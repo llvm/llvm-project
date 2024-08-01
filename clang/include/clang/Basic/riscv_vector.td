@@ -766,7 +766,7 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
         IntrinsicTypes = {ResultType, Ops[0]->getType(), Ops.back()->getType()};
       else
         IntrinsicTypes = {ResultType, Ops.back()->getType()};
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 6> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -836,7 +836,7 @@ multiclass RVVUnitStridedSegStoreTuple<string op> {
       // Intrinsic: (tuple, ptr, vl)
       unsigned Offset = IsMasked ? 1 : 0;
 
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 5> Operands;
       Operands.push_back(Ops[Offset + 1]); // tuple
       Operands.push_back(Ops[Offset]); // Ptr
       if (IsMasked)
@@ -886,7 +886,7 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
         IntrinsicTypes = {ResultType, Ops.back()->getType(), Ops[0]->getType()};
       else
         IntrinsicTypes = {ResultType, Ops.back()->getType()};
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 6> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -961,7 +961,7 @@ multiclass RVVStridedSegLoadTuple<string op> {
         IntrinsicTypes = {ResultType, Ops.back()->getType(), Ops[0]->getType()};
       else
         IntrinsicTypes = {ResultType, Ops.back()->getType()};
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 7> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -1033,7 +1033,7 @@ multiclass RVVStridedSegStoreTuple<string op> {
       // Intrinsic: (tuple, ptr, stride, vl)
       unsigned Offset = IsMasked ? 1 : 0;
 
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 6> Operands;
       Operands.push_back(Ops[Offset + 2]); // tuple
       Operands.push_back(Ops[Offset]); // Ptr
       Operands.push_back(Ops[Offset + 1]); // Stride
@@ -1075,7 +1075,7 @@ multiclass RVVIndexedSegLoadTuple<string op> {
                                                    []<string>)),
             ManualCodegen = [{
     {
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 7> Operands;
 
       bool NoPassthru =
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
@@ -1150,7 +1150,7 @@ multiclass RVVIndexedSegStoreTuple<string op> {
       // Intrinsic: (tuple, ptr, index, vl)
       unsigned Offset = IsMasked ? 1 : 0;
 
-      SmallVector<llvm::Value*, 12> Operands;
+      SmallVector<llvm::Value*, 6> Operands;
       Operands.push_back(Ops[Offset + 2]); // tuple
       Operands.push_back(Ops[Offset]); // Ptr
       Operands.push_back(Ops[Offset + 1]); // Idx
@@ -2536,11 +2536,11 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       ManualCodegen = [{
       {
         auto *VecTy = cast<ScalableVectorType>(ResultType);
-        // Mask to only valid indices.
-        Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
         if (auto *OpVecTy = dyn_cast<ScalableVectorType>(Ops[0]->getType())) {
           unsigned MaxIndex = OpVecTy->getMinNumElements() / VecTy->getMinNumElements();
           assert(isPowerOf2_32(MaxIndex));
+          // Mask to only valid indices.
+          Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
           Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
           Ops[1] = Builder.CreateMul(Ops[1],
                                      ConstantInt::get(Ops[1]->getType(),
@@ -2548,12 +2548,10 @@ let HasMasked = false, HasVL = false, IRName = "" in {
           return Builder.CreateExtractVector(ResultType, Ops[0], Ops[1]);
         }
 
-        bool IsRISCV64 = getTarget().getTriple().isRISCV64();
-        llvm::Type *XLenTy = IsRISCV64 ? Builder.getInt64Ty() :
-                                         Builder.getInt32Ty();
         return Builder.CreateIntrinsic(Intrinsic::riscv_vector_extract,
-                                       {ResultType, Ops[0]->getType(), XLenTy},
-                                       {Ops[0], Ops[1]});
+                                       {ResultType, Ops[0]->getType()},
+                                       {Ops[0], Builder.CreateZExt(Ops[1],
+                                        Builder.getInt32Ty())});
       }
       }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
@@ -2574,12 +2572,12 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vset_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
-        auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
-        // Mask to only valid indices.
-        Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
         if (auto *ResVecTy = dyn_cast<ScalableVectorType>(ResultType)) {
+          auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
           unsigned MaxIndex = ResVecTy->getMinNumElements() / VecTy->getMinNumElements();
           assert(isPowerOf2_32(MaxIndex));
+          // Mask to only valid indices.
+          Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
           Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
           Ops[1] = Builder.CreateMul(Ops[1],
                                      ConstantInt::get(Ops[1]->getType(),
@@ -2587,12 +2585,10 @@ let HasMasked = false, HasVL = false, IRName = "" in {
           return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
         }
 
-        bool IsRISCV64 = getTarget().getTriple().isRISCV64();
-        llvm::Type *XLenTy = IsRISCV64 ? Builder.getInt64Ty() :
-                                         Builder.getInt32Ty();
         return Builder.CreateIntrinsic(Intrinsic::riscv_vector_insert,
-                                       {ResultType, Ops[2]->getType(), XLenTy},
-                                       {Ops[0], Ops[2], Ops[1]});
+                                       {ResultType, Ops[2]->getType()},
+                                       {Ops[0], Ops[2],
+                                        Builder.CreateZExt(Ops[1],Builder.getInt32Ty())});
       }
       }] in {
     foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
@@ -2618,23 +2614,19 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       {
         llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
         auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
-        bool IsRISCV64 = getTarget().getTriple().isRISCV64();
-        llvm::Type *XLenTy = IsRISCV64 ? Builder.getInt64Ty() :
-                                         Builder.getInt32Ty();
         for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
-          llvm::Value *Idx =
-            ConstantInt::get(Builder.getInt64Ty(),
-                             isa<ScalableVectorType>(ResultType) ?
-                             VecTy->getMinNumElements() * I : I);
-
-          if (isa<ScalableVectorType>(ResultType))
+          if (isa<ScalableVectorType>(ResultType)) {
+            llvm::Value *Idx = ConstantInt::get(Builder.getInt64Ty(),
+                                                VecTy->getMinNumElements() * I);
             ReturnVector =
               Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
-          else
+          } else {
+            llvm::Value *Idx = ConstantInt::get(Builder.getInt32Ty(), I);
             ReturnVector =
               Builder.CreateIntrinsic(Intrinsic::riscv_vector_insert,
-                                      {ResultType, Ops[I]->getType(), XLenTy},
+                                      {ResultType, Ops[I]->getType()},
                                       {ReturnVector, Ops[I], Idx});
+          }
 
         }
         return ReturnVector;

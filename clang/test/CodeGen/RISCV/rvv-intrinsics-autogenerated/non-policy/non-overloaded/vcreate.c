@@ -899,8 +899,8 @@ vuint64m8_t test_vcreate_v_u64m4_u64m8(vuint64m4_t v0, vuint64m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vcreate_v_f16mf4x2(
 // CHECK-RV64-SAME: <vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 1 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 1 x half> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 1 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 1 x half> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP1]]
 //
 vfloat16mf4x2_t test_vcreate_v_f16mf4x2(vfloat16mf4_t v0, vfloat16mf4_t v1) {
@@ -910,9 +910,9 @@ vfloat16mf4x2_t test_vcreate_v_f16mf4x2(vfloat16mf4_t v0, vfloat16mf4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vcreate_v_f16mf4x3(
 // CHECK-RV64-SAME: <vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 1 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 1 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 1 x half> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 1 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 1 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 1 x half> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP2]]
 //
 vfloat16mf4x3_t test_vcreate_v_f16mf4x3(vfloat16mf4_t v0, vfloat16mf4_t v1,
@@ -923,10 +923,10 @@ vfloat16mf4x3_t test_vcreate_v_f16mf4x3(vfloat16mf4_t v0, vfloat16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vcreate_v_f16mf4x4(
 // CHECK-RV64-SAME: <vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 1 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 1 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 1 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 1 x half> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 1 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 1 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 1 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 1 x half> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP3]]
 //
 vfloat16mf4x4_t test_vcreate_v_f16mf4x4(vfloat16mf4_t v0, vfloat16mf4_t v1,
@@ -937,11 +937,11 @@ vfloat16mf4x4_t test_vcreate_v_f16mf4x4(vfloat16mf4_t v0, vfloat16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vcreate_v_f16mf4x5(
 // CHECK-RV64-SAME: <vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 1 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 1 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 1 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 1 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 1 x half> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 1 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 1 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 1 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 1 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 1 x half> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP4]]
 //
 vfloat16mf4x5_t test_vcreate_v_f16mf4x5(vfloat16mf4_t v0, vfloat16mf4_t v1,
@@ -953,12 +953,12 @@ vfloat16mf4x5_t test_vcreate_v_f16mf4x5(vfloat16mf4_t v0, vfloat16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vcreate_v_f16mf4x6(
 // CHECK-RV64-SAME: <vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 1 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 1 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 1 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 1 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 1 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 1 x half> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 1 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 1 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 1 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 1 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 1 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 1 x half> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP5]]
 //
 vfloat16mf4x6_t test_vcreate_v_f16mf4x6(vfloat16mf4_t v0, vfloat16mf4_t v1,
@@ -970,13 +970,13 @@ vfloat16mf4x6_t test_vcreate_v_f16mf4x6(vfloat16mf4_t v0, vfloat16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vcreate_v_f16mf4x7(
 // CHECK-RV64-SAME: <vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 1 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 1 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 1 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 1 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 1 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 1 x half> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 1 x half> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 1 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 1 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 1 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 1 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 1 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 1 x half> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 1 x half> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP6]]
 //
 vfloat16mf4x7_t test_vcreate_v_f16mf4x7(vfloat16mf4_t v0, vfloat16mf4_t v1,
@@ -989,14 +989,14 @@ vfloat16mf4x7_t test_vcreate_v_f16mf4x7(vfloat16mf4_t v0, vfloat16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vcreate_v_f16mf4x8(
 // CHECK-RV64-SAME: <vscale x 1 x half> [[V0:%.*]], <vscale x 1 x half> [[V1:%.*]], <vscale x 1 x half> [[V2:%.*]], <vscale x 1 x half> [[V3:%.*]], <vscale x 1 x half> [[V4:%.*]], <vscale x 1 x half> [[V5:%.*]], <vscale x 1 x half> [[V6:%.*]], <vscale x 1 x half> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 1 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 1 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 1 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 1 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 1 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 1 x half> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 1 x half> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 1 x half> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 1 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 1 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 1 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 1 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 1 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 1 x half> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 1 x half> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1f16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 1 x half> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP7]]
 //
 vfloat16mf4x8_t test_vcreate_v_f16mf4x8(vfloat16mf4_t v0, vfloat16mf4_t v1,
@@ -1009,8 +1009,8 @@ vfloat16mf4x8_t test_vcreate_v_f16mf4x8(vfloat16mf4_t v0, vfloat16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_f16mf2x2(
 // CHECK-RV64-SAME: <vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 2 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 2 x half> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 2 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 2 x half> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vfloat16mf2x2_t test_vcreate_v_f16mf2x2(vfloat16mf2_t v0, vfloat16mf2_t v1) {
@@ -1020,9 +1020,9 @@ vfloat16mf2x2_t test_vcreate_v_f16mf2x2(vfloat16mf2_t v0, vfloat16mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_f16mf2x3(
 // CHECK-RV64-SAME: <vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 2 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 2 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 2 x half> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 2 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 2 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 2 x half> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vfloat16mf2x3_t test_vcreate_v_f16mf2x3(vfloat16mf2_t v0, vfloat16mf2_t v1,
@@ -1033,10 +1033,10 @@ vfloat16mf2x3_t test_vcreate_v_f16mf2x3(vfloat16mf2_t v0, vfloat16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_f16mf2x4(
 // CHECK-RV64-SAME: <vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 2 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 2 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 2 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 2 x half> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 2 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 2 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 2 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 2 x half> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vfloat16mf2x4_t test_vcreate_v_f16mf2x4(vfloat16mf2_t v0, vfloat16mf2_t v1,
@@ -1047,11 +1047,11 @@ vfloat16mf2x4_t test_vcreate_v_f16mf2x4(vfloat16mf2_t v0, vfloat16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_f16mf2x5(
 // CHECK-RV64-SAME: <vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 2 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 2 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 2 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 2 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 2 x half> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 2 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 2 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 2 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 2 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 2 x half> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vfloat16mf2x5_t test_vcreate_v_f16mf2x5(vfloat16mf2_t v0, vfloat16mf2_t v1,
@@ -1063,12 +1063,12 @@ vfloat16mf2x5_t test_vcreate_v_f16mf2x5(vfloat16mf2_t v0, vfloat16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_f16mf2x6(
 // CHECK-RV64-SAME: <vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 2 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 2 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 2 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 2 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 2 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 2 x half> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 2 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 2 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 2 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 2 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 2 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 2 x half> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vfloat16mf2x6_t test_vcreate_v_f16mf2x6(vfloat16mf2_t v0, vfloat16mf2_t v1,
@@ -1080,13 +1080,13 @@ vfloat16mf2x6_t test_vcreate_v_f16mf2x6(vfloat16mf2_t v0, vfloat16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_f16mf2x7(
 // CHECK-RV64-SAME: <vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 2 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 2 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 2 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 2 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 2 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 2 x half> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 2 x half> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 2 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 2 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 2 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 2 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 2 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 2 x half> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 2 x half> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vfloat16mf2x7_t test_vcreate_v_f16mf2x7(vfloat16mf2_t v0, vfloat16mf2_t v1,
@@ -1099,14 +1099,14 @@ vfloat16mf2x7_t test_vcreate_v_f16mf2x7(vfloat16mf2_t v0, vfloat16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_f16mf2x8(
 // CHECK-RV64-SAME: <vscale x 2 x half> [[V0:%.*]], <vscale x 2 x half> [[V1:%.*]], <vscale x 2 x half> [[V2:%.*]], <vscale x 2 x half> [[V3:%.*]], <vscale x 2 x half> [[V4:%.*]], <vscale x 2 x half> [[V5:%.*]], <vscale x 2 x half> [[V6:%.*]], <vscale x 2 x half> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 2 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 2 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 2 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 2 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 2 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 2 x half> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 2 x half> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 2 x half> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 2 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 2 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 2 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 2 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 2 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 2 x half> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 2 x half> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2f16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 2 x half> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vfloat16mf2x8_t test_vcreate_v_f16mf2x8(vfloat16mf2_t v0, vfloat16mf2_t v1,
@@ -1119,8 +1119,8 @@ vfloat16mf2x8_t test_vcreate_v_f16mf2x8(vfloat16mf2_t v0, vfloat16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_f16m1x2(
 // CHECK-RV64-SAME: <vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 4 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 4 x half> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 4 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 4 x half> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vfloat16m1x2_t test_vcreate_v_f16m1x2(vfloat16m1_t v0, vfloat16m1_t v1) {
@@ -1130,9 +1130,9 @@ vfloat16m1x2_t test_vcreate_v_f16m1x2(vfloat16m1_t v0, vfloat16m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_f16m1x3(
 // CHECK-RV64-SAME: <vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 4 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 4 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 4 x half> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 4 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 4 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 4 x half> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vfloat16m1x3_t test_vcreate_v_f16m1x3(vfloat16m1_t v0, vfloat16m1_t v1,
@@ -1143,10 +1143,10 @@ vfloat16m1x3_t test_vcreate_v_f16m1x3(vfloat16m1_t v0, vfloat16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_f16m1x4(
 // CHECK-RV64-SAME: <vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 4 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 4 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 4 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 4 x half> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 4 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 4 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 4 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 4 x half> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vfloat16m1x4_t test_vcreate_v_f16m1x4(vfloat16m1_t v0, vfloat16m1_t v1,
@@ -1157,11 +1157,11 @@ vfloat16m1x4_t test_vcreate_v_f16m1x4(vfloat16m1_t v0, vfloat16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_f16m1x5(
 // CHECK-RV64-SAME: <vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 4 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 4 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 4 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 4 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 4 x half> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 4 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 4 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 4 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 4 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 4 x half> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vfloat16m1x5_t test_vcreate_v_f16m1x5(vfloat16m1_t v0, vfloat16m1_t v1,
@@ -1173,12 +1173,12 @@ vfloat16m1x5_t test_vcreate_v_f16m1x5(vfloat16m1_t v0, vfloat16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_f16m1x6(
 // CHECK-RV64-SAME: <vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 4 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 4 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 4 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 4 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 4 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 4 x half> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 4 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 4 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 4 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 4 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 4 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 4 x half> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vfloat16m1x6_t test_vcreate_v_f16m1x6(vfloat16m1_t v0, vfloat16m1_t v1,
@@ -1190,13 +1190,13 @@ vfloat16m1x6_t test_vcreate_v_f16m1x6(vfloat16m1_t v0, vfloat16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_f16m1x7(
 // CHECK-RV64-SAME: <vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 4 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 4 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 4 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 4 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 4 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 4 x half> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 4 x half> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 4 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 4 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 4 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 4 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 4 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 4 x half> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 4 x half> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vfloat16m1x7_t test_vcreate_v_f16m1x7(vfloat16m1_t v0, vfloat16m1_t v1,
@@ -1209,14 +1209,14 @@ vfloat16m1x7_t test_vcreate_v_f16m1x7(vfloat16m1_t v0, vfloat16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_f16m1x8(
 // CHECK-RV64-SAME: <vscale x 4 x half> [[V0:%.*]], <vscale x 4 x half> [[V1:%.*]], <vscale x 4 x half> [[V2:%.*]], <vscale x 4 x half> [[V3:%.*]], <vscale x 4 x half> [[V4:%.*]], <vscale x 4 x half> [[V5:%.*]], <vscale x 4 x half> [[V6:%.*]], <vscale x 4 x half> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 4 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 4 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 4 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 4 x half> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 4 x half> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 4 x half> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 4 x half> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 4 x half> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 4 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 4 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 4 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 4 x half> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 4 x half> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 4 x half> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 4 x half> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4f16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 4 x half> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vfloat16m1x8_t test_vcreate_v_f16m1x8(vfloat16m1_t v0, vfloat16m1_t v1,
@@ -1229,8 +1229,8 @@ vfloat16m1x8_t test_vcreate_v_f16m1x8(vfloat16m1_t v0, vfloat16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_f16m2x2(
 // CHECK-RV64-SAME: <vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 8 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 8 x half> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 8 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 8 x half> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vfloat16m2x2_t test_vcreate_v_f16m2x2(vfloat16m2_t v0, vfloat16m2_t v1) {
@@ -1240,9 +1240,9 @@ vfloat16m2x2_t test_vcreate_v_f16m2x2(vfloat16m2_t v0, vfloat16m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_f16m2x3(
 // CHECK-RV64-SAME: <vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 8 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 8 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 8 x half> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 8 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 8 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 8 x half> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vfloat16m2x3_t test_vcreate_v_f16m2x3(vfloat16m2_t v0, vfloat16m2_t v1,
@@ -1253,10 +1253,10 @@ vfloat16m2x3_t test_vcreate_v_f16m2x3(vfloat16m2_t v0, vfloat16m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_f16m2x4(
 // CHECK-RV64-SAME: <vscale x 8 x half> [[V0:%.*]], <vscale x 8 x half> [[V1:%.*]], <vscale x 8 x half> [[V2:%.*]], <vscale x 8 x half> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 8 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 8 x half> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 8 x half> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 8 x half> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 8 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 8 x half> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 8 x half> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8f16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 8 x half> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vfloat16m2x4_t test_vcreate_v_f16m2x4(vfloat16m2_t v0, vfloat16m2_t v1,
@@ -1267,8 +1267,8 @@ vfloat16m2x4_t test_vcreate_v_f16m2x4(vfloat16m2_t v0, vfloat16m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_f16m4x2(
 // CHECK-RV64-SAME: <vscale x 16 x half> [[V0:%.*]], <vscale x 16 x half> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16f16.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 16 x half> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16f16.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 16 x half> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16f16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 16 x half> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16f16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 16 x half> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vfloat16m4x2_t test_vcreate_v_f16m4x2(vfloat16m4_t v0, vfloat16m4_t v1) {
@@ -1278,8 +1278,8 @@ vfloat16m4x2_t test_vcreate_v_f16m4x2(vfloat16m4_t v0, vfloat16m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_f32mf2x2(
 // CHECK-RV64-SAME: <vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 1 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 1 x float> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 1 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 1 x float> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vfloat32mf2x2_t test_vcreate_v_f32mf2x2(vfloat32mf2_t v0, vfloat32mf2_t v1) {
@@ -1289,9 +1289,9 @@ vfloat32mf2x2_t test_vcreate_v_f32mf2x2(vfloat32mf2_t v0, vfloat32mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_f32mf2x3(
 // CHECK-RV64-SAME: <vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], <vscale x 1 x float> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 1 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 1 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 1 x float> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 1 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 1 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 1 x float> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vfloat32mf2x3_t test_vcreate_v_f32mf2x3(vfloat32mf2_t v0, vfloat32mf2_t v1,
@@ -1302,10 +1302,10 @@ vfloat32mf2x3_t test_vcreate_v_f32mf2x3(vfloat32mf2_t v0, vfloat32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_f32mf2x4(
 // CHECK-RV64-SAME: <vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], <vscale x 1 x float> [[V2:%.*]], <vscale x 1 x float> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 1 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 1 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 1 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 1 x float> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 1 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 1 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 1 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 1 x float> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vfloat32mf2x4_t test_vcreate_v_f32mf2x4(vfloat32mf2_t v0, vfloat32mf2_t v1,
@@ -1316,11 +1316,11 @@ vfloat32mf2x4_t test_vcreate_v_f32mf2x4(vfloat32mf2_t v0, vfloat32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_f32mf2x5(
 // CHECK-RV64-SAME: <vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], <vscale x 1 x float> [[V2:%.*]], <vscale x 1 x float> [[V3:%.*]], <vscale x 1 x float> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 1 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 1 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 1 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 1 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 1 x float> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 1 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 1 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 1 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 1 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 1 x float> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vfloat32mf2x5_t test_vcreate_v_f32mf2x5(vfloat32mf2_t v0, vfloat32mf2_t v1,
@@ -1332,12 +1332,12 @@ vfloat32mf2x5_t test_vcreate_v_f32mf2x5(vfloat32mf2_t v0, vfloat32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_f32mf2x6(
 // CHECK-RV64-SAME: <vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], <vscale x 1 x float> [[V2:%.*]], <vscale x 1 x float> [[V3:%.*]], <vscale x 1 x float> [[V4:%.*]], <vscale x 1 x float> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 1 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 1 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 1 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 1 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 1 x float> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 1 x float> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 1 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 1 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 1 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 1 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 1 x float> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 1 x float> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vfloat32mf2x6_t test_vcreate_v_f32mf2x6(vfloat32mf2_t v0, vfloat32mf2_t v1,
@@ -1349,13 +1349,13 @@ vfloat32mf2x6_t test_vcreate_v_f32mf2x6(vfloat32mf2_t v0, vfloat32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_f32mf2x7(
 // CHECK-RV64-SAME: <vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], <vscale x 1 x float> [[V2:%.*]], <vscale x 1 x float> [[V3:%.*]], <vscale x 1 x float> [[V4:%.*]], <vscale x 1 x float> [[V5:%.*]], <vscale x 1 x float> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 1 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 1 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 1 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 1 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 1 x float> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 1 x float> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 1 x float> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 1 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 1 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 1 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 1 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 1 x float> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 1 x float> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 1 x float> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vfloat32mf2x7_t test_vcreate_v_f32mf2x7(vfloat32mf2_t v0, vfloat32mf2_t v1,
@@ -1368,14 +1368,14 @@ vfloat32mf2x7_t test_vcreate_v_f32mf2x7(vfloat32mf2_t v0, vfloat32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_f32mf2x8(
 // CHECK-RV64-SAME: <vscale x 1 x float> [[V0:%.*]], <vscale x 1 x float> [[V1:%.*]], <vscale x 1 x float> [[V2:%.*]], <vscale x 1 x float> [[V3:%.*]], <vscale x 1 x float> [[V4:%.*]], <vscale x 1 x float> [[V5:%.*]], <vscale x 1 x float> [[V6:%.*]], <vscale x 1 x float> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 1 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 1 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 1 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 1 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 1 x float> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 1 x float> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 1 x float> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 1 x float> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 1 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 1 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 1 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 1 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 1 x float> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 1 x float> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 1 x float> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1f32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 1 x float> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vfloat32mf2x8_t test_vcreate_v_f32mf2x8(vfloat32mf2_t v0, vfloat32mf2_t v1,
@@ -1388,8 +1388,8 @@ vfloat32mf2x8_t test_vcreate_v_f32mf2x8(vfloat32mf2_t v0, vfloat32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_f32m1x2(
 // CHECK-RV64-SAME: <vscale x 2 x float> [[V0:%.*]], <vscale x 2 x float> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 2 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 2 x float> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 2 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 2 x float> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vfloat32m1x2_t test_vcreate_v_f32m1x2(vfloat32m1_t v0, vfloat32m1_t v1) {
@@ -1399,9 +1399,9 @@ vfloat32m1x2_t test_vcreate_v_f32m1x2(vfloat32m1_t v0, vfloat32m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_f32m1x3(
 // CHECK-RV64-SAME: <vscale x 2 x float> [[V0:%.*]], <vscale x 2 x float> [[V1:%.*]], <vscale x 2 x float> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 2 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 2 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 2 x float> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 2 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 2 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 2 x float> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vfloat32m1x3_t test_vcreate_v_f32m1x3(vfloat32m1_t v0, vfloat32m1_t v1,
@@ -1412,10 +1412,10 @@ vfloat32m1x3_t test_vcreate_v_f32m1x3(vfloat32m1_t v0, vfloat32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_f32m1x4(
 // CHECK-RV64-SAME: <vscale x 2 x float> [[V0:%.*]], <vscale x 2 x float> [[V1:%.*]], <vscale x 2 x float> [[V2:%.*]], <vscale x 2 x float> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 2 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 2 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 2 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 2 x float> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 2 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 2 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 2 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 2 x float> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vfloat32m1x4_t test_vcreate_v_f32m1x4(vfloat32m1_t v0, vfloat32m1_t v1,
@@ -1426,11 +1426,11 @@ vfloat32m1x4_t test_vcreate_v_f32m1x4(vfloat32m1_t v0, vfloat32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_f32m1x5(
 // CHECK-RV64-SAME: <vscale x 2 x float> [[V0:%.*]], <vscale x 2 x float> [[V1:%.*]], <vscale x 2 x float> [[V2:%.*]], <vscale x 2 x float> [[V3:%.*]], <vscale x 2 x float> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 2 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 2 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 2 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 2 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 2 x float> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 2 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 2 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 2 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 2 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 2 x float> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vfloat32m1x5_t test_vcreate_v_f32m1x5(vfloat32m1_t v0, vfloat32m1_t v1,
@@ -1442,12 +1442,12 @@ vfloat32m1x5_t test_vcreate_v_f32m1x5(vfloat32m1_t v0, vfloat32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_f32m1x6(
 // CHECK-RV64-SAME: <vscale x 2 x float> [[V0:%.*]], <vscale x 2 x float> [[V1:%.*]], <vscale x 2 x float> [[V2:%.*]], <vscale x 2 x float> [[V3:%.*]], <vscale x 2 x float> [[V4:%.*]], <vscale x 2 x float> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 2 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 2 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 2 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 2 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 2 x float> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 2 x float> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 2 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 2 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 2 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 2 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 2 x float> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 2 x float> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vfloat32m1x6_t test_vcreate_v_f32m1x6(vfloat32m1_t v0, vfloat32m1_t v1,
@@ -1459,13 +1459,13 @@ vfloat32m1x6_t test_vcreate_v_f32m1x6(vfloat32m1_t v0, vfloat32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_f32m1x7(
 // CHECK-RV64-SAME: <vscale x 2 x float> [[V0:%.*]], <vscale x 2 x float> [[V1:%.*]], <vscale x 2 x float> [[V2:%.*]], <vscale x 2 x float> [[V3:%.*]], <vscale x 2 x float> [[V4:%.*]], <vscale x 2 x float> [[V5:%.*]], <vscale x 2 x float> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 2 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 2 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 2 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 2 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 2 x float> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 2 x float> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 2 x float> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 2 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 2 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 2 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 2 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 2 x float> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 2 x float> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 2 x float> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vfloat32m1x7_t test_vcreate_v_f32m1x7(vfloat32m1_t v0, vfloat32m1_t v1,
@@ -1478,14 +1478,14 @@ vfloat32m1x7_t test_vcreate_v_f32m1x7(vfloat32m1_t v0, vfloat32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_f32m1x8(
 // CHECK-RV64-SAME: <vscale x 2 x float> [[V0:%.*]], <vscale x 2 x float> [[V1:%.*]], <vscale x 2 x float> [[V2:%.*]], <vscale x 2 x float> [[V3:%.*]], <vscale x 2 x float> [[V4:%.*]], <vscale x 2 x float> [[V5:%.*]], <vscale x 2 x float> [[V6:%.*]], <vscale x 2 x float> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 2 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 2 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 2 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 2 x float> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 2 x float> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 2 x float> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 2 x float> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 2 x float> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 2 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 2 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 2 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 2 x float> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 2 x float> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 2 x float> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 2 x float> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2f32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 2 x float> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vfloat32m1x8_t test_vcreate_v_f32m1x8(vfloat32m1_t v0, vfloat32m1_t v1,
@@ -1498,8 +1498,8 @@ vfloat32m1x8_t test_vcreate_v_f32m1x8(vfloat32m1_t v0, vfloat32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_f32m2x2(
 // CHECK-RV64-SAME: <vscale x 4 x float> [[V0:%.*]], <vscale x 4 x float> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 4 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 4 x float> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 4 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 4 x float> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vfloat32m2x2_t test_vcreate_v_f32m2x2(vfloat32m2_t v0, vfloat32m2_t v1) {
@@ -1509,9 +1509,9 @@ vfloat32m2x2_t test_vcreate_v_f32m2x2(vfloat32m2_t v0, vfloat32m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_f32m2x3(
 // CHECK-RV64-SAME: <vscale x 4 x float> [[V0:%.*]], <vscale x 4 x float> [[V1:%.*]], <vscale x 4 x float> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 4 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 4 x float> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 4 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 4 x float> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vfloat32m2x3_t test_vcreate_v_f32m2x3(vfloat32m2_t v0, vfloat32m2_t v1,
@@ -1522,10 +1522,10 @@ vfloat32m2x3_t test_vcreate_v_f32m2x3(vfloat32m2_t v0, vfloat32m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_f32m2x4(
 // CHECK-RV64-SAME: <vscale x 4 x float> [[V0:%.*]], <vscale x 4 x float> [[V1:%.*]], <vscale x 4 x float> [[V2:%.*]], <vscale x 4 x float> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 4 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 4 x float> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 4 x float> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 4 x float> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 4 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 4 x float> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 4 x float> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4f32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 4 x float> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vfloat32m2x4_t test_vcreate_v_f32m2x4(vfloat32m2_t v0, vfloat32m2_t v1,
@@ -1536,8 +1536,8 @@ vfloat32m2x4_t test_vcreate_v_f32m2x4(vfloat32m2_t v0, vfloat32m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_f32m4x2(
 // CHECK-RV64-SAME: <vscale x 8 x float> [[V0:%.*]], <vscale x 8 x float> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8f32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 8 x float> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8f32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 8 x float> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8f32(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 8 x float> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8f32(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 8 x float> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vfloat32m4x2_t test_vcreate_v_f32m4x2(vfloat32m4_t v0, vfloat32m4_t v1) {
@@ -1547,8 +1547,8 @@ vfloat32m4x2_t test_vcreate_v_f32m4x2(vfloat32m4_t v0, vfloat32m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_f64m1x2(
 // CHECK-RV64-SAME: <vscale x 1 x double> [[V0:%.*]], <vscale x 1 x double> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 1 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 1 x double> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 1 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 1 x double> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vfloat64m1x2_t test_vcreate_v_f64m1x2(vfloat64m1_t v0, vfloat64m1_t v1) {
@@ -1558,9 +1558,9 @@ vfloat64m1x2_t test_vcreate_v_f64m1x2(vfloat64m1_t v0, vfloat64m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_f64m1x3(
 // CHECK-RV64-SAME: <vscale x 1 x double> [[V0:%.*]], <vscale x 1 x double> [[V1:%.*]], <vscale x 1 x double> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 1 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 1 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 1 x double> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 1 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 1 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 1 x double> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vfloat64m1x3_t test_vcreate_v_f64m1x3(vfloat64m1_t v0, vfloat64m1_t v1,
@@ -1571,10 +1571,10 @@ vfloat64m1x3_t test_vcreate_v_f64m1x3(vfloat64m1_t v0, vfloat64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_f64m1x4(
 // CHECK-RV64-SAME: <vscale x 1 x double> [[V0:%.*]], <vscale x 1 x double> [[V1:%.*]], <vscale x 1 x double> [[V2:%.*]], <vscale x 1 x double> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 1 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 1 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 1 x double> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 1 x double> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 1 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 1 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 1 x double> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 1 x double> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vfloat64m1x4_t test_vcreate_v_f64m1x4(vfloat64m1_t v0, vfloat64m1_t v1,
@@ -1585,11 +1585,11 @@ vfloat64m1x4_t test_vcreate_v_f64m1x4(vfloat64m1_t v0, vfloat64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_f64m1x5(
 // CHECK-RV64-SAME: <vscale x 1 x double> [[V0:%.*]], <vscale x 1 x double> [[V1:%.*]], <vscale x 1 x double> [[V2:%.*]], <vscale x 1 x double> [[V3:%.*]], <vscale x 1 x double> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 1 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 1 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 1 x double> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 1 x double> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 1 x double> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 1 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 1 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 1 x double> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 1 x double> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 1 x double> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vfloat64m1x5_t test_vcreate_v_f64m1x5(vfloat64m1_t v0, vfloat64m1_t v1,
@@ -1601,12 +1601,12 @@ vfloat64m1x5_t test_vcreate_v_f64m1x5(vfloat64m1_t v0, vfloat64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_f64m1x6(
 // CHECK-RV64-SAME: <vscale x 1 x double> [[V0:%.*]], <vscale x 1 x double> [[V1:%.*]], <vscale x 1 x double> [[V2:%.*]], <vscale x 1 x double> [[V3:%.*]], <vscale x 1 x double> [[V4:%.*]], <vscale x 1 x double> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 1 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 1 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 1 x double> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 1 x double> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 1 x double> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 1 x double> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 1 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 1 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 1 x double> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 1 x double> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 1 x double> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 1 x double> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vfloat64m1x6_t test_vcreate_v_f64m1x6(vfloat64m1_t v0, vfloat64m1_t v1,
@@ -1618,13 +1618,13 @@ vfloat64m1x6_t test_vcreate_v_f64m1x6(vfloat64m1_t v0, vfloat64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_f64m1x7(
 // CHECK-RV64-SAME: <vscale x 1 x double> [[V0:%.*]], <vscale x 1 x double> [[V1:%.*]], <vscale x 1 x double> [[V2:%.*]], <vscale x 1 x double> [[V3:%.*]], <vscale x 1 x double> [[V4:%.*]], <vscale x 1 x double> [[V5:%.*]], <vscale x 1 x double> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 1 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 1 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 1 x double> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 1 x double> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 1 x double> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 1 x double> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 1 x double> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 1 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 1 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 1 x double> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 1 x double> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 1 x double> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 1 x double> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 1 x double> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vfloat64m1x7_t test_vcreate_v_f64m1x7(vfloat64m1_t v0, vfloat64m1_t v1,
@@ -1637,14 +1637,14 @@ vfloat64m1x7_t test_vcreate_v_f64m1x7(vfloat64m1_t v0, vfloat64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_f64m1x8(
 // CHECK-RV64-SAME: <vscale x 1 x double> [[V0:%.*]], <vscale x 1 x double> [[V1:%.*]], <vscale x 1 x double> [[V2:%.*]], <vscale x 1 x double> [[V3:%.*]], <vscale x 1 x double> [[V4:%.*]], <vscale x 1 x double> [[V5:%.*]], <vscale x 1 x double> [[V6:%.*]], <vscale x 1 x double> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 1 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 1 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 1 x double> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 1 x double> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 1 x double> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 1 x double> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 1 x double> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 1 x double> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 1 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 1 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 1 x double> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 1 x double> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 1 x double> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 1 x double> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 1 x double> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1f64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 1 x double> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vfloat64m1x8_t test_vcreate_v_f64m1x8(vfloat64m1_t v0, vfloat64m1_t v1,
@@ -1657,8 +1657,8 @@ vfloat64m1x8_t test_vcreate_v_f64m1x8(vfloat64m1_t v0, vfloat64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_f64m2x2(
 // CHECK-RV64-SAME: <vscale x 2 x double> [[V0:%.*]], <vscale x 2 x double> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 2 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 2 x double> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 2 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 2 x double> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vfloat64m2x2_t test_vcreate_v_f64m2x2(vfloat64m2_t v0, vfloat64m2_t v1) {
@@ -1668,9 +1668,9 @@ vfloat64m2x2_t test_vcreate_v_f64m2x2(vfloat64m2_t v0, vfloat64m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_f64m2x3(
 // CHECK-RV64-SAME: <vscale x 2 x double> [[V0:%.*]], <vscale x 2 x double> [[V1:%.*]], <vscale x 2 x double> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 2 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 2 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 2 x double> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 2 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 2 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 2 x double> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vfloat64m2x3_t test_vcreate_v_f64m2x3(vfloat64m2_t v0, vfloat64m2_t v1,
@@ -1681,10 +1681,10 @@ vfloat64m2x3_t test_vcreate_v_f64m2x3(vfloat64m2_t v0, vfloat64m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_f64m2x4(
 // CHECK-RV64-SAME: <vscale x 2 x double> [[V0:%.*]], <vscale x 2 x double> [[V1:%.*]], <vscale x 2 x double> [[V2:%.*]], <vscale x 2 x double> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 2 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 2 x double> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 2 x double> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 2 x double> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 2 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 2 x double> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 2 x double> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2f64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 2 x double> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vfloat64m2x4_t test_vcreate_v_f64m2x4(vfloat64m2_t v0, vfloat64m2_t v1,
@@ -1695,8 +1695,8 @@ vfloat64m2x4_t test_vcreate_v_f64m2x4(vfloat64m2_t v0, vfloat64m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_f64m4x2(
 // CHECK-RV64-SAME: <vscale x 4 x double> [[V0:%.*]], <vscale x 4 x double> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4f64.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 4 x double> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4f64.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 4 x double> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4f64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 4 x double> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4f64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 4 x double> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vfloat64m4x2_t test_vcreate_v_f64m4x2(vfloat64m4_t v0, vfloat64m4_t v1) {
@@ -1706,8 +1706,8 @@ vfloat64m4x2_t test_vcreate_v_f64m4x2(vfloat64m4_t v0, vfloat64m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @test_vcreate_v_i8mf8x2(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[TMP1]]
 //
 vint8mf8x2_t test_vcreate_v_i8mf8x2(vint8mf8_t v0, vint8mf8_t v1) {
@@ -1717,9 +1717,9 @@ vint8mf8x2_t test_vcreate_v_i8mf8x2(vint8mf8_t v0, vint8mf8_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @test_vcreate_v_i8mf8x3(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP2]]
 //
 vint8mf8x3_t test_vcreate_v_i8mf8x3(vint8mf8_t v0, vint8mf8_t v1,
@@ -1730,10 +1730,10 @@ vint8mf8x3_t test_vcreate_v_i8mf8x3(vint8mf8_t v0, vint8mf8_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @test_vcreate_v_i8mf8x4(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP3]]
 //
 vint8mf8x4_t test_vcreate_v_i8mf8x4(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
@@ -1744,11 +1744,11 @@ vint8mf8x4_t test_vcreate_v_i8mf8x4(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @test_vcreate_v_i8mf8x5(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP4]]
 //
 vint8mf8x5_t test_vcreate_v_i8mf8x5(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
@@ -1759,12 +1759,12 @@ vint8mf8x5_t test_vcreate_v_i8mf8x5(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @test_vcreate_v_i8mf8x6(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]], <vscale x 1 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP4]], <vscale x 1 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP4]], <vscale x 1 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP5]]
 //
 vint8mf8x6_t test_vcreate_v_i8mf8x6(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
@@ -1776,13 +1776,13 @@ vint8mf8x6_t test_vcreate_v_i8mf8x6(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @test_vcreate_v_i8mf8x7(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]], <vscale x 1 x i8> [[V5:%.*]], <vscale x 1 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP4]], <vscale x 1 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP5]], <vscale x 1 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP4]], <vscale x 1 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP5]], <vscale x 1 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP6]]
 //
 vint8mf8x7_t test_vcreate_v_i8mf8x7(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
@@ -1794,14 +1794,14 @@ vint8mf8x7_t test_vcreate_v_i8mf8x7(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @test_vcreate_v_i8mf8x8(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]], <vscale x 1 x i8> [[V5:%.*]], <vscale x 1 x i8> [[V6:%.*]], <vscale x 1 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP4]], <vscale x 1 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP5]], <vscale x 1 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP6]], <vscale x 1 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP4]], <vscale x 1 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP5]], <vscale x 1 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP6]], <vscale x 1 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP7]]
 //
 vint8mf8x8_t test_vcreate_v_i8mf8x8(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
@@ -1813,8 +1813,8 @@ vint8mf8x8_t test_vcreate_v_i8mf8x8(vint8mf8_t v0, vint8mf8_t v1, vint8mf8_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vcreate_v_i8mf4x2(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP1]]
 //
 vint8mf4x2_t test_vcreate_v_i8mf4x2(vint8mf4_t v0, vint8mf4_t v1) {
@@ -1824,9 +1824,9 @@ vint8mf4x2_t test_vcreate_v_i8mf4x2(vint8mf4_t v0, vint8mf4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vcreate_v_i8mf4x3(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP2]]
 //
 vint8mf4x3_t test_vcreate_v_i8mf4x3(vint8mf4_t v0, vint8mf4_t v1,
@@ -1837,10 +1837,10 @@ vint8mf4x3_t test_vcreate_v_i8mf4x3(vint8mf4_t v0, vint8mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vcreate_v_i8mf4x4(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP3]]
 //
 vint8mf4x4_t test_vcreate_v_i8mf4x4(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
@@ -1851,11 +1851,11 @@ vint8mf4x4_t test_vcreate_v_i8mf4x4(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vcreate_v_i8mf4x5(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP4]]
 //
 vint8mf4x5_t test_vcreate_v_i8mf4x5(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
@@ -1866,12 +1866,12 @@ vint8mf4x5_t test_vcreate_v_i8mf4x5(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vcreate_v_i8mf4x6(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]], <vscale x 2 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 2 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 2 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP5]]
 //
 vint8mf4x6_t test_vcreate_v_i8mf4x6(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
@@ -1883,13 +1883,13 @@ vint8mf4x6_t test_vcreate_v_i8mf4x6(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vcreate_v_i8mf4x7(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]], <vscale x 2 x i8> [[V5:%.*]], <vscale x 2 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 2 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 2 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 2 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 2 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP6]]
 //
 vint8mf4x7_t test_vcreate_v_i8mf4x7(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
@@ -1901,14 +1901,14 @@ vint8mf4x7_t test_vcreate_v_i8mf4x7(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vcreate_v_i8mf4x8(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]], <vscale x 2 x i8> [[V5:%.*]], <vscale x 2 x i8> [[V6:%.*]], <vscale x 2 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 2 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 2 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 2 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 2 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 2 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 2 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP7]]
 //
 vint8mf4x8_t test_vcreate_v_i8mf4x8(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
@@ -1920,8 +1920,8 @@ vint8mf4x8_t test_vcreate_v_i8mf4x8(vint8mf4_t v0, vint8mf4_t v1, vint8mf4_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_i8mf2x2(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vint8mf2x2_t test_vcreate_v_i8mf2x2(vint8mf2_t v0, vint8mf2_t v1) {
@@ -1931,9 +1931,9 @@ vint8mf2x2_t test_vcreate_v_i8mf2x2(vint8mf2_t v0, vint8mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_i8mf2x3(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vint8mf2x3_t test_vcreate_v_i8mf2x3(vint8mf2_t v0, vint8mf2_t v1,
@@ -1944,10 +1944,10 @@ vint8mf2x3_t test_vcreate_v_i8mf2x3(vint8mf2_t v0, vint8mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_i8mf2x4(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vint8mf2x4_t test_vcreate_v_i8mf2x4(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
@@ -1958,11 +1958,11 @@ vint8mf2x4_t test_vcreate_v_i8mf2x4(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_i8mf2x5(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vint8mf2x5_t test_vcreate_v_i8mf2x5(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
@@ -1973,12 +1973,12 @@ vint8mf2x5_t test_vcreate_v_i8mf2x5(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_i8mf2x6(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]], <vscale x 4 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 4 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 4 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vint8mf2x6_t test_vcreate_v_i8mf2x6(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
@@ -1990,13 +1990,13 @@ vint8mf2x6_t test_vcreate_v_i8mf2x6(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_i8mf2x7(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]], <vscale x 4 x i8> [[V5:%.*]], <vscale x 4 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 4 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 4 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 4 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 4 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vint8mf2x7_t test_vcreate_v_i8mf2x7(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
@@ -2008,14 +2008,14 @@ vint8mf2x7_t test_vcreate_v_i8mf2x7(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_i8mf2x8(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]], <vscale x 4 x i8> [[V5:%.*]], <vscale x 4 x i8> [[V6:%.*]], <vscale x 4 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 4 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 4 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 4 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 4 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 4 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 4 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vint8mf2x8_t test_vcreate_v_i8mf2x8(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
@@ -2027,8 +2027,8 @@ vint8mf2x8_t test_vcreate_v_i8mf2x8(vint8mf2_t v0, vint8mf2_t v1, vint8mf2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_i8m1x2(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vint8m1x2_t test_vcreate_v_i8m1x2(vint8m1_t v0, vint8m1_t v1) {
@@ -2038,9 +2038,9 @@ vint8m1x2_t test_vcreate_v_i8m1x2(vint8m1_t v0, vint8m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_i8m1x3(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vint8m1x3_t test_vcreate_v_i8m1x3(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2) {
@@ -2050,10 +2050,10 @@ vint8m1x3_t test_vcreate_v_i8m1x3(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_i8m1x4(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vint8m1x4_t test_vcreate_v_i8m1x4(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
@@ -2064,11 +2064,11 @@ vint8m1x4_t test_vcreate_v_i8m1x4(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_i8m1x5(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vint8m1x5_t test_vcreate_v_i8m1x5(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
@@ -2079,12 +2079,12 @@ vint8m1x5_t test_vcreate_v_i8m1x5(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_i8m1x6(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]], <vscale x 8 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 8 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 8 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vint8m1x6_t test_vcreate_v_i8m1x6(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
@@ -2095,13 +2095,13 @@ vint8m1x6_t test_vcreate_v_i8m1x6(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_i8m1x7(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]], <vscale x 8 x i8> [[V5:%.*]], <vscale x 8 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 8 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 8 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 8 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 8 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vint8m1x7_t test_vcreate_v_i8m1x7(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
@@ -2113,14 +2113,14 @@ vint8m1x7_t test_vcreate_v_i8m1x7(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_i8m1x8(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]], <vscale x 8 x i8> [[V5:%.*]], <vscale x 8 x i8> [[V6:%.*]], <vscale x 8 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 8 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 8 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 8 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 8 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 8 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 8 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vint8m1x8_t test_vcreate_v_i8m1x8(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
@@ -2132,8 +2132,8 @@ vint8m1x8_t test_vcreate_v_i8m1x8(vint8m1_t v0, vint8m1_t v1, vint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_i8m2x2(
 // CHECK-RV64-SAME: <vscale x 16 x i8> [[V0:%.*]], <vscale x 16 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 16 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 16 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 16 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 16 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vint8m2x2_t test_vcreate_v_i8m2x2(vint8m2_t v0, vint8m2_t v1) {
@@ -2143,9 +2143,9 @@ vint8m2x2_t test_vcreate_v_i8m2x2(vint8m2_t v0, vint8m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_i8m2x3(
 // CHECK-RV64-SAME: <vscale x 16 x i8> [[V0:%.*]], <vscale x 16 x i8> [[V1:%.*]], <vscale x 16 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 16 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 16 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 16 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 16 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 16 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 16 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vint8m2x3_t test_vcreate_v_i8m2x3(vint8m2_t v0, vint8m2_t v1, vint8m2_t v2) {
@@ -2155,10 +2155,10 @@ vint8m2x3_t test_vcreate_v_i8m2x3(vint8m2_t v0, vint8m2_t v1, vint8m2_t v2) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_i8m2x4(
 // CHECK-RV64-SAME: <vscale x 16 x i8> [[V0:%.*]], <vscale x 16 x i8> [[V1:%.*]], <vscale x 16 x i8> [[V2:%.*]], <vscale x 16 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 16 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 16 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 16 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 16 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 16 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 16 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 16 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 16 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vint8m2x4_t test_vcreate_v_i8m2x4(vint8m2_t v0, vint8m2_t v1, vint8m2_t v2,
@@ -2169,8 +2169,8 @@ vint8m2x4_t test_vcreate_v_i8m2x4(vint8m2_t v0, vint8m2_t v1, vint8m2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_i8m4x2(
 // CHECK-RV64-SAME: <vscale x 32 x i8> [[V0:%.*]], <vscale x 32 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 32 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 32 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 32 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 32 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vint8m4x2_t test_vcreate_v_i8m4x2(vint8m4_t v0, vint8m4_t v1) {
@@ -2180,8 +2180,8 @@ vint8m4x2_t test_vcreate_v_i8m4x2(vint8m4_t v0, vint8m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vcreate_v_i16mf4x2(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP1]]
 //
 vint16mf4x2_t test_vcreate_v_i16mf4x2(vint16mf4_t v0, vint16mf4_t v1) {
@@ -2191,9 +2191,9 @@ vint16mf4x2_t test_vcreate_v_i16mf4x2(vint16mf4_t v0, vint16mf4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vcreate_v_i16mf4x3(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP2]]
 //
 vint16mf4x3_t test_vcreate_v_i16mf4x3(vint16mf4_t v0, vint16mf4_t v1,
@@ -2204,10 +2204,10 @@ vint16mf4x3_t test_vcreate_v_i16mf4x3(vint16mf4_t v0, vint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vcreate_v_i16mf4x4(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP3]]
 //
 vint16mf4x4_t test_vcreate_v_i16mf4x4(vint16mf4_t v0, vint16mf4_t v1,
@@ -2218,11 +2218,11 @@ vint16mf4x4_t test_vcreate_v_i16mf4x4(vint16mf4_t v0, vint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vcreate_v_i16mf4x5(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP4]]
 //
 vint16mf4x5_t test_vcreate_v_i16mf4x5(vint16mf4_t v0, vint16mf4_t v1,
@@ -2234,12 +2234,12 @@ vint16mf4x5_t test_vcreate_v_i16mf4x5(vint16mf4_t v0, vint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vcreate_v_i16mf4x6(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]], <vscale x 1 x i16> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 1 x i16> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 1 x i16> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP5]]
 //
 vint16mf4x6_t test_vcreate_v_i16mf4x6(vint16mf4_t v0, vint16mf4_t v1,
@@ -2251,13 +2251,13 @@ vint16mf4x6_t test_vcreate_v_i16mf4x6(vint16mf4_t v0, vint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vcreate_v_i16mf4x7(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]], <vscale x 1 x i16> [[V5:%.*]], <vscale x 1 x i16> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 1 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 1 x i16> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 1 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 1 x i16> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP6]]
 //
 vint16mf4x7_t test_vcreate_v_i16mf4x7(vint16mf4_t v0, vint16mf4_t v1,
@@ -2270,14 +2270,14 @@ vint16mf4x7_t test_vcreate_v_i16mf4x7(vint16mf4_t v0, vint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vcreate_v_i16mf4x8(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]], <vscale x 1 x i16> [[V5:%.*]], <vscale x 1 x i16> [[V6:%.*]], <vscale x 1 x i16> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 1 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 1 x i16> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 1 x i16> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 1 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 1 x i16> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 1 x i16> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP7]]
 //
 vint16mf4x8_t test_vcreate_v_i16mf4x8(vint16mf4_t v0, vint16mf4_t v1,
@@ -2290,8 +2290,8 @@ vint16mf4x8_t test_vcreate_v_i16mf4x8(vint16mf4_t v0, vint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_i16mf2x2(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vint16mf2x2_t test_vcreate_v_i16mf2x2(vint16mf2_t v0, vint16mf2_t v1) {
@@ -2301,9 +2301,9 @@ vint16mf2x2_t test_vcreate_v_i16mf2x2(vint16mf2_t v0, vint16mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_i16mf2x3(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vint16mf2x3_t test_vcreate_v_i16mf2x3(vint16mf2_t v0, vint16mf2_t v1,
@@ -2314,10 +2314,10 @@ vint16mf2x3_t test_vcreate_v_i16mf2x3(vint16mf2_t v0, vint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_i16mf2x4(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vint16mf2x4_t test_vcreate_v_i16mf2x4(vint16mf2_t v0, vint16mf2_t v1,
@@ -2328,11 +2328,11 @@ vint16mf2x4_t test_vcreate_v_i16mf2x4(vint16mf2_t v0, vint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_i16mf2x5(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vint16mf2x5_t test_vcreate_v_i16mf2x5(vint16mf2_t v0, vint16mf2_t v1,
@@ -2344,12 +2344,12 @@ vint16mf2x5_t test_vcreate_v_i16mf2x5(vint16mf2_t v0, vint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_i16mf2x6(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]], <vscale x 2 x i16> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 2 x i16> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 2 x i16> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vint16mf2x6_t test_vcreate_v_i16mf2x6(vint16mf2_t v0, vint16mf2_t v1,
@@ -2361,13 +2361,13 @@ vint16mf2x6_t test_vcreate_v_i16mf2x6(vint16mf2_t v0, vint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_i16mf2x7(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]], <vscale x 2 x i16> [[V5:%.*]], <vscale x 2 x i16> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 2 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 2 x i16> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 2 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 2 x i16> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vint16mf2x7_t test_vcreate_v_i16mf2x7(vint16mf2_t v0, vint16mf2_t v1,
@@ -2380,14 +2380,14 @@ vint16mf2x7_t test_vcreate_v_i16mf2x7(vint16mf2_t v0, vint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_i16mf2x8(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]], <vscale x 2 x i16> [[V5:%.*]], <vscale x 2 x i16> [[V6:%.*]], <vscale x 2 x i16> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 2 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 2 x i16> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 2 x i16> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 2 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 2 x i16> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 2 x i16> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vint16mf2x8_t test_vcreate_v_i16mf2x8(vint16mf2_t v0, vint16mf2_t v1,
@@ -2400,8 +2400,8 @@ vint16mf2x8_t test_vcreate_v_i16mf2x8(vint16mf2_t v0, vint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_i16m1x2(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vint16m1x2_t test_vcreate_v_i16m1x2(vint16m1_t v0, vint16m1_t v1) {
@@ -2411,9 +2411,9 @@ vint16m1x2_t test_vcreate_v_i16m1x2(vint16m1_t v0, vint16m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_i16m1x3(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vint16m1x3_t test_vcreate_v_i16m1x3(vint16m1_t v0, vint16m1_t v1,
@@ -2424,10 +2424,10 @@ vint16m1x3_t test_vcreate_v_i16m1x3(vint16m1_t v0, vint16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_i16m1x4(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vint16m1x4_t test_vcreate_v_i16m1x4(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
@@ -2438,11 +2438,11 @@ vint16m1x4_t test_vcreate_v_i16m1x4(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_i16m1x5(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vint16m1x5_t test_vcreate_v_i16m1x5(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
@@ -2453,12 +2453,12 @@ vint16m1x5_t test_vcreate_v_i16m1x5(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_i16m1x6(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]], <vscale x 4 x i16> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 4 x i16> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 4 x i16> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vint16m1x6_t test_vcreate_v_i16m1x6(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
@@ -2470,13 +2470,13 @@ vint16m1x6_t test_vcreate_v_i16m1x6(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_i16m1x7(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]], <vscale x 4 x i16> [[V5:%.*]], <vscale x 4 x i16> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 4 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 4 x i16> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 4 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 4 x i16> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vint16m1x7_t test_vcreate_v_i16m1x7(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
@@ -2488,14 +2488,14 @@ vint16m1x7_t test_vcreate_v_i16m1x7(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_i16m1x8(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]], <vscale x 4 x i16> [[V5:%.*]], <vscale x 4 x i16> [[V6:%.*]], <vscale x 4 x i16> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 4 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 4 x i16> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 4 x i16> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 4 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 4 x i16> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 4 x i16> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vint16m1x8_t test_vcreate_v_i16m1x8(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
@@ -2507,8 +2507,8 @@ vint16m1x8_t test_vcreate_v_i16m1x8(vint16m1_t v0, vint16m1_t v1, vint16m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_i16m2x2(
 // CHECK-RV64-SAME: <vscale x 8 x i16> [[V0:%.*]], <vscale x 8 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 8 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 8 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 8 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 8 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vint16m2x2_t test_vcreate_v_i16m2x2(vint16m2_t v0, vint16m2_t v1) {
@@ -2518,9 +2518,9 @@ vint16m2x2_t test_vcreate_v_i16m2x2(vint16m2_t v0, vint16m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_i16m2x3(
 // CHECK-RV64-SAME: <vscale x 8 x i16> [[V0:%.*]], <vscale x 8 x i16> [[V1:%.*]], <vscale x 8 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 8 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 8 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 8 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 8 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 8 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 8 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vint16m2x3_t test_vcreate_v_i16m2x3(vint16m2_t v0, vint16m2_t v1,
@@ -2531,10 +2531,10 @@ vint16m2x3_t test_vcreate_v_i16m2x3(vint16m2_t v0, vint16m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_i16m2x4(
 // CHECK-RV64-SAME: <vscale x 8 x i16> [[V0:%.*]], <vscale x 8 x i16> [[V1:%.*]], <vscale x 8 x i16> [[V2:%.*]], <vscale x 8 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 8 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 8 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 8 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 8 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 8 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 8 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 8 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 8 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vint16m2x4_t test_vcreate_v_i16m2x4(vint16m2_t v0, vint16m2_t v1, vint16m2_t v2,
@@ -2545,8 +2545,8 @@ vint16m2x4_t test_vcreate_v_i16m2x4(vint16m2_t v0, vint16m2_t v1, vint16m2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_i16m4x2(
 // CHECK-RV64-SAME: <vscale x 16 x i16> [[V0:%.*]], <vscale x 16 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 16 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 16 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 16 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 16 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vint16m4x2_t test_vcreate_v_i16m4x2(vint16m4_t v0, vint16m4_t v1) {
@@ -2556,8 +2556,8 @@ vint16m4x2_t test_vcreate_v_i16m4x2(vint16m4_t v0, vint16m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_i32mf2x2(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vint32mf2x2_t test_vcreate_v_i32mf2x2(vint32mf2_t v0, vint32mf2_t v1) {
@@ -2567,9 +2567,9 @@ vint32mf2x2_t test_vcreate_v_i32mf2x2(vint32mf2_t v0, vint32mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_i32mf2x3(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vint32mf2x3_t test_vcreate_v_i32mf2x3(vint32mf2_t v0, vint32mf2_t v1,
@@ -2580,10 +2580,10 @@ vint32mf2x3_t test_vcreate_v_i32mf2x3(vint32mf2_t v0, vint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_i32mf2x4(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vint32mf2x4_t test_vcreate_v_i32mf2x4(vint32mf2_t v0, vint32mf2_t v1,
@@ -2594,11 +2594,11 @@ vint32mf2x4_t test_vcreate_v_i32mf2x4(vint32mf2_t v0, vint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_i32mf2x5(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vint32mf2x5_t test_vcreate_v_i32mf2x5(vint32mf2_t v0, vint32mf2_t v1,
@@ -2610,12 +2610,12 @@ vint32mf2x5_t test_vcreate_v_i32mf2x5(vint32mf2_t v0, vint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_i32mf2x6(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]], <vscale x 1 x i32> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 1 x i32> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 1 x i32> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vint32mf2x6_t test_vcreate_v_i32mf2x6(vint32mf2_t v0, vint32mf2_t v1,
@@ -2627,13 +2627,13 @@ vint32mf2x6_t test_vcreate_v_i32mf2x6(vint32mf2_t v0, vint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_i32mf2x7(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]], <vscale x 1 x i32> [[V5:%.*]], <vscale x 1 x i32> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 1 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 1 x i32> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 1 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 1 x i32> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vint32mf2x7_t test_vcreate_v_i32mf2x7(vint32mf2_t v0, vint32mf2_t v1,
@@ -2646,14 +2646,14 @@ vint32mf2x7_t test_vcreate_v_i32mf2x7(vint32mf2_t v0, vint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_i32mf2x8(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]], <vscale x 1 x i32> [[V5:%.*]], <vscale x 1 x i32> [[V6:%.*]], <vscale x 1 x i32> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 1 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 1 x i32> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 1 x i32> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 1 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 1 x i32> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 1 x i32> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vint32mf2x8_t test_vcreate_v_i32mf2x8(vint32mf2_t v0, vint32mf2_t v1,
@@ -2666,8 +2666,8 @@ vint32mf2x8_t test_vcreate_v_i32mf2x8(vint32mf2_t v0, vint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_i32m1x2(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vint32m1x2_t test_vcreate_v_i32m1x2(vint32m1_t v0, vint32m1_t v1) {
@@ -2677,9 +2677,9 @@ vint32m1x2_t test_vcreate_v_i32m1x2(vint32m1_t v0, vint32m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_i32m1x3(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vint32m1x3_t test_vcreate_v_i32m1x3(vint32m1_t v0, vint32m1_t v1,
@@ -2690,10 +2690,10 @@ vint32m1x3_t test_vcreate_v_i32m1x3(vint32m1_t v0, vint32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_i32m1x4(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vint32m1x4_t test_vcreate_v_i32m1x4(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
@@ -2704,11 +2704,11 @@ vint32m1x4_t test_vcreate_v_i32m1x4(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_i32m1x5(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vint32m1x5_t test_vcreate_v_i32m1x5(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
@@ -2719,12 +2719,12 @@ vint32m1x5_t test_vcreate_v_i32m1x5(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_i32m1x6(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]], <vscale x 2 x i32> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 2 x i32> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 2 x i32> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vint32m1x6_t test_vcreate_v_i32m1x6(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
@@ -2736,13 +2736,13 @@ vint32m1x6_t test_vcreate_v_i32m1x6(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_i32m1x7(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]], <vscale x 2 x i32> [[V5:%.*]], <vscale x 2 x i32> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 2 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 2 x i32> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 2 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 2 x i32> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vint32m1x7_t test_vcreate_v_i32m1x7(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
@@ -2754,14 +2754,14 @@ vint32m1x7_t test_vcreate_v_i32m1x7(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_i32m1x8(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]], <vscale x 2 x i32> [[V5:%.*]], <vscale x 2 x i32> [[V6:%.*]], <vscale x 2 x i32> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 2 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 2 x i32> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 2 x i32> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 2 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 2 x i32> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 2 x i32> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vint32m1x8_t test_vcreate_v_i32m1x8(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
@@ -2773,8 +2773,8 @@ vint32m1x8_t test_vcreate_v_i32m1x8(vint32m1_t v0, vint32m1_t v1, vint32m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_i32m2x2(
 // CHECK-RV64-SAME: <vscale x 4 x i32> [[V0:%.*]], <vscale x 4 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 4 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 4 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 4 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 4 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vint32m2x2_t test_vcreate_v_i32m2x2(vint32m2_t v0, vint32m2_t v1) {
@@ -2784,9 +2784,9 @@ vint32m2x2_t test_vcreate_v_i32m2x2(vint32m2_t v0, vint32m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_i32m2x3(
 // CHECK-RV64-SAME: <vscale x 4 x i32> [[V0:%.*]], <vscale x 4 x i32> [[V1:%.*]], <vscale x 4 x i32> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 4 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 4 x i32> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 4 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 4 x i32> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vint32m2x3_t test_vcreate_v_i32m2x3(vint32m2_t v0, vint32m2_t v1,
@@ -2797,10 +2797,10 @@ vint32m2x3_t test_vcreate_v_i32m2x3(vint32m2_t v0, vint32m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_i32m2x4(
 // CHECK-RV64-SAME: <vscale x 4 x i32> [[V0:%.*]], <vscale x 4 x i32> [[V1:%.*]], <vscale x 4 x i32> [[V2:%.*]], <vscale x 4 x i32> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 4 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 4 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 4 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 4 x i32> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 4 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 4 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 4 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 4 x i32> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vint32m2x4_t test_vcreate_v_i32m2x4(vint32m2_t v0, vint32m2_t v1, vint32m2_t v2,
@@ -2811,8 +2811,8 @@ vint32m2x4_t test_vcreate_v_i32m2x4(vint32m2_t v0, vint32m2_t v1, vint32m2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_i32m4x2(
 // CHECK-RV64-SAME: <vscale x 8 x i32> [[V0:%.*]], <vscale x 8 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 8 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 8 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 8 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 8 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vint32m4x2_t test_vcreate_v_i32m4x2(vint32m4_t v0, vint32m4_t v1) {
@@ -2822,8 +2822,8 @@ vint32m4x2_t test_vcreate_v_i32m4x2(vint32m4_t v0, vint32m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_i64m1x2(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vint64m1x2_t test_vcreate_v_i64m1x2(vint64m1_t v0, vint64m1_t v1) {
@@ -2833,9 +2833,9 @@ vint64m1x2_t test_vcreate_v_i64m1x2(vint64m1_t v0, vint64m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_i64m1x3(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vint64m1x3_t test_vcreate_v_i64m1x3(vint64m1_t v0, vint64m1_t v1,
@@ -2846,10 +2846,10 @@ vint64m1x3_t test_vcreate_v_i64m1x3(vint64m1_t v0, vint64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_i64m1x4(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vint64m1x4_t test_vcreate_v_i64m1x4(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
@@ -2860,11 +2860,11 @@ vint64m1x4_t test_vcreate_v_i64m1x4(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_i64m1x5(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vint64m1x5_t test_vcreate_v_i64m1x5(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
@@ -2875,12 +2875,12 @@ vint64m1x5_t test_vcreate_v_i64m1x5(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_i64m1x6(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]], <vscale x 1 x i64> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 1 x i64> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 1 x i64> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vint64m1x6_t test_vcreate_v_i64m1x6(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
@@ -2892,13 +2892,13 @@ vint64m1x6_t test_vcreate_v_i64m1x6(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_i64m1x7(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]], <vscale x 1 x i64> [[V5:%.*]], <vscale x 1 x i64> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 1 x i64> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 1 x i64> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 1 x i64> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 1 x i64> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vint64m1x7_t test_vcreate_v_i64m1x7(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
@@ -2910,14 +2910,14 @@ vint64m1x7_t test_vcreate_v_i64m1x7(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_i64m1x8(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]], <vscale x 1 x i64> [[V5:%.*]], <vscale x 1 x i64> [[V6:%.*]], <vscale x 1 x i64> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 1 x i64> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 1 x i64> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 1 x i64> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 1 x i64> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 1 x i64> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 1 x i64> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vint64m1x8_t test_vcreate_v_i64m1x8(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
@@ -2929,8 +2929,8 @@ vint64m1x8_t test_vcreate_v_i64m1x8(vint64m1_t v0, vint64m1_t v1, vint64m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_i64m2x2(
 // CHECK-RV64-SAME: <vscale x 2 x i64> [[V0:%.*]], <vscale x 2 x i64> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 2 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 2 x i64> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 2 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 2 x i64> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vint64m2x2_t test_vcreate_v_i64m2x2(vint64m2_t v0, vint64m2_t v1) {
@@ -2940,9 +2940,9 @@ vint64m2x2_t test_vcreate_v_i64m2x2(vint64m2_t v0, vint64m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_i64m2x3(
 // CHECK-RV64-SAME: <vscale x 2 x i64> [[V0:%.*]], <vscale x 2 x i64> [[V1:%.*]], <vscale x 2 x i64> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 2 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 2 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 2 x i64> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 2 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 2 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 2 x i64> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vint64m2x3_t test_vcreate_v_i64m2x3(vint64m2_t v0, vint64m2_t v1,
@@ -2953,10 +2953,10 @@ vint64m2x3_t test_vcreate_v_i64m2x3(vint64m2_t v0, vint64m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_i64m2x4(
 // CHECK-RV64-SAME: <vscale x 2 x i64> [[V0:%.*]], <vscale x 2 x i64> [[V1:%.*]], <vscale x 2 x i64> [[V2:%.*]], <vscale x 2 x i64> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 2 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 2 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 2 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 2 x i64> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 2 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 2 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 2 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 2 x i64> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vint64m2x4_t test_vcreate_v_i64m2x4(vint64m2_t v0, vint64m2_t v1, vint64m2_t v2,
@@ -2967,8 +2967,8 @@ vint64m2x4_t test_vcreate_v_i64m2x4(vint64m2_t v0, vint64m2_t v1, vint64m2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_i64m4x2(
 // CHECK-RV64-SAME: <vscale x 4 x i64> [[V0:%.*]], <vscale x 4 x i64> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 4 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 4 x i64> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 4 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 4 x i64> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vint64m4x2_t test_vcreate_v_i64m4x2(vint64m4_t v0, vint64m4_t v1) {
@@ -2978,8 +2978,8 @@ vint64m4x2_t test_vcreate_v_i64m4x2(vint64m4_t v0, vint64m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @test_vcreate_v_u8mf8x2(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_2t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[TMP1]]
 //
 vuint8mf8x2_t test_vcreate_v_u8mf8x2(vuint8mf8_t v0, vuint8mf8_t v1) {
@@ -2989,9 +2989,9 @@ vuint8mf8x2_t test_vcreate_v_u8mf8x2(vuint8mf8_t v0, vuint8mf8_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @test_vcreate_v_u8mf8x3(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_3t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[TMP2]]
 //
 vuint8mf8x3_t test_vcreate_v_u8mf8x3(vuint8mf8_t v0, vuint8mf8_t v1,
@@ -3002,10 +3002,10 @@ vuint8mf8x3_t test_vcreate_v_u8mf8x3(vuint8mf8_t v0, vuint8mf8_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @test_vcreate_v_u8mf8x4(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_4t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[TMP3]]
 //
 vuint8mf8x4_t test_vcreate_v_u8mf8x4(vuint8mf8_t v0, vuint8mf8_t v1,
@@ -3016,11 +3016,11 @@ vuint8mf8x4_t test_vcreate_v_u8mf8x4(vuint8mf8_t v0, vuint8mf8_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @test_vcreate_v_u8mf8x5(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_5t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[TMP4]]
 //
 vuint8mf8x5_t test_vcreate_v_u8mf8x5(vuint8mf8_t v0, vuint8mf8_t v1,
@@ -3032,12 +3032,12 @@ vuint8mf8x5_t test_vcreate_v_u8mf8x5(vuint8mf8_t v0, vuint8mf8_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @test_vcreate_v_u8mf8x6(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]], <vscale x 1 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP4]], <vscale x 1 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_6t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP4]], <vscale x 1 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[TMP5]]
 //
 vuint8mf8x6_t test_vcreate_v_u8mf8x6(vuint8mf8_t v0, vuint8mf8_t v1,
@@ -3049,13 +3049,13 @@ vuint8mf8x6_t test_vcreate_v_u8mf8x6(vuint8mf8_t v0, vuint8mf8_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @test_vcreate_v_u8mf8x7(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]], <vscale x 1 x i8> [[V5:%.*]], <vscale x 1 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP4]], <vscale x 1 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP5]], <vscale x 1 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP4]], <vscale x 1 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_7t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP5]], <vscale x 1 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[TMP6]]
 //
 vuint8mf8x7_t test_vcreate_v_u8mf8x7(vuint8mf8_t v0, vuint8mf8_t v1,
@@ -3068,14 +3068,14 @@ vuint8mf8x7_t test_vcreate_v_u8mf8x7(vuint8mf8_t v0, vuint8mf8_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @test_vcreate_v_u8mf8x8(
 // CHECK-RV64-SAME: <vscale x 1 x i8> [[V0:%.*]], <vscale x 1 x i8> [[V1:%.*]], <vscale x 1 x i8> [[V2:%.*]], <vscale x 1 x i8> [[V3:%.*]], <vscale x 1 x i8> [[V4:%.*]], <vscale x 1 x i8> [[V5:%.*]], <vscale x 1 x i8> [[V6:%.*]], <vscale x 1 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) poison, <vscale x 1 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP0]], <vscale x 1 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP1]], <vscale x 1 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP2]], <vscale x 1 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP3]], <vscale x 1 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP4]], <vscale x 1 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP5]], <vscale x 1 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8.i64(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP6]], <vscale x 1 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) poison, <vscale x 1 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP0]], <vscale x 1 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP1]], <vscale x 1 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP2]], <vscale x 1 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP3]], <vscale x 1 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP4]], <vscale x 1 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP5]], <vscale x 1 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv1i8_8t.nxv1i8(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP6]], <vscale x 1 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[TMP7]]
 //
 vuint8mf8x8_t test_vcreate_v_u8mf8x8(vuint8mf8_t v0, vuint8mf8_t v1,
@@ -3088,8 +3088,8 @@ vuint8mf8x8_t test_vcreate_v_u8mf8x8(vuint8mf8_t v0, vuint8mf8_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vcreate_v_u8mf4x2(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP1]]
 //
 vuint8mf4x2_t test_vcreate_v_u8mf4x2(vuint8mf4_t v0, vuint8mf4_t v1) {
@@ -3099,9 +3099,9 @@ vuint8mf4x2_t test_vcreate_v_u8mf4x2(vuint8mf4_t v0, vuint8mf4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vcreate_v_u8mf4x3(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP2]]
 //
 vuint8mf4x3_t test_vcreate_v_u8mf4x3(vuint8mf4_t v0, vuint8mf4_t v1,
@@ -3112,10 +3112,10 @@ vuint8mf4x3_t test_vcreate_v_u8mf4x3(vuint8mf4_t v0, vuint8mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vcreate_v_u8mf4x4(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP3]]
 //
 vuint8mf4x4_t test_vcreate_v_u8mf4x4(vuint8mf4_t v0, vuint8mf4_t v1,
@@ -3126,11 +3126,11 @@ vuint8mf4x4_t test_vcreate_v_u8mf4x4(vuint8mf4_t v0, vuint8mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vcreate_v_u8mf4x5(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP4]]
 //
 vuint8mf4x5_t test_vcreate_v_u8mf4x5(vuint8mf4_t v0, vuint8mf4_t v1,
@@ -3142,12 +3142,12 @@ vuint8mf4x5_t test_vcreate_v_u8mf4x5(vuint8mf4_t v0, vuint8mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vcreate_v_u8mf4x6(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]], <vscale x 2 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 2 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 2 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP5]]
 //
 vuint8mf4x6_t test_vcreate_v_u8mf4x6(vuint8mf4_t v0, vuint8mf4_t v1,
@@ -3159,13 +3159,13 @@ vuint8mf4x6_t test_vcreate_v_u8mf4x6(vuint8mf4_t v0, vuint8mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vcreate_v_u8mf4x7(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]], <vscale x 2 x i8> [[V5:%.*]], <vscale x 2 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 2 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 2 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 2 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 2 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP6]]
 //
 vuint8mf4x7_t test_vcreate_v_u8mf4x7(vuint8mf4_t v0, vuint8mf4_t v1,
@@ -3178,14 +3178,14 @@ vuint8mf4x7_t test_vcreate_v_u8mf4x7(vuint8mf4_t v0, vuint8mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vcreate_v_u8mf4x8(
 // CHECK-RV64-SAME: <vscale x 2 x i8> [[V0:%.*]], <vscale x 2 x i8> [[V1:%.*]], <vscale x 2 x i8> [[V2:%.*]], <vscale x 2 x i8> [[V3:%.*]], <vscale x 2 x i8> [[V4:%.*]], <vscale x 2 x i8> [[V5:%.*]], <vscale x 2 x i8> [[V6:%.*]], <vscale x 2 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 2 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 2 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 2 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 2 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 2 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 2 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 2 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 2 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 2 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 2 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 2 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 2 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 2 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 2 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 2 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv2i8(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 2 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP7]]
 //
 vuint8mf4x8_t test_vcreate_v_u8mf4x8(vuint8mf4_t v0, vuint8mf4_t v1,
@@ -3198,8 +3198,8 @@ vuint8mf4x8_t test_vcreate_v_u8mf4x8(vuint8mf4_t v0, vuint8mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_u8mf2x2(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vuint8mf2x2_t test_vcreate_v_u8mf2x2(vuint8mf2_t v0, vuint8mf2_t v1) {
@@ -3209,9 +3209,9 @@ vuint8mf2x2_t test_vcreate_v_u8mf2x2(vuint8mf2_t v0, vuint8mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_u8mf2x3(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vuint8mf2x3_t test_vcreate_v_u8mf2x3(vuint8mf2_t v0, vuint8mf2_t v1,
@@ -3222,10 +3222,10 @@ vuint8mf2x3_t test_vcreate_v_u8mf2x3(vuint8mf2_t v0, vuint8mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_u8mf2x4(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vuint8mf2x4_t test_vcreate_v_u8mf2x4(vuint8mf2_t v0, vuint8mf2_t v1,
@@ -3236,11 +3236,11 @@ vuint8mf2x4_t test_vcreate_v_u8mf2x4(vuint8mf2_t v0, vuint8mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_u8mf2x5(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vuint8mf2x5_t test_vcreate_v_u8mf2x5(vuint8mf2_t v0, vuint8mf2_t v1,
@@ -3252,12 +3252,12 @@ vuint8mf2x5_t test_vcreate_v_u8mf2x5(vuint8mf2_t v0, vuint8mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_u8mf2x6(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]], <vscale x 4 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 4 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 4 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vuint8mf2x6_t test_vcreate_v_u8mf2x6(vuint8mf2_t v0, vuint8mf2_t v1,
@@ -3269,13 +3269,13 @@ vuint8mf2x6_t test_vcreate_v_u8mf2x6(vuint8mf2_t v0, vuint8mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_u8mf2x7(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]], <vscale x 4 x i8> [[V5:%.*]], <vscale x 4 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 4 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 4 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 4 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 4 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vuint8mf2x7_t test_vcreate_v_u8mf2x7(vuint8mf2_t v0, vuint8mf2_t v1,
@@ -3288,14 +3288,14 @@ vuint8mf2x7_t test_vcreate_v_u8mf2x7(vuint8mf2_t v0, vuint8mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_u8mf2x8(
 // CHECK-RV64-SAME: <vscale x 4 x i8> [[V0:%.*]], <vscale x 4 x i8> [[V1:%.*]], <vscale x 4 x i8> [[V2:%.*]], <vscale x 4 x i8> [[V3:%.*]], <vscale x 4 x i8> [[V4:%.*]], <vscale x 4 x i8> [[V5:%.*]], <vscale x 4 x i8> [[V6:%.*]], <vscale x 4 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 4 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 4 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 4 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 4 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 4 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 4 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 4 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 4 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 4 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 4 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 4 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 4 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 4 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 4 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 4 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv4i8(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 4 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vuint8mf2x8_t test_vcreate_v_u8mf2x8(vuint8mf2_t v0, vuint8mf2_t v1,
@@ -3308,8 +3308,8 @@ vuint8mf2x8_t test_vcreate_v_u8mf2x8(vuint8mf2_t v0, vuint8mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_u8m1x2(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vuint8m1x2_t test_vcreate_v_u8m1x2(vuint8m1_t v0, vuint8m1_t v1) {
@@ -3319,9 +3319,9 @@ vuint8m1x2_t test_vcreate_v_u8m1x2(vuint8m1_t v0, vuint8m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_u8m1x3(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vuint8m1x3_t test_vcreate_v_u8m1x3(vuint8m1_t v0, vuint8m1_t v1,
@@ -3332,10 +3332,10 @@ vuint8m1x3_t test_vcreate_v_u8m1x3(vuint8m1_t v0, vuint8m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_u8m1x4(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vuint8m1x4_t test_vcreate_v_u8m1x4(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
@@ -3346,11 +3346,11 @@ vuint8m1x4_t test_vcreate_v_u8m1x4(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_u8m1x5(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vuint8m1x5_t test_vcreate_v_u8m1x5(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
@@ -3361,12 +3361,12 @@ vuint8m1x5_t test_vcreate_v_u8m1x5(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_u8m1x6(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]], <vscale x 8 x i8> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 8 x i8> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 8 x i8> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vuint8m1x6_t test_vcreate_v_u8m1x6(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
@@ -3378,13 +3378,13 @@ vuint8m1x6_t test_vcreate_v_u8m1x6(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_u8m1x7(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]], <vscale x 8 x i8> [[V5:%.*]], <vscale x 8 x i8> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 8 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 8 x i8> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 8 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 8 x i8> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vuint8m1x7_t test_vcreate_v_u8m1x7(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
@@ -3396,14 +3396,14 @@ vuint8m1x7_t test_vcreate_v_u8m1x7(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_u8m1x8(
 // CHECK-RV64-SAME: <vscale x 8 x i8> [[V0:%.*]], <vscale x 8 x i8> [[V1:%.*]], <vscale x 8 x i8> [[V2:%.*]], <vscale x 8 x i8> [[V3:%.*]], <vscale x 8 x i8> [[V4:%.*]], <vscale x 8 x i8> [[V5:%.*]], <vscale x 8 x i8> [[V6:%.*]], <vscale x 8 x i8> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 8 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 8 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 8 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 8 x i8> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 8 x i8> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 8 x i8> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 8 x i8> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 8 x i8> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 8 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 8 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 8 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 8 x i8> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 8 x i8> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 8 x i8> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 8 x i8> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv8i8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 8 x i8> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vuint8m1x8_t test_vcreate_v_u8m1x8(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
@@ -3415,8 +3415,8 @@ vuint8m1x8_t test_vcreate_v_u8m1x8(vuint8m1_t v0, vuint8m1_t v1, vuint8m1_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_u8m2x2(
 // CHECK-RV64-SAME: <vscale x 16 x i8> [[V0:%.*]], <vscale x 16 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 16 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 16 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 16 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 16 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vuint8m2x2_t test_vcreate_v_u8m2x2(vuint8m2_t v0, vuint8m2_t v1) {
@@ -3426,9 +3426,9 @@ vuint8m2x2_t test_vcreate_v_u8m2x2(vuint8m2_t v0, vuint8m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_u8m2x3(
 // CHECK-RV64-SAME: <vscale x 16 x i8> [[V0:%.*]], <vscale x 16 x i8> [[V1:%.*]], <vscale x 16 x i8> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 16 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 16 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 16 x i8> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 16 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 16 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 16 x i8> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vuint8m2x3_t test_vcreate_v_u8m2x3(vuint8m2_t v0, vuint8m2_t v1,
@@ -3439,10 +3439,10 @@ vuint8m2x3_t test_vcreate_v_u8m2x3(vuint8m2_t v0, vuint8m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_u8m2x4(
 // CHECK-RV64-SAME: <vscale x 16 x i8> [[V0:%.*]], <vscale x 16 x i8> [[V1:%.*]], <vscale x 16 x i8> [[V2:%.*]], <vscale x 16 x i8> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 16 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 16 x i8> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 16 x i8> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 16 x i8> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 16 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 16 x i8> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 16 x i8> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv16i8(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 16 x i8> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vuint8m2x4_t test_vcreate_v_u8m2x4(vuint8m2_t v0, vuint8m2_t v1, vuint8m2_t v2,
@@ -3453,8 +3453,8 @@ vuint8m2x4_t test_vcreate_v_u8m2x4(vuint8m2_t v0, vuint8m2_t v1, vuint8m2_t v2,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_u8m4x2(
 // CHECK-RV64-SAME: <vscale x 32 x i8> [[V0:%.*]], <vscale x 32 x i8> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 32 x i8> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 32 x i8> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 32 x i8> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv32i8(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 32 x i8> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vuint8m4x2_t test_vcreate_v_u8m4x2(vuint8m4_t v0, vuint8m4_t v1) {
@@ -3464,8 +3464,8 @@ vuint8m4x2_t test_vcreate_v_u8m4x2(vuint8m4_t v0, vuint8m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vcreate_v_u16mf4x2(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_2t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[TMP1]]
 //
 vuint16mf4x2_t test_vcreate_v_u16mf4x2(vuint16mf4_t v0, vuint16mf4_t v1) {
@@ -3475,9 +3475,9 @@ vuint16mf4x2_t test_vcreate_v_u16mf4x2(vuint16mf4_t v0, vuint16mf4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vcreate_v_u16mf4x3(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_3t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[TMP2]]
 //
 vuint16mf4x3_t test_vcreate_v_u16mf4x3(vuint16mf4_t v0, vuint16mf4_t v1,
@@ -3488,10 +3488,10 @@ vuint16mf4x3_t test_vcreate_v_u16mf4x3(vuint16mf4_t v0, vuint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vcreate_v_u16mf4x4(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_4t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP3]]
 //
 vuint16mf4x4_t test_vcreate_v_u16mf4x4(vuint16mf4_t v0, vuint16mf4_t v1,
@@ -3502,11 +3502,11 @@ vuint16mf4x4_t test_vcreate_v_u16mf4x4(vuint16mf4_t v0, vuint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vcreate_v_u16mf4x5(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_5t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[TMP4]]
 //
 vuint16mf4x5_t test_vcreate_v_u16mf4x5(vuint16mf4_t v0, vuint16mf4_t v1,
@@ -3518,12 +3518,12 @@ vuint16mf4x5_t test_vcreate_v_u16mf4x5(vuint16mf4_t v0, vuint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vcreate_v_u16mf4x6(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]], <vscale x 1 x i16> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 1 x i16> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_6t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP4]], <vscale x 1 x i16> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP5]]
 //
 vuint16mf4x6_t test_vcreate_v_u16mf4x6(vuint16mf4_t v0, vuint16mf4_t v1,
@@ -3535,13 +3535,13 @@ vuint16mf4x6_t test_vcreate_v_u16mf4x6(vuint16mf4_t v0, vuint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vcreate_v_u16mf4x7(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]], <vscale x 1 x i16> [[V5:%.*]], <vscale x 1 x i16> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 1 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 1 x i16> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP4]], <vscale x 1 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_7t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP5]], <vscale x 1 x i16> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[TMP6]]
 //
 vuint16mf4x7_t test_vcreate_v_u16mf4x7(vuint16mf4_t v0, vuint16mf4_t v1,
@@ -3554,14 +3554,14 @@ vuint16mf4x7_t test_vcreate_v_u16mf4x7(vuint16mf4_t v0, vuint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vcreate_v_u16mf4x8(
 // CHECK-RV64-SAME: <vscale x 1 x i16> [[V0:%.*]], <vscale x 1 x i16> [[V1:%.*]], <vscale x 1 x i16> [[V2:%.*]], <vscale x 1 x i16> [[V3:%.*]], <vscale x 1 x i16> [[V4:%.*]], <vscale x 1 x i16> [[V5:%.*]], <vscale x 1 x i16> [[V6:%.*]], <vscale x 1 x i16> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 1 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 1 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 1 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 1 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 1 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 1 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 1 x i16> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 1 x i16> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison, <vscale x 1 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP0]], <vscale x 1 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP1]], <vscale x 1 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP2]], <vscale x 1 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP3]], <vscale x 1 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP4]], <vscale x 1 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP5]], <vscale x 1 x i16> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv2i8_8t.nxv1i16(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP6]], <vscale x 1 x i16> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[TMP7]]
 //
 vuint16mf4x8_t test_vcreate_v_u16mf4x8(vuint16mf4_t v0, vuint16mf4_t v1,
@@ -3574,8 +3574,8 @@ vuint16mf4x8_t test_vcreate_v_u16mf4x8(vuint16mf4_t v0, vuint16mf4_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_u16mf2x2(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vuint16mf2x2_t test_vcreate_v_u16mf2x2(vuint16mf2_t v0, vuint16mf2_t v1) {
@@ -3585,9 +3585,9 @@ vuint16mf2x2_t test_vcreate_v_u16mf2x2(vuint16mf2_t v0, vuint16mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_u16mf2x3(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vuint16mf2x3_t test_vcreate_v_u16mf2x3(vuint16mf2_t v0, vuint16mf2_t v1,
@@ -3598,10 +3598,10 @@ vuint16mf2x3_t test_vcreate_v_u16mf2x3(vuint16mf2_t v0, vuint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_u16mf2x4(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vuint16mf2x4_t test_vcreate_v_u16mf2x4(vuint16mf2_t v0, vuint16mf2_t v1,
@@ -3612,11 +3612,11 @@ vuint16mf2x4_t test_vcreate_v_u16mf2x4(vuint16mf2_t v0, vuint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_u16mf2x5(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vuint16mf2x5_t test_vcreate_v_u16mf2x5(vuint16mf2_t v0, vuint16mf2_t v1,
@@ -3628,12 +3628,12 @@ vuint16mf2x5_t test_vcreate_v_u16mf2x5(vuint16mf2_t v0, vuint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_u16mf2x6(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]], <vscale x 2 x i16> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 2 x i16> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 2 x i16> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vuint16mf2x6_t test_vcreate_v_u16mf2x6(vuint16mf2_t v0, vuint16mf2_t v1,
@@ -3645,13 +3645,13 @@ vuint16mf2x6_t test_vcreate_v_u16mf2x6(vuint16mf2_t v0, vuint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_u16mf2x7(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]], <vscale x 2 x i16> [[V5:%.*]], <vscale x 2 x i16> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 2 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 2 x i16> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 2 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 2 x i16> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vuint16mf2x7_t test_vcreate_v_u16mf2x7(vuint16mf2_t v0, vuint16mf2_t v1,
@@ -3664,14 +3664,14 @@ vuint16mf2x7_t test_vcreate_v_u16mf2x7(vuint16mf2_t v0, vuint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_u16mf2x8(
 // CHECK-RV64-SAME: <vscale x 2 x i16> [[V0:%.*]], <vscale x 2 x i16> [[V1:%.*]], <vscale x 2 x i16> [[V2:%.*]], <vscale x 2 x i16> [[V3:%.*]], <vscale x 2 x i16> [[V4:%.*]], <vscale x 2 x i16> [[V5:%.*]], <vscale x 2 x i16> [[V6:%.*]], <vscale x 2 x i16> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 2 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 2 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 2 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 2 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 2 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 2 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 2 x i16> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 2 x i16> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 2 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 2 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 2 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 2 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 2 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 2 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 2 x i16> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv2i16(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 2 x i16> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vuint16mf2x8_t test_vcreate_v_u16mf2x8(vuint16mf2_t v0, vuint16mf2_t v1,
@@ -3684,8 +3684,8 @@ vuint16mf2x8_t test_vcreate_v_u16mf2x8(vuint16mf2_t v0, vuint16mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_u16m1x2(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vuint16m1x2_t test_vcreate_v_u16m1x2(vuint16m1_t v0, vuint16m1_t v1) {
@@ -3695,9 +3695,9 @@ vuint16m1x2_t test_vcreate_v_u16m1x2(vuint16m1_t v0, vuint16m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_u16m1x3(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vuint16m1x3_t test_vcreate_v_u16m1x3(vuint16m1_t v0, vuint16m1_t v1,
@@ -3708,10 +3708,10 @@ vuint16m1x3_t test_vcreate_v_u16m1x3(vuint16m1_t v0, vuint16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_u16m1x4(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vuint16m1x4_t test_vcreate_v_u16m1x4(vuint16m1_t v0, vuint16m1_t v1,
@@ -3722,11 +3722,11 @@ vuint16m1x4_t test_vcreate_v_u16m1x4(vuint16m1_t v0, vuint16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_u16m1x5(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vuint16m1x5_t test_vcreate_v_u16m1x5(vuint16m1_t v0, vuint16m1_t v1,
@@ -3738,12 +3738,12 @@ vuint16m1x5_t test_vcreate_v_u16m1x5(vuint16m1_t v0, vuint16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_u16m1x6(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]], <vscale x 4 x i16> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 4 x i16> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 4 x i16> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vuint16m1x6_t test_vcreate_v_u16m1x6(vuint16m1_t v0, vuint16m1_t v1,
@@ -3755,13 +3755,13 @@ vuint16m1x6_t test_vcreate_v_u16m1x6(vuint16m1_t v0, vuint16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_u16m1x7(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]], <vscale x 4 x i16> [[V5:%.*]], <vscale x 4 x i16> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 4 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 4 x i16> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 4 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 4 x i16> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vuint16m1x7_t test_vcreate_v_u16m1x7(vuint16m1_t v0, vuint16m1_t v1,
@@ -3774,14 +3774,14 @@ vuint16m1x7_t test_vcreate_v_u16m1x7(vuint16m1_t v0, vuint16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_u16m1x8(
 // CHECK-RV64-SAME: <vscale x 4 x i16> [[V0:%.*]], <vscale x 4 x i16> [[V1:%.*]], <vscale x 4 x i16> [[V2:%.*]], <vscale x 4 x i16> [[V3:%.*]], <vscale x 4 x i16> [[V4:%.*]], <vscale x 4 x i16> [[V5:%.*]], <vscale x 4 x i16> [[V6:%.*]], <vscale x 4 x i16> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 4 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 4 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 4 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 4 x i16> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 4 x i16> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 4 x i16> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 4 x i16> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 4 x i16> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 4 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 4 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 4 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 4 x i16> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 4 x i16> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 4 x i16> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 4 x i16> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv4i16(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 4 x i16> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vuint16m1x8_t test_vcreate_v_u16m1x8(vuint16m1_t v0, vuint16m1_t v1,
@@ -3794,8 +3794,8 @@ vuint16m1x8_t test_vcreate_v_u16m1x8(vuint16m1_t v0, vuint16m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_u16m2x2(
 // CHECK-RV64-SAME: <vscale x 8 x i16> [[V0:%.*]], <vscale x 8 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 8 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 8 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 8 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 8 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vuint16m2x2_t test_vcreate_v_u16m2x2(vuint16m2_t v0, vuint16m2_t v1) {
@@ -3805,9 +3805,9 @@ vuint16m2x2_t test_vcreate_v_u16m2x2(vuint16m2_t v0, vuint16m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_u16m2x3(
 // CHECK-RV64-SAME: <vscale x 8 x i16> [[V0:%.*]], <vscale x 8 x i16> [[V1:%.*]], <vscale x 8 x i16> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 8 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 8 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 8 x i16> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 8 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 8 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 8 x i16> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vuint16m2x3_t test_vcreate_v_u16m2x3(vuint16m2_t v0, vuint16m2_t v1,
@@ -3818,10 +3818,10 @@ vuint16m2x3_t test_vcreate_v_u16m2x3(vuint16m2_t v0, vuint16m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_u16m2x4(
 // CHECK-RV64-SAME: <vscale x 8 x i16> [[V0:%.*]], <vscale x 8 x i16> [[V1:%.*]], <vscale x 8 x i16> [[V2:%.*]], <vscale x 8 x i16> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 8 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 8 x i16> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 8 x i16> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 8 x i16> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 8 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 8 x i16> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 8 x i16> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 8 x i16> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vuint16m2x4_t test_vcreate_v_u16m2x4(vuint16m2_t v0, vuint16m2_t v1,
@@ -3832,8 +3832,8 @@ vuint16m2x4_t test_vcreate_v_u16m2x4(vuint16m2_t v0, vuint16m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_u16m4x2(
 // CHECK-RV64-SAME: <vscale x 16 x i16> [[V0:%.*]], <vscale x 16 x i16> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 16 x i16> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 16 x i16> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 16 x i16> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 16 x i16> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vuint16m4x2_t test_vcreate_v_u16m4x2(vuint16m4_t v0, vuint16m4_t v1) {
@@ -3843,8 +3843,8 @@ vuint16m4x2_t test_vcreate_v_u16m4x2(vuint16m4_t v0, vuint16m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vcreate_v_u32mf2x2(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_2t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP1]]
 //
 vuint32mf2x2_t test_vcreate_v_u32mf2x2(vuint32mf2_t v0, vuint32mf2_t v1) {
@@ -3854,9 +3854,9 @@ vuint32mf2x2_t test_vcreate_v_u32mf2x2(vuint32mf2_t v0, vuint32mf2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vcreate_v_u32mf2x3(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_3t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP2]]
 //
 vuint32mf2x3_t test_vcreate_v_u32mf2x3(vuint32mf2_t v0, vuint32mf2_t v1,
@@ -3867,10 +3867,10 @@ vuint32mf2x3_t test_vcreate_v_u32mf2x3(vuint32mf2_t v0, vuint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vcreate_v_u32mf2x4(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_4t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP3]]
 //
 vuint32mf2x4_t test_vcreate_v_u32mf2x4(vuint32mf2_t v0, vuint32mf2_t v1,
@@ -3881,11 +3881,11 @@ vuint32mf2x4_t test_vcreate_v_u32mf2x4(vuint32mf2_t v0, vuint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vcreate_v_u32mf2x5(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_5t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP4]]
 //
 vuint32mf2x5_t test_vcreate_v_u32mf2x5(vuint32mf2_t v0, vuint32mf2_t v1,
@@ -3897,12 +3897,12 @@ vuint32mf2x5_t test_vcreate_v_u32mf2x5(vuint32mf2_t v0, vuint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vcreate_v_u32mf2x6(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]], <vscale x 1 x i32> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 1 x i32> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_6t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP4]], <vscale x 1 x i32> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP5]]
 //
 vuint32mf2x6_t test_vcreate_v_u32mf2x6(vuint32mf2_t v0, vuint32mf2_t v1,
@@ -3914,13 +3914,13 @@ vuint32mf2x6_t test_vcreate_v_u32mf2x6(vuint32mf2_t v0, vuint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vcreate_v_u32mf2x7(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]], <vscale x 1 x i32> [[V5:%.*]], <vscale x 1 x i32> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 1 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 1 x i32> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP4]], <vscale x 1 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_7t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP5]], <vscale x 1 x i32> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP6]]
 //
 vuint32mf2x7_t test_vcreate_v_u32mf2x7(vuint32mf2_t v0, vuint32mf2_t v1,
@@ -3933,14 +3933,14 @@ vuint32mf2x7_t test_vcreate_v_u32mf2x7(vuint32mf2_t v0, vuint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vcreate_v_u32mf2x8(
 // CHECK-RV64-SAME: <vscale x 1 x i32> [[V0:%.*]], <vscale x 1 x i32> [[V1:%.*]], <vscale x 1 x i32> [[V2:%.*]], <vscale x 1 x i32> [[V3:%.*]], <vscale x 1 x i32> [[V4:%.*]], <vscale x 1 x i32> [[V5:%.*]], <vscale x 1 x i32> [[V6:%.*]], <vscale x 1 x i32> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 1 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 1 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 1 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 1 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 1 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 1 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 1 x i32> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 1 x i32> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, <vscale x 1 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP0]], <vscale x 1 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP1]], <vscale x 1 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP2]], <vscale x 1 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP3]], <vscale x 1 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP4]], <vscale x 1 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP5]], <vscale x 1 x i32> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv4i8_8t.nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP6]], <vscale x 1 x i32> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP7]]
 //
 vuint32mf2x8_t test_vcreate_v_u32mf2x8(vuint32mf2_t v0, vuint32mf2_t v1,
@@ -3953,8 +3953,8 @@ vuint32mf2x8_t test_vcreate_v_u32mf2x8(vuint32mf2_t v0, vuint32mf2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_u32m1x2(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vuint32m1x2_t test_vcreate_v_u32m1x2(vuint32m1_t v0, vuint32m1_t v1) {
@@ -3964,9 +3964,9 @@ vuint32m1x2_t test_vcreate_v_u32m1x2(vuint32m1_t v0, vuint32m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_u32m1x3(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vuint32m1x3_t test_vcreate_v_u32m1x3(vuint32m1_t v0, vuint32m1_t v1,
@@ -3977,10 +3977,10 @@ vuint32m1x3_t test_vcreate_v_u32m1x3(vuint32m1_t v0, vuint32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_u32m1x4(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vuint32m1x4_t test_vcreate_v_u32m1x4(vuint32m1_t v0, vuint32m1_t v1,
@@ -3991,11 +3991,11 @@ vuint32m1x4_t test_vcreate_v_u32m1x4(vuint32m1_t v0, vuint32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_u32m1x5(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vuint32m1x5_t test_vcreate_v_u32m1x5(vuint32m1_t v0, vuint32m1_t v1,
@@ -4007,12 +4007,12 @@ vuint32m1x5_t test_vcreate_v_u32m1x5(vuint32m1_t v0, vuint32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_u32m1x6(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]], <vscale x 2 x i32> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 2 x i32> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 2 x i32> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vuint32m1x6_t test_vcreate_v_u32m1x6(vuint32m1_t v0, vuint32m1_t v1,
@@ -4024,13 +4024,13 @@ vuint32m1x6_t test_vcreate_v_u32m1x6(vuint32m1_t v0, vuint32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_u32m1x7(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]], <vscale x 2 x i32> [[V5:%.*]], <vscale x 2 x i32> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 2 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 2 x i32> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 2 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 2 x i32> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vuint32m1x7_t test_vcreate_v_u32m1x7(vuint32m1_t v0, vuint32m1_t v1,
@@ -4043,14 +4043,14 @@ vuint32m1x7_t test_vcreate_v_u32m1x7(vuint32m1_t v0, vuint32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_u32m1x8(
 // CHECK-RV64-SAME: <vscale x 2 x i32> [[V0:%.*]], <vscale x 2 x i32> [[V1:%.*]], <vscale x 2 x i32> [[V2:%.*]], <vscale x 2 x i32> [[V3:%.*]], <vscale x 2 x i32> [[V4:%.*]], <vscale x 2 x i32> [[V5:%.*]], <vscale x 2 x i32> [[V6:%.*]], <vscale x 2 x i32> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 2 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 2 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 2 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 2 x i32> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 2 x i32> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 2 x i32> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 2 x i32> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 2 x i32> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 2 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 2 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 2 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 2 x i32> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 2 x i32> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 2 x i32> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 2 x i32> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv2i32(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 2 x i32> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vuint32m1x8_t test_vcreate_v_u32m1x8(vuint32m1_t v0, vuint32m1_t v1,
@@ -4063,8 +4063,8 @@ vuint32m1x8_t test_vcreate_v_u32m1x8(vuint32m1_t v0, vuint32m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_u32m2x2(
 // CHECK-RV64-SAME: <vscale x 4 x i32> [[V0:%.*]], <vscale x 4 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 4 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 4 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 4 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 4 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vuint32m2x2_t test_vcreate_v_u32m2x2(vuint32m2_t v0, vuint32m2_t v1) {
@@ -4074,9 +4074,9 @@ vuint32m2x2_t test_vcreate_v_u32m2x2(vuint32m2_t v0, vuint32m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_u32m2x3(
 // CHECK-RV64-SAME: <vscale x 4 x i32> [[V0:%.*]], <vscale x 4 x i32> [[V1:%.*]], <vscale x 4 x i32> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 4 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 4 x i32> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 4 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 4 x i32> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vuint32m2x3_t test_vcreate_v_u32m2x3(vuint32m2_t v0, vuint32m2_t v1,
@@ -4087,10 +4087,10 @@ vuint32m2x3_t test_vcreate_v_u32m2x3(vuint32m2_t v0, vuint32m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_u32m2x4(
 // CHECK-RV64-SAME: <vscale x 4 x i32> [[V0:%.*]], <vscale x 4 x i32> [[V1:%.*]], <vscale x 4 x i32> [[V2:%.*]], <vscale x 4 x i32> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 4 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 4 x i32> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 4 x i32> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 4 x i32> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 4 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 4 x i32> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 4 x i32> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv4i32(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 4 x i32> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vuint32m2x4_t test_vcreate_v_u32m2x4(vuint32m2_t v0, vuint32m2_t v1,
@@ -4101,8 +4101,8 @@ vuint32m2x4_t test_vcreate_v_u32m2x4(vuint32m2_t v0, vuint32m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_u32m4x2(
 // CHECK-RV64-SAME: <vscale x 8 x i32> [[V0:%.*]], <vscale x 8 x i32> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 8 x i32> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 8 x i32> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 8 x i32> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv8i32(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 8 x i32> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vuint32m4x2_t test_vcreate_v_u32m4x2(vuint32m4_t v0, vuint32m4_t v1) {
@@ -4112,8 +4112,8 @@ vuint32m4x2_t test_vcreate_v_u32m4x2(vuint32m4_t v0, vuint32m4_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vcreate_v_u64m1x2(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_2t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[TMP1]]
 //
 vuint64m1x2_t test_vcreate_v_u64m1x2(vuint64m1_t v0, vuint64m1_t v1) {
@@ -4123,9 +4123,9 @@ vuint64m1x2_t test_vcreate_v_u64m1x2(vuint64m1_t v0, vuint64m1_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vcreate_v_u64m1x3(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_3t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[TMP2]]
 //
 vuint64m1x3_t test_vcreate_v_u64m1x3(vuint64m1_t v0, vuint64m1_t v1,
@@ -4136,10 +4136,10 @@ vuint64m1x3_t test_vcreate_v_u64m1x3(vuint64m1_t v0, vuint64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vcreate_v_u64m1x4(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_4t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP3]]
 //
 vuint64m1x4_t test_vcreate_v_u64m1x4(vuint64m1_t v0, vuint64m1_t v1,
@@ -4150,11 +4150,11 @@ vuint64m1x4_t test_vcreate_v_u64m1x4(vuint64m1_t v0, vuint64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vcreate_v_u64m1x5(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_5t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[TMP4]]
 //
 vuint64m1x5_t test_vcreate_v_u64m1x5(vuint64m1_t v0, vuint64m1_t v1,
@@ -4166,12 +4166,12 @@ vuint64m1x5_t test_vcreate_v_u64m1x5(vuint64m1_t v0, vuint64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vcreate_v_u64m1x6(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]], <vscale x 1 x i64> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 1 x i64> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_6t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP4]], <vscale x 1 x i64> [[V5]], i32 5)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP5]]
 //
 vuint64m1x6_t test_vcreate_v_u64m1x6(vuint64m1_t v0, vuint64m1_t v1,
@@ -4183,13 +4183,13 @@ vuint64m1x6_t test_vcreate_v_u64m1x6(vuint64m1_t v0, vuint64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vcreate_v_u64m1x7(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]], <vscale x 1 x i64> [[V5:%.*]], <vscale x 1 x i64> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 1 x i64> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 1 x i64> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP4]], <vscale x 1 x i64> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_7t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP5]], <vscale x 1 x i64> [[V6]], i32 6)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[TMP6]]
 //
 vuint64m1x7_t test_vcreate_v_u64m1x7(vuint64m1_t v0, vuint64m1_t v1,
@@ -4202,14 +4202,14 @@ vuint64m1x7_t test_vcreate_v_u64m1x7(vuint64m1_t v0, vuint64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vcreate_v_u64m1x8(
 // CHECK-RV64-SAME: <vscale x 1 x i64> [[V0:%.*]], <vscale x 1 x i64> [[V1:%.*]], <vscale x 1 x i64> [[V2:%.*]], <vscale x 1 x i64> [[V3:%.*]], <vscale x 1 x i64> [[V4:%.*]], <vscale x 1 x i64> [[V5:%.*]], <vscale x 1 x i64> [[V6:%.*]], <vscale x 1 x i64> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 1 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 1 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 1 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 1 x i64> [[V3]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 1 x i64> [[V4]], i64 4)
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 1 x i64> [[V5]], i64 5)
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 1 x i64> [[V6]], i64 6)
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 1 x i64> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison, <vscale x 1 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP0]], <vscale x 1 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP1]], <vscale x 1 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP2]], <vscale x 1 x i64> [[V3]], i32 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP3]], <vscale x 1 x i64> [[V4]], i32 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP4]], <vscale x 1 x i64> [[V5]], i32 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP5]], <vscale x 1 x i64> [[V6]], i32 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv8i8_8t.nxv1i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP6]], <vscale x 1 x i64> [[V7]], i32 7)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[TMP7]]
 //
 vuint64m1x8_t test_vcreate_v_u64m1x8(vuint64m1_t v0, vuint64m1_t v1,
@@ -4222,8 +4222,8 @@ vuint64m1x8_t test_vcreate_v_u64m1x8(vuint64m1_t v0, vuint64m1_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vcreate_v_u64m2x2(
 // CHECK-RV64-SAME: <vscale x 2 x i64> [[V0:%.*]], <vscale x 2 x i64> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 2 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 2 x i64> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, <vscale x 2 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_2t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP0]], <vscale x 2 x i64> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[TMP1]]
 //
 vuint64m2x2_t test_vcreate_v_u64m2x2(vuint64m2_t v0, vuint64m2_t v1) {
@@ -4233,9 +4233,9 @@ vuint64m2x2_t test_vcreate_v_u64m2x2(vuint64m2_t v0, vuint64m2_t v1) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vcreate_v_u64m2x3(
 // CHECK-RV64-SAME: <vscale x 2 x i64> [[V0:%.*]], <vscale x 2 x i64> [[V1:%.*]], <vscale x 2 x i64> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 2 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 2 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 2 x i64> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 2 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP0]], <vscale x 2 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_3t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP1]], <vscale x 2 x i64> [[V2]], i32 2)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[TMP2]]
 //
 vuint64m2x3_t test_vcreate_v_u64m2x3(vuint64m2_t v0, vuint64m2_t v1,
@@ -4246,10 +4246,10 @@ vuint64m2x3_t test_vcreate_v_u64m2x3(vuint64m2_t v0, vuint64m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vcreate_v_u64m2x4(
 // CHECK-RV64-SAME: <vscale x 2 x i64> [[V0:%.*]], <vscale x 2 x i64> [[V1:%.*]], <vscale x 2 x i64> [[V2:%.*]], <vscale x 2 x i64> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 2 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 2 x i64> [[V1]], i64 1)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 2 x i64> [[V2]], i64 2)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 2 x i64> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, <vscale x 2 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]], <vscale x 2 x i64> [[V1]], i32 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP1]], <vscale x 2 x i64> [[V2]], i32 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv16i8_4t.nxv2i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP2]], <vscale x 2 x i64> [[V3]], i32 3)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP3]]
 //
 vuint64m2x4_t test_vcreate_v_u64m2x4(vuint64m2_t v0, vuint64m2_t v1,
@@ -4260,8 +4260,8 @@ vuint64m2x4_t test_vcreate_v_u64m2x4(vuint64m2_t v0, vuint64m2_t v1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vcreate_v_u64m4x2(
 // CHECK-RV64-SAME: <vscale x 4 x i64> [[V0:%.*]], <vscale x 4 x i64> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 4 x i64> [[V0]], i64 0)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 4 x i64> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, <vscale x 4 x i64> [[V0]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vector.insert.triscv.vector.tuple_nxv32i8_2t.nxv4i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP0]], <vscale x 4 x i64> [[V1]], i32 1)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]]
 //
 vuint64m4x2_t test_vcreate_v_u64m4x2(vuint64m4_t v0, vuint64m4_t v1) {

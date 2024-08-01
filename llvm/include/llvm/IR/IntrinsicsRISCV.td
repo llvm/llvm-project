@@ -1359,11 +1359,11 @@ let TargetPrefix = "riscv" in {
 
   //==-- Intrinsics to perform vector tuple subvector insertion/extraction --=//
   def int_riscv_vector_insert : DefaultAttrsIntrinsic<[llvm_any_ty],
-                                                [LLVMMatchType<0>, llvm_anyvector_ty, llvm_anyint_ty],
+                                                [LLVMMatchType<0>, llvm_anyvector_ty, llvm_i32_ty],
                                                 [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
   def int_riscv_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                 [llvm_any_ty, llvm_anyint_ty],
+                                                 [llvm_any_ty, llvm_i32_ty],
                                                  [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
   defm vle : RISCVUSLoad;

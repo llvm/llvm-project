@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -842,12 +843,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
 
   // RISC-V vector tuple type. The layout is represented as the type that needs
   // the same number of vector registers(VREGS) as this tuple type, represented
-  // as <vscale x (VREGS * 8) x i8>.
+  // as <vscale x (RVVBitsPerBlock * VREGS / 8) x i8>.
   if (Name == "riscv.vector.tuple") {
     unsigned TotalNumElts =
         std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
                      ->getMinNumElements(),
-                 8U) *
+                 RISCV::RVVBitsPerBlock / 8) *
         Ty->getIntParameter(0);
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
