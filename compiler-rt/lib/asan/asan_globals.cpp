@@ -33,10 +33,9 @@ namespace __asan {
 typedef __asan_global Global;
 
 struct GlobalListNode {
-  const Global *g;
-  GlobalListNode *next;
+  const Global *g = nullptr;
+  GlobalListNode *next = nullptr;
 };
-
 typedef IntrusiveList<GlobalListNode> ListOfGlobals;
 typedef DenseMap<uptr, ListOfGlobals> MapOfGlobals;
 
@@ -80,9 +79,7 @@ ALWAYS_INLINE void PoisonRedZones(const Global &g) {
 const uptr kMinimalDistanceFromAnotherGlobal = 64;
 
 static void AddGlobalToList(ListOfGlobals &list, const Global *g) {
-  GlobalListNode *l = new (GetGlobalLowLevelAllocator()) GlobalListNode;
-  l->g = g;
-  list.push_front(l);
+  list.push_front(new (GetGlobalLowLevelAllocator()) GlobalListNode{g});
 }
 
 static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
@@ -185,9 +182,10 @@ static void CheckODRViolationViaPoisoning(const Global *g) {
     for (const auto &l : list_of_all_globals) {
       if (g->beg == l.g->beg &&
           (flags()->detect_odr_violation >= 2 || g->size != l.g->size) &&
-          !IsODRViolationSuppressed(g->name))
+          !IsODRViolationSuppressed(g->name)) {
         ReportODRViolation(g, FindRegistrationSite(g), l.g,
                            FindRegistrationSite(l.g));
+      }
     }
   }
 }
