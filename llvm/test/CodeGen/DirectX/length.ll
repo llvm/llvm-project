@@ -13,14 +13,6 @@ declare float @llvm.dx.length.v2f32(<2 x float>)
 declare float @llvm.dx.length.v3f32(<3 x float>)
 declare float @llvm.dx.length.v4f32(<4 x float>)
 
-define noundef half @test_length_half(half noundef %p0) {
-entry:  
-  ; EXPCHECK: call half @llvm.fabs.f16(half %{{.*}})
-  ; DOPCHECK: call half @dx.op.unary.f16(i32 6, half %{{.*}})
-  %0 = call half @llvm.fabs.f16(half %p0)
-  ret half %0
-}
-
 define noundef half @test_length_half2(<2 x half> noundef %p0) {
 entry:
   ; CHECK: extractelement <2 x half> %{{.*}}, i64 0
@@ -70,15 +62,6 @@ entry:
 
   %hlsl.length = call half @llvm.dx.length.v4f16(<4 x half> %p0)
   ret half %hlsl.length
-}
-
-define noundef float @test_length_float(float noundef %p0) {
-entry:  
-  ; EXPCHECK: call float @llvm.fabs.f32(float %p0)
-  ; DOPCHECK: call float @dx.op.unary.f32(i32 6, float %{{.*}})
-
-  %0 = call float @llvm.fabs.f32(float %p0)
-  ret float %0
 }
 
 define noundef float @test_length_float2(<2 x float> noundef %p0) {

@@ -1079,12 +1079,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_length: {
+  case Builtin::BI__builtin_hlsl_length: {
     if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
       return true;
     if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
 
     ExprResult A = TheCall->getArg(0);

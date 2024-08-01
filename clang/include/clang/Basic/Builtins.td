@@ -4708,7 +4708,7 @@ def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
 }
 
 def HLSLLength : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_elementwise_length"];
+  let Spellings = ["__builtin_hlsl_length"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

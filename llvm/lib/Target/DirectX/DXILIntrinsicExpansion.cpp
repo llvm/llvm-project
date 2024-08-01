@@ -170,11 +170,12 @@ static bool expandLengthIntrinsic(CallInst *Orig) {
   // CGBuiltin.cpp should have emitted a fabs call.
   Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
   auto *XVec = dyn_cast<FixedVectorType>(Ty);
-  unsigned size = XVec->getNumElements();
-  assert(Ty->isVectorTy() && size > 1 && "dx.length only works on vector type");
+  unsigned XVecSize = XVec->getNumElements();
+  assert(Ty->isVectorTy() && XVecSize > 1 &&
+         "dx.length requires a vector of length 2 or more");
 
   Value *Sum = Builder.CreateFMul(Elt, Elt);
-  for (unsigned I = 1; I < size; I++) {
+  for (unsigned I = 1; I < XVecSize; I++) {
     Elt = Builder.CreateExtractElement(X, I);
     Value *Mul = Builder.CreateFMul(Elt, Elt);
     Sum = Builder.CreateFAdd(Sum, Mul);
