@@ -3860,7 +3860,7 @@ public:
 class BinaryOperator : public Expr {
   enum { LHS, RHS, END_EXPR };
   Stmt *SubExprs[END_EXPR];
-  bool ExcludedOverflowPattern;
+  bool ExcludedOverflowPattern = false;
 
 public:
   typedef BinaryOperatorKind Opcode;
