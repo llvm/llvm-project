@@ -30,26 +30,26 @@ using namespace lldb;
 using namespace lldb_private;
 
 UnwindTable::UnwindTable(Module &module)
-    : m_module(module), m_unwinds(), m_initialized(false), m_mutex(),
-      m_object_file_unwind_up(), m_eh_frame_up(), m_compact_unwind_up(),
-      m_arm_unwind_up() {}
+    : m_module(module), m_unwinds(), m_scanned_all_unwind_sources(false),
+      m_mutex(), m_object_file_unwind_up(), m_eh_frame_up(),
+      m_compact_unwind_up(), m_arm_unwind_up() {}
 
 // We can't do some of this initialization when the ObjectFile is running its
 // ctor; delay doing it until needed for something.
 void UnwindTable::Initialize() {
-  if (m_initialized)
+  if (m_scanned_all_unwind_sources)
     return;
 
   std::lock_guard<std::mutex> guard(m_mutex);
 
-  if (m_initialized) // check again once we've acquired the lock
+  if (m_scanned_all_unwind_sources) // check again once we've acquired the lock
     return;
 
   ObjectFile *object_file = m_module.GetObjectFile();
   if (!object_file)
     return;
 
-  m_initialized = true;
+  m_scanned_all_unwind_sources = true;
 
   if (!m_object_file_unwind_up)
     m_object_file_unwind_up = object_file->CreateCallFrameInfo();
@@ -85,7 +85,7 @@ void UnwindTable::Initialize() {
 
 void UnwindTable::ModuleWasUpdated() {
   std::lock_guard<std::mutex> guard(m_mutex);
-  m_initialized = false;
+  m_scanned_all_unwind_sources = false;
 }
 
 UnwindTable::~UnwindTable() = default;
