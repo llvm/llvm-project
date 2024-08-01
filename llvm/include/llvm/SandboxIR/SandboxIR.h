@@ -32,15 +32,27 @@
 //                                      |                   |
 //                                      |                   +- BitCastInst
 //                                      |                   |
+//                                      |                   +- FPExtInst
+//                                      |                   |
 //                                      |                   +- FPToSIInst
 //                                      |                   |
 //                                      |                   +- FPToUIInst
+//                                      |                   |
+//                                      |                   +- FPTruncInst
 //                                      |                   |
 //                                      |                   +- IntToPtrInst
 //                                      |                   |
 //                                      |                   +- PtrToIntInst
 //                                      |                   |
+//                                      |                   +- SExtInst
+//                                      |                   |
 //                                      |                   +- SIToFPInst
+//                                      |                   |
+//                                      |                   +- TruncInst
+//                                      |                   |
+//                                      |                   +- UIToFPInst
+//                                      |                   |
+//                                      |                   +- ZExtInst
 //                                      |
 //                                      +- CallBase -----------+- CallBrInst
 //                                      |                      |
@@ -1458,6 +1470,12 @@ public:
   }
 };
 
+class TruncInst final : public CastInstImpl<Instruction::Opcode::Trunc> {};
+class ZExtInst final : public CastInstImpl<Instruction::Opcode::ZExt> {};
+class SExtInst final : public CastInstImpl<Instruction::Opcode::SExt> {};
+class FPTruncInst final : public CastInstImpl<Instruction::Opcode::FPTrunc> {};
+class FPExtInst final : public CastInstImpl<Instruction::Opcode::FPExt> {};
+class UIToFPInst final : public CastInstImpl<Instruction::Opcode::UIToFP> {};
 class SIToFPInst final : public CastInstImpl<Instruction::Opcode::SIToFP> {};
 class FPToUIInst final : public CastInstImpl<Instruction::Opcode::FPToUI> {};
 class FPToSIInst final : public CastInstImpl<Instruction::Opcode::FPToSI> {};
