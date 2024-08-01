@@ -3,6 +3,8 @@
 
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result
+
+// Run without -verify to check the order of errors we show.
 // RUN: not %clang_cc1 -std=c++20 -fsyntax-only %s -fcxx-exceptions -fexceptions -Wunused-result 2>&1 | FileCheck %s
 
 void no_coroutine_traits_bad_arg_await() {
@@ -339,18 +341,20 @@ Handle mixed_return_value() {
   co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
   return 0; // expected-error {{return statement not allowed in coroutine}}
   // expected-error@-1 {{no viable conversion from returned value of type}}
+  // Check that we first show that return is not allowed in coroutine.
+  // The error about bad conversion is most likely spurious so we prefer to have it afterwards.
   // CHECK-NOT: error: no viable conversion from returned value of type
   // CHECK: error: return statement not allowed in coroutine
   // CHECK: error: no viable conversion from returned value of type
 }
 
 Handle mixed_return_value_return_first(bool b) {
-   if (b) {
-        return 0; // expected-error {{no viable conversion from returned value of type}}
-        // expected-error@-1 {{return statement not allowed in coroutine}}
-    }
-    co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
-    co_return 0; // expected-error {{no member named 'return_value' in 'promise_handle'}}
+  if (b) {
+    return 0; // expected-error {{no viable conversion from returned value of type}}
+    // expected-error@-1 {{return statement not allowed in coroutine}}
+  }
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  co_return 0; // expected-error {{no member named 'return_value' in 'promise_handle'}}
 }
 
 Handle mixed_multiple_returns(bool b) {
@@ -359,6 +363,7 @@ Handle mixed_multiple_returns(bool b) {
     // expected-error@-1 {{return statement not allowed in coroutine}}
   }
   co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  // The error 'return statement not allowed in coroutine' should appear only once.
   return 0; // expected-error {{no viable conversion from returned value of type}}
 }
 
