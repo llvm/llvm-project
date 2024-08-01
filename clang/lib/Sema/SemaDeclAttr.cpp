@@ -1481,6 +1481,14 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   }
 
+  // Allow only pointers to be return type for functions with ownership_returns
+  // attribute. This matches with current OwnershipAttr::Takes semantics
+  if (K == OwnershipAttr::Returns &&
+      !getFunctionOrMethodResultType(D)->isPointerType()) {
+    S.Diag(AL.getLoc(), diag::err_ownership_takes_return_type) << AL;
+    return;
+  }
+
   IdentifierInfo *Module = AL.getArgAsIdent(0)->Ident;
 
   StringRef ModuleName = Module->getName();
@@ -5984,7 +5992,7 @@ static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Warn if the return type is not a pointer or reference type.
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     QualType RetTy = FD->getReturnType();
-    if (!RetTy->isPointerType() && !RetTy->isReferenceType()) {
+    if (!RetTy->isPointerOrReferenceType()) {
       S.Diag(AL.getLoc(), diag::warn_declspec_allocator_nonpointer)
           << AL.getRange() << RetTy;
       return;

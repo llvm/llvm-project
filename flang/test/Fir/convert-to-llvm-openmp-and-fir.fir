@@ -472,7 +472,7 @@ func.func @_QPomp_target() {
 // CHECK:           %[[UPPER:.*]] = llvm.mlir.constant(511 : index) : i64
 // CHECK:           %[[BOUNDS:.*]] = omp.map.bounds   lower_bound(%[[LOWER]] : i64) upper_bound(%[[UPPER]] : i64) extent(%[[EXTENT]] : i64) stride(%[[STRIDE]] : i64) start_idx(%[[STRIDE]] : i64)
 // CHECK:           %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = "a"}
-// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !llvm.ptr) {
+// CHECK:           omp.target map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !llvm.ptr) thread_limit(%[[VAL_2]] : i32) {
 // CHECK:           ^bb0(%[[ARG_0]]: !llvm.ptr):
 // CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
