@@ -41,8 +41,10 @@ enum {
   // condition code in op #4
   SELECT_CC,
 
-  // Shift
+  // SRCL(R) performs shift left(right) of the concatenation of 2 registers
+  // and returns high(low) 32-bit part of 64-bit result
   SRCL,
+  // Shift Right Combined
   SRCR,
 };
 }
@@ -90,6 +92,9 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
+
   const XtensaSubtarget &getSubtarget() const { return Subtarget; }
 
   MachineBasicBlock *
@@ -110,8 +115,6 @@ private:
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 

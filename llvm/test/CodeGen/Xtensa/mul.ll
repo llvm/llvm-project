@@ -634,3 +634,27 @@ define i8 @mulsub_demand_2(i8 %x, i8 %y) nounwind {
   %r = or i8 %a, 240
   ret i8 %r
 }
+
+define signext i32 @mul_imm_2(i32 %a) nounwind {
+; XTENSA-LABEL: mul_imm_2:
+; XTENSA:         slli a2, a2, 1
+; XTENSA-NEXT:    ret
+  %1 = mul i32 %a, 2
+  ret i32 %1
+}
+
+define signext i32 @mul_imm_1024(i32 %a) nounwind {
+; XTENSA-LABEL: mul_imm_1024:
+; XTENSA:         slli a2, a2, 10
+; XTENSA-NEXT:    ret
+  %1 = mul i32 %a, 1024
+  ret i32 %1
+}
+
+define signext i32 @mul_imm_16384(i32 %a) nounwind {
+; XTENSA-LABEL: mul_imm_16384:
+; XTENSA:         slli a2, a2, 14
+; XTENSA-NEXT:    ret
+  %1 = mul i32 %a, 16384
+  ret i32 %1
+}

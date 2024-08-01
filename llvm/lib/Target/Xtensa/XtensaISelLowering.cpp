@@ -100,7 +100,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setCondCodeAction(ISD::SETUGT, MVT::i32, Expand);
   setCondCodeAction(ISD::SETULE, MVT::i32, Expand);
 
-  setOperationAction(ISD::MUL, MVT::i32, Custom);
+  setOperationAction(ISD::MUL, MVT::i32, Expand);
   setOperationAction(ISD::MULHU, MVT::i32, Expand);
   setOperationAction(ISD::MULHS, MVT::i32, Expand);
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
@@ -655,10 +655,12 @@ SDValue XtensaTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
   SDValue TargetJT = DAG.getTargetJumpTable(JT->getIndex(), MVT::i32);
   const DataLayout &TD = DAG.getDataLayout();
   EVT PtrVT = Table.getValueType();
-  unsigned EntrySize = MJTI->getEntrySize(TD);
 
-  Index = DAG.getNode(ISD::MUL, DL, Index.getValueType(), Index,
-                      DAG.getConstant(EntrySize, DL, Index.getValueType()));
+  assert((MJTI->getEntrySize(TD) == 4) && "Unsupported jump-table entry size");
+
+  Index = DAG.getNode(ISD::SHL, DL, Index.getValueType(), Index,
+                      DAG.getConstant(2, DL, Index.getValueType()));
+
   SDValue Addr = DAG.getNode(ISD::ADD, DL, Index.getValueType(), Index, Table);
   SDValue LD =
       DAG.getLoad(PtrVT, DL, Chain, Addr,
@@ -852,36 +854,23 @@ SDValue XtensaTargetLowering::LowerShiftRightParts(SDValue Op,
   return DAG.getMergeValues(Ops, DL);
 }
 
-SDValue XtensaTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op->getValueType(0);
-  SDLoc DL(Op);
+bool XtensaTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                                  SDValue C) const {
+  if (!VT.isScalarInteger())
+    return false;
 
-  if (VT != MVT::i32)
-    return SDValue();
+  // Omit if data size exceeds.
+  if (VT.getSizeInBits() > 32)
+    return false;
 
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op->getOperand(1));
-  if (!C)
-    return SDValue();
-
-  int64_t MulAmt = C->getSExtValue();
-  unsigned ShiftAmt = 0;
-
-  switch (MulAmt) {
-  case 2:
-    ShiftAmt = 1;
-    break;
-  case 4:
-    ShiftAmt = 2;
-    break;
-  case 8:
-    ShiftAmt = 3;
-    break;
-  default:
-    return SDValue();
+  if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
+    const APInt &Imm = ConstNode->getAPIntValue();
+    // Convert MULT to LSL.
+    if (Imm.isPowerOf2() && Imm.isIntN(5))
+      return true;
   }
 
-  return DAG.getNode(ISD::SHL, DL, VT, Op->getOperand(0),
-                     DAG.getConstant(ShiftAmt, DL, VT));
+  return false;
 }
 
 SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
@@ -899,8 +888,6 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(Op, DAG);
-  case ISD::MUL:
-    return LowerMUL(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
   case ISD::STACKSAVE:
