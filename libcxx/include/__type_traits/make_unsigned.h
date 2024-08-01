@@ -73,7 +73,7 @@ using __make_unsigned_t = __copy_cv_t<_Tp, typename __make_unsigned<__remove_cv_
 #endif // __has_builtin(__make_unsigned)
 
 template <class _Tp>
-struct make_unsigned {
+struct _LIBCPP_NO_SPECIALIZATIONS make_unsigned {
   using type _LIBCPP_NODEBUG = __make_unsigned_t<_Tp>;
 };
 

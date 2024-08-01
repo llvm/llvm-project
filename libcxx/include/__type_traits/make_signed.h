@@ -71,7 +71,7 @@ using __make_signed_t = __copy_cv_t<_Tp, typename __make_signed<__remove_cv_t<_T
 #endif // __has_builtin(__make_signed)
 
 template <class _Tp>
-struct make_signed {
+struct _LIBCPP_NO_SPECIALIZATIONS make_signed {
   using type _LIBCPP_NODEBUG = __make_signed_t<_Tp>;
 };
 

@@ -38,7 +38,7 @@ using __is_same_uncvref _LIBCPP_NODEBUG = _IsSame<__remove_cvref_t<_Tp>, __remov
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-struct remove_cvref {
+struct _LIBCPP_NO_SPECIALIZATIONS remove_cvref {
   using type _LIBCPP_NODEBUG = __remove_cvref(_Tp);
 };
 
