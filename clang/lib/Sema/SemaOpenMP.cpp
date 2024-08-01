@@ -23156,6 +23156,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
     return new (getASTContext()) OMPNoOpenMPClause(Loc, RLoc);
   case OMPC_no_openmp_routines:
     return new (getASTContext()) OMPNoOpenMPRoutinesClause(Loc, RLoc);
+  case OMPC_no_parallelism:
+    return new (getASTContext()) OMPNoParallelismClause(Loc, RLoc);
   default:
     llvm_unreachable("Unexpected OpenMP clause");
   }

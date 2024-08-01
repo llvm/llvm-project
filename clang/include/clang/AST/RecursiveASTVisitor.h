@@ -3507,6 +3507,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPRoutinesClause(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPNoParallelismClause(
+    OMPNoParallelismClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPAcquireClause(OMPAcquireClause *) {
   return true;
 }

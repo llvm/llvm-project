@@ -595,6 +595,9 @@ void OMPClauseProfiler::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
 void OMPClauseProfiler::VisitOMPNoOpenMPRoutinesClause(
     const OMPNoOpenMPRoutinesClause *) {}
 
+void OMPClauseProfiler::VisitOMPNoParallelismClause(
+    const OMPNoParallelismClause *) {}
+
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}

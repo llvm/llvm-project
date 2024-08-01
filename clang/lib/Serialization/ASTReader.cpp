@@ -10482,6 +10482,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_no_openmp_routines:
     C = new (Context) OMPNoOpenMPRoutinesClause();
     break;
+  case llvm::omp::OMPC_no_parallelism:
+    C = new (Context) OMPNoParallelismClause();
+    break;
   case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
@@ -10913,6 +10916,8 @@ void OMPClauseReader::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
 
 void OMPClauseReader::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseReader::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 

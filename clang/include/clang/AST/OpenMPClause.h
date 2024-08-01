@@ -2229,6 +2229,28 @@ public:
   OMPNoOpenMPRoutinesClause() : OMPNoChildClause() {}
 };
 
+/// This represents the 'no_parallelism' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_parallelism
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_parallelism'
+/// clause.
+class OMPNoParallelismClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_parallelism> {
+public:
+  /// Build 'no_parallelism' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoParallelismClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoParallelismClause() : OMPNoChildClause() {}
+};
+
 /// This represents 'read' clause in the '#pragma omp atomic' directive.
 ///
 /// \code

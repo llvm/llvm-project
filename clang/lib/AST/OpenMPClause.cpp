@@ -2011,6 +2011,10 @@ void OMPClausePrinter::VisitOMPNoOpenMPRoutinesClause(
   OS << "no_openmp_routines";
 }
 
+void OMPClausePrinter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {
+  OS << "no_parallelism";
+}
+
 void OMPClausePrinter::VisitOMPSeqCstClause(OMPSeqCstClause *) {
   OS << "seq_cst";
 }
