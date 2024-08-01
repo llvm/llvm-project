@@ -389,6 +389,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.daddl
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -660,6 +661,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.daddf128
+    libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128

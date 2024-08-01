@@ -119,6 +119,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.ceill
     #libc.src.math.coshf
     #libc.src.math.cosf
+    #libc.src.math.daddl
     #libc.src.math.dfmal
     #libc.src.math.dsqrtl
     #libc.src.math.dsubl
