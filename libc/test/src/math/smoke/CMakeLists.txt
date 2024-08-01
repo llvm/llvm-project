@@ -4256,7 +4256,7 @@ add_fp_unittest(
   SUITE
     libc-math-smoke-tests
   SRCS
-    fsubl_test.cpp
+    fsubf128_test.cpp
   HDRS
     SubTest.h
   DEPENDS

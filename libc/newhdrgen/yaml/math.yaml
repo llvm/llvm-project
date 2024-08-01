@@ -794,6 +794,14 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: remainderf128
+    standards:
+      - llvm_libc_ext
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: remquo
     standards: 
       - stdc
@@ -1540,6 +1548,28 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fsub
+    standards: 
+      - stdc
+    return_type: float
+    arguments: 
+      - type: double
+      - type: double
+  - name: fsubl
+    standards: 
+      - stdc
+    return_type: float
+    arguments: 
+      - type: long double
+      - type: long double
+  - name: fsubf128
+    standards: 
+      - llvm_libc_ext
+    return_type: float
+    arguments: 
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: getpayloadf16
     standards: 
       - stdc

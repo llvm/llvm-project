@@ -701,6 +701,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
+    libc.src.math.remainderf128
     libc.src.math.remquof128
     libc.src.math.rintf128
     libc.src.math.roundevenf128

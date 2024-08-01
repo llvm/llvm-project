@@ -3021,6 +3021,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  remainderf128
+  SRCS
+    remainderf128.cpp
+  HDRS
+    ../remainderf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.division_and_remainder_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   hypotf
   SRCS
     hypotf.cpp
