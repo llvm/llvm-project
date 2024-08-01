@@ -981,7 +981,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
     bool Has512Len = (EBX >> 18) & 1;
     switch (EBX & 0xff) {
-    default: llvm_unreachable("Unknown version!");
+    default:
+      llvm_unreachable("Unknown version!");
     case 2:
       setFeature(FEATURE_AVX10_2_256);
       if (Has512Len)
