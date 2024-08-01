@@ -7581,6 +7581,25 @@ TEST_P(ImportAutoFunctions, ReturnWithSubstNonTypeTemplateParmExpr) {
   EXPECT_TRUE(ToBar);
 }
 
+TEST_P(ImportAutoFunctions, ReturnWithUnaryTransformType) {
+  const char *Code =
+      R"(
+        enum E { E1 };
+
+        template<typename T>
+        auto foo(T v) { return static_cast<__underlying_type(T)>(v); }
+
+        bool bar() { return foo(E1); }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX17);
+
+  auto *FromBar = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("bar")));
+
+  auto *ToBar = Import(FromBar, Lang_CXX17);
+  EXPECT_TRUE(ToBar);
+}
+
 struct ImportSourceLocations : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ImportSourceLocations, PreserveFileIDTreeStructure) {
