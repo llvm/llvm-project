@@ -24,7 +24,7 @@ struct {
   unsigned mVendorID;
   unsigned mArchID;
   unsigned mImplID;
-} __riscv__cpu_model __attribute__((visibility("hidden"), nocommon));
+} __riscv_cpu_model __attribute__((visibility("hidden"), nocommon));
 
 // NOTE: Should sync-up with RISCVFeatures.td
 // TODO: Maybe generate a header from tablegen then include it.
@@ -214,9 +214,9 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   // This unsets all extension bitmask bits.
 
   // Init VendorID, ArchID, ImplID
-  __riscv__cpu_model.mVendorID = Hwprobes[2].value;
-  __riscv__cpu_model.mArchID = Hwprobes[3].value;
-  __riscv__cpu_model.mImplID = Hwprobes[4].value;
+  __riscv_cpu_model.mVendorID = Hwprobes[2].value;
+  __riscv_cpu_model.mArchID = Hwprobes[3].value;
+  __riscv_cpu_model.mImplID = Hwprobes[4].value;
 
   // Init standard extension
   // TODO: Maybe Extension implied generate from tablegen?
