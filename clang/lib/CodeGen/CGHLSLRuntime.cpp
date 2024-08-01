@@ -280,7 +280,7 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   const auto *RD = Ty->getAsCXXRecordDecl();
   if (!RD)
     return;
-  // the resource related attributes are on the handle member 
+  // the resource related attributes are on the handle member
   // inside the record decl
   for (auto *FD : RD->fields()) {
     const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
@@ -295,7 +295,7 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
 
     BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
     addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
-	}
+  }
 }
 
 CGHLSLRuntime::BufferResBinding::BufferResBinding(

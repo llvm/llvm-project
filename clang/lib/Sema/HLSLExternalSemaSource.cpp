@@ -101,9 +101,9 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
-  BuiltinTypeDeclBuilder &addHandleMember(
-      ResourceClass RC, ResourceKind RK,
-      bool IsROV, AccessSpecifier Access = AccessSpecifier::AS_private) {
+  BuiltinTypeDeclBuilder &
+  addHandleMember(ResourceClass RC, ResourceKind RK, bool IsROV,
+                  AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
     QualType Ty = Record->getASTContext().VoidPtrTy;
