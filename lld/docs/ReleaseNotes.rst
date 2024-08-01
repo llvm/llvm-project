@@ -26,6 +26,10 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* ``-z nosectionheader`` has been implemented to omit the section header table.
+  The operation is similar to ``llvm-objcopy --strip-sections``.
+  (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
+
 Breaking changes
 ----------------
 

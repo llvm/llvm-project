@@ -283,6 +283,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  vsscanf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vsscanf_test.cpp
+  DEPENDS
+    libc.src.stdio.vsscanf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+  COMPILE_OPTIONS
+    ${sscanf_test_copts}
+)
+
+add_libc_test(
   puts_test
   HERMETIC_TEST_ONLY # writes to libc's stdout
   SUITE
