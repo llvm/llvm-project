@@ -100,6 +100,7 @@ struct WriteBuffer {
     case WriteMode::RESIZE_AND_FILL_BUFF:
       return resize_and_write(new_str);
     }
+    __builtin_unreachable();
   }
 };
 
