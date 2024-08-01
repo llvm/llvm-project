@@ -558,7 +558,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
 static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
-  ASTContext &Context = D->getASTContext();
+  ASTContext& Context = D->getASTContext();
   // TODO investigate whether we can use ASTContext::getCommentForDecl instead
   // of this logic. See also similar code in Mapper.cpp.
   RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
@@ -566,7 +566,7 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
     return;
 
   Comment->setAttached();
-  if (comments::FullComment *fc = Comment->parse(Context, nullptr, D)) {
+  if (comments::FullComment* fc = Comment->parse(Context, nullptr, D)) {
     I.Description.emplace_back();
     parseFullComment(fc, I.Description.back());
   }
