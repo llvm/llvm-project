@@ -12,8 +12,8 @@
 #include "terminator.h"
 #include <cfenv>
 
-// Some system don't define those exceptions, although they are mandated by
-// c++11 standard (e.g. musl, emscripten).
+// When not supported, these macro are undefined in cfenv.h,
+// set them to zero in that case.
 #ifndef FE_INVALID
 #define FE_INVALID 0
 #endif
@@ -62,7 +62,12 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
   if (excepts == 0 || excepts >= mapSize) {
     terminator.Crash("Invalid excepts value: %d", excepts);
   }
-  return map[excepts];
+  uint32_t except_value = map[excepts];
+  if (except_value == 0) {
+    terminator.Crash(
+        "Excepts value %d not supported by flang runtime", excepts);
+  }
+  return except_value;
 }
 
 // Verify that the size of ieee_modes_type and ieee_status_type objects from
