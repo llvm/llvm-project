@@ -613,8 +613,7 @@ void BranchInst::dump() const {
 void LoadInst::setVolatile(bool V) {
   auto &Tracker = Ctx.getTracker();
   if (Tracker.isTracking())
-    Tracker.track(
-        std::make_unique<SetVolatile>(cast<Instruction>(this), Tracker));
+    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
   cast<llvm::LoadInst>(Val)->setVolatile(V);
 }
 
@@ -676,8 +675,7 @@ void LoadInst::dump() const {
 void StoreInst::setVolatile(bool V) {
   auto &Tracker = Ctx.getTracker();
   if (Tracker.isTracking())
-    Tracker.track(
-        std::make_unique<SetVolatile>(cast<Instruction>(this), Tracker));
+    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
   cast<llvm::StoreInst>(Val)->setVolatile(V);
 }
 

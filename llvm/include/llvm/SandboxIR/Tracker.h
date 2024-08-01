@@ -54,6 +54,8 @@ namespace llvm::sandboxir {
 
 class BasicBlock;
 class CallBrInst;
+class LoadInst;
+class StoreInst;
 class Instruction;
 class Tracker;
 
@@ -214,11 +216,10 @@ public:
 };
 
 class SetVolatile : public IRChangeBase {
-  /// This holds the properties of whether
-  /// LoadInst or StoreInst was volatile
+  /// This holds the properties of whether LoadInst or StoreInst was volatile
   bool WasVolatile;
   /// This could either be StoreInst or LoadInst
-  PointerUnion<StoreInst *, LoadInst *> InstUnion;
+  PointerUnion<StoreInst *, LoadInst *> StoreOrLoad;
 
 public:
   SetVolatile(Instruction *I, Tracker &Tracker);

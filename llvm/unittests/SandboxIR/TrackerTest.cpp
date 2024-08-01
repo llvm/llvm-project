@@ -606,16 +606,16 @@ define void @foo(ptr %arg0, i8 %val) {
   auto *Store = cast<sandboxir::StoreInst>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
+  EXPECT_FALSE(Load->isVolatile());
+  EXPECT_FALSE(Store->isVolatile());
   // Check setVolatile()
   Ctx.save();
   Load->setVolatile(true);
   EXPECT_TRUE(Load->isVolatile());
-  Load->setVolatile(false);
-  EXPECT_FALSE(Load->isVolatile());
+  Ctx.revert();
 
   Ctx.save();
   Store->setVolatile(true);
   EXPECT_TRUE(Store->isVolatile());
-  Store->setVolatile(false);
-  EXPECT_FALSE(Store->isVolatile());
+  Ctx.revert();
 }
