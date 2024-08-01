@@ -3689,15 +3689,10 @@ bool AArch64TTIImpl::isPartialReductionSupported(
     return false;
 
   Type *ReductionType = ReductionInstr->getType();
-  if (ReductionType->isIntegerTy(32)) {
-    if (!InputType->isIntegerTy(8))
-      return false;
-  } else if (ReductionType->isIntegerTy(64)) {
-    if (!InputType->isIntegerTy(16))
-      return false;
-  }
 
-  return true;
+  return ((ReductionType->isIntegerTy(32) && InputType->isIntegerTy(8)) ||
+          (ReductionType->isIntegerTy(64) && InputType->isIntegerTy(16))) &&
+         ReductionType->isScalableTy();
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
