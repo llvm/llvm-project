@@ -1,0 +1,12 @@
+# RUN: cat -e %S/txt-files/newline | FileCheck %s
+
+# CHECK: new
+# CHECK: $
+# CHECK: $
+# CHECK: $
+# CHECK: $
+# CHECK: $
+# CHECK: $
+# CHECK: $
+# CHECK: $
+# CHECK: line
