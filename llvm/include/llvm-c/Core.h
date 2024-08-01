@@ -3163,7 +3163,7 @@ LLVM_C_ABI LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
  *
  * @see llvm::Intrinsic::getType()
  */
-LLVM_C_ABI LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
+LLVM_C_ABI LLVMTypeRef LLVMIntrinsicGetType(LLVMModuleRef Mod, unsigned ID,
                                             LLVMTypeRef *OverloadTypes,
                                             size_t OverloadCount);
 

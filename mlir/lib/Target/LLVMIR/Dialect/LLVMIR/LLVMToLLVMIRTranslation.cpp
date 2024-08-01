@@ -94,7 +94,8 @@ getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
   std::string errorMsg;
   llvm::raw_string_ostream errorOS(errorMsg);
   SmallVector<llvm::Type *, 8> overloadedTys;
-  if (!llvm::Intrinsic::isSignatureValid(id, ft, overloadedTys, errorOS)) {
+  if (!llvm::Intrinsic::isSignatureValid(module->getDataLayout(), id, ft,
+                                         overloadedTys, errorOS)) {
     return mlir::emitError(op.getLoc(), "call intrinsic signature ")
            << diagStr(ft) << " to overloaded intrinsic " << op.getIntrinAttr()
            << " does not match any of the overloads: " << errorMsg;
