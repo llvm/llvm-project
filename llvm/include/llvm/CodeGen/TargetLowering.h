@@ -1641,7 +1641,8 @@ public:
     MVT NVT = VT;
     do {
       NVT = (MVT::SimpleValueType)(NVT.SimpleTy+1);
-      assert(NVT.isInteger() == VT.isInteger() && NVT != MVT::isVoid &&
+      assert(NVT.isInteger() == VT.isInteger() &&
+             NVT.isFloatingPoint() == VT.isFloatingPoint() &&
              "Didn't find type to promote to!");
     } while (VTBits >= NVT.getScalarSizeInBits() || !isTypeLegal(NVT) ||
              getOperationAction(Op, NVT) == Promote);
