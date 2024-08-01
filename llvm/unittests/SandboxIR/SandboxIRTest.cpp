@@ -1489,11 +1489,13 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
 
   // Check classof(), getOpcode(), getSrcTy(), getDstTy()
   auto *ZExt = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_TRUE(isa<sandboxir::ZExtInst>(ZExt));
   EXPECT_EQ(ZExt->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
   EXPECT_EQ(ZExt->getSrcTy(), Ti32);
   EXPECT_EQ(ZExt->getDestTy(), Ti64);
 
   auto *SExt = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_TRUE(isa<sandboxir::SExtInst>(SExt));
   EXPECT_EQ(SExt->getOpcode(), sandboxir::Instruction::Opcode::SExt);
   EXPECT_EQ(SExt->getSrcTy(), Ti32);
   EXPECT_EQ(SExt->getDestTy(), Ti64);
@@ -1511,6 +1513,7 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   EXPECT_EQ(FPToSI->getDestTy(), Ti32);
 
   auto *FPExt = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_TRUE(isa<sandboxir::FPExtInst>(FPExt));
   EXPECT_EQ(FPExt->getOpcode(), sandboxir::Instruction::Opcode::FPExt);
   EXPECT_EQ(FPExt->getSrcTy(), Tfloat);
   EXPECT_EQ(FPExt->getDestTy(), Tdouble);
@@ -1534,16 +1537,19 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   EXPECT_EQ(SIToFP->getDestTy(), Tfloat);
 
   auto *UIToFP = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_TRUE(isa<sandboxir::UIToFPInst>(UIToFP));
   EXPECT_EQ(UIToFP->getOpcode(), sandboxir::Instruction::Opcode::UIToFP);
   EXPECT_EQ(UIToFP->getSrcTy(), Ti32);
   EXPECT_EQ(UIToFP->getDestTy(), Tfloat);
 
   auto *Trunc = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_TRUE(isa<sandboxir::TruncInst>(Trunc));
   EXPECT_EQ(Trunc->getOpcode(), sandboxir::Instruction::Opcode::Trunc);
   EXPECT_EQ(Trunc->getSrcTy(), Ti32);
   EXPECT_EQ(Trunc->getDestTy(), Ti16);
 
   auto *FPTrunc = cast<sandboxir::CastInst>(&*It++);
+  EXPECT_TRUE(isa<sandboxir::FPTruncInst>(FPTrunc));
   EXPECT_EQ(FPTrunc->getOpcode(), sandboxir::Instruction::Opcode::FPTrunc);
   EXPECT_EQ(FPTrunc->getSrcTy(), Tdouble);
   EXPECT_EQ(FPTrunc->getDestTy(), Tfloat);
@@ -1684,6 +1690,78 @@ void testCastInst(llvm::Module &M, Type *SrcTy, Type *DstTy) {
     EXPECT_EQ(NewI->getNextNode(), nullptr);
     EXPECT_EQ(NewI->getParent(), BB);
   }
+}
+
+TEST_F(SandboxIRTest, TruncInst) {
+  parseIR(C, R"IR(
+define void @foo(i64 %arg) {
+  %trunc = trunc i64 %arg to i32
+  ret void
+}
+)IR");
+  testCastInst<sandboxir::TruncInst, sandboxir::Instruction::Opcode::Trunc>(
+      *M,
+      /*SrcTy=*/Type::getInt64Ty(C), /*DstTy=*/Type::getInt32Ty(C));
+}
+
+TEST_F(SandboxIRTest, ZExtInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %zext = zext i32 %arg to i64
+  ret void
+}
+)IR");
+  testCastInst<sandboxir::ZExtInst, sandboxir::Instruction::Opcode::ZExt>(
+      *M,
+      /*SrcTy=*/Type::getInt32Ty(C), /*DstTy=*/Type::getInt64Ty(C));
+}
+
+TEST_F(SandboxIRTest, SExtInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %sext = sext i32 %arg to i64
+  ret void
+}
+)IR");
+  testCastInst<sandboxir::SExtInst, sandboxir::Instruction::Opcode::SExt>(
+      *M,
+      /*SrcTy=*/Type::getInt32Ty(C), /*DstTy=*/Type::getInt64Ty(C));
+}
+
+TEST_F(SandboxIRTest, FPTruncInst) {
+  parseIR(C, R"IR(
+define void @foo(double %arg) {
+  %fptrunc = fptrunc double %arg to float
+  ret void
+}
+)IR");
+  testCastInst<sandboxir::FPTruncInst, sandboxir::Instruction::Opcode::FPTrunc>(
+      *M,
+      /*SrcTy=*/Type::getDoubleTy(C), /*DstTy=*/Type::getFloatTy(C));
+}
+
+TEST_F(SandboxIRTest, FPExtInst) {
+  parseIR(C, R"IR(
+define void @foo(float %arg) {
+  %fpext = fpext float %arg to double
+  ret void
+}
+)IR");
+  testCastInst<sandboxir::FPExtInst, sandboxir::Instruction::Opcode::FPExt>(
+      *M,
+      /*SrcTy=*/Type::getFloatTy(C), /*DstTy=*/Type::getDoubleTy(C));
+}
+
+TEST_F(SandboxIRTest, UIToFPInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %uitofp = uitofp i32 %arg to float
+  ret void
+}
+)IR");
+  testCastInst<sandboxir::UIToFPInst, sandboxir::Instruction::Opcode::UIToFP>(
+      *M,
+      /*SrcTy=*/Type::getInt32Ty(C), /*DstTy=*/Type::getFloatTy(C));
 }
 
 TEST_F(SandboxIRTest, SIToFPInst) {

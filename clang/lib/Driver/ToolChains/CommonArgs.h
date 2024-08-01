@@ -138,6 +138,11 @@ bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
                       bool ForceStaticHostRuntime = false,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
 
+/// Adds offloading options for OpenMP host compilation to \p CmdArgs.
+void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
+                                 const llvm::opt::ArgList &Args,
+                                 llvm::opt::ArgStringList &CmdArgs);
+
 /// Adds Fortran runtime libraries to \p CmdArgs.
 void addFortranRuntimeLibs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs);

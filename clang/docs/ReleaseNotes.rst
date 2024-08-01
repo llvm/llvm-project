@@ -188,6 +188,9 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
   can be found as ordinary identifiers in struct/union definition. (#GH31295)
 
+- Fixed a crash caused by long chains of ``sizeof`` and other similar operators
+  that can be followed by a non-parenthesized expression. (#GH45061)
+
 OpenACC Specific Changes
 ------------------------
 

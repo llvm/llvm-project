@@ -3367,66 +3367,339 @@ define float @test_atomicrmw_fmax_f32_global_system(ptr addrspace(1) %ptr, float
 }
 
 define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX10-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX10-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
@@ -3455,66 +3728,339 @@ define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode
 }
 
 define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX10-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX10-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmax_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
@@ -3547,66 +4093,339 @@ define float @test_atomicrmw_fmin_f32_global_system(ptr addrspace(1) %ptr, float
 }
 
 define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX10-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX10-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
@@ -3635,66 +4454,339 @@ define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode
 }
 
 define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX10-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX10-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res
 }
 
 define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, float %value) {
-; COMMON-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[TMP6]]
+; GFX803-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret float [[TMP6]]
+;
+; GFX906-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret float [[TMP6]]
+;
+; GFX908-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret float [[TMP6]]
+;
+; GFX90A-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret float [[TMP6]]
+;
+; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX940:       atomicrmw.start:
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    ret float [[TMP6]]
+;
+; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret float [[RES]]
+;
+; GFX11-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    ret float [[RES]]
+;
+; GFX12-LABEL: define float @test_atomicrmw_fmin_f32_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], float [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %res

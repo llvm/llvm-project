@@ -7938,37 +7938,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_mno_amdgpu_ieee);
   }
 
-  // For all the host OpenMP offloading compile jobs we need to pass the targets
-  // information using `-fopenmp-targets=` option.
-  if (JA.isHostOffloading(Action::OFK_OpenMP)) {
-    SmallString<128> TargetInfo("-fopenmp-targets=");
-
-    Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
-
-    // Get list of device Toolchains
-    auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
-
-    if (Tgts && Tgts->getNumValues()) {
-      for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
-        if (i)
-          TargetInfo += ',';
-        // We need to get the string from the triple because it may be not
-        // exactly the same as the one we get directly from the arguments.
-        llvm::Triple T(Tgts->getValue(i));
-        TargetInfo += T.getTriple();
-      }
-    } else if (OpenMPTCRange.first != OpenMPTCRange.second) {
-      for (auto TI = OpenMPTCRange.first, TE = OpenMPTCRange.second; TI != TE;
-           ++TI) {
-        auto *deviceTC = TI->second;
-        TargetInfo += deviceTC->getTriple().str();
-      }
-    } else {
-      assert("OpenMP offloading requires target devices, use either \
-              `-fopenmp-targets=` format, or `--offload-arch=` flag");
-    }
-    CmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
-  }
+  addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
 
   bool VirtualFunctionElimination =
       Args.hasFlag(options::OPT_fvirtual_function_elimination,

@@ -846,7 +846,6 @@ void TargetPassConfig::addIRPasses() {
   // TODO: add a pass insertion point here
   addPass(&GCLoweringID);
   addPass(&ShadowStackGCLoweringID);
-  addPass(createLowerConstantIntrinsicsPass());
 
   // For MachO, lower @llvm.global_dtors into @llvm.global_ctors with
   // __cxa_atexit() calls to avoid emitting the deprecated __mod_term_func.
