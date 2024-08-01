@@ -28,10 +28,12 @@
 
 template <class Real>
 constexpr unsigned get_maximal_order() {
-  if constexpr (std::numeric_limits<Real>::max_exponent10 < std::numeric_limits<Real>::max_exponent)
+  if constexpr (std::numeric_limits<Real>::max_exponent < 64)
+    return 39;
+  else if constexpr (std::numeric_limits<Real>::max_exponent < 129)
     return 128;
   else
-    return 39;
+    return 1024;
 }
 
 template <class T>
