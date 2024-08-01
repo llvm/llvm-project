@@ -78,6 +78,7 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
 
   switch (Values[0]->IT) {
   case InfoType::IT_namespace:
+    return reduce<NamespaceInfo>(Values);
   case InfoType::IT_record:
     return reduce<RecordInfo>(Values);
   case InfoType::IT_enum:
@@ -220,8 +221,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
-    : Info(InfoType::IT_namespace, USR, Name, Path) {}
-
+      : Info(InfoType::IT_namespace, USR, Name, Path) {}
 
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));
