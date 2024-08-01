@@ -1373,7 +1373,12 @@ public:
     return cast<llvm::PHINode>(Val)->hasConstantOrUndefValue();
   }
   bool isComplete() const { return cast<llvm::PHINode>(Val)->isComplete(); }
-
+  // TODO: Implement the below functions:
+  // void replaceIncomingBlockWith (const BasicBlock *Old, BasicBlock *New);
+  // void copyIncomingBlocks(iterator_range<const_block_iterator> BBRange,
+  //                         uint32_t ToIdx = 0)
+  // void removeIncomingValueIf(function_ref< bool(unsigned)> Predicate,
+  //                            bool DeletePHIIfEmpty=true)
 #ifndef NDEBUG
   void verify() const final {
     assert(isa<llvm::PHINode>(Val) && "Expected PHINode!");
