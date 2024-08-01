@@ -133,7 +133,6 @@ namespace {
   protected:
     bool Is64Bit;
     bool IsV8Plus;
-    bool HasV9;
 
   public:
     SparcAsmBackend(const MCSubtargetInfo &STI)
@@ -141,8 +140,7 @@ namespace {
                            ? llvm::endianness::little
                            : llvm::endianness::big),
           Is64Bit(STI.getTargetTriple().isArch64Bit()),
-          IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)),
-          HasV9(STI.hasFeature(Sparc::FeatureV9)) {}
+          IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
 
     unsigned getNumFixupKinds() const override {
       return Sparc::NumTargetFixupKinds;
@@ -361,7 +359,7 @@ namespace {
     std::unique_ptr<MCObjectTargetWriter>
     createObjectTargetWriter() const override {
       uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
-      return createSparcELFObjectWriter(Is64Bit, IsV8Plus, HasV9, OSABI);
+      return createSparcELFObjectWriter(Is64Bit, IsV8Plus, OSABI);
     }
   };
 

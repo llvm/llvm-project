@@ -21,16 +21,11 @@ using namespace llvm;
 namespace {
   class SparcELFObjectWriter : public MCELFObjectTargetWriter {
   public:
-    SparcELFObjectWriter(bool Is64Bit, bool IsV8Plus, bool HasV9, uint8_t OSABI)
+    SparcELFObjectWriter(bool Is64Bit, bool IsV8Plus, uint8_t OSABI)
         : MCELFObjectTargetWriter(
               Is64Bit, OSABI,
-              Is64Bit
-                  ? ELF::EM_SPARCV9
-                  // Note that we still need to emit an EM_SPARC32PLUS object
-                  // even when V8+ isn't explicitly requested, if we're
-                  // targeting a V9-capable CPU. This matches GAS behavior upon
-                  // encountering any V9 instructions in its input.
-                  : ((IsV8Plus || HasV9) ? ELF::EM_SPARC32PLUS : ELF::EM_SPARC),
+              Is64Bit ? ELF::EM_SPARCV9
+                      : (IsV8Plus ? ELF::EM_SPARC32PLUS : ELF::EM_SPARC),
               /*HasRelocationAddend*/ true) {}
 
     ~SparcELFObjectWriter() override = default;
@@ -153,8 +148,6 @@ bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
 }
 
 std::unique_ptr<MCObjectTargetWriter>
-llvm::createSparcELFObjectWriter(bool Is64Bit, bool IsV8Plus, bool HasV9,
-                                 uint8_t OSABI) {
-  return std::make_unique<SparcELFObjectWriter>(Is64Bit, IsV8Plus, HasV9,
-                                                OSABI);
+llvm::createSparcELFObjectWriter(bool Is64Bit, bool IsV8Plus, uint8_t OSABI) {
+  return std::make_unique<SparcELFObjectWriter>(Is64Bit, IsV8Plus, OSABI);
 }
