@@ -187,7 +187,7 @@ define float @f2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-NEXT:    bic r1, r1, #159
@@ -207,7 +207,7 @@ define float @f2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -245,7 +245,7 @@ define double @d2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-LE-NEXT:    bic r0, r0, #1
 ; CHECK-8M-LE-NEXT:    sub sp, #136
 ; CHECK-8M-LE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-LE-NEXT:    vlstm sp
+; CHECK-8M-LE-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-LE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-LE-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-LE-NEXT:    bic r1, r1, #159
@@ -264,7 +264,7 @@ define double @d2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-LE-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-LE-NEXT:    blxns r0
 ; CHECK-8M-LE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-LE-NEXT:    vlldm sp
+; CHECK-8M-LE-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-LE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-LE-NEXT:    add sp, #136
 ; CHECK-8M-LE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -283,7 +283,7 @@ define double @d2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-BE-NEXT:    bic r0, r0, #1
 ; CHECK-8M-BE-NEXT:    sub sp, #136
 ; CHECK-8M-BE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-BE-NEXT:    vlstm sp
+; CHECK-8M-BE-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-BE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-BE-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-BE-NEXT:    bic r1, r1, #159
@@ -302,7 +302,7 @@ define double @d2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-BE-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-BE-NEXT:    blxns r0
 ; CHECK-8M-BE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-BE-NEXT:    vlldm sp
+; CHECK-8M-BE-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-BE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-BE-NEXT:    add sp, #136
 ; CHECK-8M-BE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -368,7 +368,7 @@ define float @f3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-NEXT:    bic r1, r1, #159
@@ -388,7 +388,7 @@ define float @f3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -426,7 +426,7 @@ define double @d3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-LE-NEXT:    bic r0, r0, #1
 ; CHECK-8M-LE-NEXT:    sub sp, #136
 ; CHECK-8M-LE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-LE-NEXT:    vlstm sp
+; CHECK-8M-LE-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-LE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-LE-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-LE-NEXT:    bic r1, r1, #159
@@ -445,7 +445,7 @@ define double @d3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-LE-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-LE-NEXT:    blxns r0
 ; CHECK-8M-LE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-LE-NEXT:    vlldm sp
+; CHECK-8M-LE-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-LE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-LE-NEXT:    add sp, #136
 ; CHECK-8M-LE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -464,7 +464,7 @@ define double @d3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-BE-NEXT:    bic r0, r0, #1
 ; CHECK-8M-BE-NEXT:    sub sp, #136
 ; CHECK-8M-BE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-BE-NEXT:    vlstm sp
+; CHECK-8M-BE-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-BE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-BE-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-BE-NEXT:    bic r1, r1, #159
@@ -483,7 +483,7 @@ define double @d3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-BE-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-BE-NEXT:    blxns r0
 ; CHECK-8M-BE-NEXT:    vmov r11, r12, d0
-; CHECK-8M-BE-NEXT:    vlldm sp
+; CHECK-8M-BE-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-BE-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-BE-NEXT:    add sp, #136
 ; CHECK-8M-BE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -547,7 +547,7 @@ define float @f4(ptr nocapture %fptr) #6 {
 ; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    mov r1, r0
 ; CHECK-8M-NEXT:    mov r2, r0
 ; CHECK-8M-NEXT:    mov r3, r0
@@ -563,7 +563,7 @@ define float @f4(ptr nocapture %fptr) #6 {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -598,7 +598,7 @@ define double @d4(ptr nocapture %fptr) #6 {
 ; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    mov r1, r0
 ; CHECK-8M-NEXT:    mov r2, r0
 ; CHECK-8M-NEXT:    mov r3, r0
@@ -614,7 +614,7 @@ define double @d4(ptr nocapture %fptr) #6 {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r11, r12, d0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov d0, r11, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -649,7 +649,7 @@ define void @fd(ptr %f, float %a, double %b) #8 {
 ; CHECK-8M-NEXT:    vmov r12, s0
 ; CHECK-8M-NEXT:    mov r2, r0
 ; CHECK-8M-NEXT:    vmov r10, r11, d1
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    vmov d1, r10, r11
 ; CHECK-8M-NEXT:    ldr r1, [sp, #64]
@@ -666,7 +666,7 @@ define void @fd(ptr %f, float %a, double %b) #8 {
 ; CHECK-8M-NEXT:    mov r9, r0
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    pop {r7, pc}
@@ -708,7 +708,7 @@ define void @fdff(ptr %f, float %a, double %b, float %c, float %d) #8 {
 ; CHECK-8M-NEXT:    vmov r9, s1
 ; CHECK-8M-NEXT:    mov r4, r0
 ; CHECK-8M-NEXT:    vmov r8, s4
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    vmov d1, r10, r11
 ; CHECK-8M-NEXT:    vmov s1, r9
@@ -723,7 +723,7 @@ define void @fdff(ptr %f, float %a, double %b, float %c, float %d) #8 {
 ; CHECK-8M-NEXT:    mov r7, r0
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    pop {r7, pc}
@@ -765,7 +765,7 @@ define void @fidififid(ptr %fu, float %a, i32 %b, double %c, i32 %d, float %e, i
 ; CHECK-8M-NEXT:    vmov r8, s1
 ; CHECK-8M-NEXT:    vmov r7, s4
 ; CHECK-8M-NEXT:    vmov r5, r6, d3
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r11
 ; CHECK-8M-NEXT:    vmov d1, r9, r10
 ; CHECK-8M-NEXT:    vmov s1, r8
@@ -778,7 +778,7 @@ define void @fidififid(ptr %fu, float %a, i32 %b, double %c, i32 %d, float %e, i
 ; CHECK-8M-NEXT:    mov r4, r12
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r12
 ; CHECK-8M-NEXT:    blxns r12
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    pop {r7, pc}
@@ -897,7 +897,7 @@ define half @h2(ptr nocapture %hptr) nounwind {
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-NEXT:    bic r1, r1, #159
@@ -917,7 +917,7 @@ define half @h2(ptr nocapture %hptr) nounwind {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -976,7 +976,7 @@ define half @h3(ptr nocapture %hptr) nounwind {
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-NEXT:    bic r1, r1, #159
@@ -996,7 +996,7 @@ define half @h3(ptr nocapture %hptr) nounwind {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -1053,7 +1053,7 @@ define half @h4(ptr nocapture %hptr) nounwind {
 ; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    mov r1, r0
 ; CHECK-8M-NEXT:    mov r2, r0
 ; CHECK-8M-NEXT:    mov r3, r0
@@ -1069,7 +1069,7 @@ define half @h4(ptr nocapture %hptr) nounwind {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -1176,7 +1176,7 @@ define half @h1_arg(ptr nocapture %hptr, half %harg) nounwind {
 ; CHECK-8M-NEXT:    bic r0, r0, #1
 ; CHECK-8M-NEXT:    sub sp, #136
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vlstm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    ldr r1, [sp, #64]
 ; CHECK-8M-NEXT:    bic r1, r1, #159
@@ -1196,7 +1196,7 @@ define half @h1_arg(ptr nocapture %hptr, half %harg) nounwind {
 ; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
 ; CHECK-8M-NEXT:    blxns r0
 ; CHECK-8M-NEXT:    vmov r12, s0
-; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vlldm sp, {d0 - d15}
 ; CHECK-8M-NEXT:    vmov s0, r12
 ; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
