@@ -516,3 +516,114 @@ entry:
   %shuffle = shufflevector <2 x i32> %x, <2 x i32> %trunc, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %shuffle
 }
+
+; Type support varification - not supported with saturated value
+; i64 -> i16
+define <4 x i16> @sminsmax_range_unsigned_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
+; CHECK-LABEL: sminsmax_range_unsigned_i64_to_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmgt v2.2d, v1.2d, #0
+; CHECK-NEXT:    movi v3.2d, #0x0000000000ffff
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    cmgt v2.2d, v3.2d, v1.2d
+; CHECK-NEXT:    bif v1.16b, v3.16b, v2.16b
+; CHECK-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+entry:
+  %smax = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %y, <2 x i64> zeroinitializer)
+  %smin = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %smax, <2 x i64> <i64 65535, i64 65535>)
+  %trunc = trunc <2 x i64> %smin to <2 x i16>
+  %shuffle = shufflevector <2 x i16> %x, <2 x i16> %trunc, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i16> %shuffle
+}
+
+define <4 x i16> @sminsmax_range_signed_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
+; CHECK-LABEL: sminsmax_range_signed_i64_to_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #-32768 // =0xffffffffffff8000
+; CHECK-NEXT:    dup v2.2d, x8
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    cmgt v3.2d, v1.2d, v2.2d
+; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    dup v2.2d, x8
+; CHECK-NEXT:    cmgt v3.2d, v2.2d, v1.2d
+; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+entry:
+  %smax = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %y, <2 x i64> <i64 -32768, i64 -32768>)
+  %smin = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %smax, <2 x i64> <i64 32767, i64 32767>)
+  %trunc = trunc <2 x i64> %smin to <2 x i16>
+  %shuffle = shufflevector <2 x i16> %x, <2 x i16> %trunc, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i16> %shuffle
+}
+
+define <4 x i16> @umin_range_unsigned_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
+; CHECK-LABEL: umin_range_unsigned_i64_to_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x0000000000ffff
+; CHECK-NEXT:    cmhi v3.2d, v2.2d, v1.2d
+; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+entry:
+  %umin = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %y, <2 x i64> <i64 65535, i64 65535>)
+  %trunc = trunc <2 x i64> %umin to <2 x i16>
+  %shuffle = shufflevector <2 x i16> %x, <2 x i16> %trunc, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i16> %shuffle
+}
+
+; i32 -> i8
+define <8 x i8> @sminsmax_range_unsigned_i64_to_i8(<4 x i8> %x, <4 x i32> %y) {
+; CHECK-LABEL: sminsmax_range_unsigned_i64_to_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    smax v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-NEXT:    smin v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+entry:
+  %smax = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %y, <4 x i32> zeroinitializer)
+  %smin = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %smax, <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
+  %trunc = trunc <4 x i32> %smin to <4 x i8>
+  %shuffle = shufflevector <4 x i8> %x, <4 x i8> %trunc, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuffle
+}
+
+define <8 x i8> @sminsmax_range_signed_i32_to_i8(<4 x i8> %x, <4 x i32> %y) {
+; CHECK-LABEL: sminsmax_range_signed_i32_to_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mvni v2.4s, #127
+; CHECK-NEXT:    smax v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    movi v2.4s, #127
+; CHECK-NEXT:    smin v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+entry:
+  %smax = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %y, <4 x i32> <i32 -128, i32 -128, i32 -128, i32 -128>)
+  %smin = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %smax, <4 x i32> <i32 127, i32 127, i32 127, i32 127>)
+  %trunc = trunc <4 x i32> %smin to <4 x i8>
+  %shuffle = shufflevector <4 x i8> %x, <4 x i8> %trunc, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuffle
+}
+
+define <8 x i8> @umin_range_unsigned_i32_to_i8(<4 x i8> %x, <4 x i32> %y) {
+; CHECK-LABEL: umin_range_unsigned_i32_to_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-NEXT:    umin v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+entry:
+  %umin = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %y, <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
+  %trunc = trunc <4 x i32> %umin to <4 x i8>
+  %shuffle = shufflevector <4 x i8> %x, <4 x i8> %trunc, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuffle
+}
