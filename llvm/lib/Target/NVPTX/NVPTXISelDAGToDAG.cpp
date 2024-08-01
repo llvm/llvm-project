@@ -978,8 +978,9 @@ NVPTX::Ordering NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL,
     break;
   }
   default:
-    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
-                               OrderingToCString(NVPTX::Ordering(FenceOrdering))));
+    report_fatal_error(
+        formatv("Unexpected fence ordering: \"{}\".",
+                OrderingToCString(NVPTX::Ordering(FenceOrdering))));
   }
 
   return InstructionOrdering;
@@ -2026,7 +2027,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     break;
   case NVPTXISD::StoreV4:
     VecType = NVPTX::PTXLdStInstCode::V4;
-    Ops.append({N->getOperand(1), N->getOperand(2), N->getOperand(3), N->getOperand(4)});
+    Ops.append({N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                N->getOperand(4)});
     N2 = N->getOperand(5);
     break;
   default:
@@ -2043,12 +2045,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     ToTypeWidth = 32;
   }
 
-  Ops.append({
-      getI32Imm(InstructionOrdering, DL),
-      getI32Imm(CodeAddrSpace, DL),
-      getI32Imm(VecType, DL),
-      getI32Imm(ToType, DL),
-      getI32Imm(ToTypeWidth, DL)});
+  Ops.append({getI32Imm(InstructionOrdering, DL), getI32Imm(CodeAddrSpace, DL),
+              getI32Imm(VecType, DL), getI32Imm(ToType, DL),
+              getI32Imm(ToTypeWidth, DL)});
 
   if (SelectDirectAddr(N2, Addr)) {
     switch (N->getOpcode()) {
@@ -2461,9 +2460,7 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   for (unsigned i = 0; i < NumElts; ++i)
     Ops.push_back(N->getOperand(i + 3));
   Ops.append({CurDAG->getTargetConstant(ParamVal, DL, MVT::i32),
-      CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32),
-      Chain,
-      Glue});
+              CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain, Glue});
 
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in

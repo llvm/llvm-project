@@ -127,7 +127,8 @@ static_assert(Ordering::NotAtomic == (unsigned)AtomicOrdering::NotAtomic);
 static_assert(Ordering::Relaxed == (unsigned)AtomicOrdering::Monotonic);
 static_assert(Ordering::Acquire == (unsigned)AtomicOrdering::Acquire);
 static_assert(Ordering::Release == (unsigned)AtomicOrdering::Release);
-static_assert(Ordering::SequentiallyConsistent == (unsigned)AtomicOrdering::SequentiallyConsistent);        
+static_assert(Ordering::SequentiallyConsistent ==
+              (unsigned)AtomicOrdering::SequentiallyConsistent);
 
 namespace PTXLdStInstCode {
 enum AddressSpace {

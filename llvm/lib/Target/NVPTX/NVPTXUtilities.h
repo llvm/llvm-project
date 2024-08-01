@@ -86,7 +86,7 @@ bool Isv2x16VT(EVT VT);
 
 namespace NVPTX {
 
-inline std::string_view OrderingToCString(Ordering Order) {
+inline std::string OrderingToCString(Ordering Order) {
   switch (Order) {
   case Ordering::NotAtomic:
     return "NotAtomic";
