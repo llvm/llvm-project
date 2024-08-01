@@ -64,6 +64,14 @@ class ShTestLldb(ShTest):
                 if '-O "platform settings -w ' in cmd:
                     # If command is present, it is added by get_lldb_args.
                     # Replace the path with the tests' path in suite.
+                    # Example:
+                    # bin/lldb
+                    #   -O "platform shell mkdir -p /home/user/shell"
+                    #   -O "platform settings -w /home/user/shell" ...
+                    # =>
+                    # bin/lldb
+                    #   -O "platform shell mkdir -p /home/user/shell/SymbolFile/Breakpad/inline-record.test"
+                    #   -O "platform settings -w /home/user/shell/SymbolFile/Breakpad/inline-record.test" ...
                     args_def = " ".join(get_lldb_args(test.config))
                     args_unique = " ".join(
                         get_lldb_args(
