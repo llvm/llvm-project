@@ -2,13 +2,12 @@
 
 // This test verifies that loading and ELF file from memory works and the new
 // features that were added when loading from memory work like:
-// - Loading the .dynamic section from the PT_DYNAMIC since ELF files loaded 
+// - Loading the .dynamic section from the PT_DYNAMIC since ELF files loaded
 //   from memory don't have the section headers available.
 // - Loading the symbol table from the DT_SYMTAB dynamic entries.
 // This test will make a simple executable that:
 //   - links against libc
 //   - runs and stops at a breakpoint
-//   - 
 
 // RUN: %clang_host %p/Inputs/memory-elf.cpp -g -O0 -o %t
 
@@ -44,7 +43,7 @@
 // MAIN: Dependent Modules:
 
 // Check for the .dynamic dump and ensure we find all dynamic entries that are
-// required to be there and needed to get the .dynstr section and the symbol 
+// required to be there and needed to get the .dynstr section and the symbol
 // table, and the DT_DEBUG entry to find the list of shared libraries.
 // MAIN: .dynamic:
 // Make sure we found the .dynstr section by checking for valid strings after NEEDED
@@ -55,4 +54,3 @@
 // MAIN-DAG: SYMENT {{0x[0-9a-f]+}}
 // MAIN-DAG: DEBUG {{0x[0-9a-f]+}}
 // MAIN:     NULL {{0x[0-9a-f]+}}
-

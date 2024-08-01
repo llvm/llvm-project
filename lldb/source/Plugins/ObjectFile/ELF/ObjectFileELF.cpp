@@ -2452,7 +2452,7 @@ size_t ObjectFileELF::ParseDynamicSymbols() {
         lldb::offset_t cursor = entry.symbol.d_val;
         const char *name = dynstr_data->GetCStr(&cursor);
         if (name)
-          entry.name = name;
+          entry.name = std::string(name);
         break;
       }
       default:
@@ -3739,14 +3739,11 @@ DataExtractor ObjectFileELF::GetSegmentData(const ELFProgramHeader &H) {
   if (IsInMemory()) {
     // We have a ELF file in process memory, read the program header data from
     // the process.
-    ProcessSP process_sp(m_process_wp.lock());
-    if (process_sp) {
+    if (ProcessSP process_sp = m_process_wp.lock()) {
       const lldb::offset_t base_file_addr = GetBaseAddress().GetFileAddress();
-      // const addr_t data_addr = m_memory_addr + H.p_offset; // Not correct for
-      // some files
-      const addr_t data_addr = H.p_vaddr - base_file_addr + m_memory_addr;
-      DataBufferSP data_sp = ReadMemory(process_sp, data_addr, H.p_memsz);
-      if (data_sp)
+      const addr_t load_bias = m_memory_addr - base_file_addr;
+      const addr_t data_addr = H.p_vaddr + load_bias;
+      if (DataBufferSP data_sp = ReadMemory(process_sp, data_addr, H.p_memsz))
         return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
     }
   }
@@ -3792,24 +3789,23 @@ ObjectFileELF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
 }
 
 std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
-
-  SectionList *section_list = GetSectionList();
-  if (section_list) {
+  if (SectionList *section_list = GetSectionList()) {
     // Find the SHT_DYNAMIC section.
-    Section *dynamic =
-        section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
-            .get();
-    if (dynamic) {
+    if (Section *dynamic =
+            section_list
+                ->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
+                .get()) {
       assert(dynamic->GetObjectFile() == this);
-      const ELFSectionHeaderInfo *header =
-          GetSectionHeaderByIndex(dynamic->GetID());
-      if (header) {
+      if (const ELFSectionHeaderInfo *header =
+              GetSectionHeaderByIndex(dynamic->GetID())) {
         // sh_link: section header index of string table used by entries in
         // the section.
-        Section *dynstr = section_list->FindSectionByID(header->sh_link).get();
-        DataExtractor data;
-        if (dynstr && ReadSectionData(dynstr, data))
-          return data;
+        if (Section *dynstr =
+                section_list->FindSectionByID(header->sh_link).get()) {
+          DataExtractor data;
+          if (ReadSectionData(dynstr, data))
+            return data;
+        }
       }
     }
   }
@@ -3833,10 +3829,10 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
   if (strtab == nullptr || strsz == nullptr)
     return std::nullopt;
 
-  DataBufferSP data_sp = ReadMemory(process_sp, strtab->d_ptr, strsz->d_val);
-  if (!data_sp)
-    return std::nullopt;
-  return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
+  if (DataBufferSP data_sp =
+          ReadMemory(process_sp, strtab->d_ptr, strsz->d_val))
+    return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
+  return std::nullopt;
 }
 
 std::optional<lldb_private::DataExtractor> ObjectFileELF::GetDynamicData() {
@@ -3854,13 +3850,12 @@ std::optional<lldb_private::DataExtractor> ObjectFileELF::GetDynamicData() {
     }
   }
   // Fall back to using section headers.
-  SectionList *section_list = GetSectionList();
-  if (section_list) {
+  if (SectionList *section_list = GetSectionList()) {
     // Find the SHT_DYNAMIC section.
-    Section *dynamic =
-        section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
-            .get();
-    if (dynamic) {
+    if (Section *dynamic =
+            section_list
+                ->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
+                .get()) {
       assert(dynamic->GetObjectFile() == this);
       if (ReadSectionData(dynamic, data)) {
         m_dynamic_base_addr = dynamic->GetFileAddress();
