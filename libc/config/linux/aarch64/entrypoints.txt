@@ -363,6 +363,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.daddl
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
@@ -618,6 +619,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.daddf128
+    libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
