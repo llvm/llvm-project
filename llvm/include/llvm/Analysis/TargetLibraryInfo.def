@@ -491,6 +491,16 @@ TLI_DEFINE_ENUM_INTERNAL(Exit)
 TLI_DEFINE_STRING_INTERNAL("_Exit")
 TLI_DEFINE_SIG_INTERNAL(Void, Int)
 
+/// void std::terminate(void);
+TLI_DEFINE_ENUM_INTERNAL(terminate)
+TLI_DEFINE_STRING_INTERNAL("_ZSt9terminatev")
+TLI_DEFINE_SIG_INTERNAL(Void)
+
+/// void __cxa_throw(void *, void *, void (*)(void *));
+TLI_DEFINE_ENUM_INTERNAL(cxa_throw)
+TLI_DEFINE_STRING_INTERNAL("__cxa_throw")
+TLI_DEFINE_SIG_INTERNAL(Void, Ptr, Ptr, Ptr)
+
 /// void __cxa_guard_abort(guard_t *guard);
 /// guard_t is int64_t in Itanium ABI or int32_t on ARM eabi.
 TLI_DEFINE_ENUM_INTERNAL(cxa_guard_abort)
