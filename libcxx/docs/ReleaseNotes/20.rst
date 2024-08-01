@@ -44,6 +44,12 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
+  available.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER`` macro has been added to make ``std::get_temporary_buffer`` and
+  ``std::return_temporary_buffer`` available.
+
 - TODO
 
 
