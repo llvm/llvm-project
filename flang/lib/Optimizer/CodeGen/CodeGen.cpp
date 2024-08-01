@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/allocator-registry.h"
+#include "flang/Runtime/descriptor.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -1226,7 +1227,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                  mlir::ConversionPatternRewriter &rewriter,
                                  unsigned rank, mlir::Value eleSize,
                                  mlir::Value cfiTy, mlir::Value typeDesc,
-                                 int allocatorIdx = 0) const {
+                                 int allocatorIdx = kDefaultAllocator) const {
     auto llvmBoxTy = this->lowerTy().convertBoxTypeAsStruct(boxTy, rank);
     bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
     bool useInputType = fir::isPolymorphicType(boxTy) || isUnlimitedPolymorphic;
@@ -1245,13 +1246,15 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
 
     const bool hasAddendum = fir::boxHasAddendum(boxTy);
 
-    Fortran::ISO::CFI_cdesc_t desc;
-    desc.extra = 0;
+    // Descriptor used to set the correct value of the extra field.
+    Fortran::runtime::StaticDescriptor<0> staticDescriptor;
+    Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
+    desc.raw().extra = 0;
     desc.SetAllocIdx(allocatorIdx);
     if (hasAddendum)
       desc.SetHasAddendum();
     descriptor = insertField(rewriter, loc, descriptor, {kExtraPosInBox},
-                             this->genI32Constant(loc, rewriter, desc.extra));
+                             this->genI32Constant(loc, rewriter, desc.raw().extra));
 
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
