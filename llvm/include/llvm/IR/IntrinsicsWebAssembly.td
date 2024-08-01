@@ -348,7 +348,7 @@ def int_wasm_relaxed_dot_bf16x8_add_f32:
 def int_wasm_loadf16_f32:
   Intrinsic<[llvm_float_ty],
             [llvm_ptr_ty],
-            [IntrReadMem, IntrArgMemOnly],
+            [IntrWillReturn, IntrReadMem, IntrArgMemOnly],
              "", [SDNPMemOperand]>;
 def int_wasm_storef16_f32:
   Intrinsic<[],

@@ -4699,7 +4699,7 @@ def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
 class NVVM_WMMA_LD<WMMA_REGS Frag, string Layout, int WithStride>
   : Intrinsic<Frag.regs,
               !if(WithStride, [llvm_anyptr_ty, llvm_i32_ty], [llvm_anyptr_ty]),
-              [IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
+              [IntrWillReturn, IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
               WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.intr>;
 
 // WMMA.STORE.D

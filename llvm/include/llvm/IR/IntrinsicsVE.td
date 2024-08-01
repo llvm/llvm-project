@@ -4,10 +4,10 @@
 let TargetPrefix = "ve" in {
   def int_ve_vl_pack_f32p : ClangBuiltin<"__builtin_ve_vl_pack_f32p">,
                             Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_ptr_ty],
-                                      [IntrReadMem]>;
+                                      [IntrWillReturn, IntrReadMem]>;
   def int_ve_vl_pack_f32a : ClangBuiltin<"__builtin_ve_vl_pack_f32a">,
                             Intrinsic<[llvm_i64_ty], [llvm_ptr_ty],
-                                      [IntrReadMem]>;
+                                      [IntrWillReturn, IntrReadMem]>;
 
   def int_ve_vl_extract_vm512u :
       ClangBuiltin<"__builtin_ve_vl_extract_vm512u">,
