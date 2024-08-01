@@ -1,74 +1,54 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2c %s
-// RUN: %clang_cc1 -fsyntax-only -ast-dump -std=c++2c %s | FileCheck %s
-// RUN: %clang_cc1 -ast-print -std=c++2c %s | FileCheck %s --check-prefix=PRINT
-// expected-no-diagnostics
 
-struct S;
 template <typename> struct TS; // #template
 
-// CHECK-LABEL: CXXRecordDecl {{.*}} struct Friends
-// PRINT-LABEL: struct Friends {
-struct Friends {
-  // CHECK: FriendDecl {{.*}} 'int'
-  // CHECK-NEXT: FriendDecl {{.*}} 'long'
-  // PRINT-NEXT: friend int, long;
-  friend int, long;
-
-  // CHECK-NEXT: FriendDecl {{.*}} 'int'
-  // CHECK-NEXT: FriendDecl {{.*}} 'long'
-  // CHECK-NEXT: FriendDecl {{.*}} 'char'
-  // PRINT-NEXT: friend int, long, char;
+struct Errors {
+  friend int, int;
   friend int, long, char;
 
-  // CHECK-NEXT: FriendDecl {{.*}} 'S'
-  // PRINT-NEXT: friend S;
-  friend S;
+  // We simply ignore the '...' here.
+  friend float...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
 
-  // CHECK-NEXT: FriendDecl {{.*}} 'S'
-  // CHECK-NEXT: FriendDecl {{.*}} 'S'
-  // CHECK-NEXT: FriendDecl {{.*}} 'S'
-  // PRINT-NEXT: friend S, S, S;
-  friend S, S, S;
+  friend short..., unsigned, unsigned short...; // expected-error 2 {{pack expansion does not contain any unexpanded parameter packs}}
 
-  // CHECK-NEXT: FriendDecl
-  // CHECK-NEXT: ClassTemplateDecl {{.*}} friend TS
-  // PRINT-NEXT: friend template <typename> struct TS;
-  template <typename> friend struct TS;
+  // FIXME: This is a pretty bad diagnostic.
+  template <typename>
+  friend struct TS, int; // expected-error {{cannot be referenced with the 'struct' specifier}}
+                         // expected-note@#template {{declared here}}
+
+  double friend; // expected-error {{'friend' must appear first in a non-function declaration}}
+  double friend, double; // expected-error {{expected member name or ';' after declaration specifiers}}
 };
 
-namespace specialisations {
-template<class T>
-struct C {
-  template<class U> struct Nested;
+template <typename>
+struct C { template<class T> class Nested; };
+
+template<class... Ts> // expected-note {{template parameter is declared here}}
+struct VS {
+  friend Ts...;
+
+  friend class Ts...; // expected-error {{declaration of 'Ts' shadows template parameter}}
+  // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
+
+  // TODO: Fix-it hint to insert '...'.
+  friend Ts; // expected-error {{friend declaration contains unexpanded parameter pack}}
+
+  template<class... Us>
+  friend Us...; // expected-error {{friend type templates must use an elaborated type}}
+
+  template<class... Us> // expected-note {{is declared here}}
+  friend class Us...; // expected-error {{declaration of 'Us' shadows template parameter}}
+                      // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
+
+  // FIXME: Ill-formed.
+  template<class U>
+  friend class C<Ts>::template Nested<U>...;
+
+  // FIXME: Ill-formed.
+  template<class... Us>
+  friend class C<Ts...>::template Nested<Us>...;
+
+  // FIXME: Ill-formed.
+  template<class... Us>
+  friend class C<Us>::Nested...;
 };
-
-struct N {
-  template<class U> class C;
-};
-
-// CHECK-LABEL: ClassTemplateDecl {{.*}} Variadic
-// PRINT-LABEL: template <typename ...Pack> struct Variadic {
-template <typename ...Pack> struct Variadic {
-  // CHECK: FriendDecl {{.*}} 'Pack' variadic
-  // CHECK-NEXT: FriendDecl {{.*}} 'long'
-  // CHECK-NEXT: FriendDecl {{.*}} 'Pack' variadic
-  // PRINT-NEXT: friend Pack..., long, Pack...;
-  friend Pack..., long, Pack...;
-
-  // CHECK-NEXT: FriendDecl {{.*}} 'TS<Pack>' variadic
-  // PRINT-NEXT: friend TS<Pack>...;
-  friend TS<Pack>...;
-};
-
-// CHECK-LABEL: ClassTemplateDecl {{.*}} S2
-// PRINT-LABEL: template <class ...Ts> struct S2 {
-template<class ...Ts> struct S2 {
-  // CHECK: FriendDecl {{.*}} 'class C<Ts>':'C<Ts>' variadic
-  // PRINT-NEXT: friend class C<Ts>...;
-  friend class C<Ts>...;
-
-  // CHECK-NEXT: FriendDecl {{.*}} 'class N::C<Ts>':'C<Ts>' variadic
-  // PRINT-NEXT: friend class N::C<Ts>...
-  friend class N::C<Ts>...;
-};
-}

@@ -17568,6 +17568,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
 
   Decl *D;
   if (!TempParams.empty())
+    // TODO: Support variadic friend template decls?
     D = FriendTemplateDecl::Create(Context, CurContext, Loc, TempParams, TSI,
                                    FriendLoc);
   else
