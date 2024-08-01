@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/cos.h"
-#include <math.h>>
+#include <math.h>
 #include <mpfr.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const double x) {
