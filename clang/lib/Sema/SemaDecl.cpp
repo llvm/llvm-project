@@ -10601,15 +10601,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
   }
 
-  if (getLangOpts().HLSL) {
-    if (D.isFunctionDefinition()) {
-      // Any top level function could potentially be specified as an entry.
-      if (!NewFD->isInvalidDecl() && S->getDepth() == 0 && Name.isIdentifier())
-        HLSL().ActOnTopLevelFunction(NewFD);
+  if (getLangOpts().HLSL && D.isFunctionDefinition()) {
+    // Any top level function could potentially be specified as an entry.
+    if (!NewFD->isInvalidDecl() && S->getDepth() == 0 && Name.isIdentifier())
+      HLSL().ActOnTopLevelFunction(NewFD);
 
-      if (NewFD->hasAttr<HLSLShaderAttr>())
-        HLSL().CheckEntryPoint(NewFD);
-    }
+    if (NewFD->hasAttr<HLSLShaderAttr>())
+      HLSL().CheckEntryPoint(NewFD);
   }
 
   // If this is the first declaration of a library builtin function, add
