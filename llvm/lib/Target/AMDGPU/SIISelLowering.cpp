@@ -629,10 +629,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         case ISD::EXTRACT_VECTOR_ELT:
         case ISD::INSERT_VECTOR_ELT:
         case ISD::INSERT_SUBVECTOR:
-        case ISD::EXTRACT_SUBVECTOR:
         case ISD::SCALAR_TO_VECTOR:
         case ISD::IS_FPCLASS:
           break;
+        case ISD::EXTRACT_SUBVECTOR:
         case ISD::CONCAT_VECTORS:
           setOperationAction(Op, VT, Custom);
           break;

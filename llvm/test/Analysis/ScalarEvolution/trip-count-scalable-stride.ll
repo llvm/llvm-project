@@ -364,9 +364,8 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; The next two cases check to see if we can infer the flags on the IV
-; of a countup loop using vscale strides.
-; TODO: We should be able to because vscale is a power of two and these
-; are finite loops by assumption.
+; of a countup loop using vscale strides.  vscale is a power of two
+; and these are finite loops by assumption.
 
 define void @vscale_slt_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,1024) {
 ; CHECK-LABEL: 'vscale_slt_noflags'
@@ -374,15 +373,16 @@ define void @vscale_slt_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_ra
 ; CHECK-NEXT:    %vscale = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    --> vscale U: [2,1025) S: [2,1025)
 ; CHECK-NEXT:    %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,vscale}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,vscale}<%for.body> U: full-set S: full-set Exits: (vscale * ((-1 + %n) /u vscale))<nuw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
-; CHECK-NEXT:    --> {%A,+,(4 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%A,+,(4 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((4 * vscale * ((-1 + %n) /u vscale)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add i32 %i.05, %vscale
-; CHECK-NEXT:    --> {vscale,+,vscale}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {vscale,+,vscale}<nw><%for.body> U: full-set S: full-set Exits: (vscale * (1 + ((-1 + %n) /u vscale))<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_slt_noflags
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u vscale)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 1073741822
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + %n) /u vscale)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %vscale = call i32 @llvm.vscale.i32()
@@ -411,15 +411,16 @@ define void @vscalex4_ult_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_
 ; CHECK-NEXT:    %VF = mul i32 %vscale, 4
 ; CHECK-NEXT:    --> (4 * vscale)<nuw><nsw> U: [8,4097) S: [8,4097)
 ; CHECK-NEXT:    %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,(4 * vscale)<nuw><nsw>}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,(4 * vscale)<nuw><nsw>}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (4 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
-; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add i32 %i.05, %VF
-; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (vscale * (4 + (4 * ((-1 + %n) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscalex4_ult_noflags
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u (4 * vscale)<nuw><nsw>)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 536870910
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + %n) /u (4 * vscale)<nuw><nsw>)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %vscale = call i32 @llvm.vscale.i32()
