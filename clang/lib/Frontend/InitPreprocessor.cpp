@@ -754,6 +754,10 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
     Builder.defineMacro("__cpp_auto_cast", "202110L");
   }
+  // C++26 features.
+  if (LangOpts.CPlusPlus26) {
+    Builder.defineMacro("__cpp_variadic_friend", "202403L");
+  }
 
   // We provide those C++23 features as extensions in earlier language modes, so
   // we also define their feature test macros.
@@ -764,6 +768,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 
   // C++26 features supported in earlier language modes.
   Builder.defineMacro("__cpp_deleted_function", "202403L");
+
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
