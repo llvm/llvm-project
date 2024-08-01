@@ -137,7 +137,8 @@ static inline void genOmpAtomicHintAndMemoryOrderClauses(
 }
 
 template <typename AtomicListT>
-static void processOmpAtomicTODO(mlir::Type elementType, mlir::Location loc) {
+static void processOmpAtomicTODO(mlir::Type elementType,
+                                 [[maybe_unused]] mlir::Location loc) {
   if (!elementType)
     return;
   if constexpr (std::is_same<AtomicListT,

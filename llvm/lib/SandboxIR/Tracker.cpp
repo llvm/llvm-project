@@ -35,6 +35,86 @@ void UseSet::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+
+void UseSwap::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+PHISetIncoming::PHISetIncoming(PHINode &PHI, unsigned Idx, What What,
+                               Tracker &Tracker)
+    : IRChangeBase(Tracker), PHI(PHI), Idx(Idx) {
+  switch (What) {
+  case What::Value:
+    OrigValueOrBB = PHI.getIncomingValue(Idx);
+    break;
+  case What::Block:
+    OrigValueOrBB = PHI.getIncomingBlock(Idx);
+    break;
+  }
+}
+
+void PHISetIncoming::revert() {
+  if (auto *V = OrigValueOrBB.dyn_cast<Value *>())
+    PHI.setIncomingValue(Idx, V);
+  else
+    PHI.setIncomingBlock(Idx, OrigValueOrBB.get<BasicBlock *>());
+}
+
+#ifndef NDEBUG
+void PHISetIncoming::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+PHIRemoveIncoming::PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx,
+                                     Tracker &Tracker)
+    : IRChangeBase(Tracker), PHI(PHI), RemovedIdx(RemovedIdx) {
+  RemovedV = PHI.getIncomingValue(RemovedIdx);
+  RemovedBB = PHI.getIncomingBlock(RemovedIdx);
+}
+
+void PHIRemoveIncoming::revert() {
+  // Special case: if the PHI is now empty, as we don't need to care about the
+  // order of the incoming values.
+  unsigned NumIncoming = PHI.getNumIncomingValues();
+  if (NumIncoming == 0) {
+    PHI.addIncoming(RemovedV, RemovedBB);
+    return;
+  }
+  // Shift all incoming values by one starting from the end until `Idx`.
+  // Start by adding a copy of the last incoming values.
+  unsigned LastIdx = NumIncoming - 1;
+  PHI.addIncoming(PHI.getIncomingValue(LastIdx), PHI.getIncomingBlock(LastIdx));
+  for (unsigned Idx = LastIdx; Idx > RemovedIdx; --Idx) {
+    auto *PrevV = PHI.getIncomingValue(Idx - 1);
+    auto *PrevBB = PHI.getIncomingBlock(Idx - 1);
+    PHI.setIncomingValue(Idx, PrevV);
+    PHI.setIncomingBlock(Idx, PrevBB);
+  }
+  PHI.setIncomingValue(RemovedIdx, RemovedV);
+  PHI.setIncomingBlock(RemovedIdx, RemovedBB);
+}
+
+#ifndef NDEBUG
+void PHIRemoveIncoming::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+PHIAddIncoming::PHIAddIncoming(PHINode &PHI, Tracker &Tracker)
+    : IRChangeBase(Tracker), PHI(PHI), Idx(PHI.getNumIncomingValues()) {}
+
+void PHIAddIncoming::revert() { PHI.removeIncomingValue(Idx); }
+
+#ifndef NDEBUG
+void PHIAddIncoming::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 #endif // NDEBUG
 
 Tracker::~Tracker() {
@@ -119,6 +199,37 @@ void RemoveFromParent::revert() {
 
 #ifndef NDEBUG
 void RemoveFromParent::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+CallBrInstSetDefaultDest::CallBrInstSetDefaultDest(CallBrInst *CallBr,
+                                                   Tracker &Tracker)
+    : IRChangeBase(Tracker), CallBr(CallBr) {
+  OrigDefaultDest = CallBr->getDefaultDest();
+}
+void CallBrInstSetDefaultDest::revert() {
+  CallBr->setDefaultDest(OrigDefaultDest);
+}
+#ifndef NDEBUG
+void CallBrInstSetDefaultDest::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+CallBrInstSetIndirectDest::CallBrInstSetIndirectDest(CallBrInst *CallBr,
+                                                     unsigned Idx,
+                                                     Tracker &Tracker)
+    : IRChangeBase(Tracker), CallBr(CallBr), Idx(Idx) {
+  OrigIndirectDest = CallBr->getIndirectDest(Idx);
+}
+void CallBrInstSetIndirectDest::revert() {
+  CallBr->setIndirectDest(Idx, OrigIndirectDest);
+}
+#ifndef NDEBUG
+void CallBrInstSetIndirectDest::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }

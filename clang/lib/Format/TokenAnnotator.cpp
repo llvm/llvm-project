@@ -62,6 +62,7 @@ static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
 
 /// With `Left` being '(', check if we're at either `[...](` or
 /// `[...]<...>(`, where the [ opens a lambda capture list.
+// FIXME: this doesn't cover attributes/constraints before the l_paren.
 static bool isLambdaParameterList(const FormatToken *Left) {
   // Skip <...> if present.
   if (Left->Previous && Left->Previous->is(tok::greater) &&
@@ -154,8 +155,8 @@ private:
     if (NonTemplateLess.count(CurrentToken->Previous) > 0)
       return false;
 
-    const FormatToken &Previous = *CurrentToken->Previous; // The '<'.
-    if (Previous.Previous) {
+    if (const auto &Previous = *CurrentToken->Previous; // The '<'.
+        Previous.Previous) {
       if (Previous.Previous->Tok.isLiteral())
         return false;
       if (Previous.Previous->is(tok::r_brace))
@@ -175,11 +176,13 @@ private:
     FormatToken *Left = CurrentToken->Previous;
     Left->ParentBracket = Contexts.back().ContextKind;
     ScopedContextCreator ContextCreator(*this, tok::less, 12);
-
     Contexts.back().IsExpression = false;
+
+    const auto *BeforeLess = Left->Previous;
+
     // If there's a template keyword before the opening angle bracket, this is a
     // template parameter, not an argument.
-    if (Left->Previous && Left->Previous->isNot(tok::kw_template))
+    if (BeforeLess && BeforeLess->isNot(tok::kw_template))
       Contexts.back().ContextType = Context::TemplateArgument;
 
     if (Style.Language == FormatStyle::LK_Java &&
@@ -187,19 +190,24 @@ private:
       next();
     }
 
-    while (CurrentToken) {
+    for (bool SeenTernaryOperator = false; CurrentToken;) {
+      const bool InExpr = Contexts[Contexts.size() - 2].IsExpression;
       if (CurrentToken->is(tok::greater)) {
+        const auto *Next = CurrentToken->Next;
         // Try to do a better job at looking for ">>" within the condition of
         // a statement. Conservatively insert spaces between consecutive ">"
         // tokens to prevent splitting right bitshift operators and potentially
         // altering program semantics. This check is overly conservative and
         // will prevent spaces from being inserted in select nested template
         // parameter cases, but should not alter program semantics.
-        if (CurrentToken->Next && CurrentToken->Next->is(tok::greater) &&
+        if (Next && Next->is(tok::greater) &&
             Left->ParentBracket != tok::less &&
             CurrentToken->getStartOfNonWhitespace() ==
-                CurrentToken->Next->getStartOfNonWhitespace().getLocWithOffset(
-                    -1)) {
+                Next->getStartOfNonWhitespace().getLocWithOffset(-1)) {
+          return false;
+        }
+        if (InExpr && SeenTernaryOperator &&
+            (!Next || !Next->isOneOf(tok::l_paren, tok::l_brace))) {
           return false;
         }
         Left->MatchingParen = CurrentToken;
@@ -210,14 +218,14 @@ private:
         //   msg: < item: data >
         // In TT_TextProto, map<key, value> does not occur.
         if (Style.Language == FormatStyle::LK_TextProto ||
-            (Style.Language == FormatStyle::LK_Proto && Left->Previous &&
-             Left->Previous->isOneOf(TT_SelectorName, TT_DictLiteral))) {
+            (Style.Language == FormatStyle::LK_Proto && BeforeLess &&
+             BeforeLess->isOneOf(TT_SelectorName, TT_DictLiteral))) {
           CurrentToken->setType(TT_DictLiteral);
         } else {
           CurrentToken->setType(TT_TemplateCloser);
           CurrentToken->Tok.setLength(1);
         }
-        if (CurrentToken->Next && CurrentToken->Next->Tok.isLiteral())
+        if (Next && Next->Tok.isLiteral())
           return false;
         next();
         return true;
@@ -229,18 +237,21 @@ private:
       }
       if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace))
         return false;
+      const auto &Prev = *CurrentToken->Previous;
       // If a && or || is found and interpreted as a binary operator, this set
       // of angles is likely part of something like "a < b && c > d". If the
       // angles are inside an expression, the ||/&& might also be a binary
       // operator that was misinterpreted because we are parsing template
       // parameters.
       // FIXME: This is getting out of hand, write a decent parser.
-      if (CurrentToken->Previous->isOneOf(tok::pipepipe, tok::ampamp) &&
-          CurrentToken->Previous->is(TT_BinaryOperator) &&
-          Contexts[Contexts.size() - 2].IsExpression &&
-          !Line.startsWith(tok::kw_template)) {
-        return false;
+      if (InExpr && !Line.startsWith(tok::kw_template) &&
+          Prev.is(TT_BinaryOperator)) {
+        const auto Precedence = Prev.getPrecedence();
+        if (Precedence > prec::Conditional && Precedence < prec::Relational)
+          return false;
       }
+      if (Prev.is(TT_ConditionalExpr))
+        SeenTernaryOperator = true;
       updateParameterCount(Left, CurrentToken);
       if (Style.Language == FormatStyle::LK_Proto) {
         if (FormatToken *Previous = CurrentToken->getPreviousNonComment()) {
@@ -365,12 +376,17 @@ private:
       Contexts.back().IsExpression = false;
     } else if (isLambdaParameterList(&OpeningParen)) {
       // This is a parameter list of a lambda expression.
+      OpeningParen.setType(TT_LambdaDefinitionLParen);
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.is(TT_RequiresExpressionLParen)) {
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.Previous &&
                OpeningParen.Previous->is(tok::kw__Generic)) {
       Contexts.back().ContextType = Context::C11GenericSelection;
+      Contexts.back().IsExpression = true;
+    } else if (Line.InPPDirective &&
+               (!OpeningParen.Previous ||
+                OpeningParen.Previous->isNot(tok::identifier))) {
       Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
@@ -384,20 +400,7 @@ private:
                OpeningParen.Previous->MatchingParen->isOneOf(
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
-    } else if (Line.InPPDirective) {
-      auto IsExpr = [&OpeningParen] {
-        const auto *Tok = OpeningParen.Previous;
-        if (!Tok || Tok->isNot(tok::identifier))
-          return true;
-        Tok = Tok->Previous;
-        while (Tok && Tok->endsSequence(tok::coloncolon, tok::identifier)) {
-          assert(Tok->Previous);
-          Tok = Tok->Previous->Previous;
-        }
-        return !Tok || !Tok->Tok.getIdentifierInfo();
-      };
-      Contexts.back().IsExpression = IsExpr();
-    } else if (!Line.MustBeDeclaration) {
+    } else if (!Line.MustBeDeclaration && !Line.InPPDirective) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
@@ -6203,6 +6206,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
     return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
+  }
+
+  if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
+      Right.is(TT_TrailingAnnotation) &&
+      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+    return false;
   }
 
   // Allow breaking after a trailing annotation, e.g. after a method

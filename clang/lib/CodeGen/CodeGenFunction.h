@@ -612,6 +612,9 @@ public:
   /// True if the current statement has always_inline attribute.
   bool InAlwaysInlineAttributedStmt = false;
 
+  /// True if the current statement has noconvergent attribute.
+  bool InNoConvergentAttributedStmt = false;
+
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
@@ -4160,6 +4163,13 @@ public:
           llvm::AtomicOrdering::SequentiallyConsistent,
       bool IsWeak = false, AggValueSlot Slot = AggValueSlot::ignored());
 
+  /// Emit an atomicrmw instruction, and applying relevant metadata when
+  /// applicable.
+  llvm::AtomicRMWInst *emitAtomicRMWInst(
+      llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
+      llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
+
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
                         bool IsVolatile);
@@ -4529,7 +4539,6 @@ public:
 
   RValue EmitNVPTXDevicePrintfCallExpr(const CallExpr *E);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E);
-  RValue EmitOpenMPDevicePrintfCallExpr(const CallExpr *E);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
@@ -4696,6 +4705,9 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
+
+  llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuInit();
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);

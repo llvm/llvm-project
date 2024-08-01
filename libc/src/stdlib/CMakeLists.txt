@@ -331,7 +331,12 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
 
     # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
-    set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    # set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    if (LIBC_TARGET_OS_IS_DARWIN AND (LIBC_TARGET_ARCHITECTURE STREQUAL "arm"))
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO arm64)
+    else()
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    endif()
     if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
       set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv64)
     elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV32)
@@ -387,8 +392,6 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
         malloc.h
       DEPENDS
         libc.src.__support.freelist_heap
-      COMPILE_OPTIONS
-        -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
     )
     get_target_property(freelist_malloc_is_skipped libc.src.stdlib.freelist_malloc "SKIPPED")
     if(LIBC_TARGET_OS_IS_BAREMETAL AND NOT freelist_malloc_is_skipped)
@@ -440,14 +443,23 @@ if(LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       .${LIBC_TARGET_OS}.free
   )
-  add_entrypoint_external(
-    calloc
-  )
-  add_entrypoint_external(
+  add_entrypoint_object(
     realloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.realloc
   )
-  add_entrypoint_external(
+  add_entrypoint_object(
+    calloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.calloc
+  )
+  add_entrypoint_object(
     aligned_alloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.aligned_alloc
   )
 endif()
 

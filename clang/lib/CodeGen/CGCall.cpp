@@ -2025,6 +2025,9 @@ static void getTrivialDefaultFunctionAttributes(
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
   }
 
+  if (CodeGenOpts.SaveRegParams && !AttrOnCallSite)
+    FuncAttrs.addAttribute("save-reg-params");
+
   for (StringRef Attr : CodeGenOpts.DefaultFunctionAttrs) {
     StringRef Var, Value;
     std::tie(Var, Value) = Attr.split('=');
@@ -2519,6 +2522,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         }
       }
     }
+    // Remove 'convergent' if requested.
+    if (TargetDecl->hasAttr<NoConvergentAttr>())
+      FuncAttrs.removeAttribute(llvm::Attribute::Convergent);
   }
 
   // Add "sample-profile-suffix-elision-policy" attribute for internal linkage
@@ -5632,6 +5638,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (InAlwaysInlineAttributedStmt)
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
+
+  // Remove call-site convergent attribute if requested.
+  if (InNoConvergentAttributedStmt)
+    Attrs =
+        Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
 
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.

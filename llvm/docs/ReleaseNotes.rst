@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* The ``x86_mmx`` IR type has been removed. It will be translated to
+  the standard vector type ``<1 x i64>`` in bitcode upgrade.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -65,11 +68,19 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
 Changes to the ARM Backend
 --------------------------
+
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
 
 Changes to the AVR Backend
 --------------------------
@@ -92,6 +103,10 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
@@ -101,6 +116,19 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* `.balign N, 0x90`, `.p2align N, 0x90`, and `.align N, 0x90` in code sections
+  now fill the required alignment space with repeating `0x90` bytes, rather than
+  using optimised NOP filling. Optimised NOP filling fills the space with NOP
+  instructions of various widths, not just those that use the `0x90` byte
+  encoding. To use optimised NOP filling in a code section, leave off the
+  "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
+
+* Due to the removal of the ``x86_mmx`` IR type, functions with
+  ``x86_mmx`` arguments or return values will use a different,
+  incompatible, calling convention ABI. Such functions are not
+  generally seen in the wild (Clang never generates them!), so this is
+  not expected to result in real-world compatibility problems.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -109,6 +137,12 @@ Changes to the Python bindings
 
 Changes to the C API
 --------------------
+
+* The following symbols are deleted due to the removal of the ``x86_mmx`` IR type:
+
+  * ``LLVMX86_MMXTypeKind``
+  * ``LLVMX86MMXTypeInContext``
+  * ``LLVMX86MMXType``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

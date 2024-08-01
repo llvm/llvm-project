@@ -126,6 +126,16 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
+def irpgo_profile_sort: Joined<["--"], "irpgo-profile-sort=">,
+    MetaVarName<"<profile>">,
+    HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
+    Group<grp_lld>;
+def compression_sort: Joined<["--"], "compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def verbose_bp_section_orderer: Flag<["--"], "verbose-bp-section-orderer">,
+    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
+    Group<grp_lld>;
 def ignore_auto_link_option : Separate<["--"], "ignore-auto-link-option">,
     Group<grp_lld>;
 def ignore_auto_link_option_eq : Joined<["--"], "ignore-auto-link-option=">,

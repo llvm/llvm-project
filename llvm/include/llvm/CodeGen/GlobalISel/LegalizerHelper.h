@@ -280,6 +280,9 @@ private:
   LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
                                          MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver);
+  LegalizeResult createFCMPLibcall(MachineIRBuilder &MIRBuilder,
+                                   MachineInstr &MI,
+                                   LostDebugLocObserver &LocObserver);
 
   MachineInstrBuilder
   getNeutralElementForVecReduce(unsigned Opcode, MachineIRBuilder &MIRBuilder,

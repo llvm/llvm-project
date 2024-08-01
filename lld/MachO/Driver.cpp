@@ -1750,6 +1750,34 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
 
+  auto IncompatWithCGSort = [&](StringRef firstArgStr) {
+    // Throw an error only if --call-graph-profile-sort is explicitly specified
+    if (config->callGraphProfileSort)
+      if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
+        error(firstArgStr + " is incompatible with " + arg->getSpelling());
+  };
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
+    config->irpgoProfileSortProfilePath = arg->getValue();
+    IncompatWithCGSort(arg->getSpelling());
+  }
+  if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
+    StringRef compressionSortStr = arg->getValue();
+    if (compressionSortStr == "function") {
+      config->functionOrderForCompression = true;
+    } else if (compressionSortStr == "data") {
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr == "both") {
+      config->functionOrderForCompression = true;
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr != "none") {
+      error("unknown value `" + compressionSortStr + "` for " +
+            arg->getSpelling());
+    }
+    if (compressionSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
         std::make_pair(arg->getValue(0), arg->getValue(1)));

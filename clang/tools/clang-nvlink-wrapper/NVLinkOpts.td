@@ -12,9 +12,9 @@ def verbose : Flag<["-"], "v">, HelpText<"Print verbose information">;
 def version : Flag<["--"], "version">,
   HelpText<"Display the version number and exit">;
 
-def cuda_path_EQ : Joined<["--"], "cuda-path=">,
+def cuda_path_EQ : Joined<["--"], "cuda-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the system CUDA path">;
-def ptxas_path_EQ : Joined<["--"], "ptxas-path=">,
+def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the 'ptxas' path">;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
@@ -73,6 +73,10 @@ def plugin_opt : Joined<["--", "-"], "plugin-opt=">, Flags<[WrapperOnlyOption]>,
 def save_temps : Flag<["--", "-"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
 
+def relocatable : Flag<["--", "-"], "relocatable">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Perform a relocatable link (LTO only)">;
+def r : Flag<["-"], "r">, Flags<[WrapperOnlyOption]>, Alias<relocatable>;
+
 def whole_archive : Flag<["--", "-"], "whole-archive">,
   Flags<[WrapperOnlyOption, HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
@@ -83,8 +87,7 @@ def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Arguments passed to LLVM, including Clang invocations, for which "
            "the '-mllvm' prefix is preserved. Use '-mllvm --help' for a list "
            "of options.">;
-def mllvm_EQ : Joined<["-"], "mllvm=">, Flags<[HelpHidden]>,
-  Alias<mllvm>;
+def mllvm_EQ : Joined<["-"], "mllvm=">, Flags<[HelpHidden]>, Alias<mllvm>;
 
 def dry_run : Flag<["--", "-"], "dry-run">, Flags<[WrapperOnlyOption]>,
   HelpText<"Print generated commands without running.">;

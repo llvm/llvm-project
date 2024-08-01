@@ -84,9 +84,24 @@
 // MISSING: error: must pass in an explicit nvptx64 gpu architecture to 'ptxas'
 // MISSING: error: must pass in an explicit nvptx64 gpu architecture to 'nvlink'
 
+// Do not error when performing LTO.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -flto %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=MISSING-LTO %s
+
+// MISSING-LTO-NOT: error: must pass in an explicit nvptx64 gpu architecture to 'nvlink'
+
 // RUN: %clang -target nvptx64-nvidia-cuda -flto -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=GENERIC %s
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 -march=generic -flto -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=GENERIC %s
 
 // GENERIC-NOT: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-target-cpu"
+
+//
+// Test forwarding the necessary +ptx feature.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=FEATURE %s
+
+// FEATURE: clang-nvlink-wrapper{{.*}}"--feature" "+ptx63"

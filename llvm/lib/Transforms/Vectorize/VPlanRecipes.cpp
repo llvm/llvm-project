@@ -283,12 +283,12 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
 }
 
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
-  if (auto *UI = getInstructionForCost(this))
-    if (Ctx.skipCostComputation(UI, VF.isVector()))
-      return 0;
+  auto *UI = getInstructionForCost(this);
+  if (UI && Ctx.skipCostComputation(UI, VF.isVector()))
+    return 0;
 
   InstructionCost RecipeCost = computeCost(VF, Ctx);
-  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+  if (UI && ForceTargetInstructionCost.getNumOccurrences() > 0 &&
       RecipeCost.isValid())
     RecipeCost = InstructionCost(ForceTargetInstructionCost);
 
