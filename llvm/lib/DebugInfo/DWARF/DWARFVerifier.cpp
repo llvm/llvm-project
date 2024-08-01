@@ -1516,7 +1516,8 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
         !Attributes.count(dwarf::DW_IDX_type_unit)) {
       ErrorCategory.Report("Abbreviation contains no attribute", [&]() {
         error() << formatv("NameIndex @ {0:x}: Indexing multiple compile units "
-                           "and abbreviation {1:x} has no {2} attribute.\n",
+                           "and abbreviation {1:x} has no DW_IDX_compile_unit "
+                           "or DW_IDX_type_unit attribute.\n",
                            NI.getUnitOffset(), Abbrev.Code,
                            dwarf::DW_IDX_compile_unit);
       });
