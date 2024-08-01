@@ -1,7 +1,5 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
-// TODO: Align naming with e.g. vector-transfer-flatten.mlir
-
 ///----------------------------------------------------------------------------------------
 /// vector.transfer_write -> vector.transpose + vector.transfer_write
 /// [Pattern: TransferWritePermutationLowering]
@@ -161,10 +159,10 @@ func.func @xfer_write_non_transposing_permutation_map_with_mask_out_of_bounds(
 // CHECK-SAME:        %[[MEM:.*]]: memref<1x4x?x1xi16>,
 // CHECK-SAME:        %[[MASK:.*]]: vector<4x[8]xi1>) {
 // CHECK:             %[[C0:.*]] = arith.constant 0 : index
-// CHECK:             %[[BCAST_1:.*]] = vector.broadcast %[[VEC]] : vector<4x[8]xi16> to vector<1x4x[8]xi16>
-// CHECK:             %[[BCAST_2:.*]] = vector.broadcast %[[MASK]] : vector<4x[8]xi1> to vector<1x4x[8]xi1>
-// CHECK:             %[[TRANSPOSE_1:.*]] =  vector.transpose %[[BCAST_2]], [1, 2, 0] : vector<1x4x[8]xi1> to vector<4x[8]x1xi1>
-// CHECK:             %[[TRANSPOSE_2:.*]] =  vector.transpose %[[BCAST_1]], [1, 2, 0] : vector<1x4x[8]xi16> to vector<4x[8]x1xi16>
+// CHECK:             %[[BC_1:.*]] = vector.broadcast %[[VEC]] : vector<4x[8]xi16> to vector<1x4x[8]xi16>
+// CHECK:             %[[BC_2:.*]] = vector.broadcast %[[MASK]] : vector<4x[8]xi1> to vector<1x4x[8]xi1>
+// CHECK:             %[[TRANSPOSE_1:.*]] =  vector.transpose %[[BC_2]], [1, 2, 0] : vector<1x4x[8]xi1> to vector<4x[8]x1xi1>
+// CHECK:             %[[TRANSPOSE_2:.*]] =  vector.transpose %[[BC_1]], [1, 2, 0] : vector<1x4x[8]xi16> to vector<4x[8]x1xi16>
 // CHECK:             vector.transfer_write %[[TRANSPOSE_2]], %[[MEM]]{{.*}}, %[[TRANSPOSE_1]] {in_bounds = [true, true, true]} : vector<4x[8]x1xi16>, memref<1x4x?x1xi16>
 func.func @permutation_with_mask_xfer_write_scalable(
     %vec: vector<4x[8]xi16>,
@@ -187,20 +185,20 @@ func.func @permutation_with_mask_xfer_write_scalable(
 //  CHECK-SAME:   %[[IDX:.*]]: index,
 //  CHECK-SAME:   %[[MASK:.*]]: vector<16xi1>
 //   CHECK-NOT:   vector.transpose
-//       CHECK:   %[[RES:.*]] = vector.mask %[[MASK]] { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} vector<16xf32>, tensor<?x?xf32> } : vector<16xi1> -> tensor<?x?xf32>
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} vector<16xf32>, tensor<?x?xf32> } : vector<16xi1> -> tensor<?x?xf32>
 func.func @masked_permutation_xfer_write_fixed_width(
     %dest: tensor<?x?xf32>,
-    %val: vector<16xf32>,
+    %vec: vector<16xf32>,
     %idx: index,
     %mask: vector<16xi1>) -> tensor<?x?xf32> {
 
-  %r = vector.mask %mask {
-    vector.transfer_write %val, %dest[%idx, %idx] {
+  %res = vector.mask %mask {
+    vector.transfer_write %vec, %dest[%idx, %idx] {
       permutation_map = affine_map<(d0, d1) -> (d0)>
     } : vector<16xf32>, tensor<?x?xf32>
   } : vector<16xi1> -> tensor<?x?xf32>
 
-  return %r : tensor<?x?xf32>
+  return %res : tensor<?x?xf32>
 }
 
 // CHECK-LABEL: func.func @masked_permutation_xfer_write_scalable(
@@ -209,21 +207,21 @@ func.func @masked_permutation_xfer_write_fixed_width(
 //  CHECK-SAME:   %[[MASK:.*]]: vector<4x[8]xi1>)
 //  CHECK-SAME:   -> tensor<?x?x?x?xf32> {
 //   CHECK-NOT:   vector.transpose
-//       CHECK:   %[[R:.*]] = vector.mask %[[MASK]] { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<4x[8]xi16>, tensor<?x?x?x?xf32> } : vector<4x[8]xi1> -> tensor<?x?x?x?xf32>
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<4x[8]xi16>, tensor<?x?x?x?xf32> } : vector<4x[8]xi1> -> tensor<?x?x?x?xf32>
 func.func @masked_permutation_xfer_write_scalable(
     %vec: vector<4x[8]xi16>,
     %dest: tensor<?x?x?x?xf32>,
     %mask:  vector<4x[8]xi1>) -> tensor<?x?x?x?xf32> {
 
   %c0 = arith.constant 0 : index
-  %r = vector.mask %mask {
+  %res = vector.mask %mask {
     vector.transfer_write %vec, %dest[%c0, %c0, %c0, %c0] {
       in_bounds = [true, true],
       permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
     } : vector<4x[8]xi16>, tensor<?x?x?x?xf32>
   } : vector<4x[8]xi1> -> tensor<?x?x?x?xf32>
 
-  return %r : tensor<?x?x?x?xf32>
+  return %res : tensor<?x?x?x?xf32>
 }
 
 // transfer_write in MaskOp case not supported.
@@ -232,7 +230,7 @@ func.func @masked_permutation_xfer_write_scalable(
 //  CHECK-SAME:   %[[VEC:.*]]: vector<14x8x16xf32>
 //  CHECK-SAME:   %[[IDX:.*]]: index) -> tensor<?x?x?x?xf32>
 //   CHECK-NOT:   vector.broadcast
-//       CHECK:   %[[masked1:.*]] = vector.mask %0 { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<14x8x16xf32>, tensor<?x?x?x?xf32> } : vector<14x8x16xi1> -> tensor<?x?x?x?xf32>
+//       CHECK:   vector.mask %0 { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<14x8x16xf32>, tensor<?x?x?x?xf32> } : vector<14x8x16xi1> -> tensor<?x?x?x?xf32>
 func.func @masked_non_permutation_xfer_write_fixed_width(
     %dest : tensor<?x?x?x?xf32>,
     %vec : vector<14x8x16xf32>,
@@ -240,14 +238,14 @@ func.func @masked_non_permutation_xfer_write_fixed_width(
 
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %dim, %dim, %dim : vector<14x8x16xi1>
-  %0 = vector.mask %mask {
+  %res = vector.mask %mask {
     vector.transfer_write %vec, %dest[%c0, %c0, %c0, %c0] {
       in_bounds = [false, false, true],
       permutation_map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
     } : vector<14x8x16xf32>, tensor<?x?x?x?xf32>
   } : vector<14x8x16xi1> -> tensor<?x?x?x?xf32>
 
-  return %0 : tensor<?x?x?x?xf32>
+  return %res : tensor<?x?x?x?xf32>
 }
 
 ///----------------------------------------------------------------------------------------
@@ -383,8 +381,8 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   func.func @transfer_read_reduce_rank_scalable(
 //  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>) -> vector<8x[4]x2x3xf32> {
 //       CHECK:     %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:     %[[TFR:.*]] = vector.transfer_read %[[MEM]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]]{{.*}} permutation_map = #[[MAP]]} : memref<?x?x?x?xf32>, vector<[4]x2x3xf32>
-//       CHECK:     %[[BC:.*]] = vector.broadcast %[[TFR]] : vector<[4]x2x3xf32> to vector<8x[4]x2x3xf32>
+//       CHECK:     %[[T_READ:.*]] = vector.transfer_read %[[MEM]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]]{{.*}} permutation_map = #[[MAP]]} : memref<?x?x?x?xf32>, vector<[4]x2x3xf32>
+//       CHECK:     %[[BC:.*]] = vector.broadcast %[[T_READ]] : vector<[4]x2x3xf32> to vector<8x[4]x2x3xf32>
 //       CHECK:     return %[[BC]] : vector<8x[4]x2x3xf32>
 func.func @transfer_read_reduce_rank_scalable(
     %mem: memref<?x?x?x?xf32>) -> vector<8x[4]x2x3xf32> {
@@ -392,12 +390,12 @@ func.func @transfer_read_reduce_rank_scalable(
   %c0 = arith.constant 0 : index
   %cst_0 = arith.constant 0.000000e+00 : f32
 
-  %1 = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst_0 {
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst_0 {
     in_bounds = [true, true, true, true],
     permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>
   } : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32>
 
-  return %1 : vector<8x[4]x2x3xf32>
+  return %res : vector<8x[4]x2x3xf32>
 }
 
 // Masked case not supported.
