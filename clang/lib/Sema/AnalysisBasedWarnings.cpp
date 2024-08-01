@@ -2292,6 +2292,18 @@ public:
     }
   }
 
+  void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
+                            ASTContext &Ctx) override {
+    // We have checked that there is a direct callee with an identifier name:
+    StringRef Name = Call->getDirectCallee()->getName();
+
+    S.Diag(Call->getBeginLoc(), diag::warn_unsafe_buffer_libc_call)
+        << Name << Call->getSourceRange();
+    if (PrintfInfo > 0)
+      S.Diag(Call->getBeginLoc(), diag::note_unsafe_buffer_printf_call)
+          << PrintfInfo << Call->getSourceRange();
+  }
+
   void handleUnsafeOperationInContainer(const Stmt *Operation,
                                         bool IsRelatedToDecl,
                                         ASTContext &Ctx) override {
