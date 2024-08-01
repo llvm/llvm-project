@@ -171,8 +171,8 @@ public:
       // will point to the allocation of the entire slab.
       __msan_allocated_memory(reinterpret_cast<char *>(AlignedPtr), Size);
       // Similarly, tell ASan about this space.
-      __asan_unpoison_memory_region(AlignedPtr, Size);
-      return reinterpret_cast<char *>(reinterpret_cast<char *>(AlignedPtr));
+      __asan_unpoison_memory_region(reinterpret_cast<char *>(AlignedPtr), Size);
+      return reinterpret_cast<char *>(AlignedPtr);
     }
 
     return AllocateSlow(Size, SizeToAllocate, Alignment);
