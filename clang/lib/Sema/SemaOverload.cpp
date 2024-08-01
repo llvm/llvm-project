@@ -4556,7 +4556,9 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
       if (S.getLangOpts().MSVCReferenceBinding &&
           S.Context.hasSameType(SCS1.getFromType(), SCS2.getFromType()) &&
           !SCS1.getFromType().hasQualifiers() && SCS1.BindsToRvalue &&
-          SCS2.BindsToRvalue) {
+          SCS2.BindsToRvalue &&
+          !SCS1.BindsImplicitObjectArgumentWithoutRefQualifier &&
+          !SCS2.BindsImplicitObjectArgumentWithoutRefQualifier) {
 
         // When binding a user-defined type temporary to an lvalue MSVC will
         // pick `const T&` over `T&` when binding an unqualified `T&&`.
