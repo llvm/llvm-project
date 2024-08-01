@@ -4071,7 +4071,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       if (Callee->isDeclaration())
         return false;   // Cannot transform this return value.
 
-      if (!Caller->use_empty() || NewRetTy->isVoidTy())
+      if (!Caller->use_empty())
         return false;   // Cannot transform this return value.
     }
 
