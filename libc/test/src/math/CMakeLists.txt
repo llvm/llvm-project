@@ -2408,7 +2408,7 @@ add_fp_unittest(
 add_fp_unittest(
   dfmal_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     dfmal_test.cpp
   HDRS
@@ -2420,7 +2420,7 @@ add_fp_unittest(
 add_fp_unittest(
   dfmaf128_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     dfmaf128_test.cpp
   HDRS
@@ -2432,7 +2432,7 @@ add_fp_unittest(
 add_fp_unittest(
   dsubl_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     dsubl_test.cpp
   HDRS
@@ -2446,7 +2446,7 @@ add_fp_unittest(
 add_fp_unittest(
   dsubf128_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     dsubf128_test.cpp
   HDRS
@@ -2460,7 +2460,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdiv_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     fdiv_test.cpp
   HDRS
@@ -2474,7 +2474,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdivl_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     fdivl_test.cpp
   HDRS
@@ -2488,7 +2488,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdivf128_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     fdivf128_test.cpp
   HDRS
@@ -2502,7 +2502,7 @@ add_fp_unittest(
 add_fp_unittest(
   ffma_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     ffma_test.cpp
   HDRS
@@ -2514,7 +2514,7 @@ add_fp_unittest(
 add_fp_unittest(
   ffmal_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     ffmal_test.cpp
   HDRS
@@ -2526,7 +2526,7 @@ add_fp_unittest(
 add_fp_unittest(
   ffmaf128_test
   SUITE
-    libc-math-smoke-tests
+    libc-math-unittests
   SRCS
     ffmaf128_test.cpp
   HDRS
