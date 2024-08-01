@@ -13821,8 +13821,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG, const AArch64Subtarget &
   if (Diff.getOpcode() != ISD::SUB || Diff.getValueType() != MVT::i64)
     return SDValue();
 
-  auto LaneMaskConst = dyn_cast<ConstantSDNode>(LaneMask.getOperand(1));
-  if (!LaneMaskConst || LaneMaskConst->getZExtValue() != 0 ||
+  if (!isNullConstant(LaneMask.getOperand(1)) ||
       (EltSize != 1 && LaneMask.getOperand(2).getOpcode() != ISD::SRA))
     return SDValue();
 
@@ -13844,8 +13843,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG, const AArch64Subtarget &
       if (Select.getOpcode() != ISD::SELECT_CC || Select.getOperand(3) != Diff)
         return SDValue();
       // Make sure it's checking if the difference is less than 0
-      if (auto *SelectConst = dyn_cast<ConstantSDNode>(Select.getOperand(1));
-          !SelectConst || SelectConst->getZExtValue() != 0 ||
+      if (!isNullConstant(Select.getOperand(1)) ||
           cast<CondCodeSDNode>(Select.getOperand(4))->get() !=
               ISD::CondCode::SETLT)
         return SDValue();
