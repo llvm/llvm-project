@@ -279,6 +279,10 @@ namespace llvm {
   /// predicating if/else block and insert select at the join point.
   extern char &EarlyIfPredicatorID;
 
+  /// EarlyReturnPass - This pass replaces out of range branch to return
+  /// blocks with early return block well within the range.
+  extern char &EarlyReturnPassID;
+
   /// This pass performs instruction combining using trace metrics to estimate
   /// critical-path and resource depth.
   extern char &MachineCombinerID;
