@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s       -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
-// RUN: %clang_cc1 -xc++ %s -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
+// RUN: %clang_cc1 -xc++ %s -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck --check-prefixes=CHECK,CHECK-CXX %s
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,6 +7,8 @@ extern "C" {
 
 void (*fptr)(void);
 void (* __ptrauth(0, 0, 42) f2ptr_42_discm)(int);
+void f(int);
+void (* const __ptrauth(0, 0, 42) f_const_ptr)(int) = &f;
 
 // CHECK-LABEL: define void @test_assign_to_qualified
 void test_assign_to_qualified() {
@@ -70,6 +72,24 @@ void test_assign_from_qualified() {
   // CHECK-NEXT store void ()* [[FPTR10]], void ()** @f2ptr_42_discm
 }
 
+// CHECK-LABEL: define void @test_const_ptr_function_call()
+void test_const_ptr_function_call(void) {
+  f_const_ptr(1);
+
+  // CHECK: call void ptrauth (ptr @f, i32 0, i64 2712)(i32 noundef 1) [ "ptrauth"(i32 0, i64 2712) ]
+}
+
 #ifdef __cplusplus
+void (* get_fptr(void))(int);
+void (* __ptrauth(0, 0, 42) f_const_ptr2)(int) = get_fptr();
+void (* const __ptrauth(0, 0, 42) &f_ref)(int) = f_const_ptr2;
+
+// CHECK-CXX-LABEL: define void @test_const_ptr_ref_function_call()
+void test_const_ptr_ref_function_call(void) {
+  f_ref(1);
+
+  // CHECK-CXX: %[[V0:.*]] = load ptr, ptr @f_const_ptr2, align 8
+  // CHECK-CXX: call void %[[V0]](i32 noundef 1) [ "ptrauth"(i32 0, i64 42) ]
+}
 }
 #endif

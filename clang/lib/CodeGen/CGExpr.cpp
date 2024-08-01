@@ -1750,7 +1750,7 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   if (CEK != CEK_AsReferenceOnly &&
       refExpr->EvaluateAsRValue(result, getContext())) {
     resultIsReference = false;
-    resultType = refExpr->getType();
+    resultType = refExpr->getType().getUnqualifiedType();
 
   // Otherwise, try to evaluate as an l-value.
   } else if (CEK != CEK_AsValueOnly &&
