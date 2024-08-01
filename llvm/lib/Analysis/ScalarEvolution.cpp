@@ -12930,7 +12930,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     }
   } else if (!NoWrap) {
     // Avoid proven overflow cases: this will ensure that the backedge taken
-    // count will not generate any unsigned overflow. .
+    // count will not generate any unsigned overflow.
     if (canIVOverflowOnLT(RHS, Stride, IsSigned))
       return getCouldNotCompute();
   }
