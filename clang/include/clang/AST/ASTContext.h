@@ -3218,25 +3218,6 @@ public:
       const FunctionDecl *FD,
       llvm::function_ref<void(FunctionDecl *)> Pred) const;
 
-  bool areFMVCompatible(const FunctionDecl *FD1,
-                        const FunctionDecl *FD2) const {
-    if (!hasSameType(FD1->getReturnType(), FD2->getReturnType()))
-      return false;
-
-    if (FD1->isVariadic() != FD2->isVariadic())
-      return false;
-
-    if (FD1->getNumParams() != FD2->getNumParams())
-      return false;
-
-    for (unsigned I = 0; I < FD1->getNumParams(); ++I)
-      if (!hasSameType(FD1->getParamDecl(I)->getOriginalType(),
-                       FD2->getParamDecl(I)->getOriginalType()))
-        return false;
-
-    return true;
-  }
-
   const CXXConstructorDecl *
   getCopyConstructorForExceptionObject(CXXRecordDecl *RD);
 
