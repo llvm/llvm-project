@@ -83,6 +83,38 @@ static void filterFuncAttributes(FunctionOpInterface func,
   }
 }
 
+/// Returns the `llvm.byval` or `llvm.byref` attributes that are present in the
+/// function arguments and were not converted to an LLVM pointer type. Returns
+/// an empty container if none of these attributes are found in any of the
+/// attributes.
+static void filterByValRefNonPtrAttrs(
+    FunctionOpInterface funcOp,
+    const TypeConverter::SignatureConversion &signatureConv,
+    SmallVectorImpl<std::optional<NamedAttribute>> &result,
+    function_ref<bool(int argIdx)> filter = nullptr) {
+  assert(result.empty() && "Unexpected non-empty output");
+  result.resize(funcOp.getNumArguments(), std::nullopt);
+  bool foundByValByRefAttrs = false;
+  for (int argIdx : llvm::seq(funcOp.getNumArguments())) {
+    for (NamedAttribute namedAttr : funcOp.getArgAttrs(argIdx)) {
+      if ((namedAttr.getName() == LLVM::LLVMDialect::getByValAttrName() ||
+           namedAttr.getName() == LLVM::LLVMDialect::getByRefAttrName())) {
+        // Retrieve the converted type from the converted signature and check
+        // that is not an LLVM pointer.
+        auto convType = signatureConv.getConvertedType(argIdx);
+        if (!convType || isa<LLVM::LLVMPointerType>(*convType))
+          continue;
+        foundByValByRefAttrs = true;
+        result[argIdx] = namedAttr;
+        break;
+      }
+    }
+  }
+
+  if (!foundByValByRefAttrs)
+    result.clear();
+}
+
 /// Propagate argument/results attributes.
 static void propagateArgResAttrs(OpBuilder &builder, bool resultStructType,
                                  FunctionOpInterface funcOp,
@@ -270,8 +302,10 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 /// Inserts `llvm.load` ops in the function body to restore the expected pointee
 /// value from `llvm.byval`/`llvm.byref` function arguments that were converted
 /// to LLVM pointer types.
-static void restoreByValByRefArgumentType(ConversionPatternRewriter &rewriter,
-                                          FunctionOpInterface funcOp) {
+static void restoreByValRefArgumentType(
+    ConversionPatternRewriter &rewriter, const LLVMTypeConverter &typeConverter,
+    ArrayRef<std::optional<NamedAttribute>> byValRefNonPtrAttrs,
+    LLVM::LLVMFuncOp funcOp) {
   // Nothing to do for function declarations.
   if (funcOp.isExternal())
     return;
@@ -279,10 +313,8 @@ static void restoreByValByRefArgumentType(ConversionPatternRewriter &rewriter,
   ConversionPatternRewriter::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(&funcOp.getFunctionBody().front());
 
-  SmallVector<std::optional<NamedAttribute>> byValRefArgAttrs;
-  filterByValByRefArgAttributes(funcOp, byValRefArgAttrs);
   for (const auto &[arg, byValRefAttr] :
-       llvm::zip(funcOp.getArguments(), byValRefArgAttrs)) {
+       llvm::zip(funcOp.getArguments(), byValRefNonPtrAttrs)) {
     // Skip argument if no `llvm.byval` or `llvm.byref` attribute.
     if (!byValRefAttr)
       continue;
@@ -291,7 +323,9 @@ static void restoreByValByRefArgumentType(ConversionPatternRewriter &rewriter,
     assert(isa<LLVM::LLVMPointerType>(arg.getType()) &&
            "Expected LLVM pointer type for argument with "
            "`llvm.byval`/`llvm.byref` attribute");
-    Type resTy = cast<TypeAttr>(byValRefAttr->getValue()).getValue();
+    Type resTy = typeConverter.convertType(
+        cast<TypeAttr>(byValRefAttr->getValue()).getValue());
+
     auto valueArg = rewriter.create<LLVM::LoadOp>(arg.getLoc(), resTy, arg);
     rewriter.replaceAllUsesExcept(arg, valueArg, valueArg);
   }
@@ -318,12 +352,12 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
   if (!llvmType)
     return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
 
-  // Make sure the type of `llvm.byval` and `llvm.byref` arguments are converted
-  // to LLVM pointer types.
-  SmallVector<std::optional<NamedAttribute>> byValByRefArgs;
-  filterByValByRefArgAttributes(funcOp, byValByRefArgs);
+  // Replace the type of `llvm.byval` and `llvm.byref` arguments that were not
+  // converted to an LLVM pointer type.
+  SmallVector<std::optional<NamedAttribute>> byValRefNonPtrAttrs;
+  filterByValRefNonPtrAttrs(funcOp, result, byValRefNonPtrAttrs);
   llvmType = converter.materializePtrForByValByRefFuncArgs(
-      llvmType, byValByRefArgs, result);
+      llvmType, byValRefNonPtrAttrs, result);
 
   // Create an LLVM function, use external linkage by default until MLIR
   // functions have linkage.
@@ -436,10 +470,11 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
                                        "region types conversion failed");
   }
 
-  // Fix the type mismatch between the generated `llvm.ptr` and the expected
+  // Fix the type mismatch between the materialized `llvm.ptr` and the expected
   // pointee type in the function body when converting `llvm.byval`/`llvm.byref`
   // function arguments.
-  restoreByValByRefArgumentType(rewriter, newFuncOp);
+  restoreByValRefArgumentType(rewriter, converter, byValRefNonPtrAttrs,
+                              newFuncOp);
 
   if (!shouldUseBarePtrCallConv(funcOp, &converter)) {
     if (funcOp->getAttrOfType<UnitAttr>(

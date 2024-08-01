@@ -260,13 +260,6 @@ LogicalResult barePtrFuncArgTypeConverter(const LLVMTypeConverter &converter,
                                           Type type,
                                           SmallVectorImpl<Type> &result);
 
-/// Returns the `llvm.byval` or `llvm.byref` attributes that are present in the
-/// function arguments. Returns an empty container if none of these attributes
-/// are found in any of the attributes.
-void filterByValByRefArgAttributes(
-    FunctionOpInterface funcOp,
-    SmallVectorImpl<std::optional<NamedAttribute>> &result);
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_LLVMCOMMON_TYPECONVERTER_H

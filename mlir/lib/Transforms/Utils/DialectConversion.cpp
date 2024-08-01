@@ -2929,6 +2929,14 @@ LogicalResult OperationConverter::legalizeChangedResultType(
 // Type Conversion
 //===----------------------------------------------------------------------===//
 
+std::optional<Type>
+TypeConverter::SignatureConversion::getConvertedType(unsigned input) const {
+  auto mapping = getInputMapping(input);
+  if (!mapping || mapping->size != 1)
+    return std::nullopt;
+  return getConvertedTypes()[mapping->inputNo];
+}
+
 void TypeConverter::SignatureConversion::addInputs(unsigned origInputNo,
                                                    ArrayRef<Type> types) {
   assert(!types.empty() && "expected valid types");

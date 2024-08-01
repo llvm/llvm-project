@@ -733,24 +733,3 @@ mlir::barePtrFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
   result.push_back(llvmTy);
   return success();
 }
-
-void mlir::filterByValByRefArgAttributes(
-    FunctionOpInterface funcOp,
-    SmallVectorImpl<std::optional<NamedAttribute>> &result) {
-  assert(result.empty() && "Unexpected non-empty output");
-  result.resize(funcOp.getNumArguments(), std::nullopt);
-  bool hasByValByRefAttrs = false;
-  for (int argIdx : llvm::seq(funcOp.getNumArguments())) {
-    for (NamedAttribute namedAttr : funcOp.getArgAttrs(argIdx)) {
-      if (namedAttr.getName() == LLVM::LLVMDialect::getByValAttrName() ||
-          namedAttr.getName() == LLVM::LLVMDialect::getByRefAttrName()) {
-        hasByValByRefAttrs = true;
-        result[argIdx] = namedAttr;
-        break;
-      }
-    }
-  }
-
-  if (!hasByValByRefAttrs)
-    result.clear();
-}
