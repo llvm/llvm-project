@@ -307,16 +307,16 @@ struct hash_state {
 };
 
 /// In LLVM_ENABLE_ABI_BREAKING_CHECKS builds, the seed is non-deterministic
-/// per process (address of a function in LLVMSupport) to prevent having users
-/// depend on the particular hash values. On platforms without ASLR, this is
-/// still likely non-deterministic per build.
+/// (address of a variable) to prevent having users depend on the particular
+/// hash values. On platforms without ASLR, this is still likely
+/// non-deterministic per build.
 inline uint64_t get_execution_seed() {
   // Work around x86-64 negative offset folding for old Clang -fno-pic
   // https://reviews.llvm.org/D93931
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS &&                                         \
     (!defined(__clang__) || __clang_major__ > 11)
-  return static_cast<uint64_t>(
-      reinterpret_cast<uintptr_t>(&install_fatal_error_handler));
+  static const char seed = 0;
+  return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&seed));
 #else
   return 0xff51afd7ed558ccdULL;
 #endif
