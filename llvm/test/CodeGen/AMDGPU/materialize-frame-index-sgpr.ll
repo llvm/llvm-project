@@ -835,13 +835,12 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX7-NEXT:    v_writelane_b32 v21, s56, 25
 ; GFX7-NEXT:    v_writelane_b32 v21, s57, 26
 ; GFX7-NEXT:    s_and_b64 s[4:5], 0, exec
-; GFX7-NEXT:    v_mov_b32_e32 v22, 16
 ; GFX7-NEXT:    v_writelane_b32 v21, s58, 27
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX7-NEXT:    ;;#ASMEND
-; GFX7-NEXT:    v_mad_u32_u24 v22, v22, 64, s32
 ; GFX7-NEXT:    v_lshr_b32_e64 v22, s32, 6
+; GFX7-NEXT:    v_mad_u32_u24 v22, v22, 1, 16
 ; GFX7-NEXT:    v_writelane_b32 v21, s59, 28
 ; GFX7-NEXT:    v_readfirstlane_b32 s59, v22
 ; GFX7-NEXT:    ;;#ASMSTART
@@ -918,13 +917,12 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX8-NEXT:    v_writelane_b32 v21, s56, 25
 ; GFX8-NEXT:    v_writelane_b32 v21, s57, 26
 ; GFX8-NEXT:    s_and_b64 s[4:5], 0, exec
-; GFX8-NEXT:    v_mov_b32_e32 v22, 16
 ; GFX8-NEXT:    v_writelane_b32 v21, s58, 27
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX8-NEXT:    ;;#ASMEND
-; GFX8-NEXT:    v_mad_u32_u24 v22, v22, 64, s32
 ; GFX8-NEXT:    v_lshrrev_b32_e64 v22, 6, s32
+; GFX8-NEXT:    v_mad_u32_u24 v22, v22, 1, 16
 ; GFX8-NEXT:    v_writelane_b32 v21, s59, 28
 ; GFX8-NEXT:    v_readfirstlane_b32 s59, v22
 ; GFX8-NEXT:    ;;#ASMSTART
