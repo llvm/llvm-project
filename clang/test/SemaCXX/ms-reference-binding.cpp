@@ -6,10 +6,26 @@
 struct A {};
 void fARef(A&) {}
 
-void test() {
+void test1() {
   A& a1 = A(); // expected-warning{{binding a user-defined type temporary to a non-const lvalue is a Microsoft extension}}
 
   fARef(A()); // expected-warning{{binding a user-defined type temporary to a non-const lvalue is a Microsoft extension}}
+}
+
+void fARefDoNotWarn(A&) {}
+void fARefDoNotWarn(const A&) {}
+
+// expected-note@+2 {{candidate function not viable: 1st argument ('const A') would lose const qualifier}}
+// expected-note@+1 {{candidate function not viable: 1st argument ('const A') would lose const qualifier}}
+void fARefLoseConstQualifier(A&) {}
+
+void test2() {
+  // This should not warn since `fARef2(const A&)` is a better candidate
+  fARefDoNotWarn(A());
+
+  const A a;
+  fARefLoseConstQualifier(a); // expected-error{{no matching function for call to 'fARefLoseConstQualifier'}}
+  fARefLoseConstQualifier(static_cast<const A&&>(a)); // expected-error{{no matching function for call to 'fARefLoseConstQualifier'}}
 }
 
 #else
@@ -22,7 +38,12 @@ A fA();
 
 A&& fARvalueRef();
 A(&&fARvalueRefArray())[1];
+
 void fARef(A&) {}
+
+// expected-note@+2 {{candidate function not viable: expects an lvalue for 1st argument}}
+// expected-note@+1 {{candidate function not viable: expects an lvalue for 1st argument}}
+void fAVolatileRef(volatile A&) {}
 
 void fIntRef(int&) {} // expected-note{{candidate function not viable: expects an lvalue for 1st argument}}
 void fDoubleRef(double&) {} // expected-note{{candidate function not viable: expects an lvalue for 1st argument}}
@@ -35,6 +56,10 @@ void fIntConstArray(const int (&)[1]);
 
 namespace NS {
   void fARef(A&) {}
+
+  // expected-note@+2 {{passing argument to parameter here}}
+  // expected-note@+1 {{passing argument to parameter here}}
+  void fAVolatileRef(volatile A&) {}
 
   void fIntRef(int&) {} // expected-note{{passing argument to parameter here}}
   void fDoubleRef(double&) {} // expected-note{{passing argument to parameter here}}
@@ -87,10 +112,18 @@ void test3() {
 
   fARef(A());
   fARef(static_cast<A&&>(a1));
+
+  fAVolatileRef(A()); // expected-error{{no matching function for call to 'fAVolatileRef'}}
+  fAVolatileRef(static_cast<A&&>(a1)); // expected-error{{no matching function for call to 'fAVolatileRef'}}
+
   fARef(B());
 
   NS::fARef(A());
   NS::fARef(static_cast<A&&>(a1));
+
+  NS::fAVolatileRef(A()); // expected-error{{volatile lvalue reference to type 'volatile A' cannot bind to a temporary of type 'A'}}
+  NS::fAVolatileRef(static_cast<A&&>(a1)); // expected-error{{volatile lvalue reference to type 'volatile A' cannot bind to a temporary of type 'A'}}
+
   NS::fARef(B());
 
   A& a2 = fA();
