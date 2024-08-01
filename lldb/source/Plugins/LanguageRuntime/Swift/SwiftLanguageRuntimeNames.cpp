@@ -1079,13 +1079,13 @@ void SwiftLanguageRuntime::MethodName::Parse() {
       if (was_operator)
         m_type = eTypeOperator;
       // check for obvious constructor/destructor cases
-      else if (m_basename.equals("__deallocating_destructor"))
+      else if (m_basename == "__deallocating_destructor")
         m_type = eTypeDeallocator;
-      else if (m_basename.equals("__allocating_constructor"))
+      else if (m_basename == "__allocating_constructor")
         m_type = eTypeAllocator;
-      else if (m_basename.equals("init"))
+      else if (m_basename == "init")
         m_type = eTypeConstructor;
-      else if (m_basename.equals("destructor"))
+      else if (m_basename == "destructor")
         m_type = eTypeDestructor;
       else
         m_type = eTypeUnknownMethod;

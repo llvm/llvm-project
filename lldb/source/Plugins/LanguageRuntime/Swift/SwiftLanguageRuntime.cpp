@@ -173,7 +173,7 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
     if (runtime_kind == RuntimeKind::ObjC) {
       auto *obj_file = target.GetExecutableModule()->GetObjectFile();
       bool have_objc_interop =
-          obj_file && obj_file->GetPluginName().equals("mach-o");
+          obj_file && obj_file->GetPluginName() == "mach-o";
       if (!have_objc_interop)
         return {};
     }
@@ -904,7 +904,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   std::optional<uint32_t> info_id;
   // When dealing with ELF, we need to pass in the contents of the on-disk
   // file, since the Section Header Table is not present in the child process
-  if (obj_file->GetPluginName().equals("elf")) {
+  if (obj_file->GetPluginName() == "elf") {
     DataExtractor extractor;
     auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
     const uint8_t *file_data = extractor.GetDataStart();
@@ -914,7 +914,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
         std::optional<llvm::sys::MemoryBlock>(file_buffer),
         likely_module_names);
   } else if (read_from_file_cache &&
-             obj_file->GetPluginName().equals("mach-o")) {
+             obj_file->GetPluginName() == "mach-o") {
     info_id = AddObjectFileToReflectionContext(module_sp, likely_module_names);
     if (!info_id)
       info_id = m_reflection_ctx->AddImage(swift::remote::RemoteAddress(load_ptr),
