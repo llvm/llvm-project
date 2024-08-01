@@ -3310,9 +3310,9 @@ public:
   const FieldDecl *FindCountedByField(const FieldDecl *FD);
 
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
-                                      const FieldDecl *FAMDecl,
-                                      const FieldDecl *CountDecl);
+  llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
