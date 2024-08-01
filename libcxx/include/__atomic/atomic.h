@@ -47,6 +47,7 @@ struct atomic : public __atomic_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp, __base::is_always_lock_free);
     __base::store(__d);
     return __d;
   }
@@ -72,6 +73,7 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __d) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
     __base::store(__d);
     return __d;
   }
@@ -81,6 +83,7 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
     // __atomic_fetch_add accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
     return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
@@ -93,6 +96,7 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
     // __atomic_fetch_add accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
     return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
@@ -104,18 +108,41 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
     return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) volatile _NOEXCEPT { return fetch_add(1); }
   _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) _NOEXCEPT { return fetch_add(1); }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator--(int) volatile _NOEXCEPT { return fetch_sub(1); }
+  _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
+    return fetch_add(1);
+  }
+
   _LIBCPP_HIDE_FROM_ABI _Tp* operator--(int) _NOEXCEPT { return fetch_sub(1); }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator++() volatile _NOEXCEPT { return fetch_add(1) + 1; }
+  _LIBCPP_HIDE_FROM_ABI _Tp* operator--(int) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
+    return fetch_sub(1);
+  }
+
   _LIBCPP_HIDE_FROM_ABI _Tp* operator++() _NOEXCEPT { return fetch_add(1) + 1; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator--() volatile _NOEXCEPT { return fetch_sub(1) - 1; }
+  _LIBCPP_HIDE_FROM_ABI _Tp* operator++() volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
+    return fetch_add(1) + 1;
+  }
+
   _LIBCPP_HIDE_FROM_ABI _Tp* operator--() _NOEXCEPT { return fetch_sub(1) - 1; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator+=(ptrdiff_t __op) volatile _NOEXCEPT { return fetch_add(__op) + __op; }
+  _LIBCPP_HIDE_FROM_ABI _Tp* operator--() volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
+    return fetch_sub(1) - 1;
+  }
+
   _LIBCPP_HIDE_FROM_ABI _Tp* operator+=(ptrdiff_t __op) _NOEXCEPT { return fetch_add(__op) + __op; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator-=(ptrdiff_t __op) volatile _NOEXCEPT { return fetch_sub(__op) - __op; }
+  _LIBCPP_HIDE_FROM_ABI _Tp* operator+=(ptrdiff_t __op) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
+    return fetch_add(__op) + __op;
+  }
+
   _LIBCPP_HIDE_FROM_ABI _Tp* operator-=(ptrdiff_t __op) _NOEXCEPT { return fetch_sub(__op) - __op; }
+  _LIBCPP_HIDE_FROM_ABI _Tp* operator-=(ptrdiff_t __op) volatile _NOEXCEPT {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp*, __base::is_always_lock_free);
+    return fetch_sub(__op) - __op;
+  }
 
   atomic& operator=(const atomic&)          = delete;
   atomic& operator=(const atomic&) volatile = delete;
@@ -201,9 +228,8 @@ public:
   atomic& operator=(const atomic&)          = delete;
   atomic& operator=(const atomic&) volatile = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile noexcept
-    requires __base::is_always_lock_free
-  {
+  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile noexcept {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp, __base::is_always_lock_free);
     __base::store(__d);
     return __d;
   }
@@ -212,9 +238,8 @@ public:
     return __d;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
-    requires __base::is_always_lock_free
-  {
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp, __base::is_always_lock_free);
     return __fetch_add(*this, __op, __m);
   }
 
@@ -222,9 +247,8 @@ public:
     return __fetch_add(*this, __op, __m);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
-    requires __base::is_always_lock_free
-  {
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp, __base::is_always_lock_free);
     return __fetch_sub(*this, __op, __m);
   }
 
@@ -232,17 +256,15 @@ public:
     return __fetch_sub(*this, __op, __m);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) volatile noexcept
-    requires __base::is_always_lock_free
-  {
+  _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) volatile noexcept {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp, __base::is_always_lock_free);
     return fetch_add(__op) + __op;
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) noexcept { return fetch_add(__op) + __op; }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) volatile noexcept
-    requires __base::is_always_lock_free
-  {
+  _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) volatile noexcept {
+    _LIBCPP_DEPRECATED_NOT_ALWAYS_LOCK_FREE(_Tp, __base::is_always_lock_free);
     return fetch_sub(__op) - __op;
   }
 
@@ -272,8 +294,7 @@ atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NO
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
-atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
   std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 

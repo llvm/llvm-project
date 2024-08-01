@@ -132,7 +132,7 @@ tuple(allocator_arg_t, Alloc, pair<T1, T2>) -> tuple<T1, T2>;       // since C++
 template <class Alloc, class ...T>
 tuple(allocator_arg_t, Alloc, tuple<T...>) -> tuple<T...>;          // since C++17
 
-struct ignore-type { // exposition only                             // Since C++26
+struct ignore-type { // exposition only                             // since C++26
   constexpr const ignore-type&
     operator=(const auto &) const noexcept
       { return *this; }
@@ -154,11 +154,20 @@ template <class T, class Tuple>
 template <class T> struct tuple_size; // undefined
 template <class... T> struct tuple_size<tuple<T...>>;
 template <class T>
- inline constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17
+  inline constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17
+
+template <class T> struct tuple_size<const T>;
+template <class T> struct tuple_size<volatile T>;       // deprecated in C++20
+template <class T> struct tuple_size<const volatile T>; // deprecated in C++20
+
 template <size_t I, class T> struct tuple_element; // undefined
 template <size_t I, class... T> struct tuple_element<I, tuple<T...>>;
 template <size_t I, class T>
   using tuple_element_t = typename tuple_element <I, T>::type; // C++14
+
+template <size_t I, class T> struct tuple_element<I, const T>;
+template <size_t I, class T> struct tuple_element<I, volatile T>;       // deprecated in C++20
+template <size_t I, class T> struct tuple_element<I, const volatile T>; // deprecated in C++20
 
 // 20.4.1.5, element access:
 template <size_t I, class... T>
