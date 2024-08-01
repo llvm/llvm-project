@@ -595,6 +595,13 @@ namespace llvm {
     VPDPBSSD,
     VPDPBSSDS,
 
+    VPDPWSUD,
+    VPDPWSUDS,
+    VPDPWUSD,
+    VPDPWUSDS,
+    VPDPWUUD,
+    VPDPWUUDS,
+
     MPSADBW,
 
     // Compress and expand.
@@ -656,9 +663,10 @@ namespace llvm {
     // SRC, PASSTHRU, MASK
     MCVTNEPS2BF16,
 
-    // Dot product of BF16 pairs to accumulated into
+    // Dot product of BF16/FP16 pairs to accumulated into
     // packed single precision.
     DPBF16PS,
+    DPFP16PS,
 
     // A stack checking function call. On Windows it's _chkstk call.
     DYN_ALLOCA,

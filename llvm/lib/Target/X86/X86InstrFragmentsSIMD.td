@@ -792,6 +792,11 @@ def X86dpbf16ps :      SDNode<"X86ISD::DPBF16PS",
                                             SDTCisSameAs<0,1>,
                                             SDTCVecEltisVT<2, bf16>,
                                             SDTCisSameAs<2,3>]>>;
+def X86dpfp16ps :      SDNode<"X86ISD::DPFP16PS",
+                       SDTypeProfile<1, 3, [SDTCVecEltisVT<0, f32>,
+                                            SDTCisSameAs<0,1>,
+                                            SDTCVecEltisVT<2, f16>,
+                                            SDTCisSameAs<2,3>]>>;
 
 // galois field arithmetic
 def X86GF2P8affineinvqb : SDNode<"X86ISD::GF2P8AFFINEINVQB", SDTBlend>;
@@ -808,6 +813,13 @@ def X86vpdpbsud  : SDNode<"X86ISD::VPDPBSUD",  SDTVnni>;
 def X86vpdpbsuds : SDNode<"X86ISD::VPDPBSUDS", SDTVnni>;
 def X86vpdpbuud  : SDNode<"X86ISD::VPDPBUUD",  SDTVnni>;
 def X86vpdpbuuds : SDNode<"X86ISD::VPDPBUUDS", SDTVnni>;
+
+def X86vpdpwsud  : SDNode<"X86ISD::VPDPWSUD",  SDTVnni>;
+def X86vpdpwsuds : SDNode<"X86ISD::VPDPWSUDS", SDTVnni>;
+def X86vpdpwusd  : SDNode<"X86ISD::VPDPWUSD",  SDTVnni>;
+def X86vpdpwusds : SDNode<"X86ISD::VPDPWUSDS", SDTVnni>;
+def X86vpdpwuud  : SDNode<"X86ISD::VPDPWUUD",  SDTVnni>;
+def X86vpdpwuuds : SDNode<"X86ISD::VPDPWUUDS", SDTVnni>;
 
 def X86Vmpsadbw : SDNode<"X86ISD::MPSADBW", SDTX86PSADBW>;
 

@@ -12390,13 +12390,13 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (VTI.VT (OpNode VTI.RC:$src1,
                                             VTI.RC:$src2, VTI.RC:$src3)),
                                    IsCommutable, IsCommutable>,
-                                   EVEX, VVVV, T8, PD, Sched<[sched]>;
+                                   EVEX, VVVV, T8, Sched<[sched]>;
   defm m  :   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.MemOp:$src3), OpStr,
                                    "$src3, $src2", "$src2, $src3",
                                    (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
                                             (VTI.VT (VTI.LdFrag addr:$src3))))>,
-                                   EVEX, VVVV, EVEX_CD8<32, CD8VF>, T8, PD,
+                                   EVEX, VVVV, EVEX_CD8<32, CD8VF>, T8,
                                    Sched<[sched.Folded, sched.ReadAfterFold,
                                           sched.ReadAfterFold]>;
   defm mb :   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
@@ -12406,17 +12406,18 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (OpNode VTI.RC:$src1, VTI.RC:$src2,
                                     (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))>,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, EVEX_B,
-                                   T8, PD, Sched<[sched.Folded, sched.ReadAfterFold,
+                                   T8, Sched<[sched.Folded, sched.ReadAfterFold,
                                                 sched.ReadAfterFold]>;
   }
 }
 
 multiclass VNNI_common<bits<8> Op, string OpStr, SDNode OpNode,
-                       X86SchedWriteWidths sched, bit IsCommutable> {
-  let Predicates = [HasVNNI] in
+                       X86SchedWriteWidths sched, bit IsCommutable,
+                       list<Predicate> prds, list<Predicate> prds512> {
+  let Predicates = prds512 in
   defm Z      :   VNNI_rmb<Op, OpStr, OpNode, sched.ZMM, v16i32_info,
                            IsCommutable>, EVEX_V512;
-  let Predicates = [HasVNNI, HasVLX] in {
+  let Predicates = prds in {
     defm Z256 :   VNNI_rmb<Op, OpStr, OpNode, sched.YMM, v8i32x_info,
                            IsCommutable>, EVEX_V256;
     defm Z128 :   VNNI_rmb<Op, OpStr, OpNode, sched.XMM, v4i32x_info,
@@ -12425,10 +12426,14 @@ multiclass VNNI_common<bits<8> Op, string OpStr, SDNode OpNode,
 }
 
 // FIXME: Is there a better scheduler class for VPDP?
-defm VPDPBUSD   : VNNI_common<0x50, "vpdpbusd", X86Vpdpbusd, SchedWriteVecIMul, 0>;
-defm VPDPBUSDS  : VNNI_common<0x51, "vpdpbusds", X86Vpdpbusds, SchedWriteVecIMul, 0>;
-defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 1>;
-defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1>;
+defm VPDPBUSD   : VNNI_common<0x50, "vpdpbusd", X86Vpdpbusd, SchedWriteVecIMul, 0,
+                              [HasVNNI, HasVLX], [HasVNNI]>, PD;
+defm VPDPBUSDS  : VNNI_common<0x51, "vpdpbusds", X86Vpdpbusds, SchedWriteVecIMul, 0,
+                              [HasVNNI, HasVLX], [HasVNNI]>, PD;
+defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 1,
+                              [HasVNNI, HasVLX], [HasVNNI]>, PD;
+defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1,
+                              [HasVNNI, HasVLX], [HasVNNI]>, PD;
 
 // Patterns to match VPDPWSSD from existing instructions/intrinsics.
 let Predicates = [HasVNNI] in {
@@ -12806,9 +12811,9 @@ let Predicates = [HasBF16] in {
 }
 
 let Constraints = "$src1 = $dst" in {
-multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                              X86FoldableSchedWrite sched,
-                              X86VectorVTInfo _, X86VectorVTInfo src_v> {
+multiclass avx512_dpf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                             X86FoldableSchedWrite sched,
+                             X86VectorVTInfo _, X86VectorVTInfo src_v> {
   defm r: AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),
                            (ins src_v.RC:$src2, src_v.RC:$src3),
                            OpcodeStr, "$src3, $src2", "$src2, $src3",
@@ -12834,25 +12839,25 @@ multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 } // Constraints = "$src1 = $dst"
 
-multiclass avx512_dpbf16ps_sizes<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                 X86SchedWriteWidths sched, AVX512VLVectorVTInfo _,
-                                 AVX512VLVectorVTInfo src_v, Predicate prd> {
-  let Predicates = [prd] in {
-    defm Z    : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, sched.ZMM, _.info512,
-                                   src_v.info512>, EVEX_V512;
+multiclass avx512_dpf16ps_sizes<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                                AVX512VLVectorVTInfo _, list<Predicate> prds,
+                                list<Predicate> prds512> {
+  let Predicates = prds512 in {
+    defm Z    : avx512_dpf16ps_rm<opc, OpcodeStr, OpNode, WriteFMAZ,
+                                  avx512vl_f32_info.info512, _.info512>, EVEX_V512;
   }
-  let Predicates = [HasVLX, prd] in {
-    defm Z256 : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, sched.YMM, _.info256,
-                                   src_v.info256>, EVEX_V256;
-    defm Z128 : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, sched.XMM, _.info128,
-                                   src_v.info128>, EVEX_V128;
+  let Predicates = prds in {
+    defm Z256 : avx512_dpf16ps_rm<opc, OpcodeStr, OpNode, WriteFMAY,
+                                  v8f32x_info, _.info256>, EVEX_V256;
+    defm Z128 : avx512_dpf16ps_rm<opc, OpcodeStr, OpNode, WriteFMAX,
+                                  v4f32x_info, _.info128>, EVEX_V128;
   }
 }
 
 let ExeDomain = SSEPackedSingle in
-defm VDPBF16PS : avx512_dpbf16ps_sizes<0x52, "vdpbf16ps", X86dpbf16ps, SchedWriteFMA,
-                                       avx512vl_f32_info, avx512vl_bf16_info,
-                                       HasBF16>, T8, XS, EVEX_CD8<32, CD8VF>;
+defm VDPBF16PS : avx512_dpf16ps_sizes<0x52, "vdpbf16ps", X86dpbf16ps, avx512vl_bf16_info,
+                                      [HasVLX, HasBF16], [HasBF16]>,
+                      T8, XS, EVEX_CD8<32, CD8VF>;
 
 //===----------------------------------------------------------------------===//
 // AVX512FP16

@@ -2,6 +2,569 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx10.2-256 --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.2-256 --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64
 
+; VNNI FP16
+
+define <4 x float> @test_mm_dpph_ps(<4 x float> %__W, <8 x half> %__A, <8 x half> %__B) {
+; CHECK-LABEL: test_mm_dpph_ps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdpphps %xmm2, %xmm1, %xmm0 # encoding: [0x62,0xf2,0x74,0x08,0x52,0xc2]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = tail call <4 x float> @llvm.x86.avx10.vdpphps.128(<4 x float> %__W, <8 x half> %__A, <8 x half> %__B)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_mm_mask_dpph_ps(<4 x float> %__W, i8 zeroext %__U, <8 x half> %__A, <8 x half> %__B) {
+; X86-LABEL: test_mm_mask_dpph_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vdpphps %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x74,0x09,0x52,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_dpph_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vdpphps %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x74,0x09,0x52,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dph = tail call <4 x float> @llvm.x86.avx10.vdpphps.128(<4 x float> %__W, <8 x half> %__A, <8 x half> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %ext = shufflevector <8 x i1> %bst, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = select <4 x i1> %ext, <4 x float> %dph, <4 x float> %__W
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_mm_maskz_dpph_ps(i8 zeroext %__U, <4 x float> %__W, <8 x half> %__A, <8 x half> %__B) {
+; X86-LABEL: test_mm_maskz_dpph_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vdpphps %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0x89,0x52,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_dpph_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vdpphps %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0x89,0x52,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dph = tail call <4 x float> @llvm.x86.avx10.vdpphps.128(<4 x float> %__W, <8 x half> %__A, <8 x half> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %ext = shufflevector <8 x i1> %bst, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = select <4 x i1> %ext, <4 x float> %dph, <4 x float> zeroinitializer
+  ret <4 x float> %res
+}
+
+define <8 x float> @test_mm256_dpph_ps(<8 x float> %__W, <16 x half> %__A, <16 x half> %__B) {
+; CHECK-LABEL: test_mm256_dpph_ps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdpphps %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf2,0x74,0x28,0x52,0xc2]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = tail call <8 x float> @llvm.x86.avx10.vdpphps.256(<8 x float> %__W, <16 x half> %__A, <16 x half> %__B)
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_mm256_mask_dpph_ps(<8 x float> %__W, i8 zeroext %__U, <16 x half> %__A, <16 x half> %__B) {
+; X86-LABEL: test_mm256_mask_dpph_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vdpphps %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x74,0x29,0x52,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_mask_dpph_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vdpphps %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x74,0x29,0x52,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dph = tail call <8 x float> @llvm.x86.avx10.vdpphps.256(<8 x float> %__W, <16 x half> %__A, <16 x half> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x float> %dph, <8 x float> %__W
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_mm256_maskz_dpph_ps(i8 zeroext %__U, <8 x float> %__W, <16 x half> %__A, <16 x half> %__B) {
+; X86-LABEL: test_mm256_maskz_dpph_ps:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vdpphps %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0xa9,0x52,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_maskz_dpph_ps:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vdpphps %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0xa9,0x52,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dph = tail call <8 x float> @llvm.x86.avx10.vdpphps.256(<8 x float> %__W, <16 x half> %__A, <16 x half> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x float> %dph, <8 x float> zeroinitializer
+  ret <8 x float> %res
+}
+
+declare <4 x float> @llvm.x86.avx10.vdpphps.128(<4 x float>, <8 x half>, <8 x half>)
+declare <8 x float> @llvm.x86.avx10.vdpphps.256(<8 x float>, <16 x half>, <16 x half>)
+
+; VNNI INT8
+
+define <4 x i32> @test_mm_mask_dpbssd_epi32(<4 x i32> %__W, i4 zeroext %__U, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_mask_dpbssd_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbssd %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x77,0x09,0x50,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_dpbssd_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbssd %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x77,0x09,0x50,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpbssd.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> %__W
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_mm_maskz_dpbssds_epi32(i4 zeroext %__U, <4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_maskz_dpbssds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbssds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x77,0x89,0x51,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_dpbssds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbssds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x77,0x89,0x51,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpbssds.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <8 x i32> @test_mm256_maskz_dpbssds_epi32(<8 x i32> %__W, i8 zeroext %__U, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_maskz_dpbssds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbssds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x77,0x29,0x51,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_maskz_dpbssds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbssds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x77,0x29,0x51,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpbssds.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> %__W
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_mm256_mask_dpbssd_epi32(i8 zeroext %__U, <8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_mask_dpbssd_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbssd %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x77,0xa9,0x50,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_mask_dpbssd_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbssd %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x77,0xa9,0x50,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpbssd.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+declare <4 x i32> @llvm.x86.avx2.vpdpbssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx2.vpdpbssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpbssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpbssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
+define <4 x i32> @test_mm_mask_dpbsud_epi32(<4 x i32> %__W, i4 zeroext %__U, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_mask_dpbsud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbsud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x09,0x50,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_dpbsud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbsud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x09,0x50,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpbsud.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> %__W
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_mm_maskz_dpbsuds_epi32(i4 zeroext %__U, <4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_maskz_dpbsuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbsuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0x89,0x51,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_dpbsuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbsuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0x89,0x51,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpbsuds.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <8 x i32> @test_mm256_maskz_dpbsuds_epi32(<8 x i32> %__W, i8 zeroext %__U, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_maskz_dpbsuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbsuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x76,0x29,0x51,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_maskz_dpbsuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbsuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x76,0x29,0x51,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpbsuds.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> %__W
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_mm256_mask_dpbsud_epi32(i8 zeroext %__U, <8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_mask_dpbsud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbsud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xa9,0x50,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_mask_dpbsud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbsud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xa9,0x50,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpbsud.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+declare <4 x i32> @llvm.x86.avx2.vpdpbsud.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx2.vpdpbsuds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpbsud.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpbsuds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
+define <4 x i32> @test_mm_mask_dpbuud_epi32(<4 x i32> %__W, i4 zeroext %__U, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_mask_dpbuud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbuud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x74,0x09,0x50,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_dpbuud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbuud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x74,0x09,0x50,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpbuud.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> %__W
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_mm_maskz_dpbuuds_epi32(i4 zeroext %__U, <4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_maskz_dpbuuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbuuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0x89,0x51,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_dpbuuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbuuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0x89,0x51,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpbuuds.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <8 x i32> @test_mm256_maskz_dpbuuds_epi32(<8 x i32> %__W, i8 zeroext %__U, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_maskz_dpbuuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbuuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x74,0x29,0x51,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_maskz_dpbuuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbuuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x74,0x29,0x51,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpbuuds.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> %__W
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_mm256_mask_dpbuud_epi32(i8 zeroext %__U, <8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_mask_dpbuud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpbuud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0xa9,0x50,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_mask_dpbuud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpbuud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0xa9,0x50,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpbuud.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+declare <4 x i32> @llvm.x86.avx2.vpdpbuud.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx2.vpdpbuuds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpbuud.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpbuuds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
+; VNNI INT16
+
+define <4 x i32> @test_mm_mask_dpwsud_epi32(<4 x i32> %__W, i4 zeroext %__U, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_mask_dpwsud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwsud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x09,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_dpwsud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwsud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x09,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpwsud.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> %__W
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_mm_maskz_dpwsuds_epi32(i4 zeroext %__U, <4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_maskz_dpwsuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwsuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0x89,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_dpwsuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwsuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0x89,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpwsuds.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <8 x i32> @test_mm256_maskz_dpwsuds_epi32(<8 x i32> %__W, i8 zeroext %__U, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_maskz_dpwsuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwsuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x76,0x29,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_maskz_dpwsuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwsuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x76,0x29,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpwsuds.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> %__W
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_mm256_mask_dpwsud_epi32(i8 zeroext %__U, <8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_mask_dpwsud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwsud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xa9,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_mask_dpwsud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwsud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xa9,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpwsud.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+declare <4 x i32> @llvm.x86.avx2.vpdpwsud.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx2.vpdpwsuds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpwsud.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpwsuds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
+define <4 x i32> @test_mm_mask_dpwusd_epi32(<4 x i32> %__W, i4 zeroext %__U, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_mask_dpwusd_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwusd %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x75,0x09,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_dpwusd_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwusd %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x75,0x09,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpwusd.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> %__W
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_mm_maskz_dpwusds_epi32(i4 zeroext %__U, <4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_maskz_dpwusds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwusds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x75,0x89,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_dpwusds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwusds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x75,0x89,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpwusds.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <8 x i32> @test_mm256_maskz_dpwusds_epi32(<8 x i32> %__W, i8 zeroext %__U, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_maskz_dpwusds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwusds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x75,0x29,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_maskz_dpwusds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwusds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x75,0x29,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpwusds.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> %__W
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_mm256_mask_dpwusd_epi32(i8 zeroext %__U, <8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_mask_dpwusd_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwusd %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xa9,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_mask_dpwusd_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwusd %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xa9,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpwusd.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+declare <4 x i32> @llvm.x86.avx2.vpdpwusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx2.vpdpwusds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpwusd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpwusds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
+define <4 x i32> @test_mm_mask_dpwuud_epi32(<4 x i32> %__W, i4 zeroext %__U, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_mask_dpwuud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwuud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x74,0x09,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_dpwuud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwuud %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x74,0x09,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpwuud.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> %__W
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_mm_maskz_dpwuuds_epi32(i4 zeroext %__U, <4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B) {
+; X86-LABEL: test_mm_maskz_dpwuuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwuuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0x89,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_dpwuuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwuuds %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0x89,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <4 x i32> @llvm.x86.avx2.vpdpwuuds.128(<4 x i32> %__W, <4 x i32> %__A, <4 x i32> %__B)
+  %bst = bitcast i4 %__U to <4 x i1>
+  %res = select <4 x i1> %bst, <4 x i32> %dpi, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <8 x i32> @test_mm256_maskz_dpwuuds_epi32(<8 x i32> %__W, i8 zeroext %__U, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_maskz_dpwuuds_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwuuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x74,0x29,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_maskz_dpwuuds_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwuuds %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x74,0x29,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpwuuds.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> %__W
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_mm256_mask_dpwuud_epi32(i8 zeroext %__U, <8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B) {
+; X86-LABEL: test_mm256_mask_dpwuud_epi32:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpdpwuud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0xa9,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mm256_mask_dpwuud_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpdpwuud %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x74,0xa9,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %dpi = tail call <8 x i32> @llvm.x86.avx2.vpdpwuud.256(<8 x i32> %__W, <8 x i32> %__A, <8 x i32> %__B)
+  %bst = bitcast i8 %__U to <8 x i1>
+  %res = select <8 x i1> %bst, <8 x i32> %dpi, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+declare <4 x i32> @llvm.x86.avx2.vpdpwuud.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx2.vpdpwuuds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpwuud.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.vpdpwuuds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+
 ; VMPSADBW
 
 define { <8 x i16>, <8 x i16>, <8 x i16> } @test_mask_mpsadbw_128(<16 x i8> %x0, <16 x i8> %x1, <8 x i16> %x3, i8 %x4) {
