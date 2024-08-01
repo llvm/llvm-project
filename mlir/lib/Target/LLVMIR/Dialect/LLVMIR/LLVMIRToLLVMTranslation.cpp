@@ -256,16 +256,15 @@ static std::optional<int32_t> parseIntegerMD(llvm::Metadata *md) {
 }
 
 /// Convert an `MDNode` to an LLVM dialect `VecTypeHintAttr` if possible.
-template <typename ConvertType>
 static VecTypeHintAttr convertVecTypeHint(Builder builder, llvm::MDNode *md,
-                                          ConvertType convertType) {
+                                          ModuleImport &moduleImport) {
   if (!md || md->getNumOperands() != 2)
     return {};
 
   auto *hintMD = dyn_cast<llvm::ValueAsMetadata>(md->getOperand(0).get());
   if (!hintMD)
     return {};
-  TypeAttr hint = TypeAttr::get(convertType(hintMD->getType()));
+  TypeAttr hint = TypeAttr::get(moduleImport.convertType(hintMD->getType()));
 
   std::optional<int32_t> optIsSigned = parseIntegerMD(md->getOperand(1).get());
   if (!optIsSigned)
@@ -300,14 +299,14 @@ static IntegerAttr convertIntegerMD(Builder builder, llvm::MDNode *md) {
   return builder.getI32IntegerAttr(*val);
 }
 
-template <typename Parser, typename Setter>
+template <typename Encoder, typename Setter>
 static LogicalResult setFuncAttr(Builder &builder, llvm::MDNode *node,
-                                 Operation *op, Parser parse, Setter set) {
+                                 Operation *op, Encoder encode, Setter set) {
   auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op);
   if (!funcOp)
     return failure();
 
-  auto attr = parse(node);
+  auto attr = encode(node);
   if (!attr)
     return failure();
 
@@ -321,10 +320,7 @@ static LogicalResult setVecTypeHintAttr(Builder &builder, llvm::MDNode *node,
   return setFuncAttr(
       builder, node, op,
       [&builder, &moduleImport](llvm::MDNode *node) {
-        return convertVecTypeHint(builder, node,
-                                  [&moduleImport](llvm::Type *type) {
-                                    return moduleImport.convertType(type);
-                                  });
+        return convertVecTypeHint(builder, node, moduleImport);
       },
       [](LLVM::LLVMFuncOp funcOp, VecTypeHintAttr attr) {
         funcOp.setVecTypeHintAttr(attr);
