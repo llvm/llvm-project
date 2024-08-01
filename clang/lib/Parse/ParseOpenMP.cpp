@@ -3326,6 +3326,35 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
           << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
     SkipUntil(tok::comma, tok::annot_pragma_openmp_end, StopBeforeMatch);
     break;
+  case OMPC_absent: {
+    SourceLocation Loc = ConsumeToken();
+    SourceLocation LLoc = Tok.getLocation();
+    SourceLocation RLoc;
+    llvm::SmallVector<OpenMPDirectiveKind, 4> DKVec;
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+    T.consumeOpen();
+    do {
+      OpenMPDirectiveKind DK = getOpenMPDirectiveKind(PP.getSpelling(Tok));
+      if (DK == OMPD_unknown) {
+        skipUntilPragmaOpenMPEnd(OMPD_assume);
+        Diag(Tok, diag::err_omp_unexpected_clause)
+            << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
+        break;
+      }
+      if (isOpenMPExecutableDirective(DK)) {
+        DKVec.push_back(DK);
+        ConsumeToken();
+      } else {
+        Diag(Tok, diag::err_omp_unexpected_clause)
+            << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
+      }
+    } while (TryConsumeToken(tok::comma));
+    RLoc = Tok.getLocation();
+    T.consumeClose();
+    Clause = Actions.OpenMP().ActOnOpenMPDirectivePresenceClause(
+        CKind, DKVec, Loc, LLoc, RLoc);
+    break;
+  }
   case OMPC_ompx_attribute:
     Clause = ParseOpenMPOMPXAttributesClause(WrongDirective);
     break;

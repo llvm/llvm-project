@@ -1720,6 +1720,24 @@ const Expr *OMPDoacrossClause::getLoopData(unsigned NumLoop) const {
   return *It;
 }
 
+OMPAbsentClause *OMPAbsentClause::Create(const ASTContext &C,
+                                         ArrayRef<OpenMPDirectiveKind> DKVec,
+                                         SourceLocation Loc,
+                                         SourceLocation LLoc,
+                                         SourceLocation RLoc) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OpenMPDirectiveKind>(DKVec.size()),
+                         alignof(OMPAbsentClause));
+  auto *AC = new (Mem) OMPAbsentClause(Loc, LLoc, RLoc, DKVec.size());
+  AC->setDirectiveKinds(DKVec);
+  return AC;
+}
+
+OMPAbsentClause *OMPAbsentClause::CreateEmpty(const ASTContext &C, unsigned K) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OpenMPDirectiveKind>(K),
+                         alignof(OMPAbsentClause));
+  return new (Mem) OMPAbsentClause(K);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -1935,6 +1953,18 @@ void OMPClausePrinter::VisitOMPFailClause(OMPFailClause *Node) {
         Node->getClauseKind(), static_cast<int>(Node->getFailParameter()));
     OS << ")";
   }
+}
+
+void OMPClausePrinter::VisitOMPAbsentClause(OMPAbsentClause *Node) {
+  OS << "absent(";
+  bool First = true;
+  for (auto &D : Node->getDirectiveKinds()) {
+    if (!First)
+      OS << ", ";
+    OS << getOpenMPDirectiveName(D);
+    First = false;
+  }
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPHoldsClause(OMPHoldsClause *Node) {

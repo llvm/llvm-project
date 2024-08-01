@@ -32,6 +32,9 @@ def OpenMP : DirectiveLanguage {
 // Sorted alphabetically wrt clause spelling.
 //===----------------------------------------------------------------------===//
 
+def OMPC_Absent : Clause<"absent"> {
+  let clangClass = "OMPAbsentClause";
+}
 def OMPC_Acquire : Clause<"acquire"> {
   let clangClass = "OMPAcquireClause";
 }
@@ -517,6 +520,7 @@ def OMP_Assume : Directive<"assume"> {
   let association = AS_Block;
   let category = CA_Informational;
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Absent, 51>,
     VersionedClause<OMPC_Holds, 51>,
   ];
 }

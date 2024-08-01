@@ -944,6 +944,10 @@ public:
   OMPClause *ActOnOpenMPHoldsClause(Expr *E, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc);
+  /// Called on well-formed 'absent' or 'contains' clauses.
+  OMPClause *ActOnOpenMPDirectivePresenceClause(
+      OpenMPClauseKind CK, llvm::ArrayRef<OpenMPDirectiveKind> DKVec,
+      SourceLocation Loc, SourceLocation LLoc, SourceLocation RLoc);
 
   OMPClause *ActOnOpenMPSingleExprWithArgClause(
       OpenMPClauseKind Kind, ArrayRef<unsigned> Arguments, Expr *Expr,

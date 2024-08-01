@@ -342,6 +342,66 @@ public:
   }
 };
 
+/// Class that represents a list of directive kinds (parallel, target, etc.)
+/// as used in \c absent, \c contains clauses.
+template <class T> class OMPDirectiveListClause : public OMPClause {
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+protected:
+  /// Number of directive kinds listed in the clause
+  unsigned NumKinds;
+
+public:
+  /// Build a clause with \a NumKinds directive kinds.
+  ///
+  /// \param K The clause kind.
+  /// \param StartLoc Starting location of the clause (the clause keyword).
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPDirectiveListClause(OpenMPClauseKind K, SourceLocation StartLoc,
+                         SourceLocation LParenLoc, SourceLocation EndLoc,
+                         unsigned NumKinds)
+      : OMPClause(K, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        NumKinds(NumKinds) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  MutableArrayRef<OpenMPDirectiveKind> getDirectiveKinds() {
+    return MutableArrayRef<OpenMPDirectiveKind>(
+        static_cast<T *>(this)
+            ->template getTrailingObjects<OpenMPDirectiveKind>(),
+        NumKinds);
+  }
+
+  void setDirectiveKinds(ArrayRef<OpenMPDirectiveKind> DK) {
+    assert(
+        DK.size() == NumKinds &&
+        "Number of directive kinds is not the same as the preallocated buffer");
+    std::copy(DK.begin(), DK.end(),
+              static_cast<T *>(this)
+                  ->template getTrailingObjects<OpenMPDirectiveKind>());
+  }
+
+  SourceLocation getLParenLoc() { return LParenLoc; }
+
+  void setLParenLoc(SourceLocation S) { LParenLoc = S; }
+};
+
 /// This represents 'allocator' clause in the '#pragma omp ...'
 /// directive.
 ///
@@ -2010,6 +2070,49 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_mergeable;
+  }
+};
+
+/// This represents the 'absent' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume absent(<directive-name list>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has an 'absent' clause.
+class OMPAbsentClause final
+    : public OMPDirectiveListClause<OMPAbsentClause>,
+      private llvm::TrailingObjects<OMPAbsentClause, OpenMPDirectiveKind> {
+  friend OMPDirectiveListClause;
+  friend TrailingObjects;
+
+  /// Build 'absent' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPAbsentClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc, unsigned NumKinds)
+      : OMPDirectiveListClause<OMPAbsentClause>(
+            llvm::omp::OMPC_absent, StartLoc, LParenLoc, EndLoc, NumKinds) {}
+
+  /// Build an empty clause.
+  OMPAbsentClause(unsigned NumKinds)
+      : OMPDirectiveListClause<OMPAbsentClause>(
+            llvm::omp::OMPC_absent, SourceLocation(), SourceLocation(),
+            SourceLocation(), NumKinds) {}
+
+public:
+  static OMPAbsentClause *Create(const ASTContext &C,
+                                 ArrayRef<OpenMPDirectiveKind> DKVec,
+                                 SourceLocation Loc, SourceLocation LLoc,
+                                 SourceLocation RLoc);
+
+  static OMPAbsentClause *CreateEmpty(const ASTContext &C, unsigned NumKinds);
+
+  static bool classof(const OMPClause *C) {
+    return C->getClauseKind() == llvm::omp::OMPC_absent;
   }
 };
 
