@@ -619,7 +619,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     }
     return std::move(FullComment);
   }
-
+ 
   if (I.Kind == "ParagraphComment") {
     auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
     for (const auto &Child : I.Children) {
