@@ -769,7 +769,6 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // C++26 features supported in earlier language modes.
   Builder.defineMacro("__cpp_deleted_function", "202403L");
 
-
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
