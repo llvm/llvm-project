@@ -14,6 +14,7 @@
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
@@ -292,7 +293,7 @@ void DialectRegistry::applyExtensions(MLIRContext *ctx) const {
 
 bool DialectRegistry::isSubsetOf(const DialectRegistry &rhs) const {
   // Check that all extension keys are present in 'rhs'.
-  llvm::DenseSet<llvm::StringRef> rhsExtensionKeys;
+  llvm::DenseSet<TypeID> rhsExtensionKeys;
   {
     auto rhsKeys = llvm::map_range(rhs.extensions,
                                    [](const auto &item) { return item.first; });

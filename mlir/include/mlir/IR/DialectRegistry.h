@@ -14,9 +14,9 @@
 #define MLIR_IR_DIALECTREGISTRY_H
 
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 
 #include <map>
 #include <tuple>
@@ -207,7 +207,7 @@ public:
   void applyExtensions(MLIRContext *ctx) const;
 
   /// Add the given extension to the registry.
-  void addExtension(StringRef extensionID,
+  void addExtension(TypeID extensionID,
                     std::unique_ptr<DialectExtensionBase> extension) {
     extensions.emplace_back(extensionID, std::move(extension));
   }
@@ -215,39 +215,29 @@ public:
   /// Add the given extensions to the registry.
   template <typename... ExtensionsT>
   void addExtensions() {
-    (addExtension(ExtensionsT::extensionID, std::make_unique<ExtensionsT>()),
+    (addExtension(TypeID::get<ExtensionsT>(), std::make_unique<ExtensionsT>()),
      ...);
   }
 
   /// Add an extension function that requires the given dialects.
   /// Note: This bare functor overload is provided in addition to the
   /// std::function variant to enable dialect type deduction, e.g.:
-  ///  registry.addExtension("ID", +[](MLIRContext *ctx, MyDialect *dialect) {
+  ///  registry.addExtension(+[](MLIRContext *ctx, MyDialect *dialect) {
   ///  ... })
   ///
   /// is equivalent to:
   ///  registry.addExtension<MyDialect>(
-  ///     "ID",
   ///     [](MLIRContext *ctx, MyDialect *dialect){ ... }
   ///  )
   template <typename... DialectsT>
-  void addExtension(StringRef extensionID,
-                    void (*extensionFn)(MLIRContext *, DialectsT *...)) {
-    addExtension<DialectsT...>(
-        extensionID,
-        std::function<void(MLIRContext *, DialectsT * ...)>(extensionFn));
-  }
-  template <typename... DialectsT>
-  void
-  addExtension(StringRef extensionID,
-               std::function<void(MLIRContext *, DialectsT *...)> extensionFn) {
-    using ExtensionFnT = std::function<void(MLIRContext *, DialectsT * ...)>;
+  void addExtension(void (*extensionFn)(MLIRContext *, DialectsT *...)) {
+    using ExtensionFnT = void (*)(MLIRContext *, DialectsT *...);
 
     struct Extension : public DialectExtension<Extension, DialectsT...> {
       Extension(const Extension &) = default;
       Extension(ExtensionFnT extensionFn)
           : DialectExtension<Extension, DialectsT...>(),
-            extensionFn(std::move(extensionFn)) {}
+            extensionFn(extensionFn) {}
       ~Extension() override = default;
 
       void apply(MLIRContext *context, DialectsT *...dialects) const final {
@@ -255,8 +245,9 @@ public:
       }
       ExtensionFnT extensionFn;
     };
-    addExtension(extensionID,
-                 std::make_unique<Extension>(std::move(extensionFn)));
+    addExtension(TypeID::getFromOpaquePointer(
+                     reinterpret_cast<const void *>(extensionFn)),
+                 std::make_unique<Extension>(extensionFn));
   }
 
   /// Returns true if the current registry is a subset of 'rhs', i.e. if 'rhs'
@@ -266,7 +257,7 @@ public:
 private:
   MapTy registry;
   using KeyExtensionPair =
-      std::pair<llvm::StringRef, std::unique_ptr<DialectExtensionBase>>;
+      std::pair<TypeID, std::unique_ptr<DialectExtensionBase>>;
   llvm::SmallVector<KeyExtensionPair> extensions;
 };
 
