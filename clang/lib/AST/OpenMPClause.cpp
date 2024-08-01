@@ -2006,6 +2006,11 @@ void OMPClausePrinter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
   OS << "no_openmp";
 }
 
+void OMPClausePrinter::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {
+  OS << "no_openmp_routines";
+}
+
 void OMPClausePrinter::VisitOMPSeqCstClause(OMPSeqCstClause *) {
   OS << "seq_cst";
 }

@@ -7227,6 +7227,9 @@ void OMPClauseWriter::VisitOMPContainsClause(OMPContainsClause *C) {
 
 void OMPClauseWriter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
 
+void OMPClauseWriter::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {}
+
 void OMPClauseWriter::VisitOMPAcquireClause(OMPAcquireClause *) {}
 
 void OMPClauseWriter::VisitOMPReleaseClause(OMPReleaseClause *) {}

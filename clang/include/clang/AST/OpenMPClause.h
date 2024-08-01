@@ -2207,6 +2207,28 @@ public:
   OMPNoOpenMPClause() : OMPNoChildClause() {}
 };
 
+/// This represents the 'no_openmp_routines' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_openmp_routines
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp_routines'
+/// clause.
+class OMPNoOpenMPRoutinesClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp_routines> {
+public:
+  /// Build 'no_openmp_routines' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPRoutinesClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPRoutinesClause() : OMPNoChildClause() {}
+};
+
 /// This represents 'read' clause in the '#pragma omp atomic' directive.
 ///
 /// \code

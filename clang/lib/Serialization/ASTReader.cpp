@@ -10479,6 +10479,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_no_openmp:
     C = new (Context) OMPNoOpenMPClause();
     break;
+  case llvm::omp::OMPC_no_openmp_routines:
+    C = new (Context) OMPNoOpenMPRoutinesClause();
+    break;
   case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
@@ -10907,6 +10910,9 @@ void OMPClauseReader::VisitOMPContainsClause(OMPContainsClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
+
+void OMPClauseReader::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 

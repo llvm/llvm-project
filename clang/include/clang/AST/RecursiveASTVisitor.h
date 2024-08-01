@@ -3501,6 +3501,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPAcquireClause(OMPAcquireClause *) {
   return true;
 }

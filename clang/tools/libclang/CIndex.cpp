@@ -2433,6 +2433,9 @@ void OMPClauseEnqueue::VisitOMPContainsClause(const OMPContainsClause *) {}
 
 void OMPClauseEnqueue::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
 
+void OMPClauseEnqueue::VisitOMPNoOpenMPRoutinesClause(
+    const OMPNoOpenMPRoutinesClause *) {}
+
 void OMPClauseEnqueue::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseEnqueue::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}

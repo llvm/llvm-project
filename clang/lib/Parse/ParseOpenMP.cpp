@@ -3356,7 +3356,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
         CKind, DKVec, Loc, LLoc, RLoc);
     break;
   }
-  case OMPC_no_openmp: {
+  case OMPC_no_openmp:
+  case OMPC_no_openmp_routines: {
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
