@@ -1063,12 +1063,12 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
   let summary = "Update halo data.";
   let description = [{
     This operation updates halo regions of shards, e.g. if their sharding
-    specified `halo_sizes` and the actual tensor data might have changed
+    specified halos and the actual tensor data might have changed
     on the remote devices. Changes might be caused by mutating operations
     and/or if the new halo regions are larger than the existing ones.
 
     Assumes all devices hold tensors with same-sized halo data as specified
-    by `halo_sizes`.
+    by `dynamic/static_halo_sizes`.
 
     `mesh_axes` specifies the tensor axes along which the halo data is updated.
     Currently each tensor dim can be sharded along a single mesh axis only.
@@ -1077,8 +1077,9 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    DenseI64ArrayAttr:$dynamic_halo_sizes,
-    OptionalAttr<DenseI64ArrayAttr>:$target_halo_sizes
+    Variadic<I64>:$dynamic_halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$target_halo_sizes
   ));
   let results = (outs
     AnyRankedTensor:$result
@@ -1086,7 +1087,7 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
   let assemblyFormat = [{
     $input `on` $mesh
     (`mesh_axes` `=` $mesh_axes^)?
-    `halo_sizes` `=` $dynamic_halo_sizes
+    (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
     (`target_halo_sizes` `=` $target_halo_sizes^)?
     attr-dict `:` functional-type(operands, results)
   }];

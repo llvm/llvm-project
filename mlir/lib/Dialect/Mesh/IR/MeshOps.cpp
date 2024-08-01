@@ -175,8 +175,8 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
         // sizes in sharded_dims_sizes.
         auto sz = shardedDimsSizes[tensorAxis];
         bool same = true;
-        for (size_t i = tensorAxis + inShape.size(); i < shardedDimsSizes.size();
-             i += inShape.size()) {
+        for (size_t i = tensorAxis + inShape.size();
+             i < shardedDimsSizes.size(); i += inShape.size()) {
           if (shardedDimsSizes[i] != sz) {
             same = false;
             break;
