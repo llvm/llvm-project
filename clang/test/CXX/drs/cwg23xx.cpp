@@ -114,7 +114,7 @@ namespace cwg2346 { // cwg2346: 11
   }
 }
 
-namespace cwg2351 { // cwg2351: 19
+namespace cwg2351 { // cwg2351: 20
 #if __cplusplus >= 201103L
   static_assert((void{}, true), "");
 
