@@ -525,7 +525,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
                                        uint32_t NumThreads,
-                                       uint64_t NumBlocks) const {
+                                       uint64_t NumBlocks[3]) const {
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
        "Launching kernel %s with %" PRIu64
        " blocks and %d threads in %s mode\n",
@@ -537,7 +537,7 @@ Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
 Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                               KernelArgsTy &KernelArgs,
                                               uint32_t NumThreads,
-                                              uint64_t NumBlocks) const {
+                                              uint64_t NumBlocks[3]) const {
   return Plugin::success();
 }
 
