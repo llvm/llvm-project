@@ -7,22 +7,22 @@ RUN: split-file %s %t
 
 # Synthesize two sets of raw cgdata without the header (24 byte) from the indexed cgdata.
 # Concatenate them in merge-concat.ll
-RUN: llvm-cgdata -convert -format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
+RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
 RUN: od -t x1 -j 24 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
 RUN: sed -ie "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-concat.ll
-RUN: llvm-cgdata -convert -format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
+RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
 RUN: od -t x1 -j 24 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-2-bytes.txt
 RUN: sed -ie "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-concat.ll
 
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-concat.ll -o %t/merge-concat.o
-RUN: llvm-cgdata -merge %t/merge-concat.o -o %t/merge-concat.cgdata
-RUN: llvm-cgdata -show %t/merge-concat.cgdata | FileCheck %s
+RUN: llvm-cgdata --merge %t/merge-concat.o -o %t/merge-concat.cgdata
+RUN: llvm-cgdata --show %t/merge-concat.cgdata | FileCheck %s
 CHECK: Outlined hash tree:
 CHECK-NEXT:  Total Node Count: 4
 CHECK-NEXT:  Terminal Node Count: 2
 CHECK-NEXT:  Depth: 2
 
-RUN: llvm-cgdata -convert %t/merge-concat.cgdata | FileCheck %s --check-prefix=TREE
+RUN: llvm-cgdata --convert %t/merge-concat.cgdata | FileCheck %s --check-prefix=TREE
 TREE: # Outlined stable hash tree
 TREE-NEXT: :outlined_hash_tree
 TREE-NEXT: ---

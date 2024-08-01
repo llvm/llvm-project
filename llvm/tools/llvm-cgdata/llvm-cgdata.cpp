@@ -72,9 +72,9 @@ public:
 } // end anonymous namespace
 
 // Options
-static std::string ToolName;
-static std::string OutputFilename = "-";
-static std::string Filename;
+static StringRef ToolName;
+static StringRef OutputFilename = "-";
+static StringRef Filename;
 static bool ShowCGDataVersion;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
@@ -267,8 +267,8 @@ static void parseArgs(int argc, char **argv) {
   if (Args.hasArg(OPT_help)) {
     Tbl.printHelp(
         llvm::outs(),
-        "llvm-cgdata [options] <action> (<binary files>|<.cgdata file>)",
-        ToolName.c_str());
+        "llvm-cgdata <action> [options] (<binary files>|<.cgdata file>)",
+        ToolName.str().c_str());
     std::exit(0);
   }
   if (Args.hasArg(OPT_version)) {
