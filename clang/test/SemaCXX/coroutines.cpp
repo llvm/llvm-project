@@ -3,6 +3,7 @@
 
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: not %clang_cc1 -std=c++20 -fsyntax-only %s -fcxx-exceptions -fexceptions -Wunused-result 2>&1 | FileCheck %s
 
 void no_coroutine_traits_bad_arg_await() {
   co_await a; // expected-error {{include <coroutine>}}
@@ -209,6 +210,22 @@ void mixed_yield_invalid() {
   return; // expected-error {{return statement not allowed in coroutine}}
 }
 
+void mixed_yield_return_first(bool b) {
+  if (b) {
+    return; // expected-error {{return statement not allowed in coroutine}}
+  }
+  co_yield 0; // expected-note {{function is a coroutine due to use of 'co_yield'}}
+}
+
+template<typename T>
+void mixed_return_for_range(bool b, T t) {
+  if (b) {
+    return; // expected-error {{return statement not allowed in coroutine}}
+  }
+  for co_await (auto i : t){}; // expected-warning {{'for co_await' belongs to CoroutineTS instead of C++20, which is deprecated}}
+  // expected-note@-1 {{function is a coroutine due to use of 'co_await'}}
+}
+
 template <class T>
 void mixed_yield_template(T) {
   co_yield blah; // expected-error {{use of undeclared identifier}}
@@ -267,6 +284,13 @@ void mixed_coreturn(void_tag, bool b) {
     return; // expected-error {{not allowed in coroutine}}
 }
 
+void mixed_coreturn_return_first(void_tag, bool b) {
+  if (b)
+    return; // expected-error {{not allowed in coroutine}}
+  else
+    co_return; // expected-note {{use of 'co_return'}}
+}
+
 void mixed_coreturn_invalid(bool b) {
   if (b)
     co_return; // expected-note {{use of 'co_return'}}
@@ -296,8 +320,8 @@ void mixed_coreturn_template2(bool b, T) {
 
 struct promise_handle;
 
-struct Handle : std::coroutine_handle<promise_handle> { // expected-note 2{{candidate constructor (the implicit copy constructor) not viable}}
-    // expected-note@-1 2{{candidate constructor (the implicit move constructor) not viable}}
+struct Handle : std::coroutine_handle<promise_handle> { // expected-note 4{{not viable}}
+    // expected-note@-1 4{{not viable}}
     using promise_type = promise_handle;
 };
 
@@ -315,6 +339,9 @@ Handle mixed_return_value() {
   co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
   return 0; // expected-error {{return statement not allowed in coroutine}}
   // expected-error@-1 {{no viable conversion from returned value of type}}
+  // CHECK-NOT: error: no viable conversion from returned value of type
+  // CHECK: error: return statement not allowed in coroutine
+  // CHECK: error: no viable conversion from returned value of type
 }
 
 Handle mixed_return_value_return_first(bool b) {
@@ -324,6 +351,15 @@ Handle mixed_return_value_return_first(bool b) {
     }
     co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
     co_return 0; // expected-error {{no member named 'return_value' in 'promise_handle'}}
+}
+
+Handle mixed_multiple_returns(bool b) {
+  if (b) {
+    return 0; // expected-error {{no viable conversion from returned value of type}}
+    // expected-error@-1 {{return statement not allowed in coroutine}}
+  }
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  return 0; // expected-error {{no viable conversion from returned value of type}}
 }
 
 struct CtorDtor {

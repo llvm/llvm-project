@@ -3749,7 +3749,7 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   // using plain return in a coroutine is not allowed.
   FunctionScopeInfo *FSI = getCurFunction();
-  if (getLangOpts().Coroutines && FSI->isCoroutine()) {
+  if (FSI->FirstReturnLoc.isInvalid() && FSI->isCoroutine()) {
     assert(FSI->FirstCoroutineStmtLoc.isValid() &&
                   "first coroutine location not set");
     Diag(ReturnLoc, diag::err_return_in_coroutine);
