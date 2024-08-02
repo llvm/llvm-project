@@ -651,10 +651,36 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Constant(SDNode *N) {
 // (CTLZ (XOR Op -1)) --> (CTLZ_ZERO_UNDEF (XOR (SHIFT (ANYEXTEND Op1)
 //                                                     ShiftAmount)
 //                                               -1))
+//
+// The following Vector Predicated patterns will also be transformed
+// similarly to above using VP_CTLZ_ZERO_UNDEF and VP_XOR:
+//
+// - (VP_CTLZ (XOR Op -1) Mask VecLen)
+// - (VP_CTLZ (VP_XOR Op -1 Mask VecLen) Mask VecLen))
 static SDValue ExtendCtlzNot(SDNode *Node, SDLoc &dl, EVT OVT, EVT NVT,
                              SelectionDAG &DAG) {
   SDValue SrcOp;
-  if (!sd_match(Node->getOperand(0), m_Not(m_Value(SrcOp))))
+  if (sd_match(Node->getOperand(0), m_Not(m_Value(SrcOp)))) {
+  } else if (Node->isVPOpcode() &&
+             Node->getOperand(0).getOpcode() == ISD::VP_XOR) {
+    SDValue VPXor = Node->getOperand(0);
+
+    SDValue Mask = Node->getOperand(1);
+    SDValue EVL = Node->getOperand(2);
+
+    SDValue VPXorMask = VPXor->getOperand(2);
+    SDValue VPXorEVL = VPXor->getOperand(3);
+
+    if (VPXorMask != Mask || VPXorEVL != EVL)
+      return SDValue();
+
+    if (isAllOnesOrAllOnesSplat(VPXor->getOperand(1))) {
+      SrcOp = VPXor->getOperand(0);
+    } else if (isAllOnesOrAllOnesSplat(VPXor->getOperand(0))) {
+      SrcOp = VPXor->getOperand(1);
+    } else
+      return SDValue();
+  } else
     return SDValue();
 
   SDValue ExtSrc = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, SrcOp);
@@ -662,8 +688,6 @@ static SDValue ExtendCtlzNot(SDNode *Node, SDLoc &dl, EVT OVT, EVT NVT,
   SDValue ShiftConst =
       DAG.getShiftAmountConstant(SHLAmount, ExtSrc.getValueType(), dl);
 
-  SDValue NCstOp =
-      DAG.getConstant(APInt::getAllOnes(NVT.getScalarSizeInBits()), dl, NVT);
   if (!Node->isVPOpcode()) {
     SDValue LShift = DAG.getNode(ISD::SHL, dl, NVT, ExtSrc, ShiftConst);
     SDValue Not = DAG.getNOT(dl, LShift, NVT);
@@ -675,7 +699,8 @@ static SDValue ExtendCtlzNot(SDNode *Node, SDLoc &dl, EVT OVT, EVT NVT,
 
   SDValue LShift =
       DAG.getNode(ISD::VP_SHL, dl, NVT, ExtSrc, ShiftConst, Mask, EVL);
-  SDValue Not = DAG.getNode(ISD::VP_XOR, dl, NVT, LShift, NCstOp, Mask, EVL);
+  SDValue Not = DAG.getNode(ISD::VP_XOR, dl, NVT, LShift,
+                            DAG.getAllOnesConstant(dl, NVT), Mask, EVL);
   return DAG.getNode(ISD::VP_CTLZ_ZERO_UNDEF, dl, NVT, Not, Mask, EVL);
 }
 
