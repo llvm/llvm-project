@@ -1100,7 +1100,7 @@ declare i64 @write(i32, ptr, i64)
 ; CHECK: declare void @abort() [[NOFREE_COLD:#[0-9]+]]
 declare void @abort()
 
-; CHECK: declare void @__cxa_throw() [[NOFREE_COLD_NORETURN:#[0-9]+]]
+; CHECK: declare void @__cxa_throw(ptr, ptr, ptr) [[COLD_NORETURN:#[0-9]+]]
 declare void @__cxa_throw(ptr, ptr, ptr)
 
 ; CHECK: declare void @_ZSt9terminatev() [[NOFREE_COLD_NORETURN:#[0-9]+]]
