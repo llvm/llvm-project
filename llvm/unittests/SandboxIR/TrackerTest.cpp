@@ -708,3 +708,35 @@ bb2:
   EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
 }
+
+TEST_F(TrackerTest, SetVolatile) {
+  parseIR(C, R"IR(
+define void @foo(ptr %arg0, i8 %val) {
+  %ld = load i8, ptr %arg0, align 64
+  store i8 %val, ptr %arg0, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Load = cast<sandboxir::LoadInst>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+
+  EXPECT_FALSE(Load->isVolatile());
+  EXPECT_FALSE(Store->isVolatile());
+  Ctx.save();
+  Load->setVolatile(true);
+  EXPECT_TRUE(Load->isVolatile());
+  Ctx.revert();
+  EXPECT_FALSE(Load->isVolatile());
+
+  Ctx.save();
+  Store->setVolatile(true);
+  EXPECT_TRUE(Store->isVolatile());
+  Ctx.revert();
+  EXPECT_FALSE(Store->isVolatile());
+}
