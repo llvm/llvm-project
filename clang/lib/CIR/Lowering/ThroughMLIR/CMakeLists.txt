@@ -27,6 +27,7 @@ add_clang_library(clangCIRLoweringThroughMLIR
   clangLex
   clangFrontend
   clangCIR
+  clangCIRLoweringHelpers
   ${dialect_libs}
   MLIRCIR
   MLIRAnalysis
