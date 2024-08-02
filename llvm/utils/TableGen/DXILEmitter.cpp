@@ -132,49 +132,25 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // resolve an LLVMMatchType in accordance with  convention outlined in
   // the comment before the definition of class LLVMMatchType in
   // llvm/IR/Intrinsics.td
-  SmallVector<int> OverloadParamIndices;
+  OverloadParamIndex = -1; // A sigil meaning none.
   for (unsigned i = 0; i < ParamTypeRecsSize; i++) {
     auto TR = ParamTypeRecs[i];
     // Track operation parameter indices of any overload types
     auto isAny = TR->getValueAsInt("isAny");
     if (isAny == 1) {
-      // All overload types in a DXIL Op are required to be of the same type.
-      if (!OverloadParamIndices.empty()) {
-        [[maybe_unused]] bool knownType = true;
-        // Ensure that the same overload type registered earlier is being used
-        for (auto Idx : OverloadParamIndices) {
-          if (TR != ParamTypeRecs[Idx]) {
-            knownType = false;
-            break;
-          }
-        }
-        assert(knownType && "Specification of multiple differing overload "
-                            "parameter types not yet supported");
-      } else {
-        OverloadParamIndices.push_back(i);
+      if (OverloadParamIndex != -1) {
+        assert(TR == ParamTypeRecs[OverloadParamIndex] &&
+               "Specification of multiple differing overload parameter types "
+               "is not supported");
       }
+      // Keep the earliest parameter index we see, but if it was the return type
+      // overwrite it with the first overloaded argument.
+      if (OverloadParamIndex <= 0)
+        OverloadParamIndex = i;
     }
-    // Populate OpTypes array according to the type specification
-    if (TR->isAnonymous()) {
-      // Check prior overload types exist
-      assert(!OverloadParamIndices.empty() &&
-             "No prior overloaded parameter found to match.");
-      // Get the parameter index of anonymous type, TR, references
-      auto OLParamIndex = TR->getValueAsInt("Number");
-      // Resolve and insert the type to that at OLParamIndex
-      OpTypes.emplace_back(ParamTypeRecs[OLParamIndex]);
-    } else {
-      // A non-anonymous type. Just record it in OpTypes
-      OpTypes.emplace_back(TR);
-    }
-  }
-
-  // Set the index of the overload parameter, if any.
-  OverloadParamIndex = -1; // default; indicating none
-  if (!OverloadParamIndices.empty()) {
-    assert(OverloadParamIndices.size() == 1 &&
-           "Multiple overload type specification not supported");
-    OverloadParamIndex = OverloadParamIndices[0];
+    if (TR->isAnonymous())
+      PrintFatalError(TR, "Only concrete types are allowed here");
+    OpTypes.emplace_back(TR);
   }
 
   // Get overload records
@@ -429,39 +405,27 @@ static std::string getAttributeMaskString(const SmallVector<Record *> Recs) {
   return MaskString;
 }
 
-/// Emit Enums of DXIL Ops
-/// \param A vector of DXIL Ops
-/// \param Output stream
-static void emitDXILEnums(std::vector<DXILOperationDesc> &Ops,
-                          raw_ostream &OS) {
-  // Sort by OpCode
-  llvm::sort(Ops, [](DXILOperationDesc &A, DXILOperationDesc &B) {
-    return A.OpCode < B.OpCode;
-  });
+/// Emit a mapping of DXIL opcode to opname
+static void emitDXILOpCodes(std::vector<DXILOperationDesc> &Ops,
+                            raw_ostream &OS) {
+  OS << "#ifdef DXIL_OPCODE\n";
+  for (const DXILOperationDesc &Op : Ops)
+    OS << "DXIL_OPCODE(" << Op.OpCode << ", " << Op.OpName << ")\n";
+  OS << "#undef DXIL_OPCODE\n";
+  OS << "\n";
+  OS << "#endif\n\n";
+}
 
-  OS << "#ifdef DXIL_OP_ENUM\n";
-  OS << "// Enumeration for operations specified by DXIL\n";
-  OS << "enum class OpCode : unsigned {\n";
-
-  for (auto &Op : Ops) {
-    // Name = ID, // Doc
-    OS << Op.OpName << " = " << Op.OpCode << ", // " << Op.Doc << "\n";
-  }
-
-  OS << "\n};\n\n";
-
-  OS << "// Groups for DXIL operations with equivalent function templates\n";
-  OS << "enum class OpCodeClass : unsigned {\n";
-  // Build an OpClass set to print
-  SmallSet<StringRef, 2> OpClassSet;
-  for (auto &Op : Ops) {
-    OpClassSet.insert(Op.OpClass);
-  }
-  for (auto &C : OpClassSet) {
-    OS << C << ",\n";
-  }
-  OS << "\n};\n\n";
-  OS << "#endif // DXIL_OP_ENUM\n";
+/// Emit a list of DXIL op classes
+static void emitDXILOpClasses(RecordKeeper &Records,
+                              raw_ostream &OS) {
+  OS << "#ifdef DXIL_OPCLASS\n";
+  std::vector<Record *> OpClasses =
+      Records.getAllDerivedDefinitions("DXILOpClass");
+  for (Record *OpClass : OpClasses)
+    OS << "DXIL_OPCLASS(" << OpClass->getName() << ")\n";
+  OS << "#undef DXIL_OPCLASS\n";
+  OS << "#endif\n\n";
 }
 
 /// Emit map of DXIL operation to LLVM or DirectX intrinsic
@@ -469,20 +433,17 @@ static void emitDXILEnums(std::vector<DXILOperationDesc> &Ops,
 /// \param Output stream
 static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
                                  raw_ostream &OS) {
-  OS << "\n#ifdef DXIL_OP_INTRINSIC_MAP\n";
-
-  // FIXME: use array instead of SmallDenseMap.
-  OS << "static const SmallDenseMap<Intrinsic::ID, dxil::OpCode> LowerMap = "
-        "{\n";
-  for (auto &Op : Ops) {
+  OS << "#ifdef DXIL_OP_INTRINSIC\n";
+  OS << "\n";
+  for (const auto &Op : Ops) {
     if (Op.Intrinsic.empty())
       continue;
-    // {Intrinsic::sin, dxil::OpCode::Sin},
-    OS << "  { Intrinsic::" << Op.Intrinsic << ", dxil::OpCode::" << Op.OpName
-       << "},\n";
+    OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
+       << ", Intrinsic::" << Op.Intrinsic << ")\n";
   }
-  OS << "};\n\n";
-  OS << "#endif // DXIL_OP_INTRINSIC_MAP\n";
+  OS << "\n";
+  OS << "#undef DXIL_OP_INTRINSIC\n";
+  OS << "#endif\n\n";
 }
 
 /// Emit DXIL operation table
@@ -490,11 +451,6 @@ static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
 /// \param Output stream
 static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
                                    raw_ostream &OS) {
-  // Sort by OpCode.
-  llvm::sort(Ops, [](DXILOperationDesc &A, DXILOperationDesc &B) {
-    return A.OpCode < B.OpCode;
-  });
-
   // Collect Names.
   SequenceToOffsetTable<std::string> OpClassStrings;
   SequenceToOffsetTable<std::string> OpStrings;
@@ -510,8 +466,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
     ClassSet.insert(Op.OpClass);
     OpClassStrings.add(Op.OpClass.data());
     SmallVector<ParameterKind> ParamKindVec;
-    // ParamKindVec is a vector of parameters. Skip return type at index 0
-    for (unsigned i = 1; i < Op.OpTypes.size(); i++) {
+    for (unsigned i = 0; i < Op.OpTypes.size(); i++) {
       ParamKindVec.emplace_back(getParameterKind(Op.OpTypes[i]));
     }
     ParameterMap[Op.OpClass] = ParamKindVec;
@@ -531,23 +486,13 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
   std::string Prefix = "";
   for (auto &Op : Ops) {
-    // Consider Op.OverloadParamIndex as the overload parameter index, by
-    // default
-    auto OLParamIdx = Op.OverloadParamIndex;
-    // If no overload parameter index is set, treat first parameter type as
-    // overload type - unless the Op has no parameters, in which case treat the
-    // return type - as overload parameter to emit the appropriate overload kind
-    // enum.
-    if (OLParamIdx < 0) {
-      OLParamIdx = (Op.OpTypes.size() > 1) ? 1 : 0;
-    }
     OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", "
        << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
        << getStageMaskString(Op.StageRecs) << ", "
        << getAttributeMaskString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
-       << ", " << Op.OpTypes.size() - 1 << ", "
+       << ", " << Op.OpTypes.size() << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " }";
     Prefix = ",\n";
   }
@@ -601,7 +546,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   OS << "  };\n\n";
   OS << "  unsigned Index = Prop.ParameterTableOffset;\n";
   OS << "  return DXILOpParameterKindTable + Index;\n";
-  OS << "}\n ";
+  OS << "}\n\n";
 }
 
 static void emitDXILOperationTableDataStructs(RecordKeeper &Records,
@@ -653,12 +598,25 @@ static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   for (auto *Record : OpIntrProps) {
     DXILOps.emplace_back(DXILOperationDesc(Record));
   }
-  emitDXILEnums(DXILOps, OS);
+  // Sort by opcode.
+  llvm::sort(DXILOps, [](DXILOperationDesc &A, DXILOperationDesc &B) {
+    return A.OpCode < B.OpCode;
+  });
+  int PrevOp = -1;
+  for (DXILOperationDesc &Desc : DXILOps) {
+    if (Desc.OpCode == PrevOp)
+      PrintFatalError(Twine("Duplicate opcode: ") + Twine(Desc.OpCode));
+    PrevOp = Desc.OpCode;
+  }
+
+  emitDXILOpCodes(DXILOps, OS);
+  emitDXILOpClasses(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
-  OS << "#ifdef DXIL_OP_OPERATION_TABLE\n";
+  OS << "#ifdef DXIL_OP_OPERATION_TABLE\n\n";
   emitDXILOperationTableDataStructs(Records, OS);
   emitDXILOperationTable(DXILOps, OS);
-  OS << "#endif // DXIL_OP_OPERATION_TABLE\n";
+  OS << "#undef DXIL_OP_OPERATION_TABLE\n";
+  OS << "#endif\n\n";
 }
 
 static TableGen::Emitter::Opt X("gen-dxil-operation", EmitDXILOperation,

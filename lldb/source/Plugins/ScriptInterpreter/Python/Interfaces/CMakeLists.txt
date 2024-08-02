@@ -21,7 +21,6 @@ endif()
 
 add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
   ScriptedPythonInterface.cpp
-  ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
 
   LINK_LIBS
@@ -38,5 +37,6 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
 
 add_subdirectory(OperatingSystemPythonInterface)
 add_subdirectory(ScriptedPlatformPythonInterface)
+add_subdirectory(ScriptedProcessPythonInterface)
 add_subdirectory(ScriptedThreadPlanPythonInterface)
 

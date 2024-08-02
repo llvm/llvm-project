@@ -711,7 +711,7 @@ getUuidAttrOfType(Sema &SemaRef, QualType QT,
                   llvm::SmallSetVector<const UuidAttr *, 1> &UuidAttrs) {
   // Optionally remove one level of pointer, reference or array indirection.
   const Type *Ty = QT.getTypePtr();
-  if (QT->isPointerType() || QT->isReferenceType())
+  if (QT->isPointerOrReferenceType())
     Ty = QT->getPointeeType().getTypePtr();
   else if (QT->isArrayType())
     Ty = Ty->getBaseElementTypeUnsafe();
