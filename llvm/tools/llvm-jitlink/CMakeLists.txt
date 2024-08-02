@@ -20,6 +20,8 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
+set(ENABLE_EXPORTS ON)
+
 add_llvm_tool(llvm-jitlink
   llvm-jitlink.cpp
   llvm-jitlink-coff.cpp
