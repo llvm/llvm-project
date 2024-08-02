@@ -3682,17 +3682,17 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
                                       const FormatToken &Current,
                                       const AnnotatedLine &Line,
                                       FormatToken *&ClosingParen) {
-  assert(Current.Previous);
-
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
   if (!Current.Tok.getIdentifierInfo())
     return false;
 
-  const auto &Previous = *Current.Previous;
+  const auto *Prev = Current.getPreviousNonComment();
+  assert(Prev);
+  const auto &Previous = *Prev;
 
-  if (const auto *PrevPrev = Previous.Previous;
+  if (const auto *PrevPrev = Previous.getPreviousNonComment();
       PrevPrev && PrevPrev->is(TT_ObjCDecl)) {
     return false;
   }
@@ -3859,20 +3859,20 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   First->TotalLength = First->IsMultiline
                            ? Style.ColumnLimit
                            : Line.FirstStartColumn + First->ColumnWidth;
-  FormatToken *Current = First->Next;
-  bool InFunctionDecl = Line.MightBeFunctionDecl;
   bool AlignArrayOfStructures =
       (Style.AlignArrayOfStructures != FormatStyle::AIAS_None &&
        Line.Type == LT_ArrayOfStructInitializer);
   if (AlignArrayOfStructures)
     calculateArrayInitializerColumnList(Line);
 
+  const auto *FirstNonComment = Line.getFirstNonComment();
   bool SeenName = false;
   bool LineIsFunctionDeclaration = false;
-  FormatToken *ClosingParen = nullptr;
   FormatToken *AfterLastAttribute = nullptr;
+  FormatToken *ClosingParen = nullptr;
 
-  for (auto *Tok = Current; Tok; Tok = Tok->Next) {
+  for (auto *Tok = FirstNonComment ? FirstNonComment->Next : nullptr; Tok;
+       Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
     if (Tok->Previous->EndsCppAttributeGroup)
@@ -3894,7 +3894,9 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
   }
 
-  if (IsCpp && (LineIsFunctionDeclaration || First->is(TT_CtorDtorDeclName)) &&
+  if (IsCpp &&
+      (LineIsFunctionDeclaration ||
+       (FirstNonComment && FirstNonComment->is(TT_CtorDtorDeclName))) &&
       Line.endsWith(tok::semi, tok::r_brace)) {
     auto *Tok = Line.Last->Previous;
     while (Tok->isNot(tok::r_brace))
@@ -3917,7 +3919,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   if (IsCpp) {
     if (!LineIsFunctionDeclaration) {
       // Annotate */&/&& in `operator` function calls as binary operators.
-      for (const auto *Tok = First; Tok; Tok = Tok->Next) {
+      for (const auto *Tok = FirstNonComment; Tok; Tok = Tok->Next) {
         if (Tok->isNot(tok::kw_operator))
           continue;
         do {
@@ -3960,7 +3962,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
   }
 
-  while (Current) {
+  bool InFunctionDecl = Line.MightBeFunctionDecl;
+  for (auto *Current = First->Next; Current; Current = Current->Next) {
     const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
       if (Prev->is(BK_BracedInit) && Prev->opensScope()) {
@@ -4050,13 +4053,11 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     } else {
       Current->SplitPenalty += 20 * Current->BindingStrength;
     }
-
-    Current = Current->Next;
   }
 
   calculateUnbreakableTailLengths(Line);
   unsigned IndentLevel = Line.Level;
-  for (Current = First; Current; Current = Current->Next) {
+  for (auto *Current = First; Current; Current = Current->Next) {
     if (Current->Role)
       Current->Role->precomputeFormattingInfos(Current);
     if (Current->MatchingParen &&
