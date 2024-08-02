@@ -344,8 +344,6 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::SP_REG:
   case AMDGPU::PRIVATE_RSRC_REG:
     llvm_unreachable("pseudo-register should not ever be emitted");
-  case AMDGPU::SCC:
-    llvm_unreachable("pseudo scc should not ever be emitted");
   default:
     break;
   }

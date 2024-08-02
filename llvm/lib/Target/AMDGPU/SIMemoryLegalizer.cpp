@@ -627,13 +627,6 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-#if LLPC_BUILD_GFX12
-  // TODO-GFX12: We might need to introduce a GLOBAL_WB upon release.
-  // bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-  //                    SIAtomicAddrSpace AddrSpace, bool
-  //                    IsCrossAddrSpaceOrdering, Position Pos) const override;
-
-#endif /* LLPC_BUILD_GFX12 */
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,

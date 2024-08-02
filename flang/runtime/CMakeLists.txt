@@ -107,6 +107,7 @@ add_subdirectory(Float128Math)
 
 set(sources
   ISO_Fortran_binding.cpp
+  allocator-registry.cpp
   allocatable.cpp
   array-constructor.cpp
   assign.cpp
@@ -178,6 +179,7 @@ include(AddFlangOffloadRuntime)
 set(supported_files
   ISO_Fortran_binding.cpp
   allocatable.cpp
+  allocator-registry.cpp
   array-constructor.cpp
   assign.cpp
   buffer.cpp

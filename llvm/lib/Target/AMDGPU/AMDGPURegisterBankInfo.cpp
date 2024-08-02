@@ -4091,18 +4091,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FCONSTANT:
   case AMDGPU::G_CONSTANT:
   case AMDGPU::G_GLOBAL_VALUE:
+  case AMDGPU::G_FRAME_INDEX:
   case AMDGPU::G_BLOCK_ADDR:
   case AMDGPU::G_READSTEADYCOUNTER:
   case AMDGPU::G_READCYCLECOUNTER: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
-    break;
-  }
-  case AMDGPU::G_FRAME_INDEX: {
-    // TODO: This should be the same as other constants, but eliminateFrameIndex
-    // currently assumes VALU uses.
-    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
     break;
   }
   case AMDGPU::G_DYN_STACKALLOC: {

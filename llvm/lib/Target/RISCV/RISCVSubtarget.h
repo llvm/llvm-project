@@ -50,6 +50,9 @@ struct RISCVTuneInfo {
   unsigned MaxPrefetchIterationsAhead;
 
   unsigned MinimumJumpTableEntries;
+
+  // Tail duplication threshold at -O3.
+  unsigned TailDupAggressiveThreshold;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -299,6 +302,10 @@ public:
   };
 
   unsigned getMinimumJumpTableEntries() const;
+
+  unsigned getTailDupAggressiveThreshold() const {
+    return TuneInfo->TailDupAggressiveThreshold;
+  }
 
   bool supportsInitUndef() const override { return hasVInstructions(); }
 };
