@@ -10,16 +10,18 @@
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPROCESSPYTHONINTERFACE_H
 
 #include "lldb/Host/Config.h"
+#include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 
 #if LLDB_ENABLE_PYTHON
 
-#include "ScriptedPythonInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
+#include "../ScriptedPythonInterface.h"
+
 #include <optional>
 
 namespace lldb_private {
 class ScriptedProcessPythonInterface : public ScriptedProcessInterface,
-                                       public ScriptedPythonInterface {
+                                       public ScriptedPythonInterface,
+                                       public PluginInterface {
 public:
   ScriptedProcessPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
@@ -66,6 +68,16 @@ public:
   std::optional<std::string> GetScriptedThreadPluginName() override;
 
   StructuredData::DictionarySP GetMetadata() override;
+
+  static void Initialize();
+
+  static void Terminate();
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return "ScriptedProcessPythonInterface";
+  }
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 private:
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
