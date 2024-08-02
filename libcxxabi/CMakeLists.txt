@@ -168,6 +168,12 @@ message(STATUS "Using libc++abi testing configuration: ${LIBCXXABI_TEST_CONFIG}"
 set(LIBCXXABI_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
+set(LIBCXXABI_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(LIBCXXABI_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXXABI_SUPPORTED_C_LIBRARIES}.")
+if (NOT "${LIBCXXABI_LIBC}" IN_LIST LIBCXXABI_SUPPORTED_C_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C library: '${LIBCXXABI_CXX_ABI}'. Supported values are ${LIBCXXABI_SUPPORTED_C_LIBRARIES}.")
+endif()
+
 #===============================================================================
 # Configure System
 #===============================================================================
@@ -248,6 +254,8 @@ add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
+
+include(HandleLibC) # Setup the C library flags
 
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)

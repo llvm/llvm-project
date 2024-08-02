@@ -171,6 +171,8 @@ include(HandleLibunwindFlags)
 # Configure compiler.
 include(config-ix)
 
+include(HandleLibC) # Setup the C library flags
+
 if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
 endif()

@@ -148,9 +148,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_shared_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_shared_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers libunwind-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -164,7 +165,7 @@ endif()
 
 if (LIBUNWIND_ENABLE_SHARED)
   add_library(unwind_shared SHARED)
-  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
+  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects libunwind-libc-shared)
   set_target_properties(unwind_shared
     PROPERTIES
       LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
@@ -188,9 +189,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_static_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_static_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers libunwind-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -210,7 +212,7 @@ endif()
 
 if (LIBUNWIND_ENABLE_STATIC)
   add_library(unwind_static STATIC)
-  target_link_libraries(unwind_static PUBLIC unwind_static_objects)
+  target_link_libraries(unwind_static PUBLIC unwind_static_objects libunwind-libc-static)
   set_target_properties(unwind_static
     PROPERTIES
       LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
