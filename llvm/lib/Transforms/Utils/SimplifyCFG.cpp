@@ -2960,6 +2960,24 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
   return HaveRewritablePHIs;
 }
 
+static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
+                                    const TargetTransformInfo &TTI) {
+  // If the branch is non-unpredictable, and is predicted to *not* branch to
+  // the `then` block, then avoid speculating it.
+  if (BI->getMetadata(LLVMContext::MD_unpredictable))
+    return true;
+
+  uint64_t TWeight, FWeight;
+  if (!extractBranchWeights(*BI, TWeight, FWeight) || (TWeight + FWeight) == 0)
+    return true;
+
+  uint64_t EndWeight = Invert ? TWeight : FWeight;
+  BranchProbability BIEndProb =
+      BranchProbability::getBranchProbability(EndWeight, TWeight + FWeight);
+  BranchProbability Likely = TTI.getPredictableBranchThreshold();
+  return BIEndProb < Likely;
+}
+
 /// Speculate a conditional basic block flattening the CFG.
 ///
 /// Note that this is a very risky transform currently. Speculating
@@ -3021,20 +3039,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   }
   assert(EndBB == BI->getSuccessor(!Invert) && "No edge from to end block");
 
-  // If the branch is non-unpredictable, and is predicted to *not* branch to
-  // the `then` block, then avoid speculating it.
-  if (!BI->getMetadata(LLVMContext::MD_unpredictable)) {
-    uint64_t TWeight, FWeight;
-    if (extractBranchWeights(*BI, TWeight, FWeight) &&
-        (TWeight + FWeight) != 0) {
-      uint64_t EndWeight = Invert ? TWeight : FWeight;
-      BranchProbability BIEndProb =
-          BranchProbability::getBranchProbability(EndWeight, TWeight + FWeight);
-      BranchProbability Likely = TTI.getPredictableBranchThreshold();
-      if (BIEndProb >= Likely)
-        return false;
-    }
-  }
+  if (!isProfitableToSpeculate(BI, Invert, TTI))
+    return false;
 
   // Keep a count of how many times instructions are used within ThenBB when
   // they are candidates for sinking into ThenBB. Specifically:
