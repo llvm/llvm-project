@@ -159,7 +159,7 @@ define void @bitreverse() {
 
 define void @ctpop() {
 ; NOZVBB-LABEL: 'ctpop'
-; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = call i8 @llvm.ctpop.i8(i8 undef)
+; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call i8 @llvm.ctpop.i8(i8 undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %2 = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %3 = call <4 x i8> @llvm.ctpop.v4i8(<4 x i8> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %4 = call <8 x i8> @llvm.ctpop.v8i8(<8 x i8> undef)
@@ -169,7 +169,7 @@ define void @ctpop() {
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %8 = call <vscale x 4 x i8> @llvm.ctpop.nxv4i8(<vscale x 4 x i8> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %9 = call <vscale x 8 x i8> @llvm.ctpop.nxv8i8(<vscale x 8 x i8> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %10 = call <vscale x 16 x i8> @llvm.ctpop.nxv16i8(<vscale x 16 x i8> undef)
-; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = call i16 @llvm.ctpop.i16(i16 undef)
+; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = call i16 @llvm.ctpop.i16(i16 undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %12 = call <2 x i16> @llvm.ctpop.v2i16(<2 x i16> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %13 = call <4 x i16> @llvm.ctpop.v4i16(<4 x i16> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %14 = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> undef)
@@ -179,7 +179,7 @@ define void @ctpop() {
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %18 = call <vscale x 4 x i16> @llvm.ctpop.nxv4i16(<vscale x 4 x i16> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %19 = call <vscale x 8 x i16> @llvm.ctpop.nxv8i16(<vscale x 8 x i16> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %20 = call <vscale x 16 x i16> @llvm.ctpop.nxv16i16(<vscale x 16 x i16> undef)
-; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %21 = call i32 @llvm.ctpop.i32(i32 undef)
+; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = call i32 @llvm.ctpop.i32(i32 undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %22 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %23 = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %24 = call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> undef)
@@ -189,7 +189,7 @@ define void @ctpop() {
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %28 = call <vscale x 4 x i32> @llvm.ctpop.nxv4i32(<vscale x 4 x i32> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %29 = call <vscale x 8 x i32> @llvm.ctpop.nxv8i32(<vscale x 8 x i32> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %30 = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> undef)
-; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %31 = call i64 @llvm.ctpop.i64(i64 undef)
+; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %31 = call i64 @llvm.ctpop.i64(i64 undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %32 = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %33 = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> undef)
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %34 = call <8 x i64> @llvm.ctpop.v8i64(<8 x i64> undef)
@@ -202,7 +202,7 @@ define void @ctpop() {
 ; NOZVBB-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZVBB-LABEL: 'ctpop'
-; ZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = call i8 @llvm.ctpop.i8(i8 undef)
+; ZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call i8 @llvm.ctpop.i8(i8 undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x i8> @llvm.ctpop.v4i8(<4 x i8> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x i8> @llvm.ctpop.v8i8(<8 x i8> undef)
@@ -212,7 +212,7 @@ define void @ctpop() {
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = call <vscale x 4 x i8> @llvm.ctpop.nxv4i8(<vscale x 4 x i8> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = call <vscale x 8 x i8> @llvm.ctpop.nxv8i8(<vscale x 8 x i8> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = call <vscale x 16 x i8> @llvm.ctpop.nxv16i8(<vscale x 16 x i8> undef)
-; ZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = call i16 @llvm.ctpop.i16(i16 undef)
+; ZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = call i16 @llvm.ctpop.i16(i16 undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <2 x i16> @llvm.ctpop.v2i16(<2 x i16> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i16> @llvm.ctpop.v4i16(<4 x i16> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> undef)
@@ -222,7 +222,7 @@ define void @ctpop() {
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x i16> @llvm.ctpop.nxv4i16(<vscale x 4 x i16> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x i16> @llvm.ctpop.nxv8i16(<vscale x 8 x i16> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = call <vscale x 16 x i16> @llvm.ctpop.nxv16i16(<vscale x 16 x i16> undef)
-; ZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %21 = call i32 @llvm.ctpop.i32(i32 undef)
+; ZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = call i32 @llvm.ctpop.i32(i32 undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> undef)
@@ -232,7 +232,7 @@ define void @ctpop() {
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %28 = call <vscale x 4 x i32> @llvm.ctpop.nxv4i32(<vscale x 4 x i32> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %29 = call <vscale x 8 x i32> @llvm.ctpop.nxv8i32(<vscale x 8 x i32> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %30 = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> undef)
-; ZVBB-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %31 = call i64 @llvm.ctpop.i64(i64 undef)
+; ZVBB-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %31 = call i64 @llvm.ctpop.i64(i64 undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %32 = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %33 = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> undef)
 ; ZVBB-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %34 = call <8 x i64> @llvm.ctpop.v8i64(<8 x i64> undef)
