@@ -14,13 +14,11 @@ define i32 @bar() {
 ; CHECK-LABEL: define i32 @bar() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo()
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %1 = tail call i32 @foo()
-  %2 = add i32 %1, 1
-  ret i32 %2
+  ret i32 %1
 }
 
 define void @goo() {
