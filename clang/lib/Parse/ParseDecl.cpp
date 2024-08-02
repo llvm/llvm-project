@@ -314,27 +314,24 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
 }
 
 /// Determine whether the given attribute has an identifier argument.
-static bool attributeHasIdentifierArg(const IdentifierInfo &II,
+static bool attributeHasIdentifierArg(const llvm::Triple &T,
+                                      const IdentifierInfo &II,
                                       ParsedAttr::Syntax Syntax,
                                       IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
 #define CLANG_ATTR_IDENTIFIER_ARG_LIST
-  return llvm::StringSwitch<bool>(FullName)
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
       .Default(false);
 #undef CLANG_ATTR_IDENTIFIER_ARG_LIST
 }
 
-/// Determine whether the given attribute has an identifier argument.
+/// Determine whether the given attribute has string arguments.
 static ParsedAttributeArgumentsProperties
 attributeStringLiteralListArg(const llvm::Triple &T, const IdentifierInfo &II,
                               ParsedAttr::Syntax Syntax,
                               IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
 #define CLANG_ATTR_STRING_LITERAL_ARG_LIST
-  return llvm::StringSwitch<uint32_t>(FullName)
+  return llvm::StringSwitch<uint32_t>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
       .Default(0);
 #undef CLANG_ATTR_STRING_LITERAL_ARG_LIST
@@ -344,10 +341,8 @@ attributeStringLiteralListArg(const llvm::Triple &T, const IdentifierInfo &II,
 static bool attributeHasVariadicIdentifierArg(const IdentifierInfo &II,
                                               ParsedAttr::Syntax Syntax,
                                               IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
 #define CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
-  return llvm::StringSwitch<bool>(FullName)
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
       .Default(false);
 #undef CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
@@ -357,10 +352,8 @@ static bool attributeHasVariadicIdentifierArg(const IdentifierInfo &II,
 static bool attributeTreatsKeywordThisAsIdentifier(const IdentifierInfo &II,
                                                    ParsedAttr::Syntax Syntax,
                                                    IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
 #define CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST
-  return llvm::StringSwitch<bool>(FullName)
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
       .Default(false);
 #undef CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST
@@ -370,10 +363,8 @@ static bool attributeTreatsKeywordThisAsIdentifier(const IdentifierInfo &II,
 static bool attributeAcceptsExprPack(const IdentifierInfo &II,
                                      ParsedAttr::Syntax Syntax,
                                      IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
 #define CLANG_ATTR_ACCEPTS_EXPR_PACK
-  return llvm::StringSwitch<bool>(FullName)
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
       .Default(false);
 #undef CLANG_ATTR_ACCEPTS_EXPR_PACK
@@ -383,42 +374,22 @@ static bool attributeAcceptsExprPack(const IdentifierInfo &II,
 static bool attributeIsTypeArgAttr(const IdentifierInfo &II,
                                    ParsedAttr::Syntax Syntax,
                                    IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
 #define CLANG_ATTR_TYPE_ARG_LIST
-  return llvm::StringSwitch<bool>(FullName)
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
       .Default(false);
 #undef CLANG_ATTR_TYPE_ARG_LIST
 }
 
-/// Determine whether the given attribute takes identifier arguments.
+/// Determine whether the given attribute takes a strict identifier argument.
 static bool attributeHasStrictIdentifierArgs(const IdentifierInfo &II,
                                              ParsedAttr::Syntax Syntax,
                                              IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
-#define CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
-  return (llvm::StringSwitch<uint64_t>(FullName)
+#define CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
-              .Default(0)) != 0;
-#undef CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
-}
-
-/// Determine whether the given attribute takes an identifier argument at a
-/// specific index
-static bool attributeHasStrictIdentifierArgAtIndex(const IdentifierInfo &II,
-                                                   ParsedAttr::Syntax Syntax,
-                                                   IdentifierInfo *ScopeName,
-                                                   size_t argIndex) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
-#define CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
-  return (llvm::StringSwitch<uint64_t>(FullName)
-#include "clang/Parse/AttrParserStringSwitches.inc"
-              .Default(0)) &
-         (1ull << argIndex);
-#undef CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
+              .Default(false);
+#undef CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST
 }
 
 /// Determine whether the given attribute requires parsing its arguments
@@ -426,10 +397,8 @@ static bool attributeHasStrictIdentifierArgAtIndex(const IdentifierInfo &II,
 static bool attributeParsedArgsUnevaluated(const IdentifierInfo &II,
                                            ParsedAttr::Syntax Syntax,
                                            IdentifierInfo *ScopeName) {
-  std::string FullName =
-      AttributeCommonInfo::normalizeFullNameWithSyntax(&II, ScopeName, Syntax);
 #define CLANG_ATTR_ARG_CONTEXT_LIST
-  return llvm::StringSwitch<bool>(FullName)
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
       .Default(false);
 #undef CLANG_ATTR_ARG_CONTEXT_LIST
@@ -575,7 +544,8 @@ unsigned Parser::ParseAttributeArgsCommon(
     // If this attribute wants an 'identifier' argument, make it so.
     bool IsIdentifierArg =
         AttributeHasVariadicIdentifierArg ||
-        attributeHasIdentifierArg(*AttrName, Form.getSyntax(), ScopeName);
+        attributeHasIdentifierArg(getTargetInfo().getTriple(), *AttrName,
+                                  Form.getSyntax(), ScopeName);
     ParsedAttr::Kind AttrKind =
         ParsedAttr::getParsedKind(AttrName, ScopeName, Form.getSyntax());
 
@@ -618,13 +588,6 @@ unsigned Parser::ParseAttributeArgsCommon(
         // Interpret "kw_this" as an identifier if the attributed requests it.
         if (ChangeKWThisToIdent && Tok.is(tok::kw_this))
           Tok.setKind(tok::identifier);
-
-        if (Tok.is(tok::identifier) &&
-            attributeHasStrictIdentifierArgAtIndex(
-                *AttrName, Form.getSyntax(), ScopeName, ArgExprs.size())) {
-          ArgExprs.push_back(ParseIdentifierLoc());
-          continue;
-        }
 
         ExprResult ArgExpr;
         if (Tok.is(tok::identifier)) {
