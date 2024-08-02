@@ -24,7 +24,7 @@ LIBC_INLINE pid_t *get_tid_cache() {
 #ifdef LIBC_FULL_BUILD
   return &self.attrib->tid;
 #else
-  // in non-full build mode, we do not control of the fork routine. Therefore,
+  // in non-full build mode, we do not control the fork routine. Therefore,
   // we do not cache tid at all.
   return nullptr;
 #endif
