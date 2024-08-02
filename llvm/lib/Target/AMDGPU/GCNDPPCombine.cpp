@@ -430,9 +430,9 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
   return DPPInst.getInstr();
 }
 
-static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
+static bool isIdentityValue(const MachineInstr &MI, MachineOperand *OldOpnd) {
   assert(OldOpnd->isImm());
-  switch (OrigMIOp) {
+  switch (MI.getOpcode()) {
   default: break;
   case AMDGPU::V_ADD_U32_e32:
   case AMDGPU::V_ADD_U32_e64:
@@ -478,6 +478,16 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
     if (OldOpnd->getImm() == 1)
       return true;
     break;
+  case AMDGPU::V_ADD_F32_e32:
+  case AMDGPU::V_ADD_F32_e64:
+    // -0.0 is an identity for fadd.
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == 0x80000000)
+      return true;
+    // +0.0 is an identity for fadd except for the sign of a zero result.
+    if (MI.getFlag(MachineInstr::FmNsz) &&
+        static_cast<uint32_t>(OldOpnd->getImm()) == 0)
+      return true;
+    break;
   }
   return false;
 }
@@ -492,7 +502,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(
       LLVM_DEBUG(dbgs() << "  failed: no src1 or it isn't a register\n");
       return nullptr;
     }
-    if (!isIdentityValue(OrigMI.getOpcode(), OldOpndValue)) {
+    if (!isIdentityValue(OrigMI, OldOpndValue)) {
       LLVM_DEBUG(dbgs() << "  failed: old immediate isn't an identity\n");
       return nullptr;
     }
