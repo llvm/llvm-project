@@ -12491,8 +12491,7 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   void initialize(Attributor &A) override {
     assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
            "Associated value is not a pointer");
-    auto *PtrTy = cast<PointerType>(getAssociatedType());
-    if (PtrTy->getAddressSpace())
+    if (getAssociatedType()->getPointerAddressSpace())
       indicateOptimisticFixpoint();
   }
 
