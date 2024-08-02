@@ -1,0 +1,14 @@
+## Tests
+
+# RUN: cat %S/txt-files/newline | FileCheck %s --check-prefix=NEWLINE
+
+# NEWLINE: first
+# NEWLINE-EMPTY:
+# NEWLINE-EMPTY:
+# NEWLINE-EMPTY:
+# NEWLINE-EMPTY:
+# NEWLINE-EMPTY:
+# NEWLINE-EMPTY:
+# NEWLINE-EMPTY:
+# NEWLINE-EMPTY:
+# NEWLINE: last

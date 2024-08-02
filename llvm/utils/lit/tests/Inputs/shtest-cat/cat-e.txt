@@ -1,0 +1,33 @@
+## Tests to check cat -e output for ASCII characters and newlines
+
+# RUN: cat -e %S/txt-files/allchars | FileCheck %s --check-prefix=ALLCHARS
+# RUN: cat -e %S/txt-files/newline | FileCheck %s --check-prefix=NEWLINE
+
+# ALLCHARS: ^@^A^B^C^D^E^F^G^H      $
+# ALLCHARS: ^K^L^M^N^O^P^Q^R^S^T^U^V^W^X^Y^Z
+# ALLCHARS-SAME: ^[^\^]^^^_ !"#$%&'()*+,-./
+# ALLCHARS-SAME: 0123456789
+# ALLCHARS-SAME: :;<=>?@
+# ALLCHARS-SAME: ABCDEFGHIJKLMNOPQRSTUVWXYZ
+# ALLCHARS-SAME: [\]^_`
+# ALLCHARS-SAME: abcdefghijklmnopqrstuvwxyz
+# ALLCHARS-SAME: {|}~^?
+# ALLCHARS-SAME: M-^@M-^AM-^BM-^CM-^DM-^EM-^FM-^GM-^HM-^IM-^JM-^KM-^LM-^MM-^NM-^OM-^PM-^QM-^RM-^SM-^TM-^UM-^VM-^WM-^XM-^YM-^Z
+# ALLCHARS-SAME: M-^[M-^\M-^]M-^^M-^_M- M-!M-"M-#M-$M-%M-&M-'M-(M-)M-*M-+M-,M--M-.M-/
+# ALLCHARS-SAME: M-0M-1M-2M-3M-4M-5M-6M-7M-8M-9
+# ALLCHARS-SAME: M-:M-;M-<M-=M->M-?M-@
+# ALLCHARS-SAME: M-AM-BM-CM-DM-EM-FM-GM-HM-IM-JM-KM-LM-MM-NM-OM-PM-QM-RM-SM-TM-UM-VM-WM-XM-YM-Z
+# ALLCHARS-SAME: M-[M-\M-]M-^M-_M-`
+# ALLCHARS-SAME: M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-oM-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-z
+# ALLCHARS-SAME: M-{M-|M-}M-~M-^?
+
+# NEWLINE: first
+# NEWLINE: $
+# NEWLINE: $
+# NEWLINE: $
+# NEWLINE: $
+# NEWLINE: $
+# NEWLINE: $
+# NEWLINE: $
+# NEWLINE: $
+# NEWLINE: last
