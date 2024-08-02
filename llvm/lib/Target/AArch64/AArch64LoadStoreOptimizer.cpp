@@ -1951,6 +1951,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
 static MachineBasicBlock::iterator
 maybeMoveCFI(MachineInstr &MI, MachineBasicBlock::iterator MaybeCFI) {
+  assert((MI.getOpcode() == AArch64::SUBXri ||
+          MI.getOpcode() == AArch64::ADDXri) &&
+         "Expected a register update instruction");
   auto End = MI.getParent()->end();
   if (MaybeCFI == End ||
       MaybeCFI->getOpcode() != TargetOpcode::CFI_INSTRUCTION ||
