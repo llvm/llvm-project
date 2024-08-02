@@ -178,6 +178,8 @@ void SetVolatile::revert() {
     Load->setVolatile(WasVolatile);
   } else if (auto *Store = StoreOrLoad.dyn_cast<StoreInst *>()) {
     Store->setVolatile(WasVolatile);
+  } else {
+    llvm_unreachable("Expected LoadInst or StoreInst");
   }
 }
 #ifndef NDEBUG

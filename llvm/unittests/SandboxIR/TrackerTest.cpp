@@ -597,25 +597,22 @@ define void @foo(ptr %arg0, i8 %val) {
   sandboxir::Context Ctx(C);
 
   auto *F = Ctx.createFunction(&LLVMF);
-  unsigned ArgIdx = 0;
-  [[maybe_unused]] auto *Arg0 = F->getArg(ArgIdx++);
-  [[maybe_unused]] auto *Val = F->getArg(ArgIdx++);
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Load = cast<sandboxir::LoadInst>(&*It++);
   auto *Store = cast<sandboxir::StoreInst>(&*It++);
-  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   EXPECT_FALSE(Load->isVolatile());
   EXPECT_FALSE(Store->isVolatile());
-  // Check setVolatile()
   Ctx.save();
   Load->setVolatile(true);
   EXPECT_TRUE(Load->isVolatile());
   Ctx.revert();
+  EXPECT_FALSE(Load->isVolatile());
 
   Ctx.save();
   Store->setVolatile(true);
   EXPECT_TRUE(Store->isVolatile());
   Ctx.revert();
+  EXPECT_FALSE(Store->isVolatile());
 }
