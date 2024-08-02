@@ -1510,9 +1510,12 @@ DWARFUnitVector &DWARFContext::getDWOUnits(bool Lazy) {
   return State->getDWOUnits(Lazy);
 }
 
+DWARFUnit *DWARFContext::getUnitForOffset(uint64_t Offset) {
+  return State->getNormalUnits().getUnitForOffset(Offset);
+}
+
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint64_t Offset) {
-  return dyn_cast_or_null<DWARFCompileUnit>(
-      State->getNormalUnits().getUnitForOffset(Offset));
+  return dyn_cast_or_null<DWARFCompileUnit>(getUnitForOffset(Offset));
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForCodeAddress(uint64_t Address) {

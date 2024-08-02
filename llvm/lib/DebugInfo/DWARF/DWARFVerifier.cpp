@@ -1626,8 +1626,44 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       UnitOffset = NI.getCUOffset(*CUIndex);
     if (!UnitOffset)
       continue;
-    uint64_t DIEOffset = *UnitOffset + *EntryOr->getDIEUnitOffset();
-    DWARFDie DIE = DCtx.getDIEForOffset(DIEOffset);
+    // For split DWARF entries we need to make sure we find the non skeleton
+    // DWARF unit that is needed and use that's DWARF unit offset as the
+    // DIE offset to add the DW_IDX_die_offset to.
+    DWARFUnit *DU = DCtx.getUnitForOffset(*UnitOffset);
+    if (DU == nullptr || DU->getOffset() != *UnitOffset) {
+      // If we didn't find a DWARF Unit from the UnitOffset, or if the offset
+      // of the unit doesn't match exactly, report an error.
+      ErrorCategory.Report(
+          "Name Index entry contains invalid CU or TU offset", [&]() {
+            error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
+                               "invalid CU or TU offset {1:x}.\n",
+                               NI.getUnitOffset(), EntryID, *UnitOffset);
+          });
+      ++NumErrors;
+      continue;
+    }
+    // This function will try to get the non skeleton unit DIE, but if it is
+    // unable to load the .dwo file from the .dwo or .dwp, it will return the
+    // unit DIE of the DWARFUnit in "DU". So we need to check if the DWARFUnit
+    // has a .dwo file, but we couldn't load it.
+    DWARFDie NonSkeletonUnitDie = DU->getNonSkeletonUnitDIE();
+    if (DU->getDWOId() && DU->getUnitDIE() == NonSkeletonUnitDie) {
+      ErrorCategory.Report("Unable to get load .dwo file", [&]() {
+        error() << formatv("Name Index @ {0:x}: Entry @ {1:x} unable to load "
+                           ".dwo file \"{2}\" for DWARF unit @ {3:x}.\n",
+                           NI.getUnitOffset(), EntryID,
+                           dwarf::toString(DU->getUnitDIE().find(
+                               {DW_AT_dwo_name, DW_AT_GNU_dwo_name})),
+                           *UnitOffset);
+      });
+      ++NumErrors;
+      continue;
+    }
+    DWARFUnit *NonSkeletonUnit = NonSkeletonUnitDie.getDwarfUnit();
+    uint64_t DIEOffset =
+        NonSkeletonUnit->getOffset() + *EntryOr->getDIEUnitOffset();
+    DWARFDie DIE = NonSkeletonUnit->getDIEForOffset(DIEOffset);
+
     if (!DIE) {
       ErrorCategory.Report("NameIndex references nonexistent DIE", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} references a "
@@ -1637,7 +1673,12 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       ++NumErrors;
       continue;
     }
-    if (DIE.getDwarfUnit()->getOffset() != *UnitOffset) {
+    // Only compare the DIE we found's DWARFUnit offset if the DIE lives in
+    // the DWARFUnit from the DW_IDX_comp_unit or DW_IDX_type_unit. If we are
+    // using split DWARF, then the DIE's DWARFUnit doesn't need to match the
+    // skeleton unit.
+    if (DIE.getDwarfUnit() == DU &&
+        DIE.getDwarfUnit()->getOffset() != *UnitOffset) {
       ErrorCategory.Report("Name index contains mismatched CU of DIE", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x}: mismatched CU of "
