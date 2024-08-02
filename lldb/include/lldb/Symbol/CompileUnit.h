@@ -24,6 +24,8 @@
 #include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
+class RealpathPrefixes;
+
 /// \class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
 /// A class that describes a compilation unit.
 ///
@@ -390,9 +392,11 @@ public:
   ///     entries appended to.
   ///
   /// \see enum SymbolContext::Scope
-  void ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
-                            lldb::SymbolContextItem resolve_scope,
-                            SymbolContextList &sc_list);
+  void
+  ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
+                       lldb::SymbolContextItem resolve_scope,
+                       SymbolContextList &sc_list,
+                       const RealpathPrefixes *realpath_prefixes = nullptr);
 
   /// Get whether compiler optimizations were enabled for this compile unit
   ///

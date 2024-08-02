@@ -17,6 +17,7 @@
 #include <vector>
 
 namespace lldb_private {
+class RealpathPrefixes;
 class Stream;
 
 /// A list of support files for a CompileUnit.
@@ -64,10 +65,16 @@ public:
   /// \param[in] file
   ///     The file specification to search for.
   ///
+  /// \param[in] realpath_prefixes
+  ///     Paths that start with one of the prefixes in this list will be
+  ///     realpath'ed to resolve any symlinks.
+  ///
   /// \return
   ///     The index of the file that matches \a file if it is found,
   ///     else UINT32_MAX is returned.
-  size_t FindCompatibleIndex(size_t idx, const FileSpec &file) const;
+  size_t FindCompatibleIndex(
+      size_t idx, const FileSpec &file,
+      const RealpathPrefixes *realpath_prefixes = nullptr) const;
 
   template <class... Args> void EmplaceBack(Args &&...args) {
     m_files.push_back(

@@ -150,6 +150,9 @@ let Definition = "target" in {
     DefaultEnumValue<"eInlineBreakpointsAlways">,
     EnumValues<"OptionEnumValues(g_inline_breakpoint_enums)">,
     Desc<"The strategy to use when settings breakpoints by file and line. Breakpoint locations can end up being inlined by the compiler, so that a compile unit 'a.c' might contain an inlined function from another source file. Usually this is limited to breakpoint locations from inlined functions from header or other include files, or more accurately non-implementation source files. Sometimes code might #include implementation files and cause inlined breakpoint locations in inlined implementation files. Always checking for inlined breakpoint locations can be expensive (memory and time), so if you have a project with many headers and find that setting breakpoints is slow, then you can change this setting to headers. This setting allows you to control exactly which strategy is used when setting file and line breakpoints.">;
+  def SourceRealpathPrefixes: Property<"source-realpath-prefixes", "FileSpecList">,
+    DefaultStringValue<"">,
+    Desc<"Realpath any source paths that start with one of these prefixes. If the debug info contains symlinks that don't match the original source file locations that the user will use to set breakpoints, then this setting can help resolve breakpoints correctly.">;
   def DisassemblyFlavor: Property<"x86-disassembly-flavor", "Enum">,
     DefaultEnumValue<"eX86DisFlavorDefault">,
     EnumValues<"OptionEnumValues(g_x86_dis_flavor_value_types)">,

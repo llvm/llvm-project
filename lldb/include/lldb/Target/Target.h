@@ -39,6 +39,8 @@
 
 namespace lldb_private {
 
+class RealpathPrefixes;
+
 OptionEnumValues GetDynamicValueTypes();
 
 enum InlineStrategy {
@@ -116,6 +118,8 @@ public:
   const char *GetDisassemblyFlavor() const;
 
   InlineStrategy GetInlineStrategy() const;
+
+  RealpathPrefixes GetSourceRealpathPrefixes() const;
 
   llvm::StringRef GetArg0() const;
 
