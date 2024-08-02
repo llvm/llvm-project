@@ -1217,7 +1217,7 @@ static int getInstructionID(struct InternalInstruction *insn,
 
       if (zFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXKZ;
-      if (!readModRM(insn) && isNF(insn) &&
+      if (isNF(insn) && !readModRM(insn) &&
           !isCCMPOrCTEST(insn)) // NF bit is the MSB of aaa.
         attrMask |= ATTR_EVEXNF;
       // aaa is not used a opmask in MAP4
@@ -1227,7 +1227,7 @@ static int getInstructionID(struct InternalInstruction *insn,
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3])) {
         attrMask |= ATTR_EVEXB;
         if (uFromEVEX3of4(insn->vectorExtensionPrefix[2]) &&
-            modFromModRM(insn->modRM) == 3)
+            !readModRM(insn) && modFromModRM(insn->modRM) == 3)
           attrMask |= ATTR_EVEXU;
       }
       if (lFromEVEX4of4(insn->vectorExtensionPrefix[3]))
