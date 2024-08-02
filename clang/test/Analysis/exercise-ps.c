@@ -30,3 +30,10 @@ void f3(void *dest) {
   void *src = __builtin_alloca(5);
   memcpy(dest, src, 1); // expected-warning{{2nd function call argument is a pointer to uninitialized value}}
 }
+
+// Reproduce crash from GH#94496. When array is used as subcript to another array, CSA cannot model it
+// and should just assume it's unknown and do not crash.
+void f4(char *array) {
+  char b[4] = {0};
+  array[__builtin_bit_cast(int, b)] = 0x10; // no crash
+}
