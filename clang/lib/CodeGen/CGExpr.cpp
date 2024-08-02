@@ -3882,6 +3882,8 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
     TrapCall->addFnAttr(A);
   }
 
+  if (InNoMergeAttributedStmt)
+    TrapCall->addFnAttr(llvm::Attribute::NoMerge);
   return TrapCall;
 }
 

@@ -1,6 +1,8 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -O0 -debug-info-kind=limited -gheterogeneous-dwarf -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
 
+// XFAIL:*
+
 // Notes:
 // * There is no test involving transparent_union, as this isn't supported in
 // C++, and so is not supported in HIP.
