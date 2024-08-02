@@ -354,7 +354,7 @@ static void SetupDefaultClangDiagnostics(CompilerInstance &compiler) {
 
 static void SetupLangOpts(CompilerInstance &compiler,
                           ExecutionContextScope &exe_scope,
-                          Expression const &expr) {
+                          const Expression &expr) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   // If the expression is being evaluated in the context of an existing stack
