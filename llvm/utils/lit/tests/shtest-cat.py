@@ -18,7 +18,7 @@
 # CHECK-NEXT: # executed command: cat -v {{.+}}/allchars
 # CHECK-NEXT: # executed command: FileCheck {{.*}}
 # CHECK: cat -v {{.+}}/newline | FileCheck {{.*}}
-# CHECK-NEXT: # executed command: cat -v {{.+}}/newline 
+# CHECK-NEXT: # executed command: cat -v {{.+}}/newline
 # CHECK-NEXT: # executed command: FileCheck {{.*}}
 
 # CHECK: PASS: shtest-cat :: cat.txt ({{[^)]*}})
