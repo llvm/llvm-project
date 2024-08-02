@@ -70,17 +70,17 @@ static ListOfGlobals &GlobalsByIndicator(uptr odr_indicator)
   return (*globals_by_indicator)[odr_indicator];
 }
 
-using DynInitGLobalsByModule =
+using DynInitGlobalsByModule =
     DenseMap<const char *, IntrusiveList<DynInitGlobal>>;
 
 // TODO: Add a NoDestroy helper, this patter is very common in sanitizers.
-static DynInitGLobalsByModule &DynInitGlobals()
+static DynInitGlobalsByModule &DynInitGlobals()
     SANITIZER_REQUIRES(mu_for_globals) {
-  static DynInitGLobalsByModule *globals_by_module = nullptr;
+  static DynInitGlobalsByModule *globals_by_module = nullptr;
   if (!globals_by_module) {
-    alignas(alignof(DynInitGLobalsByModule)) static char
-        placeholder[sizeof(DynInitGLobalsByModule)];
-    globals_by_module = new (placeholder) DynInitGLobalsByModule();
+    alignas(alignof(DynInitGlobalsByModule)) static char
+        placeholder[sizeof(DynInitGlobalsByModule)];
+    globals_by_module = new (placeholder) DynInitGlobalsByModule();
   }
 
   return *globals_by_module;
