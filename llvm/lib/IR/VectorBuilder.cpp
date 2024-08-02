@@ -70,6 +70,15 @@ Value *VectorBuilder::createSimpleTargetReduction(Intrinsic::ID RdxID,
   return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
 }
 
+CallInst *VectorBuilder::createAlignedLoad(Type *Ty, Value *Ptr,
+                                           Align Alignment, const Twine &Name) {
+  auto VPLI =
+      cast<CallInst>(createVectorInstruction(Instruction::Load, Ty, Ptr, Name));
+  VPLI->addParamAttr(
+      0, Attribute::getWithAlignment(VPLI->getContext(), Alignment));
+  return VPLI;
+}
+
 Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
                                                   Type *ReturnTy,
                                                   ArrayRef<Value *> InstOpArray,

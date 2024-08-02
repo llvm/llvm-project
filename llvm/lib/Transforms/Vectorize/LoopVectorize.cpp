@@ -9364,11 +9364,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   } else {
     VectorBuilder VBuilder(Builder);
     VBuilder.setEVL(EVL).setMask(Mask);
-    NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Load, DataTy, Addr, "vp.op.load"));
+    NewLI = VBuilder.createAlignedLoad(DataTy, Addr, Alignment, "vp.op.load");
   }
-  NewLI->addParamAttr(
-      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
   Instruction *Res = NewLI;
   if (isReverse())

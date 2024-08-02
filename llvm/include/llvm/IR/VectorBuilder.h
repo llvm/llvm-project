@@ -106,6 +106,13 @@ public:
   Value *createSimpleTargetReduction(Intrinsic::ID RdxID, Type *ValTy,
                                      ArrayRef<Value *> VecOpArray,
                                      const Twine &Name = Twine());
+
+  /// Emit a VP load intrinsic call.
+  /// \param Ty         The return type of the load.
+  /// \param Ptr        The load address.
+  /// \param Alignment  The alignment information of the load.
+  CallInst *createAlignedLoad(Type *Ty, Value *Ptr, Align Alignment,
+                              const Twine &Name = Twine());
 };
 
 } // namespace llvm
