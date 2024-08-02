@@ -26,6 +26,11 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
   invoke_prepare_callbacks();
+  pid_t parent_tid = internal::gettid();
+  // Invalidate parent's tid cache before forking. We cannot do this in child
+  // process because in the post-fork instruction windows, there may be a signal
+  // handler triggered which may get the wrong tid.
+  internal::force_set_tid(0);
 #ifdef SYS_fork
   pid_t ret = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_fork);
 #elif defined(SYS_clone)
@@ -33,11 +38,6 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
 #else
 #error "fork and clone syscalls not available."
 #endif
-  pid_t parent_tid = internal::gettid();
-  // Invalidate parent's tid cache before forking. We cannot do this in child
-  // process because in the post-fork instruction windows, there may be a signal
-  // handler triggered which may get the wrong tid.
-  internal::force_set_tid(0);
 
   if (ret == 0) {
     // Return value is 0 in the child process.
