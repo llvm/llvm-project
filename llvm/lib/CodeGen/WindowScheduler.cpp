@@ -451,7 +451,6 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
       }
       RM.reserveResources(*SU, CurCycle);
     }
-    RM.reserveResources(*SU, CurCycle);
     OriToCycle[getOriMI(&MI)] = CurCycle;
     LLVM_DEBUG(dbgs() << "\tCycle " << CurCycle << " [S."
                       << getOriStage(getOriMI(&MI), Offset) << "]: " << MI);
