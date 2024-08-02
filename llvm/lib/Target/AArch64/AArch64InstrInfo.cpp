@@ -4112,6 +4112,7 @@ bool AArch64InstrInfo::isPairedLdSt(const MachineInstr &MI) {
 }
 
 const MachineOperand &AArch64InstrInfo::getLdStBaseOp(const MachineInstr &MI) {
+  assert(MI.mayLoadOrStore() && "Load or store instruction expected");
   unsigned Idx =
       AArch64InstrInfo::isPairedLdSt(MI) || AArch64InstrInfo::isPreLdSt(MI) ? 2
                                                                             : 1;
@@ -4120,6 +4121,7 @@ const MachineOperand &AArch64InstrInfo::getLdStBaseOp(const MachineInstr &MI) {
 
 const MachineOperand &
 AArch64InstrInfo::getLdStOffsetOp(const MachineInstr &MI) {
+  assert(MI.mayLoadOrStore() && "Load or store instruction expected");
   unsigned Idx =
       AArch64InstrInfo::isPairedLdSt(MI) || AArch64InstrInfo::isPreLdSt(MI) ? 3
                                                                             : 2;
