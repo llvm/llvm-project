@@ -2341,6 +2341,11 @@ std::optional<Value *> AArch64TTIImpl::simplifyDemandedVectorEltsIntrinsic(
   return std::nullopt;
 }
 
+bool AArch64TTIImpl::enableScalableVectorization() const {
+  return ST->isSVEAvailable() || (ST->isSVEorStreamingSVEAvailable() &&
+                                  EnableScalableAutovecInStreamingMode);
+}
+
 TypeSize
 AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
