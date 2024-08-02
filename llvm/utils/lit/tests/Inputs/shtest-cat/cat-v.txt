@@ -19,7 +19,7 @@
 
 ## Test output of -v for all ASCII characters in ^ and M- notation
 # ALLCHARS: ^@^A^B^C^D^E^F^G^H
-# ALLCHARS: ^K^L^M^N^O^P^Q^R^S^T^U^V^W^X^Y^Z
+# ALLCHARS-NEXT: ^K^L^M^N^O^P^Q^R^S^T^U^V^W^X^Y^Z
 # ALLCHARS-SAME: ^[^\^]^^^_
 # ALLCHARS-SAME: !"#$%&'()*+,-./
 # ALLCHARS-SAME: 0123456789
@@ -47,4 +47,4 @@
 # NEWLINE-EMPTY:
 # NEWLINE-EMPTY:
 # NEWLINE-EMPTY:
-# NEWLINE: last
+# NEWLINE-NEXT: last
