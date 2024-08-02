@@ -1308,8 +1308,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   InstructionCost SizeCost = std::get<0>(OutliningCosts);
   InstructionCost NonWeightedRcost = std::get<1>(OutliningCosts);
 
-  assert(SizeCost.isValid() && NonWeightedRcost.isValid() &&
-         "Expected valid costs");
+  if (!SizeCost.isValid() || !NonWeightedRcost.isValid())
+    return false;
 
   // Only calculate RelativeToEntryFreq when we are doing single region
   // outlining.
