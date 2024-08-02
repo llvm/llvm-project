@@ -3066,6 +3066,10 @@ dll version.}]>;
 def fms_omit_default_lib : Joined<["-"], "fms-omit-default-lib">,
   Group<f_Group>, Flags<[]>,
   Visibility<[ClangOption, CLOption]>;
+def fzos_extensions : Flag<["-"], "fzos-extensions">, Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Accept some non-standard constructs supported by the z/OS compiler">;
+def fno_zos_extensions : Flag<["-"], "fno-zos-extensions">, Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not accept non-standard constructs supported by the z/OS compiler">;
 defm delayed_template_parsing : BoolFOption<"delayed-template-parsing",
   LangOpts<"DelayedTemplateParsing">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
