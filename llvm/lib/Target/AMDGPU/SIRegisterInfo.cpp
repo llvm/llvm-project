@@ -2581,26 +2581,22 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 // mad_u32_u24 primarily as an add with no carry out clobber.
                 bool IsInlinableLiteral = AMDGPU::isInlinableLiteral32(
                     Offset, ST.hasInv2PiInlineImm());
-                if (!IsInlinableLiteral)
+                if (!IsInlinableLiteral) {
                   BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32),
                           TmpResultReg)
                       .addImm(Offset);
+                }
 
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg);
 
                 if (!IsInlinableLiteral) {
-                  Add.addReg(TmpResultReg, RegState::Kill)
-                      .addImm(ST.getWavefrontSize())
-                      .addReg(FrameReg)
-                      .addImm(0);
+                  Add.addReg(TmpResultReg, RegState::Kill);
                 } else {
                   // We fold the offset into mad itself if its inlinable.
-                  Add.addImm(Offset)
-                      .addImm(ST.getWavefrontSize())
-                      .addReg(FrameReg)
-                      .addImm(0);
+                  Add.addImm(Offset);
                 }
+                Add.addImm(ST.getWavefrontSize()).addReg(FrameReg).addImm(0);
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
                         TmpResultReg)
                     .addImm(ST.getWavefrontSizeLog2())
