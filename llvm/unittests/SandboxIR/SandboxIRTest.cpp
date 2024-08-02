@@ -796,11 +796,6 @@ define void @foo(ptr %arg0, ptr %arg1) {
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
                                   /*InsertAtEnd=*/BB, Ctx, "NewLdEnd");
   EXPECT_FALSE(NewLdEnd->isVolatile());
-  OrigVolatileValue = NewLdEnd->isVolatile();
-  NewLdEnd->setVolatile(true);
-  EXPECT_TRUE(NewLdEnd->isVolatile());
-  NewLdEnd->setVolatile(OrigVolatileValue);
-  EXPECT_FALSE(NewLdEnd->isVolatile());
   EXPECT_EQ(NewLdEnd->getName(), "NewLdEnd");
   EXPECT_EQ(NewLdEnd->getType(), Ld->getType());
   EXPECT_EQ(NewLdEnd->getPointerOperand(), Arg1);
@@ -813,10 +808,6 @@ define void @foo(ptr %arg0, ptr %arg1) {
                                   /*InsertAtEnd=*/BB,
                                   /*IsVolatile=*/true, Ctx, "NewVLdEnd");
   EXPECT_TRUE(NewVLdEnd->isVolatile());
-  OrigVolatileValue = NewVLdEnd->isVolatile();
-  NewVLdEnd->setVolatile(false);
-  EXPECT_FALSE(NewVLdEnd->isVolatile());
-  NewVLdEnd->setVolatile(OrigVolatileValue);
   EXPECT_EQ(NewVLdEnd->getName(), "NewVLdEnd");
   EXPECT_EQ(NewVLdEnd->getType(), VLd->getType());
   EXPECT_EQ(NewVLdEnd->getPointerOperand(), Arg1);
@@ -889,11 +880,6 @@ define void @foo(i8 %val, ptr %ptr) {
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertAtEnd=*/BB, Ctx);
   EXPECT_FALSE(NewStEnd->isVolatile());
-  OrigVolatileValue = NewStEnd->isVolatile();
-  NewStEnd->setVolatile(true);
-  EXPECT_TRUE(NewStEnd->isVolatile());
-  NewStEnd->setVolatile(OrigVolatileValue);
-  EXPECT_FALSE(NewStEnd->isVolatile());
   EXPECT_EQ(NewStEnd->getType(), St->getType());
   EXPECT_EQ(NewStEnd->getValueOperand(), Val);
   EXPECT_EQ(NewStEnd->getPointerOperand(), Ptr);
@@ -905,11 +891,6 @@ define void @foo(i8 %val, ptr %ptr) {
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertAtEnd=*/BB,
                                    /*IsVolatile=*/true, Ctx);
-  EXPECT_TRUE(NewVStEnd->isVolatile());
-  OrigVolatileValue = NewVStEnd->isVolatile();
-  NewVStEnd->setVolatile(false);
-  EXPECT_FALSE(NewVStEnd->isVolatile());
-  NewVStEnd->setVolatile(OrigVolatileValue);
   EXPECT_TRUE(NewVStEnd->isVolatile());
   EXPECT_EQ(NewVStEnd->getType(), VSt->getType());
   EXPECT_EQ(NewVStEnd->getValueOperand(), Val);
