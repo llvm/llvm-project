@@ -90,9 +90,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.remove
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
+    libc.src.stdio.asprintf
     libc.src.stdio.vprintf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
+    libc.src.stdio.vasprintf
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
