@@ -1570,8 +1570,7 @@ define i64 @srai_slli(i16 signext %0) {
 ;
 ; RV64ZBB-LABEL: srai_slli:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a0, a0, 9
-; RV64ZBB-NEXT:    slli a0, a0, 48
+; RV64ZBB-NEXT:    slli a0, a0, 57
 ; RV64ZBB-NEXT:    srai a0, a0, 63
 ; RV64ZBB-NEXT:    ret
   %2 = shl i16 %0, 9
@@ -1589,8 +1588,7 @@ define i64 @srai_slli2(i16 signext %0) {
 ;
 ; RV64ZBB-LABEL: srai_slli2:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a0, a0, 9
-; RV64ZBB-NEXT:    slli a0, a0, 48
+; RV64ZBB-NEXT:    slli a0, a0, 57
 ; RV64ZBB-NEXT:    srai a0, a0, 62
 ; RV64ZBB-NEXT:    ret
   %2 = shl i16 %0, 9

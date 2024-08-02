@@ -1419,18 +1419,11 @@ define i64 @orc_b_i64(i64 %a) {
 }
 
 define i32 @srai_slli(i16 signext %0) {
-; RV32I-LABEL: srai_slli:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 25
-; RV32I-NEXT:    srai a0, a0, 31
-; RV32I-NEXT:    ret
-;
-; RV32ZBB-LABEL: srai_slli:
-; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    slli a0, a0, 9
-; RV32ZBB-NEXT:    slli a0, a0, 16
-; RV32ZBB-NEXT:    srai a0, a0, 31
-; RV32ZBB-NEXT:    ret
+; CHECK-LABEL: srai_slli:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 25
+; CHECK-NEXT:    srai a0, a0, 31
+; CHECK-NEXT:    ret
   %2 = shl i16 %0, 9
   %sext = ashr i16 %2, 15
   %3 = sext i16 %sext to i32
@@ -1438,18 +1431,11 @@ define i32 @srai_slli(i16 signext %0) {
 }
 
 define i32 @srai_slli2(i16 signext %0) {
-; RV32I-LABEL: srai_slli2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 25
-; RV32I-NEXT:    srai a0, a0, 30
-; RV32I-NEXT:    ret
-;
-; RV32ZBB-LABEL: srai_slli2:
-; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    slli a0, a0, 9
-; RV32ZBB-NEXT:    slli a0, a0, 16
-; RV32ZBB-NEXT:    srai a0, a0, 30
-; RV32ZBB-NEXT:    ret
+; CHECK-LABEL: srai_slli2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 25
+; CHECK-NEXT:    srai a0, a0, 30
+; CHECK-NEXT:    ret
   %2 = shl i16 %0, 9
   %sext = ashr i16 %2, 14
   %3 = sext i16 %sext to i32
