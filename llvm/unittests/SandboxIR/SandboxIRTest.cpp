@@ -773,6 +773,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   NewLd->setVolatile(true);
   EXPECT_TRUE(NewLd->isVolatile());
   NewLd->setVolatile(OrigVolatileValue);
+  EXPECT_FALSE(NewLd->isVolatile());
   EXPECT_EQ(NewLd->getType(), Ld->getType());
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
   EXPECT_EQ(NewLd->getAlign(), 8);
@@ -788,6 +789,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   NewVLd->setVolatile(false);
   EXPECT_FALSE(NewVLd->isVolatile());
   NewVLd->setVolatile(OrigVolatileValue);
+  EXPECT_TRUE(NewVLd->isVolatile());
   EXPECT_EQ(NewVLd->getName(), "NewVLd");
   // Check create(InsertAtEnd)
   sandboxir::LoadInst *NewLdEnd =
@@ -798,6 +800,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   NewLdEnd->setVolatile(true);
   EXPECT_TRUE(NewLdEnd->isVolatile());
   NewLdEnd->setVolatile(OrigVolatileValue);
+  EXPECT_FALSE(NewLdEnd->isVolatile());
   EXPECT_EQ(NewLdEnd->getName(), "NewLdEnd");
   EXPECT_EQ(NewLdEnd->getType(), Ld->getType());
   EXPECT_EQ(NewLdEnd->getPointerOperand(), Arg1);
@@ -859,6 +862,7 @@ define void @foo(i8 %val, ptr %ptr) {
   NewSt->setVolatile(true);
   EXPECT_TRUE(NewSt->isVolatile());
   NewSt->setVolatile(OrigVolatileValue);
+  EXPECT_FALSE(NewSt->isVolatile());
   EXPECT_EQ(NewSt->getType(), St->getType());
   EXPECT_EQ(NewSt->getValueOperand(), Val);
   EXPECT_EQ(NewSt->getPointerOperand(), Ptr);
@@ -874,6 +878,7 @@ define void @foo(i8 %val, ptr %ptr) {
   NewVSt->setVolatile(false);
   EXPECT_FALSE(NewVSt->isVolatile());
   NewVSt->setVolatile(OrigVolatileValue);
+  EXPECT_TRUE(NewVSt->isVolatile());
   EXPECT_EQ(NewVSt->getType(), VSt->getType());
   EXPECT_EQ(NewVSt->getValueOperand(), Val);
   EXPECT_EQ(NewVSt->getPointerOperand(), Ptr);
@@ -888,6 +893,7 @@ define void @foo(i8 %val, ptr %ptr) {
   NewStEnd->setVolatile(true);
   EXPECT_TRUE(NewStEnd->isVolatile());
   NewStEnd->setVolatile(OrigVolatileValue);
+  EXPECT_FALSE(NewStEnd->isVolatile());
   EXPECT_EQ(NewStEnd->getType(), St->getType());
   EXPECT_EQ(NewStEnd->getValueOperand(), Val);
   EXPECT_EQ(NewStEnd->getPointerOperand(), Ptr);
@@ -904,6 +910,7 @@ define void @foo(i8 %val, ptr %ptr) {
   NewVStEnd->setVolatile(false);
   EXPECT_FALSE(NewVStEnd->isVolatile());
   NewVStEnd->setVolatile(OrigVolatileValue);
+  EXPECT_TRUE(NewVStEnd->isVolatile());
   EXPECT_EQ(NewVStEnd->getType(), VSt->getType());
   EXPECT_EQ(NewVStEnd->getValueOperand(), Val);
   EXPECT_EQ(NewVStEnd->getPointerOperand(), Ptr);
