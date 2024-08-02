@@ -2268,8 +2268,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       MI->eraseFromParent();
       return true;
     }
-    case AMDGPU::S_ADD_I32: {
-      // TODO: Handle s_or_b32, s_and_b32.
+    case AMDGPU::S_ADD_I32:
+    case AMDGPU::S_OR_B32:
+    case AMDGPU::S_AND_B32: {
       MachineOperand &OtherOp = MI->getOperand(FIOperandNum == 1 ? 2 : 1);
 
       assert(FrameReg || MFI->isBottomOfStack());
