@@ -28,12 +28,13 @@
 
 template <class Real>
 constexpr unsigned get_maximal_order() {
-  if constexpr (std::numeric_limits<Real>::max_exponent < 64)
-    return 39;
-  else if constexpr (std::numeric_limits<Real>::max_exponent < 129)
+  if constexpr (std::numeric_limits<Real>::is_iec559)
     return 128;
-  else
-    return 1024;
+  else { // Workaround for z/OS HexFloat.
+    // Note |H_n(x)| < 10^75 for n < 39 and x in sample_points().
+    static_assert(std::numeric_limits<Real>::max_exponent10 == 75);
+    return 39;
+  }
 }
 
 template <class T>
