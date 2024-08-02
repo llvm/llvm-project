@@ -615,19 +615,17 @@ static void collectBPFFastCalls(const TargetRegisterInfo *TRI,
   LiveRegs.addLiveOuts(BB);
   Calls.clear();
   for (MachineInstr &MI : llvm::reverse(BB)) {
-    unsigned LiveCallerSavedRegs;
-    if (!MI.isCall())
-      goto NextInsn;
-    LiveCallerSavedRegs = 0;
-    for (MCRegister R : CallerSavedRegs) {
-      bool DoSpillFill = !MI.definesRegister(R, TRI) && LiveRegs.contains(R);
-      if (!DoSpillFill)
-        continue;
-      LiveCallerSavedRegs |= 1 << R;
+    if (MI.isCall()) {
+      unsigned LiveCallerSavedRegs = 0;
+      for (MCRegister R : CallerSavedRegs) {
+        bool DoSpillFill = !MI.definesRegister(R, TRI) && LiveRegs.contains(R);
+        if (!DoSpillFill)
+          continue;
+        LiveCallerSavedRegs |= 1 << R;
+      }
+      if (LiveCallerSavedRegs)
+        Calls.push_back({&MI, LiveCallerSavedRegs});
     }
-    if (LiveCallerSavedRegs)
-      Calls.push_back({&MI, LiveCallerSavedRegs});
-  NextInsn:
     LiveRegs.stepBackward(MI);
   }
 }
