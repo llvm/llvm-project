@@ -1255,6 +1255,7 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   static const int PR_SET_VMA = 0x53564d41;
   static const int PR_SCHED_CORE = 62;
   static const int PR_SCHED_CORE_GET = 0;
+  static const int PR_GET_PDEATHSIG = 2;
   if (option == PR_SET_VMA && arg2 == 0UL) {
     char *name = (char *)arg5;
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, internal_strlen(name) + 1);
@@ -1271,6 +1272,8 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   } else if (res != -1 && option == PR_SCHED_CORE &&
              arg2 == PR_SCHED_CORE_GET) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64*)(arg5), sizeof(u64));
+  } else if (res != -1 && option == PR_GET_PDEATHSIG) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64*)(arg2), sizeof(u64));
   }
   return res;
 }
@@ -9980,7 +9983,7 @@ INTERCEPTOR(SSIZE_T, getrandom, void *buf, SIZE_T buflen, unsigned int flags) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getrandom, buf, buflen, flags);
   // If GRND_NONBLOCK is set in the flags, it is non blocking.
-  static const int grnd_nonblock = 1; 
+  static const int grnd_nonblock = 1;
   SSIZE_T n;
   if ((flags & grnd_nonblock))
     n = REAL(getrandom)(buf, buflen, flags);
