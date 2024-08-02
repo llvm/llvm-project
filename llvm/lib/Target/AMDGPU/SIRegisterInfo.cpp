@@ -2676,7 +2676,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
                         TmpResultReg)
                     .addImm(ST.getWavefrontSizeLog2())
-                    .addReg(FrameReg);
+                    .addReg(TmpResultReg);
               }
 
               Register NewDest = IsCopy ? ResultReg

@@ -443,6 +443,14 @@ body:             |
     ; GCN-NEXT: v_fma_f32 v3, v4 /*v260*/, v5, 1
     $vgpr3 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr5, 0, 1, 0, 0, implicit $exec, implicit $mode
 
+    ; GCN-NEXT: s_set_vgpr_msb 16
+    ; GCN-NEXT: v_mov_b32_e32 v0, v1
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 20
+    ; GCN-NEXT: v_add_nc_u32_e32 v2, v1, v3 /*v259*/
+    $vgpr2 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr259, implicit $exec
+
     ; ASM: NumVgprs: 263
 
 ...
@@ -550,6 +558,38 @@ body:             |
     S_SETPC_B64_return undef $sgpr0_sgpr1, implicit-def $exec
 
     ; ASM: NumVgprs: 257
+...
+
+# ASM-LABEL: {{^}}control_flow:
+# DIS-LABEL: <control_flow>:
+---
+name:            control_flow
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v0
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr0, implicit $exec
+
+  bb.1:
+    ; ASM: .LBB{{[0-9]+}}_1:
+    ;
+    ; BUG: Missing s_set_vgpr_msb here!
+    ;
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: s_cbranch_scc0
+    $vgpr257 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    S_CBRANCH_SCC0 %bb.1, undef implicit $scc
+
+  bb.2:
+    ; ASM: %bb.2:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v2 /*v258*/, v2
+    ; GCN-NEXT: s_endpgm
+    $vgpr258 = V_MOV_B32_e32 undef $vgpr2, implicit $exec
+    S_ENDPGM 0
 ...
 
 # ASM-LABEL: {{^}}inline_asm:
