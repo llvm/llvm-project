@@ -584,7 +584,7 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
       SpilledOperandsMap;
   for (MachineOperand *MO : LRIDbgOperands)
     SpilledOperandsMap[MO->getParent()].push_back(MO);
-  for (auto& MISpilledOperands : SpilledOperandsMap) {
+  for (auto &MISpilledOperands : SpilledOperandsMap) {
     MachineInstr &DBG = *MISpilledOperands.first;
     // We don't have enough support for tracking operands of DBG_VALUE_LISTs.
     if (DBG.isDebugValueList())
