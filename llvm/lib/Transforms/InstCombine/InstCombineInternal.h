@@ -674,6 +674,8 @@ public:
   Instruction *foldSignBitTest(ICmpInst &I);
   Instruction *foldICmpWithZero(ICmpInst &Cmp);
 
+  Instruction *foldOpWithTwoPossibleValuesToSelect(BinaryOperator &I);
+
   Value *foldMultiplicationOverflowCheck(ICmpInst &Cmp);
 
   Instruction *foldICmpBinOpWithConstant(ICmpInst &Cmp, BinaryOperator *BO,
