@@ -477,7 +477,8 @@ void __asan_after_dynamic_init() {
     return;
   CHECK(AsanInited());
   Lock lock(&mu_for_globals);
-  // FIXME: Optionally report that we're unpoisoning globals from a module.
+  if (flags()->report_globals >= 3)
+    Printf("DynInitUnpoison\n");
   for (const DynInitGlobal &dyn_g : dynamic_init_globals) {
     const Global *g = &dyn_g.g;
     if (!dyn_g.initialized) {
