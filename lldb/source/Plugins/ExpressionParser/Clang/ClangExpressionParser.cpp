@@ -619,7 +619,8 @@ ClangExpressionParser::ClangExpressionParser(
 
   // 4. Set language options.
   SetupLangOpts(*m_compiler, *exe_scope, expr);
-  if (isa<ClangUserExpression>(&m_expr)) {
+  if (auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
+      clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
     SetupImportStdModuleLangOpts(*m_compiler);
     SetupModuleHeaderPaths(m_compiler.get(), m_include_directories, target_sp);
