@@ -1254,3 +1254,27 @@ define i64 @orc_b_i64(i64 %a) {
   %2 = mul nuw i64 %1, 255
   ret i64 %2
 }
+
+define i32 @srai_slli(i16 signext %0) {
+; CHECK-LABEL: srai_slli:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 25
+; CHECK-NEXT:    srai a0, a0, 31
+; CHECK-NEXT:    ret
+  %2 = shl i16 %0, 9
+  %sext = ashr i16 %2, 15
+  %3 = sext i16 %sext to i32
+  ret i32 %3
+}
+
+define i32 @srai_slli2(i16 signext %0) {
+; CHECK-LABEL: srai_slli2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 25
+; CHECK-NEXT:    srai a0, a0, 30
+; CHECK-NEXT:    ret
+  %2 = shl i16 %0, 9
+  %sext = ashr i16 %2, 14
+  %3 = sext i16 %sext to i32
+  ret i32 %3
+}
