@@ -8581,7 +8581,7 @@ void TargetRegionEntryInfo::getTargetRegionEntryFnName(
     SmallVectorImpl<char> &Name, StringRef ParentName, unsigned DeviceID,
     unsigned FileID, unsigned Line, unsigned Count) {
   raw_svector_ostream OS(Name);
-  OS << "__omp_offloading" << llvm::format("_%x", DeviceID)
+  OS << KernelNamePrefix << llvm::format("%x", DeviceID)
      << llvm::format("_%x_", FileID) << ParentName << "_l" << Line;
   if (Count)
     OS << "_" << Count;

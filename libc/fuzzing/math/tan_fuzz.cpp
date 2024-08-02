@@ -1,4 +1,4 @@
-//===-- sin_fuzz.cpp ------------------------------------------------------===//
+//===-- tan_fuzz.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Fuzzing test for llvm-libc sin implementation.
+/// Fuzzing test for llvm-libc tan implementation.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sin.h"
+#include "src/math/tan.h"
 #include <math.h>
 #include <mpfr.h>
 
@@ -26,11 +26,11 @@ extern "C" int LLVMFuzzerTestOneInput(const double x) {
   mpfr_t input;
   mpfr_init2(input, 53);
   mpfr_set_d(input, x, MPFR_RNDN);
-  int output = mpfr_sin(input, input, MPFR_RNDN);
+  int output = mpfr_tan(input, input, MPFR_RNDN);
   mpfr_subnormalize(input, output, MPFR_RNDN);
   double to_compare = mpfr_get_d(input, MPFR_RNDN);
 
-  double result = LIBC_NAMESPACE::sin(x);
+  double result = LIBC_NAMESPACE::tan(x);
 
   if (result != to_compare)
     __builtin_trap();
