@@ -171,8 +171,9 @@ static bool expandLengthIntrinsic(CallInst *Orig) {
   Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
   auto *XVec = dyn_cast<FixedVectorType>(Ty);
   unsigned XVecSize = XVec->getNumElements();
-  assert(Ty->isVectorTy() && XVecSize > 1 &&
-         "dx.length requires a vector of length 2 or more");
+  if (!(Ty->isVectorTy() && XVecSize > 1))
+    report_fatal_error(Twine("Invalid input type for length intrinsic"),
+                       /* gen_crash_diag=*/false);
 
   Value *Sum = Builder.CreateFMul(Elt, Elt);
   for (unsigned I = 1; I < XVecSize; I++) {
