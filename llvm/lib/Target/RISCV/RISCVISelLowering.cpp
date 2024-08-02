@@ -7471,63 +7471,45 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   };
 
   SDValue OutChains[6];
-  SDValue Addr = Trmp;
 
-  // auipc t2, 0
-  // Loads the current PC into t2.
-  OutChains[0] = DAG.getTruncStore(
-      Root, dl,
-      DAG.getConstant(
-          GetEncoding(MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X7).addImm(0)),
-          dl, MVT::i64),
-      Addr, MachinePointerInfo(TrmpAddr), MVT::i32);
+  uint32_t Encodings[] = {
+      // auipc t2, 0
+      // Loads the current PC into t2.
+      GetEncoding(MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X7).addImm(0)),
+      // ld t0, 24(t2)
+      // Loads the function address into t0. Note that we are using offsets
+      // pc-relative to the first instruction of the trampoline.
+      GetEncoding(
+          MCInstBuilder(RISCV::LD).addReg(RISCV::X5).addReg(RISCV::X7).addImm(
+              FunctionAddressOffset)),
+      // ld t2, 16(t2)
+      // Load the value of the static chain.
+      GetEncoding(
+          MCInstBuilder(RISCV::LD).addReg(RISCV::X7).addReg(RISCV::X7).addImm(
+              StaticChainOffset)),
+      // jalr t0
+      // Jump to the function.
+      GetEncoding(MCInstBuilder(RISCV::JALR)
+                      .addReg(RISCV::X0)
+                      .addReg(RISCV::X5)
+                      .addImm(0))};
 
-  // ld t0, 24(t2)
-  // Loads the function address into t0. Note that we are using offsets
-  // pc-relative to the first instruction of the trampoline.
-  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                     DAG.getConstant(4, dl, MVT::i64));
-  OutChains[1] = DAG.getTruncStore(
-      Root, dl,
-      DAG.getConstant(GetEncoding(MCInstBuilder(RISCV::LD)
-                                      .addReg(RISCV::X5)
-                                      .addReg(RISCV::X7)
-                                      .addImm(FunctionAddressOffset)),
-                      dl, MVT::i64),
-      Addr, MachinePointerInfo(TrmpAddr, 4), MVT::i32);
-
-  // ld t2, 16(t2)
-  // Load the value of the static chain.
-  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                     DAG.getConstant(8, dl, MVT::i64));
-  OutChains[2] = DAG.getTruncStore(
-      Root, dl,
-      DAG.getConstant(GetEncoding(MCInstBuilder(RISCV::LD)
-                                      .addReg(RISCV::X7)
-                                      .addReg(RISCV::X7)
-                                      .addImm(StaticChainOffset)),
-                      dl, MVT::i64),
-      Addr, MachinePointerInfo(TrmpAddr, 8), MVT::i32);
-
-  // jalr t0
-  // Jump to the function.
-  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                     DAG.getConstant(12, dl, MVT::i64));
-  OutChains[3] =
-      DAG.getTruncStore(Root, dl,
-                        DAG.getConstant(GetEncoding(MCInstBuilder(RISCV::JALR)
-                                                        .addReg(RISCV::X0)
-                                                        .addReg(RISCV::X5)
-                                                        .addImm(0)),
-                                        dl, MVT::i64),
-                        Addr, MachinePointerInfo(TrmpAddr, 12), MVT::i32);
+  // Store encoded instructions.
+  for (auto [Idx, Encoding] : llvm::enumerate(Encodings)) {
+    SDValue Addr = Idx > 0 ? DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                                     DAG.getConstant(Idx * 4, dl, MVT::i64))
+                       : Trmp;
+    OutChains[Idx] = DAG.getTruncStore(
+        Root, dl, DAG.getConstant(Encoding, dl, MVT::i64), Addr,
+        MachinePointerInfo(TrmpAddr, Idx * 4), MVT::i32);
+  }
 
   // Now store the variable part of the trampoline.
   SDValue FunctionAddress = Op.getOperand(2);
   SDValue StaticChain = Op.getOperand(3);
 
   // Store the given static chain in the trampoline buffer.
-  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+  SDValue Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(StaticChainOffset, dl, MVT::i64));
   OutChains[4] = DAG.getStore(Root, dl, StaticChain, Addr,
                               MachinePointerInfo(TrmpAddr, StaticChainOffset));
