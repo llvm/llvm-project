@@ -37,6 +37,8 @@
 # LLVM: Type: SHT_SYMTAB_SHNDX
 # LLVM: Name: relr
 # LLVM: Type: SHT_RELR
+# LLVM: Name: crel
+# LLVM: Type: SHT_CREL (0x40000014)
 # LLVM: Name: android_rel
 # LLVM: Type: SHT_ANDROID_REL
 # LLVM: Name: android_rela
@@ -110,6 +112,7 @@
 # GNU-NEXT: group                   GROUP
 # GNU-NEXT: symtab_shndx            SYMTAB SECTION INDICES
 # GNU-NEXT: relr                    RELR
+# GNU-NEXT: crel                    CREL
 # GNU-NEXT: android_rel             ANDROID_REL
 # GNU-NEXT: android_rela            ANDROID_RELA
 # GNU-NEXT: android_relr            ANDROID_RELR
@@ -185,6 +188,8 @@ Sections:
     Entries: [ 0, 1 ]
   - Name: relr
     Type: SHT_RELR
+  - Name: crel
+    Type: SHT_CREL
   - Name: android_rel
     Type: SHT_ANDROID_REL
   - Name: android_rela

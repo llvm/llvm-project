@@ -600,14 +600,17 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   const Scope &subpScope{
       GetProgramUnitContaining(context.FindScope(name_.source))};
   if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {
-    if (auto whyNot{WhyNotDefinable(name_.source, subpScope,
-            {DefinabilityFlag::PointerDefinition,
-                DefinabilityFlag::AcceptAllocatable},
-            *allocateObject_.typedExpr->v)}) {
+    DefinabilityFlags flags{DefinabilityFlag::PointerDefinition,
+        DefinabilityFlag::AcceptAllocatable};
+    if (allocateInfo_.gotSource) {
+      flags.set(DefinabilityFlag::SourcedAllocation);
+    }
+    if (auto whyNot{WhyNotDefinable(
+            name_.source, subpScope, flags, *allocateObject_.typedExpr->v)}) {
       context
           .Say(name_.source,
               "Name in ALLOCATE statement is not definable"_err_en_US)
-          .Attach(std::move(*whyNot));
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       return false;
     }
   }

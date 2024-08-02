@@ -33,8 +33,6 @@ namespace memref {
 class AllocOp;
 } // namespace memref
 
-struct LogicalResult;
-
 namespace affine {
 class AffineForOp;
 class AffineIfOp;

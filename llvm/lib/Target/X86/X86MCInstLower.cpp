@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
@@ -53,6 +54,14 @@
 #include <string>
 
 using namespace llvm;
+
+static cl::opt<bool> EnableBranchHint("enable-branch-hint",
+                                      cl::desc("Enable branch hint."),
+                                      cl::init(false), cl::Hidden);
+static cl::opt<unsigned> BranchHintProbabilityThreshold(
+    "branch-hint-probability-threshold",
+    cl::desc("The probability threshold of enabling branch hint."),
+    cl::init(50), cl::Hidden);
 
 namespace {
 
@@ -138,7 +147,7 @@ X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
       AsmPrinter(asmprinter) {}
 
 MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
-  return MF.getMMI().getObjFileInfo<MachineModuleInfoMachO>();
+  return AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoMachO>();
 }
 
 /// GetSymbolFromOperand - Lower an MO_GlobalAddress or MO_ExternalSymbol
@@ -194,7 +203,7 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
     break;
   case X86II::MO_COFFSTUB: {
     MachineModuleInfoCOFF &MMICOFF =
-        MF.getMMI().getObjFileInfo<MachineModuleInfoCOFF>();
+        AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoCOFF>();
     MachineModuleInfoImpl::StubValueTy &StubSym = MMICOFF.getGVStubEntry(Sym);
     if (!StubSym.getPointer()) {
       assert(MO.isGlobal() && "Extern symbol not handled yet");
@@ -2443,6 +2452,21 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::CALL64pcrel32:
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
+    break;
+  case X86::JCC_1:
+    // Two instruction prefixes (2EH for branch not-taken and 3EH for branch
+    // taken) are used as branch hints. Here we add branch taken prefix for
+    // jump instruction with higher probability than threshold.
+    if (getSubtarget().hasBranchHint() && EnableBranchHint) {
+      const MachineBranchProbabilityInfo *MBPI =
+          &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+      MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
+      BranchProbability EdgeProb =
+          MBPI->getEdgeProbability(MI->getParent(), DestBB);
+      BranchProbability Threshold(BranchHintProbabilityThreshold, 100);
+      if (EdgeProb > Threshold)
+        EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
+    }
     break;
   }
 

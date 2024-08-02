@@ -1133,6 +1133,10 @@ def Arith_DivFOp : Arith_FloatBinaryOp<"divf"> {
 
 def Arith_RemFOp : Arith_FloatBinaryOp<"remf"> {
   let summary = "floating point division remainder operation";
+  let description = [{
+    Returns the floating point division remainder.
+    The remainder has the same sign as the dividend (lhs operand).
+  }];
   let hasFolder = 1;
 }
 

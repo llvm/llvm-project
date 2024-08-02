@@ -351,10 +351,11 @@ bool DWARFTypePrinter::appendTemplateParameters(DWARFDie D,
         OS << std::to_string(*V->getAsSignedConstant());
         continue;
       }
-      // /Maybe/ we could do pointer type parameters, looking for the
+      // /Maybe/ we could do pointer/reference type parameters, looking for the
       // symbol in the ELF symbol table to get back to the variable...
       // but probably not worth it.
-      if (T.getTag() == DW_TAG_pointer_type)
+      if (T.getTag() == DW_TAG_pointer_type ||
+          T.getTag() == DW_TAG_reference_type)
         continue;
       const char *RawName = dwarf::toString(T.find(DW_AT_name), nullptr);
       assert(RawName);

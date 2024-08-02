@@ -40,32 +40,6 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp> {
 
 #ifndef _LIBCPP_CXX03_LANG
 
-#  if !__has_builtin(__type_pack_element)
-
-namespace __indexer_detail {
-
-template <size_t _Idx, class _Tp>
-struct __indexed {
-  using type _LIBCPP_NODEBUG = _Tp;
-};
-
-template <class _Types, class _Indexes>
-struct __indexer;
-
-template <class... _Types, size_t... _Idx>
-struct __indexer<__tuple_types<_Types...>, __tuple_indices<_Idx...>> : __indexed<_Idx, _Types>... {};
-
-template <size_t _Idx, class _Tp>
-__indexed<_Idx, _Tp> __at_index(__indexed<_Idx, _Tp> const&);
-
-} // namespace __indexer_detail
-
-template <size_t _Idx, class... _Types>
-using __type_pack_element _LIBCPP_NODEBUG = typename decltype(__indexer_detail::__at_index<_Idx>(
-    __indexer_detail::__indexer< __tuple_types<_Types...>,
-                                 typename __make_tuple_indices<sizeof...(_Types)>::type >{}))::type;
-#  endif
-
 template <size_t _Ip, class... _Types>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, __tuple_types<_Types...> > {
   static_assert(_Ip < sizeof...(_Types), "tuple_element index out of range");

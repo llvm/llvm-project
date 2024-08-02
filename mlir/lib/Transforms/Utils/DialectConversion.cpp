@@ -293,10 +293,9 @@ public:
 /// original location.
 class EraseBlockRewrite : public BlockRewrite {
 public:
-  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
-                    Region *region, Block *insertBeforeBlock)
-      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block), region(region),
-        insertBeforeBlock(insertBeforeBlock) {}
+  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block)
+      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block),
+        region(block->getParent()), insertBeforeBlock(block->getNextNode()) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::EraseBlock;
@@ -667,7 +666,7 @@ public:
 /// The type of materialization.
 enum MaterializationKind {
   /// This materialization materializes a conversion for an illegal block
-  /// argument type, to a legal one.
+  /// argument type, to the original one.
   Argument,
 
   /// This materialization materializes a conversion from an illegal type to a
@@ -687,14 +686,9 @@ public:
   UnresolvedMaterializationRewrite(
       ConversionPatternRewriterImpl &rewriterImpl,
       UnrealizedConversionCastOp op, const TypeConverter *converter = nullptr,
-      MaterializationKind kind = MaterializationKind::Target,
-      Type origArgType = nullptr)
+      MaterializationKind kind = MaterializationKind::Target)
       : OperationRewrite(Kind::UnresolvedMaterialization, rewriterImpl, op),
-        converterAndKind(converter, kind), origArgType(origArgType) {
-    assert(kind == MaterializationKind::Argument ||
-           !origArgType && "orginal argument type make sense only for argument "
-                           "materializations");
-  }
+        converterAndKind(converter, kind) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::UnresolvedMaterialization;
@@ -718,17 +712,11 @@ public:
     return converterAndKind.getInt();
   }
 
-  /// Return the original type of the block argument.
-  Type getOrigArgType() const { return origArgType; }
-
 private:
   /// The corresponding type converter to use when resolving this
   /// materialization, and the kind of this materialization.
   llvm::PointerIntPair<const TypeConverter *, 2, MaterializationKind>
       converterAndKind;
-
-  /// The original output type. This is only used for argument conversions.
-  Type origArgType;
 };
 } // namespace
 
@@ -844,8 +832,8 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
                                        Block *insertBlock,
                                        Block::iterator insertPt, Location loc,
                                        ValueRange inputs, Type outputType,
-                                       Type origOutputType,
                                        const TypeConverter *converter);
+
   Value buildUnresolvedTargetMaterialization(Location loc, Value input,
                                              Type outputType,
                                              const TypeConverter *converter);
@@ -998,7 +986,7 @@ LogicalResult BlockTypeConversionRewrite::materializeLiveConversions(
     if (!liveUser)
       continue;
 
-    Value replacementValue = rewriterImpl.mapping.lookupOrNull(origArg);
+    Value replacementValue = rewriterImpl.mapping.lookupOrDefault(origArg);
     assert(replacementValue && "replacement value not found");
     Value newArg;
     if (converter) {
@@ -1304,21 +1292,6 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     BlockArgument origArg = block->getArgument(i);
     Type origArgType = origArg.getType();
 
-    // Helper function that tries to legalize the given type. Returns the given
-    // type if it could not be legalized.
-    // FIXME: We simply pass through the replacement argument if there wasn't a
-    // converter, which isn't great as it allows implicit type conversions to
-    // appear. We should properly restructure this code to handle cases where a
-    // converter isn't provided and also to properly handle the case where an
-    // argument materialization is actually a temporary source materialization
-    // (e.g. in the case of 1->N).
-    auto tryLegalizeType = [&](Type type) {
-      if (converter)
-        if (Type t = converter->convertType(type))
-          return t;
-      return type;
-    };
-
     std::optional<TypeConverter::SignatureConversion::InputMapping> inputMap =
         signatureConversion.getInputMapping(i);
     if (!inputMap) {
@@ -1327,7 +1300,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       Value repl = buildUnresolvedMaterialization(
           MaterializationKind::Source, newBlock, newBlock->begin(),
           origArg.getLoc(), /*inputs=*/ValueRange(),
-          /*outputType=*/origArgType, /*origArgType=*/{}, converter);
+          /*outputType=*/origArgType, converter);
       mapping.map(origArg, repl);
       appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
       continue;
@@ -1346,15 +1319,33 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     // This is a 1->1+ mapping. 1->N mappings are not fully supported in the
     // dialect conversion. Therefore, we need an argument materialization to
     // turn the replacement block arguments into a single SSA value that can be
-    // used as a replacement. The type of this SSA value is the legalized
-    // version of the original block argument type.
+    // used as a replacement.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
-    Value repl = buildUnresolvedMaterialization(
+    Value argMat = buildUnresolvedMaterialization(
         MaterializationKind::Argument, newBlock, newBlock->begin(),
-        origArg.getLoc(), /*inputs=*/replArgs,
-        /*outputType=*/tryLegalizeType(origArgType), origArgType, converter);
-    mapping.map(origArg, repl);
+        origArg.getLoc(), /*inputs=*/replArgs, origArgType, converter);
+    mapping.map(origArg, argMat);
+    appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
+
+    Type legalOutputType;
+    if (converter) {
+      legalOutputType = converter->convertType(origArgType);
+    } else if (replArgs.size() == 1) {
+      // When there is no type converter, assume that the new block argument
+      // types are legal. This is reasonable to assume because they were
+      // specified by the user.
+      // FIXME: This won't work for 1->N conversions because multiple output
+      // types are not supported in parts of the dialect conversion. In such a
+      // case, we currently use the original block argument type (produced by
+      // the argument materialization).
+      legalOutputType = replArgs[0].getType();
+    }
+    if (legalOutputType && legalOutputType != origArgType) {
+      Value targetMat = buildUnresolvedTargetMaterialization(
+          origArg.getLoc(), argMat, legalOutputType, converter);
+      mapping.map(argMat, targetMat);
+    }
     appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
   }
 
@@ -1375,7 +1366,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
 /// of input operands.
 Value ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     MaterializationKind kind, Block *insertBlock, Block::iterator insertPt,
-    Location loc, ValueRange inputs, Type outputType, Type origArgType,
+    Location loc, ValueRange inputs, Type outputType,
     const TypeConverter *converter) {
   // Avoid materializing an unnecessary cast.
   if (inputs.size() == 1 && inputs.front().getType() == outputType)
@@ -1383,11 +1374,11 @@ Value ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
 
   // Create an unresolved materialization. We use a new OpBuilder to avoid
   // tracking the materialization like we do for other operations.
-  OpBuilder builder(insertBlock, insertPt);
+  OpBuilder builder(outputType.getContext());
+  builder.setInsertionPoint(insertBlock, insertPt);
   auto convertOp =
       builder.create<UnrealizedConversionCastOp>(loc, outputType, inputs);
-  appendRewrite<UnresolvedMaterializationRewrite>(convertOp, converter, kind,
-                                                  origArgType);
+  appendRewrite<UnresolvedMaterializationRewrite>(convertOp, converter, kind);
   return convertOp.getResult(0);
 }
 Value ConversionPatternRewriterImpl::buildUnresolvedTargetMaterialization(
@@ -1398,9 +1389,9 @@ Value ConversionPatternRewriterImpl::buildUnresolvedTargetMaterialization(
   if (OpResult inputRes = dyn_cast<OpResult>(input))
     insertPt = ++inputRes.getOwner()->getIterator();
 
-  return buildUnresolvedMaterialization(
-      MaterializationKind::Target, insertBlock, insertPt, loc, input,
-      outputType, /*origArgType=*/{}, converter);
+  return buildUnresolvedMaterialization(MaterializationKind::Target,
+                                        insertBlock, insertPt, loc, input,
+                                        outputType, converter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1453,9 +1444,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
 }
 
 void ConversionPatternRewriterImpl::notifyBlockIsBeingErased(Block *block) {
-  Region *region = block->getParent();
-  Block *origNextBlock = block->getNextNode();
-  appendRewrite<EraseBlockRewrite>(block, region, origNextBlock);
+  appendRewrite<EraseBlockRewrite>(block);
 }
 
 void ConversionPatternRewriterImpl::notifyBlockInserted(
@@ -2616,6 +2605,9 @@ static void computeNecessaryMaterializations(
     ConversionPatternRewriterImpl &rewriterImpl,
     DenseMap<Value, SmallVector<Value>> &inverseMapping,
     SetVector<UnresolvedMaterializationRewrite *> &necessaryMaterializations) {
+  // Helper function to check if the given value or a not yet materialized
+  // replacement of the given value is live.
+  // Note: `inverseMapping` maps from replaced values to original values.
   auto isLive = [&](Value value) {
     auto findFn = [&](Operation *user) {
       auto matIt = materializationOps.find(user);
@@ -2623,12 +2615,18 @@ static void computeNecessaryMaterializations(
         return !necessaryMaterializations.count(matIt->second);
       return rewriterImpl.isOpIgnored(user);
     };
-    // This value may be replacing another value that has a live user.
-    for (Value inv : inverseMapping.lookup(value))
-      if (llvm::find_if_not(inv.getUsers(), findFn) != inv.user_end())
+    // A worklist is needed because a value may have gone through a chain of
+    // replacements and each of the replaced values may have live users.
+    SmallVector<Value> worklist;
+    worklist.push_back(value);
+    while (!worklist.empty()) {
+      Value next = worklist.pop_back_val();
+      if (llvm::find_if_not(next.getUsers(), findFn) != next.user_end())
         return true;
-    // Or have live users itself.
-    return llvm::find_if_not(value.getUsers(), findFn) != value.user_end();
+      // This value may be replacing another value that has a live user.
+      llvm::append_range(worklist, inverseMapping.lookup(next));
+    }
+    return false;
   };
 
   llvm::unique_function<Value(Value, Value, Type)> lookupRemappedValue =
@@ -2788,18 +2786,10 @@ static LogicalResult legalizeUnresolvedMaterialization(
     switch (mat.getMaterializationKind()) {
     case MaterializationKind::Argument:
       // Try to materialize an argument conversion.
-      // FIXME: The current argument materialization hook expects the original
-      // output type, even though it doesn't use that as the actual output type
-      // of the generated IR. The output type is just used as an indicator of
-      // the type of materialization to do. This behavior is really awkward in
-      // that it diverges from the behavior of the other hooks, and can be
-      // easily misunderstood. We should clean up the argument hooks to better
-      // represent the desired invariants we actually care about.
       newMaterialization = converter->materializeArgumentConversion(
-          rewriter, op->getLoc(), mat.getOrigArgType(), inputOperands);
+          rewriter, op->getLoc(), outputType, inputOperands);
       if (newMaterialization)
         break;
-
       // If an argument materialization failed, fallback to trying a target
       // materialization.
       [[fallthrough]];
@@ -2813,6 +2803,8 @@ static LogicalResult legalizeUnresolvedMaterialization(
       break;
     }
     if (newMaterialization) {
+      assert(newMaterialization.getType() == outputType &&
+             "materialization callback produced value of incorrect type");
       replaceMaterialization(rewriterImpl, opResult, newMaterialization,
                              inverseMapping);
       return success();

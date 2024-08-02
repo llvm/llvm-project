@@ -77,7 +77,7 @@ static void printModule(mlir::ModuleOp mod, raw_ostream &output) {
 }
 
 // compile a .fir file
-static mlir::LogicalResult
+static llvm::LogicalResult
 compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   // check that there is a file to load
   ErrorOr<std::unique_ptr<MemoryBuffer>> fileOrErr =

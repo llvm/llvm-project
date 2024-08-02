@@ -12,7 +12,7 @@
 
 # CHECK:      <.init>:
 # CHECK-NEXT: brasl %r14,
-# CHECK-NEXT: bcr     0, %r7
+# CHECK-NEXT: nopr   %r7
 # CHECK-NEXT: lg %r4, 272(%r15)
 
 	.text

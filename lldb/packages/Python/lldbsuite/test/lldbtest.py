@@ -229,7 +229,7 @@ def pointer_size():
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
-    if fpath == None:
+    if fpath is None:
         return False
     if sys.platform == "win32":
         if not fpath.endswith(".exe"):
@@ -1379,10 +1379,6 @@ class Base(unittest.TestCase):
         """Returns the compiler in effect the test suite is running with."""
         return lldbplatformutil.getCompiler()
 
-    def getCompilerBinary(self):
-        """Returns the compiler binary the test suite is running with."""
-        return lldbplatformutil.getCompilerBinary()
-
     def getCompilerVersion(self):
         """Returns a string that represents the compiler version.
         Supports: llvm, clang.
@@ -1518,19 +1514,23 @@ class Base(unittest.TestCase):
             stdflag = "-std=c++11"
         return stdflag
 
-    def buildDriver(self, sources, exe_name):
+    def buildDriver(self, sources, exe_name, defines=None):
         """Platform-specific way to build a program that links with LLDB (via the liblldb.so
         or LLDB.framework).
         """
+        if defines is None:
+            defines = []
+
         stdflag = self.getstdFlag()
         stdlibflag = self.getstdlibFlag()
+        defines = " ".join(["-D{}={}".format(name, value) for name, value in defines])
 
         lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s" % (stdflag, stdlibflag),
+                "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
                 "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
             }
@@ -1538,12 +1538,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -lliblldb" % lib_dir,
             }
@@ -1551,12 +1552,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir),
             }
@@ -2191,7 +2193,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         if num_matches == 0:
             compare_string = str_input
         else:
-            if common_match != None and len(common_match) > 0:
+            if common_match is not None and len(common_match) > 0:
                 compare_string = str_input + common_match
             else:
                 compare_string = ""
@@ -2446,7 +2448,7 @@ FileCheck output:
                 log_lines.append(pattern_line)
 
                 # Convert to bool because match objects
-                # are True-ish but != True itself
+                # are True-ish but is not True itself
                 matched = bool(matched)
                 if matched != matching:
                     break
@@ -2552,7 +2554,7 @@ FileCheck output:
         if obj.Success():
             self.fail(self._formatMessage(msg, "Error not in a fail state"))
 
-        if error_str == None:
+        if error_str is None:
             return
 
         error = obj.GetCString()

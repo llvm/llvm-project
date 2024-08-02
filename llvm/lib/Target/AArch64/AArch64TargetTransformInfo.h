@@ -71,7 +71,7 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
 
 public:
   explicit AArch64TTIImpl(const AArch64TargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
@@ -369,6 +369,10 @@ public:
                  : TailFoldingStyle::DataAndControlFlow;
 
     return TailFoldingStyle::DataWithoutLaneMask;
+  }
+
+  bool preferFixedOverScalableIfEqualCost() const {
+    return ST->useFixedOverScalableIfEqualCost();
   }
 
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);

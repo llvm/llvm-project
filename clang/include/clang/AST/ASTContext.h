@@ -37,6 +37,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
@@ -642,6 +643,9 @@ private:
   /// address spaces (e.g. OpenCL/CUDA)
   bool AddrSpaceMapMangling;
 
+  /// For performance, track whether any function effects are in use.
+  mutable bool AnyFunctionEffects = false;
+
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   clang::PrintingPolicy PrintingPolicy;
@@ -733,6 +737,12 @@ public:
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
   void Deallocate(void *Ptr) const {}
+
+  llvm::StringRef backupStr(llvm::StringRef S) const {
+    char *Buf = new (*this) char[S.size()];
+    std::copy(S.begin(), S.end(), Buf);
+    return llvm::StringRef(Buf, S.size());
+  }
 
   /// Allocates a \c DeclListNode or returns one from the \c ListNodeFreeList
   /// pool.
@@ -1277,6 +1287,14 @@ public:
   /// space.
   QualType removeAddrSpaceQualType(QualType T) const;
 
+  /// Return the "other" discriminator used for the pointer auth schema used for
+  /// vtable pointers in instances of the requested type.
+  uint16_t
+  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+
+  /// Return the "other" type-specific discriminator for the given type.
+  uint16_t getPointerAuthTypeDiscriminator(QualType T);
+
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
   /// qualifiers on ObjCObjectPointerType. It can be set to true when
@@ -1351,7 +1369,7 @@ public:
                            bool AsWritten = false);
 
   /// Get a function type and produce the equivalent function type where
-  /// pointer size address spaces in the return type and parameter tyeps are
+  /// pointer size address spaces in the return type and parameter types are
   /// replaced with the default address space.
   QualType getFunctionTypeWithoutPtrSizes(QualType T);
 
@@ -2644,6 +2662,10 @@ public:
   /// \returns if this is an array type, the completely unqualified array type
   /// that corresponds to it. Otherwise, returns T.getUnqualifiedType().
   QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals) const;
+  QualType getUnqualifiedArrayType(QualType T) const {
+    Qualifiers Quals;
+    return getUnqualifiedArrayType(T, Quals);
+  }
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
@@ -2895,6 +2917,8 @@ public:
   bool addressSpaceMapManglingFor(LangAS AS) const {
     return AddrSpaceMapMangling || isTargetAddressSpace(AS);
   }
+
+  bool hasAnyFunctionEffects() const { return AnyFunctionEffects; }
 
   // Merges two exception specifications, such that the resulting
   // exception spec is the union of both. For example, if either
@@ -3438,12 +3462,21 @@ public:
   /// Whether a C++ static variable or CUDA/HIP kernel should be externalized.
   bool shouldExternalize(const Decl *D) const;
 
+  /// Resolve the root record to be used to derive the vtable pointer
+  /// authentication policy for the specified record.
+  const CXXRecordDecl *
+  baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+  bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
+                               StringRef MangledName);
+
   StringRef getCUIDHash() const;
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
+
+  llvm::DenseMap<GlobalDecl, llvm::StringSet<>> ThunksToBeAbbreviated;
 };
 
 /// Insertion operator for diagnostics.

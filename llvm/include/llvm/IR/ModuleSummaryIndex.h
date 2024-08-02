@@ -41,6 +41,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -402,6 +403,10 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
+  // If requested, keep track of total profiled sizes for each MIB. This will be
+  // a vector of the same length and order as the MIBs vector, if non-empty.
+  std::vector<uint64_t> TotalSizes;
+
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
   }
@@ -421,6 +426,16 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   OS << " MIB:\n";
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
+  }
+  if (!AE.TotalSizes.empty()) {
+    OS << " TotalSizes per MIB:\n\t\t";
+    First = true;
+    for (uint64_t TS : AE.TotalSizes) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << TS << "\n";
+    }
   }
   return OS;
 }
@@ -793,7 +808,7 @@ public:
       OS << ", hasUnknownCall: " << this->HasUnknownCall;
       OS << ", mustBeUnreachable: " << this->MustBeUnreachable;
       OS << ")";
-      return OS.str();
+      return Output;
     }
   };
 
@@ -1277,7 +1292,7 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 4>;
+using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
@@ -1430,7 +1445,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 9;
+  static constexpr uint64_t BitcodeSummaryVersion = 10;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {

@@ -68,9 +68,9 @@ class CFIInstrInserter : public MachineFunctionPass {
   struct MBBCFAInfo {
     MachineBasicBlock *MBB;
     /// Value of cfa offset valid at basic block entry.
-    int IncomingCFAOffset = -1;
+    int64_t IncomingCFAOffset = -1;
     /// Value of cfa offset valid at basic block exit.
-    int OutgoingCFAOffset = -1;
+    int64_t OutgoingCFAOffset = -1;
     /// Value of cfa register valid at basic block entry.
     unsigned IncomingCFARegister = 0;
     /// Value of cfa register valid at basic block exit.
@@ -120,7 +120,7 @@ class CFIInstrInserter : public MachineFunctionPass {
   /// Return the cfa offset value that should be set at the beginning of a MBB
   /// if needed. The negated value is needed when creating CFI instructions that
   /// set absolute offset.
-  int getCorrectCFAOffset(MachineBasicBlock *MBB) {
+  int64_t getCorrectCFAOffset(MachineBasicBlock *MBB) {
     return MBBVector[MBB->getNumber()].IncomingCFAOffset;
   }
 
@@ -175,7 +175,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
 
 void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   // Outgoing cfa offset set by the block.
-  int SetOffset = MBBInfo.IncomingCFAOffset;
+  int64_t SetOffset = MBBInfo.IncomingCFAOffset;
   // Outgoing cfa register set by the block.
   unsigned SetRegister = MBBInfo.IncomingCFARegister;
   MachineFunction *MF = MBBInfo.MBB->getParent();
@@ -188,7 +188,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   for (MachineInstr &MI : *MBBInfo.MBB) {
     if (MI.isCFIInstruction()) {
       std::optional<unsigned> CSRReg;
-      std::optional<int> CSROffset;
+      std::optional<int64_t> CSROffset;
       unsigned CFIIndex = MI.getOperand(0).getCFIIndex();
       const MCCFIInstruction &CFI = Instrs[CFIIndex];
       switch (CFI.getOperation()) {
@@ -248,6 +248,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpWindowSave:
       case MCCFIInstruction::OpNegateRAState:
       case MCCFIInstruction::OpGnuArgsSize:
+      case MCCFIInstruction::OpLabel:
         break;
       }
       if (CSRReg || CSROffset) {
