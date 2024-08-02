@@ -980,19 +980,16 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
     bool Has512Len = (EBX >> 18) & 1;
-    switch (EBX & 0xff) {
-    default:
-      llvm_unreachable("Unknown version!");
-    case 2:
+    int AVX10Ver = EBX & 0xff;
+    if (AVX10Ver >= 2) {
       setFeature(FEATURE_AVX10_2_256);
       if (Has512Len)
         setFeature(FEATURE_AVX10_2_512);
-      [[fallthrough]];
-    case 1:
+    }
+    if (AVX10Ver >= 1) {
       setFeature(FEATURE_AVX10_1_256);
       if (Has512Len)
         setFeature(FEATURE_AVX10_1_512);
-      break;
     }
   }
 

@@ -214,6 +214,10 @@ InstructionContext RecognizableInstr::insnContext() const {
           insnContext = EVEX_KB_U(IC_EVEX_W_XD);
         else if (OpPrefix == X86Local::PS)
           insnContext = EVEX_KB_U(IC_EVEX_W);
+        else {
+          errs() << "Instruction does not use a prefix: " << Name << "\n";
+          llvm_unreachable("Invalid prefix");
+        }
       } else {
         if (OpPrefix == X86Local::PD)
           insnContext = EVEX_KB_U(IC_EVEX_OPSIZE);
@@ -223,6 +227,10 @@ InstructionContext RecognizableInstr::insnContext() const {
           insnContext = EVEX_KB_U(IC_EVEX_XD);
         else if (OpPrefix == X86Local::PS)
           insnContext = EVEX_KB_U(IC_EVEX);
+        else {
+          errs() << "Instruction does not use a prefix: " << Name << "\n";
+          llvm_unreachable("Invalid prefix");
+        }
       }
     } else if (HasEVEX_NF) {
       if (OpPrefix == X86Local::PD)
