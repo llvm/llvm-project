@@ -82,6 +82,12 @@ message(STATUS "Using libunwind testing configuration: ${LIBUNWIND_TEST_CONFIG}"
 set(LIBUNWIND_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
+set(LIBUNWIND_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(LIBUNWIND_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBUNWIND_SUPPORTED_C_LIBRARIES}.")
+if (NOT "${LIBUNWIND_LIBC}" IN_LIST LIBUNWIND_SUPPORTED_C_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C library: '${LIBUNWIND_CXX_ABI}'. Supported values are ${LIBUNWIND_SUPPORTED_C_LIBRARIES}.")
+endif()
+
 if (NOT LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_STATIC)
   message(FATAL_ERROR "libunwind must be built as either a shared or static library.")
 endif()
