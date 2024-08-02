@@ -38,6 +38,7 @@ void BadBounds() {
 
 void UnalignedBadBounds() {
   char t[100];
+  // CHECK-UNALIGNED-BAD-BOUNDS: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_contiguous_container
   // CHECK-UNALIGNED-BAD-BOUNDS-NOT: beg is not aligned by
   __sanitizer_annotate_contiguous_container(&t[1], &t[0] + 100, &t[0] + 101,
                                             &t[0] + 50);
