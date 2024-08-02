@@ -5,13 +5,13 @@
 ; RUN: -split-dwarf-file=main.dwo -o main.o
 ; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-helper.s \
 ; RUN: -split-dwarf-file=helper.dwo -o helper.o
-; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe -fno-pic -no-pie
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o helper.o -o main.exe -fno-pic -no-pie
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --always-convert-to-ranges --cu-processing-batch-size=2
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-ranges main.exe.bolt &> %t/foo.txt
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
 ; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
 
-;; Testing dwarf5 split dwarf for two CUs with an increased batch size. Checks values
+;; Testing dwarf4 split dwarf for two CUs with an increased batch size. Checks values
 ;; in debug_ranges and debug_info.
 
 ; BOLT: .debug_ranges
