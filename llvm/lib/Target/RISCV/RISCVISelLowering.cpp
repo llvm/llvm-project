@@ -15480,16 +15480,16 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG && N0.hasOneUse()) {
     unsigned ExtSize =
         cast<VTSDNode>(N0.getOperand(1))->getVT().getSizeInBits();
-    if (ShAmt < ExtSize &&
-        N0.getOperand(0).getOpcode() == ISD::SHL && N0.getOperand(0).hasOneUse() &&
+    if (ShAmt < ExtSize && N0.getOperand(0).getOpcode() == ISD::SHL &&
+        N0.getOperand(0).hasOneUse() &&
         isa<ConstantSDNode>(N0.getOperand(0).getOperand(1))) {
       uint64_t LShAmt = N0.getOperand(0).getConstantOperandVal(1);
       if (LShAmt < ExtSize) {
         unsigned Size = VT.getSizeInBits();
         SDLoc ShlDL(N0.getOperand(0));
-        SDValue Shl = DAG.getNode(ISD::SHL, ShlDL, VT,
-                                  N0.getOperand(0).getOperand(0),
-                                  DAG.getConstant(LShAmt + (Size - ExtSize), ShlDL, VT));
+        SDValue Shl =
+            DAG.getNode(ISD::SHL, ShlDL, VT, N0.getOperand(0).getOperand(0),
+                        DAG.getConstant(LShAmt + (Size - ExtSize), ShlDL, VT));
         SDLoc DL(N);
         return DAG.getNode(ISD::SRA, DL, VT, Shl,
                            DAG.getConstant(ShAmt + (Size - ExtSize), DL, VT));
