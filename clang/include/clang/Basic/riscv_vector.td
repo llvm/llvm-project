@@ -1915,8 +1915,14 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "si", "vfwcvt_f">;
   def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "si", "vfwcvt_f">;
   let RequiredFeatures = ["Zvfh"], OverloadedName = "vfwcvt_f" in {
-    defm : RVVConvBuiltinSet<"vfwcvt_f_xu_v", "c", [["Fw", "FwUv"]]>;
-    defm : RVVConvBuiltinSet<"vfwcvt_f_x_v", "c", [["Fw", "Fwv"]]>;
+    let Name = "vfwcvt_f_xu_v",
+        IRName = "vfwcvt_f_xu_v",
+        MaskedIRName = "vfwcvt_f_xu_v_mask" in
+      def : RVVConvBuiltin<"Fw", "FwUv", "c", "vfwcvt_f">;
+    let Name = "vfwcvt_f_x_v",
+        IRName = "vfwcvt_f_x_v",
+        MaskedIRName = "vfwcvt_f_x_v_mask" in
+      def : RVVConvBuiltin<"Fw", "Fwv", "c", "vfwcvt_f">;
   }
   def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "f", "vfwcvt_f">;
   let RequiredFeatures = ["Zvfhmin"] in
