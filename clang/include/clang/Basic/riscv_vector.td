@@ -2011,9 +2011,9 @@ let ManualCodegen = [{
           RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFwu"]]>;
       let OverloadedName = "vfncvt_f" in {
         defm :
-          RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_f_x_w", "si", [["Fv", "Fvwu"]]>;
         defm :
-          RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_f_xu_w", "si", [["Fv", "FvUwu"]]>;
       }
       let OverloadedName = "vfncvt_f" in {
         defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vwu"]]>;
@@ -2061,9 +2061,9 @@ let ManualCodegen = [{
         RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFw"]]>;
     let OverloadedName = "vfncvt_f" in {
       defm :
-        RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvw"]]>;
+        RVVConvBuiltinSet<"vfncvt_f_x_w", "si", [["Fv", "Fvw"]]>;
       defm :
-        RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUw"]]>;
+        RVVConvBuiltinSet<"vfncvt_f_xu_w", "si", [["Fv", "FvUw"]]>;
     }
     let OverloadedName = "vfncvt_f" in {
       defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vw"]]>;
