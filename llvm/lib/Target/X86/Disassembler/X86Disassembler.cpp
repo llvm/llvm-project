@@ -1226,8 +1226,8 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_EVEXK;
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3])) {
         attrMask |= ATTR_EVEXB;
-        if (uFromEVEX3of4(insn->vectorExtensionPrefix[2]) &&
-            !readModRM(insn) && modFromModRM(insn->modRM) == 3)
+        if (uFromEVEX3of4(insn->vectorExtensionPrefix[2]) && !readModRM(insn) &&
+            modFromModRM(insn->modRM) == 3)
           attrMask |= ATTR_EVEXU;
       }
       if (lFromEVEX4of4(insn->vectorExtensionPrefix[3]))
