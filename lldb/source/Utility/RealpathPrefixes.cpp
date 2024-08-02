@@ -8,14 +8,17 @@
 
 #include "lldb/Utility/RealpathPrefixes.h"
 
-#include "lldb/Host/FileSystem.h"
+#include "lldb/Target/Statistics.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 
 RealpathPrefixes::RealpathPrefixes(const FileSpecList &file_spec_list)
-    : m_fs(llvm::vfs::getRealFileSystem()) {
+    : m_fs(llvm::vfs::getRealFileSystem()), m_target(nullptr) {
   m_prefixes.reserve(file_spec_list.GetSize());
   for (const FileSpec &file_spec : file_spec_list) {
     m_prefixes.emplace_back(file_spec.GetPath());
@@ -39,12 +42,18 @@ RealpathPrefixes::ResolveSymlinks(const FileSpec &file_spec) const {
   std::string file_spec_path = file_spec.GetPath();
   for (const std::string &prefix : m_prefixes) {
     if (is_prefix(file_spec_path, prefix, file_spec.IsCaseSensitive())) {
+      // Stats and logging.
+      if (m_target)
+        m_target->GetStatistics().IncreaseSourceRealpathAttemptCount();
+      Log *log = GetLog(LLDBLog::Source);
+      LLDB_LOGF(log, "Realpath'ing support file %s", file_spec_path.c_str());
+
       // One prefix matched. Try to realpath.
       llvm::SmallString<PATH_MAX> buff;
       std::error_code ec = m_fs->getRealPath(file_spec_path, buff);
       if (ec)
         return std::nullopt;
-      FileSpec realpath(buff);
+      FileSpec realpath(buff, file_spec.GetPathStyle());
 
       // Only return realpath if it is different from the original file_spec.
       if (realpath != file_spec)

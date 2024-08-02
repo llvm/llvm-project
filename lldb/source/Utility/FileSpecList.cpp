@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/FileSpecList.h"
+#include "lldb/Target/Statistics.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Stream.h"
 
@@ -176,8 +180,17 @@ size_t SupportFileList::FindCompatibleIndex(
     if (realpath_prefixes && result == IsCompatibleResult::kOnlyFileMatch) {
       if (std::optional<FileSpec> resolved_curr_file =
               realpath_prefixes->ResolveSymlinks(curr_file)) {
-        if (IsCompatible(*resolved_curr_file, file_spec))
+        if (IsCompatible(*resolved_curr_file, file_spec)) {
+          // Stats and logging.
+          if (Target *target = realpath_prefixes->GetTarget())
+            target->GetStatistics().IncreaseSourceRealpathCompatibleCount();
+          Log *log = GetLog(LLDBLog::Source);
+          LLDB_LOGF(log,
+                    "Realpath'ed support file %s is compatible to input file",
+                    resolved_curr_file->GetPath().c_str());
+          // We found a match
           return idx;
+        }
       }
     }
   }

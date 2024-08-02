@@ -51,6 +51,7 @@ add_lldb_unittest(UtilityTests
   XcodeSDKTest.cpp
 
   LINK_LIBS
+      lldbTarget
       lldbUtility
       lldbUtilityHelpers
       LLVMTestingSupport

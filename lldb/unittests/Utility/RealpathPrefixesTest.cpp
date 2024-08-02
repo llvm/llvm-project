@@ -51,23 +51,24 @@ TEST(RealpathPrefixesTest, MatchingRelativePrefix) {
   EXPECT_EQ(ret, FileSpec("dir2/real.h"));
 }
 
-// Should resolve a symlink which match a prefix with a case-insensitive support
-// file
-TEST(RealpathPrefixesTest, CaseInsensitive) {
+// Should resolve in Windows and/or with a case-insensitive support file
+TEST(RealpathPrefixesTest, WindowsAndCaseInsensitive) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("/dir1/link.h"), FileSpec("/dir2/real.h")));
+      FileSpec("f:\\dir1\\link.h", FileSpec::Style::windows),
+      FileSpec("f:\\dir2\\real.h", FileSpec::Style::windows),
+      FileSpec::Style::windows));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("/dir1");
+  file_spec_list.EmplaceBack(FileSpec("f:\\dir1", FileSpec::Style::windows));
   RealpathPrefixes prefixes(std::move(file_spec_list));
   prefixes.SetFileSystem(fs);
 
   // Test
   std::optional<FileSpec> ret = prefixes.ResolveSymlinks(
-      FileSpec("/DIR1/LINK.H", FileSpec::Style::posix));
-  EXPECT_EQ(ret, FileSpec("/dir2/real.h"));
+      FileSpec("F:\\DIR1\\LINK.H", FileSpec::Style::windows));
+  EXPECT_EQ(ret, FileSpec("f:\\dir2\\real.h", FileSpec::Style::windows));
 }
 
 // Should resolve a symlink when there is mixture of matching and mismatching

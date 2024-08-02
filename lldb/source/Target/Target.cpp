@@ -4359,7 +4359,9 @@ InlineStrategy TargetProperties::GetInlineStrategy() const {
 // this because we want the FileSpecList to normalize the file paths for us.
 RealpathPrefixes TargetProperties::GetSourceRealpathPrefixes() const {
   const uint32_t idx = ePropertySourceRealpathPrefixes;
-  return RealpathPrefixes(GetPropertyAtIndexAs<FileSpecList>(idx, {}));
+  auto prefixes = RealpathPrefixes(GetPropertyAtIndexAs<FileSpecList>(idx, {}));
+  prefixes.SetTarget(this->m_target);
+  return prefixes;
 }
 
 llvm::StringRef TargetProperties::GetArg0() const {

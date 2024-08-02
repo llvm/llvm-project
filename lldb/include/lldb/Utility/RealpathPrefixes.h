@@ -19,6 +19,7 @@
 namespace lldb_private {
 class FileSpec;
 class FileSpecList;
+class Target;
 } // namespace lldb_private
 
 namespace lldb_private {
@@ -35,6 +36,10 @@ public:
   // filesystem will be used.
   void SetFileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
 
+  // Sets an optional Target instance to gather statistics.
+  void SetTarget(Target *target) { m_target = target; }
+  Target *GetTarget() const { return m_target; }
+
   std::optional<FileSpec> ResolveSymlinks(const FileSpec &file_spec) const;
 
 private:
@@ -48,6 +53,9 @@ private:
 
   // The filesystem to use for realpath'ing.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
+
+  // The optional Target instance to gather statistics.
+  Target *m_target;
 };
 
 } // namespace lldb_private
