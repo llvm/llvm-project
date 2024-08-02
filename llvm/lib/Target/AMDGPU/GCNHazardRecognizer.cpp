@@ -887,7 +887,7 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
 /// pack the computed value into correct bit position of the dest register. This
 /// occurs if we have SDWA with dst_sel != DWORD or if we have op_sel with
 /// dst_sel that is not aligned to the register. This function analayzes the \p
-/// MI and \returns an operand with dst setl forwarding issue, or nullptr if
+/// MI and \returns an operand with dst forwarding issue, or nullptr if
 /// none exists.
 static const MachineOperand *
 getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
@@ -972,25 +972,19 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
       }
 
       for (auto Dst : Dsts) {
-        Register Def = Dst->getReg();
-
         // We must consider implicit reads of the VALU. SDWA with dst_sel and
         // UNUSED_PRESERVE will implicitly read the result from forwarded dest,
         // and we must account for that hazard.
-        for (const MachineOperand &Use : VALU->all_uses()) {
-          if (Use.isReg() && TRI->regsOverlap(Def, Use.getReg()))
-            return true;
-        }
-
-        if (!TII->isVOP3(*VALU))
-          return false;
-
-        // We also must account for WAW hazards. In particular, WAW hazards with
-        // dest op_sel and dest preserve semantics will read the forwarded dest
+        // We also must account for WAW hazards. In particular, WAW with dest preserve semantics
+        // (e.g. VOP3 with op_sel, VOP2 && !zeroesHigh16BitsOfDest) will read the forwarded dest
         // for parity check for ECC. Without accounting for this hazard, the ECC
         // will be wrong.
-        if (auto *ThisDst = TII->getNamedOperand(*VALU, AMDGPU::OpName::vdst)) {
-          return TRI->regsOverlap(Def, ThisDst->getReg());
+        // TODO: limit to RAW (including implicit reads) + problematic WAW (i.e. complete zeroesHigh16BitsOfDest)
+        for (auto &Operand : VALU->operands()) {
+          if (Operand.isReg() &&
+            TRI->regsOverlap(Dst->getReg(), Operand.getReg())) {
+            return true;
+          }
         }
       }
       return false;
