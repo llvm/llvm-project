@@ -225,8 +225,6 @@ enum ProcessorFeatures {
   FEATURE_USERMSR,
   FEATURE_AVX10_1_256,
   FEATURE_AVX10_1_512,
-  FEATURE_AVX10_2_256,
-  FEATURE_AVX10_2_512,
   CPU_FEATURE_MAX
 };
 
@@ -962,6 +960,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_PREFETCHI);
   if (HasLeaf7Subleaf1 && ((EDX >> 15) & 1))
     setFeature(FEATURE_USERMSR);
+  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1))
+    setFeature(FEATURE_AVX10_1_256);
   if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
     setFeature(FEATURE_APXF);
 
@@ -978,23 +978,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
-  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
-    bool Has512Len = (EBX >> 18) & 1;
-    switch (EBX & 0xff) {
-    default:
-      llvm_unreachable("Unknown version!");
-    case 2:
-      setFeature(FEATURE_AVX10_2_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_2_512);
-      [[fallthrough]];
-    case 1:
-      setFeature(FEATURE_AVX10_1_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_1_512);
-      break;
-    }
-  }
+  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24 && ((EBX >> 18) & 1))
+    setFeature(FEATURE_AVX10_1_512);
 
   unsigned MaxExtLevel = 0;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);

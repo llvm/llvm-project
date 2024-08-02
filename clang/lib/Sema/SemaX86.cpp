@@ -162,9 +162,6 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_mulps512:
   case X86::BI__builtin_ia32_subpd512:
   case X86::BI__builtin_ia32_subps512:
-  case X86::BI__builtin_ia32_vaddpd256_round:
-  case X86::BI__builtin_ia32_vaddph256_round:
-  case X86::BI__builtin_ia32_vaddps256_round:
   case X86::BI__builtin_ia32_cvtsi2sd64:
   case X86::BI__builtin_ia32_cvtsi2ss32:
   case X86::BI__builtin_ia32_cvtsi2ss64:

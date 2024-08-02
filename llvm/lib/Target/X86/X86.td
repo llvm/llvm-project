@@ -326,12 +326,6 @@ def FeatureAVX10_1 : SubtargetFeature<"avx10.1-256", "HasAVX10_1", "true",
 def FeatureAVX10_1_512 : SubtargetFeature<"avx10.1-512", "HasAVX10_1_512", "true",
                                           "Support AVX10.1 up to 512-bit instruction",
                                           [FeatureAVX10_1, FeatureEVEX512]>;
-def FeatureAVX10_2 : SubtargetFeature<"avx10.2-256", "HasAVX10_2", "true",
-                                      "Support AVX10.2 up to 256-bit instruction",
-                                      [FeatureAVX10_1]>;
-def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
-                                          "Support AVX10.2 up to 512-bit instruction",
-                                          [FeatureAVX10_2, FeatureAVX10_1_512]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",

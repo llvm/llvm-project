@@ -595,8 +595,6 @@ namespace llvm {
     VPDPBSSD,
     VPDPBSSDS,
 
-    MPSADBW,
-
     // Compress and expand.
     COMPRESS,
     EXPAND,
