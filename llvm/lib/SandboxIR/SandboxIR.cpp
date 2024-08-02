@@ -1118,7 +1118,6 @@ Value *PHINode::removeIncomingValue(unsigned Idx) {
   auto &Tracker = Ctx.getTracker();
   if (Tracker.isTracking())
     Tracker.track(std::make_unique<PHIRemoveIncoming>(*this, Idx, Tracker));
-
   llvm::Value *LLVMV =
       cast<llvm::PHINode>(Val)->removeIncomingValue(Idx,
                                                     /*DeletePHIIfEmpty=*/false);
@@ -1157,18 +1156,18 @@ void PHINode::replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New) {
     if (getIncomingBlock(Idx) == Old)
       setIncomingBlock(Idx, New);
 }
-void PHINode::removeIncomingValueIf(function_ref< bool(unsigned)> Predicate) {
+void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
   // Avoid duplicate tracking by going through this->removeIncomingValue here at
   // the expense of some performance. Copy PHI::removeIncomingValueIf more
   // directly if performance becomes an issue.
-  unsigned Idx = 0;
-  unsigned LastIdx = getNumIncomingValues();
-  while (Idx < LastIdx) {
-    if (Predicate(Idx)) {
-      removeIncomingValue(Idx);
-      --LastIdx;
-    } else
-      ++Idx;
+
+  // Removing the element at index X, moves the element previously at X + 1
+  // to X. Working from the end avoids complications from that.
+  unsigned Idx = getNumIncomingValues();
+  while (Idx > 0) {
+    if (Predicate(Idx - 1))
+      removeIncomingValue(Idx - 1);
+    --Idx;
   }
 }
 
