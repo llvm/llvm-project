@@ -459,7 +459,7 @@ def EmitC_ForOp : EmitC_Op<"for",
       [AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        SingleBlockImplicitTerminator<"emitc::YieldOp">,
        RecursiveMemoryEffects]> {
-  let summary = "for operation";
+  let summary = "For operation";
   let description = [{
     The `emitc.for` operation represents a C loop of the following form:
 
@@ -519,7 +519,7 @@ def EmitC_ForOp : EmitC_Op<"for",
 def EmitC_CallOp : EmitC_Op<"call",
     [CallOpInterface, CExpression,
      DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
-  let summary = "call operation";
+  let summary = "Call operation";
   let description = [{
     The `emitc.call` operation represents a direct call to an `emitc.func`
     that is within the same symbol scope as the call. The operands and result type
@@ -1189,7 +1189,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 
 def EmitC_YieldOp : EmitC_Op<"yield",
       [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp"]>]> {
-  let summary = "block termination operation";
+  let summary = "Block termination operation";
   let description = [{
     The `emitc.yield` terminates its parent EmitC op's region, optionally yielding
     an SSA value. The semantics of how the values are yielded is defined by the
@@ -1214,7 +1214,7 @@ def EmitC_IfOp : EmitC_Op<"if",
     "getEntrySuccessorRegions"]>, SingleBlock,
     SingleBlockImplicitTerminator<"emitc::YieldOp">,
     RecursiveMemoryEffects, NoRegionArguments]> {
-  let summary = "if-then-else operation";
+  let summary = "If-then-else operation";
   let description = [{
     The `emitc.if` operation represents an if-then-else construct for
     conditionally executing two regions of code. The operand to an if operation

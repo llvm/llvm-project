@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+module attributes {omp.is_target_device = false} {
   llvm.func @omp_target_region_() {
     %0 = llvm.mlir.constant(20 : i32) : i32
     %1 = llvm.mlir.constant(10 : i32) : i32
@@ -35,20 +35,14 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 }
 
 // CHECK: define void @omp_target_region_()
-// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE1:.*]].region_id, ptr %kernel_args)
-
-// CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
-// CHECK: omp_offload.failed:
-// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
-// CHECK: omp_offload.cont:
+// CHECK-NOT: call i32 @__tgt_target_kernel({{.*}})
+// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE1:.*]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+// CHECK-NEXT: ret void
 
 // CHECK: define void @omp_target_no_map()
-// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_no_map_l[[LINE2:.*]].region_id, ptr %kernel_args)
-
-// CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
-// CHECK: omp_offload.failed:
-// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]]()
-// CHECK: omp_offload.cont:
+// CHECK-NOT: call i32 @__tgt_target_kernel({{.*}})
+// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2:.*]]()
+// CHECK-NEXT: ret void
 
 // CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
 // CHECK: %[[VAL_A:.*]] = load i32, ptr %[[ADDR_A]], align 4
