@@ -727,13 +727,13 @@ define void @foo(ptr %arg0, i8 %val) {
   auto *Store = cast<sandboxir::StoreInst>(&*It++);
 
   EXPECT_FALSE(Load->isVolatile());
-  EXPECT_FALSE(Store->isVolatile());
   Ctx.save();
   Load->setVolatile(true);
   EXPECT_TRUE(Load->isVolatile());
   Ctx.revert();
   EXPECT_FALSE(Load->isVolatile());
 
+  EXPECT_FALSE(Store->isVolatile());
   Ctx.save();
   Store->setVolatile(true);
   EXPECT_TRUE(Store->isVolatile());
