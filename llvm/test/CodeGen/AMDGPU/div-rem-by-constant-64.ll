@@ -661,9 +661,10 @@ define noundef i64 @sdiv64_2(i64 noundef %i)  {
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 31, v1
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-NEXT:    v_ashrrev_i64 v[0:1], 1, v[0:1]
+; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v2
+; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
+; GFX9-NEXT:    v_alignbit_b32 v0, v3, v2, 1
+; GFX9-NEXT:    v_ashrrev_i64 v[1:2], 33, v[2:3]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: sdiv64_2:
@@ -671,17 +672,20 @@ define noundef i64 @sdiv64_2(i64 noundef %i)  {
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 31, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942-NEXT:    v_ashrrev_i64 v[0:1], 1, v[0:1]
+; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, v[2:3]
+; GFX942-NEXT:    v_alignbit_b32 v0, v3, v2, 1
+; GFX942-NEXT:    v_ashrrev_i64 v[2:3], 33, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1030-LABEL: sdiv64_2:
 ; GFX1030:       ; %bb.0: ; %entry
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1030-NEXT:    v_lshrrev_b32_e32 v2, 31, v1
-; GFX1030-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX1030-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX1030-NEXT:    v_ashrrev_i64 v[0:1], 1, v[0:1]
+; GFX1030-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
+; GFX1030-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
+; GFX1030-NEXT:    v_alignbit_b32 v0, v3, v2, 1
+; GFX1030-NEXT:    v_ashrrev_i64 v[1:2], 33, v[2:3]
 ; GFX1030-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %div = sdiv i64 %i, 2
@@ -788,9 +792,10 @@ define noundef i64 @sdiv64_64(i64 noundef %i)  {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 26, v2
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-NEXT:    v_ashrrev_i64 v[0:1], 6, v[0:1]
+; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v2
+; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
+; GFX9-NEXT:    v_alignbit_b32 v0, v3, v2, 6
+; GFX9-NEXT:    v_ashrrev_i64 v[1:2], 38, v[2:3]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: sdiv64_64:
@@ -799,8 +804,10 @@ define noundef i64 @sdiv64_64(i64 noundef %i)  {
 ; GFX942-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 26, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0
-; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942-NEXT:    v_ashrrev_i64 v[0:1], 6, v[0:1]
+; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, v[2:3]
+; GFX942-NEXT:    v_alignbit_b32 v0, v3, v2, 6
+; GFX942-NEXT:    v_ashrrev_i64 v[2:3], 38, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1030-LABEL: sdiv64_64:
@@ -808,9 +815,10 @@ define noundef i64 @sdiv64_64(i64 noundef %i)  {
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1030-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX1030-NEXT:    v_lshrrev_b32_e32 v2, 26, v2
-; GFX1030-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX1030-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX1030-NEXT:    v_ashrrev_i64 v[0:1], 6, v[0:1]
+; GFX1030-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
+; GFX1030-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
+; GFX1030-NEXT:    v_alignbit_b32 v0, v3, v2, 6
+; GFX1030-NEXT:    v_ashrrev_i64 v[1:2], 38, v[2:3]
 ; GFX1030-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %div = sdiv i64 %i, 64

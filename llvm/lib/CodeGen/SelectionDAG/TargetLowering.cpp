@@ -1958,6 +1958,22 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
+      // If this is (shr (sra X, C1), ShAmt), see if we can combine this into a
+      // single sra. We can do this if the top bits are never demanded.
+      if (Op0.getOpcode() == ISD::SRA) {
+        if (!DemandedBits.intersects(APInt::getHighBitsSet(BitWidth, ShAmt))) {
+          if (std::optional<uint64_t> InnerSA =
+                  TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 2)) {
+            unsigned C1 = *InnerSA;
+            // Clamp the combined shift amount if it exceeds the bit width.
+            unsigned Combined = std::min(C1 + ShAmt, BitWidth - 1);
+            SDValue NewSA = TLO.DAG.getConstant(Combined, dl, ShiftVT);
+            return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRA, dl, VT,
+                                                     Op0.getOperand(0), NewSA));
+          }
+        }
+      }
+
       APInt InDemandedMask = (DemandedBits << ShAmt);
 
       // If the shift is exact, then it does demand the low bits (and knows that

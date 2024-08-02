@@ -334,23 +334,23 @@ define signext i63 @i63_signext_func_void(i63 %val) #0 {
 ; CI-LABEL: i63_signext_func_void:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 1
-; CI-NEXT:    v_ashr_i64 v[0:1], v[0:1], 1
+; CI-NEXT:    v_lshl_b64 v[1:2], v[0:1], 1
+; CI-NEXT:    v_ashr_i64 v[1:2], v[1:2], 33
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: i63_signext_func_void:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
-; GFX89-NEXT:    v_ashrrev_i64 v[0:1], 1, v[0:1]
+; GFX89-NEXT:    v_lshlrev_b64 v[1:2], 1, v[0:1]
+; GFX89-NEXT:    v_ashrrev_i64 v[1:2], 33, v[1:2]
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: i63_signext_func_void:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
+; GFX11-NEXT:    v_lshlrev_b64 v[1:2], 1, v[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_ashrrev_i64 v[0:1], 1, v[0:1]
+; GFX11-NEXT:    v_ashrrev_i64 v[1:2], 33, v[1:2]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   ret i63 %val
 }

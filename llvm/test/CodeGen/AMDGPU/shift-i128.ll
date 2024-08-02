@@ -113,8 +113,10 @@ define i128 @v_ashr_i128_vk(i128 %lhs) {
 ; GCN-NEXT:    v_mov_b32_e32 v4, v1
 ; GCN-NEXT:    v_lshl_b64 v[0:1], v[2:3], 31
 ; GCN-NEXT:    v_lshrrev_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_ashr_i64 v[2:3], v[2:3], 33
 ; GCN-NEXT:    v_or_b32_e32 v0, v4, v0
+; GCN-NEXT:    v_ashr_i64 v[4:5], v[2:3], 33
+; GCN-NEXT:    v_ashrrev_i32_e32 v3, 31, v3
+; GCN-NEXT:    v_mov_b32_e32 v2, v4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shl = ashr i128 %lhs, 33
   ret i128 %shl
