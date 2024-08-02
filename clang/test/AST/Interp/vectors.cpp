@@ -11,8 +11,7 @@ static_assert(A[3] == 4, "");
 
 /// FIXME: It would be nice if the note said 'vector' instead of 'array'.
 static_assert(A[12] == 4, ""); // both-error {{not an integral constant expression}} \
-                               // expected-note {{cannot refer to element 12 of array of 4 elements in a constant expression}} \
-                               // ref-note {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+                               // both-note {{cannot refer to element 12 of array of 4 elements in a constant expression}}
 
 
 /// VectorSplat casts

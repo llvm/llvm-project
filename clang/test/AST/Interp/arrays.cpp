@@ -114,7 +114,7 @@ static_assert(*(&arr[0]) == 1, "");
 static_assert(*(&arr[1]) == 2, "");
 
 constexpr const int *OOB = (arr + 3) - 3; // both-error {{must be initialized by a constant expression}} \
-                                          // both-note {{cannot refer to element 3 of array of 2}}
+                                          // both-note {{cannot refer to element 3 of array of 2 elements}}
 
 template<typename T>
 constexpr T getElementOf(T* array, int i) {

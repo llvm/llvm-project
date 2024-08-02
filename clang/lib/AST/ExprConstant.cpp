@@ -3889,7 +3889,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       }
     } else if (const auto *VT = ObjType->getAs<VectorType>()) {
       uint64_t Index = Sub.Entries[I].getAsArrayIndex();
-      if (Index >= VT->getNumElements()) {
+      unsigned NumElements = VT->getNumElements();
+      if (Index == NumElements) {
         if (Info.getLangOpts().CPlusPlus11)
           Info.FFDiag(E, diag::note_constexpr_access_past_end)
               << handler.AccessKind;
@@ -3897,6 +3898,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
           Info.FFDiag(E);
         return handler.failed();
       }
+
+      if (Index > NumElements) {
+        Info.CCEDiag(E, diag::note_constexpr_array_index)
+            << Index << /*array*/ 0 << NumElements;
+        return handler.failed();
+      }
+
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
       return handler.found(O->getVectorElt(Index), ObjType);
