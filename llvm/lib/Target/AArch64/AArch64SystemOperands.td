@@ -1720,7 +1720,7 @@ def : ROSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
 }
 
 // v8.7a LD64B/ST64B Accelerator Extension system register
-let Requires = [{ {AArch64::FeatureLS64} }] in
+let Requires = [{ {AArch64::FeatureLS64_ACCDATA} }] in
 def : RWSysReg<"ACCDATA_EL1",       0b11, 0b000, 0b1101, 0b0000, 0b101>;
 
 // Branch Record Buffer system registers

@@ -3682,6 +3682,8 @@ static const struct Extension {
     {"sve2p1", {AArch64::FeatureSVE2p1}},
     {"b16b16", {AArch64::FeatureB16B16}},
     {"ls64", {AArch64::FeatureLS64}},
+    {"ls64_v", {AArch64::FeatureLS64_V}},
+    {"ls64_accdata", {AArch64::FeatureLS64_ACCDATA}},
     {"xs", {AArch64::FeatureXS}},
     {"pauth", {AArch64::FeaturePAuth}},
     {"flagm", {AArch64::FeatureFlagM}},

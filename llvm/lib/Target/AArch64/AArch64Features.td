@@ -305,9 +305,17 @@ def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
 def FeatureHCX : Extension<"hcx", "HCX", "FEAT_HCX",
   "Enable Armv8.7-A HCRX_EL2 system register">;
 
-def FeatureLS64 : ExtensionWithMArch<"ls64", "LS64",
-  "FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA",
-  "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
+def FeatureLS64 : Extension<"ls64", "LS64", "FEAT_LS64",
+  "Enable single-copy atomic 64-byte loads and stores without status result">;
+
+def FeatureLS64_V : Extension<"ls64_v", "LS64_V", "FEAT_LS64_V",
+  "Enable single-copy atomic 64-byte stores with status result",
+  [FeatureLS64]>;
+
+let UserVisibleName = "ls64" in
+def FeatureLS64_ACCDATA : ExtensionWithMArch<"ls64_accdata", "LS64_ACCDATA", "FEAT_LS64_ACCDATA",
+  "Enable single-copy atomic 64-byte EL0 stores with status result",
+  [FeatureLS64_V]>;
 
 def FeatureSPE_EEF : Extension<"spe-eef", "SPE_EEF", "FEAT_SPEv1p2",
   "Enable extra register in the Statistical Profiling Extension">;

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+ls64 < %s 2>%t | FileCheck %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+ls64_accdata < %s 2>%t | FileCheck %s
 // RUN: FileCheck --check-prefix=CHECK-ERR %s < %t
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu < %s 2> %t
 // RUN: FileCheck --check-prefixes=CHECK-ERR,CHECK-NO-LS64-ERR %s < %t

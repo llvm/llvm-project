@@ -240,8 +240,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv.default
 //
 //.
-// CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
+// CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+ls64,+ls64_v,+neon" }
+// CHECK: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64,+ls64_accdata,+ls64_v" }
 // CHECK: attributes #[[ATTR2]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR3]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
 // CHECK: attributes #[[ATTR4]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }

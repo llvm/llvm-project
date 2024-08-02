@@ -284,6 +284,10 @@ def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
                        AssemblerPredicateWithAll<(all_of FeatureWFxT), "wfxt">;
 def HasLS64          : Predicate<"Subtarget->hasLS64()">,
                        AssemblerPredicateWithAll<(all_of FeatureLS64), "ls64">;
+def HasLS64_V        : Predicate<"Subtarget->hasLS64_V()">,
+                       AssemblerPredicateWithAll<(all_of FeatureLS64_V), "ls64_v">;
+def HasLS64_ACCDATA  : Predicate<"Subtarget->hasLS64_ACCDATA()">,
+                       AssemblerPredicateWithAll<(all_of FeatureLS64_ACCDATA), "ls64_accdata">;
 def HasBRBE          : Predicate<"Subtarget->hasBRBE()">,
                        AssemblerPredicateWithAll<(all_of FeatureBRBE), "brbe">;
 def HasSPE_EEF       : Predicate<"Subtarget->hasSPE_EEF()">,
@@ -9825,20 +9829,25 @@ foreach i = 0-7 in {
             (EXTRACT_SUBREG $val, !cast<SubRegIndex>("x8sub_"#i))>;
 }
 
+class ST64BPattern<Intrinsic intrinsic, Instruction instruction>
+  : Pat<(intrinsic GPR64sp:$addr, GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3, GPR64:$x4, GPR64:$x5, GPR64:$x6, GPR64:$x7),
+        (instruction (REG_SEQUENCE GPR64x8Class, $x0, x8sub_0, $x1, x8sub_1, $x2, x8sub_2, $x3, x8sub_3, $x4, x8sub_4, $x5, x8sub_5, $x6, x8sub_6, $x7, x8sub_7), $addr)>;
+
 let Predicates = [HasLS64] in {
   def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
                                           (outs GPR64x8:$Rt)>;
   def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
                                           (outs)>;
-  def ST64BV:   Store64BV<0b011, "st64bv">;
-  def ST64BV0:  Store64BV<0b010, "st64bv0">;
-
-  class ST64BPattern<Intrinsic intrinsic, Instruction instruction>
-    : Pat<(intrinsic GPR64sp:$addr, GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3, GPR64:$x4, GPR64:$x5, GPR64:$x6, GPR64:$x7),
-          (instruction (REG_SEQUENCE GPR64x8Class, $x0, x8sub_0, $x1, x8sub_1, $x2, x8sub_2, $x3, x8sub_3, $x4, x8sub_4, $x5, x8sub_5, $x6, x8sub_6, $x7, x8sub_7), $addr)>;
-
   def : ST64BPattern<int_aarch64_st64b, ST64B>;
+}
+
+let Predicates = [HasLS64_V] in {
+  def ST64BV:   Store64BV<0b011, "st64bv">;
   def : ST64BPattern<int_aarch64_st64bv, ST64BV>;
+}
+
+let Predicates = [HasLS64_ACCDATA] in {
+  def ST64BV0:  Store64BV<0b010, "st64bv0">;
   def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
 }
 
