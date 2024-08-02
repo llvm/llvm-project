@@ -687,14 +687,14 @@ bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
 // [stmt.return.coroutine]p1:
 //   A coroutine shall not enclose a return statement ([stmt.return]).
 static void checkReturnStmtInCoroutine(Sema &S, FunctionScopeInfo *FSI) {
-  assert (!FSI && "FunctionScopeInfo is null");
+  assert(FSI && "FunctionScopeInfo is null");
   assert(FSI->FirstCoroutineStmtLoc.isValid() &&
-                "first coroutine location not set");
+         "first coroutine location not set");
   if (FSI->FirstReturnLoc.isInvalid())
     return;
   S.Diag(FSI->FirstReturnLoc, diag::err_return_in_coroutine);
   S.Diag(FSI->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
-          << FSI->getFirstCoroutineStmtKeyword();
+      << FSI->getFirstCoroutineStmtKeyword();
 }
 
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
@@ -707,6 +707,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
 
+  // Avoid duplicate errors, report only on first keyword.
   if (ScopeInfo->FirstCoroutineStmtLoc == KWLoc)
     checkReturnStmtInCoroutine(*this, ScopeInfo);
 

@@ -3751,10 +3751,10 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   FunctionScopeInfo *FSI = getCurFunction();
   if (FSI->FirstReturnLoc.isInvalid() && FSI->isCoroutine()) {
     assert(FSI->FirstCoroutineStmtLoc.isValid() &&
-                  "first coroutine location not set");
+           "first coroutine location not set");
     Diag(ReturnLoc, diag::err_return_in_coroutine);
     Diag(FSI->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
-            << FSI->getFirstCoroutineStmtKeyword();
+        << FSI->getFirstCoroutineStmtKeyword();
   }
 
   StmtResult R =
