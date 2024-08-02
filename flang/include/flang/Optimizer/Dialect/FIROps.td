@@ -782,6 +782,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
           lower bounds and extents may not be known until runtime),
         - slice: an array section can be described with a slice triple,
         - typeparams: for emboxing a derived type with LEN type parameters,
+        - sourceBox: A box to read information from such as CFI type,
+          type descriptor or element size to populate the new descriptor.
         - accessMap: unused/experimental.
         - allocator_idx: specify special allocator to use.
   }];
