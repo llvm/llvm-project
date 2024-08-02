@@ -302,6 +302,7 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
 
 OpenMP Support
 --------------
