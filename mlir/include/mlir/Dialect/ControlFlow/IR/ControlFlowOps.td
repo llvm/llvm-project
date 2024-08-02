@@ -68,7 +68,7 @@ def BranchOp : CF_Op<"br", [
     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
     Pure, Terminator
   ]> {
-  let summary = "branch operation";
+  let summary = "Branch operation";
   let description = [{
     The `cf.br` operation represents a direct branch operation to a given
     block. The operands of this operation are forwarded to the successor block,
@@ -116,7 +116,7 @@ def CondBranchOp : CF_Op<"cond_br",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      Pure, Terminator]> {
-  let summary = "conditional branch operation";
+  let summary = "Conditional branch operation";
   let description = [{
     The `cf.cond_br` terminator operation represents a conditional branch on a
     boolean (1-bit integer) value. If the bit is set, then the first destination
@@ -231,7 +231,7 @@ def SwitchOp : CF_Op<"switch",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      Pure, Terminator]> {
-  let summary = "switch operation";
+  let summary = "Switch operation";
   let description = [{
     The `cf.switch` terminator operation represents a switch on a signless integer
     value. If the flag matches one of the specified cases, then the
