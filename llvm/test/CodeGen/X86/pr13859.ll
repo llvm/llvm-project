@@ -13,8 +13,7 @@ entry:
   %a37 = insertelement <4 x i16> %a36, i16 %aconv, i32 1
   %a38 = insertelement <4 x i16> %a37, i16 %aconv, i32 2
   %a39 = insertelement <4 x i16> %a38, i16 %aconv, i32 3
-  %a40 = bitcast <4 x i16> %a39 to x86_mmx
-  %a41 = bitcast x86_mmx %a40 to <1 x i64>
+  %a40 = bitcast <4 x i16> %a39 to <1 x i64>
 
   %a47 = trunc i32 %a32 to i1
   br i1 %a47, label %a48, label %a49
@@ -23,6 +22,6 @@ a48:
   unreachable
 
 a49:
-  store <1 x i64> %a41, ptr %dest, align 8 ; !!!
+  store <1 x i64> %a40, ptr %dest, align 8 ; !!!
   ret void
 }

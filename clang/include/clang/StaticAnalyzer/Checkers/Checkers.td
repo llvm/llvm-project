@@ -686,22 +686,11 @@ def MoveChecker: Checker<"Move">,
   CheckerOptions<[
     CmdLineOption<String,
                   "WarnOn",
-                  "In non-aggressive mode, only warn on use-after-move of "
-                  "local variables (or local rvalue references) and of STL "
-                  "objects. The former is possible because local variables (or "
-                  "local rvalue references) are not tempting their user to "
-                  "re-use the storage. The latter is possible because STL "
-                  "objects are known to end up in a valid but unspecified "
-                  "state after the move and their state-reset methods are also "
-                  "known, which allows us to predict precisely when "
-                  "use-after-move is invalid. Some STL objects are known to "
-                  "conform to additional contracts after move, so they are not "
-                  "tracked. However, smart pointers specifically are tracked "
-                  "because we can perform extra checking over them. In "
-                  "aggressive mode, warn on any use-after-move because the "
-                  "user has intentionally asked us to completely eliminate "
-                  "use-after-move in his code. Values: \"KnownsOnly\", "
-                  "\"KnownsAndLocals\", \"All\".",
+                  "With setting \"KnownsOnly\" warn only on objects with known "
+                  "move semantics like smart pointers and other STL objects. "
+                  "With setting \"KnownsAndLocals\" warn additionally on local "
+                  "variables (or rvalue references). With setting \"All\" warn "
+                  "on all variables (excluding global variables).",
                   "KnownsAndLocals",
                   Released>
   ]>,
@@ -1056,18 +1045,6 @@ def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
 
 def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls that are both writable and executable">,
-  CheckerOptions<[
-    CmdLineOption<Integer,
-                  "MmapProtExec",
-                  "Specifies the value of PROT_EXEC",
-                  "0x04",
-                  Released>,
-    CmdLineOption<Integer,
-                  "MmapProtRead",
-                  "Specifies the value of PROT_READ",
-                  "0x01",
-                  Released>
-  ]>,
   Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
@@ -1082,7 +1059,7 @@ def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
 
 let ParentPackage = Taint in {
 
-def GenericTaintChecker : Checker<"TaintPropagation">,
+def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
   HelpText<"Generate taint information used by other checkers">,
   CheckerOptions<[
     CmdLineOption<String,
@@ -1091,6 +1068,12 @@ def GenericTaintChecker : Checker<"TaintPropagation">,
                   "",
                   InAlpha>,
   ]>,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def GenericTaintChecker : Checker<"GenericTaint">,
+  HelpText<"Reports potential injection vulnerabilities">,
+  Dependencies<[TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security.taint"
@@ -1728,9 +1711,7 @@ let ParentPackage = TaintOptIn in {
 def TaintedAllocChecker: Checker<"TaintedAlloc">,
   HelpText<"Check for memory allocations, where the size parameter "
            "might be a tainted (attacker controlled) value.">,
-  Dependencies<[DynamicMemoryModeling]>,
-  //FIXME: GenericTaintChecker should be a dependency, but only after it
-  //is transformed into a modeling checker
+  Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "optin.taint"

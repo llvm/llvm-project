@@ -1,7 +1,16 @@
 add_library(
-  libc_diff_test_utils
+  libc_diff_test_utils STATIC
   Timer.cpp
   Timer.h
+)
+target_include_directories(
+  libc_diff_test_utils
+  PRIVATE
+    ${LIBC_SOURCE_DIR}
+)
+add_dependencies(
+  libc_diff_test_utils
+  libc.src.__support.macros.config
 )
 
 # A convenience target to build all performance tests.
@@ -12,7 +21,7 @@ function(add_perf_binary target_name)
     "PERF"
     "" # No optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
   if(NOT PERF_SRCS)
@@ -55,9 +64,13 @@ function(add_perf_binary target_name)
     )
   endif()
 
+  set(link_libraries ${link_object_files})
+  foreach(lib IN LISTS PERF_LINK_LIBRARIES)
+    list(APPEND link_libraries ${lib}.unit)
+  endforeach()
   target_link_libraries(
       ${fq_target_name}
-      PRIVATE ${link_object_files} libc_diff_test_utils)
+      PRIVATE ${link_libraries} libc_diff_test_utils)
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -82,6 +95,9 @@ add_header_library(
   single_input_single_output_diff
   HDRS
     SingleInputSingleOutputPerf.h
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_header_library(
@@ -89,6 +105,7 @@ add_header_library(
   HDRS
     BinaryOpSingleOutputPerf.h
   DEPENDS
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -154,6 +171,17 @@ add_perf_binary(
   DEPENDS
     .single_input_single_output_diff
     libc.src.math.expf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  expf16_perf
+  SRCS
+    expf16_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.expf16
   COMPILE_OPTIONS
     -fno-builtin
 )
@@ -363,6 +391,66 @@ add_perf_binary(
   DEPENDS
     .single_input_single_output_diff
     libc.src.math.fmodf128
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  nearest_integer_funcs_perf
+  SRCS
+    nearest_integer_funcs_perf.cpp
+  DEPENDS
+    libc.src.math.ceilf
+    libc.src.math.ceilf16
+    libc.src.math.floorf
+    libc.src.math.floorf16
+    libc.src.math.rintf
+    libc.src.math.rintf16
+    libc.src.math.roundf
+    libc.src.math.roundf16
+    libc.src.math.roundevenf
+    libc.src.math.roundevenf16
+    libc.src.math.truncf
+    libc.src.math.truncf16
+  COMPILE_OPTIONS
+    -fno-builtin
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_perf_binary(
+  misc_basic_ops_perf
+  SRCS
+    misc_basic_ops_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    .single_input_single_output_diff
+    libc.src.math.copysignf
+    libc.src.math.copysignf16
+    libc.src.math.fabsf
+    libc.src.math.fabsf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  max_min_funcs_perf
+  SRCS
+    max_min_funcs_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fmaxf
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximumf
+    libc.src.math.fmaximumf16
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fminf
+    libc.src.math.fminf16
+    libc.src.math.fminimumf
+    libc.src.math.fminimumf16
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf16
   COMPILE_OPTIONS
     -fno-builtin
 )

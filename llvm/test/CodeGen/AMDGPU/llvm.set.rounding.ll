@@ -64,7 +64,7 @@ define amdgpu_gfx void @s_set_rounding(i32 inreg %rounding) {
 define amdgpu_kernel void @s_set_rounding_kernel(i32 inreg %rounding) {
 ; GFX6-LABEL: s_set_rounding_kernel:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dword s2, s[0:1], 0x9
+; GFX6-NEXT:    s_load_dword s2, s[2:3], 0x9
 ; GFX6-NEXT:    s_mov_b32 s0, 0x1c84a50f
 ; GFX6-NEXT:    s_mov_b32 s1, 0xb73e62d9
 ; GFX6-NEXT:    ;;#ASMSTART
@@ -79,7 +79,7 @@ define amdgpu_kernel void @s_set_rounding_kernel(i32 inreg %rounding) {
 ;
 ; GFX7-LABEL: s_set_rounding_kernel:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s2, s[0:1], 0x9
+; GFX7-NEXT:    s_load_dword s2, s[2:3], 0x9
 ; GFX7-NEXT:    s_mov_b32 s0, 0x1c84a50f
 ; GFX7-NEXT:    s_mov_b32 s1, 0xb73e62d9
 ; GFX7-NEXT:    ;;#ASMSTART
@@ -94,7 +94,7 @@ define amdgpu_kernel void @s_set_rounding_kernel(i32 inreg %rounding) {
 ;
 ; GFX8-LABEL: s_set_rounding_kernel:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX8-NEXT:    s_load_dword s2, s[2:3], 0x24
 ; GFX8-NEXT:    s_mov_b32 s0, 0x1c84a50f
 ; GFX8-NEXT:    s_mov_b32 s1, 0xb73e62d9
 ; GFX8-NEXT:    ;;#ASMSTART
@@ -109,7 +109,7 @@ define amdgpu_kernel void @s_set_rounding_kernel(i32 inreg %rounding) {
 ;
 ; GFX9-LABEL: s_set_rounding_kernel:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX9-NEXT:    s_load_dword s2, s[2:3], 0x24
 ; GFX9-NEXT:    s_mov_b32 s0, 0x1c84a50f
 ; GFX9-NEXT:    s_mov_b32 s1, 0xb73e62d9
 ; GFX9-NEXT:    ;;#ASMSTART
@@ -124,7 +124,7 @@ define amdgpu_kernel void @s_set_rounding_kernel(i32 inreg %rounding) {
 ;
 ; GFX10-LABEL: s_set_rounding_kernel:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x24
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -139,7 +139,7 @@ define amdgpu_kernel void @s_set_rounding_kernel(i32 inreg %rounding) {
 ;
 ; GFX11-LABEL: s_set_rounding_kernel:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x24
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

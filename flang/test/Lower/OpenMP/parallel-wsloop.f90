@@ -35,7 +35,7 @@ subroutine parallel_do_with_parallel_clauses(cond, nt)
   ! CHECK:  %[[COND:.*]] = fir.load %[[COND_DECL]]#0 : !fir.ref<!fir.logical<4>>
   ! CHECK:  %[[COND_CVT:.*]] = fir.convert %[[COND]] : (!fir.logical<4>) -> i1
   ! CHECK:  %[[NT:.*]] = fir.load %[[NT_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:  omp.parallel if(%[[COND_CVT]] : i1) num_threads(%[[NT]] : i32) proc_bind(close)
+  ! CHECK:  omp.parallel if(%[[COND_CVT]]) num_threads(%[[NT]] : i32) proc_bind(close)
   ! CHECK:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:      %[[WS_UB:.*]] = arith.constant 9 : i32
   ! CHECK:      %[[WS_STEP:.*]] = arith.constant 1 : i32

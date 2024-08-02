@@ -36,6 +36,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -3120,9 +3121,9 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
-  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
-        X86::isCFCMOVCC(Opcode) || X86::isCCMPCC(Opcode) ||
-        X86::isCTESTCC(Opcode)))
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isSETZUCC(Opcode) ||
+        X86::isCMOVCC(Opcode) || X86::isCFCMOVCC(Opcode) ||
+        X86::isCCMPCC(Opcode) || X86::isCTESTCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3144,8 +3145,9 @@ X86::CondCode X86::getCondFromBranch(const MachineInstr &MI) {
 }
 
 X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
-  return X86::isSETCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                      : X86::COND_INVALID;
+  return X86::isSETCC(MI.getOpcode()) || X86::isSETZUCC(MI.getOpcode())
+             ? X86::getCondFromMI(MI)
+             : X86::COND_INVALID;
 }
 
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
@@ -5587,7 +5589,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(nullptr, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return nullptr;
 
   // Collect information about virtual register operands of MI.
@@ -8832,6 +8834,11 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
+  // Frame setup and destory can't be scheduled around.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
+    return true;
+
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
@@ -10462,6 +10469,7 @@ enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 
 std::optional<outliner::OutlinedFunction>
 X86InstrInfo::getOutliningCandidateInfo(
+    const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
@@ -10538,7 +10546,8 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(
 }
 
 outliner::InstrType
-X86InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
+X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                   MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
 

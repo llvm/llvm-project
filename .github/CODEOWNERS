@@ -64,14 +64,14 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
+/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
+/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache
 
 # MemRef Dialect in MLIR.
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
@@ -85,10 +85,11 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector/* @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/* @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/* @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector/IR @kuhar
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
 
 # Presburger library in MLIR
@@ -119,6 +120,9 @@ clang/test/AST/Interp/ @tbaederr
 # MLIR NVVM Dialect in MLIR
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
 /mlir/**/NVVM* @grypp
+
+# MLIR Index Dialect
+/mlir/**/Index* @mogball
 
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident

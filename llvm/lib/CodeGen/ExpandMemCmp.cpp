@@ -970,7 +970,7 @@ PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  const DataLayout& DL = F.getParent()->getDataLayout();
+  const DataLayout& DL = F.getDataLayout();
   bool MadeChanges = false;
   for (auto BBIt = F.begin(); BBIt != F.end();) {
     if (runOnBlock(*BBIt, TLI, TTI, TL, DL, PSI, BFI, DTU ? &*DTU : nullptr)) {

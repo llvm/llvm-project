@@ -158,6 +158,27 @@ public:
 
   IdentifierInfo *getNSErrorIdent();
 
+  bool GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx);
+
+  /// Diagnose use of %s directive in an NSString which is being passed
+  /// as formatting string to formatting method.
+  void DiagnoseCStringFormatDirectiveInCFAPI(const NamedDecl *FDecl,
+                                             Expr **Args, unsigned NumArgs);
+
+  bool isSignedCharBool(QualType Ty);
+
+  void adornBoolConversionDiagWithTernaryFixit(
+      Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
+
+  /// Check an Objective-C dictionary literal being converted to the given
+  /// target type.
+  void checkDictionaryLiteral(QualType TargetType,
+                              ObjCDictionaryLiteral *DictionaryLiteral);
+
+  /// Check an Objective-C array literal being converted to the given
+  /// target type.
+  void checkArrayLiteral(QualType TargetType, ObjCArrayLiteral *ArrayLiteral);
+
 private:
   IdentifierInfo *Ident_NSError = nullptr;
 

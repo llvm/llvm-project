@@ -11,8 +11,11 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "interception/interception.h"
+
+using testing::MatchesRegex;
 
 namespace __sanitizer {
 
@@ -96,10 +99,12 @@ TEST(FormattedStackTracePrinter, RenderFrame) {
                       "Function:%f FunctionOffset:%q Source:%s Line:%l "
                       "Column:%c",
                       frame_no, info.address, &info, false, "/path/to/");
-  EXPECT_STREQ("% Frame:42 PC:0x400000 Module:my/module ModuleOffset:0x200 "
-               "Function:foo FunctionOffset:0x100 Source:my/source Line:10 "
-               "Column:5",
-               str.data());
+  EXPECT_THAT(
+      str.data(),
+      MatchesRegex(
+          "% Frame:42 PC:0x0*400000 Module:my/module ModuleOffset:0x200 "
+          "Function:foo FunctionOffset:0x100 Source:my/source Line:10 "
+          "Column:5"));
 
   str.clear();
   // Check that RenderFrame() strips interceptor prefixes.
@@ -109,10 +114,12 @@ TEST(FormattedStackTracePrinter, RenderFrame) {
                       "Function:%f FunctionOffset:%q Source:%s Line:%l "
                       "Column:%c",
                       frame_no, info.address, &info, false, "/path/to/");
-  EXPECT_STREQ("% Frame:42 PC:0x400000 Module:my/module ModuleOffset:0x200 "
-               "Function:bar FunctionOffset:0x100 Source:my/source Line:10 "
-               "Column:5",
-               str.data());
+  EXPECT_THAT(
+      str.data(),
+      MatchesRegex(
+          "% Frame:42 PC:0x0*400000 Module:my/module ModuleOffset:0x200 "
+          "Function:bar FunctionOffset:0x100 Source:my/source Line:10 "
+          "Column:5"));
   info.Clear();
   str.clear();
 

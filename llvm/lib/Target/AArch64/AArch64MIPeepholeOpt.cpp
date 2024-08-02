@@ -52,14 +52,14 @@
 //   %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
 //   %2:fpr64 = MOVID 0
 //   %4:fpr128 = IMPLICIT_DEF
-//   %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64, %subreg.dsub
+//   %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), %2:fpr64, %subreg.dsub
 //   %6:fpr128 = IMPLICIT_DEF
-//   %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
-//   %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+//   %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
+//   %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, %3:fpr128, 0
 //   ==>
 //   %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
 //   %6:fpr128 = IMPLICIT_DEF
-//   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
+//   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
 //
 //===----------------------------------------------------------------------===//
 
@@ -128,6 +128,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool visitINSvi64lane(MachineInstr &MI);
   bool visitFMOVDr(MachineInstr &MI);
+  bool visitCopy(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -136,7 +137,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -690,6 +691,40 @@ bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
   return true;
 }
 
+// Across a basic-block we might have in i32 extract from a value that only
+// operates on upper bits (for example a sxtw). We can replace the COPY with a
+// new version skipping the sxtw.
+bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
+  Register InputReg = MI.getOperand(1).getReg();
+  if (MI.getOperand(1).getSubReg() != AArch64::sub_32 ||
+      !MRI->hasOneNonDBGUse(InputReg))
+    return false;
+
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(InputReg);
+  SmallPtrSet<MachineInstr *, 4> DeadInstrs;
+  DeadInstrs.insert(SrcMI);
+  while (SrcMI && SrcMI->isFullCopy() &&
+         MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg())) {
+    SrcMI = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
+    DeadInstrs.insert(SrcMI);
+  }
+
+  if (!SrcMI || SrcMI->getOpcode() != AArch64::SBFMXri ||
+      SrcMI->getOperand(2).getImm() != 0 || SrcMI->getOperand(3).getImm() != 31)
+    return false;
+
+  Register SrcReg = SrcMI->getOperand(1).getReg();
+  MRI->constrainRegClass(SrcReg, MRI->getRegClass(InputReg));
+  LLVM_DEBUG(dbgs() << "Optimizing: " << MI);
+  MI.getOperand(1).setReg(SrcReg);
+  LLVM_DEBUG(dbgs() << "        to: " << MI);
+  for (auto *DeadMI : DeadInstrs) {
+    LLVM_DEBUG(dbgs() << "  Removing: " << *DeadMI);
+    DeadMI->eraseFromParent();
+  }
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -697,7 +732,7 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MRI = &MF.getRegInfo();
 
   assert(MRI->isSSA() && "Expected to be run on SSA form!");
@@ -770,6 +805,9 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::FMOVDr:
         Changed |= visitFMOVDr(MI);
+        break;
+      case AArch64::COPY:
+        Changed |= visitCopy(MI);
         break;
       }
     }
