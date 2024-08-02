@@ -88,6 +88,11 @@ private:
                            attr.getValue())) {
           emitOpenCLKernelMetadata(clKernelMetadata, llvmFunc,
                                    moduleTranslation);
+        } else if (auto clArgMetadata =
+                       mlir::dyn_cast<mlir::cir::OpenCLKernelArgMetadataAttr>(
+                           attr.getValue())) {
+          emitOpenCLKernelArgMetadata(clArgMetadata, func.getNumArguments(),
+                                      llvmFunc, moduleTranslation);
         }
       }
     }
@@ -147,6 +152,79 @@ private:
       llvmFunc->setMetadata("intel_reqd_sub_group_size",
                             llvm::MDNode::get(vmCtx, attrMDArgs));
     }
+  }
+
+  void emitOpenCLKernelArgMetadata(
+      mlir::cir::OpenCLKernelArgMetadataAttr clArgMetadata, unsigned numArgs,
+      llvm::Function *llvmFunc,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto &vmCtx = moduleTranslation.getLLVMContext();
+
+    // MDNode for the kernel argument address space qualifiers.
+    SmallVector<llvm::Metadata *, 8> addressQuals;
+
+    // MDNode for the kernel argument access qualifiers (images only).
+    SmallVector<llvm::Metadata *, 8> accessQuals;
+
+    // MDNode for the kernel argument type names.
+    SmallVector<llvm::Metadata *, 8> argTypeNames;
+
+    // MDNode for the kernel argument base type names.
+    SmallVector<llvm::Metadata *, 8> argBaseTypeNames;
+
+    // MDNode for the kernel argument type qualifiers.
+    SmallVector<llvm::Metadata *, 8> argTypeQuals;
+
+    // MDNode for the kernel argument names.
+    SmallVector<llvm::Metadata *, 8> argNames;
+
+    auto lowerStringAttr = [&](mlir::Attribute strAttr) {
+      return llvm::MDString::get(
+          vmCtx, mlir::cast<mlir::StringAttr>(strAttr).getValue());
+    };
+
+    bool shouldEmitArgName = !!clArgMetadata.getName();
+    
+    auto addressSpaceValues =
+        clArgMetadata.getAddrSpace().getAsValueRange<mlir::IntegerAttr>();
+
+    for (auto &&[i, addrSpace] : llvm::enumerate(addressSpaceValues)) {
+      // Address space qualifier.
+      addressQuals.push_back(
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+              llvm::IntegerType::get(vmCtx, 32), addrSpace)));
+
+      // Access qualifier.
+      accessQuals.push_back(lowerStringAttr(clArgMetadata.getAccessQual()[i]));
+
+      // Type name.
+      argTypeNames.push_back(lowerStringAttr(clArgMetadata.getType()[i]));
+
+      // Base type name.
+      argBaseTypeNames.push_back(
+          lowerStringAttr(clArgMetadata.getBaseType()[i]));
+
+      // Type qualifier.
+      argTypeQuals.push_back(lowerStringAttr(clArgMetadata.getTypeQual()[i]));
+
+      // Argument name.
+      if (shouldEmitArgName)
+        argNames.push_back(lowerStringAttr(clArgMetadata.getName()[i]));
+    }
+
+    llvmFunc->setMetadata("kernel_arg_addr_space",
+                          llvm::MDNode::get(vmCtx, addressQuals));
+    llvmFunc->setMetadata("kernel_arg_access_qual",
+                          llvm::MDNode::get(vmCtx, accessQuals));
+    llvmFunc->setMetadata("kernel_arg_type",
+                          llvm::MDNode::get(vmCtx, argTypeNames));
+    llvmFunc->setMetadata("kernel_arg_base_type",
+                          llvm::MDNode::get(vmCtx, argBaseTypeNames));
+    llvmFunc->setMetadata("kernel_arg_type_qual",
+                          llvm::MDNode::get(vmCtx, argTypeQuals));
+    if (shouldEmitArgName)
+      llvmFunc->setMetadata("kernel_arg_name",
+                            llvm::MDNode::get(vmCtx, argNames));
   }
 };
 

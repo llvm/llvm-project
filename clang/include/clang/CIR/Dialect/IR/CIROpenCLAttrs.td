@@ -92,4 +92,59 @@ def OpenCLKernelMetadataAttr
 
 }
 
+//===----------------------------------------------------------------------===//
+// OpenCLKernelArgMetadataAttr
+//===----------------------------------------------------------------------===//
+
+def OpenCLKernelArgMetadataAttr
+    : CIR_Attr<"OpenCLKernelArgMetadata", "cl.kernel_arg_metadata"> {
+  
+  let summary = "OpenCL kernel argument metadata";
+  let description = [{
+    Provide the required information of an OpenCL kernel argument for the SPIR-V
+    backend.
+
+    All parameters are arrays, containing the information of the argument in
+    the same order as they appear in the source code.
+
+    The `addr_space` parameter is an array of I32 that provides the address
+    space of the argument. It's useful for special types like `image`, which
+    have implicit global address space.
+
+    Other parameters are arrays of strings that pass through the information
+    from the source code correspondingly.
+
+    All the fields are mandatory except for `name`, which is optional.
+
+    Example:
+    ```
+    #fn_attr = #cir<extra({cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<
+      addr_space = [1 : i32],
+      access_qual = ["none"],
+      type = ["char*"],
+      base_type = ["char*"],
+      type_qual = [""],
+      name = ["in"]
+    >})>
+
+    cir.func @kernel(%arg0: !s32i) extra(#fn_attr) {
+      cir.return
+    }
+    ```
+  }];
+
+  let parameters = (ins
+    "ArrayAttr":$addr_space,
+    "ArrayAttr":$access_qual,
+    "ArrayAttr":$type,
+    "ArrayAttr":$base_type,
+    "ArrayAttr":$type_qual,
+    OptionalParameter<"ArrayAttr">:$name
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+
+  let genVerifyDecl = 1;
+}
+
 #endif // MLIR_CIR_DIALECT_CIR_OPENCL_ATTRS
