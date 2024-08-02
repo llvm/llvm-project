@@ -9158,7 +9158,8 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       InnerLHS = ZExt->getOperand();
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS);
         AR && !AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
-        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true)) {
+        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true,
+                               /*OrNegative=*/true)) {
       auto Flags = AR->getNoWrapFlags();
       Flags = setFlags(Flags, SCEV::FlagNW);
       SmallVector<const SCEV *> Operands{AR->operands()};
@@ -10843,10 +10844,13 @@ bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
   return getUnsignedRangeMin(S) != 0;
 }
 
-bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero) {
-  auto NonRecursive = [this](const SCEV *S) {
+bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
+                                             bool OrNegative) {
+  auto NonRecursive = [this, OrNegative](const SCEV *S) {
     if (auto *C = dyn_cast<SCEVConstant>(S))
-      return C->getAPInt().isPowerOf2();
+      return C->getAPInt().isPowerOf2() ||
+             (OrNegative && C->getAPInt().isNegatedPowerOf2());
+
     // The vscale_range indicates vscale is a power-of-two.
     return isa<SCEVVScale>(S) && F.hasFnAttribute(Attribute::VScaleRange);
   };
@@ -12790,7 +12794,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (!isLoopInvariant(RHS, L))
       return false;
 
-    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true))
+    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true,
+                                /*OrNegative*/ true))
       return false;
 
     if (!ControlsOnlyExit || !loopHasNoAbnormalExits(L))

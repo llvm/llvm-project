@@ -21,6 +21,7 @@
 #include "asan_suppressions.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_dense_map.h"
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
@@ -56,6 +57,19 @@ struct GlobalRegistrationSite {
 };
 typedef InternalMmapVector<GlobalRegistrationSite> GlobalRegistrationSiteVector;
 static GlobalRegistrationSiteVector *global_registration_site_vector;
+
+static ListOfGlobals &GlobalsByIndicator(uptr odr_indicator) {
+  using MapOfGlobals = DenseMap<uptr, ListOfGlobals>;
+
+  static MapOfGlobals *globals_by_indicator = nullptr;
+  if (!globals_by_indicator) {
+    alignas(
+        alignof(MapOfGlobals)) static char placeholder[sizeof(MapOfGlobals)];
+    globals_by_indicator = new (placeholder) MapOfGlobals();
+  }
+
+  return (*globals_by_indicator)[odr_indicator];
+}
 
 ALWAYS_INLINE void PoisonShadowForGlobal(const Global *g, u8 value) {
   FastPoisonShadow(g->beg, g->size_with_redzone, value);
@@ -148,21 +162,24 @@ static void CheckODRViolationViaIndicator(const Global *g) {
   // Instrumentation requests to skip ODR check.
   if (g->odr_indicator == UINTPTR_MAX)
     return;
+
+  ListOfGlobals &relevant_globals = GlobalsByIndicator(g->odr_indicator);
+
   u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
-  if (*odr_indicator == UNREGISTERED) {
-    *odr_indicator = REGISTERED;
-    return;
-  }
-  // If *odr_indicator is DEFINED, some module have already registered
-  // externally visible symbol with the same name. This is an ODR violation.
-  for (const auto &l : list_of_all_globals) {
-    if (g->odr_indicator == l.g->odr_indicator &&
-        (flags()->detect_odr_violation >= 2 || g->size != l.g->size) &&
-        !IsODRViolationSuppressed(g->name)) {
-      ReportODRViolation(g, FindRegistrationSite(g), l.g,
-                         FindRegistrationSite(l.g));
+  if (*odr_indicator == REGISTERED) {
+    // If *odr_indicator is REGISTERED, some module have already registered
+    // externally visible symbol with the same name. This is an ODR violation.
+    for (const auto &l : relevant_globals) {
+      if ((flags()->detect_odr_violation >= 2 || g->size != l.g->size) &&
+          !IsODRViolationSuppressed(g->name))
+        ReportODRViolation(g, FindRegistrationSite(g), l.g,
+                           FindRegistrationSite(l.g));
     }
+  } else {  // UNREGISTERED
+    *odr_indicator = REGISTERED;
   }
+
+  AddGlobalToList(relevant_globals, g);
 }
 
 // Check ODR violation for given global G by checking if it's already poisoned.

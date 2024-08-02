@@ -1599,6 +1599,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":Demangle",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
