@@ -174,8 +174,7 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   // For the reason string, we want the string not the address, so fetch that.
   std::string reason_string;
   Status error;
-  size_t str_len =
-      process->ReadCStringFromMemory(reason_addr, reason_string, error);
+  process->ReadCStringFromMemory(reason_addr, reason_string, error);
   if (error.Fail()) {
     // Even if we couldn't read the string, return the other data.
     LLDB_LOG(log, "Couldn't fetch reason string: {0}.", error);
