@@ -5407,8 +5407,8 @@ def note_dependent_function_template_spec_discard_reason : Note<
   "candidate ignored: %select{not a function template|"
   "not a member of the enclosing %select{class template|"
   "namespace; did you mean to explicitly qualify the specialization?}1}0">;
-def warn_diag_specialization : Warning<
-  "specializing a template which should not be specialized">,
+def warn_invalid_specialization : Warning<
+  "%0 should not be specialized">,
   DefaultError, InGroup<InvalidSpecialization>;
 
 // C++ class template specializations and out-of-line definitions
