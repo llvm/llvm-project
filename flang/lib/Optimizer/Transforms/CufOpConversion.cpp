@@ -31,12 +31,14 @@ namespace {
 template <typename OpTy>
 static bool isBoxGlobal(OpTy op) {
   if (auto declareOp =
-          mlir::dyn_cast<fir::DeclareOp>(op.getBox().getDefiningOp())) {
-    if (mlir::isa<fir::AddrOfOp>(declareOp.getMemref().getDefiningOp()))
+          mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp())) {
+    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
+            declareOp.getMemref().getDefiningOp()))
       return true;
-  } else if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(
+  } else if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
                  op.getBox().getDefiningOp())) {
-    if (mlir::isa<fir::AddrOfOp>(declareOp.getMemref().getDefiningOp()))
+    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
+            declareOp.getMemref().getDefiningOp()))
       return true;
   }
   return false;
