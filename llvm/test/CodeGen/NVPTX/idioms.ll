@@ -113,9 +113,9 @@ define %struct.S16 @i32_to_2xi16_shr(i32 noundef %i){
   %h32 = ashr i32 %i1, 16
   %h = trunc i32 %h32 to i16
 ; CHECK:      ld.param.u32    %[[R32:r[0-9]+]], [i32_to_2xi16_shr_param_0];
-; CHECK:      shr.s32         %[[R32H:r[0-9]+]], %[[R32]], 31;
-; CHECK:      cvt.u16.u32     %rs{{[0-9+]}}, %[[R32H]]
+; CHECK:      shr.s32         %[[R32H:r[0-9]+]], %[[R32]], 16;
 ; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
+; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32H]];
   %s0 = insertvalue %struct.S16 poison, i16 %l, 0
   %s1 = insertvalue %struct.S16 %s0, i16 %h, 1
   ret %struct.S16 %s1

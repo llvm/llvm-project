@@ -631,15 +631,17 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; SDAG-NEXT:    v_and_or_b32 v0, v0, 1, v4
 ; SDAG-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v0
 ; SDAG-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v5, vcc
-; SDAG-NEXT:    v_lshrrev_b64 v[0:1], 2, v[4:5]
 ; SDAG-NEXT:    v_addc_co_u32_e32 v6, vcc, 0, v6, vcc
+; SDAG-NEXT:    v_lshrrev_b64 v[0:1], 2, v[4:5]
+; SDAG-NEXT:    v_lshlrev_b32_e32 v7, 30, v6
+; SDAG-NEXT:    v_or_b32_e32 v10, v1, v7
 ; SDAG-NEXT:    v_and_b32_e32 v1, 0x800000, v5
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; SDAG-NEXT:    v_alignbit_b32 v10, v6, v5, 2
 ; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SDAG-NEXT:  ; %bb.11: ; %itofp-if-then20
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], 3, v[4:5]
-; SDAG-NEXT:    v_alignbit_b32 v10, v6, v5, 3
+; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 29, v6
+; SDAG-NEXT:    v_or_b32_e32 v10, v1, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v8
 ; SDAG-NEXT:  ; %bb.12: ; %Flow
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
