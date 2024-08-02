@@ -11,6 +11,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/allocatable.h"
+#include "flang/Runtime/allocator-registry.h"
 
 #include "cuda.h"
 
