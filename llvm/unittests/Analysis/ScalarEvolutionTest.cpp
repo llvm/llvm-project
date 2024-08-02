@@ -1117,10 +1117,12 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 %sz, i32 %pp) { "
+      "define void @foo(i32 %sz, i32 %pp, i32 %x) { "
       "entry: "
       "  %v0 = add i32 %pp, 0 "
       "  %v3 = add i32 %pp, 3 "
+      "  %vx = add i32 %pp, %x "
+      "  %vx3 = add i32 %vx, 3 "
       "  br label %loop.body "
       "loop.body: "
       "  %iv = phi i32 [ %iv.next, %loop.body ], [ 0, %entry ] "
@@ -1141,6 +1143,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     auto *ScevV0 = SE.getSCEV(getInstructionByName(F, "v0")); // %pp
     auto *ScevV3 = SE.getSCEV(getInstructionByName(F, "v3")); // (3 + %pp)
+    auto *ScevVX = SE.getSCEV(getInstructionByName(F, "vx")); // (%pp + %x)
+    // (%pp + %x + 3)
+    auto *ScevVX3 = SE.getSCEV(getInstructionByName(F, "vx3"));
     auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
     auto *ScevXA = SE.getSCEV(getInstructionByName(F, "xa")); // {%pp,+,1}
     auto *ScevYY = SE.getSCEV(getInstructionByName(F, "yy")); // {(3 + %pp),+,1}
@@ -1162,6 +1167,7 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevV0, ScevV3), -3);
     EXPECT_EQ(diff(ScevV0, ScevV0), 0);
     EXPECT_EQ(diff(ScevV3, ScevV3), 0);
+    EXPECT_EQ(diff(ScevVX3, ScevVX), 3);
     EXPECT_EQ(diff(ScevIV, ScevIV), 0);
     EXPECT_EQ(diff(ScevXA, ScevXB), 0);
     EXPECT_EQ(diff(ScevXA, ScevYY), -3);
