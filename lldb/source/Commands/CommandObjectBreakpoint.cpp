@@ -853,7 +853,7 @@ protected:
     BreakpointIDList valid_bp_ids;
 
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::disablePerm);
 
     if (result.Succeeded()) {
@@ -934,7 +934,7 @@ protected:
       // Particular breakpoint selected; enable that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -1040,7 +1040,7 @@ protected:
       BreakpointIDList valid_bp_ids;
 
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -1185,7 +1185,7 @@ protected:
       // Particular breakpoints selected; show info about that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (result.Succeeded()) {
@@ -1464,7 +1464,7 @@ protected:
 
       if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, &target, result, &excluded_bp_ids,
+            command, target, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
         if (!result.Succeeded())
           return;
@@ -1483,7 +1483,7 @@ protected:
       }
     } else {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::deletePerm);
       if (!result.Succeeded())
         return;
@@ -1786,7 +1786,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -1860,7 +1860,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::deletePerm);
 
     if (result.Succeeded()) {
@@ -2333,7 +2333,7 @@ protected:
     BreakpointIDList valid_bp_ids;
     if (!command.empty()) {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (!result.Succeeded()) {
@@ -2415,7 +2415,7 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;
 
 void CommandObjectMultiwordBreakpoint::VerifyIDs(
-    Args &args, Target *target, bool allow_locations,
+    Args &args, Target &target, bool allow_locations,
     CommandReturnObject &result, BreakpointIDList *valid_ids,
     BreakpointName::Permissions ::PermissionKinds purpose) {
   // args can be strings representing 1). integers (for breakpoint ids)
@@ -2432,9 +2432,9 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   Args temp_args;
 
   if (args.empty()) {
-    if (target->GetLastCreatedBreakpoint()) {
+    if (target.GetLastCreatedBreakpoint()) {
       valid_ids->AddBreakpointID(BreakpointID(
-          target->GetLastCreatedBreakpoint()->GetID(), LLDB_INVALID_BREAK_ID));
+          target.GetLastCreatedBreakpoint()->GetID(), LLDB_INVALID_BREAK_ID));
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError(
@@ -2450,7 +2450,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // into TEMP_ARGS.
 
   if (llvm::Error err = BreakpointIDList::FindAndReplaceIDRanges(
-          args, target, allow_locations, purpose, temp_args)) {
+          args, &target, allow_locations, purpose, temp_args)) {
     result.SetError(std::move(err));
     return;
   }
@@ -2474,7 +2474,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   for (size_t i = 0; i < count; ++i) {
     BreakpointID cur_bp_id = valid_ids->GetBreakpointIDAtIndex(i);
     Breakpoint *breakpoint =
-        target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+        target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
     if (breakpoint != nullptr) {
       const size_t num_locations = breakpoint->GetNumLocations();
       if (static_cast<size_t>(cur_bp_id.GetLocationID()) > num_locations) {
