@@ -38,12 +38,9 @@ struct GlobalListNode {
   GlobalListNode *next = nullptr;
 };
 typedef IntrusiveList<GlobalListNode> ListOfGlobals;
-typedef DenseMap<uptr, ListOfGlobals> MapOfGlobals;
 
 static Mutex mu_for_globals;
 static ListOfGlobals list_of_all_globals SANITIZER_GUARDED_BY(mu_for_globals);
-static MapOfGlobals map_of_globals_by_indicator
-    SANITIZER_GUARDED_BY(mu_for_globals);
 
 static const int kDynamicInitGlobalsInitialCapacity = 512;
 struct DynInitGlobal {
@@ -62,6 +59,20 @@ struct GlobalRegistrationSite {
 };
 typedef InternalMmapVector<GlobalRegistrationSite> GlobalRegistrationSiteVector;
 static GlobalRegistrationSiteVector *global_registration_site_vector;
+
+static ListOfGlobals &GlobalsByIndicator(uptr odr_indicator)
+    SANITIZER_REQUIRES(mu_for_globals) {
+  using MapOfGlobals = DenseMap<uptr, ListOfGlobals>;
+
+  static MapOfGlobals *globals_by_indicator = nullptr;
+  if (!globals_by_indicator) {
+    alignas(
+        alignof(MapOfGlobals)) static char placeholder[sizeof(MapOfGlobals)];
+    globals_by_indicator = new (placeholder) MapOfGlobals();
+  }
+
+  return (*globals_by_indicator)[odr_indicator];
+}
 
 ALWAYS_INLINE void PoisonShadowForGlobal(const Global *g, u8 value) {
   FastPoisonShadow(g->beg, g->size_with_redzone, value);
@@ -156,8 +167,7 @@ static void CheckODRViolationViaIndicator(const Global *g)
   if (g->odr_indicator == UINTPTR_MAX)
     return;
 
-  ListOfGlobals &relevant_globals =
-      map_of_globals_by_indicator[g->odr_indicator];
+  ListOfGlobals &relevant_globals = GlobalsByIndicator(g->odr_indicator);
 
   u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
   if (*odr_indicator == REGISTERED) {
