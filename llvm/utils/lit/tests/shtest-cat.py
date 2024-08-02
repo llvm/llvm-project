@@ -1,7 +1,7 @@
 ## Test the cat command
 
 # RUN: not %{lit} -a -v %{inputs}/shtest-cat \
-# RUN: | FileCheck -match-full-lines %s
+# RUN: | FileCheck -match-full-lines %s --dump-input-context=1000
 #
 # END.
 
@@ -25,3 +25,7 @@
 # CHECK: cat {{.+}}/newline | FileCheck {{.*}}
 # CHECK: # executed command: cat {{.*}}
 # CHECK: # executed command: FileCheck {{.*}}
+# CHECK: cat {{.+}}/allchars > {{.*}}
+# CHECK: # executed command: cat {{.*}}
+# CHECK: diff {{.+}}/allchars {{.*}}
+# CHECK: # executed command: diff {{.*}}

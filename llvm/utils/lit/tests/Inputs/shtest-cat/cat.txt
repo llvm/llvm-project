@@ -1,6 +1,8 @@
 ## Tests to check cat output
 
 # RUN: cat %S/txt-files/newline | FileCheck %s --check-prefix=NEWLINE
+# RUN: cat %S/txt-files/allchars > %t
+# RUN: diff %S/txt-files/allchars %t
 
 # NEWLINE: first
 # NEWLINE-EMPTY:
