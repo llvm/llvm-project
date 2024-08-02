@@ -585,6 +585,10 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
   // CHECK_PTX63_SM70: cmpxchg ptr {{.*}} seq_cst seq_cst, align 2
   // CHECK_PTX63_SM70-NEXT: extractvalue { i16, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_us(usp, 0, us);
+  // CHECK_PTX63_SM70: call i16 @llvm.nvvm.atomic.cas.gen.i.cta.i16.p0
+  __nvvm_atom_cta_cas_gen_us(usp, 0, us);
+  // CHECK_PTX63_SM70: call i16 @llvm.nvvm.atomic.cas.gen.i.sys.i16.p0
+  __nvvm_atom_sys_cas_gen_us(usp, 0, us);
 #endif
 
   // CHECK: ret
