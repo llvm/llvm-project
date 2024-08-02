@@ -58,7 +58,7 @@ def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[EmitCFloatType, IntegerIndexOrOpa
 def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
   let summary = "Addition operation";
   let description = [{
-    With the `add` operation the arithmetic operator + (addition) can
+    With the `emitc.add` operation the arithmetic operator + (addition) can
     be applied.
 
     Example:
@@ -81,7 +81,7 @@ def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
 def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
   let summary = "Apply operation";
   let description = [{
-    With the `apply` operation the operators & (address of) and * (contents of)
+    With the `emitc.apply` operation the operators & (address of) and * (contents of)
     can be applied to a single operand.
 
     Example:
@@ -110,7 +110,7 @@ def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
 def EmitC_BitwiseAndOp : EmitC_BinaryOp<"bitwise_and", [CExpression]> {
   let summary = "Bitwise and operation";
   let description = [{
-    With the `bitwise_and` operation the bitwise operator & (and) can
+    With the `emitc.bitwise_and` operation the bitwise operator & (and) can
     be applied.
 
     Example:
@@ -129,7 +129,7 @@ def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift",
     [CExpression]> {
   let summary = "Bitwise left shift operation";
   let description = [{
-    With the `bitwise_left_shift` operation the bitwise operator <<
+    With the `emitc.bitwise_left_shift` operation the bitwise operator <<
     (left shift) can be applied.
 
     Example:
@@ -147,7 +147,7 @@ def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift",
 def EmitC_BitwiseNotOp : EmitC_UnaryOp<"bitwise_not", [CExpression]> {
   let summary = "Bitwise not operation";
   let description = [{
-    With the `bitwise_not` operation the bitwise operator ~ (not) can
+    With the `emitc.bitwise_not` operation the bitwise operator ~ (not) can
     be applied.
 
     Example:
@@ -165,7 +165,7 @@ def EmitC_BitwiseNotOp : EmitC_UnaryOp<"bitwise_not", [CExpression]> {
 def EmitC_BitwiseOrOp : EmitC_BinaryOp<"bitwise_or", [CExpression]> {
   let summary = "Bitwise or operation";
   let description = [{
-    With the `bitwise_or` operation the bitwise operator | (or)
+    With the `emitc.bitwise_or` operation the bitwise operator | (or)
     can be applied.
 
     Example:
@@ -184,7 +184,7 @@ def EmitC_BitwiseRightShiftOp : EmitC_BinaryOp<"bitwise_right_shift",
     [CExpression]> {
   let summary = "Bitwise right shift operation";
   let description = [{
-    With the `bitwise_right_shift` operation the bitwise operator >>
+    With the `emitc.bitwise_right_shift` operation the bitwise operator >>
     (right shift) can be applied.
 
     Example:
@@ -202,7 +202,7 @@ def EmitC_BitwiseRightShiftOp : EmitC_BinaryOp<"bitwise_right_shift",
 def EmitC_BitwiseXorOp : EmitC_BinaryOp<"bitwise_xor", [CExpression]> {
   let summary = "Bitwise xor operation";
   let description = [{
-    With the `bitwise_xor` operation the bitwise operator ^ (xor)
+    With the `emitc.bitwise_xor` operation the bitwise operator ^ (xor)
     can be applied.
 
     Example:
@@ -220,7 +220,7 @@ def EmitC_BitwiseXorOp : EmitC_BinaryOp<"bitwise_xor", [CExpression]> {
 def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpression]> {
   let summary = "Opaque call operation";
   let description = [{
-    The `call_opaque` operation represents a C++ function call. The callee
+    The `emitc.call_opaque` operation represents a C++ function call. The callee
     can be an arbitrary non-empty string. The call allows specifying order
     of operands and attributes in the call as follows:
 
@@ -269,7 +269,7 @@ def EmitC_CastOp : EmitC_Op<"cast",
      SameOperandsAndResultShape]> {
   let summary = "Cast operation";
   let description = [{
-    The `cast` operation performs an explicit type conversion and is emitted
+    The `emitc.cast` operation performs an explicit type conversion and is emitted
     as a C-style cast expression. It can be applied to integer, float, index
     and EmitC types.
 
@@ -293,7 +293,7 @@ def EmitC_CastOp : EmitC_Op<"cast",
 def EmitC_CmpOp : EmitC_BinaryOp<"cmp", [CExpression]> {
   let summary = "Comparison operation";
   let description = [{
-    With the `cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
+    With the `emitc.cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
     can be applied.
 
     Its first argument is an attribute that defines the comparison operator:
@@ -334,10 +334,10 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", [CExpression]> {
 def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let summary = "Constant operation";
   let description = [{
-    The `constant` operation produces an SSA value equal to some constant
+    The `emitc.constant` operation produces an SSA value equal to some constant
     specified by an attribute. This can be used to form simple integer and
     floating point constants, as well as more exotic things like tensor
-    constants. The `constant` operation also supports the EmitC opaque
+    constants. The `emitc.constant` operation also supports the EmitC opaque
     attribute and the EmitC opaque type. Since folding is supported,
     it should not be used with pointers.
 
@@ -363,7 +363,7 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
 def EmitC_DivOp : EmitC_BinaryOp<"div", [CExpression]> {
   let summary = "Division operation";
   let description = [{
-    With the `div` operation the arithmetic operator / (division) can
+    With the `emitc.div` operation the arithmetic operator / (division) can
     be applied.
 
     Example:
@@ -389,7 +389,7 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
        NoRegionArguments]> {
   let summary = "Expression operation";
   let description = [{
-    The `expression` operation returns a single SSA value which is yielded by
+    The `emitc.expression` operation returns a single SSA value which is yielded by
     its single-basic-block region. The operation doesn't take any arguments.
 
     As the operation is to be emitted as a C expression, the operations within
@@ -593,8 +593,8 @@ def EmitC_DeclareFuncOp : EmitC_Op<"declare_func", [
 ]> {
   let summary = "An operation to declare a function";
   let description = [{
-    The `declare_func` operation allows to insert a function declaration for an
-    `emitc.func` at a specific position. The operation only requires the `callee`
+    The `emitc.declare_func` operation allows to insert a function declaration for an
+    `emitc.func` at a specific position. The operation only requires the "callee"
     of the `emitc.func` to be specified as an attribute.
 
     Example:
@@ -733,7 +733,7 @@ def EmitC_IncludeOp
     : EmitC_Op<"include", [HasParent<"ModuleOp">]> {
   let summary = "Include operation";
   let description = [{
-    The `include` operation allows to define a source file inclusion via the
+    The `emitc.include` operation allows to define a source file inclusion via the
     `#include` directive.
 
     Example:
@@ -762,7 +762,7 @@ def EmitC_IncludeOp
 def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   let summary = "Literal operation";
   let description = [{
-    The `literal` operation produces an SSA value equal to some constant
+    The `emitc.literal` operation produces an SSA value equal to some constant
     specified by an attribute.
   }];
 
@@ -776,7 +776,7 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
 def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", [CExpression]> {
   let summary = "Logical and operation";
   let description = [{
-    With the `logical_and` operation the logical operator && (and) can
+    With the `emitc.logical_and` operation the logical operator && (and) can
     be applied.
 
     Example:
@@ -797,7 +797,7 @@ def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", [CExpression]> {
 def EmitC_LogicalNotOp : EmitC_UnaryOp<"logical_not", [CExpression]> {
   let summary = "Logical not operation";
   let description = [{
-    With the `logical_not` operation the logical operator ! (negation) can
+    With the `emitc.logical_not` operation the logical operator ! (negation) can
     be applied.
 
     Example:
@@ -818,7 +818,7 @@ def EmitC_LogicalNotOp : EmitC_UnaryOp<"logical_not", [CExpression]> {
 def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
   let summary = "Logical or operation";
   let description = [{
-    With the `logical_or` operation the logical operator || (inclusive or)
+    With the `emitc.logical_or` operation the logical operator || (inclusive or)
     can be applied.
 
     Example:
@@ -839,7 +839,7 @@ def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
 def EmitC_MulOp : EmitC_BinaryOp<"mul", [CExpression]> {
   let summary = "Multiplication operation";
   let description = [{
-    With the `mul` operation the arithmetic operator * (multiplication) can
+    With the `emitc.mul` operation the arithmetic operator * (multiplication) can
     be applied.
 
     Example:
@@ -863,7 +863,7 @@ def EmitC_MulOp : EmitC_BinaryOp<"mul", [CExpression]> {
 def EmitC_RemOp : EmitC_BinaryOp<"rem", [CExpression]> {
   let summary = "Remainder operation";
   let description = [{
-    With the `rem` operation the arithmetic operator % (remainder) can
+    With the `emitc.rem` operation the arithmetic operator % (remainder) can
     be applied.
 
     Example:
@@ -885,7 +885,7 @@ def EmitC_RemOp : EmitC_BinaryOp<"rem", [CExpression]> {
 def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   let summary = "Subtraction operation";
   let description = [{
-    With the `sub` operation the arithmetic operator - (subtraction) can
+    With the `emitc.sub` operation the arithmetic operator - (subtraction) can
     be applied.
 
     Example:
@@ -911,7 +911,7 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
 def EmitC_MemberOp : EmitC_Op<"member"> {
   let summary = "Member operation";
   let description = [{
-    With the `member` operation the member access operator `.` can be
+    With the `emitc.member` operation the member access operator `.` can be
     applied.
 
     Example:
@@ -932,7 +932,7 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
 def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
   let summary = "Member of pointer operation";
   let description = [{
-    With the `member_of_ptr` operation the member access operator `->`
+    With the `emitc.member_of_ptr` operation the member access operator `->`
     can be applied.
 
     Example:
@@ -954,7 +954,7 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
     [AllTypesMatch<["true_value", "false_value", "result"]>, CExpression]> {
   let summary = "Conditional (ternary) operation";
   let description = [{
-    With the `conditional` operation the ternary conditional operator can
+    With the `emitc.conditional` operation the ternary conditional operator can
     be applied.
 
     Example:
@@ -983,7 +983,7 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
 def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", [CExpression]> {
   let summary = "Unary minus operation";
   let description = [{
-    With the `unary_minus` operation the unary operator - (minus) can be
+    With the `emitc.unary_minus` operation the unary operator - (minus) can be
     applied.
 
     Example:
@@ -1001,7 +1001,7 @@ def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", [CExpression]> {
 def EmitC_UnaryPlusOp : EmitC_UnaryOp<"unary_plus", [CExpression]> {
   let summary = "Unary plus operation";
   let description = [{
-    With the `unary_plus` operation the unary operator + (plus) can be
+    With the `emitc.unary_plus` operation the unary operator + (plus) can be
     applied.
 
     Example:
@@ -1019,13 +1019,13 @@ def EmitC_UnaryPlusOp : EmitC_UnaryOp<"unary_plus", [CExpression]> {
 def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let summary = "Variable operation";
   let description = [{
-    The `variable` operation produces an SSA value equal to some value
+    The `emitc.variable` operation produces an SSA value equal to some value
     specified by an attribute. This can be used to form simple integer and
     floating point variables, as well as more exotic things like tensor
-    variables. The `variable` operation also supports the EmitC opaque
+    variables. The `emitc.variable` operation also supports the EmitC opaque
     attribute and the EmitC opaque type. If further supports the EmitC
     pointer type, whereas folding is not supported.
-    The `variable` is emitted as a C/C++ local variable.
+    The `emitc.variable` is emitted as a C/C++ local variable.
 
     Example:
 
@@ -1129,7 +1129,7 @@ def EmitC_GetGlobalOp : EmitC_Op<"get_global",
 def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
   let summary = "Verbatim operation";
   let description = [{
-    The `verbatim` operation produces no results and the value is emitted as is
+    The `emitc.verbatim` operation produces no results and the value is emitted as is
     followed by a line break  ('\n' character) during translation.
 
     Note: Use with caution. This operation can have arbitrary effects on the
@@ -1163,7 +1163,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
 def EmitC_AssignOp : EmitC_Op<"assign", []> {
   let summary = "Assign operation";
   let description = [{
-    The `assign` operation stores an SSA value to the location designated by an
+    The `emitc.assign` operation stores an SSA value to the location designated by an
     EmitC variable. This operation doesn't return any value. The assigned value
     must be of the same type as the variable being assigned. The operation is
     emitted as a C/C++ '=' operator.
@@ -1191,11 +1191,11 @@ def EmitC_YieldOp : EmitC_Op<"yield",
       [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp"]>]> {
   let summary = "block termination operation";
   let description = [{
-    "yield" terminates its parent EmitC op's region, optionally yielding
+    The `emitc.yield` terminates its parent EmitC op's region, optionally yielding
     an SSA value. The semantics of how the values are yielded is defined by the
     parent operation.
-    If "yield" has an operand, the operand must match the parent operation's
-    result. If the parent operation defines no values, then the "emitc.yield"
+    If `emitc.yield` has an operand, the operand must match the parent operation's
+    result. If the parent operation defines no values, then the `emitc.yield`
     may be left out in the custom syntax and the builders will insert one
     implicitly. Otherwise, it has to be present in the syntax to indicate which
     value is yielded.
@@ -1216,7 +1216,7 @@ def EmitC_IfOp : EmitC_Op<"if",
     RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
-    The `if` operation represents an if-then-else construct for
+    The `emitc.if` operation represents an if-then-else construct for
     conditionally executing two regions of code. The operand to an if operation
     is a boolean value. For example:
 
@@ -1268,7 +1268,7 @@ def EmitC_IfOp : EmitC_Op<"if",
 def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
   let summary = "Subscript operation";
   let description = [{
-    With the `subscript` operation the subscript operator `[]` can be applied
+    With the `emitc.subscript` operation the subscript operator `[]` can be applied
     to variables or arguments of array, pointer and opaque type.
 
     Example:
