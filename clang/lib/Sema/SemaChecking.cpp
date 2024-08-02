@@ -2095,7 +2095,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
 
   FPOptions FPO;
-
   switch (BuiltinID) {
   case Builtin::BI__builtin_cpu_supports:
   case Builtin::BI__builtin_cpu_is:
