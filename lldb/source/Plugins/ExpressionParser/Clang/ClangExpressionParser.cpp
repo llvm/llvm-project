@@ -440,12 +440,6 @@ static void SetupLangOpts(CompilerInstance &compiler,
   // Defaults to lldb::eLanguageTypeUnknown.
   lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
 
-  // If the expression is being evaluated in the context of an existing stack
-  // frame, we introspect to see if the language runtime is available.
-
-  lldb::StackFrameSP frame_sp = exe_scope->CalculateStackFrame();
-  lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
-
   // Make sure the user hasn't provided a preferred execution language with
   // `expression --language X -- ...`
   if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
@@ -634,8 +628,6 @@ ClangExpressionParser::ClangExpressionParser(
   std::string abi;
   ArchSpec target_arch;
   target_arch = target_sp->GetArchitecture();
-
-  const auto target_machine = target_arch.GetMachine();
 
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
