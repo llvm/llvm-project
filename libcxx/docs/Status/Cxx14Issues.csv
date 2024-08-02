@@ -99,7 +99,7 @@
 "`LWG2284 <https://wg21.link/LWG2284>`__","Inconsistency in allocator_traits::max_size","Chicago","|Complete|","",""
 "`LWG2298 <https://wg21.link/LWG2298>`__","``is_nothrow_constructible``\  is always false because of create<>","Chicago","|Complete|","",""
 "`LWG2300 <https://wg21.link/LWG2300>`__","Redundant sections for map and multimap members should be removed","Chicago","|Complete|","",""
-"NB comment: GB9","Remove gets from C++14","Chicago","|Complete|","",""
+"`LWG2249 <https://wg21.link/LWG2249>`__","NB comment GB9: Remove gets from C++14","Chicago","|Complete|","",""
 "","","","","",""
 "`LWG2135 <https://wg21.link/LWG2135>`__","Unclear requirement for exceptions thrown in condition_variable::wait()","Issaquah","|Complete|","",""
 "`LWG2291 <https://wg21.link/LWG2291>`__","std::hash is vulnerable to collision DoS attack","Issaquah","|Complete|","",""
