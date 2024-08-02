@@ -6115,11 +6115,11 @@ def BlendScaleCommuteImm2to4 : SDNodeXForm<timm, [{
   return getI8Imm(NewImm ^ 0xf, SDLoc(N));
 }]>;
 
-let Predicates = [HasAVX, NoAVX10_2] in {
+let Predicates = [HasAVX] in {
   let isCommutable = 0 in {
-    defm VMPSADBW : SS41I_binop_rmi<0x42, "vmpsadbw", X86Vmpsadbw,
-                                    v8i16, VR128, load, i128mem, 0,
-                                    SchedWriteMPSAD.XMM>, VEX, VVVV, WIG;
+    defm VMPSADBW : SS41I_binop_rmi_int<0x42, "vmpsadbw", int_x86_sse41_mpsadbw,
+                                        VR128, load, i128mem, 0,
+                                        SchedWriteMPSAD.XMM>, VEX, VVVV, WIG;
   }
 
 let Uses = [MXCSR], mayRaiseFPException = 1 in {
@@ -6138,19 +6138,19 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
 }
 }
 
-let Predicates = [HasAVX2, NoAVX10_2] in {
+let Predicates = [HasAVX2] in {
   let isCommutable = 0 in {
-  defm VMPSADBWY : SS41I_binop_rmi<0x42, "vmpsadbw", X86Vmpsadbw,
-                                   v16i16, VR256, load, i256mem, 0,
-                                   SchedWriteMPSAD.YMM>, VEX, VVVV, VEX_L, WIG;
+  defm VMPSADBWY : SS41I_binop_rmi_int<0x42, "vmpsadbw", int_x86_avx2_mpsadbw,
+                                  VR256, load, i256mem, 0,
+                                  SchedWriteMPSAD.YMM>, VEX, VVVV, VEX_L, WIG;
   }
 }
 
 let Constraints = "$src1 = $dst" in {
   let isCommutable = 0 in {
-  defm MPSADBW : SS41I_binop_rmi<0x42, "mpsadbw", X86Vmpsadbw,
-                                 v8i16, VR128, memop, i128mem, 1,
-                                 SchedWriteMPSAD.XMM>;
+  defm MPSADBW : SS41I_binop_rmi_int<0x42, "mpsadbw", int_x86_sse41_mpsadbw,
+                                     VR128, memop, i128mem, 1,
+                                     SchedWriteMPSAD.XMM>;
   }
 
   let ExeDomain = SSEPackedSingle in

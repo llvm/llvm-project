@@ -872,10 +872,7 @@ enum : uint64_t {
   EVEX_NF = 1ULL << EVEX_NFShift,
   // TwoConditionalOps - Set if this instruction has two conditional operands
   TwoConditionalOps_Shift = EVEX_NFShift + 1,
-  TwoConditionalOps = 1ULL << TwoConditionalOps_Shift,
-  // EVEX_U - Set if this instruction has EVEX.U field set.
-  EVEX_UShift = TwoConditionalOps_Shift + 1,
-  EVEX_U = 1ULL << EVEX_UShift
+  TwoConditionalOps = 1ULL << TwoConditionalOps_Shift
 };
 
 /// \returns true if the instruction with given opcode is a prefix.
