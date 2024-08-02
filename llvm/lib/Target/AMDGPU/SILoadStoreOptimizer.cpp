@@ -1712,9 +1712,11 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatStorePair(
 }
 
 static bool needsConstrainedOpcode(const GCNSubtarget &STM,
-                                   const MachineMemOperand *MMO,
+                                   ArrayRef<MachineMemOperand *> MMOs,
                                    unsigned Width) {
-  return STM.isXNACKEnabled() && MMO->getAlign().value() < Width * 4;
+  // Conservatively returns true if not found the MMO.
+  return STM.isXNACKEnabled() &&
+         (MMOs.size() != 1 || MMOs[0]->getAlign().value() < Width * 4);
 }
 
 unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
@@ -1737,8 +1739,8 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
   case S_BUFFER_LOAD_IMM: {
     // If XNACK is enabled, use the constrained opcodes when the first load is
     // under-aligned.
-    const MachineMemOperand *MMO = *CI.I->memoperands_begin();
-    bool NeedsConstrainedOpc = MMO && needsConstrainedOpcode(*STM, MMO, Width);
+    bool NeedsConstrainedOpc =
+        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
@@ -1759,8 +1761,8 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
   case S_BUFFER_LOAD_SGPR_IMM: {
     // If XNACK is enabled, use the constrained opcodes when the first load is
     // under-aligned.
-    const MachineMemOperand *MMO = *CI.I->memoperands_begin();
-    bool NeedsConstrainedOpc = MMO && needsConstrainedOpcode(*STM, MMO, Width);
+    bool NeedsConstrainedOpc =
+        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
@@ -1781,8 +1783,8 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
   case S_LOAD_IMM: {
     // If XNACK is enabled, use the constrained opcodes when the first load is
     // under-aligned.
-    const MachineMemOperand *MMO = *CI.I->memoperands_begin();
-    bool NeedsConstrainedOpc = MMO && needsConstrainedOpcode(*STM, MMO, Width);
+    bool NeedsConstrainedOpc =
+        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
