@@ -42,15 +42,13 @@ typedef IntrusiveList<GlobalListNode> ListOfGlobals;
 static Mutex mu_for_globals;
 static ListOfGlobals list_of_all_globals SANITIZER_GUARDED_BY(mu_for_globals);
 
-static const int kDynamicInitGlobalsInitialCapacity = 512;
 struct DynInitGlobal {
-  Global g;
-  bool initialized;
+  Global g = {};
+  bool initialized = false;
+  DynInitGlobal *next = nullptr;
 };
-typedef InternalMmapVector<DynInitGlobal> VectorOfGlobals;
-// Lazy-initialized and never deleted.
-static VectorOfGlobals *dynamic_init_globals
-    SANITIZER_GUARDED_BY(mu_for_globals);
+typedef IntrusiveList<DynInitGlobal> DynInitGlobals;
+static DynInitGlobals dynamic_init_globals SANITIZER_GUARDED_BY(mu_for_globals);
 
 // We want to remember where a certain range of globals was registered.
 struct GlobalRegistrationSite {
@@ -259,12 +257,8 @@ static void RegisterGlobal(const Global *g) SANITIZER_REQUIRES(mu_for_globals) {
   AddGlobalToList(list_of_all_globals, g);
 
   if (g->has_dynamic_init) {
-    if (!dynamic_init_globals) {
-      dynamic_init_globals = new (GetGlobalLowLevelAllocator()) VectorOfGlobals;
-      dynamic_init_globals->reserve(kDynamicInitGlobalsInitialCapacity);
-    }
-    DynInitGlobal dyn_global = { *g, false };
-    dynamic_init_globals->push_back(dyn_global);
+    dynamic_init_globals.push_back(new (GetGlobalLowLevelAllocator())
+                                       DynInitGlobal{*g, false});
   }
 }
 
@@ -294,11 +288,8 @@ void StopInitOrderChecking() {
   if (!flags()->check_initialization_order)
     return;
   Lock lock(&mu_for_globals);
-  if (!dynamic_init_globals)
-    return;
   flags()->check_initialization_order = false;
-  for (uptr i = 0, n = dynamic_init_globals->size(); i < n; ++i) {
-    DynInitGlobal &dyn_g = (*dynamic_init_globals)[i];
+  for (const DynInitGlobal &dyn_g : dynamic_init_globals) {
     const Global *g = &dyn_g.g;
     // Unpoison the whole global.
     PoisonShadowForGlobal(g, 0);
@@ -465,12 +456,9 @@ void __asan_before_dynamic_init(const char *module_name) {
   CHECK(module_name);
   CHECK(AsanInited());
   Lock lock(&mu_for_globals);
-  if (!dynamic_init_globals)
-    return;
   if (flags()->report_globals >= 3)
     Printf("DynInitPoison module: %s\n", module_name);
-  for (uptr i = 0, n = dynamic_init_globals->size(); i < n; ++i) {
-    DynInitGlobal &dyn_g = (*dynamic_init_globals)[i];
+  for (DynInitGlobal &dyn_g : dynamic_init_globals) {
     const Global *g = &dyn_g.g;
     if (dyn_g.initialized)
       continue;
@@ -489,11 +477,8 @@ void __asan_after_dynamic_init() {
     return;
   CHECK(AsanInited());
   Lock lock(&mu_for_globals);
-  if (!dynamic_init_globals)
-    return;
   // FIXME: Optionally report that we're unpoisoning globals from a module.
-  for (uptr i = 0, n = dynamic_init_globals->size(); i < n; ++i) {
-    DynInitGlobal &dyn_g = (*dynamic_init_globals)[i];
+  for (const DynInitGlobal &dyn_g : dynamic_init_globals) {
     const Global *g = &dyn_g.g;
     if (!dyn_g.initialized) {
       // Unpoison the whole global.
