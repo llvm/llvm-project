@@ -10,8 +10,7 @@
 // Make sure that accessing a global in the same TU is safe
 
 bool condition = true;
-__attribute__((noinline, weak))
-int initializeSameTU() {
+__attribute__((noinline, weak)) int initializeSameTU() {
   return condition ? 0x2a : 052;
 }
 int sameTU = initializeSameTU();
@@ -43,7 +42,6 @@ StructWithDtor struct_with_dtor;
 int getStructWithDtorValue() { return struct_with_dtor.value; }
 
 int main() { return 0; }
-
 
 // CHECK: DynInitPoison module: {{.*}}initialization-nobug.cpp
 // CHECK: DynInitPoison module: {{.*}}initialization-nobug-extra.cpp
