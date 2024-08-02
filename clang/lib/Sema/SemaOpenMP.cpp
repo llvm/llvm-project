@@ -20913,7 +20913,8 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
     return true;
   // Find the first user-defined mapper with a type derived from the desired
   // type.
-  auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
+  auto *VD =
+      filterLookupForUDReductionAndMapper<ValueDecl *>(
           Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
             if (!D->isInvalidDecl() &&
                 SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
@@ -20921,18 +20922,17 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
               return D;
             return nullptr;
           });
-   if (!VD)
-     return false;
+  if (!VD)
+    return false;
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/false);
   if (SemaRef.IsDerivedFrom(Loc, Type, VD->getType(), Paths)) {
-    bool IsAmbiguous = !Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
-            VD->getType().getUnqualifiedType()));
+    bool IsAmbiguous = !Paths.isAmbiguous(
+        SemaRef.Context.getCanonicalType(VD->getType().getUnqualifiedType()));
     if (IsAmbiguous)
       return false;
-    if (SemaRef.CheckBaseClassAccess(
-              Loc, VD->getType(), Type, Paths.front(),
-              /*DiagID=*/0) != Sema::AR_inaccessible) {
+    if (SemaRef.CheckBaseClassAccess(Loc, VD->getType(), Type, Paths.front(),
+                                     /*DiagID=*/0) != Sema::AR_inaccessible) {
       return true;
     }
   }
