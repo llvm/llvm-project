@@ -11,6 +11,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
@@ -561,7 +562,62 @@ static void SetupLangOpts(CompilerInstance &compiler,
   lang_opts.NoBuiltin = true;
 }
 
-static void SetupImportStdModuleLangOpts(CompilerInstance &compiler) {
+// NOTE: should be kept in sync with sdkSupportsBuiltinModules in
+// Toolchains/Darwin.cpp
+static bool
+sdkSupportsBuiltinModulesImpl(const llvm::Triple &triple,
+                              const std::optional<DarwinSDKInfo> &SDKInfo) {
+  if (!SDKInfo)
+    return false;
+
+  VersionTuple SDKVersion = SDKInfo->getVersion();
+  switch (triple.getOS()) {
+  case Triple::OSType::MacOSX:
+    return SDKVersion >= VersionTuple(15U);
+  case Triple::OSType::IOS:
+    return SDKVersion >= VersionTuple(18U);
+  case Triple::OSType::TvOS:
+    return SDKVersion >= VersionTuple(18U);
+  case Triple::OSType::WatchOS:
+    return SDKVersion >= VersionTuple(11U);
+  case Triple::OSType::XROS:
+    return SDKVersion >= VersionTuple(2U);
+  default:
+    // New SDKs support builtin modules from the start.
+    return true;
+  }
+}
+
+static bool
+sdkSupportsBuiltinModules(llvm::Triple const &triple,
+                          std::vector<std::string> const &include_dirs) {
+  static constexpr std::string_view s_sdk_suffix = ".sdk";
+  auto it = llvm::find_if(include_dirs, [](std::string const &path) {
+    return path.find(s_sdk_suffix) != std::string::npos;
+  });
+  if (it == include_dirs.end())
+    return false;
+
+  size_t suffix = it->find(s_sdk_suffix);
+  if (suffix == std::string::npos)
+    return false;
+
+  auto VFS = FileSystem::Instance().GetVirtualFileSystem();
+  if (!VFS)
+    return false;
+
+  std::string sdk_path = it->substr(0, suffix + s_sdk_suffix.size());
+  auto parsed = clang::parseDarwinSDKInfo(*VFS, sdk_path);
+  if (!parsed)
+    return false;
+
+  return sdkSupportsBuiltinModulesImpl(triple, *parsed);
+}
+
+static void
+SetupImportStdModuleLangOpts(CompilerInstance &compiler,
+                             llvm::Triple const &triple,
+                             std::vector<std::string> const &include_dirs) {
   LangOptions &lang_opts = compiler.getLangOpts();
   lang_opts.Modules = true;
   // We want to implicitly build modules.
@@ -578,7 +634,12 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler) {
   lang_opts.GNUMode = true;
   lang_opts.GNUKeywords = true;
   lang_opts.CPlusPlus11 = true;
-  lang_opts.BuiltinHeadersInSystemModules = true;
+
+  // FIXME: We should use the driver to derive this for use.
+  // ClangModulesDeclVendor already parses the SDKSettings for the purposes of
+  // this check.
+  lang_opts.BuiltinHeadersInSystemModules =
+      !sdkSupportsBuiltinModules(triple, include_dirs);
 
   // The Darwin libc expects this macro to be set.
   lang_opts.GNUCVersion = 40201;
@@ -663,7 +724,9 @@ ClangExpressionParser::ClangExpressionParser(
   if (auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
       clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
-    SetupImportStdModuleLangOpts(*m_compiler);
+    SetupImportStdModuleLangOpts(*m_compiler,
+                                 target_sp->GetArchitecture().GetTriple(),
+                                 m_include_directories);
     SetupModuleHeaderPaths(m_compiler.get(), m_include_directories, target_sp);
   }
 
