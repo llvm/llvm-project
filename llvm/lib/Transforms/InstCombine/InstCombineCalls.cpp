@@ -4231,6 +4231,9 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
   AttributeSet FnAttrs = CallerPAL.getFnAttrs();
 
+  if (NewRetTy->isVoidTy())
+    Caller->setName("");   // Void type should not have a name.
+
   assert((ArgAttrs.size() == FT->getNumParams() || FT->isVarArg()) &&
          "missing argument attributes");
   AttributeList NewCallerPAL = AttributeList::get(
