@@ -42,7 +42,6 @@
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand Atomic instructions
-; GCN-O0-NEXT:      Lower constant intrinsics
 ; GCN-O0-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O0-NEXT:      Expand vector predication intrinsics
 ; GCN-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -109,6 +108,7 @@
 ; GCN-O0-NEXT:        Finalize ISel and expand pseudo-instructions
 ; GCN-O0-NEXT:        Local Stack Slot Allocation
 ; GCN-O0-NEXT:        Register Usage Information Propagation
+; GCN-O0-NEXT:        AMDGPU Set GPR Indices
 ; GCN-O0-NEXT:        SI Insert waterfalls
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        SI Lower control flow pseudo instructions
@@ -222,7 +222,6 @@
 ; GCN-O1-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:      Expand memcmp() to load/stores
-; GCN-O1-NEXT:      Lower constant intrinsics
 ; GCN-O1-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Post-Dominator Tree Construction
@@ -341,6 +340,7 @@
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Shrink Instructions
 ; GCN-O1-NEXT:        Register Usage Information Propagation
+; GCN-O1-NEXT:        AMDGPU Set GPR Indices
 ; GCN-O1-NEXT:        SI Insert waterfalls
 ; GCN-O1-NEXT:        Detect Dead Lanes
 ; GCN-O1-NEXT:        Remove dead machine instructions
@@ -517,7 +517,6 @@
 ; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      Expand memcmp() to load/stores
-; GCN-O1-OPTS-NEXT:      Lower constant intrinsics
 ; GCN-O1-OPTS-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
@@ -651,6 +650,7 @@
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        SI Shrink Instructions
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Propagation
+; GCN-O1-OPTS-NEXT:        AMDGPU Set GPR Indices
 ; GCN-O1-OPTS-NEXT:        SI Insert waterfalls
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
@@ -832,7 +832,6 @@
 ; GCN-O2-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O2-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:      Expand memcmp() to load/stores
-; GCN-O2-NEXT:      Lower constant intrinsics
 ; GCN-O2-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      Post-Dominator Tree Construction
@@ -969,6 +968,7 @@
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Shrink Instructions
 ; GCN-O2-NEXT:        Register Usage Information Propagation
+; GCN-O2-NEXT:        AMDGPU Set GPR Indices
 ; GCN-O2-NEXT:        SI Insert waterfalls
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
@@ -1157,7 +1157,6 @@
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Expand memcmp() to load/stores
-; GCN-O3-NEXT:      Lower constant intrinsics
 ; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      Post-Dominator Tree Construction
@@ -1300,6 +1299,7 @@
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
 ; GCN-O3-NEXT:        Register Usage Information Propagation
+; GCN-O3-NEXT:        AMDGPU Set GPR Indices
 ; GCN-O3-NEXT:        SI Insert waterfalls
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions

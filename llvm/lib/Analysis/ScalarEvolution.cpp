@@ -831,6 +831,49 @@ static bool hasHugeExpression(ArrayRef<const SCEV *> Ops) {
   });
 }
 
+/// Performs a number of common optimizations on the passed \p Ops. If the
+/// whole expression reduces down to a single operand, it will be returned.
+///
+/// The following optimizations are performed:
+///  * Fold constants using the \p Fold function.
+///  * Remove identity constants satisfying \p IsIdentity.
+///  * If a constant satisfies \p IsAbsorber, return it.
+///  * Sort operands by complexity.
+template <typename FoldT, typename IsIdentityT, typename IsAbsorberT>
+static const SCEV *
+constantFoldAndGroupOps(ScalarEvolution &SE, LoopInfo &LI, DominatorTree &DT,
+                        SmallVectorImpl<const SCEV *> &Ops, FoldT Fold,
+                        IsIdentityT IsIdentity, IsAbsorberT IsAbsorber) {
+  const SCEVConstant *Folded = nullptr;
+  for (unsigned Idx = 0; Idx < Ops.size();) {
+    const SCEV *Op = Ops[Idx];
+    if (const auto *C = dyn_cast<SCEVConstant>(Op)) {
+      if (!Folded)
+        Folded = C;
+      else
+        Folded = cast<SCEVConstant>(
+            SE.getConstant(Fold(Folded->getAPInt(), C->getAPInt())));
+      Ops.erase(Ops.begin() + Idx);
+      continue;
+    }
+    ++Idx;
+  }
+
+  if (Ops.empty()) {
+    assert(Folded && "Must have folded value");
+    return Folded;
+  }
+
+  if (Folded && IsAbsorber(Folded->getAPInt()))
+    return Folded;
+
+  GroupByComplexity(Ops, &LI, DT);
+  if (Folded && !IsIdentity(Folded->getAPInt()))
+    Ops.insert(Ops.begin(), Folded);
+
+  return Ops.size() == 1 ? Ops[0] : nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 //                      Simple SCEV method implementations
 //===----------------------------------------------------------------------===//
@@ -2504,30 +2547,15 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   assert(NumPtrs <= 1 && "add has at most one pointer operand");
 #endif
 
-  // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI, DT);
+  const SCEV *Folded = constantFoldAndGroupOps(
+      *this, LI, DT, Ops,
+      [](const APInt &C1, const APInt &C2) { return C1 + C2; },
+      [](const APInt &C) { return C.isZero(); }, // identity
+      [](const APInt &C) { return false; });     // absorber
+  if (Folded)
+    return Folded;
 
-  // If there are any constants, fold them together.
-  unsigned Idx = 0;
-  if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
-    ++Idx;
-    assert(Idx < Ops.size());
-    while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
-      // We found two constants, fold them together!
-      Ops[0] = getConstant(LHSC->getAPInt() + RHSC->getAPInt());
-      if (Ops.size() == 2) return Ops[0];
-      Ops.erase(Ops.begin()+1);  // Erase the folded element
-      LHSC = cast<SCEVConstant>(Ops[0]);
-    }
-
-    // If we are left with a constant zero being added, strip it off.
-    if (LHSC->getValue()->isZero()) {
-      Ops.erase(Ops.begin());
-      --Idx;
-    }
-
-    if (Ops.size() == 1) return Ops[0];
-  }
+  unsigned Idx = isa<SCEVConstant>(Ops[0]) ? 1 : 0;
 
   // Delay expensive flag strengthening until necessary.
   auto ComputeFlags = [this, OrigFlags](const ArrayRef<const SCEV *> Ops) {
@@ -3097,35 +3125,13 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
            "SCEVMulExpr operand types don't match!");
 #endif
 
-  // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI, DT);
-
-  // If there are any constants, fold them together.
-  unsigned Idx = 0;
-  if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
-    ++Idx;
-    assert(Idx < Ops.size());
-    while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
-      // We found two constants, fold them together!
-      Ops[0] = getConstant(LHSC->getAPInt() * RHSC->getAPInt());
-      if (Ops.size() == 2) return Ops[0];
-      Ops.erase(Ops.begin()+1);  // Erase the folded element
-      LHSC = cast<SCEVConstant>(Ops[0]);
-    }
-
-    // If we have a multiply of zero, it will always be zero.
-    if (LHSC->getValue()->isZero())
-      return LHSC;
-
-    // If we are left with a constant one being multiplied, strip it off.
-    if (LHSC->getValue()->isOne()) {
-      Ops.erase(Ops.begin());
-      --Idx;
-    }
-
-    if (Ops.size() == 1)
-      return Ops[0];
-  }
+  const SCEV *Folded = constantFoldAndGroupOps(
+      *this, LI, DT, Ops,
+      [](const APInt &C1, const APInt &C2) { return C1 * C2; },
+      [](const APInt &C) { return C.isOne(); },   // identity
+      [](const APInt &C) { return C.isZero(); }); // absorber
+  if (Folded)
+    return Folded;
 
   // Delay expensive flag strengthening until necessary.
   auto ComputeFlags = [this, OrigFlags](const ArrayRef<const SCEV *> Ops) {
@@ -3202,6 +3208,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
   }
 
   // Skip over the add expression until we get to a multiply.
+  unsigned Idx = 0;
   while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < scMulExpr)
     ++Idx;
 
@@ -3829,61 +3836,46 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
   bool IsSigned = Kind == scSMaxExpr || Kind == scSMinExpr;
   bool IsMax = Kind == scSMaxExpr || Kind == scUMaxExpr;
 
-  // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI, DT);
+  const SCEV *Folded = constantFoldAndGroupOps(
+      *this, LI, DT, Ops,
+      [&](const APInt &C1, const APInt &C2) {
+        switch (Kind) {
+        case scSMaxExpr:
+          return APIntOps::smax(C1, C2);
+        case scSMinExpr:
+          return APIntOps::smin(C1, C2);
+        case scUMaxExpr:
+          return APIntOps::umax(C1, C2);
+        case scUMinExpr:
+          return APIntOps::umin(C1, C2);
+        default:
+          llvm_unreachable("Unknown SCEV min/max opcode");
+        }
+      },
+      [&](const APInt &C) {
+        // identity
+        if (IsMax)
+          return IsSigned ? C.isMinSignedValue() : C.isMinValue();
+        else
+          return IsSigned ? C.isMaxSignedValue() : C.isMaxValue();
+      },
+      [&](const APInt &C) {
+        // absorber
+        if (IsMax)
+          return IsSigned ? C.isMaxSignedValue() : C.isMaxValue();
+        else
+          return IsSigned ? C.isMinSignedValue() : C.isMinValue();
+      });
+  if (Folded)
+    return Folded;
 
   // Check if we have created the same expression before.
   if (const SCEV *S = findExistingSCEVInCache(Kind, Ops)) {
     return S;
   }
 
-  // If there are any constants, fold them together.
-  unsigned Idx = 0;
-  if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
-    ++Idx;
-    assert(Idx < Ops.size());
-    auto FoldOp = [&](const APInt &LHS, const APInt &RHS) {
-      switch (Kind) {
-      case scSMaxExpr:
-        return APIntOps::smax(LHS, RHS);
-      case scSMinExpr:
-        return APIntOps::smin(LHS, RHS);
-      case scUMaxExpr:
-        return APIntOps::umax(LHS, RHS);
-      case scUMinExpr:
-        return APIntOps::umin(LHS, RHS);
-      default:
-        llvm_unreachable("Unknown SCEV min/max opcode");
-      }
-    };
-
-    while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {
-      // We found two constants, fold them together!
-      ConstantInt *Fold = ConstantInt::get(
-          getContext(), FoldOp(LHSC->getAPInt(), RHSC->getAPInt()));
-      Ops[0] = getConstant(Fold);
-      Ops.erase(Ops.begin()+1);  // Erase the folded element
-      if (Ops.size() == 1) return Ops[0];
-      LHSC = cast<SCEVConstant>(Ops[0]);
-    }
-
-    bool IsMinV = LHSC->getValue()->isMinValue(IsSigned);
-    bool IsMaxV = LHSC->getValue()->isMaxValue(IsSigned);
-
-    if (IsMax ? IsMinV : IsMaxV) {
-      // If we are left with a constant minimum(/maximum)-int, strip it off.
-      Ops.erase(Ops.begin());
-      --Idx;
-    } else if (IsMax ? IsMaxV : IsMinV) {
-      // If we have a max(/min) with a constant maximum(/minimum)-int,
-      // it will always be the extremum.
-      return LHSC;
-    }
-
-    if (Ops.size() == 1) return Ops[0];
-  }
-
   // Find the first operation of the same kind
+  unsigned Idx = 0;
   while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < Kind)
     ++Idx;
 
@@ -9149,23 +9141,22 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   // behaviour), and we can prove the test sequence produced must repeat
   // the same values on self-wrap of the IV, then we can infer that IV
   // doesn't self wrap because if it did, we'd have an infinite (undefined)
-  // loop.
+  // loop.  Note that a stride of 0 is trivially no-self-wrap by definition.
   if (ControllingFiniteLoop && isLoopInvariant(RHS, L)) {
     // TODO: We can peel off any functions which are invertible *in L*.  Loop
     // invariant terms are effectively constants for our purposes here.
     auto *InnerLHS = LHS;
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS))
       InnerLHS = ZExt->getOperand();
-    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS)) {
-      auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
-      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
-          StrideC && StrideC->getAPInt().isPowerOf2()) {
-        auto Flags = AR->getNoWrapFlags();
-        Flags = setFlags(Flags, SCEV::FlagNW);
-        SmallVector<const SCEV*> Operands{AR->operands()};
-        Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
-      }
+    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS);
+        AR && !AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
+        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true,
+                               /*OrNegative=*/true)) {
+      auto Flags = AR->getNoWrapFlags();
+      Flags = setFlags(Flags, SCEV::FlagNW);
+      SmallVector<const SCEV *> Operands{AR->operands()};
+      Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
     }
   }
 
@@ -10843,6 +10834,26 @@ bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
   if (const auto *SExt = dyn_cast<SCEVSignExtendExpr>(S))
     return isKnownNonZero(SExt->getOperand(0));
   return getUnsignedRangeMin(S) != 0;
+}
+
+bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
+                                             bool OrNegative) {
+  auto NonRecursive = [this, OrNegative](const SCEV *S) {
+    if (auto *C = dyn_cast<SCEVConstant>(S))
+      return C->getAPInt().isPowerOf2() ||
+             (OrNegative && C->getAPInt().isNegatedPowerOf2());
+
+    // The vscale_range indicates vscale is a power-of-two.
+    return isa<SCEVVScale>(S) && F.hasFnAttribute(Attribute::VScaleRange);
+  };
+
+  if (NonRecursive(S))
+    return true;
+
+  auto *Mul = dyn_cast<SCEVMulExpr>(S);
+  if (!Mul)
+    return false;
+  return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
 
 std::pair<const SCEV *, const SCEV *>
@@ -12775,8 +12786,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (!isLoopInvariant(RHS, L))
       return false;
 
-    auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
-    if (!StrideC || !StrideC->getAPInt().isPowerOf2())
+    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true,
+                                /*OrNegative*/ true))
       return false;
 
     if (!ControlsOnlyExit || !loopHasNoAbnormalExits(L))
@@ -13132,52 +13143,50 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // "(Start - End) + (Stride - 1)" has unsigned overflow.
       const SCEV *One = getOne(Stride->getType());
       bool MayAddOverflow = [&] {
-        if (auto *StrideC = dyn_cast<SCEVConstant>(Stride)) {
-          if (StrideC->getAPInt().isPowerOf2()) {
-            // Suppose Stride is a power of two, and Start/End are unsigned
-            // integers.  Let UMAX be the largest representable unsigned
-            // integer.
-            //
-            // By the preconditions of this function, we know
-            // "(Start + Stride * N) >= End", and this doesn't overflow.
-            // As a formula:
-            //
-            //   End <= (Start + Stride * N) <= UMAX
-            //
-            // Subtracting Start from all the terms:
-            //
-            //   End - Start <= Stride * N <= UMAX - Start
-            //
-            // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
-            //
-            //   End - Start <= Stride * N <= UMAX
-            //
-            // Stride * N is a multiple of Stride. Therefore,
-            //
-            //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
-            //
-            // Since Stride is a power of two, UMAX + 1 is divisible by
-            // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
-            // write:
-            //
-            //   End - Start <= Stride * N <= UMAX - Stride - 1
-            //
-            // Dropping the middle term:
-            //
-            //   End - Start <= UMAX - Stride - 1
-            //
-            // Adding Stride - 1 to both sides:
-            //
-            //   (End - Start) + (Stride - 1) <= UMAX
-            //
-            // In other words, the addition doesn't have unsigned overflow.
-            //
-            // A similar proof works if we treat Start/End as signed values.
-            // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
-            // to use signed max instead of unsigned max. Note that we're
-            // trying to prove a lack of unsigned overflow in either case.
-            return false;
-          }
+        if (isKnownToBeAPowerOfTwo(Stride)) {
+          // Suppose Stride is a power of two, and Start/End are unsigned
+          // integers.  Let UMAX be the largest representable unsigned
+          // integer.
+          //
+          // By the preconditions of this function, we know
+          // "(Start + Stride * N) >= End", and this doesn't overflow.
+          // As a formula:
+          //
+          //   End <= (Start + Stride * N) <= UMAX
+          //
+          // Subtracting Start from all the terms:
+          //
+          //   End - Start <= Stride * N <= UMAX - Start
+          //
+          // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
+          //
+          //   End - Start <= Stride * N <= UMAX
+          //
+          // Stride * N is a multiple of Stride. Therefore,
+          //
+          //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
+          //
+          // Since Stride is a power of two, UMAX + 1 is divisible by
+          // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
+          // write:
+          //
+          //   End - Start <= Stride * N <= UMAX - Stride - 1
+          //
+          // Dropping the middle term:
+          //
+          //   End - Start <= UMAX - Stride - 1
+          //
+          // Adding Stride - 1 to both sides:
+          //
+          //   (End - Start) + (Stride - 1) <= UMAX
+          //
+          // In other words, the addition doesn't have unsigned overflow.
+          //
+          // A similar proof works if we treat Start/End as signed values.
+          // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
+          // to use signed max instead of unsigned max. Note that we're
+          // trying to prove a lack of unsigned overflow in either case.
+          return false;
         }
         if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
           // If Start is equal to Stride, (End - Start) + (Stride - 1) == End

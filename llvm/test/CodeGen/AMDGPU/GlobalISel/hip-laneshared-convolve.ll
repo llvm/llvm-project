@@ -21,9 +21,8 @@ entry:
 ; CHECK-NEXT: [[SUB6:%[0-9]+]]:vreg_96_align2 = SCRATCH_LOAD_DWORDX3_SADDR [[OFFS]], 24, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (<3 x s32>) from @weights + 24, align 8, basealign 64, addrspace 10)
 ; CHECK-NEXT: [[SEQ:%[0-9]+]]:vreg_288_align2 = REG_SEQUENCE [[SUB0]], %subreg.sub0_sub1_sub2, [[SUB3]], %subreg.sub3_sub4_sub5, [[SUB6]], %subreg.sub6_sub7_sub8
 ; VIDX: [[OFFS:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
-; VIDX-NEXT: [[VIDX:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[OFFS]], 2, implicit-def $scc
-; VIDX-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[VIDX]]
-; VIDX-NEXT: [[VDAT:%[0-9]+]]:vreg_288_align2 = V_LOAD_IDX $idx1, 0, 1, implicit $exec
+; VIDX-NEXT: [[VIDX:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[OFFS]], 2, implicit-def dead $scc
+; VIDX-NEXT: [[VDAT:%[0-9]+]]:vreg_288_align2 = V_LOAD_IDX [[VIDX]], 0, 1, implicit $exec
 ; VIDX-DAG:  [[CONV:%[0-9]+]]:vreg_128_align2 = contract V_CONVOLVE_F16_FP8_3x3_4x4 {{%[0-9]+}}, [[VDAT]],
   %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
   store <8 x half> %0, ptr addrspace(10) @out, align 16, !tbaa !4

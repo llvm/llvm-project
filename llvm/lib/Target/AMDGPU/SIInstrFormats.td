@@ -343,6 +343,12 @@ def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128_STAGING> {
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
 }
 
+// Source-encoded destination operand for instructions like v_swap_b16.
+def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+  let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
+  let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
+}
+
 class VINTRPe <bits<2> op> : Enc32 {
   bits<8> vdst;
   bits<8> vsrc;

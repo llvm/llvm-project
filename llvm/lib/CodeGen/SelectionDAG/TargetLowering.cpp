@@ -9161,8 +9161,9 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
                         !isOperationLegalOrCustomOrPromote(ISD::XOR, VT)))
     return SDValue();
 
-  // Emit Table Lookup if ISD::CTLZ and ISD::CTPOP are not legal.
-  if (!VT.isVector() && isOperationExpand(ISD::CTPOP, VT) &&
+  // Emit Table Lookup if ISD::CTPOP used in the fallback path below is going
+  // to be expanded or converted to a libcall.
+  if (!VT.isVector() && !isOperationLegalOrCustomOrPromote(ISD::CTPOP, VT) &&
       !isOperationLegal(ISD::CTLZ, VT))
     if (SDValue V = CTTZTableLookup(Node, DAG, dl, VT, Op, NumBitsPerElt))
       return V;
@@ -9377,6 +9378,26 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
                         DAG.getShiftAmountConstant(1, ExtVT, dl));
       return DAG.getNode(ISD::TRUNCATE, dl, VT, Avg);
     }
+  }
+
+  // avgflooru(lhs, rhs) -> or(lshr(add(lhs, rhs),1),shl(overflow, typesize-1))
+  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT)) {
+    SDValue UAddWithOverflow =
+        DAG.getNode(ISD::UADDO, dl, DAG.getVTList(VT, MVT::i1), {RHS, LHS});
+
+    SDValue Sum = UAddWithOverflow.getValue(0);
+    SDValue Overflow = UAddWithOverflow.getValue(1);
+
+    // Right shift the sum by 1
+    SDValue One = DAG.getShiftAmountConstant(1, VT, dl);
+    SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
+
+    SDValue ZeroExtOverflow = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Overflow);
+    SDValue OverflowShl =
+        DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow,
+                    DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
+
+    return DAG.getNode(ISD::OR, dl, VT, LShrVal, OverflowShl);
   }
 
   // avgceils(lhs, rhs) -> sub(or(lhs,rhs),ashr(xor(lhs,rhs),1))

@@ -444,6 +444,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
   initializeAMDGPULowerVGPREncodingPass(*PR);
+  initializeAMDGPUIdxRegAllocPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
@@ -1331,6 +1332,7 @@ void GCNPassConfig::addPreRegAlloc() {
   if (LateCFGStructurize) {
     addPass(createAMDGPUMachineCFGStructurizerPass());
   }
+  addPass(createAMDGPUIdxRegAllocPass());
   addPass(createSIInsertWaterfallPass());
 }
 

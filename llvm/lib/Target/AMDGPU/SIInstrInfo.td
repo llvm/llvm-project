@@ -871,7 +871,9 @@ def InlineImmFP64 : FPImmLeaf<f64, [{
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
   return isVGPRImm(N);
-}]>;
+}]> {
+  let GISelPredicateCode = [{return true;}];
+}
 
 def NegateImm : SDNodeXForm<imm, [{
   return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
@@ -3275,6 +3277,19 @@ def isMFMA_F8F6F4Table : GenericTable {
   let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
   let PrimaryKey = [ "Opcode" ];
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
+}
+
+class CvtScaleF32_F32F16ToF8F4_Table<Instruction Instr> {
+  Instruction Opcode = Instr;
+}
+
+// Tabulate cvt_scalef32 instructions which require dst forwarding hazard resolution.
+def isCvtScaleF32_F32F16ToF8F4Table : GenericTable {
+  let FilterClass = "CvtScaleF32_F32F16ToF8F4_Table";
+  let CppTypeName = "CvtScaleF32_F32F16ToF8F4_Info";
+  let Fields = [ "Opcode" ];
+  let PrimaryKey = [ "Opcode" ];
+  let PrimaryKeyName = "isCvtScaleF32_F32F16ToF8F4";
 }
 
 def VOPDComponentTable : GenericTable {

@@ -658,10 +658,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         case ISD::EXTRACT_VECTOR_ELT:
         case ISD::INSERT_VECTOR_ELT:
         case ISD::INSERT_SUBVECTOR:
-        case ISD::EXTRACT_SUBVECTOR:
         case ISD::SCALAR_TO_VECTOR:
         case ISD::IS_FPCLASS:
           break;
+        case ISD::EXTRACT_SUBVECTOR:
         case ISD::CONCAT_VECTORS:
           setOperationAction(Op, VT, Custom);
           break;
@@ -1031,10 +1031,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasBF16ConversionInsts()) {
     setOperationAction(ISD::FP_ROUND, MVT::v2bf16, Legal);
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Legal);
-  }
-
-  if (Subtarget->hasCvtPkF16F32Inst()) {
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
   }
 
   if (Subtarget->hasCvtPkF16F32Inst()) {
@@ -5473,9 +5469,9 @@ static MachineBasicBlock::iterator extractIdxFromVGPR(const SIInstrInfo *TII,
   return InsPt;
 }
 
-static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
-                                             MachineBasicBlock &MBB,
-                                             const GCNSubtarget &ST) {
+static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
+                                            MachineBasicBlock &MBB,
+                                            const GCNSubtarget &ST) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -5490,35 +5486,35 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
     // index should be in the unit of dword
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg)
         .addReg(SAddrReg)
-        .addImm(2u);
+        .addImm(2u)
+        .setOperandDead(3); // Dead scc
     if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
       Offset = Offset >> 2;
     } else {
       Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), AddReg)
           .addReg(IdxReg)
-          .addImm(Offset >> 2);
+          .addImm(Offset >> 2)
+          .setOperandDead(3); // Dead scc
       Offset = 0;
       IdxReg = AddReg;
     }
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX1)
-        .addReg(IdxReg);
-    return Offset;
+    return std::pair(IdxReg, Offset);
   };
 
   // common code to generate IDX for ST mode
   auto EmitIdxST = [&](MachineInstr &MI) {
     int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+    Register VirtualIDX = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
     if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX1)
-          .addImm(0);
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), VirtualIDX).addImm(0);
       Offset = Offset >> 2;
     } else {
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX1)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), VirtualIDX)
           .addImm(Offset >> 2);
       Offset = 0;
     }
-    return Offset;
+    return std::pair(VirtualIDX, Offset);
   };
 
   // common code to adjust IDX in VADDR-waterfall loop
@@ -5533,26 +5529,22 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
     // index should be in the unit of dword
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg)
         .addReg(SAddrReg)
-        .addImm(2u);
+        .addImm(2u)
+        .setOperandDead(3); // Dead scc
     if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
       Offset = Offset >> 2;
     } else {
       Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
       BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), AddReg)
           .addReg(IdxReg)
-          .addImm(Offset >> 2);
+          .addImm(Offset >> 2)
+          .setOperandDead(3); // Dead scc
       Offset = 0;
       IdxReg = AddReg;
     }
-    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32),
-            AMDGPU::IDX1)
-        .addReg(IdxReg);
-    return Offset;
+    return std::pair(IdxReg, Offset);
   };
 
-  // IDX0 is reserved as the base of per-wave VGPR access.
-  // IDX1 is used in ISEL for accessing lane-shared VGPR.
-  // TODO-GFX13: we may want a virtual idx-reg instead of physical IDX1.
   switch (MI.getOpcode()) {
   case AMDGPU::SCRATCH_LOAD_DWORD_SADDR:
   case AMDGPU::SCRATCH_LOAD_DWORDX2_SADDR:
@@ -5565,9 +5557,11 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORDX16_SADDR:
   case AMDGPU::SCRATCH_LOAD_DWORDX18_SADDR: {
     Register Dst = MI.getOperand(0).getReg();
-    int Offset = EmitIdxSAddr(MI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
-        .addReg(AMDGPU::IDX1)
+        .addReg(VirtualIDX)
         .addImm(Offset)
         .addImm(1u); // indicates lane-shared access
     MI.eraseFromParent();
@@ -5585,9 +5579,11 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORDX16_ST:
   case AMDGPU::SCRATCH_LOAD_DWORDX18_ST: {
     Register Dst = MI.getOperand(0).getReg();
-    int Offset = EmitIdxST(MI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
-        .addReg(AMDGPU::IDX1)
+        .addReg(VirtualIDX)
         .addImm(Offset)
         .addImm(1u); // indicates lane-shared access
 
@@ -5605,10 +5601,12 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORDX16_SADDR:
   case AMDGPU::SCRATCH_STORE_DWORDX18_SADDR: {
     Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-    int Offset = EmitIdxSAddr(MI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
         .addReg(Dst)
-        .addReg(AMDGPU::IDX1)
+        .addReg(VirtualIDX)
         .addImm(Offset)
         .addImm(1u); // indicates lane-shared access
 
@@ -5627,10 +5625,12 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORDX16_ST:
   case AMDGPU::SCRATCH_STORE_DWORDX18_ST: {
     Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-    int Offset = EmitIdxST(MI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
         .addReg(Dst)
-        .addReg(AMDGPU::IDX1)
+        .addReg(VirtualIDX)
         .addImm(Offset)
         .addImm(1u); // indicates lane-shared access
 
@@ -5651,10 +5651,12 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
     Register Dst = MI.getOperand(0).getReg();
     Register SGPRIdxReg;
     auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
-    int Offset = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
     MachineBasicBlock *LoopBB = InsPt->getParent();
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
-        .addReg(AMDGPU::IDX1)
+        .addReg(VirtualIDX)
         .addImm(Offset)
         .addImm(1u); // indicates lane-shared
 
@@ -5675,11 +5677,13 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
 
     Register SGPRIdxReg;
     auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
-    int Offset = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
     MachineBasicBlock *LoopBB = InsPt->getParent();
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_STORE_IDX))
         .addReg(Dst)
-        .addReg(AMDGPU::IDX1)
+        .addReg(VirtualIDX)
         .addImm(Offset)
         .addImm(1u); // indicates lane-shared
 
@@ -6290,7 +6294,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
         }
       }
       if (LaneSharedInVGPR) {
-        return emitVLoadVStoreIdx(MI, *BB, *getSubtarget());
+        return emitVLoadStoreIdx(MI, *BB, *getSubtarget());
       }
       return BB;
     }
@@ -17377,6 +17381,34 @@ static bool isBFloat2(Type *Ty) {
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isBFloatTy();
 }
 
+/// \returns true if it's valid to emit a native instruction for \p RMW, based
+/// on the properties of the target memory.
+static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
+                                        const AtomicRMWInst *RMW,
+                                        bool HasSystemScope) {
+  // The remote/fine-grained access logic is different from the integer
+  // atomics. Without AgentScopeFineGrainedRemoteMemoryAtomics support,
+  // fine-grained access does not work, even for a device local allocation.
+  //
+  // With AgentScopeFineGrainedRemoteMemoryAtomics, system scoped device local
+  // allocations work.
+  if (HasSystemScope) {
+    if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics() &&
+        RMW->hasMetadata("amdgpu.no.remote.memory"))
+      return true;
+  } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
+    return true;
+
+  if (RMW->hasMetadata("amdgpu.no.fine.grained.memory"))
+    return true;
+
+  // TODO: Auto-upgrade this attribute to the metadata in function body and stop
+  // checking it.
+  return RMW->getFunction()
+      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+      .getValueAsBool();
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
@@ -17527,37 +17559,32 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     Type *Ty = RMW->getType();
 
     // LDS float and double fmin/fmax were always supported.
-    if (AS == AMDGPUAS::LOCAL_ADDRESS && (Ty->isFloatTy() || Ty->isDoubleTy()))
-      return AtomicExpansionKind::None;
+    if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+      return Ty->isFloatTy() || Ty->isDoubleTy() ? AtomicExpansionKind::None
+                                                 : AtomicExpansionKind::CmpXChg;
+    }
 
-    if (unsafeFPAtomicsDisabled(RMW->getFunction()))
-      return AtomicExpansionKind::CmpXChg;
-
-    // Always expand system scope fp atomics.
-    if (HasSystemScope)
-      return AtomicExpansionKind::CmpXChg;
-
-    // For flat and global cases:
-    // float, double in gfx7. Manual claims denormal support.
-    // Removed in gfx8.
-    // float, double restored in gfx10.
-    // double removed again in gfx11, so only f32 for gfx11/gfx12.
-    //
-    // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but no
-    // f32.
-    //
-    // FIXME: Check scope and fine grained memory
-    if (AS == AMDGPUAS::FLAT_ADDRESS) {
-      if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-      if (Subtarget->hasAtomicFMinFMaxF64FlatInsts() && Ty->isDoubleTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-    } else if (AMDGPU::isExtendedGlobalAddrSpace(AS) ||
-               AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-      if (Subtarget->hasAtomicFMinFMaxF32GlobalInsts() && Ty->isFloatTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-      if (Subtarget->hasAtomicFMinFMaxF64GlobalInsts() && Ty->isDoubleTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
+      // For flat and global cases:
+      // float, double in gfx7. Manual claims denormal support.
+      // Removed in gfx8.
+      // float, double restored in gfx10.
+      // double removed again in gfx11, so only f32 for gfx11/gfx12.
+      //
+      // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but
+      // no f32.
+      if (AS == AMDGPUAS::FLAT_ADDRESS) {
+        if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+        if (Subtarget->hasAtomicFMinFMaxF64FlatInsts() && Ty->isDoubleTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      } else if (AMDGPU::isExtendedGlobalAddrSpace(AS) ||
+                 AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+        if (Subtarget->hasAtomicFMinFMaxF32GlobalInsts() && Ty->isFloatTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+        if (Subtarget->hasAtomicFMinFMaxF64GlobalInsts() && Ty->isDoubleTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      }
     }
 
     return AtomicExpansionKind::CmpXChg;

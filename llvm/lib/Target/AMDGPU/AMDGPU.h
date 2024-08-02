@@ -65,6 +65,7 @@ FunctionPass *createAMDGPUMarkPromotableLaneSharedLegacyPass();
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
+FunctionPass *createAMDGPUIdxRegAllocPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -210,6 +211,9 @@ extern char &SIWholeQuadModeID;
 
 void initializeAMDGPUFixWaveGroupEntryPass(PassRegistry &);
 extern char &AMDGPUFixWaveGroupEntryID;
+
+void initializeAMDGPUIdxRegAllocPass(PassRegistry &);
+extern char &AMDGPUIdxRegAllocID;
 
 void initializeSILowerControlFlowPass(PassRegistry &);
 extern char &SILowerControlFlowID;

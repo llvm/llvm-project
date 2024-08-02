@@ -305,34 +305,34 @@ def aarch64svcount
 def spirvbuiltin : ValueType<0, 214>; // SPIR-V's builtin type
 
 let isNormalValueType = false in {
-def token      : ValueType<0, 248>;  // TokenTy
-def MetadataVT : ValueType<0, 249> { // Metadata
+def token      : ValueType<0, 504>;  // TokenTy
+def MetadataVT : ValueType<0, 505> { // Metadata
   let LLVMName = "Metadata";
 }
 
 // Pseudo valuetype mapped to the current pointer size to any address space.
 // Should only be used in TableGen.
-def iPTRAny    : VTAny<250>;
+def iPTRAny    : VTAny<506>;
 
 // Pseudo valuetype to represent "vector of any size"
 // Should only be used in TableGen.
-def vAny       : VTAny<251>;
+def vAny       : VTAny<507>;
 
 // Pseudo valuetype to represent "float of any format"
 // Should only be used in TableGen.
-def fAny       : VTAny<252>;
+def fAny       : VTAny<508>;
 
 // Pseudo valuetype to represent "integer of any bit width"
 // Should only be used in TableGen.
-def iAny       : VTAny<253>;
+def iAny       : VTAny<509>;
 
 // Pseudo valuetype mapped to the current pointer size.
 // Should only be used in TableGen.
-def iPTR       : ValueType<0, 254>;
+def iPTR       : ValueType<0, 510>;
 
 // Pseudo valuetype to represent "any type of any size".
 // Should only be used in TableGen.
-def Any        : VTAny<255>;
+def Any        : VTAny<511>;
 
 } // isNormalValueType = false
 

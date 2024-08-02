@@ -106,7 +106,7 @@ entry:
 define i32 @test_single_sgpr_output_s32() nounwind {
   ; CHECK-LABEL: name: test_single_sgpr_output_s32
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 7", 0 /* attdialect */, 7274506 /* regdef:SReg_32 */, def %7
+  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 7", 0 /* attdialect */, 7340042 /* regdef:SReg_32 */, def %7
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %7
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -136,7 +136,7 @@ define float @test_multiple_register_outputs_same() #0 {
 define double @test_multiple_register_outputs_mixed() #0 {
   ; CHECK-LABEL: name: test_multiple_register_outputs_mixed
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 0; v_add_f64 $1, 0, 0", 0 /* attdialect */, 6553610 /* regdef:VGPR_32 */, def %7, 8585226 /* regdef:VReg_64 */, def %8
+  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 0; v_add_f64 $1, 0, 0", 0 /* attdialect */, 6553610 /* regdef:VGPR_32 */, def %7, 8650762 /* regdef:VReg_64 */, def %8
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %7
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY %8
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
@@ -185,7 +185,7 @@ define amdgpu_kernel void @test_input_sgpr_imm() {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[C]](s32)
-  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 s0, $0", 1 /* sideeffect attdialect */, 7274505 /* reguse:SReg_32 */, [[COPY1]]
+  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 s0, $0", 1 /* sideeffect attdialect */, 7340041 /* reguse:SReg_32 */, [[COPY1]]
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "s_mov_b32 s0, $0", "s"(i32 42)
   ret void
@@ -256,13 +256,13 @@ define i32 @test_vgpr_matching_constraint(i32 %a) nounwind {
 define i32 @test_sgpr_matching_constraint() nounwind {
   ; CHECK-LABEL: name: test_sgpr_matching_constraint
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 7", 0 /* attdialect */, 7274506 /* regdef:SReg_32 */, def %7
+  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 7", 0 /* attdialect */, 7340042 /* regdef:SReg_32 */, def %7
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %7
-  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 8", 0 /* attdialect */, 7274506 /* regdef:SReg_32 */, def %9
+  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 8", 0 /* attdialect */, 7340042 /* regdef:SReg_32 */, def %9
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %9
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[COPY1]](s32)
-  ; CHECK-NEXT:   INLINEASM &"s_add_u32 $0, $1, $2", 0 /* attdialect */, 7274506 /* regdef:SReg_32 */, def %11, 7274505 /* reguse:SReg_32 */, [[COPY2]], 2147483657 /* reguse tiedto:$0 */, [[COPY3]](tied-def 3)
+  ; CHECK-NEXT:   INLINEASM &"s_add_u32 $0, $1, $2", 0 /* attdialect */, 7340042 /* regdef:SReg_32 */, def %11, 7340041 /* reguse:SReg_32 */, [[COPY2]], 2147483657 /* reguse tiedto:$0 */, [[COPY3]](tied-def 3)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY %11
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY4]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -306,7 +306,7 @@ define void @test_many_matching_constraints(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_sgpr_to_vgpr_move_matching_constraint() nounwind {
   ; CHECK-LABEL: name: test_sgpr_to_vgpr_move_matching_constraint
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 7", 0 /* attdialect */, 7274506 /* regdef:SReg_32 */, def %7
+  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 7", 0 /* attdialect */, 7340042 /* regdef:SReg_32 */, def %7
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %7
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]](s32)
   ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, $1", 0 /* attdialect */, 6553610 /* regdef:VGPR_32 */, def %9, 2147483657 /* reguse tiedto:$0 */, [[COPY1]](tied-def 3)
