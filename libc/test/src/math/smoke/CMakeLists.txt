@@ -4385,3 +4385,39 @@ add_fp_unittest(
     libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16mulf128
 )
+
+add_fp_unittest(
+  daddl
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    daddl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.daddl
+)
+
+add_fp_unittest(
+  daddf128
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    daddf128_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.daddf128
+)
+
+add_fp_unittest(
+  ddivf128
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ddivf128_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ddivf128
+)

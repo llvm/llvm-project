@@ -393,7 +393,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
     }
   } else {
-    setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
+    setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    if (!Subtarget.is64Bit())
+      setOperationAction(ISD::CTPOP, MVT::i32, LibCall);
+    setOperationAction(ISD::CTPOP, MVT::i64, LibCall);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTPOP}, MVT::i32, Expand);
   }
@@ -419,14 +422,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
-  } else {
-    if (!RV64LegalI32 && Subtarget.is64Bit() &&
-        !Subtarget.hasShortForwardBranchOpt())
-      setOperationAction(ISD::ABS, MVT::i32, Custom);
-
+  } else if (Subtarget.hasShortForwardBranchOpt()) {
     // We can use PseudoCCSUB to implement ABS.
-    if (Subtarget.hasShortForwardBranchOpt())
-      setOperationAction(ISD::ABS, XLenVT, Legal);
+    setOperationAction(ISD::ABS, XLenVT, Legal);
+  } else if (!RV64LegalI32 && Subtarget.is64Bit()) {
+    setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasVendorXTHeadCondMov()) {
