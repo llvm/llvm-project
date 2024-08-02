@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -24,10 +25,12 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 
 using namespace llvm;
@@ -45,6 +48,7 @@ namespace {
 struct PreISelIntrinsicLowering {
   const TargetMachine &TM;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
+  const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
   /// If this is true, assume it's preferably to leave memory intrinsic calls
   /// for replacement with a library call later. Otherwise this depends on
@@ -54,8 +58,9 @@ struct PreISelIntrinsicLowering {
   explicit PreISelIntrinsicLowering(
       const TargetMachine &TM_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
+      function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
-      : TM(TM_), LookupTTI(LookupTTI_),
+      : TM(TM_), LookupTTI(LookupTTI_), LookupTLI(LookupTLI_),
         UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_) {}
 
   static bool shouldExpandMemIntrinsicWithSize(Value *Size,
@@ -65,6 +70,27 @@ struct PreISelIntrinsicLowering {
 };
 
 } // namespace
+
+template <class T> static bool forEachCall(Function &Intrin, T Callback) {
+  // Lowering all intrinsics in a function will delete multiple uses, so we
+  // can't use an early-inc-range. In case some remain, we don't want to look
+  // at them again. Unfortunately, Value::UseList is private, so we can't use a
+  // simple Use**. If LastUse is null, the next use to consider is
+  // Intrin.use_begin(), otherwise it's LastUse->getNext().
+  Use *LastUse = nullptr;
+  bool Changed = false;
+  while (!Intrin.use_empty() && (!LastUse || LastUse->getNext())) {
+    Use *U = LastUse ? LastUse->getNext() : &*Intrin.use_begin();
+    bool Removed = false;
+    // An intrinsic cannot have its address taken, so it cannot be an argument
+    // operand. It might be used as operand in debug metadata, though.
+    if (auto CI = dyn_cast<CallInst>(U->getUser()))
+      Changed |= Removed = Callback(CI);
+    if (!Removed)
+      LastUse = U;
+  }
+  return Changed;
+}
 
 static bool lowerLoadRelative(Function &F) {
   if (F.use_empty())
@@ -230,6 +256,21 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
 
       break;
     }
+    case Intrinsic::memcpy_inline: {
+      // Only expand llvm.memcpy.inline with non-constant length in this
+      // codepath, leaving the current SelectionDAG expansion for constant
+      // length memcpy intrinsics undisturbed.
+      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      if (isa<ConstantInt>(Memcpy->getLength()))
+        break;
+
+      Function *ParentFunc = Memcpy->getFunction();
+      const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+      expandMemCpyAsLoop(Memcpy, TTI);
+      Changed = true;
+      Memcpy->eraseFromParent();
+      break;
+    }
     case Intrinsic::memmove: {
       auto *Memmove = cast<MemMoveInst>(Inst);
       Function *ParentFunc = Memmove->getFunction();
@@ -263,6 +304,19 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
 
       break;
     }
+    case Intrinsic::memset_inline: {
+      // Only expand llvm.memset.inline with non-constant length in this
+      // codepath, leaving the current SelectionDAG expansion for constant
+      // length memset intrinsics undisturbed.
+      auto *Memset = cast<MemSetInlineInst>(Inst);
+      if (isa<ConstantInt>(Memset->getLength()))
+        break;
+
+      expandMemSetAsLoop(Memset);
+      Changed = true;
+      Memset->eraseFromParent();
+      break;
+    }
     default:
       llvm_unreachable("unhandled intrinsic");
     }
@@ -278,12 +332,24 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     default:
       break;
     case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
     case Intrinsic::memmove:
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
       Changed |= expandMemIntrinsicUses(F);
       break;
     case Intrinsic::load_relative:
       Changed |= lowerLoadRelative(F);
+      break;
+    case Intrinsic::is_constant:
+    case Intrinsic::objectsize:
+      Changed |= forEachCall(F, [&](CallInst *CI) {
+        Function *Parent = CI->getParent()->getParent();
+        TargetLibraryInfo &TLI = LookupTLI(*Parent);
+        bool Changed = lowerConstantIntrinsics(*Parent, TLI, /*DT=*/nullptr);
+        assert(Changed && "lowerConstantIntrinsics did not lower intrinsic");
+        return Changed;
+      });
       break;
     case Intrinsic::objc_autorelease:
       Changed |= lowerObjCCall(F, "objc_autorelease");
@@ -375,6 +441,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
 
@@ -382,9 +449,12 @@ public:
     auto LookupTTI = [this](Function &F) -> TargetTransformInfo & {
       return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     };
+    auto LookupTLI = [this](Function &F) -> TargetLibraryInfo & {
+      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    };
 
     const auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    PreISelIntrinsicLowering Lowering(TM, LookupTTI);
+    PreISelIntrinsicLowering Lowering(TM, LookupTTI, LookupTLI);
     return Lowering.lowerIntrinsics(M);
   }
 };
@@ -396,6 +466,7 @@ char PreISelIntrinsicLoweringLegacyPass::ID;
 INITIALIZE_PASS_BEGIN(PreISelIntrinsicLoweringLegacyPass,
                       "pre-isel-intrinsic-lowering",
                       "Pre-ISel Intrinsic Lowering", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(PreISelIntrinsicLoweringLegacyPass,
@@ -413,8 +484,11 @@ PreservedAnalyses PreISelIntrinsicLoweringPass::run(Module &M,
   auto LookupTTI = [&FAM](Function &F) -> TargetTransformInfo & {
     return FAM.getResult<TargetIRAnalysis>(F);
   };
+  auto LookupTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
 
-  PreISelIntrinsicLowering Lowering(TM, LookupTTI);
+  PreISelIntrinsicLowering Lowering(TM, LookupTTI, LookupTLI);
   if (!Lowering.lowerIntrinsics(M))
     return PreservedAnalyses::all();
   else

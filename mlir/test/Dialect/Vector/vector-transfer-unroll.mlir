@@ -199,7 +199,7 @@ func.func @transfer_read_unroll_permutation(%arg0 : memref<6x4xf32>) -> vector<4
 func.func @transfer_read_unroll_broadcast(%arg0 : memref<6x4xf32>) -> vector<6x4xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {permutation_map = #map0} : memref<6x4xf32>, vector<6x4xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [true, false], permutation_map = #map0} : memref<6x4xf32>, vector<6x4xf32>
   return %0 : vector<6x4xf32>
 }
 
@@ -226,7 +226,7 @@ func.func @transfer_read_unroll_broadcast(%arg0 : memref<6x4xf32>) -> vector<6x4
 func.func @transfer_read_unroll_broadcast_permuation(%arg0 : memref<6x4xf32>) -> vector<4x6xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {permutation_map = #map0} : memref<6x4xf32>, vector<4x6xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [true, false], permutation_map = #map0} : memref<6x4xf32>, vector<4x6xf32>
   return %0 : vector<4x6xf32>
 }
 

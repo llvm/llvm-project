@@ -14,8 +14,9 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace fma {
 
@@ -490,6 +491,6 @@ LIBC_INLINE unsigned range_reduction_small(double x, DoubleDouble &u) {
 
 } // namespace fma
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_FMA_H

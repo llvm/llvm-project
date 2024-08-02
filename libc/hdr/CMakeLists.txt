@@ -33,6 +33,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  math_function_macros
+  HDRS
+    math_function_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+    libc.include.math
+)
+
+add_proxy_header_library(
   errno_macros
   HDRS
     errno_macros.h
@@ -70,12 +79,40 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  stdio_macros
+  HDRS
+    stdio_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdio
+    libc.include.llvm-libc-macros.stdio_macros
+    libc.include.llvm-libc-macros.file_seek_macros
+)
+
+add_proxy_header_library(
   sys_epoll_macros
   HDRS
     sys_epoll_macros.h
   FULL_BUILD_DEPENDS
     libc.include.sys_epoll
     libc.include.llvm-libc-macros.sys_epoll_macros
+)
+
+add_proxy_header_library(
+  sys_stat_macros
+  HDRS
+    sys_stat_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_stat
+    libc.include.llvm-libc-macros.sys_stat_macros
+)
+
+add_proxy_header_library(
+  unistd_macros
+  HDRS
+    unistd_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.unistd
+    libc.include.llvm-libc-macros.unistd_macros
 )
 
 add_proxy_header_library(
@@ -95,6 +132,15 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.float_macros
   FULL_BUILD_DEPENDS
     libc.include.float
+)
+
+add_proxy_header_library(
+  limits_macros
+  HDRS
+    limits_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.limits
+    libc.include.llvm-libc-macros.limits_macros
 )
 
 add_subdirectory(types)

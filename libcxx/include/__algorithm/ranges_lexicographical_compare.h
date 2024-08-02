@@ -31,8 +31,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __lexicographical_compare {
-struct __fn {
+struct __lexicographical_compare {
   template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Proj1, class _Proj2, class _Comp>
   _LIBCPP_HIDE_FROM_ABI constexpr static bool __lexicographical_compare_impl(
       _Iter1 __first1,
@@ -90,10 +89,9 @@ struct __fn {
         __proj2);
   }
 };
-} // namespace __lexicographical_compare
 
 inline namespace __cpo {
-inline constexpr auto lexicographical_compare = __lexicographical_compare::__fn{};
+inline constexpr auto lexicographical_compare = __lexicographical_compare{};
 } // namespace __cpo
 } // namespace ranges
 

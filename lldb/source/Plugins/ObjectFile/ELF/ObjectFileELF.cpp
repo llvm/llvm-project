@@ -717,6 +717,20 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
         // Iterate through the object file sections to find all of the sections
         // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
+
+        // PT_TLS segments can have the same p_vaddr and p_paddr as other
+        // PT_LOAD segments so we shouldn't load them. If we do load them, then
+        // the SectionLoadList will incorrectly fill in the instance variable
+        // SectionLoadList::m_addr_to_sect with the same address as a PT_LOAD
+        // segment and we won't be able to resolve addresses in the PT_LOAD
+        // segment whose p_vaddr entry matches that of the PT_TLS. Any variables
+        // that appear in the PT_TLS segments get resolved by the DWARF
+        // expressions. If this ever changes we will need to fix all object
+        // file plug-ins, but until then, we don't want PT_TLS segments to
+        // remove the entry from SectionLoadList::m_addr_to_sect when we call
+        // SetSectionLoadAddress() below.
+        if (section_sp->IsThreadSpecific())
+          continue;
         if (section_sp->Test(SHF_ALLOC) ||
             section_sp->GetType() == eSectionTypeContainer) {
           lldb::addr_t load_addr = section_sp->GetFileAddress();
@@ -1682,7 +1696,6 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   return llvm::StringSwitch<SectionType>(Name)
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
-      .Cases(".bss", ".tbss", eSectionTypeZeroFill)
       .Case(".ctf", eSectionTypeDebug)
       .Cases(".data", ".tdata", eSectionTypeData)
       .Case(".eh_frame", eSectionTypeEHFrame)
@@ -1698,6 +1711,10 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_PROGBITS:
     if (H.sh_flags & SHF_EXECINSTR)
       return eSectionTypeCode;
+    break;
+  case SHT_NOBITS:
+    if (H.sh_flags & SHF_ALLOC)
+      return eSectionTypeZeroFill;
     break;
   case SHT_SYMTAB:
     return eSectionTypeELFSymbolTable;

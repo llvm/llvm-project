@@ -388,7 +388,7 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
 bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MCP = mf.getConstantPool();
-  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(mf));
+  BBUtils = std::make_unique<ARMBasicBlockUtils>(mf);
 
   LLVM_DEBUG(dbgs() << "***** ARMConstantIslands: "
                     << MCP->getConstants().size() << " CP entries, aligned to "
@@ -2233,8 +2233,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
   if (!MJTI) return false;
 
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  for (unsigned i = 0, e = T2JumpTables.size(); i != e; ++i) {
-    MachineInstr *MI = T2JumpTables[i];
+  for (MachineInstr *MI : T2JumpTables) {
     const MCInstrDesc &MCID = MI->getDesc();
     unsigned NumOps = MCID.getNumOperands();
     unsigned JTOpIdx = NumOps - (MI->isPredicable() ? 2 : 1);
@@ -2429,8 +2428,7 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
   if (!MJTI) return false;
 
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  for (unsigned i = 0, e = T2JumpTables.size(); i != e; ++i) {
-    MachineInstr *MI = T2JumpTables[i];
+  for (MachineInstr *MI : T2JumpTables) {
     const MCInstrDesc &MCID = MI->getDesc();
     unsigned NumOps = MCID.getNumOperands();
     unsigned JTOpIdx = NumOps - (MI->isPredicable() ? 2 : 1);

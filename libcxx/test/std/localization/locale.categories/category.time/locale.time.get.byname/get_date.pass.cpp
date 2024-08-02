@@ -110,7 +110,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_date(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-#if _LIBCPP_VERSION
+#if defined(_LIBCPP_VERSION)
           // libc++ points to the '/' after the month.
           assert(base(i) == in+2);
 #else
@@ -129,7 +129,7 @@ int main(int, char**)
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_date(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-#if _LIBCPP_VERSION
+#if defined(_LIBCPP_VERSION)
           // libc++ points to the '/' after the month.
           assert(base(i) == in+2);
 #else

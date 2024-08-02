@@ -244,8 +244,7 @@ end program
 ! CHECK:                   %[[VAL_85:.*]] = arith.select %[[VAL_84]], %[[VAL_76]], %[[VAL_83]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_85]] : i32
 ! CHECK:                 }
-! CHECK:                 %[[VAL_86:.*]] = fir.load %[[VAL_62]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                 hlfir.assign %[[VAL_68]] to %[[VAL_86]] : !hlfir.expr<?xi32>, !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:                 hlfir.assign %[[VAL_68]] to %[[VAL_62]]#0 realloc : !hlfir.expr<?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:                 hlfir.destroy %[[VAL_68]] : !hlfir.expr<?xi32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
@@ -288,8 +287,7 @@ end program
 ! CHECK:                   %[[VAL_117:.*]] = arith.select %[[VAL_116]], %[[VAL_108]], %[[VAL_115]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_117]] : i32
 ! CHECK:                 }
-! CHECK:                 %[[VAL_118:.*]] = fir.load %[[VAL_94]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                 hlfir.assign %[[VAL_100]] to %[[VAL_118]] : !hlfir.expr<?xi32>, !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:                 hlfir.assign %[[VAL_100]] to %[[VAL_94]]#0 realloc : !hlfir.expr<?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:                 hlfir.destroy %[[VAL_100]] : !hlfir.expr<?xi32>
 ! CHECK:                 omp.yield
 ! CHECK:               }

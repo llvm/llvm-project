@@ -9,6 +9,7 @@
 #include "SimplifyBooleanExprCheck.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -702,7 +703,8 @@ bool SimplifyBooleanExprCheck::canBeBypassed(const Stmt *S) const {
   return IgnoreMacros && S->getBeginLoc().isMacroID();
 }
 
-void SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
+/// @brief return true when replacement created.
+bool SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
                                          SourceLocation Loc,
                                          StringRef Description,
                                          SourceRange ReplacementRange,
@@ -712,8 +714,10 @@ void SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
                                Context.getSourceManager(), getLangOpts());
 
   DiagnosticBuilder Diag = diag(Loc, Description);
-  if (!containsDiscardedTokens(Context, CharRange))
+  const bool HasReplacement = !containsDiscardedTokens(Context, CharRange);
+  if (HasReplacement)
     Diag << FixItHint::CreateReplacement(CharRange, Replacement);
+  return HasReplacement;
 }
 
 void SimplifyBooleanExprCheck::replaceWithThenStatement(
@@ -751,8 +755,18 @@ void SimplifyBooleanExprCheck::replaceWithReturnCondition(
       replacementExpression(Context, Negated, If->getCond());
   std::string Replacement = ("return " + Condition + Terminator).str();
   SourceLocation Start = BoolLiteral->getBeginLoc();
-  issueDiag(Context, Start, SimplifyConditionalReturnDiagnostic,
-            If->getSourceRange(), Replacement);
+
+  const bool HasReplacement =
+      issueDiag(Context, Start, SimplifyConditionalReturnDiagnostic,
+                If->getSourceRange(), Replacement);
+
+  if (!HasReplacement) {
+    const SourceRange ConditionRange = If->getCond()->getSourceRange();
+    if (ConditionRange.isValid())
+      diag(ConditionRange.getBegin(), "conditions that can be simplified",
+           DiagnosticIDs::Note)
+          << ConditionRange;
+  }
 }
 
 void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
@@ -760,9 +774,23 @@ void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
     const IfStmt *If, const Expr *ThenReturn) {
   const std::string Replacement =
       "return " + replacementExpression(Context, Negated, If->getCond());
-  issueDiag(Context, ThenReturn->getBeginLoc(),
-            SimplifyConditionalReturnDiagnostic,
-            SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
+
+  const bool HasReplacement = issueDiag(
+      Context, ThenReturn->getBeginLoc(), SimplifyConditionalReturnDiagnostic,
+      SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
+
+  if (!HasReplacement) {
+    const SourceRange ConditionRange = If->getCond()->getSourceRange();
+    if (ConditionRange.isValid())
+      diag(ConditionRange.getBegin(), "conditions that can be simplified",
+           DiagnosticIDs::Note)
+          << ConditionRange;
+    const SourceRange ReturnRange = Ret->getSourceRange();
+    if (ReturnRange.isValid())
+      diag(ReturnRange.getBegin(), "return statement that can be simplified",
+           DiagnosticIDs::Note)
+          << ReturnRange;
+  }
 }
 
 void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
