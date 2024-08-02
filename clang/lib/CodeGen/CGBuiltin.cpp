@@ -14391,9 +14391,10 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
   };
 
   int BitPos = RISCVISAInfo::getRISCVFeaturesBitPosition(FeatureStr);
+  int GroupID = RISCVISAInfo::getRISCVFeaturesGroupID(FeatureStr);
   assert(BitPos != -1 && "validation should have rejected this feature");
   Value *MaskV = Builder.getInt64(1ULL << BitPos);
-  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(0), MaskV);
+  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(GroupID), MaskV);
   return Builder.CreateICmpEQ(Bitset, MaskV);
 }
 

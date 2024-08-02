@@ -80,9 +80,13 @@ public:
                                      std::set<StringRef> &EnabledFeatureNames,
                                      StringMap<StringRef> &DescMap);
 
-  /// Return the bit position (in group 0) of __riscv_feature_bits.  Returns
+  /// Return the bit position of __riscv_feature_bits.  Returns
   /// -1 if not supported.
   static int getRISCVFeaturesBitPosition(StringRef Ext);
+
+  /// Return the group id of __riscv_feature_bits.  Returns
+  /// -1 if not supported.
+  static int getRISCVFeaturesGroupID(StringRef Ext);
 
 private:
   RISCVISAInfo(unsigned XLen) : XLen(XLen) {}
