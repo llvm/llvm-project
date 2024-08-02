@@ -2407,10 +2407,10 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       ManualCodegen = [{
         return llvm::PoisonValue::get(ResultType);
       }] in {
-    def vundefined : RVVBuiltin<"v", "v", "csilxfd">;
+    def : RVVBuiltin<"v", "v", "csilxfd">;
     let RequiredFeatures = ["Zvfbfmin"] in
-      def vundefined_bf16 : RVVBuiltin<"v", "v", "y">;
-    def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
+      def : RVVBuiltin<"v", "v", "y">;
+    def : RVVBuiltin<"Uv", "Uv", "csil">;
 
     foreach nf = NFList in {
       let NF = nf in {
