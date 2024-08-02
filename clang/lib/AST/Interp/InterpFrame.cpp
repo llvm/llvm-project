@@ -37,9 +37,9 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
   Locals = std::make_unique<char[]>(FrameSize);
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      Block *B =
-          new (localBlock(Local.Offset)) Block(S.Ctx.getEvalID(), Local.Desc);
-      B->invokeCtor();
+      new (localBlock(Local.Offset)) Block(S.Ctx.getEvalID(), Local.Desc);
+      // Note that we are NOT calling invokeCtor() here, since that is done
+      // via the InitScope op.
       new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
     }
   }
@@ -80,6 +80,14 @@ InterpFrame::~InterpFrame() {
           B->invokeDtor();
       }
     }
+  }
+}
+
+void InterpFrame::initScope(unsigned Idx) {
+  if (!Func)
+    return;
+  for (auto &Local : Func->getScope(Idx).locals()) {
+    localBlock(Local.Offset)->invokeCtor();
   }
 }
 
