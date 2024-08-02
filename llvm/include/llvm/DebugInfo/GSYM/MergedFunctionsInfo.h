@@ -29,7 +29,7 @@ struct MergedFunctionsInfo {
   /// Query if a MergedFunctionsInfo object is valid.
   ///
   /// \returns A boolean indicating if this FunctionInfo is valid.
-  bool isValid() { return true; }
+  bool isValid() { return !MergedFunctions.empty(); }
 
   /// Decode an MergedFunctionsInfo object from a binary data stream.
   ///
