@@ -2,12 +2,7 @@
 ! mapped alongside one of its own allocatable components
 ! without disrupting either mapping (similar to C++ mapping
 ! of a struct and a pointer, in concept at least).
-! REQUIRES: flang
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
