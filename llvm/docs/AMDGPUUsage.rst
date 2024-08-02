@@ -14251,6 +14251,13 @@ See ``WGP_MODE`` field in
 The code sequences used to implement the memory model for GFX12 are defined in
 table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-table`.
 
+The mapping of LLVM IR syncscope to GFX12 instruction ``scope`` operands is
+defined in :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
+The table only applies if and only if it is directly referenced by an entry in
+:ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-table`, and it only applies to
+the instruction in the code sequence that references the table.
+
   .. table:: AMDHSA Memory Model Code Sequences GFX12 - Instruction Scopes
      :name: amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table
 
@@ -14272,9 +14279,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-table`.
      wavefront-one-as    *none*              *none*
      singlethread-one-as *none*              *none*
      =================== =================== ===================
-
-NOTE: The table above applies if and only if it is explicitly referenced by
-a code sequence in :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-table`.
 
   .. table:: AMDHSA Memory Model Code Sequences GFX12
      :name: amdgpu-amdhsa-memory-model-code-sequences-gfx12-table
