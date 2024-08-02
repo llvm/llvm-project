@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/allocator.h"
-#include "flang/Runtime/allocator-registry.h"
 #include "../derived.h"
 #include "../stat.h"
 #include "../terminator.h"
 #include "../type-info.h"
 #include "flang/Common/Fortran.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Runtime/allocator-registry.h"
 
 #include "cuda.h"
 
