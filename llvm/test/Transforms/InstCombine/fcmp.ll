@@ -2137,6 +2137,26 @@ define i1 @fcmp_sqrt_zero_ult(half %x) {
   ret i1 %cmp
 }
 
+define i1 @fcmp_sqrt_zero_ult_fmf(half %x) {
+; CHECK-LABEL: @fcmp_sqrt_zero_ult_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz ult half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call half @llvm.sqrt(half %x)
+  %cmp = fcmp ninf nsz ult half %sqrt, 0.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_sqrt_zero_ult_nzero(half %x) {
+; CHECK-LABEL: @fcmp_sqrt_zero_ult_nzero(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call half @llvm.sqrt(half %x)
+  %cmp = fcmp ult half %sqrt, -0.0
+  ret i1 %cmp
+}
+
 define <2 x i1> @fcmp_sqrt_zero_ult_vec(<2 x half> %x) {
 ; CHECK-LABEL: @fcmp_sqrt_zero_ult_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult <2 x half> [[X:%.*]], zeroinitializer
@@ -2144,6 +2164,16 @@ define <2 x i1> @fcmp_sqrt_zero_ult_vec(<2 x half> %x) {
 ;
   %sqrt = call <2 x half> @llvm.sqrt(<2 x half> %x)
   %cmp = fcmp ult <2 x half> %sqrt, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @fcmp_sqrt_zero_ult_vec_mixed_zero(<2 x half> %x) {
+; CHECK-LABEL: @fcmp_sqrt_zero_ult_vec_mixed_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult <2 x half> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sqrt = call <2 x half> @llvm.sqrt(<2 x half> %x)
+  %cmp = fcmp ult <2 x half> %sqrt, <half 0.0, half -0.0>
   ret <2 x i1> %cmp
 }
 
@@ -2263,6 +2293,17 @@ define i1 @fcmp_sqrt_zero_uno(half %x) {
 ;
   %sqrt = call half @llvm.sqrt(half %x)
   %cmp = fcmp uno half %sqrt, 0.0
+  ret i1 %cmp
+}
+
+; Make sure that ninf is cleared.
+define i1 @fcmp_sqrt_zero_uno_fmf(half %x) {
+; CHECK-LABEL: @fcmp_sqrt_zero_uno_fmf(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call half @llvm.sqrt(half %x)
+  %cmp = fcmp ninf uno half %sqrt, 0.0
   ret i1 %cmp
 }
 

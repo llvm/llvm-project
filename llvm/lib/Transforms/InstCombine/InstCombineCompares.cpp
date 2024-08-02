@@ -7994,6 +7994,9 @@ static Instruction *foldSqrtWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
     return IC.replaceOperand(I, 0, X);
   };
 
+  // Clear ninf flag.
+  I.setHasNoInfs(false);
+
   switch (I.getPredicate()) {
   case FCmpInst::FCMP_OLT:
   case FCmpInst::FCMP_UGE:
