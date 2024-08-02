@@ -243,19 +243,7 @@ define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memo
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 8
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
 ; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory(
@@ -501,19 +489,7 @@ define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memo
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 8
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
 ; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -630,19 +606,7 @@ define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memo
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 8
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
 ; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
@@ -759,19 +723,7 @@ define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memo
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 8
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
 ; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(

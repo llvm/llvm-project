@@ -17866,6 +17866,9 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 // and generate vecreduce.add(concat_vector(DOT, DOT2, ..)).
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *ST) {
+  if (!ST->isNeonAvailable())
+    return SDValue();
+
   if (!ST->hasDotProd())
     return performVecReduceAddCombineWithUADDLP(N, DAG);
 
