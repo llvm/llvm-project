@@ -785,6 +785,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
         - sourceBox: A box to read information from such as CFI type,
           type descriptor or element size to populate the new descriptor.
         - accessMap: unused/experimental.
+        - allocator_idx: specify special allocator to use.
   }];
 
   let arguments = (ins
@@ -793,7 +794,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams,
     Optional<fir_ClassType>:$sourceBox,
-    OptionalAttr<AffineMapAttr>:$accessMap
+    OptionalAttr<AffineMapAttr>:$accessMap,
+    OptionalAttr<I32Attr>:$allocator_idx
   );
 
   let results = (outs BoxOrClassType);
@@ -803,9 +805,11 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::Value", "{}">:$sourceBox),
+      CArg<"mlir::Value", "{}">:$sourceBox,
+      CArg<"mlir::IntegerAttr", "{}">:$allocator_idx),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, sourceBox, mlir::AffineMapAttr{}); }]>
+                    typeparams, sourceBox, mlir::AffineMapAttr{},
+                    allocator_idx); }]>
   ];
 
   let assemblyFormat = [{

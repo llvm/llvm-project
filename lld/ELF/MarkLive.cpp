@@ -85,6 +85,13 @@ static uint64_t getAddend(InputSectionBase &sec,
   return rel.r_addend;
 }
 
+// Currently, we assume all input CREL relocations have an explicit addend.
+template <class ELFT>
+static uint64_t getAddend(InputSectionBase &sec,
+                          const typename ELFT::Crel &rel) {
+  return rel.r_addend;
+}
+
 template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
@@ -239,7 +246,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // all of them. We also want to preserve personality routines and LSDA
   // referenced by .eh_frame sections, so we scan them for that here.
   for (EhInputSection *eh : ctx.ehInputSections) {
-    const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+    const RelsOrRelas<ELFT> rels =
+        eh->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
     if (rels.areRelocsRel())
       scanEhFrameSection(*eh, rels.rels);
     else if (rels.relas.size())
@@ -309,6 +317,8 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
     for (const typename ELFT::Rel &rel : rels.rels)
       resolveReloc(sec, rel, false);
     for (const typename ELFT::Rela &rel : rels.relas)
+      resolveReloc(sec, rel, false);
+    for (const typename ELFT::Crel &rel : rels.crels)
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)

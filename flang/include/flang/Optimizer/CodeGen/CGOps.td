@@ -50,6 +50,7 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
          describe an correspond to the elemental derived type.
        - sourceBox: A box to read information from such as CFI type,
          type descriptor or element size to populate the new descriptor.
+       - allocator_idx: specify special allocator to use.
 
     The memref and shape arguments are mandatory. The rest are optional.
   }];
@@ -62,7 +63,8 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     Variadic<AnyCoordinateType>:$subcomponent,
     Variadic<AnyIntegerType>:$substr,
     Variadic<AnyIntegerType>:$lenParams,
-    Optional<fir_ClassType>:$sourceBox
+    Optional<fir_ClassType>:$sourceBox,
+    OptionalAttr<I32Attr>:$allocator_idx
   );
   let results = (outs BoxOrClassType);
 
