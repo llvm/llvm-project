@@ -530,8 +530,8 @@ struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
                             const FunctionEffectsRef &New);
 };
 
-// Defined in EffectAnalysis.cpp. TODO: Maybe make this a method of Sema and move 
-// more of the effects implementation into that file?
+// Defined in EffectAnalysis.cpp. TODO: Maybe make this a method of Sema and
+// move more of the effects implementation into that file?
 void performEffectAnalysis(Sema &S, TranslationUnitDecl *TU);
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -882,7 +882,7 @@ public:
   SmallVector<const Decl *> DeclsWithEffectsToVerify;
   /// The union of all effects present on DeclsWithEffectsToVerify. Conditions
   /// are all null.
-  FunctionEffectSet AllEffectsToVerify;
+  FunctionEffectKindSet AllEffectsToVerify;
 
   /// Warn when implicitly changing function effects.
   void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,

@@ -10929,8 +10929,6 @@ void Sema::maybeAddDeclWithEffects(const Decl *D,
 }
 
 void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {
-  FunctionEffectSet::Conflicts Errs;
-
   // To avoid the possibility of conflict, don't add effects which are
   // not FE_InferrableOnCallees and therefore not verified; this removes
   // blocking/allocating but keeps nonblocking/nonallocating.
@@ -10938,11 +10936,9 @@ void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {
   bool AnyVerifiable = false;
   for (const FunctionEffectWithCondition &EC : FX)
     if (EC.Effect.flags() & FunctionEffect::FE_InferrableOnCallees) {
-      AllEffectsToVerify.insert(FunctionEffectWithCondition(EC.Effect, nullptr),
-                                Errs);
+      AllEffectsToVerify.insert(EC.Effect);
       AnyVerifiable = true;
     }
-  assert(Errs.empty() && "effects conflicts should not be possible here");
 
   // Record the declaration for later analysis.
   if (AnyVerifiable)

@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/Decl.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaInternal.h"
 
@@ -81,6 +81,7 @@ static bool isNoexcept(const FunctionDecl *FD) {
   return false;
 }
 
+#if 0
 /// A mutable set of FunctionEffect, for use in places where any conditions
 /// have been resolved or can be ignored.
 class EffectSet {
@@ -191,6 +192,7 @@ LLVM_DUMP_METHOD void EffectSet::dump(llvm::raw_ostream &OS) const {
   }
   OS << "}";
 }
+#endif
 
 // Transitory, more extended information about a callable, which can be a
 // function, block, function pointer, etc.
@@ -200,7 +202,7 @@ struct CallableInfo {
   // BlockDecl if CallType::Block
   const Decl *CDecl;
   SpecialFuncType FuncType = SpecialFuncType::None;
-  EffectSet Effects;
+  FunctionEffectKindSet Effects;
   CallType CType = CallType::Unknown;
 
   CallableInfo(Sema &SemaRef, const Decl &CD,
@@ -224,7 +226,7 @@ struct CallableInfo {
       // ValueDecl is function, enum, or variable, so just look at its type.
       FXRef = FunctionEffectsRef::get(VD->getType());
     }
-    Effects = EffectSet(FXRef);
+    Effects = FunctionEffectKindSet(FXRef);
   }
 
   bool isDirectCall() const {
@@ -251,7 +253,7 @@ struct CallableInfo {
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl))
       FD->getNameForDiagnostic(OS, Sem.getPrintingPolicy(),
-                                /*Qualified=*/true);
+                               /*Qualified=*/true);
     else if (auto *BD = dyn_cast<BlockDecl>(CDecl))
       OS << "(block " << BD->getBlockManglingNumber() << ")";
     else if (auto *VD = dyn_cast<NamedDecl>(CDecl))
@@ -328,8 +330,8 @@ public:
   // We always have two disjoint sets of effects to verify:
   // 1. Effects declared explicitly by this function.
   // 2. All other inferrable effects needing verification.
-  EffectSet DeclaredVerifiableEffects;
-  EffectSet FXToInfer;
+  FunctionEffectKindSet DeclaredVerifiableEffects;
+  FunctionEffectKindSet FXToInfer;
 
 private:
   // Diagnostics pertaining to the function's explicit effects.
@@ -345,11 +347,10 @@ private:
 public:
   PendingFunctionAnalysis(
       Sema &Sem, const CallableInfo &CInfo,
-      ArrayRef<FunctionEffect> AllInferrableEffectsToVerify) {
-    DeclaredVerifiableEffects = CInfo.Effects;
-
+      const FunctionEffectKindSet &AllInferrableEffectsToVerify)
+      : DeclaredVerifiableEffects(CInfo.Effects) {
     // Check for effects we are not allowed to infer
-    EffectSet InferrableFX;
+    FunctionEffectKindSet InferrableFX;
 
     for (const FunctionEffect &effect : AllInferrableEffectsToVerify) {
       if (effect.canInferOnFunction(*CInfo.CDecl))
@@ -364,7 +365,8 @@ public:
     }
     // InferrableFX is now the set of inferrable effects which are not
     // prohibited
-    FXToInfer = EffectSet::difference(InferrableFX, DeclaredVerifiableEffects);
+    FXToInfer = FunctionEffectKindSet::difference(InferrableFX,
+                                                  DeclaredVerifiableEffects);
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -422,7 +424,7 @@ public:
   // ones which have been successfully inferred. These are all considered
   // "verified" for the purposes of callers; any issue with verifying declared
   // effects has already been reported and is not the problem of any caller.
-  EffectSet VerifiedEffects;
+  FunctionEffectKindSet VerifiedEffects;
 
 private:
   // This is used to generate notes about failed inference.
@@ -432,9 +434,9 @@ public:
   // The incoming Pending analysis is consumed (member(s) are moved-from).
   CompleteFunctionAnalysis(
       ASTContext &Ctx, PendingFunctionAnalysis &Pending,
-      const EffectSet &DeclaredEffects,
-      ArrayRef<FunctionEffect> AllInferrableEffectsToVerify) {
-    VerifiedEffects.insert(DeclaredEffects);
+      const FunctionEffectKindSet &DeclaredEffects,
+      const FunctionEffectKindSet &AllInferrableEffectsToVerify)
+      : VerifiedEffects(DeclaredEffects) {
     for (const FunctionEffect &effect : AllInferrableEffectsToVerify)
       if (Pending.diagnosticForInferrableEffect(effect) == nullptr)
         VerifiedEffects.insert(effect);
@@ -469,7 +471,7 @@ class Analyzer {
   Sema &Sem;
 
   // Subset of Sema.AllEffectsToVerify
-  EffectSet AllInferrableEffectsToVerify;
+  FunctionEffectKindSet AllInferrableEffectsToVerify;
 
   using FuncAnalysisPtr =
       llvm::PointerUnion<PendingFunctionAnalysis *, CompleteFunctionAnalysis *>;
@@ -532,17 +534,14 @@ public:
   void run(const TranslationUnitDecl &TU) {
     // Gather all of the effects to be verified to see what operations need to
     // be checked, and to see which ones are inferrable.
-    for (const FunctionEffectWithCondition &CFE : Sem.AllEffectsToVerify) {
-      const FunctionEffect &Effect = CFE.Effect;
+    for (const FunctionEffect &Effect : Sem.AllEffectsToVerify) {
       const FunctionEffect::Flags Flags = Effect.flags();
       if (Flags & FunctionEffect::FE_InferrableOnCallees)
         AllInferrableEffectsToVerify.insert(Effect);
     }
-    LLVM_DEBUG(
-      llvm::dbgs() << "AllInferrableEffectsToVerify: ";
-      AllInferrableEffectsToVerify.dump(llvm::dbgs());
-      llvm::dbgs() << "\n";
-    );
+    LLVM_DEBUG(llvm::dbgs() << "AllInferrableEffectsToVerify: ";
+               AllInferrableEffectsToVerify.dump(llvm::dbgs());
+               llvm::dbgs() << "\n";);
 
     // We can use DeclsWithEffectsToVerify as a stack for a
     // depth-first traversal; there's no need for a second container. But first,
@@ -640,10 +639,8 @@ private:
     // a fairly trivial move to a heap-allocated object.
     PendingFunctionAnalysis FAnalysis(Sem, CInfo, AllInferrableEffectsToVerify);
 
-    LLVM_DEBUG(
-      llvm::dbgs() << "\nVerifying " << CInfo.name(Sem) << " ";
-      FAnalysis.dump(Sem, llvm::dbgs());
-    );
+    LLVM_DEBUG(llvm::dbgs() << "\nVerifying " << CInfo.name(Sem) << " ";
+               FAnalysis.dump(Sem, llvm::dbgs()););
 
     FunctionBodyASTVisitor Visitor(*this, FAnalysis, CInfo);
 
@@ -656,10 +653,8 @@ private:
     PendingFunctionAnalysis *PendingPtr =
         new PendingFunctionAnalysis(std::move(FAnalysis));
     DeclAnalysis[D] = PendingPtr;
-    LLVM_DEBUG(
-      llvm::dbgs() << "inserted pending " << PendingPtr << "\n";
-      DeclAnalysis.dump(Sem, llvm::dbgs());
-    );
+    LLVM_DEBUG(llvm::dbgs() << "inserted pending " << PendingPtr << "\n";
+               DeclAnalysis.dump(Sem, llvm::dbgs()););
     return PendingPtr;
   }
 
@@ -676,10 +671,8 @@ private:
         Sem.getASTContext(), Pending, CInfo.Effects,
         AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
-    LLVM_DEBUG(
-      llvm::dbgs() << "inserted complete " << CompletePtr << "\n";
-      DeclAnalysis.dump(Sem, llvm::dbgs());
-    );
+    LLVM_DEBUG(llvm::dbgs() << "inserted complete " << CompletePtr << "\n";
+               DeclAnalysis.dump(Sem, llvm::dbgs()););
   }
 
   // Called after all direct calls requiring inference have been found -- or
@@ -687,11 +680,9 @@ private:
   // the possibility of inference. Deletes Pending.
   void finishPendingAnalysis(const Decl *D, PendingFunctionAnalysis *Pending) {
     CallableInfo Caller(Sem, *D);
-    LLVM_DEBUG(
-      llvm::dbgs() << "finishPendingAnalysis for " << Caller.name(Sem) << " : ";
-      Pending->dump(Sem, llvm::dbgs());
-      llvm::dbgs() << "\n";
-    );
+    LLVM_DEBUG(llvm::dbgs()
+                   << "finishPendingAnalysis for " << Caller.name(Sem) << " : ";
+               Pending->dump(Sem, llvm::dbgs()); llvm::dbgs() << "\n";);
     for (const PendingFunctionAnalysis::DirectCall &Call :
          Pending->unverifiedCalls()) {
       if (Call.Recursed)
@@ -713,7 +704,7 @@ private:
     const bool DirectCall = Callee.isDirectCall();
 
     // Initially, the declared effects; inferred effects will be added.
-    EffectSet CalleeEffects = Callee.Effects;
+    FunctionEffectKindSet CalleeEffects = Callee.Effects;
 
     bool IsInferencePossible = DirectCall;
 
@@ -733,19 +724,16 @@ private:
     if (!Callee.isVerifiable())
       IsInferencePossible = false;
 
-    LLVM_DEBUG(
-      llvm::dbgs() << "followCall from " << Caller.name(Sem) << " to "
-                   << Callee.name(Sem)
-                   << "; verifiable: " << Callee.isVerifiable() << "; callee ";
-      CalleeEffects.dump(llvm::dbgs());
-      llvm::dbgs() << "\n";
-      llvm::dbgs() << "  callee " << Callee.CDecl << " canonical "
-                   << CanonicalFunctionDecl(Callee.CDecl) << " redecls";
-      for (Decl *D : Callee.CDecl->redecls())
-        llvm::dbgs() << " " << D;
+    LLVM_DEBUG(llvm::dbgs() << "followCall from " << Caller.name(Sem) << " to "
+                            << Callee.name(Sem) << "; verifiable: "
+                            << Callee.isVerifiable() << "; callee ";
+               CalleeEffects.dump(llvm::dbgs()); llvm::dbgs() << "\n";
+               llvm::dbgs()
+               << "  callee " << Callee.CDecl << " canonical "
+               << CanonicalFunctionDecl(Callee.CDecl) << " redecls";
+               for (Decl *D : Callee.CDecl->redecls()) llvm::dbgs() << " " << D;
 
-      llvm::dbgs() << "\n";
-    );
+               llvm::dbgs() << "\n";);
 
     auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
       FunctionEffect::Flags Flags = Effect.flags();
@@ -1008,7 +996,7 @@ private:
       const QualType CalleeType = CalleeExpr->getType();
       auto *FPT =
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
-      EffectSet CalleeFX;
+      FunctionEffectKindSet CalleeFX;
       if (FPT)
         CalleeFX.insert(FPT->getFunctionEffects());
 
@@ -1098,11 +1086,10 @@ private:
     }
 
     bool VisitCallExpr(CallExpr *Call) {
-      LLVM_DEBUG(
-        llvm::dbgs() << "VisitCallExpr : "
+      LLVM_DEBUG(llvm::dbgs()
+                     << "VisitCallExpr : "
                      << Call->getBeginLoc().printToString(Outer.Sem.SourceMgr)
-                     << "\n";
-      );
+                     << "\n";);
 
       Expr *CalleeExpr = Call->getCallee();
       if (const Decl *Callee = CalleeExpr->getReferencedDeclOfCallee()) {
@@ -1122,11 +1109,10 @@ private:
     }
 
     bool VisitVarDecl(VarDecl *Var) {
-      LLVM_DEBUG(
-        llvm::dbgs() << "VisitVarDecl : "
+      LLVM_DEBUG(llvm::dbgs()
+                     << "VisitVarDecl : "
                      << Var->getBeginLoc().printToString(Outer.Sem.SourceMgr)
-                     << "\n";
-      );
+                     << "\n";);
 
       if (Var->isStaticLocal())
         diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeStaticLocalVars,
@@ -1180,12 +1166,10 @@ private:
     }
 
     bool VisitCXXConstructExpr(CXXConstructExpr *Construct) {
-      LLVM_DEBUG(
-        llvm::dbgs() << "VisitCXXConstructExpr : "
-                     << Construct->getBeginLoc().printToString(
-                            Outer.Sem.SourceMgr)
-                     << "\n";
-      );
+      LLVM_DEBUG(llvm::dbgs() << "VisitCXXConstructExpr : "
+                              << Construct->getBeginLoc().printToString(
+                                     Outer.Sem.SourceMgr)
+                              << "\n";);
 
       // BUG? It seems incorrect that RecursiveASTVisitor does not
       // visit the call to the constructor.
@@ -1208,7 +1192,7 @@ private:
       // body. We have to explicitly traverse the captures.
       for (unsigned I = 0, N = Lambda->capture_size(); I < N; ++I)
         TraverseLambdaCapture(Lambda, Lambda->capture_begin() + I,
-                                  Lambda->capture_init_begin()[I]);
+                              Lambda->capture_init_begin()[I]);
 
       return true;
     }
@@ -1265,14 +1249,13 @@ Analyzer::AnalysisMap::~AnalysisMap() {
 
 namespace clang {
 
-void performEffectAnalysis(Sema &S, TranslationUnitDecl *TU)
-{
-	if (S.hasUncompilableErrorOccurred() || S.Diags.getIgnoreAllWarnings())
-	  // exit if having uncompilable errors or ignoring all warnings:
-	  return;
-	if (TU == nullptr)
-	  return;
-	Analyzer{S}.run(*TU);
+void performEffectAnalysis(Sema &S, TranslationUnitDecl *TU) {
+  if (S.hasUncompilableErrorOccurred() || S.Diags.getIgnoreAllWarnings())
+    // exit if having uncompilable errors or ignoring all warnings:
+    return;
+  if (TU == nullptr)
+    return;
+  Analyzer{S}.run(*TU);
 }
 
 } // namespace clang

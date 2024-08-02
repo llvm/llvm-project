@@ -119,6 +119,7 @@ class Expr;
 class ExtQualsTypeCommonBase;
 class FunctionDecl;
 class FunctionEffectSet;
+class FunctionEffectKindSet;
 class IdentifierInfo;
 class NamedDecl;
 class ObjCInterfaceDecl;
@@ -4755,7 +4756,7 @@ public:
   // diagnostic. Caller should be assumed to have the effect (it may not have it
   // explicitly when inferring).
   bool shouldDiagnoseFunctionCall(bool Direct,
-                                  ArrayRef<FunctionEffect> CalleeFX) const;
+                                  const FunctionEffectKindSet &CalleeFX) const;
 
   friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return LHS.FKind == RHS.FKind;
@@ -4900,6 +4901,78 @@ public:
   }
 
   void dump(llvm::raw_ostream &OS) const;
+};
+
+/// A mutable set of FunctionEffect::Kind.
+class FunctionEffectKindSet {
+  // For now this only needs to be a bitmap.
+  using KindBitsT = uint8_t;
+  constexpr static size_t EndBitPos = 8;
+
+  KindBitsT KindBits = 0;
+
+  static KindBitsT kindToBit(FunctionEffect::Kind K) {
+    return 1u << KindBitsT(K);
+  }
+
+  explicit FunctionEffectKindSet(KindBitsT KB) : KindBits(KB) {}
+
+public:
+  FunctionEffectKindSet() = default;
+  explicit FunctionEffectKindSet(FunctionEffectsRef FX) { insert(FX); }
+
+  class iterator {
+    const FunctionEffectKindSet *Outer = nullptr;
+    size_t Idx = 0;
+
+    // If Idx does not reference a set bit, advance it until it does,
+    // or until it reaches EndBitPos.
+    void advanceIdx() {
+      while (Idx < EndBitPos && !(Outer->KindBits & (1u << Idx)))
+        ++Idx;
+    }
+
+  public:
+    iterator();
+    iterator(const FunctionEffectKindSet &O, size_t I) : Outer(&O), Idx(I) {
+      advanceIdx();
+    }
+    bool operator==(const iterator &Other) const { return Idx == Other.Idx; }
+    bool operator!=(const iterator &Other) const { return Idx != Other.Idx; }
+
+    iterator operator++() {
+      ++Idx;
+      advanceIdx();
+      return *this;
+    }
+
+    FunctionEffect operator*() const {
+      assert(Idx < EndBitPos);
+      return FunctionEffect(FunctionEffect::Kind(Idx));
+    }
+  };
+
+  iterator begin() const { return iterator(*this, 0); }
+  iterator end() const { return iterator(*this, EndBitPos); }
+
+  void insert(const FunctionEffect &Effect) {
+    KindBits |= kindToBit(Effect.kind());
+  }
+  void insert(FunctionEffectsRef FX) {
+    for (const FunctionEffect &Item : FX.effects())
+      insert(Item);
+  }
+  void insert(const FunctionEffectKindSet &Set) { KindBits |= Set.KindBits; }
+
+  bool contains(const FunctionEffect::Kind EK) const {
+    return (KindBits & kindToBit(EK)) != 0;
+  }
+  void dump(llvm::raw_ostream &OS) const;
+
+  static FunctionEffectKindSet difference(const FunctionEffectKindSet &LHS,
+                                          const FunctionEffectKindSet &RHS) {
+    return FunctionEffectKindSet(LHS.KindBits & ~RHS.KindBits);
+  }
 };
 
 /// A mutable set of FunctionEffects and possibly conditions attached to them.

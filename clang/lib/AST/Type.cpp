@@ -5163,12 +5163,12 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
-    bool Direct, ArrayRef<FunctionEffect> CalleeFX) const {
+    bool Direct, const FunctionEffectKindSet &CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
     const Kind CallerKind = kind();
-    for (const auto &Effect : CalleeFX) {
+    for (const FunctionEffect &Effect : CalleeFX) {
       const Kind EK = Effect.kind();
       // Does callee have same or stronger constraint?
       if (EK == CallerKind ||
@@ -5309,6 +5309,19 @@ LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
   FunctionEffectsRef(*this).dump(OS);
+}
+
+LLVM_DUMP_METHOD void FunctionEffectKindSet::dump(llvm::raw_ostream &OS) const {
+  OS << "Effects{";
+  bool First = true;
+  for (const auto &Effect : *this) {
+    if (!First)
+      OS << ", ";
+    else
+      First = false;
+    OS << Effect.name();
+  }
+  OS << "}";
 }
 
 FunctionEffectsRef
