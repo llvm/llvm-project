@@ -134,7 +134,12 @@ cl::opt<std::string> FuncNameFilter(
     "function",
     cl::desc("Only functions matching the filter are shown in the output. For "
              "overlapping CSSPGO, this takes a function name with calling "
-             "context."),
+             "context. For merge, the filter applies to the text format "
+             "representation of the function, for example, _ZN3fooEv for "
+             "contextless, [_ZN3fooEv:2.1 @ bar:1 @ baz] for CSSPGO, and "
+             "_ZN3fooEv:2.1 @ bar:1 @ baz to filter inlined function. Use "
+             "quoted string for regex match. See detailed documentation of the "
+             "usage in https://llvm.org/docs/CommandGuide/llvm-profdata.html."),
     cl::sub(ShowSubcommand), cl::sub(OverlapSubcommand),
     cl::sub(MergeSubcommand));
 
@@ -824,59 +829,108 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
   });
 }
 
-static StringRef
-getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
-  return Val.first();
+// Limitation: Wildcard may cause unexpected regex match, for example,
+// "foo.*bar:1 @ baz" may match "foo:1 @ bar:1 @ baz". The user should specify
+// regex pattern in a way not to match strings that are not valid mangled names.
+static void filterFunctions(SampleProfileMap &Profiles,
+                            std::string FilterString, bool EraseMatch) {
+  // Checking all call targets is very slow, only do this if FilterString can
+  // ever match a call target.
+  bool MatchCallTargets = (FilterString.find(" @@ ") != std::string::npos);
+
+  // Search inlined callsites recursively is extremely slow, only do this if
+  // FilterString has more than one part delimited by " @ " (except for CSSPGO
+  // top level function, we will check for that later) or " @@ ".
+  bool SearchInlinedCallsites =
+      MatchCallTargets || (FilterString.find(" @ ") != std::string::npos);
+
+  uint64_t MD5 = 0;
+
+  // If Pattern is quoted string, treat it as escaped regex, otherwise treat it
+  // as literal match.
+  if (FilterString[0] == '\"') {
+    if (FilterString.size() < 2 || FilterString.back() != '\"')
+      exitWithError("missing terminating '\"' character");
+    FilterString = FilterString.substr(1, FilterString.length() - 2);
+
+    // If pattern is "\[.*\]", it is CSSPGO top level function.
+    if (FilterString[0] == '\\' && FilterString[1] == '[' &&
+        FilterString[FilterString.size() - 2] == '\\' &&
+        FilterString[FilterString.size() - 1] == ']')
+      SearchInlinedCallsites = false;
+  } else {
+    // If pattern is "[.*]", it is CSSPGO top level function.
+    if (FilterString[0] == '[' && FilterString[FilterString.size() - 1] == ']')
+      SearchInlinedCallsites = false;
+
+    // Handle MD5 profile as well if possible. Obviously it only makes sense if
+    // FilterString only matches top level function and is plain text only.
+    if (!SearchInlinedCallsites &&
+        !std::all_of(FilterString.begin(), FilterString.end(), ::isdigit)) {
+      std::list<SampleContextFrameVector> CSNameTable;
+      MD5 = SampleContext(FilterString, CSNameTable).getHashCode();
+    }
+
+    // Mangled name can contain `?` (MSVC), `.` (LLVM suffix), or `[]` (CSSPGO).
+    FilterString = "^" + llvm::Regex::escape(FilterString) + "$";
+  }
+
+  llvm::Regex Re(FilterString);
+  if (std::string Error; !Re.isValid(Error))
+    exitWithError(Error);
+
+  for (auto FS = Profiles.begin(); FS != Profiles.end();) {
+    std::string CanonicalName = FS->second.getContext().toString();
+    if (FS->second.getContext().hasContext())
+      CanonicalName = "[" + CanonicalName + "]";
+    if ((Re.match(CanonicalName) ||
+         (FunctionSamples::UseMD5 &&
+          FS->second.getContext().getHashCode() == MD5)) == EraseMatch) {
+      FS = Profiles.erase(FS);
+      continue;
+    }
+    if (SearchInlinedCallsites)
+      FS->second.eraseInlinedCallsites(Re, CanonicalName, MatchCallTargets,
+                                       EraseMatch);
+    FS++;
+  }
 }
 
-static std::string
-getFuncName(const SampleProfileMap::value_type &Val) {
-  return Val.second.getContext().toString();
+static void filterFunctions(StringMap<InstrProfWriter::ProfilingData> &Profiles,
+                            std::string FilterString, bool EraseMatch) {
+  // If Pattern is quoted string, treat it as escaped regex, otherwise treat it
+  // as literal match.
+  if (FilterString[0] == '\"') {
+    if (FilterString.size() < 2 || FilterString.back() != '\"')
+      exitWithError("missing terminating '\"' character");
+    FilterString = FilterString.substr(1, FilterString.length() - 2);
+  }
+
+  llvm::Regex Re(FilterString);
+  if (std::string Error; !Re.isValid(Error))
+    exitWithError(Error);
+
+  for (auto ProfileIt = Profiles.begin(); ProfileIt != Profiles.end();) {
+    auto Tmp = ProfileIt++;
+    if (Re.match(Tmp->first()) == EraseMatch)
+      Profiles.erase(Tmp);
+  }
 }
 
-template <typename T>
-static void filterFunctions(T &ProfileMap) {
+template <typename T> static void filterFunctions(T &Profiles) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
   if (!hasFilter && !hasNegativeFilter)
     return;
 
-  // If filter starts with '?' it is MSVC mangled name, not a regex.
-  llvm::Regex ProbablyMSVCMangledName("[?@$_0-9A-Za-z]+");
-  if (hasFilter && FuncNameFilter[0] == '?' &&
-      ProbablyMSVCMangledName.match(FuncNameFilter))
-    FuncNameFilter = llvm::Regex::escape(FuncNameFilter);
-  if (hasNegativeFilter && FuncNameNegativeFilter[0] == '?' &&
-      ProbablyMSVCMangledName.match(FuncNameNegativeFilter))
-    FuncNameNegativeFilter = llvm::Regex::escape(FuncNameNegativeFilter);
+  size_t Count = Profiles.size();
 
-  size_t Count = ProfileMap.size();
-  llvm::Regex Pattern(FuncNameFilter);
-  llvm::Regex NegativePattern(FuncNameNegativeFilter);
-  std::string Error;
-  if (hasFilter && !Pattern.isValid(Error))
-    exitWithError(Error);
-  if (hasNegativeFilter && !NegativePattern.isValid(Error))
-    exitWithError(Error);
+  if (!FuncNameFilter.empty())
+    filterFunctions(Profiles, FuncNameFilter, false);
+  if (!FuncNameNegativeFilter.empty())
+    filterFunctions(Profiles, FuncNameNegativeFilter, true);
 
-  // Handle MD5 profile, so it is still able to match using the original name.
-  std::string MD5Name = std::to_string(llvm::MD5Hash(FuncNameFilter));
-  std::string NegativeMD5Name =
-      std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
-
-  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
-    auto Tmp = I++;
-    const auto &FuncName = getFuncName(*Tmp);
-    // Negative filter has higher precedence than positive filter.
-    if ((hasNegativeFilter &&
-         (NegativePattern.match(FuncName) ||
-          (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
-        (hasFilter && !(Pattern.match(FuncName) ||
-                        (FunctionSamples::UseMD5 && MD5Name == FuncName))))
-      ProfileMap.erase(Tmp);
-  }
-
-  llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
+  llvm::dbgs() << Count - Profiles.size() << " of " << Count << " functions "
                << "in the original profile are filtered.\n";
 }
 

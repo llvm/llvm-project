@@ -219,13 +219,16 @@ OPTIONS
 
 .. option:: --function=<string>
 
- Only keep functions matching the regex in the output, all others are erased
- from the profile.
+ Only keep functions matching the filter in the output, all others are erased
+ from the profile. If the filter string is quoted and escaped, it is treated as
+ regex, otherwise it is treated as exact match. For sample profile, see
+ :ref:`Sample Profile Canonical Function Name <profdata-canonical>` how to match
+ inlined function.
 
 .. option:: --no-function=<string>
 
- Remove functions matching the regex from the profile. If both --function and
- --no-function are specified and a function matches both, it is removed.
+ Remove functions matching the filter from the profile. If a function matches
+ both filters specified by --function and --no-function, it is removed.
 
 EXAMPLES
 ^^^^^^^^
@@ -475,3 +478,40 @@ EXIT STATUS
 
 :program:`llvm-profdata` returns 1 if the command is omitted or is invalid,
 if it cannot read input files, or if there is a mismatch between their data.
+
+.. _profdata-canonical:
+
+SAMPLE PROFILE CANONICAL FUNCTION NAME
+--------------------------------------
+
+The canonical name of a (possibly inlined) function in sample profile is
+defined as the following:
+
+::
+
+    <canonical name> ::= <top level name>
+                     ::= <top level name> <inlined callsites>
+
+    <top level name> ::= <FunctionID> # for context-less profile
+                     ::= "[" (<FunctionID> | <FunctionID> <inlined callsites>) "]" # for CSSPGO profile
+
+    <inlined callsites> ::= <SampleContextFrame>
+                        ::= <SampleContextFrame> <inlined callsites>
+
+    <SampleContextFrame> ::= ":" <LineLocation> " @ " <FunctionID>
+
+    <LineLocation> ::= <number>
+                   ::= <number> "." <number> # with discriminator
+
+    <FunctionID> ::= <number> # for MD5 profile
+                 ::= <string> # for non-MD5 profile
+
+For brevity we do not check for the validity of the mangled name, and the only
+restrictions are that it cannot begin with a number or space, and it cannot
+contain the inline context separator " @ ".
+
+The canonical name of a call taget is defined as:
+
+::
+
+    <call target canonical name> ::= <canonical name> ":" <LineLocation> " @@ " <FunctionID>
