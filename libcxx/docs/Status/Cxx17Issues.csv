@@ -1,6 +1,6 @@
 "Issue #","Issue Name","Meeting","Status","First released version","Labels"
 "`LWG2016 <https://wg21.link/LWG2016>`__","Allocators must be no-throw swappable","Urbana","|Complete|","",""
-"`LWG2118 <https://wg21.link/LWG2376>`__","``unique_ptr``\  for array does not support cv qualification conversion of actual argument","Urbana","|Complete|","",""
+"`LWG2118 <https://wg21.link/LWG2118>`__","``unique_ptr``\  for array does not support cv qualification conversion of actual argument","Urbana","|Complete|","",""
 "`LWG2170 <https://wg21.link/LWG2170>`__","Aggregates cannot be ``DefaultConstructible``\ ","Urbana","|Complete|","",""
 "`LWG2308 <https://wg21.link/LWG2308>`__","Clarify container destructor requirements w.r.t. ``std::array``\ ","Urbana","|Complete|","",""
 "`LWG2340 <https://wg21.link/LWG2340>`__","Replacement allocation functions declared as inline","Urbana","|Complete|","",""
