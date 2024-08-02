@@ -80,8 +80,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &
-  addMemberVariable(StringRef Name, QualType Type,
-                    llvm::ArrayRef<Attr *> Attrs,
+  addMemberVariable(StringRef Name, QualType Type, llvm::ArrayRef<Attr *> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
@@ -118,11 +117,11 @@ struct BuiltinTypeDeclBuilder {
     }
     // add handle member
     llvm::SmallVector<Attr *, 2> Attrs;
-    Attrs.push_back(
-        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC));
-    Attrs.push_back(
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
-    addMemberVariable("h", Ty, Attrs, Access);
+    Attr *ResourceClassAttr =
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC);
+    Attr *ResourceAttr =
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV);
+    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr}, Access);
     return *this;
   }
 
