@@ -391,7 +391,8 @@ bool Operation::isBeforeInBlock(Operation *other) {
   // parent.
   if (!block->isOpOrderValid()) {
     block->recomputeOpOrder();
-  } else if (block->getOperations().size() > 1) {
+  // } else if (!llvm::hasSingleElement(*block)) {
+  } else {
     // Update the order either operation if necessary.
     updateOrderIfNecessary();
     other->updateOrderIfNecessary();
@@ -502,10 +503,14 @@ Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
 /// keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
   assert(!op->getBlock() && "already in an operation block!");
-  op->block = getContainingBlock();
+  
+  Block *curParent = getContainingBlock();
+  op->block = curParent;
 
   // Invalidate the order on the operation.
   op->orderIndex = Operation::kInvalidOrderIdx;
+  // Invalidate the ordering of the parent block.
+  curParent->invalidateOpOrder();
 }
 
 /// This is a trait method invoked when an operation is removed from a block.
