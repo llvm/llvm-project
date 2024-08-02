@@ -362,6 +362,26 @@ TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
             format("aaaaaaaaaa(aaaa(aaaa,\n"
                    "aaaa), //\n"
                    "aaaa, bbbbb);"));
+
+  FormatStyle BreakAlways = getLLVMStyle();
+  BreakAlways.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  EXPECT_EQ("SomeFunction(a,\n"
+            "             b, // comment\n"
+            "             c,\n"
+            "             d);",
+            format("SomeFunction(a,\n"
+                   "          b, // comment\n"
+                   "      c, d);",
+                   BreakAlways));
+  EXPECT_EQ("SomeFunction(a,\n"
+            "             b,\n"
+            "             // comment\n"
+            "             c);",
+            format("SomeFunction(a,\n"
+                   "          b,\n"
+                   "  // comment\n"
+                   "      c);",
+                   BreakAlways));
 }
 
 TEST_F(FormatTestComments, RemovesTrailingWhitespaceOfComments) {
@@ -404,7 +424,13 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
                "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_Never;
+  verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
+               "         /* parameter 2 */ aaaaaa,\n"
+               "         /* parameter 3 */ aaaaaa,\n"
+               "         /* parameter 4 */ aaaaaa);",
+               NoBinPacking);
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
                "         /* parameter 2 */ aaaaaa,\n"
                "         /* parameter 3 */ aaaaaa,\n"
@@ -2449,7 +2475,7 @@ TEST_F(FormatTestComments, BlockComments) {
                    getLLVMStyleWithColumns(50)));
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = false;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_Never;
   EXPECT_EQ("someFunction(1, /* comment 1 */\n"
             "             2, /* comment 2 */\n"
             "             3, /* comment 3 */\n"
