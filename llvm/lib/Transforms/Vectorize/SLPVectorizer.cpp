@@ -6402,6 +6402,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return TreeEntry::NeedToGather;
     }
 
+    if (any_of(VL, [&SourceVectors](Value *V) {
+          if (SourceVectors.contains(V))
+            return !V->hasOneUse();
+          // The last InsertElement can have multiple uses.
+          return false;
+        }))
+      return TreeEntry::NeedToGather;
+
     return TreeEntry::Vectorize;
   }
   case Instruction::Load: {
