@@ -419,14 +419,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
-  } else {
-    if (!RV64LegalI32 && Subtarget.is64Bit() &&
-        !Subtarget.hasShortForwardBranchOpt())
-      setOperationAction(ISD::ABS, MVT::i32, Custom);
-
+  } else if (Subtarget.hasShortForwardBranchOpt()) {
     // We can use PseudoCCSUB to implement ABS.
-    if (Subtarget.hasShortForwardBranchOpt())
-      setOperationAction(ISD::ABS, XLenVT, Legal);
+    setOperationAction(ISD::ABS, XLenVT, Legal);
+  } else if (!RV64LegalI32 && Subtarget.is64Bit()) {
+    setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasVendorXTHeadCondMov()) {
