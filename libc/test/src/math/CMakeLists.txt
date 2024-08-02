@@ -2407,6 +2407,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   dfmal_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -2415,22 +2416,13 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.dfmal
-)
-
-add_fp_unittest(
-  dfmaf128_test
-  SUITE
-    libc-math-unittests
-  SRCS
-    dfmaf128_test.cpp
-  HDRS
-    FmaTest.h
-  DEPENDS
-    libc.src.math.dfmaf128
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 add_fp_unittest(
   dsubl_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -2444,21 +2436,8 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  dsubf128_test
-  SUITE
-    libc-math-unittests
-  SRCS
-    dsubf128_test.cpp
-  HDRS
-    SubTest.h
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.math.dsubf128
-)
-
-add_fp_unittest(
   fdiv_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -2473,6 +2452,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   fdivl_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -2485,22 +2465,10 @@ add_fp_unittest(
     libc.src.math.fdivl
 )
 
-add_fp_unittest(
-  fdivf128_test
-  SUITE
-    libc-math-unittests
-  SRCS
-    fdivf128_test.cpp
-  HDRS
-    DivTest.h
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.math.fdivf128
-)
 
 add_fp_unittest(
   ffma_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -2509,10 +2477,13 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.ffma
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 add_fp_unittest(
   ffmal_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -2521,18 +2492,8 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.ffmal
-)
-
-add_fp_unittest(
-  ffmaf128_test
-  SUITE
-    libc-math-unittests
-  SRCS
-    ffmaf128_test.cpp
-  HDRS
-    FmaTest.h
-  DEPENDS
-    libc.src.math.ffmaf128
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 
