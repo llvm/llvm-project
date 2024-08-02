@@ -32,9 +32,9 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
   // handler triggered which may get the wrong tid.
   internal::force_set_tid(0);
 #ifdef SYS_fork
-  pid_t ret = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_fork);
+  pid_t ret = syscall_impl<pid_t>(SYS_fork);
 #elif defined(SYS_clone)
-  pid_t ret = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_clone, SIGCHLD, 0);
+  pid_t ret = syscall_impl<pid_t>(SYS_clone, SIGCHLD, 0);
 #else
 #error "fork and clone syscalls not available."
 #endif
@@ -44,7 +44,7 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
     // The child is created with a single thread whose self object will be a
     // copy of parent process' thread which called fork. So, we have to fix up
     // the child process' self object with the new process' tid.
-    self.attrib->tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
+    internal::force_set_tid(syscall_impl<pid_t>(SYS_gettid));
     invoke_child_callbacks();
     return 0;
   }

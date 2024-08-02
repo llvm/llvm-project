@@ -32,10 +32,8 @@ LIBC_INLINE pid_t *get_tid_cache() {
 
 LIBC_INLINE pid_t gettid() {
   pid_t *cache = get_tid_cache();
-  if (LIBC_UNLIKELY(!cache))
+  if (LIBC_UNLIKELY(!cache || *cache <= 0))
     return syscall_impl<pid_t>(SYS_gettid);
-  if (LIBC_UNLIKELY(*cache <= 0))
-    *cache = syscall_impl<pid_t>(SYS_gettid);
   return *cache;
 }
 
