@@ -661,7 +661,8 @@ define i32 @select_bittest_to_shl(i32 %x) {
 ; CHECK-LABEL: @select_bittest_to_shl(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i32 2, [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 2, i32 4
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
@@ -675,7 +676,8 @@ define i32 @select_bittest_to_lshr(i32 %x) {
 ; CHECK-LABEL: @select_bittest_to_lshr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[RET:%.*]] = lshr exact i32 4, [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 4, i32 2
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
@@ -689,7 +691,8 @@ define i32 @select_bittest_to_ashr(i32 %x) {
 ; CHECK-LABEL: @select_bittest_to_ashr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[RET:%.*]] = ashr exact i32 -4, [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 -4, i32 -1
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
@@ -697,4 +700,18 @@ entry:
   %cmp = icmp eq i32 %and, 0
   %ret = select i1 %cmp, i32 -4, i32 -1
   ret i32 %ret
+}
+
+define i32 @select_bittest_to_shl_negative_test(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_shl_negative_test(
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[MASK]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND]], i32 4, i32 6
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %mask = and i32 %x, 1
+  %cond = icmp eq i32 %mask, 0
+  %y = select i1 %cond, i32 2, i32 4
+  %res = add nuw nsw i32 %y, 2
+  ret i32 %res
 }

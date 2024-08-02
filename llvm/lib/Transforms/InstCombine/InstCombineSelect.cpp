@@ -172,35 +172,22 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
     if (CreateAnd && !Cmp->hasOneUse())
       return nullptr;
 
-    // If the select constants differ by exactly one bit and that's the same
-    // bit that is masked and checked by the select condition, the select can
-    // be replaced by bitwise logic to set/clear one bit of the constant result.
-    // If the masked bit in V is clear, clear or set the bit in the result:
-    // (V & AndMaskC) == 0 ? TC : FC --> (V & AndMaskC) ^ TC
-    // (V & AndMaskC) == 0 ? TC : FC --> (V & AndMaskC) | TC
-    if ((TC ^ FC) == AndMask) {
-      if (CreateAnd)
-        V = Builder.CreateAnd(V, ConstantInt::get(SelType, AndMask));
-      bool ExtraBitInTC = TC.ugt(FC);
-      Constant *C = ConstantInt::get(SelType, TC);
-      return ExtraBitInTC ? Builder.CreateXor(V, C) : Builder.CreateOr(V, C);
-    }
-
+    // (V & AndMaskC) == 0 ? TC : FC --> TC | (V & AndMaskC)
+    // (V & AndMaskC) == 0 ? TC : FC --> TC ^ (V & AndMaskC)
     // (V & AndMaskC) == 0 ? TC : FC --> TC + (V & AndMaskC)
     // (V & AndMaskC) == 0 ? TC : FC --> TC - (V & AndMaskC)
-    // (V & AndMaskC) == 0 ? TC : FC --> TC s>> (V & AndMaskC)
-    // (V & AndMaskC) == 0 ? TC : FC --> TC u>> (V & AndMaskC)
-    // (V & AndMaskC) == 0 ? TC : FC --> TC << (V & AndMaskC)
     Constant *TCC = ConstantInt::get(SelType, TC);
     Constant *FCC = ConstantInt::get(SelType, FC);
     Constant *MaskC = ConstantInt::get(SelType, AndMask);
-    for (auto Opc : {Instruction::Add, Instruction::Sub, Instruction::Shl,
-                     Instruction::LShr, Instruction::AShr}) {
+    for (auto Opc : {Instruction::Or, Instruction::Xor, Instruction::Add,
+                     Instruction::Sub}) {
       if (ConstantFoldBinaryOpOperands(Opc, TCC, MaskC, Sel.getDataLayout()) ==
           FCC) {
         if (CreateAnd)
           V = Builder.CreateAnd(V, MaskC);
-        return Builder.CreateBinOp(Opc, TCC, V);
+        if (Opc == Instruction::Sub)
+          return Builder.CreateSub(TCC, V);
+        return Builder.CreateBinOp(Opc, V, TCC);
       }
     }
 
