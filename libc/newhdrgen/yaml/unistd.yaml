@@ -307,3 +307,9 @@ functions:
       - type: const void *__restrict
       - type: void *
       - type: ssize_t
+  - name: gettid
+    standards: 
+      - Linux
+    return_type: pid_t
+    arguments:
+      - type: void

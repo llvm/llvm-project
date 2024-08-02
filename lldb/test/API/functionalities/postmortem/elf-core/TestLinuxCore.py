@@ -249,6 +249,32 @@ class LinuxCoreTestCase(TestBase):
 
         self.dbg.DeleteTarget(target)
 
+    def test_object_map(self):
+        """Test that lldb can find the exe for an i386 linux core file using the object map."""
+
+        # Copy linux-i386.out to lldb_i386_object_map/a.out
+        tmp_object_map_root = os.path.join(self.getBuildDir(), "lldb_i386_object_map")
+        executable = os.path.join(tmp_object_map_root, "a.out")
+        lldbutil.mkdir_p(os.path.dirname(executable))
+        shutil.copyfile("linux-i386.out", executable)
+
+        # Replace the original module path at /home/labath/test and load the core
+        self.runCmd(
+            "settings set target.object-map /home/labath/test {}".format(
+                tmp_object_map_root
+            )
+        )
+
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-i386.core")
+
+        # Check that we did load the mapped executable
+        exe_module_spec = process.GetTarget().GetModuleAtIndex(0).GetFileSpec()
+        self.assertTrue(exe_module_spec.fullpath.startswith(tmp_object_map_root))
+
+        self.check_all(process, self._i386_pid, self._i386_regions, "a.out")
+        self.dbg.DeleteTarget(target)
+
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
     def test_x86_64_sysroot(self):

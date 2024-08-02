@@ -360,7 +360,7 @@ The following sets the ftz flag to 1.
 
 .. code-block:: llvm
 
-    !llvm.module.flag = !{!0}
+    !llvm.module.flags = !{!0}
     !0 = !{i32 4, !"nvvm-reflect-ftz", i32 1}
 
 (``i32 4`` indicates that the value set here overrides the value in another

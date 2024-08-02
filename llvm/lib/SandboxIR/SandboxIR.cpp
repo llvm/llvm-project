@@ -1062,6 +1062,95 @@ void GetElementPtrInst::dump() const {
 }
 #endif // NDEBUG
 
+BasicBlock *PHINode::LLVMBBToBB::operator()(llvm::BasicBlock *LLVMBB) const {
+  return cast<BasicBlock>(Ctx.getValue(LLVMBB));
+}
+
+PHINode *PHINode::create(Type *Ty, unsigned NumReservedValues,
+                         Instruction *InsertBefore, Context &Ctx,
+                         const Twine &Name) {
+  llvm::PHINode *NewPHI = llvm::PHINode::Create(
+      Ty, NumReservedValues, Name, InsertBefore->getTopmostLLVMInstruction());
+  return Ctx.createPHINode(NewPHI);
+}
+
+bool PHINode::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::PHI;
+}
+
+Value *PHINode::getIncomingValue(unsigned Idx) const {
+  return Ctx.getValue(cast<llvm::PHINode>(Val)->getIncomingValue(Idx));
+}
+void PHINode::setIncomingValue(unsigned Idx, Value *V) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<PHISetIncoming>(
+        *this, Idx, PHISetIncoming::What::Value, Tracker));
+
+  cast<llvm::PHINode>(Val)->setIncomingValue(Idx, V->Val);
+}
+BasicBlock *PHINode::getIncomingBlock(unsigned Idx) const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::PHINode>(Val)->getIncomingBlock(Idx)));
+}
+BasicBlock *PHINode::getIncomingBlock(const Use &U) const {
+  llvm::Use *LLVMUse = U.LLVMUse;
+  llvm::BasicBlock *BB = cast<llvm::PHINode>(Val)->getIncomingBlock(*LLVMUse);
+  return cast<BasicBlock>(Ctx.getValue(BB));
+}
+void PHINode::setIncomingBlock(unsigned Idx, BasicBlock *BB) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<PHISetIncoming>(
+        *this, Idx, PHISetIncoming::What::Block, Tracker));
+  cast<llvm::PHINode>(Val)->setIncomingBlock(Idx,
+                                             cast<llvm::BasicBlock>(BB->Val));
+}
+void PHINode::addIncoming(Value *V, BasicBlock *BB) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<PHIAddIncoming>(*this, Tracker));
+
+  cast<llvm::PHINode>(Val)->addIncoming(V->Val,
+                                        cast<llvm::BasicBlock>(BB->Val));
+}
+Value *PHINode::removeIncomingValue(unsigned Idx) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<PHIRemoveIncoming>(*this, Idx, Tracker));
+
+  llvm::Value *LLVMV =
+      cast<llvm::PHINode>(Val)->removeIncomingValue(Idx,
+                                                    /*DeletePHIIfEmpty=*/false);
+  return Ctx.getValue(LLVMV);
+}
+Value *PHINode::removeIncomingValue(BasicBlock *BB) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<PHIRemoveIncoming>(
+        *this, getBasicBlockIndex(BB), Tracker));
+
+  auto *LLVMBB = cast<llvm::BasicBlock>(BB->Val);
+  llvm::Value *LLVMV =
+      cast<llvm::PHINode>(Val)->removeIncomingValue(LLVMBB,
+                                                    /*DeletePHIIfEmpty=*/false);
+  return Ctx.getValue(LLVMV);
+}
+int PHINode::getBasicBlockIndex(const BasicBlock *BB) const {
+  auto *LLVMBB = cast<llvm::BasicBlock>(BB->Val);
+  return cast<llvm::PHINode>(Val)->getBasicBlockIndex(LLVMBB);
+}
+Value *PHINode::getIncomingValueForBlock(const BasicBlock *BB) const {
+  auto *LLVMBB = cast<llvm::BasicBlock>(BB->Val);
+  llvm::Value *LLVMV =
+      cast<llvm::PHINode>(Val)->getIncomingValueForBlock(LLVMBB);
+  return Ctx.getValue(LLVMV);
+}
+Value *PHINode::hasConstantValue() const {
+  llvm::Value *LLVMV = cast<llvm::PHINode>(Val)->hasConstantValue();
+  return LLVMV != nullptr ? Ctx.getValue(LLVMV) : nullptr;
+}
+
 static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
   switch (Opc) {
   case Instruction::Opcode::ZExt:
@@ -1141,62 +1230,13 @@ void CastInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
-#endif // NDEBUG
 
-Value *PtrToIntInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                            BasicBlock *WhereBB, Context &Ctx,
-                            const Twine &Name) {
-  return CastInst::create(DestTy, Instruction::Opcode::PtrToInt, Src, WhereIt,
-                          WhereBB, Ctx, Name);
-}
-Value *PtrToIntInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                            Context &Ctx, const Twine &Name) {
-  return create(Src, DestTy, InsertBefore->getIterator(),
-                InsertBefore->getParent(), Ctx, Name);
-}
-Value *PtrToIntInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                            Context &Ctx, const Twine &Name) {
-  return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
-}
-
-#ifndef NDEBUG
-void PtrToIntInst::dump(raw_ostream &OS) const {
+void PHINode::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
   dumpCommonSuffix(OS);
 }
 
-void PtrToIntInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
-Value *BitCastInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                           BasicBlock *WhereBB, Context &Ctx,
-                           const Twine &Name) {
-  return CastInst::create(DestTy, Instruction::Opcode::BitCast, Src, WhereIt,
-                          WhereBB, Ctx, Name);
-}
-
-Value *BitCastInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                           Context &Ctx, const Twine &Name) {
-  return CastInst::create(DestTy, Instruction::Opcode::BitCast, Src,
-                          InsertBefore, Ctx, Name);
-}
-
-Value *BitCastInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                           Context &Ctx, const Twine &Name) {
-  return CastInst::create(DestTy, Instruction::Opcode::BitCast, Src,
-                          InsertAtEnd, Ctx, Name);
-}
-
-#ifndef NDEBUG
-void BitCastInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void BitCastInst::dump() const {
+void PHINode::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
@@ -1392,6 +1432,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<CastInst>(new CastInst(LLVMCast, *this));
     return It->second.get();
   }
+  case llvm::Instruction::PHI: {
+    auto *LLVMPhi = cast<llvm::PHINode>(LLVMV);
+    It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -1460,6 +1505,10 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
 CastInst *Context::createCastInst(llvm::CastInst *I) {
   auto NewPtr = std::unique_ptr<CastInst>(new CastInst(I, *this));
   return cast<CastInst>(registerValue(std::move(NewPtr)));
+}
+PHINode *Context::createPHINode(llvm::PHINode *I) {
+  auto NewPtr = std::unique_ptr<PHINode>(new PHINode(I, *this));
+  return cast<PHINode>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {
