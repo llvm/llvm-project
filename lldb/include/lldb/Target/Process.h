@@ -741,8 +741,14 @@ public:
   /// Helper function for Process::SaveCore(...) that calculates the address
   /// ranges that should be saved. This allows all core file plug-ins to save
   /// consistent memory ranges given a \a core_style.
-  Status CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+  Status CalculateCoreFileSaveRanges(const SaveCoreOptions &core_options,
                                      CoreFileMemoryRanges &ranges);
+
+  /// Helper function for Process::SaveCore(...) that calculates the thread list
+  /// based upon options set within a given \a core_options object.
+  /// \note If there is no thread list defined, all threads will be saved.
+  std::vector<lldb::ThreadSP>
+  CalculateCoreFileThreadList(const SaveCoreOptions &core_options);
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
