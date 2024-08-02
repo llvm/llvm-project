@@ -4617,12 +4617,21 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       // 3. The loads are ordered, or number of unordered loads <=
       // MaxProfitableUnorderedLoads, or loads are in reversed order.
       // (this check is to avoid extra costs for very expensive shuffles).
-      if (IsPossibleStrided && (((Sz > MinProfitableStridedLoads ||
-                                  (static_cast<unsigned>(std::abs(*Diff)) <=
-                                       MaxProfitableLoadStride * Sz &&
-                                   isPowerOf2_32(std::abs(*Diff)))) &&
-                                 static_cast<unsigned>(std::abs(*Diff)) > Sz) ||
-                                *Diff == -(static_cast<int>(Sz) - 1))) {
+      // 4. Any pointer operand is an instruction with the users outside of the
+      // current graph (for masked gathers extra extractelement instructions
+      // might be required).
+      if (IsPossibleStrided &&
+          (((Sz > MinProfitableStridedLoads ||
+             (static_cast<unsigned>(std::abs(*Diff)) <=
+                  MaxProfitableLoadStride * Sz &&
+              isPowerOf2_32(std::abs(*Diff)))) &&
+            static_cast<unsigned>(std::abs(*Diff)) > Sz) ||
+           *Diff == -(static_cast<int>(Sz) - 1) ||
+           any_of(PointerOps, [&](Value *V) {
+             return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                      return !getTreeEntry(U) && !MustGather.contains(U);
+                    });
+           }))) {
         int Stride = *Diff / static_cast<int>(Sz - 1);
         if (*Diff == Stride * static_cast<int>(Sz - 1)) {
           Align Alignment =
@@ -10074,6 +10083,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   // We only handle trees of heights 1 and 2.
   if (VectorizableTree.size() == 1 &&
       (VectorizableTree[0]->State == TreeEntry::Vectorize ||
+       VectorizableTree[0]->State == TreeEntry::StridedVectorize ||
        (ForReduction &&
         AreVectorizableGathers(VectorizableTree[0].get(),
                                VectorizableTree[0]->Scalars.size()) &&
