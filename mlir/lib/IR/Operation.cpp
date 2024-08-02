@@ -391,7 +391,6 @@ bool Operation::isBeforeInBlock(Operation *other) {
   // parent.
   if (!block->isOpOrderValid()) {
     block->recomputeOpOrder();
-  // } else if (!llvm::hasSingleElement(*block)) {
   } else {
     // Update the order either operation if necessary.
     updateOrderIfNecessary();
