@@ -74,14 +74,17 @@ lldb::SaveCoreStyle SBSaveCoreOptions::GetStyle() const {
 }
 
 SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
+  LLDB_INSTRUMENT_VA(this, process);
   return m_opaque_up->SetProcess(process.GetSP());
 }
 
 SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
+  LLDB_INSTRUMENT_VA(this, thread);
   return m_opaque_up->AddThread(thread.GetSP());
 }
 
 bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
+  LLDB_INSTRUMENT_VA(this, thread);
   return m_opaque_up->RemoveThread(thread.GetSP());
 }
 

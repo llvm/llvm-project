@@ -39,7 +39,7 @@ public:
   bool RemoveThread(lldb::ThreadSP thread_sp);
   bool ShouldThreadBeSaved(lldb::tid_t tid) const;
 
-  Status EnsureValidConfiguration(lldb::ProcessSP process_to_save) const;
+  Status EnsureValidConfiguration(lldb::ProcessSP process_sp) const;
 
   void Clear();
 

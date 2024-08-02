@@ -102,13 +102,13 @@ bool SaveCoreOptions::ShouldThreadBeSaved(lldb::tid_t tid) const {
 }
 
 Status SaveCoreOptions::EnsureValidConfiguration(
-    lldb::ProcessSP process_to_save) const {
+    lldb::ProcessSP process_sp) const {
   Status error;
   std::string error_str;
   if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
     error_str += "Cannot save a full core with a subset of threads\n";
 
-  if (m_process_sp && m_process_sp != process_to_save)
+  if (m_process_sp && m_process_sp != process_sp)
     error_str += "Cannot save core for process using supplied core options. "
                  "Options were constructed targeting a different process. \n";
 
