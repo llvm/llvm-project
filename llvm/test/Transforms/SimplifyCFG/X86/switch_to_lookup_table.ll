@@ -122,6 +122,109 @@ return:
 
 }
 
+; The cross signed max-min table range is [122, -128]([122, 128]).
+
+define i32 @f_i8_128(i8 %c) {
+; CHECK-LABEL: @f_i8_128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i8 [[C:%.*]], 122
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[SWITCH_TABLEIDX]], 7
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.f_i8_128, i32 0, i8 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 15, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+entry:
+  switch i8 %c, label %sw.default [
+  i8 122, label %return
+  i8 123, label %sw.bb1
+  i8 124, label %sw.bb2
+  i8 125, label %sw.bb3
+  i8 126, label %sw.bb4
+  i8 127, label %sw.bb5
+  i8 -128, label %sw.bb6
+  ]
+
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.bb4: br label %return
+sw.bb5: br label %return
+sw.bb6: br label %return
+sw.default: br label %return
+return:
+  %retval.0 = phi i32 [ 15, %sw.default ], [ 1, %sw.bb6 ], [ 62, %sw.bb5 ], [ 27, %sw.bb4 ], [ -1, %sw.bb3 ], [ 0, %sw.bb2 ], [ 123, %sw.bb1 ], [ 55, %entry ]
+  ret i32 %retval.0
+}
+
+; The cross signed max-min table range is [3, 0].
+
+define i32 @f_min_max(i3 %c) {
+; CHECK-LABEL: @f_min_max(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[C:%.*]], -4
+; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.f_min_max, i32 0, i4 [[SWITCH_TABLEIDX_ZEXT]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+entry:
+  switch i3 %c, label %sw.default [
+  i3 -4, label %return
+  i3 -3, label %sw.bb1
+  i3 -2, label %sw.bb2
+  i3 -1, label %sw.bb3
+  i3 0, label %sw.bb4
+  i3 3, label %sw.bb6
+  ]
+
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.bb4: br label %return
+sw.bb6: br label %return
+sw.default: br label %return
+return:
+  %retval.0 = phi i32 [ 15, %sw.default ], [ 1, %sw.bb6 ], [ 27, %sw.bb4 ], [ -1, %sw.bb3 ], [ 0, %sw.bb2 ], [ 123, %sw.bb1 ], [ 55, %entry ]
+  ret i32 %retval.0
+}
+
+; The cross signed max-min table range is [-1, -4].
+
+define i32 @f_min_max_2(i3 %c) {
+; CHECK-LABEL: @f_min_max_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[C:%.*]], -4
+; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.f_min_max_2, i32 0, i4 [[SWITCH_TABLEIDX_ZEXT]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+entry:
+  switch i3 %c, label %sw.default [
+  i3 -1, label %return
+  i3 0, label %sw.bb1
+  i3 1, label %sw.bb2
+  i3 2, label %sw.bb3
+  i3 3, label %sw.bb4
+  i3 -4, label %sw.bb6
+  ]
+
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.bb4: br label %return
+sw.bb6: br label %return
+sw.default: br label %return
+return:
+  %retval.0 = phi i32 [ 15, %sw.default ], [ 1, %sw.bb6 ], [ 27, %sw.bb4 ], [ -1, %sw.bb3 ], [ 0, %sw.bb2 ], [ 123, %sw.bb1 ], [ 55, %entry ]
+  ret i32 %retval.0
+}
+
 ; A switch used to initialize two variables, an i8 and a float.
 
 declare void @dummy(i8 signext, float)
