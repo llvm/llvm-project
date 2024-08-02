@@ -172,3 +172,7 @@ namespace std {
   template<typename T> int &move(T);
 }
 int bad_signature = std::move(0); // expected-error {{unsupported signature for 'std::move<int>'}}
+
+namespace GH101690 {
+decltype(std::move_if_noexcept<int>)* p = nullptr;
+}
