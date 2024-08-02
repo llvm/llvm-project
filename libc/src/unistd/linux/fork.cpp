@@ -12,6 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/fork_callbacks.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/thread.h" // For thread self object
 
 #include "src/errno/libc_errno.h"
@@ -32,6 +33,12 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
 #else
 #error "fork and clone syscalls not available."
 #endif
+  pid_t parent_tid = internal::gettid();
+  // Invalidate parent's tid cache before forking. We cannot do this in child
+  // process because in the post-fork instruction windows, there may be a signal
+  // handler triggered which may get the wrong tid.
+  internal::force_set_tid(0);
+
   if (ret == 0) {
     // Return value is 0 in the child process.
     // The child is created with a single thread whose self object will be a
@@ -47,7 +54,8 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
     libc_errno = static_cast<int>(-ret);
     return -1;
   }
-
+  // recover parent's tid.
+  internal::force_set_tid(parent_tid);
   invoke_parent_callbacks();
   return ret;
 }
