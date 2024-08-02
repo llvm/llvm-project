@@ -388,7 +388,7 @@ static bool attributeHasStrictIdentifierArgs(const IdentifierInfo &II,
 #define CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST
   return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
 #include "clang/Parse/AttrParserStringSwitches.inc"
-              .Default(false);
+      .Default(false);
 #undef CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST
 }
 

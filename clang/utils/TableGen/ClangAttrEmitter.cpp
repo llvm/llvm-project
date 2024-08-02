@@ -79,8 +79,8 @@ public:
 struct FlattenedSpellingInfo {
   FlattenedSpellingInfo(std::string Syntax, std::string Scope,
                         std::string TargetTest, uint32_t ArgMask)
-      : Syntax(Syntax), Scope(Scope), TargetTest(TargetTest),
-        ArgMask(ArgMask) {}
+      : Syntax(Syntax), Scope(Scope), TargetTest(TargetTest), ArgMask(ArgMask) {
+  }
   std::string Syntax;
   std::string Scope;
   std::string TargetTest;
@@ -2438,8 +2438,7 @@ static void generateFlattenedSpellingInfo(const Record &Attr,
   forEachSpelling(Attr, [&](const FlattenedSpelling &S) {
     auto It = Map.find(S.name());
     if (It != Map.end()) {
-      It->second.emplace_back(S.variety(), S.nameSpace(), TargetTest,
-                              ArgMask);
+      It->second.emplace_back(S.variety(), S.nameSpace(), TargetTest, ArgMask);
     } else {
       FSIVecTy V;
       V.emplace_back(S.variety(), S.nameSpace(), TargetTest, ArgMask);
@@ -2481,7 +2480,7 @@ static void emitSingleCondition(const FlattenedSpellingInfo &FSI,
 
 static void emitStringSwitchCases(std::map<std::string, FSIVecTy> &Map,
                                   raw_ostream &OS) {
-  for (const auto& P : Map) {
+  for (const auto &P : Map) {
     if (emitIfSimpleValue(P.first, P.second[0].ArgMask, OS))
       continue;
 
@@ -2627,7 +2626,7 @@ static void emitClangAttrUnevaluatedStringLiteralList(RecordKeeper &Records,
     return Bits;
   };
 
-  std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::map<std::string, FSIVecTy> FSIMap;
   for (const auto *Attr : Attrs) {
     // Determine whether there are any string arguments.
@@ -2669,8 +2668,7 @@ static void emitClangAttrStrictIdentifierArgList(RecordKeeper &Records,
       continue;
     // Check that there is really an identifier argument.
     std::vector<Record *> Args = Attr->getValueAsListOfDefs("Args");
-    if (llvm::none_of(Args,
-                      [&](Record *R) { return isIdentifierArgument(R); }))
+    if (llvm::none_of(Args, [&](Record *R) { return isIdentifierArgument(R); }))
       continue;
     generateFlattenedSpellingInfo(*Attr, FSIMap);
   }
