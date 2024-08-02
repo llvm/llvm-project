@@ -1429,7 +1429,7 @@ class CastInst : public UnaryInstruction {
   CastInst(llvm::CastInst *CI, Context &Ctx)
       : UnaryInstruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI,
                          Ctx) {}
-  friend Context;        // for SBCastInstruction()
+  friend Context; // for SBCastInstruction()
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
   }
