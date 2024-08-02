@@ -304,6 +304,11 @@ def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
   FeatureISAVersion11_Generic.Features
 >;
 
+// Internal only (A0)
+def : ProcessorModel<"gfx115F", GFX11SpeedModel,
+  FeatureISAVersion11_5_0.Features
+>;
+
 //===----------------------------------------------------------------------===//
 // GCN GFX12.
 //===----------------------------------------------------------------------===//
@@ -319,4 +324,14 @@ def : ProcessorModel<"gfx1201", GFX12SpeedModel,
 // [gfx1200, gfx1201]
 def : ProcessorModel<"gfx12-generic", GFX12SpeedModel,
   FeatureISAVersion12_Generic.Features
+>;
+
+// Internal only (A0)
+def : ProcessorModel<"gfx120E", GFX12SpeedModel,
+  FeatureISAVersion12.Features
+>;
+
+// Internal only (A0)
+def : ProcessorModel<"gfx120F", GFX12SpeedModel,
+  FeatureISAVersion12.Features
 >;
