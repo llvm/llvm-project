@@ -103,9 +103,7 @@ class ProcessSaveCoreTestCase(TestBase):
         core = self.getBuildArtifact("core.dmp")
         target = self.dbg.CreateTarget(exe)
         target.BreakpointCreateByName("bar")
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped)
         pid = process.GetProcessID()
         options = lldb.SBSaveCoreOptions()

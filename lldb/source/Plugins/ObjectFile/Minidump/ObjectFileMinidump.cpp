@@ -56,19 +56,15 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
 }
 
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
-                                  const lldb_private::SaveCoreOptions &options,
+                                  lldb_private::SaveCoreOptions &options,
                                   lldb_private::Status &error) {
   // Output file and process_sp are both checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());
   assert(process_sp);
 
-  // We have to make a local copy of the options, so that if we default
-  // the save core style, we can proprogate that when we pass options
-  // to process calculate save core ranges
-  lldb_private::SaveCoreOptions core_options = options;
   // Minidump defaults to stacks only.
-  if (core_options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
-    core_options.SetStyle(SaveCoreStyle::eSaveCoreStackOnly);
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
+    options.SetStyle(SaveCoreStyle::eSaveCoreStackOnly);
 
   llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
       options.GetOutputFile().value(),
@@ -78,7 +74,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     return false;
   }
   MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp,
-                              core_options);
+                              options);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddHeaderAndCalculateDirectories();

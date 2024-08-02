@@ -6351,7 +6351,7 @@ static offset_t
 CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
                            offset_t initial_file_offset,
                            StreamString &all_image_infos_payload,
-                           const lldb_private::SaveCoreOptions &options) {
+                           lldb_private::SaveCoreOptions &options) {
   Target &target = process_sp->GetTarget();
   ModuleList modules = target.GetImages();
 
@@ -6522,19 +6522,16 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const lldb_private::SaveCoreOptions &options,
+                               lldb_private::SaveCoreOptions &options,
                                Status &error) {
   // The FileSpec and Process are already checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());
   assert(process_sp);
   const FileSpec outfile = options.GetOutputFile().value();
-    
-  // We have to make a local copy of the options, so that if we default
-  // the save core style, we can proprogate that when we pass options
-  // to process calculate save core ranges
-  lldb_private::SaveCoreOptions core_options = options;
-  if (core_options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
-    core_options.SetStyle(eSaveCoreDirtyOnly);
+
+  // MachO defaults to dirty pages
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
+    options.SetStyle(eSaveCoreDirtyOnly);
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();
@@ -6565,7 +6562,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
     if (make_core) {
       Process::CoreFileMemoryRanges core_ranges;
-      error = process_sp->CalculateCoreFileSaveRanges(core_options, core_ranges);
+      error = process_sp->CalculateCoreFileSaveRanges(options, core_ranges);
       if (error.Success()) {
         const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
         const ByteOrder byte_order = target_arch.GetByteOrder();
@@ -6737,7 +6734,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         StructuredData::ArraySP threads(
             std::make_shared<StructuredData::Array>());
         for (const ThreadSP &thread_sp :
-             process_sp->CalculateCoreFileThreadList(core_options)) {
+             process_sp->CalculateCoreFileThreadList(options)) {
           StructuredData::DictionarySP thread(
               std::make_shared<StructuredData::Dictionary>());
           thread->AddIntegerItem("thread_id", thread_sp->GetID());
@@ -6760,7 +6757,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         all_image_infos_lcnote_up->payload_file_offset = file_offset;
         file_offset = CreateAllImageInfosPayload(
             process_sp, file_offset, all_image_infos_lcnote_up->payload,
-            core_options);
+            options);
         lc_notes.push_back(std::move(all_image_infos_lcnote_up));
 
         // Add LC_NOTE load commands
