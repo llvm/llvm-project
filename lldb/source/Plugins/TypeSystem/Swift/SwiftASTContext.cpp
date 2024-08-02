@@ -1019,6 +1019,20 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
   swift::LangOptions &lang_opts = m_compiler_invocation_ap->getLangOptions();
   lang_opts.AllowDeserializingImplementationOnly = true;
   lang_opts.DebuggerSupport = true;
+
+  // ModuleFileSharedCore::getTransitiveLoadingBehavior() has a
+  // best-effort mode that is enabled when debugger support is turned
+  // on that will try to import implementation-only imports of Swift
+  // modules, but won't treat import failures as errors. When explicit
+  // modules are on, this has the unwanted side-effect of potentially
+  // triggering an implicit Clang module build if one of the internal
+  // dependencies of a library was not used to build the target. It
+  // can also lead to additional Swift modules being pulled in that
+  // through their dependencies can lead to dependency cycles that
+  // were not a problem at build time.
+  bool is_precise = ModuleList::GetGlobalModuleListProperties()
+                        .GetUseSwiftPreciseCompilerInvocation();
+  lang_opts.ImportNonPublicDependencies = is_precise ? false : true;
   // When loading Swift types that conform to ObjC protocols that have
   // been renamed with NS_SWIFT_NAME the DwarfImporterDelegate will crash
   // during protocol conformance checks as the underlying type cannot be
@@ -9212,42 +9226,6 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     return true;
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
-  
-  // Turn off implicit clang modules while importing CU dependencies.
-  // ModuleFileSharedCore::getTransitiveLoadingBehavior() has a
-  // best-effort mode that is enabled when debugger support is turned
-  // on that will try to import implementation-only imports of Swift
-  // modules, but won't treat import failures as errors. When explicit
-  // modules are on, this has the unwanted side-effect of potentially
-  // triggering an implicit Clang module build if one of the internal
-  // dependencies of a library was not used to build the target. To
-  // avoid these costly and potentially dangerous imports we turn off
-  // implicit modules while importing the CU imports only. If a user
-  // manually evaluates an expression that contains an import
-  // statement that can still trigger an implict import.  Implicit
-  // imports can be dangerous if an implicit module depends on a
-  // module that also exists as an explicit input: In this case, a
-  // subsequent explicit import of said dependency will error because
-  // Clang now knows about two versions of the same module.
-  clang::LangOptions *clang_lang_opts = nullptr;
-  auto reset = llvm::make_scope_exit([&] {
-    if (clang_lang_opts) {
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Turning on implicit Clang modules");
-      clang_lang_opts->ImplicitModules = true;
-    }
-  });
-  if (auto *clang_importer = GetClangImporter()) {
-    if (m_has_explicit_modules) {
-      auto &clang_instance = const_cast<clang::CompilerInstance &>(
-          clang_importer->getClangInstance());
-      clang_lang_opts = &clang_instance.getLangOpts();
-      // AddExtraArgs is supposed to always turn implicit modules on.
-      assert(clang_lang_opts->ImplicitModules &&
-             "ClangImporter implicit module support is off");
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Turning off implicit Clang modules");
-      clang_lang_opts->ImplicitModules = false;
-    }
-  }
   
   std::string category = "Importing Swift module dependencies for ";
   category += compile_unit->GetPrimaryFile().GetFilename().GetString();
