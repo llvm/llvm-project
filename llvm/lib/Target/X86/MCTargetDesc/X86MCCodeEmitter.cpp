@@ -111,9 +111,9 @@ class X86OpcodePrefixHelper {
   //  0b11: F2
 
   // EVEX (4 bytes)
-  // +-----+ +---------------+ +-------------------+ +------------------------+
-  // | 62h | | RXBR' | B'mmm | | W | vvvv | U | pp | | z | L'L | b | v' | aaa |
-  // +-----+ +---------------+ +-------------------+ +------------------------+
+  // +-----+ +---------------+ +--------------------+ +------------------------+
+  // | 62h | | RXBR' | B'mmm | | W | vvvv | X' | pp | | z | L'L | b | v' | aaa |
+  // +-----+ +---------------+ +--------------------+ +------------------------+
 
   // EVEX_L2/VEX_L (Vector Length):
   // L2 L
@@ -131,7 +131,7 @@ class X86OpcodePrefixHelper {
   // | RM (VR)  | EVEX_X  | EVEX_B | modrm.r/m | VR      | Dest or Src  |
   // | RM (GPR) | EVEX_B' | EVEX_B | modrm.r/m | GPR     | Dest or Src  |
   // | BASE     | EVEX_B' | EVEX_B | modrm.r/m | GPR     | MA           |
-  // | INDEX    | EVEX_U  | EVEX_X | sib.index | GPR     | MA           |
+  // | INDEX    | EVEX_X' | EVEX_X | sib.index | GPR     | MA           |
   // | VIDX     | EVEX_v' | EVEX_X | sib.index | VR      | VSIB MA      |
   // +----------+---------+--------+-----------+---------+--------------+
   //
@@ -238,7 +238,6 @@ public:
   void setZ(bool V) { EVEX_z = V; }
   void setL2(bool V) { EVEX_L2 = V; }
   void setEVEX_b(bool V) { EVEX_b = V; }
-  void setEVEX_U(bool V) { X2 = V; }
   void setV2(const MCInst &MI, unsigned OpNum, bool HasVEX_4V) {
     // Only needed with VSIB which don't use VVVV.
     if (HasVEX_4V)
@@ -1053,7 +1052,6 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   Prefix.setZ(HasEVEX_K && (TSFlags & X86II::EVEX_Z));
   Prefix.setEVEX_b(TSFlags & X86II::EVEX_B);
-  Prefix.setEVEX_U(TSFlags & X86II::EVEX_U);
 
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;

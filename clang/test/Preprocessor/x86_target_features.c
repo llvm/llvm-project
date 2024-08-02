@@ -712,12 +712,7 @@
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
-// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_256,AVX10_2_256 %s
-// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2-256 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_256,AVX10_2_256 %s
-// AVX10_1_256-NOT: __AVX10_1_512__
 // AVX10_1_256: #define __AVX10_1__ 1
-// AVX10_2_256-NOT: __AVX10_2_512__
-// AVX10_2_256: #define __AVX10_2__ 1
 // AVX10_1_256: #define __AVX512F__ 1
 // AVX10_1_256: #define __EVEX256__ 1
 // AVX10_1_256-NOT: __EVEX512__
@@ -725,11 +720,7 @@
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-evex512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
-// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2-512 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_512,AVX10_2_512 %s
-// AVX10_1_512: #define __AVX10_1_512__ 1
 // AVX10_1_512: #define __AVX10_1__ 1
-// AVX10_2_512: #define __AVX10_2_512__ 1
-// AVX10_2_512: #define __AVX10_2__ 1
 // AVX10_1_512: #define __AVX512F__ 1
 // AVX10_1_512: #define __EVEX256__ 1
 // AVX10_1_512: #define __EVEX512__ 1
