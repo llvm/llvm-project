@@ -1987,9 +1987,15 @@ let ManualCodegen = [{
         RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvvu"]]>;
     let OverloadedName = "vfcvt_f" in {
       defm :
-        RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvvu"]]>;
+        RVVConvBuiltinSet<"vfcvt_f_x_v", "il", [["Fv", "Fvvu"]]>;
       defm :
-        RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUvu"]]>;
+        RVVConvBuiltinSet<"vfcvt_f_xu_v", "il", [["Fv", "FvUvu"]]>;
+      let RequiredFeatures = ["Zvfh"] in {
+        defm :
+          RVVConvBuiltinSet<"vfcvt_f_x_v", "s", [["Fv", "Fvvu"]]>;
+        defm :
+          RVVConvBuiltinSet<"vfcvt_f_xu_v", "s", [["Fv", "FvUvu"]]>;
+      }
     }
 
     // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
@@ -2037,9 +2043,15 @@ let ManualCodegen = [{
       RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvv"]]>;
   let OverloadedName = "vfcvt_f" in {
     defm :
-      RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvv"]]>;
+      RVVConvBuiltinSet<"vfcvt_f_x_v", "il", [["Fv", "Fvv"]]>;
     defm :
-      RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUv"]]>;
+      RVVConvBuiltinSet<"vfcvt_f_xu_v", "il", [["Fv", "FvUv"]]>;
+    let RequiredFeatures = ["Zvfh"] in {
+      defm :
+        RVVConvBuiltinSet<"vfcvt_f_x_v", "s", [["Fv", "Fvv"]]>;
+      defm :
+        RVVConvBuiltinSet<"vfcvt_f_xu_v", "s", [["Fv", "FvUv"]]>;
+    }
   }
 
   // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
