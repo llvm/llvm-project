@@ -1254,3 +1254,50 @@ define i64 @orc_b_i64(i64 %a) {
   %2 = mul nuw i64 %1, 255
   ret i64 %2
 }
+
+define i16 @count_activebits(i16 %x) nounwind {
+; RV32I-LABEL: count_activebits:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    andi a1, a0, 255
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a0, a0, 25
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    srli a1, a0, 2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 4
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    srli a1, a0, 1
+; RV32I-NEXT:    lui a2, 5
+; RV32I-NEXT:    addi a2, a2, 1365
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    lui a1, 3
+; RV32I-NEXT:    addi a1, a1, 819
+; RV32I-NEXT:    and a2, a0, a1
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    add a0, a2, a0
+; RV32I-NEXT:    srli a1, a0, 4
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    andi a1, a0, 15
+; RV32I-NEXT:    slli a0, a0, 20
+; RV32I-NEXT:    srli a0, a0, 28
+; RV32I-NEXT:    li a2, 16
+; RV32I-NEXT:    sub a2, a2, a1
+; RV32I-NEXT:    sub a0, a2, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: count_activebits:
+; RV32ZBB:       # %bb.0: # %entry
+; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    clz a0, a0
+; RV32ZBB-NEXT:    li a1, 32
+; RV32ZBB-NEXT:    sub a0, a1, a0
+; RV32ZBB-NEXT:    ret
+entry:
+  %ext = and i16 %x, 255
+  %ctlz = call i16 @llvm.ctlz.i16(i16 %ext, i1 true)
+  %sub = sub nuw nsw i16 16, %ctlz
+  ret i16 %sub
+}

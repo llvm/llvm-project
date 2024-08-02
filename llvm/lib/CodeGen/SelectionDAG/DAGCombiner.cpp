@@ -11133,6 +11133,18 @@ SDValue DAGCombiner::visitCTLZ_ZERO_UNDEF(SDNode *N) {
   if (SDValue C =
           DAG.FoldConstantArithmetic(ISD::CTLZ_ZERO_UNDEF, DL, VT, {N0}))
     return C;
+
+  // Fold ctlz_zero_undef(X << C) --> ctlz_zero_undef(X) - C
+  SDValue A;
+  APInt C;
+  if (sd_match(N0, m_Shl(m_Value(A), m_ConstInt(C))) &&
+      DAG.computeKnownBits(A).countMinLeadingZeros() >= C.getLimitedValue()) {
+    SDValue NegC =
+        DAG.getConstant(-C.zextOrTrunc(VT.getScalarSizeInBits()), DL, VT);
+    return DAG.getNode(ISD::ADD, DL, VT,
+                       DAG.getNode(ISD::CTLZ_ZERO_UNDEF, DL, VT, A), NegC);
+  }
+
   return SDValue();
 }
 
