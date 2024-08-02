@@ -4224,9 +4224,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       if (Callee->isDeclaration())
         return false;   // Cannot transform this return value.
 
-      if (!Caller->use_empty() &&
-          // void -> non-void is handled specially
-          !NewRetTy->isVoidTy())
+      if (!Caller->use_empty())
         return false;   // Cannot transform this return value.
     }
 
@@ -4417,17 +4415,14 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   Instruction *NC = NewCall;
   Value *NV = NC;
   if (OldRetTy != NV->getType() && !Caller->use_empty()) {
-    if (!NV->getType()->isVoidTy()) {
-      NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
-      NC->setDebugLoc(Caller->getDebugLoc());
+    assert(!NV->getType()->isVoidTy());
+    NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
+    NC->setDebugLoc(Caller->getDebugLoc());
 
-      auto OptInsertPt = NewCall->getInsertionPointAfterDef();
-      assert(OptInsertPt && "No place to insert cast");
-      InsertNewInstBefore(NC, *OptInsertPt);
-      Worklist.pushUsersToWorkList(*Caller);
-    } else {
-      NV = PoisonValue::get(Caller->getType());
-    }
+    auto OptInsertPt = NewCall->getInsertionPointAfterDef();
+    assert(OptInsertPt && "No place to insert cast");
+    InsertNewInstBefore(NC, *OptInsertPt);
+    Worklist.pushUsersToWorkList(*Caller);
   }
 
   if (!Caller->use_empty())
