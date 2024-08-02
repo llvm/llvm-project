@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+static std::unique_ptr<Module> parseIR(LLVMContext &C, StringRef IR) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
   if (!Mod)
@@ -69,8 +69,13 @@ TEST(ModuleUtils, AppendToUsedList2) {
   EXPECT_EQ(1, getListSize(*M, "llvm.used"));
 }
 
-using ParamType = std::pair<StringRef, decltype(&appendToGlobalCtors)>;
-class ModuleUtilsTest : public testing::TestWithParam<ParamType> {};
+using AppendFnType = decltype(&appendToGlobalCtors);
+using ParamType = std::tuple<StringRef, AppendFnType>;
+class ModuleUtilsTest : public testing::TestWithParam<ParamType> {
+public:
+  StringRef arrayName() const { return std::get<0>(GetParam()); }
+  AppendFnType appendFn() const { return std::get<AppendFnType>(GetParam()); }
+};
 
 INSTANTIATE_TEST_SUITE_P(
     ModuleUtilsTestCtors, ModuleUtilsTest,
@@ -78,24 +83,22 @@ INSTANTIATE_TEST_SUITE_P(
                       ParamType{"llvm.global_dtors", &appendToGlobalDtors}));
 
 TEST_P(ModuleUtilsTest, AppendToMissingArray) {
-  auto [ArrayName, Fn] = GetParam();
-
   LLVMContext C;
 
   std::unique_ptr<Module> M = parseIR(C, "");
 
-  EXPECT_EQ(0, getListSize(*M, ArrayName));
+  EXPECT_EQ(0, getListSize(*M, arrayName()));
   Function *F = cast<Function>(
       M->getOrInsertFunction("ctor", Type::getVoidTy(C)).getCallee());
-  Fn(*M, F, 11, F);
-  ASSERT_EQ(1, getListSize(*M, ArrayName));
+  appendFn()(*M, F, 11, F);
+  ASSERT_EQ(1, getListSize(*M, arrayName()));
 
   ConstantArray *CA = dyn_cast<ConstantArray>(
-      M->getGlobalVariable(ArrayName)->getInitializer());
+      M->getGlobalVariable(arrayName())->getInitializer());
   ASSERT_NE(nullptr, CA);
   ConstantStruct *CS = dyn_cast<ConstantStruct>(CA->getOperand(0));
   ASSERT_NE(nullptr, CS);
-  ConstantInt * Pri = dyn_cast<ConstantInt>(CS->getOperand(0));
+  ConstantInt *Pri = dyn_cast<ConstantInt>(CS->getOperand(0));
   ASSERT_NE(nullptr, Pri);
   EXPECT_EQ(11u, Pri->getLimitedValue());
   EXPECT_EQ(F, dyn_cast<Function>(CS->getOperand(1)));
@@ -103,22 +106,21 @@ TEST_P(ModuleUtilsTest, AppendToMissingArray) {
 }
 
 TEST_P(ModuleUtilsTest, AppendToArray) {
-  auto [ArrayName, Fn] = GetParam();
-
   LLVMContext C;
 
-  std::unique_ptr<Module> M = parseIR(
-      C, (R"(@)" + ArrayName + R"( = appending global [2 x { i32, ptr, ptr }] [
+  std::unique_ptr<Module> M =
+      parseIR(C, (R"(@)" + arrayName() +
+                  R"( = appending global [2 x { i32, ptr, ptr }] [
             { i32, ptr, ptr } { i32 65535, ptr  null, ptr null },
             { i32, ptr, ptr } { i32 0, ptr  null, ptr null }]
       )")
-             .str()
-             .c_str());
+                     .str());
 
-  EXPECT_EQ(2, getListSize(*M, ArrayName));
-  Fn(*M,
-     cast<Function>(
-         M->getOrInsertFunction("ctor", Type::getVoidTy(C)).getCallee()),
-     11, nullptr);
-  EXPECT_EQ(3, getListSize(*M, ArrayName));
+  EXPECT_EQ(2, getListSize(*M, arrayName()));
+  appendFn()(
+      *M,
+      cast<Function>(
+          M->getOrInsertFunction("ctor", Type::getVoidTy(C)).getCallee()),
+      11, nullptr);
+  EXPECT_EQ(3, getListSize(*M, arrayName()));
 }
