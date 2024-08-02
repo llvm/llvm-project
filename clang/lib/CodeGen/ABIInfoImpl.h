@@ -65,6 +65,10 @@ CGCXXABI::RecordArgABI getRecordArgABI(QualType T, CGCXXABI &CXXABI);
 bool classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
                         const ABIInfo &Info);
 
+// For transparent union types, return the type of the first element.
+// Set reference TU to true if Ty given was a transparent union.
+QualType useFirstFieldIfTransparentUnion(QualType Ty, bool &TU);
+
 /// Pass transparent unions as if they were the type of the first element. Sema
 /// should ensure that all elements of the union have the same "machine type".
 QualType useFirstFieldIfTransparentUnion(QualType Ty);

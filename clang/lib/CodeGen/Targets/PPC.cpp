@@ -196,7 +196,8 @@ ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
-  Ty = useFirstFieldIfTransparentUnion(Ty);
+  bool IsTransparentUnion;
+  Ty = useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
 
   if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
@@ -217,8 +218,14 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign*/ TyAlign > CCAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                     : ABIArgInfo::getDirect());
+  if (isPromotableTypeForABI(Ty))
+    return (IsTransparentUnion ?
+        ABIArgInfo::getExtend(Ty,
+            llvm::IntegerType::get(getVMContext(),
+                                   getContext().getTypeSize(Ty)))
+        : ABIArgInfo::getExtend(Ty));
+
+  return (ABIArgInfo::getDirect());
 }
 
 CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
@@ -822,7 +829,8 @@ bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateSmallEnough(
 
 ABIArgInfo
 PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
-  Ty = useFirstFieldIfTransparentUnion(Ty);
+  bool IsTransparentUnion;
+  Ty = useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
 
   if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
@@ -891,8 +899,14 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign=*/TyAlign > ABIAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                     : ABIArgInfo::getDirect());
+  if (isPromotableTypeForABI(Ty))
+    return (IsTransparentUnion ?
+        ABIArgInfo::getExtend(Ty,
+            llvm::IntegerType::get(getVMContext(),
+                                   getContext().getTypeSize(Ty)))
+        : ABIArgInfo::getExtend(Ty));
+
+  return ABIArgInfo::getDirect();
 }
 
 ABIArgInfo

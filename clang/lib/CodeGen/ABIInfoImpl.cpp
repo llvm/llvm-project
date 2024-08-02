@@ -143,13 +143,20 @@ bool CodeGen::classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
 }
 
 QualType CodeGen::useFirstFieldIfTransparentUnion(QualType Ty) {
+  bool IsTransparentUnion;
+  return useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
+}
+
+QualType CodeGen::useFirstFieldIfTransparentUnion(QualType Ty, bool &TU) {
   if (const RecordType *UT = Ty->getAsUnionType()) {
     const RecordDecl *UD = UT->getDecl();
     if (UD->hasAttr<TransparentUnionAttr>()) {
       assert(!UD->field_empty() && "sema created an empty transparent union");
+      TU = true;
       return UD->field_begin()->getType();
     }
   }
+  TU = false;
   return Ty;
 }
 
