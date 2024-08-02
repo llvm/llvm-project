@@ -629,10 +629,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         case ISD::EXTRACT_VECTOR_ELT:
         case ISD::INSERT_VECTOR_ELT:
         case ISD::INSERT_SUBVECTOR:
-        case ISD::EXTRACT_SUBVECTOR:
         case ISD::SCALAR_TO_VECTOR:
         case ISD::IS_FPCLASS:
           break;
+        case ISD::EXTRACT_SUBVECTOR:
         case ISD::CONCAT_VECTORS:
           setOperationAction(Op, VT, Custom);
           break;
@@ -16164,6 +16164,34 @@ static bool isBFloat2(Type *Ty) {
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isBFloatTy();
 }
 
+/// \returns true if it's valid to emit a native instruction for \p RMW, based
+/// on the properties of the target memory.
+static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
+                                        const AtomicRMWInst *RMW,
+                                        bool HasSystemScope) {
+  // The remote/fine-grained access logic is different from the integer
+  // atomics. Without AgentScopeFineGrainedRemoteMemoryAtomics support,
+  // fine-grained access does not work, even for a device local allocation.
+  //
+  // With AgentScopeFineGrainedRemoteMemoryAtomics, system scoped device local
+  // allocations work.
+  if (HasSystemScope) {
+    if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics() &&
+        RMW->hasMetadata("amdgpu.no.remote.memory"))
+      return true;
+  } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
+    return true;
+
+  if (RMW->hasMetadata("amdgpu.no.fine.grained.memory"))
+    return true;
+
+  // TODO: Auto-upgrade this attribute to the metadata in function body and stop
+  // checking it.
+  return RMW->getFunction()
+      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+      .getValueAsBool();
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
@@ -16314,37 +16342,32 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     Type *Ty = RMW->getType();
 
     // LDS float and double fmin/fmax were always supported.
-    if (AS == AMDGPUAS::LOCAL_ADDRESS && (Ty->isFloatTy() || Ty->isDoubleTy()))
-      return AtomicExpansionKind::None;
+    if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+      return Ty->isFloatTy() || Ty->isDoubleTy() ? AtomicExpansionKind::None
+                                                 : AtomicExpansionKind::CmpXChg;
+    }
 
-    if (unsafeFPAtomicsDisabled(RMW->getFunction()))
-      return AtomicExpansionKind::CmpXChg;
-
-    // Always expand system scope fp atomics.
-    if (HasSystemScope)
-      return AtomicExpansionKind::CmpXChg;
-
-    // For flat and global cases:
-    // float, double in gfx7. Manual claims denormal support.
-    // Removed in gfx8.
-    // float, double restored in gfx10.
-    // double removed again in gfx11, so only f32 for gfx11/gfx12.
-    //
-    // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but no
-    // f32.
-    //
-    // FIXME: Check scope and fine grained memory
-    if (AS == AMDGPUAS::FLAT_ADDRESS) {
-      if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-      if (Subtarget->hasAtomicFMinFMaxF64FlatInsts() && Ty->isDoubleTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-    } else if (AMDGPU::isExtendedGlobalAddrSpace(AS) ||
-               AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-      if (Subtarget->hasAtomicFMinFMaxF32GlobalInsts() && Ty->isFloatTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-      if (Subtarget->hasAtomicFMinFMaxF64GlobalInsts() && Ty->isDoubleTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
+      // For flat and global cases:
+      // float, double in gfx7. Manual claims denormal support.
+      // Removed in gfx8.
+      // float, double restored in gfx10.
+      // double removed again in gfx11, so only f32 for gfx11/gfx12.
+      //
+      // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but
+      // no f32.
+      if (AS == AMDGPUAS::FLAT_ADDRESS) {
+        if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+        if (Subtarget->hasAtomicFMinFMaxF64FlatInsts() && Ty->isDoubleTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      } else if (AMDGPU::isExtendedGlobalAddrSpace(AS) ||
+                 AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+        if (Subtarget->hasAtomicFMinFMaxF32GlobalInsts() && Ty->isFloatTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+        if (Subtarget->hasAtomicFMinFMaxF64GlobalInsts() && Ty->isDoubleTy())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      }
     }
 
     return AtomicExpansionKind::CmpXChg;

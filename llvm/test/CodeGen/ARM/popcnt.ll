@@ -324,30 +324,7 @@ define i32 @ctpop16(i16 %x) nounwind readnone {
 define i32 @ctpop32(i32 %x) nounwind readnone {
 ; CHECK-LABEL: ctpop32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    ldr r1, .LCPI22_0
-; CHECK-NEXT:    ldr r2, .LCPI22_3
-; CHECK-NEXT:    and r1, r1, r0, lsr #1
-; CHECK-NEXT:    ldr r12, .LCPI22_1
-; CHECK-NEXT:    sub r0, r0, r1
-; CHECK-NEXT:    ldr r3, .LCPI22_2
-; CHECK-NEXT:    and r1, r0, r2
-; CHECK-NEXT:    and r0, r2, r0, lsr #2
-; CHECK-NEXT:    add r0, r1, r0
-; CHECK-NEXT:    add r0, r0, r0, lsr #4
-; CHECK-NEXT:    and r0, r0, r12
-; CHECK-NEXT:    mul r1, r0, r3
-; CHECK-NEXT:    lsr r0, r1, #24
-; CHECK-NEXT:    mov pc, lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI22_0:
-; CHECK-NEXT:    .long 1431655765 @ 0x55555555
-; CHECK-NEXT:  .LCPI22_1:
-; CHECK-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-NEXT:  .LCPI22_2:
-; CHECK-NEXT:    .long 16843009 @ 0x1010101
-; CHECK-NEXT:  .LCPI22_3:
-; CHECK-NEXT:    .long 858993459 @ 0x33333333
+; CHECK-NEXT:    b __popcountsi2
   %count = tail call i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %count
 }
@@ -355,42 +332,11 @@ define i32 @ctpop32(i32 %x) nounwind readnone {
 define i32 @ctpop64(i64 %x) nounwind readnone {
 ; CHECK-LABEL: ctpop64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    ldr r2, .LCPI23_0
-; CHECK-NEXT:    ldr r3, .LCPI23_3
-; CHECK-NEXT:    and r4, r2, r0, lsr #1
-; CHECK-NEXT:    and r2, r2, r1, lsr #1
-; CHECK-NEXT:    sub r0, r0, r4
-; CHECK-NEXT:    sub r1, r1, r2
-; CHECK-NEXT:    and r4, r0, r3
-; CHECK-NEXT:    and r2, r1, r3
-; CHECK-NEXT:    and r0, r3, r0, lsr #2
-; CHECK-NEXT:    and r1, r3, r1, lsr #2
-; CHECK-NEXT:    add r0, r4, r0
-; CHECK-NEXT:    ldr lr, .LCPI23_1
-; CHECK-NEXT:    add r1, r2, r1
-; CHECK-NEXT:    ldr r12, .LCPI23_2
-; CHECK-NEXT:    add r0, r0, r0, lsr #4
-; CHECK-NEXT:    and r0, r0, lr
-; CHECK-NEXT:    add r1, r1, r1, lsr #4
-; CHECK-NEXT:    mul r2, r0, r12
-; CHECK-NEXT:    and r0, r1, lr
-; CHECK-NEXT:    mul r1, r0, r12
-; CHECK-NEXT:    lsr r0, r2, #24
-; CHECK-NEXT:    add r0, r0, r1, lsr #24
-; CHECK-NEXT:    pop {r4, lr}
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __popcountdi2
+; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI23_0:
-; CHECK-NEXT:    .long 1431655765 @ 0x55555555
-; CHECK-NEXT:  .LCPI23_1:
-; CHECK-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-NEXT:  .LCPI23_2:
-; CHECK-NEXT:    .long 16843009 @ 0x1010101
-; CHECK-NEXT:  .LCPI23_3:
-; CHECK-NEXT:    .long 858993459 @ 0x33333333
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %conv = trunc i64 %count to i32
   ret i32 %conv

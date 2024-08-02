@@ -2294,12 +2294,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_Shift(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_CMP(SDNode *N) {
-  SDValue LHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(0))
-                    : SExtPromotedInteger(N->getOperand(0));
-  SDValue RHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(1))
-                    : SExtPromotedInteger(N->getOperand(1));
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (N->getOpcode() == ISD::SCMP) {
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+  } else {
+    SExtOrZExtPromotedOperands(LHS, RHS);
+  }
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS), 0);
 }
@@ -3847,15 +3850,33 @@ void DAGTypeLegalizer::ExpandIntRes_CTLZ(SDNode *N,
   Hi = DAG.getConstant(0, dl, NVT);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N,
-                                          SDValue &Lo, SDValue &Hi) {
-  SDLoc dl(N);
+void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  if (TLI.getOperationAction(ISD::CTPOP, VT) == TargetLoweringBase::LibCall) {
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (VT == MVT::i32)
+      LC = RTLIB::CTPOP_I32;
+    else if (VT == MVT::i64)
+      LC = RTLIB::CTPOP_I64;
+    else if (VT == MVT::i128)
+      LC = RTLIB::CTPOP_I128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC) &&
+           "LibCall explicitly requested, but not available");
+    TargetLowering::MakeLibCallOptions CallOptions;
+    SDValue Res = TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, DL).first;
+    SplitInteger(Res, Lo, Hi);
+    return;
+  }
+
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)
-  GetExpandedInteger(N->getOperand(0), Lo, Hi);
+  GetExpandedInteger(Op, Lo, Hi);
   EVT NVT = Lo.getValueType();
-  Lo = DAG.getNode(ISD::ADD, dl, NVT, DAG.getNode(ISD::CTPOP, dl, NVT, Lo),
-                   DAG.getNode(ISD::CTPOP, dl, NVT, Hi));
-  Hi = DAG.getConstant(0, dl, NVT);
+  Lo = DAG.getNode(ISD::ADD, DL, NVT, DAG.getNode(ISD::CTPOP, DL, NVT, Lo),
+                   DAG.getNode(ISD::CTPOP, DL, NVT, Hi));
+  Hi = DAG.getConstant(0, DL, NVT);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CTTZ(SDNode *N,

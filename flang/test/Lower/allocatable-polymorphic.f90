@@ -643,7 +643,7 @@ end
 ! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 4
 ! LLVM: %[[TYPE_CODE:.*]] = load i32, ptr %[[TYPE_CODE_GEP]]
 ! LLVM: %[[BOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELE_SIZE]], 1
-! LLVM: %[[BOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], i32 20180515, 2
+! LLVM: %[[BOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], i32 20240719, 2
 ! LLVM: %[[BOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX1]], i8 0, 3
 ! LLVM: %[[TYPE_CODE_TRUNC:.*]] = trunc i32 %[[TYPE_CODE]] to i8
 ! LLVM: %[[BOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX2]], i8 %[[TYPE_CODE_TRUNC]], 4
@@ -664,7 +664,7 @@ end
 ! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 4
 ! LLVM: %[[TYPE_CODE:.*]] = load i32, ptr %[[TYPE_CODE_GEP]]
 ! LLVM: %[[BOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELE_SIZE]], 1
-! LLVM: %[[BOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], i32 20180515, 2
+! LLVM: %[[BOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], i32 20240719, 2
 ! LLVM: %[[BOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX1]], i8 0, 3
 ! LLVM: %[[TYPE_CODE_TRUNC:.*]] = trunc i32 %[[TYPE_CODE]] to i8
 ! LLVM: %[[BOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX2]], i8 %[[TYPE_CODE_TRUNC]], 4
@@ -681,7 +681,7 @@ end
 ! allocatable.
 
 ! LLVM-LABEL: define void @_QMpolyPtest_deallocate()
-! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyE.dt.p1, [1 x i64] zeroinitializer }, ptr %[[ALLOCA1:[0-9]*]]
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyE.dt.p1, [1 x i64] zeroinitializer }, ptr %[[ALLOCA1:[0-9]*]]
 ! LLVM: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ALLOCA1]]
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[ALLOCA2:[0-9]*]]
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %[[ALLOCA2]], ptr @_QMpolyE.dt.p1, i32 0, i32 0)
