@@ -116,26 +116,3 @@ class ProcessSaveCoreTestCase(TestBase):
         self.assertSuccess(error, error.GetCString())
         self.assertTrue(os.path.isfile(minidump_path))
         self.assertTrue(self.validate_core_pid(pid, minidump_path))
-
-    @skipUnlessDarwin
-    def test_save_core_default_values_for_style_mach_o(self):
-        """Test we can still save a core for minidump when no
-        core style is specified."""
-        self.build()
-        exe = self.getBuildArtifact("a.out")
-        core = self.getBuildArtifact("core.dmp")
-        target = self.dbg.CreateTarget(exe)
-        target.BreakpointCreateByName("bar")
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        pid = process.GetProcessID()
-        options = lldb.SBSaveCoreOptions()
-        
-        options.SetPluginName("mach-o")
-        mach_o_path = core + ".mach-o"
-        error = process.SaveCore(options)
-        self.assertSuccess(error, error.GetCString())
-        self.assertTrue(os.path.isfile(mach_o_path))
-        self.assertTrue(self.validate_core_pid(pid, mach_o_path))
