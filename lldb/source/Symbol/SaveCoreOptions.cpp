@@ -52,7 +52,7 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
   Status error;
   if (!process_sp) {
     ClearProcessSpecificData();
-    m_process_sp = nullptr;
+    m_process_sp.reset();
     return error;
   }
 
@@ -61,9 +61,10 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
     return error;
   }
 
-  if (m_process_sp)
-    ClearProcessSpecificData();
-
+  if (m_process_sp == process_sp)
+    return error;
+    
+  ClearProcessSpecificData();
   m_process_sp = process_sp;
   return error;
 }
@@ -71,7 +72,7 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
 Status SaveCoreOptions::AddThread(lldb::ThreadSP thread_sp) {
   Status error;
   if (!thread_sp) {
-    error.SetErrorString("Thread is null");
+    error.SetErrorString("invalid thread");
     return error;
   }
 
@@ -116,11 +117,14 @@ Status SaveCoreOptions::EnsureValidConfiguration(
   return error;
 }
 
-void SaveCoreOptions::ClearProcessSpecificData() { m_threads_to_save.clear(); }
+void SaveCoreOptions::ClearProcessSpecificData() { 
+  m_threads_to_save.clear(); 
+}
 
 void SaveCoreOptions::Clear() {
   m_file = std::nullopt;
   m_plugin_name = std::nullopt;
   m_style = std::nullopt;
   m_threads_to_save.clear();
+  m_process_sp.reset();
 }

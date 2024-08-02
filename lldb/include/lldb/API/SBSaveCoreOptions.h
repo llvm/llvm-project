@@ -54,12 +54,14 @@ public:
   /// \return The output file spec.
   SBFileSpec GetOutputFile() const;
 
-  /// Set the process to save, or unset if supplied with a null process.
+  /// Set the process to save, or unset if supplied with a default constructed
+  /// process.
   ///
   /// \param process The process to save.
   /// \return Success if process was set, otherwise an error
-  /// \note This will clear all process specific options if
-  /// an exisiting process is overriden.
+  /// \note This will clear all process specific options if a different process 
+  /// is specified than the current set process, either explicitly from this
+  /// api, or implicitly from any function that requires a process.
   SBError SetProcess(lldb::SBProcess process);
 
   /// Add a thread to save in the core file.

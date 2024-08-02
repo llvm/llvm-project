@@ -6610,9 +6610,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         mach_header.ncmds = segment_load_commands.size();
         mach_header.flags = 0;
         mach_header.reserved = 0;
-        std::vector<ThreadSP> thread_list =
-            process_sp->CalculateCoreFileThreadList(options);
-        const uint32_t num_threads = thread_list.size();
+        ThreadList &thread_list = process_sp->GetThreadList();
+        const uint32_t num_threads = thread_list.GetSize();
 
         // Make an array of LC_THREAD data items. Each one contains the
         // contents of the LC_THREAD load command. The data doesn't contain
@@ -6624,28 +6623,29 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           LC_THREAD_data.SetAddressByteSize(addr_byte_size);
           LC_THREAD_data.SetByteOrder(byte_order);
         }
-        for (const ThreadSP &thread_sp : thread_list) {
+        for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+          ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
           if (thread_sp) {
             switch (mach_header.cputype) {
             case llvm::MachO::CPU_TYPE_ARM64:
             case llvm::MachO::CPU_TYPE_ARM64_32:
               RegisterContextDarwin_arm64_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
+                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
 
             case llvm::MachO::CPU_TYPE_ARM:
               RegisterContextDarwin_arm_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
+                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
 
             case llvm::MachO::CPU_TYPE_I386:
               RegisterContextDarwin_i386_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
+                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
 
             case llvm::MachO::CPU_TYPE_X86_64:
               RegisterContextDarwin_x86_64_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_sp->GetIndexID()]);
+                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
             }
           }
@@ -6731,7 +6731,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             std::make_shared<StructuredData::Dictionary>());
         StructuredData::ArraySP threads(
             std::make_shared<StructuredData::Array>());
-        for (const ThreadSP &thread_sp : thread_list) {
+        for (const ThreadSP &thread_sp : process_sp->CalculateCoreFileThreadList(options)) {
           StructuredData::DictionarySP thread(
               std::make_shared<StructuredData::Dictionary>());
           thread->AddIntegerItem("thread_id", thread_sp->GetID());

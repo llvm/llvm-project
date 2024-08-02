@@ -6679,9 +6679,9 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
 std::vector<ThreadSP>
 Process::CalculateCoreFileThreadList(const SaveCoreOptions &core_options) {
   std::vector<ThreadSP> thread_list;
-  for (const auto &thread : m_thread_list.Threads()) {
-    if (core_options.ShouldThreadBeSaved(thread->GetID())) {
-      thread_list.push_back(thread);
+  for (const lldb::ThreadSP &thread_sp : m_thread_list.Threads()) {
+    if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
+      thread_list.push_back(thread_sp);
     }
   }
 
