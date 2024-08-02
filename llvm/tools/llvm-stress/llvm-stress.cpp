@@ -173,8 +173,6 @@ public:
         Ty = Type::getX86_FP80Ty(Context);
       else if (Arg == "ppc_fp128")
         Ty = Type::getPPC_FP128Ty(Context);
-      else if (Arg == "x86_mmx")
-        Ty = Type::getX86_MMXTy(Context);
       else if (Arg.starts_with("i")) {
         unsigned N = 0;
         Arg.drop_front().getAsInteger(10, N);
@@ -294,11 +292,7 @@ protected:
   /// Pick a random vector type.
   Type *pickVectorType(VectorType *VTy = nullptr) {
 
-    // Vectors of x86mmx are illegal; keep trying till we get something else.
-    Type *Ty;
-    do {
-      Ty = pickScalarType();
-    } while (Ty->isX86_MMXTy());
+    Type *Ty = pickScalarType();
 
     if (VTy)
       return VectorType::get(Ty, VTy->getElementCount());
@@ -467,7 +461,7 @@ struct AllocaModifier: public Modifier {
 
   void Act() override {
     Type *Tp = pickType();
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     PT->push_back(new AllocaInst(Tp, DL.getAllocaAddrSpace(),
                                  "A", BB->getFirstNonPHI()));
   }

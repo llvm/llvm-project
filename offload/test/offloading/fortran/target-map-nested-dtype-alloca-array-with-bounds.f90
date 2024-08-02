@@ -32,7 +32,7 @@ program main
     allocate(one_l%nest%array_k(10))
 
 !$omp target map(tofrom: one_l%nest%array_k(2:6))
-    do index = 1, 10
+    do index = 2, 6
         one_l%nest%array_k(index) = index
     end do
 !$omp end target

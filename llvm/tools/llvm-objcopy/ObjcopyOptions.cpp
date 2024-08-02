@@ -552,6 +552,100 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
+static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
+                                               StringRef OptionName) {
+  StringRef StringValue;
+  if (ArgValue.starts_with("*+")) {
+    StringValue = ArgValue.slice(2, StringRef::npos);
+  } else if (ArgValue.starts_with("*-")) {
+    StringValue = ArgValue.slice(1, StringRef::npos);
+  } else if (ArgValue.contains("=")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing LMA to a specific value is not "
+                                 "supported. Use *+val or *-val instead");
+  } else if (ArgValue.contains("+") || ArgValue.contains("-")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing a specific section LMA is not "
+                                 "supported. Use *+val or *-val instead");
+  }
+  if (StringValue.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": missing LMA offset");
+
+  auto LMAValue = getAsInteger<int64_t>(StringValue);
+  if (!LMAValue)
+    return createStringError(LMAValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 ArgValue.slice(0, 2) + " is " + StringValue +
+                                 " when it should be an integer");
+  return *LMAValue;
+}
+
+static Expected<SectionPatternAddressUpdate>
+parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
+                       MatchStyle SectionMatchStyle,
+                       function_ref<Error(Error)> ErrorCallback) {
+  SectionPatternAddressUpdate PatternUpdate;
+
+  size_t LastSymbolIndex = ArgValue.find_last_of("+-=");
+  if (LastSymbolIndex == StringRef::npos)
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": argument value " + ArgValue +
+                                 " is invalid. See --help");
+  char UpdateSymbol = ArgValue[LastSymbolIndex];
+
+  StringRef SectionPattern = ArgValue.slice(0, LastSymbolIndex);
+  if (SectionPattern.empty())
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for " + OptionName +
+            ": missing section pattern to apply address change to");
+  if (Error E = PatternUpdate.SectionPattern.addMatcher(NameOrPattern::create(
+          SectionPattern, SectionMatchStyle, ErrorCallback)))
+    return std::move(E);
+
+  StringRef Value = ArgValue.slice(LastSymbolIndex + 1, StringRef::npos);
+  if (Value.empty()) {
+    switch (UpdateSymbol) {
+    case '+':
+    case '-':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing value of offset after '" +
+                                   std::string({UpdateSymbol}) + "'");
+
+    case '=':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing address value after '='");
+    }
+  }
+  auto AddrValue = getAsInteger<uint64_t>(Value);
+  if (!AddrValue)
+    return createStringError(AddrValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 std::string({UpdateSymbol}) + " is " + Value +
+                                 " when it should be a 64-bit integer");
+
+  switch (UpdateSymbol) {
+  case '+':
+    PatternUpdate.Update.Kind = AdjustKind::Add;
+    break;
+  case '-':
+    PatternUpdate.Update.Kind = AdjustKind::Subtract;
+    break;
+  case '=':
+    PatternUpdate.Update.Kind = AdjustKind::Set;
+  }
+
+  PatternUpdate.Update.Value = *AddrValue;
+  return PatternUpdate;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
@@ -678,12 +772,13 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Case("efi_application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Case("efi_boot_service_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+            .Cases("efi_application", "efi-app",
+                   COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
+            .Cases("efi_boot_service_driver", "efi-bsd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Case("efi_runtime_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+            .Cases("efi_runtime_driver", "efi-rtd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
@@ -833,6 +928,23 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     Config.PadTo = *Addr;
   }
 
+  if (const auto *Arg = InputArgs.getLastArg(OBJCOPY_change_section_lma)) {
+    Expected<int64_t> LMAValue =
+        parseChangeSectionLMA(Arg->getValue(), Arg->getSpelling());
+    if (!LMAValue)
+      return LMAValue.takeError();
+    Config.ChangeSectionLMAValAll = *LMAValue;
+  }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_change_section_address)) {
+    Expected<SectionPatternAddressUpdate> AddressUpdate =
+        parseChangeSectionAddr(Arg->getValue(), Arg->getSpelling(),
+                               SectionMatchStyle, ErrorCallback);
+    if (!AddressUpdate)
+      return AddressUpdate.takeError();
+    Config.ChangeSectionAddress.push_back(*AddressUpdate);
+  }
+
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
@@ -949,6 +1061,10 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              ? DiscardType::All
                              : DiscardType::Locals;
   }
+
+  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
+
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);

@@ -73,12 +73,20 @@ struct llvm::TimeTraceProfilerEntry {
   const TimePointType Start;
   TimePointType End;
   const std::string Name;
-  const std::string Detail;
+  TimeTraceMetadata Metadata;
+
   const bool AsyncEvent = false;
   TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
                          std::string &&Dt, bool Ae)
+      : Start(std::move(S)), End(std::move(E)), Name(std::move(N)), Metadata(),
+        AsyncEvent(Ae) {
+    Metadata.Detail = std::move(Dt);
+  }
+
+  TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
+                         TimeTraceMetadata &&Mt, bool Ae)
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)),
-        Detail(std::move(Dt)), AsyncEvent(Ae) {}
+        Metadata(std::move(Mt)), AsyncEvent(Ae) {}
 
   // Calculate timings for FlameGraph. Cast time points to microsecond precision
   // rather than casting duration. This avoids truncation issues causing inner
@@ -97,10 +105,12 @@ struct llvm::TimeTraceProfilerEntry {
 };
 
 struct llvm::TimeTraceProfiler {
-  TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
+  TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "",
+                    bool TimeTraceVerbose = false)
       : BeginningOfTime(system_clock::now()), StartTime(ClockType::now()),
         ProcName(ProcName), Pid(sys::Process::getProcessId()),
-        Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity) {
+        Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity),
+        TimeTraceVerbose(TimeTraceVerbose) {
     llvm::get_thread_name(ThreadName);
   }
 
@@ -113,9 +123,18 @@ struct llvm::TimeTraceProfiler {
     return Stack.back().get();
   }
 
+  TimeTraceProfilerEntry *
+  begin(std::string Name, llvm::function_ref<TimeTraceMetadata()> Metadata,
+        bool AsyncEvent = false) {
+    Stack.emplace_back(std::make_unique<TimeTraceProfilerEntry>(
+        ClockType::now(), TimePointType(), std::move(Name), Metadata(),
+        AsyncEvent));
+    return Stack.back().get();
+  }
+
   void end() {
     assert(!Stack.empty() && "Must call begin() first");
-    end(*Stack.back().get());
+    end(*Stack.back());
   }
 
   void end(TimeTraceProfilerEntry &E) {
@@ -184,8 +203,15 @@ struct llvm::TimeTraceProfiler {
           J.attribute("dur", DurUs);
         }
         J.attribute("name", E.Name);
-        if (!E.Detail.empty()) {
-          J.attributeObject("args", [&] { J.attribute("detail", E.Detail); });
+        if (!E.Metadata.isEmpty()) {
+          J.attributeObject("args", [&] {
+            if (!E.Metadata.Detail.empty())
+              J.attribute("detail", E.Metadata.Detail);
+            if (!E.Metadata.File.empty())
+              J.attribute("file", E.Metadata.File);
+            if (E.Metadata.Line > 0)
+              J.attribute("line", E.Metadata.Line);
+          });
         }
       });
 
@@ -307,14 +333,25 @@ struct llvm::TimeTraceProfiler {
 
   // Minimum time granularity (in microseconds)
   const unsigned TimeTraceGranularity;
+
+  // Make time trace capture verbose event details (e.g. source filenames). This
+  // can increase the size of the output by 2-3 times.
+  const bool TimeTraceVerbose;
 };
 
+bool llvm::isTimeTraceVerbose() {
+  return getTimeTraceProfilerInstance() &&
+         getTimeTraceProfilerInstance()->TimeTraceVerbose;
+}
+
 void llvm::timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                       StringRef ProcName) {
+                                       StringRef ProcName,
+                                       bool TimeTraceVerbose) {
   assert(TimeTraceProfilerInstance == nullptr &&
          "Profiler should not be initialized");
   TimeTraceProfilerInstance = new TimeTraceProfiler(
-      TimeTraceGranularity, llvm::sys::path::filename(ProcName));
+      TimeTraceGranularity, llvm::sys::path::filename(ProcName),
+      TimeTraceVerbose);
 }
 
 // Removes all TimeTraceProfilerInstances.
@@ -378,6 +415,14 @@ llvm::timeTraceProfilerBegin(StringRef Name,
                              llvm::function_ref<std::string()> Detail) {
   if (TimeTraceProfilerInstance != nullptr)
     return TimeTraceProfilerInstance->begin(std::string(Name), Detail, false);
+  return nullptr;
+}
+
+TimeTraceProfilerEntry *
+llvm::timeTraceProfilerBegin(StringRef Name,
+                             llvm::function_ref<TimeTraceMetadata()> Metadata) {
+  if (TimeTraceProfilerInstance != nullptr)
+    return TimeTraceProfilerInstance->begin(std::string(Name), Metadata, false);
   return nullptr;
 }
 

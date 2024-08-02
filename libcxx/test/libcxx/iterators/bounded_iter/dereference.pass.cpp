@@ -16,7 +16,7 @@
 // UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
-#include <iterator>
+#include <__iterator/bounded_iter.h>
 
 #include "check_assertion.h"
 #include "test_iterators.h"

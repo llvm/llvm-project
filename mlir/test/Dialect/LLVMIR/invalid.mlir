@@ -1415,10 +1415,163 @@ func.func @invalid_zext_target_type_two(%arg: vector<1xi32>)  {
 
 // -----
 
+llvm.func @non_variadic(%arg: i32)
+
+llvm.func @invalid_var_callee_type(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to be a variadic function type}}
+  llvm.call @non_variadic(%arg) vararg(!llvm.func<void (i32)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.call @variadic(%arg) vararg(!llvm.func<void (i32, i64, ...)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.call %callee(%arg) vararg(!llvm.func<void (i32, i64, ...)>) : !llvm.ptr, (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.call @variadic(%arg) vararg(!llvm.func<void (i64, ...)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.call %callee(%arg) vararg(!llvm.func<void (i64, ...)>) : !llvm.ptr, (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to return void}}
+  llvm.call @variadic(%arg) vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...) -> i32
+
+llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type return type mismatch: 'i8' != 'i32'}}
+  %0 = llvm.call @variadic(%arg) vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.func @non_variadic(%arg: i32)
+
+llvm.func @invalid_var_callee_type(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to be a variadic function type}}
+  llvm.invoke @non_variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : !llvm.ptr, (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : !llvm.ptr, (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to return void}}
+  llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...) -> i32
+
+llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type return type mismatch: 'i8' != 'i32'}}
+  %0 = llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> (i32)
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
 llvm.func @variadic(...)
 
 llvm.func @invalid_variadic_call(%arg: i32)  {
-  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  // expected-error@+1 {{missing var_callee_type attribute for vararg call}}
   "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
   llvm.return
 }
@@ -1428,7 +1581,7 @@ llvm.func @invalid_variadic_call(%arg: i32)  {
 llvm.func @variadic(...)
 
 llvm.func @invalid_variadic_call(%arg: i32)  {
-  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  // expected-error@+1 {{missing var_callee_type attribute for vararg call}}
   "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
   llvm.return
 }
@@ -1445,14 +1598,14 @@ llvm.func @foo(%arg: !llvm.ptr) {
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{to use im2col mode, the tensor has to be at least 3-dimensional}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
   return
 }
 // -----
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{im2col offsets must be 2 less than number of coordinates}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
   return
 }
 
@@ -1460,7 +1613,7 @@ func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr
   return
 }
 
@@ -1469,7 +1622,7 @@ func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr
   return
 }
 

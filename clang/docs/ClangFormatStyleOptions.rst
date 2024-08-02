@@ -4443,23 +4443,51 @@ the configuration (without a prefix: ``Auto``).
      false:
      import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,} from "some/module.js"
 
+.. _KeepEmptyLines:
+
+**KeepEmptyLines** (``KeepEmptyLinesStyle``) :versionbadge:`clang-format 19` :ref:`¶ <KeepEmptyLines>`
+  Which empty lines are kept.  See ``MaxEmptyLinesToKeep`` for how many
+  consecutive empty lines are kept.
+
+  Nested configuration flags:
+
+  Options regarding which empty lines are kept.
+
+  For example, the config below will remove empty lines at start of the
+  file, end of the file, and start of blocks.
+
+
+  .. code-block:: c++
+
+    KeepEmptyLines:
+      AtEndOfFile: false
+      AtStartOfBlock: false
+      AtStartOfFile: false
+
+  * ``bool AtEndOfFile`` Keep empty lines at end of file.
+
+  * ``bool AtStartOfBlock`` Keep empty lines at start of a block.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       if (foo) {                     vs.     if (foo) {
+                                                bar();
+         bar();                               }
+       }
+
+  * ``bool AtStartOfFile`` Keep empty lines at start of file.
+
+
 .. _KeepEmptyLinesAtEOF:
 
 **KeepEmptyLinesAtEOF** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <KeepEmptyLinesAtEOF>`
-  Keep empty lines (up to ``MaxEmptyLinesToKeep``) at end of file.
+  This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
 
 .. _KeepEmptyLinesAtTheStartOfBlocks:
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
-  If true, the empty line at the start of blocks is kept.
-
-  .. code-block:: c++
-
-     true:                                  false:
-     if (foo) {                     vs.     if (foo) {
-                                              bar();
-       bar();                               }
-     }
+  This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
 
 .. _LambdaBodyIndentation:
 
@@ -6214,6 +6242,7 @@ the configuration (without a prefix: ``Auto``).
     # Example of usage:
     SpacesInParens: Custom
     SpacesInParensOptions:
+      ExceptDoubleParentheses: false
       InConditionalStatements: true
       InEmptyParentheses: true
 
@@ -6226,8 +6255,21 @@ the configuration (without a prefix: ``Auto``).
     # Should be declared this way:
     SpacesInParens: Custom
     SpacesInParensOptions:
+      ExceptDoubleParentheses: false
       InConditionalStatements: true
       Other: true
+
+  * ``bool ExceptDoubleParentheses`` Override any of the following options to prevent addition of space
+    when both opening and closing parentheses use multiple parentheses.
+
+    .. code-block:: c++
+
+      true:
+      __attribute__(( noreturn ))
+      __decltype__(( x ))
+      if (( a = b ))
+     false:
+       Uses the applicable option.
 
   * ``bool InConditionalStatements`` Put a space in parentheses only inside conditional statements
     (``for/if/while/switch...``).
@@ -6242,8 +6284,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-       true:                                  false:
-       x = ( int32 )y                 vs.     x = (int32)y
+      true:                                  false:
+      x = ( int32 )y                  vs.    x = (int32)y
+      y = (( int (*)(int) )foo)(x);          y = ((int (*)(int))foo)(x);
 
   * ``bool InEmptyParentheses`` Insert a space in empty parentheses, i.e. ``()``.
 
@@ -6261,8 +6304,8 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-       true:                                  false:
-       t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+      true:                                 false:
+      t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
 
 
 .. _SpacesInParentheses:

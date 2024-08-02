@@ -139,7 +139,7 @@ struct D3 : B {
 #endif
 
 #if __cplusplus >= 202302L
-namespace cwg2561 { // cwg2561: no tentatively ready 2024-03-18
+namespace cwg2561 { // cwg2561: no
 struct C {
     constexpr C(auto) { }
 };

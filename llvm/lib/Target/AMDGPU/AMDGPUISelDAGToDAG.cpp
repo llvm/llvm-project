@@ -1270,8 +1270,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
     // (add n0, c0)
     if (isDSOffset2Legal(N0, OffsetValue0, OffsetValue1, Size)) {
       Base = N0;
-      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i8);
-      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i8);
+      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i32);
+      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i32);
       return true;
     }
   } else if (Addr.getOpcode() == ISD::SUB) {
@@ -1306,8 +1306,10 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
               SubOp, DL, MVT::getIntegerVT(Size * 8), Opnds);
 
           Base = SDValue(MachineSub, 0);
-          Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i8);
-          Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i8);
+          Offset0 =
+              CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i32);
+          Offset1 =
+              CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i32);
           return true;
         }
       }
@@ -1321,8 +1323,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
       MachineSDNode *MovZero =
           CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, DL, MVT::i32, Zero);
       Base = SDValue(MovZero, 0);
-      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i8);
-      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i8);
+      Offset0 = CurDAG->getTargetConstant(OffsetValue0 / Size, DL, MVT::i32);
+      Offset1 = CurDAG->getTargetConstant(OffsetValue1 / Size, DL, MVT::i32);
       return true;
     }
   }
@@ -1330,8 +1332,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
   // default case
 
   Base = Addr;
-  Offset0 = CurDAG->getTargetConstant(0, DL, MVT::i8);
-  Offset1 = CurDAG->getTargetConstant(1, DL, MVT::i8);
+  Offset0 = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  Offset1 = CurDAG->getTargetConstant(1, DL, MVT::i32);
   return true;
 }
 
@@ -2583,15 +2585,6 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
-void AMDGPUDAGToDAGISel::SelectPOPSExitingWaveID(SDNode *N) {
-  // TODO: Select this with a tablegen pattern. This is tricky because the
-  // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
-  // mayLoad/mayStore and tablegen complains about the mismatch.
-  SDValue Reg = CurDAG->getRegister(AMDGPU::SRC_POPS_EXITING_WAVE_ID, MVT::i32);
-  SDValue Chain = N->getOperand(0);
-  CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), {Reg, Chain});
-}
-
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
@@ -2748,9 +2741,6 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     SelectDSBvhStackIntrinsic(N);
     return;
-  case Intrinsic::amdgcn_pops_exiting_wave_id:
-    SelectPOPSExitingWaveID(N);
-    return;
   }
 
   SelectCode(N);
@@ -2787,18 +2777,6 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;
-  case Intrinsic::amdgcn_inverse_ballot:
-    switch (N->getOperand(1).getValueSizeInBits()) {
-    case 32:
-      Opcode = AMDGPU::S_INVERSE_BALLOT_U32;
-      break;
-    case 64:
-      Opcode = AMDGPU::S_INVERSE_BALLOT_U64;
-      break;
-    default:
-      llvm_unreachable("Unsupported size for inverse ballot mask.");
-    }
-    break;
   default:
     SelectCode(N);
     break;

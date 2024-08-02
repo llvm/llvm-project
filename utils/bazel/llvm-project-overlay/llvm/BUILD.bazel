@@ -1297,8 +1297,9 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
-        "include/llvm/TargetParser/ARMTargetParserDef.inc",
+        "include/llvm/TargetParser/AArch64CPUFeatures.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+        "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
@@ -1598,6 +1599,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":Demangle",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -2652,6 +2654,7 @@ cc_library(
         ":CodeGen",
         ":Core",
         ":Coroutines",
+        ":Demangle",
         ":HipStdPar",
         ":IPO",
         ":IRPrinter",
