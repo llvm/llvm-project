@@ -214,6 +214,25 @@ def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ", "f8E4M3B1
 }
 
 //===----------------------------------------------------------------------===//
+// Float8E3M4Type
+
+def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
+  let summary = "8-bit floating point with 3 bits exponent and 4 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 3 bits exponent and 4 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S1E3M4
+      * exponent bias: 3
+      * infinities: supported with exponent set to all 1s and mantissa 0s
+      * NaNs: supported with exponent bits set to all 1s and mantissa values of
+        {0,1}⁴ except S.111.0000
+      * denormals when exponent is 0
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 
 def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16"> {
@@ -1166,6 +1185,11 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
       if (getRank() == 0)
         return false;
       return !llvm::is_contained(getScalableDims(), false);
+    }
+
+    /// Get the number of scalable dimensions.
+    int64_t getNumScalableDims() const {
+      return llvm::count(getScalableDims(), true);
     }
 
     /// Get or create a new VectorType with the same shape as `this` and an

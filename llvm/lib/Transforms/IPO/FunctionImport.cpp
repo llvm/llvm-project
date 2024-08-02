@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -30,6 +29,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/IRMover.h"
+#include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -185,6 +185,10 @@ static cl::opt<bool> ImportAssumeUniqueLocal(
         "user specify the full module path."),
     cl::Hidden);
 
+static cl::opt<std::string>
+    ContextualProfile("thinlto-pgo-ctx-prof",
+                      cl::desc("Path to a contextual profile."), cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 }
@@ -207,7 +211,7 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
   return Result;
 }
 
-static bool shouldSkipLocalInAnotherModule(const GlobalVarSummary *RefSummary,
+static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
                                            size_t NumDefs,
                                            StringRef ImporterModule) {
   // We can import a local from another module if all inputs are compiled
@@ -268,8 +272,7 @@ static auto qualifyCalleeCandidates(
         // there is only one entry in the list or when all files in the program
         // are compiled with full path - in both cases the local function has
         // unique PGO name and GUID.
-        if (shouldSkipLocalInAnotherModule(dyn_cast<GlobalVarSummary>(Summary),
-                                           CalleeSummaryList.size(),
+        if (shouldSkipLocalInAnotherModule(Summary, CalleeSummaryList.size(),
                                            CallerModulePath))
           return {
               FunctionImporter::ImportFailureReason::LocalLinkageNotInModule,
@@ -605,13 +608,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
     LLVM_DEBUG(dbgs() << "[Workload] Done\n");
   }
 
-public:
-  WorkloadImportsManager(
-      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-          IsPrevailing,
-      const ModuleSummaryIndex &Index,
-      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
-      : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
+  void loadFromJson() {
     // Since the workload def uses names, we need a quick lookup
     // name->ValueInfo.
     StringMap<ValueInfo> NameToValueInfo;
@@ -681,15 +678,81 @@ public:
         }
         Set.insert(ElemIt->second);
       }
-      LLVM_DEBUG({
+    }
+  }
+
+  void loadFromCtxProf() {
+    std::error_code EC;
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ContextualProfile);
+    if (std::error_code EC = BufferOrErr.getError()) {
+      report_fatal_error("Failed to open contextual profile file");
+      return;
+    }
+    auto Buffer = std::move(BufferOrErr.get());
+
+    PGOCtxProfileReader Reader(Buffer->getBuffer());
+    auto Ctx = Reader.loadContexts();
+    if (!Ctx) {
+      report_fatal_error("Failed to parse contextual profiles");
+      return;
+    }
+    const auto &CtxMap = *Ctx;
+    DenseSet<GlobalValue::GUID> ContainedGUIDs;
+    for (const auto &[RootGuid, Root] : CtxMap) {
+      // Avoid ContainedGUIDs to get in/out of scope. Reuse its memory for
+      // subsequent roots, but clear its contents.
+      ContainedGUIDs.clear();
+
+      auto RootVI = Index.getValueInfo(RootGuid);
+      if (!RootVI) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << RootGuid
+                          << " not found in this linkage unit.\n");
+        continue;
+      }
+      if (RootVI.getSummaryList().size() != 1) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << RootGuid
+                          << " should have exactly one summary, but has "
+                          << RootVI.getSummaryList().size() << ". Skipping.\n");
+        continue;
+      }
+      StringRef RootDefiningModule =
+          RootVI.getSummaryList().front()->modulePath();
+      LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << RootGuid
+                        << " is : " << RootDefiningModule << "\n");
+      auto &Set = Workloads[RootDefiningModule];
+      Root.getContainedGuids(ContainedGUIDs);
+      for (auto Guid : ContainedGUIDs)
+        if (auto VI = Index.getValueInfo(Guid))
+          Set.insert(VI);
+    }
+  }
+
+public:
+  WorkloadImportsManager(
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          IsPrevailing,
+      const ModuleSummaryIndex &Index,
+      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
+      : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
+    if (ContextualProfile.empty() == WorkloadDefinitions.empty()) {
+      report_fatal_error(
+          "Pass only one of: -thinlto-pgo-ctx-prof or -thinlto-workload-def");
+      return;
+    }
+    if (!ContextualProfile.empty())
+      loadFromCtxProf();
+    else
+      loadFromJson();
+    LLVM_DEBUG({
+      for (const auto &[Root, Set] : Workloads) {
         dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
                << " distinct callees.\n";
         for (const auto &VI : Set) {
           dbgs() << "[Workload] Root: " << Root
                  << " Would include: " << VI.getGUID() << "\n";
         }
-      });
-    }
+      }
+    });
   }
 };
 
@@ -698,7 +761,7 @@ std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
         IsPrevailing,
     const ModuleSummaryIndex &Index,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
-  if (WorkloadDefinitions.empty()) {
+  if (WorkloadDefinitions.empty() && ContextualProfile.empty()) {
     LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
     return std::unique_ptr<ModuleImportsManager>(
         new ModuleImportsManager(IsPrevailing, Index, ExportLists));

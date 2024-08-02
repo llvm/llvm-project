@@ -294,8 +294,8 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 }
 
 /// Returns the trip count of `forOp` if its' low bound, high bound and step are
-/// constants, or optional otherwise. Trip count is computed as ceilDiv(highBound
-/// - lowBound, step).
+/// constants, or optional otherwise. Trip count is computed as
+/// ceilDiv(highBound - lowBound, step).
 static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
   std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
   std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
@@ -1362,4 +1362,38 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
   rewriter.replaceOp(source, fusedLoop.getResults().take_back(numSourceOuts));
 
   return fusedLoop;
+}
+
+FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
+                                                 scf::ForallOp forallOp) {
+  SmallVector<OpFoldResult> lbs = forallOp.getMixedLowerBound();
+  SmallVector<OpFoldResult> ubs = forallOp.getMixedUpperBound();
+  SmallVector<OpFoldResult> steps = forallOp.getMixedStep();
+
+  if (llvm::all_of(
+          lbs, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }) &&
+      llvm::all_of(
+          steps, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); })) {
+    return forallOp;
+  }
+
+  SmallVector<OpFoldResult> newLbs, newUbs, newSteps;
+  for (auto [lb, ub, step] : llvm::zip_equal(lbs, ubs, steps)) {
+    Range normalizedLoopParams =
+        emitNormalizedLoopBounds(rewriter, forallOp.getLoc(), lb, ub, step);
+    newLbs.push_back(normalizedLoopParams.offset);
+    newUbs.push_back(normalizedLoopParams.size);
+    newSteps.push_back(normalizedLoopParams.stride);
+  }
+
+  auto normalizedForallOp = rewriter.create<scf::ForallOp>(
+      forallOp.getLoc(), newLbs, newUbs, newSteps, forallOp.getOutputs(),
+      forallOp.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+
+  rewriter.inlineRegionBefore(forallOp.getBodyRegion(),
+                              normalizedForallOp.getBodyRegion(),
+                              normalizedForallOp.getBodyRegion().begin());
+
+  rewriter.replaceAllOpUsesWith(forallOp, normalizedForallOp);
+  return success();
 }

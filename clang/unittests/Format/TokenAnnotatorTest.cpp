@@ -269,6 +269,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
 
+  Tokens = annotate("template <typename T>\n"
+                    "enable_if_t<is_integral_v<T>, bool> // comment\n"
+                    "operator~(T &a);");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::amp, TT_PointerOrReference);
+
   Tokens = annotate("template <enable_if_t<foo && !bar>* = nullptr> void f();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
@@ -577,7 +583,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsTernaryInTemplate) {
   EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
 
   // IsExpression = true
+
   Tokens = annotate("return foo<true ? 1 : 2>();");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[4], tok::question, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("return foo<true ? 1 : 2>{};");
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[4], tok::question, TT_ConditionalExpr);
@@ -595,6 +609,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[7], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("return A < B ? true : A > B;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("return A < B ? true : A > B ? false : false;");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("return A < B ^ A > B;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_BinaryOperator);
 
   Tokens = annotate("ratio{-1, 2} < ratio{-1, 3} == -1 / 3 > -1 / 2;");
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
