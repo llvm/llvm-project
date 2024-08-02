@@ -130,7 +130,7 @@ Improvements to Clang's diagnostics
 - Some template related diagnostics have been improved.
 
   .. code-block:: c++
-    
+
      void foo() { template <typename> int i; } // error: templates can only be declared in namespace or class scope
 
      struct S {
@@ -171,6 +171,8 @@ Bug Fixes to C++ Support
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
+- Fix a crash when checking the initialzier of an object that was initialized
+  with a string literal. (#GH82167)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -183,6 +185,9 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
   can be found as ordinary identifiers in struct/union definition. (#GH31295)
+
+- Fixed a crash caused by long chains of ``sizeof`` and other similar operators
+  that can be followed by a non-parenthesized expression. (#GH45061)
 
 OpenACC Specific Changes
 ------------------------

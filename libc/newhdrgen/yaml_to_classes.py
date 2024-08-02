@@ -252,8 +252,6 @@ def main(
         with open(output_file_path, "w") as f:
             f.write(header_str)
 
-    print(f"Generated header file: {output_file_path}")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate header files from YAML")

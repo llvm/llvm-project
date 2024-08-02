@@ -130,6 +130,44 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  daddl
+  SRCS
+    daddl.cpp
+  HDRS
+    ../daddl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+)
+
+add_entrypoint_object(
+  daddf128
+  SRCS
+    daddf128.cpp
+  HDRS
+    ../daddf128.h
+  COMPILE_OPTIONS
+    -O3
+ DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+)
+
+add_entrypoint_object(
+  ddivf128
+  SRCS
+    ddivf128.cpp
+  HDRS
+    ../ddivf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
   dfmaf128
   SRCS
     dfmaf128.cpp
@@ -4156,11 +4194,48 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpayload
+  SRCS
+    getpayload.cpp
+  HDRS
+    ../getpayload.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  getpayloadf
+  SRCS
+    getpayloadf.cpp
+  HDRS
+    ../getpayloadf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   getpayloadf16
   SRCS
     getpayloadf16.cpp
   HDRS
     ../getpayloadf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  getpayloadf128
+  SRCS
+    getpayloadf128.cpp
+  HDRS
+    ../getpayloadf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
