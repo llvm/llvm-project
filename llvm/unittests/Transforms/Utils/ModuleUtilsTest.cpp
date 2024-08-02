@@ -24,12 +24,12 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   return Mod;
 }
 
-static int getUsedListSize(Module &M, StringRef Name) {
-  auto *UsedList = M.getGlobalVariable(Name);
-  if (!UsedList)
+static int getListSize(Module &M, StringRef Name) {
+  auto *List = M.getGlobalVariable(Name);
+  if (!List)
     return 0;
-  auto *UsedListBaseArrayType = cast<ArrayType>(UsedList->getValueType());
-  return UsedListBaseArrayType->getNumElements();
+  auto *T = cast<ArrayType>(List->getValueType());
+  return T->getNumElements();
 }
 
 TEST(ModuleUtils, AppendToUsedList1) {
@@ -41,13 +41,13 @@ TEST(ModuleUtils, AppendToUsedList1) {
   for (auto &G : M->globals()) {
     Globals.push_back(&G);
   }
-  EXPECT_EQ(0, getUsedListSize(*M, "llvm.compiler.used"));
+  EXPECT_EQ(0, getListSize(*M, "llvm.compiler.used"));
   appendToCompilerUsed(*M, Globals);
-  EXPECT_EQ(1, getUsedListSize(*M, "llvm.compiler.used"));
+  EXPECT_EQ(1, getListSize(*M, "llvm.compiler.used"));
 
-  EXPECT_EQ(0, getUsedListSize(*M, "llvm.used"));
+  EXPECT_EQ(0, getListSize(*M, "llvm.used"));
   appendToUsed(*M, Globals);
-  EXPECT_EQ(1, getUsedListSize(*M, "llvm.used"));
+  EXPECT_EQ(1, getListSize(*M, "llvm.used"));
 }
 
 TEST(ModuleUtils, AppendToUsedList2) {
@@ -59,11 +59,11 @@ TEST(ModuleUtils, AppendToUsedList2) {
   for (auto &G : M->globals()) {
     Globals.push_back(&G);
   }
-  EXPECT_EQ(0, getUsedListSize(*M, "llvm.compiler.used"));
+  EXPECT_EQ(0, getListSize(*M, "llvm.compiler.used"));
   appendToCompilerUsed(*M, Globals);
-  EXPECT_EQ(1, getUsedListSize(*M, "llvm.compiler.used"));
+  EXPECT_EQ(1, getListSize(*M, "llvm.compiler.used"));
 
-  EXPECT_EQ(0, getUsedListSize(*M, "llvm.used"));
+  EXPECT_EQ(0, getListSize(*M, "llvm.used"));
   appendToUsed(*M, Globals);
-  EXPECT_EQ(1, getUsedListSize(*M, "llvm.used"));
+  EXPECT_EQ(1, getListSize(*M, "llvm.used"));
 }
