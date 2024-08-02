@@ -27,7 +27,6 @@ from typing import List
 
 
 class PRMerger:
-
     def __init__(self, args):
         self.pr = args.pr
         self.args = args
@@ -173,7 +172,8 @@ class PRMerger:
     def push_upstream(self):
         print("> Pushing changes...")
         subprocess.run(
-            ["git", "push", self.args.upstream, "HEAD:" + self.target_branch], check=True
+            ["git", "push", self.args.upstream, "HEAD:" + self.target_branch],
+            check=True,
         )
 
     def delete_local_branch(self):
