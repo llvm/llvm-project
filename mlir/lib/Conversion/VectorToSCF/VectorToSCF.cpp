@@ -1068,7 +1068,7 @@ struct ScalableTransposeTransferWriteConversion
     auto scalableFlags = vectorType.getScalableDims();
     if (scalableFlags != ArrayRef<bool>{true, false}) {
       return rewriter.notifyMatchFailure(
-          writeOp, "expected vector of form vector<[*]x*xty>");
+          writeOp, "expected vector of the form vector<[N]xMxty>");
     }
 
     auto permutationMap = writeOp.getPermutationMap();
