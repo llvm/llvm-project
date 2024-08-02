@@ -9062,51 +9062,83 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
   if (Previous.empty()) {
     // Nowhere to look anyway.
   } else if (FunctionDecl *Function = dyn_cast<FunctionDecl>(Member)) {
-    SmallVector<FunctionDecl *> Candidates;
-    bool Ambiguous = false;
-    for (LookupResult::iterator I = Previous.begin(), E = Previous.end();
-           I != E; ++I) {
-      CXXMethodDecl *Method =
-          dyn_cast<CXXMethodDecl>((*I)->getUnderlyingDecl());
-      if (!Method)
+    LookupResult::Filter Filter = Previous.makeFilter();
+    while (Filter.hasNext()) {
+      auto *Method =
+          dyn_cast<CXXMethodDecl>(Filter.next()->getUnderlyingDecl());
+      // Discard any candidates that aren't member functions.
+      if (!Method) {
+        Filter.erase();
         continue;
+      }
+
       QualType Adjusted = Function->getType();
       if (!hasExplicitCallingConv(Adjusted))
         Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
+      // Discard any candidates with the wrong type.
       // This doesn't handle deduced return types, but both function
       // declarations should be undeduced at this point.
-      if (!Context.hasSameType(Adjusted, Method->getType()))
+      if (!Context.hasSameType(Adjusted, Method->getType())) {
+        Filter.erase();
         continue;
+      }
+
+      // Discard any candidates with unsatisfied constraints.
       if (ConstraintSatisfaction Satisfaction;
           Method->getTrailingRequiresClause() &&
           (CheckFunctionConstraints(Method, Satisfaction,
                                     /*UsageLoc=*/Member->getLocation(),
                                     /*ForOverloadResolution=*/true) ||
-           !Satisfaction.IsSatisfied))
+           !Satisfaction.IsSatisfied)) {
+        Filter.erase();
         continue;
-      Candidates.push_back(Method);
-      FunctionDecl *MoreConstrained =
-          Instantiation ? getMoreConstrainedFunction(
-                              Method, cast<FunctionDecl>(Instantiation))
-                        : Method;
-      if (!MoreConstrained) {
-        Ambiguous = true;
-        continue;
-      }
-      if (MoreConstrained == Method) {
-        Ambiguous = false;
-        FoundInstantiation = *I;
-        Instantiation = Method;
-        InstantiatedFrom = Method->getInstantiatedFromMemberFunction();
-        MSInfo = Method->getMemberSpecializationInfo();
       }
     }
+    Filter.done();
+
+    // If we have no candidates left after filtering, we are done.
+    if (Previous.empty())
+      return false;
+
+    // Find the function that is more constrained than every other function it
+    // has been compared to.
+    UnresolvedSetIterator Best = Previous.begin();
+    CXXMethodDecl *BestMethod = nullptr;
+    for (UnresolvedSetIterator I = Previous.begin(), E = Previous.end(); I != E;
+         ++I) {
+      auto *Method = cast<CXXMethodDecl>(I->getUnderlyingDecl());
+      if (I == Best ||
+          getMoreConstrainedFunction(Method, BestMethod) == Method) {
+        Best = I;
+        BestMethod = Method;
+      }
+    }
+
+    FoundInstantiation = *Best;
+    Instantiation = BestMethod;
+    InstantiatedFrom = BestMethod->getInstantiatedFromMemberFunction();
+    MSInfo = BestMethod->getMemberSpecializationInfo();
+
+    // Make sure the best candidate is more specialized than all of the others.
+    bool Ambiguous = false;
+    for (UnresolvedSetIterator I = Previous.begin(), E = Previous.end(); I != E;
+         ++I) {
+      auto *Method = cast<CXXMethodDecl>(I->getUnderlyingDecl());
+      if (I != Best &&
+          getMoreConstrainedFunction(Method, BestMethod) != BestMethod) {
+        Ambiguous = true;
+        break;
+      }
+    }
+
     if (Ambiguous) {
       Diag(Member->getLocation(), diag::err_function_member_spec_ambiguous)
           << Member << (InstantiatedFrom ? InstantiatedFrom : Instantiation);
-      for (FunctionDecl *Candidate : Candidates)
+      for (NamedDecl *Candidate : Previous) {
+        Candidate = Candidate->getUnderlyingDecl();
         Diag(Candidate->getLocation(), diag::note_function_member_spec_matched)
             << Candidate;
+      }
       return true;
     }
   } else if (isa<VarDecl>(Member)) {
