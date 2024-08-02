@@ -7,8 +7,9 @@
 
 declare ghccc i32 @external(i32)
 
-define i32 @foo(i32 %0, i32 %1) {
-; CHECK-LABEL: foo:
+; Basic test with ghccc calling convention.
+define i32 @test1(i32 %0, i32 %1) {
+; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -49,4 +50,110 @@ define i32 @foo(i32 %0, i32 %1) {
 ; CHECK-NEXT:    retq
     %x = call ghccc i32 @external(i32 %0, i32 %1)
     ret i32 %x
+}
+
+; Calling convention hipe has similar behavior. It clobbers rbp but not rbx.
+
+declare cc 11 i64 @hipe1(i64)
+declare cc 11 i64 @hipe2(i64, i64, i64, i64, i64, i64, i64)
+
+; Basic test with hipe calling convention.
+define i64 @test2(i64 %a0, i64 %a1) {
+; CHECK-LABEL: test2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    andq $-16, %rsp
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    .cfi_offset %rbx, -56
+; CHECK-NEXT:    .cfi_offset %r12, -48
+; CHECK-NEXT:    .cfi_offset %r13, -40
+; CHECK-NEXT:    .cfi_offset %r14, -32
+; CHECK-NEXT:    .cfi_offset %r15, -24
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_remember_state
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x06, 0x77, 0x08, 0x06, 0x11, 0x10, 0x22 #
+; CHECK-NEXT:    movq %rsi, %rbp
+; CHECK-NEXT:    movq %rdi, %r15
+; CHECK-NEXT:    callq hipe1@PLT
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_restore_state
+; CHECK-NEXT:    movq %r15, %rax
+; CHECK-NEXT:    leaq -40(%rbp), %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    retq
+  %x = call cc 11 i64 @hipe1(i64 %a0, i64 %a1)
+  ret i64 %x
+}
+
+; Test with more arguments, so some of them are passed from stack. The spilling
+; of rbp should not disturb stack arguments.
+; fixme: current generated code is wrong because rbp is used to load passed in
+;        argument after rbp is assigned argument for function call, it is caused
+;        by x86-cf-opt.
+define i64 @test3(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7) {
+; CHECK-LABEL: test3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    andq $-16, %rsp
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    .cfi_offset %rbx, -56
+; CHECK-NEXT:    .cfi_offset %r12, -48
+; CHECK-NEXT:    .cfi_offset %r13, -40
+; CHECK-NEXT:    .cfi_offset %r14, -32
+; CHECK-NEXT:    .cfi_offset %r15, -24
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_remember_state
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x06, 0x77, 0x08, 0x06, 0x11, 0x10, 0x22 #
+; CHECK-NEXT:    movq %rsi, %rbp
+; CHECK-NEXT:    movq %rdi, %r15
+; CHECK-NEXT:    movq %rdx, %rsi
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    movq %r8, %rcx
+; CHECK-NEXT:    movq %r9, %r8
+; CHECK-NEXT:    pushq 24(%rbp)
+; CHECK-NEXT:    pushq 16(%rbp)
+; CHECK-NEXT:    callq hipe2@PLT
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_restore_state
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    movq %r15, %rax
+; CHECK-NEXT:    leaq -40(%rbp), %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    retq
+  %x = call cc 11 i64 @hipe2(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7)
+  ret i64 %x
 }

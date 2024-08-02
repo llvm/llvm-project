@@ -469,8 +469,7 @@ public:
 
   /// If frame pointer or base pointer is clobbered by an instruction, we should
   /// spill/restore it around that instruction.
-  virtual void spillFPBP(MachineFunction &MF) const {
-  }
+  virtual void spillFPBP(MachineFunction &MF) const {}
 };
 
 } // End llvm namespace

@@ -4232,9 +4232,11 @@ void X86FrameLowering::restoreWinEHStackPointersInParent(
   }
 }
 
-static int computeSPAdjust4SpillFPBP(MachineFunction &MF,
-                                     const TargetRegisterClass *RC,
-                                     unsigned NumSpilledRegs) {
+// Compute the alignment gap between current SP after spilling FP/BP and the
+// next properly aligned stack offset.
+static int computeFPBPAlignmentGap(MachineFunction &MF,
+                                   const TargetRegisterClass *RC,
+                                   unsigned NumSpilledRegs) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   unsigned AllocSize = TRI->getSpillSize(*RC) * NumSpilledRegs;
   Align StackAlign = MF.getSubtarget().getFrameLowering()->getStackAlign();
@@ -4244,47 +4246,33 @@ static int computeSPAdjust4SpillFPBP(MachineFunction &MF,
 
 void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
                                         MachineBasicBlock::iterator BeforeMI,
-                                        bool SpillFP, bool SpillBP) const {
-  assert(SpillFP || SpillBP);
+                                        Register FP, Register BP,
+                                        int SPAdjust) const {
+  assert(FP.isValid() || BP.isValid());
 
-  const TargetRegisterClass *RC;
-  unsigned NumRegs = 0;
   MachineBasicBlock *MBB = BeforeMI->getParent();
   DebugLoc DL = BeforeMI->getDebugLoc();
 
   // Spill FP.
-  if (SpillFP) {
-    Register FP = TRI->getFrameRegister(MF);
-    if (STI.isTarget64BitILP32())
-      FP = Register(getX86SubSuperRegister(FP, 64));
-    RC = TRI->getMinimalPhysRegClass(FP);
-    ++NumRegs;
-
+  if (FP.isValid()) {
     BuildMI(*MBB, BeforeMI, DL,
             TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
         .addReg(FP);
   }
 
   // Spill BP.
-  if (SpillBP) {
-    Register BP = TRI->getBaseRegister();
-    if (STI.isTarget64BitILP32())
-      BP = Register(getX86SubSuperRegister(BP, 64));
-    RC = TRI->getMinimalPhysRegClass(BP);
-    ++NumRegs;
-
+  if (BP.isValid()) {
     BuildMI(*MBB, BeforeMI, DL,
             TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
         .addReg(BP);
   }
 
   // Make sure SP is aligned.
-  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, NumRegs);
   if (SPAdjust)
     emitSPUpdate(*MBB, BeforeMI, DL, -SPAdjust, false);
 
   // Emit unwinding information.
-  if (SpillFP && needsDwarfCFI(MF)) {
+  if (FP.isValid() && needsDwarfCFI(MF)) {
     // Emit .cfi_remember_state to remember old frame.
     unsigned CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
@@ -4296,8 +4284,8 @@ void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
     SmallString<64> CfaExpr;
     uint8_t buffer[16];
     int Offset = SPAdjust;
-    if (SpillBP)
-      Offset += TRI->getSpillSize(*RC);
+    if (BP.isValid())
+      Offset += TRI->getSpillSize(*TRI->getMinimalPhysRegClass(BP));
     // If BeforeMI is a frame setup instruction, we need to adjust the position
     // and offset of the new cfi instruction.
     if (TII.isFrameSetup(*BeforeMI)) {
@@ -4327,12 +4315,49 @@ void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
 
 void X86FrameLowering::restoreFPBPUsingSP(MachineFunction &MF,
                                           MachineBasicBlock::iterator AfterMI,
-                                          bool SpillFP, bool SpillBP) const {
+                                          Register FP, Register BP,
+                                          int SPAdjust) const {
+  assert(FP.isValid() || BP.isValid());
+
+  // Adjust SP so it points to spilled FP or BP.
+  MachineBasicBlock *MBB = AfterMI->getParent();
+  MachineBasicBlock::iterator Pos = std::next(AfterMI);
+  DebugLoc DL = AfterMI->getDebugLoc();
+  if (SPAdjust)
+    emitSPUpdate(*MBB, Pos, DL, SPAdjust, false);
+
+  // Restore BP.
+  if (BP.isValid()) {
+    BuildMI(*MBB, Pos, DL,
+            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), BP);
+  }
+
+  // Restore FP.
+  if (FP.isValid()) {
+    BuildMI(*MBB, Pos, DL,
+            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), FP);
+
+    // Emit unwinding information.
+    if (needsDwarfCFI(MF)) {
+      // Restore original frame with .cfi_restore_state.
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
+      BuildMI(*MBB, Pos, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
+    }
+  }
+}
+
+void X86FrameLowering::saveAndRestoreFPBPUsingSP(MachineFunction &MF,
+                                        MachineBasicBlock::iterator BeforeMI,
+                                        MachineBasicBlock::iterator AfterMI,
+                                        bool SpillFP, bool SpillBP) const {
   assert(SpillFP || SpillBP);
 
   Register FP, BP;
   const TargetRegisterClass *RC;
   unsigned NumRegs = 0;
+
   if (SpillFP) {
     FP = TRI->getFrameRegister(MF);
     if (STI.isTarget64BitILP32())
@@ -4347,35 +4372,10 @@ void X86FrameLowering::restoreFPBPUsingSP(MachineFunction &MF,
     RC = TRI->getMinimalPhysRegClass(BP);
     ++NumRegs;
   }
+  int SPAdjust = computeFPBPAlignmentGap(MF, RC, NumRegs);
 
-  // Adjust SP so it points to spilled FP or BP.
-  MachineBasicBlock *MBB = AfterMI->getParent();
-  MachineBasicBlock::iterator Pos = std::next(AfterMI);
-  DebugLoc DL = AfterMI->getDebugLoc();
-  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, NumRegs);
-  if (SPAdjust)
-    emitSPUpdate(*MBB, Pos, DL, SPAdjust, false);
-
-  // Restore BP.
-  if (SpillBP) {
-    BuildMI(*MBB, Pos, DL,
-            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), BP);
-  }
-
-  // Restore FP.
-  if (SpillFP) {
-    BuildMI(*MBB, Pos, DL,
-            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), FP);
-
-    // Emit unwinding information.
-    if (needsDwarfCFI(MF)) {
-      // Restore original frame with .cfi_restore_state.
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
-      BuildMI(*MBB, Pos, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex);
-    }
-  }
+  spillFPBPUsingSP(MF, BeforeMI, FP, BP, SPAdjust);
+  restoreFPBPUsingSP(MF, AfterMI, FP, BP, SPAdjust);
 }
 
 bool X86FrameLowering::skipSpillFPBP(
@@ -4547,9 +4547,8 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
         }
       }
 
-      // Call target functions to spill and restore FP and BP registers.
-      spillFPBPUsingSP(MF, &(*DefMI), SpillFP, SpillBP);
-      restoreFPBPUsingSP(MF, &(*KillMI), SpillFP, SpillBP);
+      // Call target function to spill and restore FP and BP registers.
+      saveAndRestoreFPBPUsingSP(MF, &(*DefMI), &(*KillMI), SpillFP, SpillBP);
     }
   }
 }

@@ -274,13 +274,18 @@ private:
   /// base pointer to stack using stack pointer register.
   void spillFPBPUsingSP(MachineFunction &MF,
                         const MachineBasicBlock::iterator BeforeMI,
-                        bool SpillFP, bool SpillBP) const;
+                        Register FP, Register BP, int SPAdjust) const;
 
   /// Issue instructions to restore frame pointer and/or base pointer from stack
   /// using stack pointer register, and free stack space.
   void restoreFPBPUsingSP(MachineFunction &MF,
                           const MachineBasicBlock::iterator AfterMI,
-                          bool SpillFP, bool SpillBP) const;
+                          Register FP, Register BP, int SPAdjust) const;
+
+  void saveAndRestoreFPBPUsingSP(MachineFunction &MF,
+                                 MachineBasicBlock::iterator BeforeMI,
+                                 MachineBasicBlock::iterator AfterMI,
+                                 bool SpillFP, bool SpillBP) const;
 
   // If MI uses fp/bp, but target can handle it, and doesn't want to be spilled
   // again, this function should return true, and update MI so we will not check

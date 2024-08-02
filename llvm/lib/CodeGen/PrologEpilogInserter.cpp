@@ -228,6 +228,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
+  // Spill frame pointer and/or base pointer registers if they are clobbered.
+  // It is placed before call frame instruction elimination so it will not mess
+  // with stack arguments.
   TFI->spillFPBP(MF);
 
   // Calculate the MaxCallFrameSize value for the function's frame
