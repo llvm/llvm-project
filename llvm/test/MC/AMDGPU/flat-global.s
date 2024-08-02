@@ -212,8 +212,8 @@ global_store_dword v3, v1, s[2:3] offset:-8
 
 // XXX: Is this valid?
 global_store_dword v3, v1, exec
-// GFX10: encoding: [0x00,0x80,0x70,0xdc,0x03,0x01,0x7e,0x00]
-// GFX9: global_store_dword v3, v1, exec ; encoding: [0x00,0x80,0x70,0xdc,0x03,0x01,0x7e,0x00]
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX9-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 // VI-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 global_load_dword v1, v[3:4], s2
