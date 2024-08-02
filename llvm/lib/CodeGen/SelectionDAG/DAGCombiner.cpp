@@ -537,6 +537,7 @@ namespace {
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
+    SDValue visitSPLAT_VECTOR(SDNode *N);
     SDValue visitVECTOR_COMPRESS(SDNode *N);
     SDValue visitMLOAD(SDNode *N);
     SDValue visitMSTORE(SDNode *N);
@@ -1951,6 +1952,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECTOR_SHUFFLE:     return visitVECTOR_SHUFFLE(N);
   case ISD::SCALAR_TO_VECTOR:   return visitSCALAR_TO_VECTOR(N);
   case ISD::INSERT_SUBVECTOR:   return visitINSERT_SUBVECTOR(N);
+  case ISD::SPLAT_VECTOR:       return visitSPLAT_VECTOR(N);
   case ISD::MGATHER:            return visitMGATHER(N);
   case ISD::MLOAD:              return visitMLOAD(N);
   case ISD::MSCATTER:           return visitMSCATTER(N);
@@ -26624,6 +26626,28 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   // Simplify source operands based on insertion.
   if (SimplifyDemandedVectorElts(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitSPLAT_VECTOR(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT N0VT = N0->getValueType(0);
+  auto N0Opcode = N0->getOpcode();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
+
+  // fold (splat (binop)) -> (binop (splat, splat)) if there is no scalar binop.
+  if (!TLI.isBinOp(N0Opcode) || N0VT.isVector()) {
+    return SDValue();
+  }
+  if (!(TLI.getOperationAction(N0Opcode, N0VT) == TargetLowering::Legal) &&
+      TLI.isOperationLegalOrCustom(N0Opcode, VT)) {
+    SDValue X = DAG.getSplat(VT, DL, N0.getOperand(0));
+    SDValue Y = DAG.getSplat(VT, DL, N0.getOperand(1));
+    return DAG.getNode(N0Opcode, DL, VT, X, Y);
+  }
 
   return SDValue();
 }
