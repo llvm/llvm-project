@@ -1735,8 +1735,10 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
   case UNKNOWN:
     llvm_unreachable("Unknown instruction class");
   case S_BUFFER_LOAD_IMM: {
+    // If XNACK is enabled, use the constrained opcodes when the first load is
+    // under-aligned.
     const MachineMemOperand *MMO = *CI.I->memoperands_begin();
-    bool NeedsConstrainedOpc = needsConstrainedOpcode(*STM, MMO, Width);
+    bool NeedsConstrainedOpc = MMO && needsConstrainedOpcode(*STM, MMO, Width);
     switch (Width) {
     default:
       return 0;
@@ -1755,8 +1757,10 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     }
   }
   case S_BUFFER_LOAD_SGPR_IMM: {
+    // If XNACK is enabled, use the constrained opcodes when the first load is
+    // under-aligned.
     const MachineMemOperand *MMO = *CI.I->memoperands_begin();
-    bool NeedsConstrainedOpc = needsConstrainedOpcode(*STM, MMO, Width);
+    bool NeedsConstrainedOpc = MMO && needsConstrainedOpcode(*STM, MMO, Width);
     switch (Width) {
     default:
       return 0;
@@ -1778,7 +1782,7 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     // If XNACK is enabled, use the constrained opcodes when the first load is
     // under-aligned.
     const MachineMemOperand *MMO = *CI.I->memoperands_begin();
-    bool NeedsConstrainedOpc = needsConstrainedOpcode(*STM, MMO, Width);
+    bool NeedsConstrainedOpc = MMO && needsConstrainedOpcode(*STM, MMO, Width);
     switch (Width) {
     default:
       return 0;
