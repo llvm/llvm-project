@@ -28,7 +28,11 @@ template <class Dest, class Source> inline Dest bit_cast(const Source &S) {
   return D;
 }
 
-inline constexpr bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
+inline constexpr bool isPowerOfTwo(uptr X) {
+  if (X == 0)
+    return false;
+  return (X & (X - 1)) == 0;
+}
 
 inline constexpr uptr roundUp(uptr X, uptr Boundary) {
   DCHECK(isPowerOfTwo(Boundary));

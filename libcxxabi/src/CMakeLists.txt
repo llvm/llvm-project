@@ -182,6 +182,7 @@ set_target_properties(cxxabi_shared_objects
 if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
   set_target_properties(cxxabi_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
+target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED)
@@ -261,6 +262,7 @@ set_target_properties(cxxabi_static_objects
     CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
+target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
@@ -268,7 +270,10 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   # then its code shouldn't declare them with hidden visibility.  They might
   # actually be provided by a shared library at link time.
   if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
+    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+      target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    endif()
   endif()
   # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in libcxx's
   # __config_site too. Define it in the same way here, to avoid redefinition
@@ -301,6 +306,7 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
+add_dependencies(cxxabi-test-depends cxxabi cxx)
 
 if (LIBCXXABI_INSTALL_LIBRARY)
   install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}

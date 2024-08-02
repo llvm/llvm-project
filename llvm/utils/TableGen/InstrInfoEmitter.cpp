@@ -11,15 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
-#include "SequenceToOffsetTable.h"
-#include "SubtargetFeatureInfo.h"
+#include "Basic/SequenceToOffsetTable.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
+#include "Common/SubtargetFeatureInfo.h"
+#include "Common/Types.h"
 #include "TableGenBackends.h"
-#include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -776,9 +776,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
     return false;
   });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
+  FeatureBitsets.erase(llvm::unique(FeatureBitsets), FeatureBitsets.end());
   OS << "inline FeatureBitset computeRequiredFeatures(unsigned Opcode) {\n"
      << "  enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
      << "    CEFBS_None,\n";
@@ -1181,9 +1179,15 @@ void InstrInfoEmitter::emitRecord(
     // Each logical operand can be multiple MI operands.
     MinOperands =
         Inst.Operands.back().MIOperandNo + Inst.Operands.back().MINumOperands;
+  // Even the logical output operand may be multiple MI operands.
+  int DefOperands = 0;
+  if (Inst.Operands.NumDefs) {
+    auto &Opnd = Inst.Operands[Inst.Operands.NumDefs - 1];
+    DefOperands = Opnd.MIOperandNo + Opnd.MINumOperands;
+  }
 
   OS << "    { ";
-  OS << Num << ",\t" << MinOperands << ",\t" << Inst.Operands.NumDefs << ",\t"
+  OS << Num << ",\t" << MinOperands << ",\t" << DefOperands << ",\t"
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
      << SchedModels.getSchedClassIdx(Inst) << ",\t";
 

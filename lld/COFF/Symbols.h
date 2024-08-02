@@ -98,15 +98,15 @@ protected:
   friend SymbolTable;
   explicit Symbol(Kind k, StringRef n = "")
       : symbolKind(k), isExternal(true), isCOMDAT(false),
-        writtenToSymtab(false), pendingArchiveLoad(false), isGCRoot(false),
-        isRuntimePseudoReloc(false), deferUndefined(false), canInline(true),
-        isWeak(false), nameSize(n.size()),
-        nameData(n.empty() ? nullptr : n.data()) {
+        writtenToSymtab(false), isUsedInRegularObj(false),
+        pendingArchiveLoad(false), isGCRoot(false), isRuntimePseudoReloc(false),
+        deferUndefined(false), canInline(true), isWeak(false),
+        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {
     assert((!n.empty() || k <= LastDefinedCOFFKind) &&
            "If the name is empty, the Symbol must be a DefinedCOFF.");
   }
 
-  const unsigned symbolKind : 8;
+  unsigned symbolKind : 8;
   unsigned isExternal : 1;
 
 public:
@@ -499,8 +499,10 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
   bool canInline = s->canInline;
+  bool isUsedInRegularObj = s->isUsedInRegularObj;
   new (s) T(std::forward<ArgT>(arg)...);
   s->canInline = canInline;
+  s->isUsedInRegularObj = isUsedInRegularObj;
 }
 } // namespace coff
 

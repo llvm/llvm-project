@@ -95,7 +95,7 @@ inline RT_API_ATTRS bool CompareDerivedType(
   return a == b || CompareDerivedTypeNames(a->name(), b->name());
 }
 
-static const RT_API_ATTRS typeInfo::DerivedType *GetDerivedType(
+static RT_API_ATTRS const typeInfo::DerivedType *GetDerivedType(
     const Descriptor &desc) {
   if (const DescriptorAddendum * addendum{desc.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {

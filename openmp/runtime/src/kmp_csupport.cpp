@@ -18,6 +18,7 @@
 #include "kmp_itt.h"
 #include "kmp_lock.h"
 #include "kmp_stats.h"
+#include "kmp_utils.h"
 #include "ompt-specific.h"
 
 #define MAX_MESSAGE 512
@@ -234,6 +235,50 @@ void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
                 global_tid, num_threads));
   __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_threads(loc, global_tid, num_threads);
+}
+
+void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32 global_tid,
+                                    kmp_int32 num_threads, int severity,
+                                    const char *message) {
+  __kmp_push_num_threads(loc, global_tid, num_threads);
+  __kmp_set_strict_num_threads(loc, global_tid, severity, message);
+}
+
+/*!
+@ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
+@param list_length number of entries in the num_threads_list array
+@param num_threads_list array of numbers of threads requested for this parallel
+construct and subsequent nested parallel constructs
+
+Set the number of threads to be used by the next fork spawned by this thread,
+and some nested forks as well.
+This call is only required if the parallel construct has a `num_threads` clause
+that has a list of integers as the argument.
+*/
+void __kmpc_push_num_threads_list(ident_t *loc, kmp_int32 global_tid,
+                                  kmp_uint32 list_length,
+                                  kmp_int32 *num_threads_list) {
+  KA_TRACE(20, ("__kmpc_push_num_threads_list: enter T#%d num_threads_list=",
+                global_tid));
+  KA_TRACE(20, ("%d", num_threads_list[0]));
+#ifdef KMP_DEBUG
+  for (kmp_uint32 i = 1; i < list_length; ++i)
+    KA_TRACE(20, (", %d", num_threads_list[i]));
+#endif
+  KA_TRACE(20, ("/n"));
+
+  __kmp_assert_valid_gtid(global_tid);
+  __kmp_push_num_threads_list(loc, global_tid, list_length, num_threads_list);
+}
+
+void __kmpc_push_num_threads_list_strict(ident_t *loc, kmp_int32 global_tid,
+                                         kmp_uint32 list_length,
+                                         kmp_int32 *num_threads_list,
+                                         int severity, const char *message) {
+  __kmp_push_num_threads_list(loc, global_tid, list_length, num_threads_list);
+  __kmp_set_strict_num_threads(loc, global_tid, severity, message);
 }
 
 void __kmpc_pop_num_threads(ident_t *loc, kmp_int32 global_tid) {
@@ -653,6 +698,12 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
         serial_team->t.t_dispatch->th_disp_buffer->next;
     __kmp_free(disp_buffer);
   }
+
+  /* pop the task team stack */
+  if (serial_team->t.t_serialized > 1) {
+    __kmp_pop_task_team_node(this_thr, serial_team);
+  }
+
   this_thr->th.th_def_allocator = serial_team->t.t_def_allocator; // restore
 
   --serial_team->t.t_serialized;
@@ -691,6 +742,11 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     this_thr->th.th_current_task->td_flags.executing = 1;
 
     if (__kmp_tasking_mode != tskm_immediate_exec) {
+      // Restore task state from serial team structure
+      KMP_DEBUG_ASSERT(serial_team->t.t_primary_task_state == 0 ||
+                       serial_team->t.t_primary_task_state == 1);
+      this_thr->th.th_task_state =
+          (kmp_uint8)serial_team->t.t_primary_task_state;
       // Copy the task team from the new child / old parent team to the thread.
       this_thr->th.th_task_team =
           this_thr->th.th_team->t.t_task_team[this_thr->th.th_task_state];
@@ -1950,13 +2006,13 @@ void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.ompt_callback_work) {
-    ompt_work_t ompt_work_type = ompt_work_loop;
+    ompt_work_t ompt_work_type = ompt_work_loop_static;
     ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
     ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
     // Determine workshare type
     if (loc != NULL) {
       if ((loc->flags & KMP_IDENT_WORK_LOOP) != 0) {
-        ompt_work_type = ompt_work_loop;
+        ompt_work_type = ompt_work_loop_static;
       } else if ((loc->flags & KMP_IDENT_WORK_SECTIONS) != 0) {
         ompt_work_type = ompt_work_sections;
       } else if ((loc->flags & KMP_IDENT_WORK_DISTRIBUTE) != 0) {
@@ -4233,7 +4289,7 @@ void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
   up = pr_buf->th_doacross_info[3];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     if (vec[0] < lo || vec[0] > up) {
@@ -4345,7 +4401,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
   lo = pr_buf->th_doacross_info[2];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     iter_number = vec[0] - lo;

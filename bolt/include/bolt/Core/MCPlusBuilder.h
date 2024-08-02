@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/MC/MCExpr.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -56,6 +58,8 @@ enum class IndirectBranchType : char {
   POSSIBLE_PIC_JUMP_TABLE, /// Possibly a jump table for PIC.
   POSSIBLE_GOTO,           /// Possibly a gcc's computed goto.
   POSSIBLE_FIXED_BRANCH,   /// Possibly an indirect branch to a fixed location.
+  POSSIBLE_PIC_FIXED_BRANCH, /// Possibly an indirect jump to a fixed entry in a
+                             /// PIC jump table.
 };
 
 class MCPlusBuilder {
@@ -436,8 +440,21 @@ public:
     return false;
   }
 
-  /// Check whether we support inverting this branch
-  virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
+  /// Check whether this conditional branch can be reversed
+  virtual bool isReversibleBranch(const MCInst &Inst) const {
+    assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
+           "Instruction is not known conditional branch");
+
+    if (isDynamicBranch(Inst))
+      return false;
+    return true;
+  }
+
+  /// Return true if this instruction inhibits analysis of the containing
+  /// function.
+  virtual bool isUnsupportedInstruction(const MCInst &Inst) const {
+    return false;
+  }
 
   /// Return true of the instruction is of pseudo kind.
   virtual bool isPseudo(const MCInst &Inst) const {
@@ -487,10 +504,9 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  virtual bool createDirectCall(MCInst &Inst, const MCSymbol *Target,
+  virtual void createDirectCall(MCInst &Inst, const MCSymbol *Target,
                                 MCContext *Ctx, bool IsTailCall) {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
@@ -534,9 +550,7 @@ public:
     return Analysis->isReturn(Inst);
   }
 
-  virtual bool isTerminator(const MCInst &Inst) const {
-    return Analysis->isTerminator(Inst);
-  }
+  virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -918,13 +932,6 @@ public:
   /// Return true if the instruction is encoded using EVEX (AVX-512).
   virtual bool hasEVEXEncoding(const MCInst &Inst) const { return false; }
 
-  /// Return true if a pair of instructions represented by \p Insts
-  /// could be fused into a single uop.
-  virtual bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
   struct X86MemOperand {
     unsigned BaseRegNum;
     int64_t ScaleImm;
@@ -1200,6 +1207,16 @@ public:
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
+  /// Check if the branch instruction could be modified at runtime.
+  bool isDynamicBranch(const MCInst &Inst) const;
+
+  /// Return ID for runtime-modifiable instruction.
+  std::optional<uint32_t> getDynamicBranchID(const MCInst &Inst) const;
+
+  /// Mark instruction as a dynamic branch, i.e. a branch that can be
+  /// overwritten at runtime.
+  void setDynamicBranch(MCInst &Inst, uint32_t ID) const;
+
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
   /// the operand - return nullptr.
@@ -1403,13 +1420,14 @@ public:
     return false;
   }
 
-  /// Modify a direct call instruction \p Inst with an indirect call taking
-  /// a destination from a memory location pointed by \p TargetLocation symbol.
-  virtual bool convertCallToIndirectCall(MCInst &Inst,
-                                         const MCSymbol *TargetLocation,
-                                         MCContext *Ctx) {
+  /// Creates an indirect call to the function within the \p DirectCall PLT
+  /// stub. The function's memory location is pointed by the \p TargetLocation
+  /// symbol.
+  virtual InstructionListType
+  createIndirectPltCall(const MCInst &DirectCall,
+                        const MCSymbol *TargetLocation, MCContext *Ctx) {
     llvm_unreachable("not implemented");
-    return false;
+    return {};
   }
 
   /// Morph an indirect call into a load where \p Reg holds the call target.
@@ -1458,12 +1476,11 @@ public:
   /// will be set to the different components of the branch.  \p MemLocInstr
   /// is the instruction that loads up the indirect function pointer.  It may
   /// or may not be same as \p Instruction.
-  virtual IndirectBranchType
-  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
-                        InstructionIterator End, const unsigned PtrSize,
-                        MCInst *&MemLocInstr, unsigned &BaseRegNum,
-                        unsigned &IndexRegNum, int64_t &DispValue,
-                        const MCExpr *&DispExpr, MCInst *&PCRelBaseOut) const {
+  virtual IndirectBranchType analyzeIndirectBranch(
+      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
+      const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
+      unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
+      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const {
     llvm_unreachable("not implemented");
     return IndirectBranchType::UNKNOWN;
   }
@@ -1534,15 +1551,13 @@ public:
   }
 
   /// Create a no-op instruction.
-  virtual bool createNoop(MCInst &Inst) const {
+  virtual void createNoop(MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Create a return instruction.
-  virtual bool createReturn(MCInst &Inst) const {
+  virtual void createReturn(MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Store \p Target absolute address to \p RegName
@@ -1556,32 +1571,30 @@ public:
 
   /// Creates a new unconditional branch instruction in Inst and set its operand
   /// to TBB.
-  ///
-  /// Returns true on success.
-  virtual bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
+  virtual void createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
                                   MCContext *Ctx) const {
     llvm_unreachable("not implemented");
-    return false;
+  }
+
+  /// Create a version of unconditional jump that has the largest span for a
+  /// single instruction with direct target.
+  virtual void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                                      MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
   }
 
   /// Creates a new call instruction in Inst and sets its operand to
   /// Target.
-  ///
-  /// Returns true on success.
-  virtual bool createCall(MCInst &Inst, const MCSymbol *Target,
+  virtual void createCall(MCInst &Inst, const MCSymbol *Target,
                           MCContext *Ctx) {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Creates a new tail call instruction in Inst and sets its operand to
   /// Target.
-  ///
-  /// Returns true on success.
-  virtual bool createTailCall(MCInst &Inst, const MCSymbol *Target,
+  virtual void createTailCall(MCInst &Inst, const MCSymbol *Target,
                               MCContext *Ctx) {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   virtual void createLongTailCall(InstructionListType &Seq,
@@ -1590,43 +1603,36 @@ public:
   }
 
   /// Creates a trap instruction in Inst.
-  ///
-  /// Returns true on success.
-  virtual bool createTrap(MCInst &Inst) const {
+  virtual void createTrap(MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Creates an instruction to bump the stack pointer just like a call.
-  virtual bool createStackPointerIncrement(MCInst &Inst, int Size = 8,
+  virtual void createStackPointerIncrement(MCInst &Inst, int Size = 8,
                                            bool NoFlagsClobber = false) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Creates an instruction to move the stack pointer just like a ret.
-  virtual bool createStackPointerDecrement(MCInst &Inst, int Size = 8,
+  virtual void createStackPointerDecrement(MCInst &Inst, int Size = 8,
                                            bool NoFlagsClobber = false) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Create a store instruction using \p StackReg as the base register
   /// and \p Offset as the displacement.
-  virtual bool createSaveToStack(MCInst &Inst, const MCPhysReg &StackReg,
+  virtual void createSaveToStack(MCInst &Inst, const MCPhysReg &StackReg,
                                  int Offset, const MCPhysReg &SrcReg,
                                  int Size) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
-  virtual bool createLoad(MCInst &Inst, const MCPhysReg &BaseReg, int64_t Scale,
+  virtual void createLoad(MCInst &Inst, const MCPhysReg &BaseReg, int64_t Scale,
                           const MCPhysReg &IndexReg, int64_t Offset,
                           const MCExpr *OffsetExpr,
                           const MCPhysReg &AddrSegmentReg,
                           const MCPhysReg &DstReg, int Size) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   virtual InstructionListType createLoadImmediate(const MCPhysReg Dest,
@@ -1636,32 +1642,27 @@ public:
 
   /// Create a fragment of code (sequence of instructions) that load a 32-bit
   /// address from memory, zero-extends it to 64 and jump to it (indirect jump).
-  virtual bool
+  virtual void
   createIJmp32Frag(SmallVectorImpl<MCInst> &Insts, const MCOperand &BaseReg,
                    const MCOperand &Scale, const MCOperand &IndexReg,
                    const MCOperand &Offset, const MCOperand &TmpReg) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Create a load instruction using \p StackReg as the base register
   /// and \p Offset as the displacement.
-  virtual bool createRestoreFromStack(MCInst &Inst, const MCPhysReg &StackReg,
+  virtual void createRestoreFromStack(MCInst &Inst, const MCPhysReg &StackReg,
                                       int Offset, const MCPhysReg &DstReg,
                                       int Size) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Creates a call frame pseudo instruction. A single operand identifies which
   /// MCCFIInstruction this MCInst is referring to.
-  ///
-  /// Returns true on success.
-  virtual bool createCFI(MCInst &Inst, int64_t Offset) const {
+  virtual void createCFI(MCInst &Inst, int64_t Offset) const {
     Inst.clear();
     Inst.setOpcode(TargetOpcode::CFI_INSTRUCTION);
     Inst.addOperand(MCOperand::createImm(Offset));
-    return true;
   }
 
   /// Create an inline version of memcpy(dest, src, 1).
@@ -1699,13 +1700,23 @@ public:
     return Inst.getOpcode() == TargetOpcode::CFI_INSTRUCTION;
   }
 
+  /// Create a conditional branch with a target-specific conditional code \p CC.
+  virtual void createCondBranch(MCInst &Inst, const MCSymbol *Target,
+                                unsigned CC, MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Create long conditional branch with a target-specific conditional code
+  /// \p CC.
+  virtual void createLongCondBranch(MCInst &Inst, const MCSymbol *Target,
+                                    unsigned CC, MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Reverses the branch condition in Inst and update its taken target to TBB.
-  ///
-  /// Returns true on success.
-  virtual bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                                       MCContext *Ctx) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   virtual bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB,
@@ -1745,12 +1756,9 @@ public:
   }
 
   /// Sets the taken target of the branch instruction to Target.
-  ///
-  /// Returns true on success.
-  virtual bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  virtual void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Extract a symbol and an addend out of the fixup value expression.
@@ -2034,9 +2042,14 @@ public:
     return InstructionListType();
   }
 
-  virtual InstructionListType createDummyReturnFunction(MCContext *Ctx) const {
-    llvm_unreachable("not implemented");
-    return InstructionListType();
+  /// Returns a function body that contains only a return instruction. An
+  /// example usage is a workaround for the '__bolt_fini_trampoline' of
+  // Instrumentation.
+  virtual InstructionListType
+  createReturnInstructionList(MCContext *Ctx) const {
+    InstructionListType Insts(1);
+    createReturn(Insts[0]);
+    return Insts;
   }
 
   /// This method takes an indirect call instruction and splits it up into an

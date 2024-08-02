@@ -9,6 +9,14 @@ to the libc project should also follow the general LLVM
 `contribution guidelines <https://llvm.org/docs/Contributing.html>`_. Below is
 a list of open projects that one can start with:
 
+#. **Beginner Bugs** - Help us tackle
+   `good first issues <https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Alibc+label%3A%22good+first+issue%22>`__.
+   These bugs have been tagged with the github labels "libc" and "good first
+   issue" by the team as potentially easier places to get started.  Please do
+   first check if the bug has an assignee; if so please find another unless
+   there's been no movement on the issue from the assignee, in which place do
+   ask if you can help take over.
+
 #. **Cleanup code-style** - The libc project follows the general
    `LLVM style <https://llvm.org/docs/CodingStandards.html>`_ but differs in a
    few aspects: We use ``snake_case`` for non-constant variable and function

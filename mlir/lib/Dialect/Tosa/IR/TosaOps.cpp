@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
@@ -136,6 +137,14 @@ void TosaDialect::initialize() {
 #include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
       >();
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
+  declarePromisedInterfaces<
+      mesh::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
+      ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, IntDivOp,
+      LogicalAndOp, LogicalLeftShiftOp, LogicalRightShiftOp, LogicalOrOp,
+      LogicalXorOp, MaximumOp, MinimumOp, MulOp, PowOp, SubOp, AbsOp,
+      BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp, LogOp, LogicalNotOp,
+      NegateOp, ReciprocalOp, RsqrtOp, SelectOp, EqualOp, GreaterOp,
+      GreaterEqualOp, MatMulOp>();
 }
 
 Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
@@ -159,7 +168,7 @@ ParseResult mlir::tosa::parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
       return parser.emitError(parser.getCurrentLocation())
              << "expected attribute";
     }
-    if (auto typedAttr = attr.dyn_cast<TypedAttr>()) {
+    if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
       typeAttr = TypeAttr::get(typedAttr.getType());
     }
     return success();
@@ -177,7 +186,7 @@ ParseResult mlir::tosa::parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
 void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
                                  Attribute attr) {
   bool needsSpace = false;
-  auto typedAttr = attr.dyn_cast_or_null<TypedAttr>();
+  auto typedAttr = dyn_cast_or_null<TypedAttr>(attr);
   if (!typedAttr || typedAttr.getType() != type.getValue()) {
     p << ": ";
     p.printAttribute(type);
@@ -211,7 +220,8 @@ static bool hasZeroDimension(ShapedType shapedType) {
   return false;
 }
 
-template <typename T> static LogicalResult verifyConvOp(T op) {
+template <typename T>
+static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
   auto inputType = llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
   auto weightType = llvm::dyn_cast<RankedTensorType>(op.getWeight().getType());
@@ -945,22 +955,36 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   return success();
 }
 
-mlir::LogicalResult tosa::ReshapeOp::verify() {
-  ShapedType inputType = llvm::cast<ShapedType>(getInput1().getType());
-  ShapedType outputType = llvm::cast<ShapedType>(getType());
+llvm::LogicalResult tosa::ReshapeOp::verify() {
+  TensorType inputType = getInput1().getType();
+  RankedTensorType outputType = getType();
 
   if (hasZeroDimension(inputType) || hasZeroDimension(outputType))
     return emitOpError() << "tensor has a dimension with size zero. Each "
                             "dimension of a tensor must have size >= 1";
 
+  if ((int64_t)getNewShape().size() != outputType.getRank())
+    return emitOpError() << "new shape does not match result rank";
+
+  for (auto [newShapeDim, outputShapeDim] :
+       zip(getNewShape(), outputType.getShape()))
+    if (newShapeDim != -1 && outputShapeDim != ShapedType::kDynamic &&
+        newShapeDim != outputShapeDim)
+      return emitOpError() << "new shape is inconsistent with result shape";
+
   if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
     int64_t inputElementsNum = inputType.getNumElements();
     int64_t outputElementsNum = outputType.getNumElements();
     if (inputElementsNum != outputElementsNum) {
-      return emitOpError() << "Cannot reshape " << inputElementsNum
+      return emitOpError() << "cannot reshape " << inputElementsNum
                            << " elements into " << outputElementsNum;
     }
   }
+
+  int missingDims = llvm::count(getNewShape(), -1);
+  if (missingDims > 1)
+    return emitOpError() << "expected at most one target dimension to be -1";
+
   return mlir::success();
 }
 
@@ -1093,6 +1117,32 @@ LogicalResult tosa::TransposeOp::verify() {
     if (!isPermutationVector(constantPerms))
       return emitOpError() << "expected valid permutation tensor";
   }
+  return success();
+}
+
+LogicalResult TransposeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+
+  SmallVector<int64_t> transposePerms;
+  if (getConstantPerms(transposePerms).failed())
+    return failure();
+
+  Value input = getInput1();
+  auto inputType = cast<TensorType>(input.getType());
+
+  SmallVector<OpFoldResult> returnedDims(inputType.getRank());
+  for (auto dim : transposePerms) {
+    int64_t dimInInput = transposePerms[dim];
+    if (inputType.isDynamicDim(dimInInput))
+      returnedDims[dim] =
+          builder.create<tensor::DimOp>(getLoc(), input, dimInInput)
+              .getResult();
+    else
+      returnedDims[dim] =
+          builder.getIndexAttr(inputType.getDimSize(dimInInput));
+  }
+
+  reifiedReturnShapes.emplace_back(std::move(returnedDims));
   return success();
 }
 
@@ -1331,12 +1381,12 @@ NARY_SHAPE_INFER(tosa::CeilOp)
 NARY_SHAPE_INFER(tosa::ClampOp)
 NARY_SHAPE_INFER(tosa::ClzOp)
 NARY_SHAPE_INFER(tosa::CosOp)
-NARY_SHAPE_INFER(tosa::DivOp)
 NARY_SHAPE_INFER(tosa::ExpOp)
 NARY_SHAPE_INFER(tosa::FloorOp)
 NARY_SHAPE_INFER(tosa::GreaterEqualOp)
 NARY_SHAPE_INFER(tosa::GreaterOp)
 NARY_SHAPE_INFER(tosa::IdentityOp)
+NARY_SHAPE_INFER(tosa::IntDivOp)
 NARY_SHAPE_INFER(tosa::LogOp)
 NARY_SHAPE_INFER(tosa::LogicalAndOp)
 NARY_SHAPE_INFER(tosa::LogicalLeftShiftOp)

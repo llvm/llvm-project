@@ -42,10 +42,14 @@ Getting the Source Code and Building LLVM
 
      ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
 
-   * You are likely only interested in the main branch moving forward, if
-     you don't want `git fetch` (or `git pull`) to download user branches, use:
+   * You are likely not interested in the user branches in the repo (used for
+     stacked pull-requests and reverts), you can filter them from your
+     `git fetch` (or `git pull`) with this configuration:
 
-     ``sed 's#fetch = +refs/heads/\*:refs/remotes/origin/\*#fetch = +refs/heads/main:refs/remotes/origin/main#' -i llvm-project/.git/config``
+.. code-block:: console
+
+  git config --add remote.origin.fetch '^refs/heads/users/*'
+  git config --add remote.origin.fetch '^refs/heads/revert-*'
 
 #. Configure and build LLVM and Clang:
 
@@ -90,11 +94,11 @@ Getting the Source Code and Building LLVM
        is installed on your system. This can dramatically speed up link times
        if the default linker is slow.
 
-     * ``-DLLVM_PARALLEL_{COMPILE,LINK}_JOBS=N`` --- Limit the number of
-       compile/link jobs running in parallel at the same time. This is
+     * ``-DLLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS=N`` --- Limit the number of
+       compile/link/tablegen jobs running in parallel at the same time. This is
        especially important for linking since linking can use lots of memory. If
        you run into memory issues building LLVM, try setting this to limit the
-       maximum number of compile/link jobs running at the same time.
+       maximum number of compile/link/tablegen jobs running at the same time.
 
    * ``cmake --build build [--target <target>]`` or the build system specified
      above directly.
@@ -287,20 +291,22 @@ uses the package and provides other details.
 =========================================================== ============ ==========================================
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
-`CMake <http://cmake.org/>`__                               >=3.20.0     Makefile/workspace generator
-`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`1`
+`CMake <http://cmake.org/>`_                                >=3.20.0     Makefile/workspace generator
+`python <http://www.python.org/>`_                          >=3.8        Automated test suite\ :sup:`1`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`2`
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`3`
+`PyYAML <https://pypi.org/project/PyYAML/>`_                >=5.1        Header generator\ :sup:`4`
 =========================================================== ============ ==========================================
 
 .. note::
 
-   #. Only needed if you want to run the automated test suite. Python 3.8.0
-      or later is needed on Windows if a substitute (virtual) drive is used
-      to access LLVM source code due to ``MAX_PATH`` limitations.
+   #. Only needed if you want to run the automated test suite in the
+      ``llvm/test`` directory, or if you plan to utilize any Python libraries,
+      utilities, or bindings.
    #. Optional, adds compression / uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.
+   #. Only needed when building libc with New Headergen. Mainly used by libc.
 
 Additionally, your compilation host is expected to have the usual plethora of
 Unix utilities. Specifically:

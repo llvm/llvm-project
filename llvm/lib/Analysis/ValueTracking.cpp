@@ -252,6 +252,12 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                         RHSCache.getKnownBits(SQ));
 }
 
+bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
+  return !I->user_empty() && all_of(I->users(), [](const User *U) {
+    return match(U, m_ICmp(m_Value(), m_Zero()));
+  });
+}
+
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
   return !I->user_empty() && all_of(I->users(), [](const User *U) {
     ICmpInst::Predicate P;
@@ -272,17 +278,7 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
 }
 
 static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
-                           unsigned Depth, const SimplifyQuery &Q);
-
-static bool isKnownNonZero(const Value *V, unsigned Depth,
-                           const SimplifyQuery &Q);
-
-bool llvm::isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth,
-                          AssumptionCache *AC, const Instruction *CxtI,
-                          const DominatorTree *DT, bool UseInstrInfo) {
-  return ::isKnownNonZero(
-      V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
-}
+                           const SimplifyQuery &Q, unsigned Depth);
 
 bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
                               unsigned Depth) {
@@ -298,7 +294,7 @@ bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
   // this updated.
   KnownBits Known = computeKnownBits(V, Depth, SQ);
   return Known.isNonNegative() &&
-         (Known.isNonZero() || ::isKnownNonZero(V, Depth, SQ));
+         (Known.isNonZero() || isKnownNonZero(V, SQ, Depth));
 }
 
 bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
@@ -306,15 +302,21 @@ bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
   return computeKnownBits(V, Depth, SQ).isNegative();
 }
 
-static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
+static bool isKnownNonEqual(const Value *V1, const Value *V2,
+                            const APInt &DemandedElts, unsigned Depth,
                             const SimplifyQuery &Q);
 
 bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const DataLayout &DL, AssumptionCache *AC,
                            const Instruction *CxtI, const DominatorTree *DT,
                            bool UseInstrInfo) {
+  assert(V1->getType() == V2->getType() &&
+         "Testing equality of non-equal types!");
+  auto *FVTy = dyn_cast<FixedVectorType>(V1->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
   return ::isKnownNonEqual(
-      V1, V2, 0,
+      V1, V2, DemandedElts, 0,
       SimplifyQuery(DL, DT, AC, safeCxtI(V2, V1, CxtI), UseInstrInfo));
 }
 
@@ -648,6 +650,7 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   auto m_V =
       m_CombineOr(m_Specific(V), m_PtrToIntSameSize(Q.DL, m_Specific(V)));
 
+  Value *Y;
   const APInt *Mask, *C;
   uint64_t ShAmt;
   switch (Pred) {
@@ -656,16 +659,18 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
     if (match(LHS, m_V) && match(RHS, m_APInt(C))) {
       Known = Known.unionWith(KnownBits::makeConstant(*C));
       // assume(V & Mask = C)
-    } else if (match(LHS, m_And(m_V, m_APInt(Mask))) &&
+    } else if (match(LHS, m_c_And(m_V, m_Value(Y))) &&
                match(RHS, m_APInt(C))) {
       // For one bits in Mask, we can propagate bits from C to V.
-      Known.Zero |= ~*C & *Mask;
-      Known.One |= *C & *Mask;
+      Known.One |= *C;
+      if (match(Y, m_APInt(Mask)))
+        Known.Zero |= ~*C & *Mask;
       // assume(V | Mask = C)
-    } else if (match(LHS, m_Or(m_V, m_APInt(Mask))) && match(RHS, m_APInt(C))) {
+    } else if (match(LHS, m_c_Or(m_V, m_Value(Y))) && match(RHS, m_APInt(C))) {
       // For zero bits in Mask, we can propagate bits from C to V.
-      Known.Zero |= ~*C & ~*Mask;
-      Known.One |= *C & ~*Mask;
+      Known.Zero |= ~*C;
+      if (match(Y, m_APInt(Mask)))
+        Known.One |= *C & ~*Mask;
       // assume(V ^ Mask = C)
     } else if (match(LHS, m_Xor(m_V, m_APInt(Mask))) &&
                match(RHS, m_APInt(C))) {
@@ -698,13 +703,31 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
     break;
   }
   default:
-    const APInt *Offset = nullptr;
-    if (match(LHS, m_CombineOr(m_V, m_Add(m_V, m_APInt(Offset)))) &&
-        match(RHS, m_APInt(C))) {
-      ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
-      if (Offset)
-        LHSRange = LHSRange.sub(*Offset);
-      Known = Known.unionWith(LHSRange.toKnownBits());
+    if (match(RHS, m_APInt(C))) {
+      const APInt *Offset = nullptr;
+      if (match(LHS, m_CombineOr(m_V, m_AddLike(m_V, m_APInt(Offset))))) {
+        ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
+        if (Offset)
+          LHSRange = LHSRange.sub(*Offset);
+        Known = Known.unionWith(LHSRange.toKnownBits());
+      }
+      if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
+        // X & Y u> C     -> X u> C && Y u> C
+        // X nuw- Y u> C  -> X u> C
+        if (match(LHS, m_c_And(m_V, m_Value())) ||
+            match(LHS, m_NUWSub(m_V, m_Value())))
+          Known.One.setHighBits(
+              (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
+      }
+      if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
+        // X | Y u< C    -> X u< C && Y u< C
+        // X nuw+ Y u< C -> X u< C && Y u< C
+        if (match(LHS, m_c_Or(m_V, m_Value())) ||
+            match(LHS, m_c_NUWAdd(m_V, m_Value()))) {
+          Known.Zero.setHighBits(
+              (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
+        }
+      }
     }
     break;
   }
@@ -753,6 +776,10 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
                                        unsigned Depth, const SimplifyQuery &Q) {
+  // Handle injected condition.
+  if (Q.CC && Q.CC->AffectedValues.contains(V))
+    computeKnownBitsFromCond(V, Q.CC->Cond, Known, Depth, Q, Q.CC->Invert);
+
   if (!Q.CxtI)
     return;
 
@@ -862,7 +889,7 @@ static void computeKnownBitsFromShiftOperator(
   bool ShAmtNonZero =
       Known.isNonZero() ||
       (Known.getMaxValue().ult(Known.getBitWidth()) &&
-       isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q));
+       isKnownNonZero(I->getOperand(1), DemandedElts, Q, Depth + 1));
   Known = KF(Known2, Known, ShAmtNonZero);
 }
 
@@ -906,7 +933,7 @@ getKnownBitsFromAndXorOr(const Operator *I, const APInt &DemandedElts,
     // Demanded) == (xor(x, x-1) & Demanded). Extend the xor pattern
     // to use arbitrary C if xor(x, x-C) as the same as xor(x, x-1).
     if (HasKnownOne &&
-        match(I, m_c_Xor(m_Value(X), m_c_Add(m_Deferred(X), m_AllOnes())))) {
+        match(I, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())))) {
       const KnownBits &XBits = I->getOperand(0) == X ? KnownLHS : KnownRHS;
       KnownOut = XBits.blsmsk();
     }
@@ -935,6 +962,32 @@ getKnownBitsFromAndXorOr(const Operator *I, const APInt &DemandedElts,
     }
   }
   return KnownOut;
+}
+
+static KnownBits computeKnownBitsForHorizontalOperation(
+    const Operator *I, const APInt &DemandedElts, unsigned Depth,
+    const SimplifyQuery &Q,
+    const function_ref<KnownBits(const KnownBits &, const KnownBits &)>
+        KnownBitsFunc) {
+  APInt DemandedEltsLHS, DemandedEltsRHS;
+  getHorizDemandedEltsForFirstOperand(Q.DL.getTypeSizeInBits(I->getType()),
+                                      DemandedElts, DemandedEltsLHS,
+                                      DemandedEltsRHS);
+
+  const auto ComputeForSingleOpFunc =
+      [Depth, &Q, KnownBitsFunc](const Value *Op, APInt &DemandedEltsOp) {
+        return KnownBitsFunc(
+            computeKnownBits(Op, DemandedEltsOp, Depth + 1, Q),
+            computeKnownBits(Op, DemandedEltsOp << 1, Depth + 1, Q));
+      };
+
+  if (DemandedEltsRHS.isZero())
+    return ComputeForSingleOpFunc(I->getOperand(0), DemandedEltsLHS);
+  if (DemandedEltsLHS.isZero())
+    return ComputeForSingleOpFunc(I->getOperand(1), DemandedEltsRHS);
+
+  return ComputeForSingleOpFunc(I->getOperand(0), DemandedEltsLHS)
+      .intersectWith(ComputeForSingleOpFunc(I->getOperand(1), DemandedEltsRHS));
 }
 
 // Public so this can be used in `SimplifyDemandedUseBits`.
@@ -968,6 +1021,40 @@ ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
     return ConstantRange(Min, APInt::getZero(BitWidth));
 
   return ConstantRange(Min, APInt(BitWidth, *AttrMax) + 1);
+}
+
+void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
+                                       Value *Arm, bool Invert, unsigned Depth,
+                                       const SimplifyQuery &Q) {
+  // If we have a constant arm, we are done.
+  if (Known.isConstant())
+    return;
+
+  // See what condition implies about the bits of the select arm.
+  KnownBits CondRes(Known.getBitWidth());
+  computeKnownBitsFromCond(Arm, Cond, CondRes, Depth + 1, Q, Invert);
+  // If we don't get any information from the condition, no reason to
+  // proceed.
+  if (CondRes.isUnknown())
+    return;
+
+  // We can have conflict if the condition is dead. I.e if we have
+  // (x | 64) < 32 ? (x | 64) : y
+  // we will have conflict at bit 6 from the condition/the `or`.
+  // In that case just return. Its not particularly important
+  // what we do, as this select is going to be simplified soon.
+  CondRes = CondRes.unionWith(Known);
+  if (CondRes.hasConflict())
+    return;
+
+  // Finally make sure the information we found is valid. This is relatively
+  // expensive so it's left for the very end.
+  if (!isGuaranteedNotToBeUndef(Arm, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+    return;
+
+  // Finally, we know we get information from the condition and its valid,
+  // so return it.
+  Known = CondRes;
 }
 
 static void computeKnownBitsFromOperator(const Operator *I,
@@ -1009,25 +1096,30 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::UDiv: {
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
     Known =
         KnownBits::udiv(Known, Known2, Q.IIQ.isExact(cast<BinaryOperator>(I)));
     break;
   }
   case Instruction::SDiv: {
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
     Known =
         KnownBits::sdiv(Known, Known2, Q.IIQ.isExact(cast<BinaryOperator>(I)));
     break;
   }
   case Instruction::Select: {
-    computeKnownBits(I->getOperand(2), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
-
+    auto ComputeForArm = [&](Value *Arm, bool Invert) {
+      KnownBits Res(Known.getBitWidth());
+      computeKnownBits(Arm, DemandedElts, Res, Depth + 1, Q);
+      adjustKnownBitsForSelectArm(Res, I->getOperand(0), Arm, Invert, Depth, Q);
+      return Res;
+    };
     // Only known if known in both the LHS and RHS.
-    Known = Known.intersectWith(Known2);
+    Known =
+        ComputeForArm(I->getOperand(1), /*Invert=*/false)
+            .intersectWith(ComputeForArm(I->getOperand(2), /*Invert=*/true));
     break;
   }
   case Instruction::FPTrunc:
@@ -1055,7 +1147,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.anyextOrTrunc(SrcBitWidth);
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
     if (auto *Inst = dyn_cast<PossiblyNonNegInst>(I);
         Inst && Inst->hasNonNeg() && !Known.isNegative())
       Known.makeNonNegative();
@@ -1069,6 +1161,45 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // (bitcast i64 %x to <2 x i32>)
         !I->getType()->isVectorTy()) {
       computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+      break;
+    }
+
+    const Value *V;
+    // Handle bitcast from floating point to integer.
+    if (match(I, m_ElementWiseBitCast(m_Value(V))) &&
+        V->getType()->isFPOrFPVectorTy()) {
+      Type *FPType = V->getType()->getScalarType();
+      KnownFPClass Result =
+          computeKnownFPClass(V, DemandedElts, fcAllFlags, Depth + 1, Q);
+      FPClassTest FPClasses = Result.KnownFPClasses;
+
+      // TODO: Treat it as zero/poison if the use of I is unreachable.
+      if (FPClasses == fcNone)
+        break;
+
+      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
+        Known.Zero.setAllBits();
+        Known.One.setAllBits();
+
+        if (FPClasses & fcInf)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt()));
+
+        if (FPClasses & fcZero)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APInt::getZero(FPType->getScalarSizeInBits())));
+
+        Known.Zero.clearSignBit();
+        Known.One.clearSignBit();
+      }
+
+      if (Result.SignBit) {
+        if (*Result.SignBit)
+          Known.makeNegative();
+        else
+          Known.makeNonNegative();
+      }
+
       break;
     }
 
@@ -1120,7 +1251,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     unsigned SrcBitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
 
     Known = Known.trunc(SrcBitWidth);
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
     Known = Known.sext(BitWidth);
@@ -1142,9 +1273,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::LShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
-                 bool ShAmtNonZero) {
-      return KnownBits::lshr(KnownVal, KnownAmt, ShAmtNonZero);
+    bool Exact = Q.IIQ.isExact(cast<BinaryOperator>(I));
+    auto KF = [Exact](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                      bool ShAmtNonZero) {
+      return KnownBits::lshr(KnownVal, KnownAmt, ShAmtNonZero, Exact);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -1155,9 +1287,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::AShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
-                 bool ShAmtNonZero) {
-      return KnownBits::ashr(KnownVal, KnownAmt, ShAmtNonZero);
+    bool Exact = Q.IIQ.isExact(cast<BinaryOperator>(I));
+    auto KF = [Exact](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                      bool ShAmtNonZero) {
+      return KnownBits::ashr(KnownVal, KnownAmt, ShAmtNonZero, Exact);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -1178,14 +1311,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::SRem:
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
     Known = KnownBits::srem(Known, Known2);
     break;
 
   case Instruction::URem:
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
     Known = KnownBits::urem(Known, Known2);
     break;
   case Instruction::Alloca:
@@ -1301,7 +1434,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // inferred hold at original context instruction.  TODO: It may be
         // correct to use the original context.  IF warranted, explore and
         // add sufficient tests to cover.
-        SimplifyQuery RecQ = Q;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
         RecQ.CxtI = P;
         computeKnownBits(R, DemandedElts, Known2, Depth + 1, RecQ);
         switch (Opcode) {
@@ -1334,21 +1467,21 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
         // D69571).
-        SimplifyQuery RecQ = Q;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
 
         unsigned OpNum = P->getOperand(0) == R ? 0 : 1;
         Instruction *RInst = P->getIncomingBlock(OpNum)->getTerminator();
-        Instruction *LInst = P->getIncomingBlock(1-OpNum)->getTerminator();
+        Instruction *LInst = P->getIncomingBlock(1 - OpNum)->getTerminator();
 
         // Ok, we have a PHI of the form L op= R. Check for low
         // zero bits.
         RecQ.CxtI = RInst;
-        computeKnownBits(R, Known2, Depth + 1, RecQ);
+        computeKnownBits(R, DemandedElts, Known2, Depth + 1, RecQ);
 
         // We need to take the minimum number of known bits
         KnownBits Known3(BitWidth);
         RecQ.CxtI = LInst;
-        computeKnownBits(L, Known3, Depth + 1, RecQ);
+        computeKnownBits(L, DemandedElts, Known3, Depth + 1, RecQ);
 
         Known.Zero.setLowBits(std::min(Known2.countMinTrailingZeros(),
                                        Known3.countMinTrailingZeros()));
@@ -1412,7 +1545,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
         // D69571).
-        SimplifyQuery RecQ = Q;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
@@ -1421,7 +1554,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // want to waste time spinning around in loops.
         // TODO: See if we can base recursion limiter on number of incoming phi
         // edges so we don't overly clamp analysis.
-        computeKnownBits(IncValue, Known2, MaxAnalysisRecursionDepth - 1, RecQ);
+        computeKnownBits(IncValue, DemandedElts, Known2,
+                         MaxAnalysisRecursionDepth - 1, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
@@ -1465,24 +1599,37 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::Call:
-  case Instruction::Invoke:
+  case Instruction::Invoke: {
     // If range metadata is attached to this call, set known bits from that,
     // and then intersect with known bits based on other properties of the
     // function.
     if (MDNode *MD =
             Q.IIQ.getMetadata(cast<Instruction>(I), LLVMContext::MD_range))
       computeKnownBitsFromRangeMetadata(*MD, Known);
-    if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
+
+    const auto *CB = cast<CallBase>(I);
+
+    if (std::optional<ConstantRange> Range = CB->getRange())
+      Known = Known.unionWith(Range->toKnownBits());
+
+    if (const Value *RV = CB->getReturnedArgOperand()) {
       if (RV->getType() == I->getType()) {
         computeKnownBits(RV, Known2, Depth + 1, Q);
         Known = Known.unionWith(Known2);
+        // If the function doesn't return properly for all input values
+        // (e.g. unreachable exits) then there might be conflicts between the
+        // argument value and the range metadata. Simply discard the known bits
+        // in case of conflicts.
+        if (Known.hasConflict())
+          Known.resetAll();
       }
     }
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
-      default: break;
+      default:
+        break;
       case Intrinsic::abs: {
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
         Known = Known2.abs(IntMinIsPoison);
         break;
@@ -1498,7 +1645,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known.One |= Known2.One.byteSwap();
         break;
       case Intrinsic::ctlz: {
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         // If we have a known 1, its position is our upper bound.
         unsigned PossibleLZ = Known2.countMaxLeadingZeros();
         // If this call is poison for 0 input, the result will be less than 2^n.
@@ -1509,7 +1656,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
       case Intrinsic::cttz: {
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         // If we have a known 1, its position is our upper bound.
         unsigned PossibleTZ = Known2.countMaxTrailingZeros();
         // If this call is poison for 0 input, the result will be less than 2^n.
@@ -1520,7 +1667,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
       case Intrinsic::ctpop: {
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         // We can bound the space the count needs.  Also, bits known to be zero
         // can't contribute to the population.
         unsigned BitsPossiblySet = Known2.countMaxPopulation();
@@ -1542,8 +1689,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
           ShiftAmt = BitWidth - ShiftAmt;
 
         KnownBits Known3(BitWidth);
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known3, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known3, Depth + 1, Q);
 
         Known.Zero =
             Known2.Zero.shl(ShiftAmt) | Known3.Zero.lshr(BitWidth - ShiftAmt);
@@ -1552,58 +1699,140 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
       case Intrinsic::uadd_sat:
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::uadd_sat(Known, Known2);
         break;
       case Intrinsic::usub_sat:
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::usub_sat(Known, Known2);
         break;
       case Intrinsic::sadd_sat:
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::sadd_sat(Known, Known2);
         break;
       case Intrinsic::ssub_sat:
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::ssub_sat(Known, Known2);
         break;
-      case Intrinsic::umin:
+        // Vec reverse preserves bits from input vec.
+      case Intrinsic::vector_reverse:
+        computeKnownBits(I->getOperand(0), DemandedElts.reverseBits(), Known,
+                         Depth + 1, Q);
+        break;
+        // for min/max/and/or reduce, any bit common to each element in the
+        // input vec is set in the output.
+      case Intrinsic::vector_reduce_and:
+      case Intrinsic::vector_reduce_or:
+      case Intrinsic::vector_reduce_umax:
+      case Intrinsic::vector_reduce_umin:
+      case Intrinsic::vector_reduce_smax:
+      case Intrinsic::vector_reduce_smin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        break;
+      case Intrinsic::vector_reduce_xor: {
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        // The zeros common to all vecs are zero in the output.
+        // If the number of elements is odd, then the common ones remain. If the
+        // number of elements is even, then the common ones becomes zeros.
+        auto *VecTy = cast<VectorType>(I->getOperand(0)->getType());
+        // Even, so the ones become zeros.
+        bool EvenCnt = VecTy->getElementCount().isKnownEven();
+        if (EvenCnt)
+          Known.Zero |= Known.One;
+        // Maybe even element count so need to clear ones.
+        if (VecTy->isScalableTy() || EvenCnt)
+          Known.One.clearAllBits();
+        break;
+      }
+      case Intrinsic::umin:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::umin(Known, Known2);
         break;
       case Intrinsic::umax:
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::umax(Known, Known2);
         break;
       case Intrinsic::smin:
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::smin(Known, Known2);
         break;
       case Intrinsic::smax:
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::smax(Known, Known2);
         break;
       case Intrinsic::ptrmask: {
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
 
         const Value *Mask = I->getOperand(1);
         Known2 = KnownBits(Mask->getType()->getScalarSizeInBits());
-        computeKnownBits(Mask, Known2, Depth + 1, Q);
+        computeKnownBits(Mask, DemandedElts, Known2, Depth + 1, Q);
         // TODO: 1-extend would be more precise.
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
+      case Intrinsic::x86_sse2_pmulh_w:
+      case Intrinsic::x86_avx2_pmulh_w:
+      case Intrinsic::x86_avx512_pmulh_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhs(Known, Known2);
+        break;
+      case Intrinsic::x86_sse2_pmulhu_w:
+      case Intrinsic::x86_avx2_pmulhu_w:
+      case Intrinsic::x86_avx512_pmulhu_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhu(Known, Known2);
+        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
+      case Intrinsic::x86_ssse3_phadd_d_128:
+      case Intrinsic::x86_ssse3_phadd_w_128:
+      case Intrinsic::x86_avx2_phadd_d:
+      case Intrinsic::x86_avx2_phadd_w: {
+        Known = computeKnownBitsForHorizontalOperation(
+            I, DemandedElts, Depth, Q,
+            [](const KnownBits &KnownLHS, const KnownBits &KnownRHS) {
+              return KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
+                                                 /*NUW=*/false, KnownLHS,
+                                                 KnownRHS);
+            });
+        break;
+      }
+      case Intrinsic::x86_ssse3_phadd_sw_128:
+      case Intrinsic::x86_avx2_phadd_sw: {
+        Known = computeKnownBitsForHorizontalOperation(I, DemandedElts, Depth,
+                                                       Q, KnownBits::sadd_sat);
+        break;
+      }
+      case Intrinsic::x86_ssse3_phsub_d_128:
+      case Intrinsic::x86_ssse3_phsub_w_128:
+      case Intrinsic::x86_avx2_phsub_d:
+      case Intrinsic::x86_avx2_phsub_w: {
+        Known = computeKnownBitsForHorizontalOperation(
+            I, DemandedElts, Depth, Q,
+            [](const KnownBits &KnownLHS, const KnownBits &KnownRHS) {
+              return KnownBits::computeForAddSub(/*Add=*/false, /*NSW=*/false,
+                                                 /*NUW=*/false, KnownLHS,
+                                                 KnownRHS);
+            });
+        break;
+      }
+      case Intrinsic::x86_ssse3_phsub_sw_128:
+      case Intrinsic::x86_avx2_phsub_sw: {
+        Known = computeKnownBitsForHorizontalOperation(I, DemandedElts, Depth,
+                                                       Q, KnownBits::ssub_sat);
+        break;
+      }
       case Intrinsic::riscv_vsetvli:
       case Intrinsic::riscv_vsetvlimax: {
         bool HasAVL = II->getIntrinsicID() == Intrinsic::riscv_vsetvli;
@@ -1612,10 +1841,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
             cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
         RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(
             cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
-        // The Range is [Lower, Upper), so we need to subtract 1 here to get the
-        // real upper value.
         uint64_t MaxVLEN =
-            (Range.getUpper().getZExtValue() - 1) * RISCV::RVVBitsPerBlock;
+            Range.getUnsignedMax().getZExtValue() * RISCV::RVVBitsPerBlock;
         uint64_t MaxVL = MaxVLEN / RISCVVType::getSEWLMULRatio(SEW, VLMUL);
 
         // Result of vsetvli must be not larger than AVL.
@@ -1638,6 +1865,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       }
     }
     break;
+  }
   case Instruction::ShuffleVector: {
     auto *Shuf = dyn_cast<ShuffleVectorInst>(I);
     // FIXME: Do we need to handle ConstantExpr involving shufflevectors?
@@ -1676,26 +1904,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const Value *Vec = I->getOperand(0);
     const Value *Elt = I->getOperand(1);
     auto *CIdx = dyn_cast<ConstantInt>(I->getOperand(2));
-    // Early out if the index is non-constant or out-of-range.
     unsigned NumElts = DemandedElts.getBitWidth();
-    if (!CIdx || CIdx->getValue().uge(NumElts)) {
-      Known.resetAll();
-      return;
+    APInt DemandedVecElts = DemandedElts;
+    bool NeedsElt = true;
+    // If we know the index we are inserting too, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      NeedsElt = DemandedElts[CIdx->getZExtValue()];
     }
+
     Known.One.setAllBits();
     Known.Zero.setAllBits();
-    unsigned EltIdx = CIdx->getZExtValue();
-    // Do we demand the inserted element?
-    if (DemandedElts[EltIdx]) {
+    if (NeedsElt) {
       computeKnownBits(Elt, Known, Depth + 1, Q);
       // If we don't know any bits, early out.
       if (Known.isUnknown())
         break;
     }
-    // We don't need the base vector element that has been inserted.
-    APInt DemandedVecElts = DemandedElts;
-    DemandedVecElts.clearBit(EltIdx);
-    if (!!DemandedVecElts) {
+
+    if (!DemandedVecElts.isZero()) {
       computeKnownBits(Vec, DemandedVecElts, Known2, Depth + 1, Q);
       Known = Known.intersectWith(Known2);
     }
@@ -1892,6 +2119,10 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   // assumptions.  Confirm that we've handled them all.
   assert(!isa<ConstantData>(V) && "Unhandled constant data!");
 
+  if (const auto *A = dyn_cast<Argument>(V))
+    if (std::optional<ConstantRange> Range = A->getRange())
+      Known = Range->toKnownBits();
+
   // All recursive calls that increase depth must come after this.
   if (Depth == MaxAnalysisRecursionDepth)
     return;
@@ -1922,8 +2153,6 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
 
   // Check whether we can determine known bits from context such as assumes.
   computeKnownBitsFromContext(V, Known, Depth, Q);
-
-  assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
 }
 
 /// Try to detect a recurrence that the value of the induction variable is
@@ -2042,7 +2271,7 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   case Instruction::Mul:
     return isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
            isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q) &&
-           (OrZero || isKnownNonZero(I, Depth, Q));
+           (OrZero || isKnownNonZero(I, Q, Depth));
   case Instruction::And:
     // A power of two and'd with anything is a power of two or zero.
     if (OrZero &&
@@ -2052,7 +2281,7 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     // X & (-X) is always a power of two or zero.
     if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
         match(I->getOperand(1), m_Neg(m_Specific(I->getOperand(0)))))
-      return OrZero || isKnownNonZero(I->getOperand(0), Depth, Q);
+      return OrZero || isKnownNonZero(I->getOperand(0), Q, Depth);
     return false;
   case Instruction::Add: {
     // Adding a power-of-two or zero to the same power-of-two or zero yields
@@ -2084,6 +2313,11 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
         if (OrZero || RHSBits.One.getBoolValue() || LHSBits.One.getBoolValue())
           return true;
     }
+
+    // LShr(UINT_MAX, Y) + 1 is a power of two (if add is nuw) or zero.
+    if (OrZero || Q.IIQ.hasNoUnsignedWrap(VOBO))
+      if (match(I, m_Add(m_LShr(m_AllOnes(), m_Value()), m_One())))
+        return true;
     return false;
   }
   case Instruction::Select:
@@ -2094,7 +2328,7 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     // it is an induction variable where in each step its value is a power of
     // two.
     auto *PN = cast<PHINode>(I);
-    SimplifyQuery RecQ = Q;
+    SimplifyQuery RecQ = Q.getWithoutCondContext();
 
     // Check if it is an induction variable and always power of two.
     if (isPowerOfTwoRecurrence(PN, OrZero, Depth, RecQ))
@@ -2158,8 +2392,11 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
   if (const Instruction *I = dyn_cast<Instruction>(GEP))
     F = I->getFunction();
 
-  if (!GEP->isInBounds() ||
-      NullPointerIsDefined(F, GEP->getPointerAddressSpace()))
+  // If the gep is nuw or inbounds with invalid null pointer, then the GEP
+  // may be null iff the base pointer is null and the offset is zero.
+  if (!GEP->hasNoUnsignedWrap() &&
+      !(GEP->isInBounds() &&
+        !NullPointerIsDefined(F, GEP->getPointerAddressSpace())))
     return false;
 
   // FIXME: Support vector-GEPs.
@@ -2167,7 +2404,7 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
 
   // If the base pointer is non-null, we cannot walk to a null address with an
   // inbounds GEP in address space zero.
-  if (isKnownNonZero(GEP->getPointerOperand(), Depth, Q))
+  if (isKnownNonZero(GEP->getPointerOperand(), Q, Depth))
     return true;
 
   // Walk the GEP operands and see if any operand introduces a non-zero offset.
@@ -2206,7 +2443,7 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
     if (Depth++ >= MaxAnalysisRecursionDepth)
       continue;
 
-    if (isKnownNonZero(GTI.getOperand(), Depth, Q))
+    if (isKnownNonZero(GTI.getOperand(), Q, Depth))
       return true;
   }
 
@@ -2355,12 +2592,23 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   }
 }
 
+static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
+  return match(Op0, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op1), m_Zero()))) ||
+         match(Op1, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op0), m_Zero())));
+}
+
 static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y, bool NSW, bool NUW) {
+  // (X + (X != 0)) is non zero
+  if (matchOpWithOpEqZero(X, Y))
+    return true;
+
   if (NUW)
-    return isKnownNonZero(Y, DemandedElts, Depth, Q) ||
-           isKnownNonZero(X, DemandedElts, Depth, Q);
+    return isKnownNonZero(Y, DemandedElts, Q, Depth) ||
+           isKnownNonZero(X, DemandedElts, Q, Depth);
 
   KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
   KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
@@ -2368,8 +2616,8 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
   // If X and Y are both non-negative (as signed values) then their sum is not
   // zero unless both X and Y are zero.
   if (XKnown.isNonNegative() && YKnown.isNonNegative())
-    if (isKnownNonZero(Y, DemandedElts, Depth, Q) ||
-        isKnownNonZero(X, DemandedElts, Depth, Q))
+    if (isKnownNonZero(Y, DemandedElts, Q, Depth) ||
+        isKnownNonZero(X, DemandedElts, Q, Depth))
       return true;
 
   // If X and Y are both negative (as signed values) then their sum is not
@@ -2401,12 +2649,45 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y) {
+  // (X - (X != 0)) is non zero
+  // ((X != 0) - X) is non zero
+  if (matchOpWithOpEqZero(X, Y))
+    return true;
+
   // TODO: Move this case into isKnownNonEqual().
   if (auto *C = dyn_cast<Constant>(X))
-    if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Depth, Q))
+    if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Q, Depth))
       return true;
 
-  return ::isKnownNonEqual(X, Y, Depth, Q);
+  return ::isKnownNonEqual(X, Y, DemandedElts, Depth, Q);
+}
+
+static bool isNonZeroMul(const APInt &DemandedElts, unsigned Depth,
+                         const SimplifyQuery &Q, unsigned BitWidth, Value *X,
+                         Value *Y, bool NSW, bool NUW) {
+  // If X and Y are non-zero then so is X * Y as long as the multiplication
+  // does not overflow.
+  if (NSW || NUW)
+    return isKnownNonZero(X, DemandedElts, Q, Depth) &&
+           isKnownNonZero(Y, DemandedElts, Q, Depth);
+
+  // If either X or Y is odd, then if the other is non-zero the result can't
+  // be zero.
+  KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
+  if (XKnown.One[0])
+    return isKnownNonZero(Y, DemandedElts, Q, Depth);
+
+  KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
+  if (YKnown.One[0])
+    return XKnown.isNonZero() || isKnownNonZero(X, DemandedElts, Q, Depth);
+
+  // If there exists any subset of X (sX) and subset of Y (sY) s.t sX * sY is
+  // non-zero, then X * Y is non-zero. We can find sX and sY by just taking
+  // the lowest known One of X and Y. If they are non-zero, the result
+  // must be non-zero. We can check if LSB(X) * LSB(Y) != 0 by doing
+  // X.CountLeadingZeros + Y.CountLeadingZeros < BitWidth.
+  return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <
+         BitWidth;
 }
 
 static bool isNonZeroShift(const Operator *I, const APInt &DemandedElts,
@@ -2454,7 +2735,7 @@ static bool isNonZeroShift(const Operator *I, const APInt &DemandedElts,
   // non-zero then at least one non-zero bit must remain.
   if (InvShiftOp(KnownVal.Zero, NumBits - MaxShift)
           .eq(InvShiftOp(APInt::getAllOnes(NumBits), NumBits - MaxShift)) &&
-      isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q))
+      isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth))
     return true;
 
   return false;
@@ -2503,7 +2784,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     Type *FromTy = I->getOperand(0)->getType();
     if ((FromTy->isIntOrIntVectorTy() || FromTy->isPtrOrPtrVectorTy()) &&
         (BitWidth % getBitWidth(FromTy->getScalarType(), Q.DL)) == 0)
-      return isKnownNonZero(I->getOperand(0), Depth, Q);
+      return isKnownNonZero(I->getOperand(0), Q, Depth);
   } break;
   case Instruction::IntToPtr:
     // Note that we have to take special care to avoid looking through
@@ -2512,7 +2793,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (!isa<ScalableVectorType>(I->getType()) &&
         Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedValue() <=
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
-      return isKnownNonZero(I->getOperand(0), Depth, Q);
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
     break;
   case Instruction::PtrToInt:
     // Similar to int2ptr above, we can look through ptr2int here if the cast
@@ -2520,25 +2801,40 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (!isa<ScalableVectorType>(I->getType()) &&
         Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedValue() <=
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
-      return isKnownNonZero(I->getOperand(0), Depth, Q);
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
     break;
+  case Instruction::Trunc:
+    // nuw/nsw trunc preserves zero/non-zero status of input.
+    if (auto *TI = dyn_cast<TruncInst>(I))
+      if (TI->hasNoSignedWrap() || TI->hasNoUnsignedWrap())
+        return isKnownNonZero(TI->getOperand(0), DemandedElts, Q, Depth);
+    break;
+
   case Instruction::Sub:
     return isNonZeroSub(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
                         I->getOperand(1));
+  case Instruction::Xor:
+    // (X ^ (X != 0)) is non zero
+    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
+      return true;
+    break;
   case Instruction::Or:
+    // (X | (X != 0)) is non zero
+    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
+      return true;
     // X | Y != 0 if X != 0 or Y != 0.
-    return isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q) ||
-           isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
+    return isKnownNonZero(I->getOperand(1), DemandedElts, Q, Depth) ||
+           isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
   case Instruction::SExt:
   case Instruction::ZExt:
     // ext X != 0 if X != 0.
-    return isKnownNonZero(I->getOperand(0), Depth, Q);
+    return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
 
   case Instruction::Shl: {
     // shl nsw/nuw can't remove any non-zero bits.
     const OverflowingBinaryOperator *BO = cast<OverflowingBinaryOperator>(I);
     if (Q.IIQ.hasNoUnsignedWrap(BO) || Q.IIQ.hasNoSignedWrap(BO))
-      return isKnownNonZero(I->getOperand(0), Depth, Q);
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
 
     // shl X, Y != 0 if X is odd.  Note that the value of the shift is undefined
     // if the lowest bit is shifted off the end.
@@ -2554,7 +2850,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     // shr exact can only shift out zero bits.
     const PossiblyExactOperator *BO = cast<PossiblyExactOperator>(I);
     if (BO->isExact())
-      return isKnownNonZero(I->getOperand(0), Depth, Q);
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
 
     // shr X, Y != 0 if X is negative.  Note that the value of the shift is not
     // defined if the sign bit is shifted off the end.
@@ -2570,9 +2866,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     // X / Y
     // div exact can only produce a zero if the dividend is zero.
     if (cast<PossiblyExactOperator>(I)->isExact())
-      return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
 
-    std::optional<bool> XUgeY;
     KnownBits XKnown =
         computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
     // If X is fully unknown we won't be able to figure anything out so don't
@@ -2588,7 +2883,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       YKnown = YKnown.abs(/*IntMinIsPoison*/ false);
     }
     // If X u>= Y then div is non zero (0/0 is UB).
-    XUgeY = KnownBits::uge(XKnown, YKnown);
+    std::optional<bool> XUgeY = KnownBits::uge(XKnown, YKnown);
     // If X is total unknown or X u< Y we won't be able to prove non-zero
     // with compute known bits so just return early.
     return XUgeY && *XUgeY;
@@ -2604,33 +2899,10 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
                         Q.IIQ.hasNoUnsignedWrap(BO));
   }
   case Instruction::Mul: {
-    // If X and Y are non-zero then so is X * Y as long as the multiplication
-    // does not overflow.
     const OverflowingBinaryOperator *BO = cast<OverflowingBinaryOperator>(I);
-    if (Q.IIQ.hasNoSignedWrap(BO) || Q.IIQ.hasNoUnsignedWrap(BO))
-      return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) &&
-             isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
-
-    // If either X or Y is odd, then if the other is non-zero the result can't
-    // be zero.
-    KnownBits XKnown =
-        computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
-    if (XKnown.One[0])
-      return isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
-
-    KnownBits YKnown =
-        computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
-    if (YKnown.One[0])
-      return XKnown.isNonZero() ||
-             isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
-
-    // If there exists any subset of X (sX) and subset of Y (sY) s.t sX * sY is
-    // non-zero, then X * Y is non-zero. We can find sX and sY by just taking
-    // the lowest known One of X and Y. If they are non-zero, the result
-    // must be non-zero. We can check if LSB(X) * LSB(Y) != 0 by doing
-    // X.CountLeadingZeros + Y.CountLeadingZeros < BitWidth.
-    return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <
-           BitWidth;
+    return isNonZeroMul(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
+                        I->getOperand(1), Q.IIQ.hasNoSignedWrap(BO),
+                        Q.IIQ.hasNoUnsignedWrap(BO));
   }
   case Instruction::Select: {
     // (C ? X : Y) != 0 if X != 0 and Y != 0.
@@ -2643,7 +2915,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       Value *Op;
       Op = IsTrueArm ? I->getOperand(1) : I->getOperand(2);
       // Op is trivially non-zero.
-      if (isKnownNonZero(Op, DemandedElts, Depth, Q))
+      if (isKnownNonZero(Op, DemandedElts, Q, Depth))
         return true;
 
       // The condition of the select dominates the true/false arm. Check if the
@@ -2670,7 +2942,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       return true;
 
     // Check if all incoming values are non-zero using recursion.
-    SimplifyQuery RecQ = Q;
+    SimplifyQuery RecQ = Q.getWithoutCondContext();
     unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
     return llvm::all_of(PN->operands(), [&](const Use &U) {
       if (U.get() == PN)
@@ -2693,8 +2965,31 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         }
       }
       // Finally recurse on the edge and check it directly.
-      return isKnownNonZero(U.get(), DemandedElts, NewDepth, RecQ);
+      return isKnownNonZero(U.get(), DemandedElts, RecQ, NewDepth);
     });
+  }
+  case Instruction::InsertElement: {
+    if (isa<ScalableVectorType>(I->getType()))
+      break;
+
+    const Value *Vec = I->getOperand(0);
+    const Value *Elt = I->getOperand(1);
+    auto *CIdx = dyn_cast<ConstantInt>(I->getOperand(2));
+
+    unsigned NumElts = DemandedElts.getBitWidth();
+    APInt DemandedVecElts = DemandedElts;
+    bool SkipElt = false;
+    // If we know the index we are inserting too, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      SkipElt = !DemandedElts[CIdx->getZExtValue()];
+    }
+
+    // Result is zero if Elt is non-zero and rest of the demanded elts in Vec
+    // are non-zero.
+    return (SkipElt || isKnownNonZero(Elt, Q, Depth)) &&
+           (DemandedVecElts.isZero() ||
+            isKnownNonZero(Vec, DemandedVecElts, Q, Depth));
   }
   case Instruction::ExtractElement:
     if (const auto *EEI = dyn_cast<ExtractElementInst>(I)) {
@@ -2706,39 +3001,88 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         APInt DemandedVecElts = APInt::getAllOnes(NumElts);
         if (CIdx && CIdx->getValue().ult(NumElts))
           DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
-        return isKnownNonZero(Vec, DemandedVecElts, Depth, Q);
+        return isKnownNonZero(Vec, DemandedVecElts, Q, Depth);
       }
     }
     break;
+  case Instruction::ShuffleVector: {
+    auto *Shuf = dyn_cast<ShuffleVectorInst>(I);
+    if (!Shuf)
+      break;
+    APInt DemandedLHS, DemandedRHS;
+    // For undef elements, we don't know anything about the common state of
+    // the shuffle result.
+    if (!getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+    // If demanded elements for both vecs are non-zero, the shuffle is non-zero.
+    return (DemandedRHS.isZero() ||
+            isKnownNonZero(Shuf->getOperand(1), DemandedRHS, Q, Depth)) &&
+           (DemandedLHS.isZero() ||
+            isKnownNonZero(Shuf->getOperand(0), DemandedLHS, Q, Depth));
+  }
   case Instruction::Freeze:
-    return isKnownNonZero(I->getOperand(0), Depth, Q) &&
+    return isKnownNonZero(I->getOperand(0), Q, Depth) &&
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
                                      Depth);
   case Instruction::Load: {
     auto *LI = cast<LoadInst>(I);
     // A Load tagged with nonnull or dereferenceable with null pointer undefined
     // is never null.
-    if (auto *PtrT = dyn_cast<PointerType>(I->getType()))
+    if (auto *PtrT = dyn_cast<PointerType>(I->getType())) {
       if (Q.IIQ.getMetadata(LI, LLVMContext::MD_nonnull) ||
           (Q.IIQ.getMetadata(LI, LLVMContext::MD_dereferenceable) &&
            !NullPointerIsDefined(LI->getFunction(), PtrT->getAddressSpace())))
         return true;
+    } else if (MDNode *Ranges = Q.IIQ.getMetadata(LI, LLVMContext::MD_range)) {
+      return rangeMetadataExcludesValue(Ranges, APInt::getZero(BitWidth));
+    }
 
     // No need to fall through to computeKnownBits as range metadata is already
     // handled in isKnownNonZero.
     return false;
   }
+  case Instruction::ExtractValue: {
+    const WithOverflowInst *WO;
+    if (match(I, m_ExtractValue<0>(m_WithOverflowInst(WO)))) {
+      switch (WO->getBinaryOp()) {
+      default:
+        break;
+      case Instruction::Add:
+        return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
+                            WO->getArgOperand(0), WO->getArgOperand(1),
+                            /*NSW=*/false,
+                            /*NUW=*/false);
+      case Instruction::Sub:
+        return isNonZeroSub(DemandedElts, Depth, Q, BitWidth,
+                            WO->getArgOperand(0), WO->getArgOperand(1));
+      case Instruction::Mul:
+        return isNonZeroMul(DemandedElts, Depth, Q, BitWidth,
+                            WO->getArgOperand(0), WO->getArgOperand(1),
+                            /*NSW=*/false, /*NUW=*/false);
+        break;
+      }
+    }
+    break;
+  }
   case Instruction::Call:
-  case Instruction::Invoke:
+  case Instruction::Invoke: {
+    const auto *Call = cast<CallBase>(I);
     if (I->getType()->isPointerTy()) {
-      const auto *Call = cast<CallBase>(I);
       if (Call->isReturnNonNull())
         return true;
       if (const auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
-        return isKnownNonZero(RP, Depth, Q);
-    } else if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
-      if (RV->getType() == I->getType() && isKnownNonZero(RV, Depth, Q))
-        return true;
+        return isKnownNonZero(RP, Q, Depth);
+    } else {
+      if (MDNode *Ranges = Q.IIQ.getMetadata(Call, LLVMContext::MD_range))
+        return rangeMetadataExcludesValue(Ranges, APInt::getZero(BitWidth));
+      if (std::optional<ConstantRange> Range = Call->getRange()) {
+        const APInt ZeroValue(Range->getBitWidth(), 0);
+        if (!Range->contains(ZeroValue))
+          return true;
+      }
+      if (const Value *RV = Call->getReturnedArgOperand())
+        if (RV->getType() == I->getType() && isKnownNonZero(RV, Q, Depth))
+          return true;
     }
 
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -2749,7 +3093,9 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       case Intrinsic::bitreverse:
       case Intrinsic::bswap:
       case Intrinsic::ctpop:
-        return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q);
+        return isKnownNonZero(II->getArgOperand(0), DemandedElts, Q, Depth);
+        // NB: We don't do usub_sat here as in any case we can prove its
+        // non-zero, we will fold it to `sub nuw` in InstCombine.
       case Intrinsic::ssub_sat:
         return isNonZeroSub(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1));
@@ -2757,33 +3103,70 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1),
                             /*NSW=*/true, /* NUW=*/false);
+        // Vec reverse preserves zero/non-zero status from input vec.
+      case Intrinsic::vector_reverse:
+        return isKnownNonZero(II->getArgOperand(0), DemandedElts.reverseBits(),
+                              Q, Depth);
+        // umin/smin/smax/smin/or of all non-zero elements is always non-zero.
+      case Intrinsic::vector_reduce_or:
+      case Intrinsic::vector_reduce_umax:
+      case Intrinsic::vector_reduce_umin:
+      case Intrinsic::vector_reduce_smax:
+      case Intrinsic::vector_reduce_smin:
+        return isKnownNonZero(II->getArgOperand(0), Q, Depth);
       case Intrinsic::umax:
       case Intrinsic::uadd_sat:
-        return isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q) ||
-               isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q);
-      case Intrinsic::smin:
-      case Intrinsic::smax: {
-        auto KnownOpImpliesNonZero = [&](const KnownBits &K) {
-          return II->getIntrinsicID() == Intrinsic::smin
-                     ? K.isNegative()
-                     : K.isStrictlyPositive();
-        };
-        KnownBits XKnown =
-            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
-        if (KnownOpImpliesNonZero(XKnown))
-          return true;
-        KnownBits YKnown =
-            computeKnownBits(II->getArgOperand(1), DemandedElts, Depth, Q);
-        if (KnownOpImpliesNonZero(YKnown))
+        // umax(X, (X != 0)) is non zero
+        // X +usat (X != 0) is non zero
+        if (matchOpWithOpEqZero(II->getArgOperand(0), II->getArgOperand(1)))
           return true;
 
-        if (XKnown.isNonZero() && YKnown.isNonZero())
+        return isKnownNonZero(II->getArgOperand(1), DemandedElts, Q, Depth) ||
+               isKnownNonZero(II->getArgOperand(0), DemandedElts, Q, Depth);
+      case Intrinsic::smax: {
+        // If either arg is strictly positive the result is non-zero. Otherwise
+        // the result is non-zero if both ops are non-zero.
+        auto IsNonZero = [&](Value *Op, std::optional<bool> &OpNonZero,
+                             const KnownBits &OpKnown) {
+          if (!OpNonZero.has_value())
+            OpNonZero = OpKnown.isNonZero() ||
+                        isKnownNonZero(Op, DemandedElts, Q, Depth);
+          return *OpNonZero;
+        };
+        // Avoid re-computing isKnownNonZero.
+        std::optional<bool> Op0NonZero, Op1NonZero;
+        KnownBits Op1Known =
+            computeKnownBits(II->getArgOperand(1), DemandedElts, Depth, Q);
+        if (Op1Known.isNonNegative() &&
+            IsNonZero(II->getArgOperand(1), Op1NonZero, Op1Known))
+          return true;
+        KnownBits Op0Known =
+            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
+        if (Op0Known.isNonNegative() &&
+            IsNonZero(II->getArgOperand(0), Op0NonZero, Op0Known))
+          return true;
+        return IsNonZero(II->getArgOperand(1), Op1NonZero, Op1Known) &&
+               IsNonZero(II->getArgOperand(0), Op0NonZero, Op0Known);
+      }
+      case Intrinsic::smin: {
+        // If either arg is negative the result is non-zero. Otherwise
+        // the result is non-zero if both ops are non-zero.
+        KnownBits Op1Known =
+            computeKnownBits(II->getArgOperand(1), DemandedElts, Depth, Q);
+        if (Op1Known.isNegative())
+          return true;
+        KnownBits Op0Known =
+            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
+        if (Op0Known.isNegative())
+          return true;
+
+        if (Op1Known.isNonZero() && Op0Known.isNonZero())
           return true;
       }
         [[fallthrough]];
       case Intrinsic::umin:
-        return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) &&
-               isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q);
+        return isKnownNonZero(II->getArgOperand(0), DemandedElts, Q, Depth) &&
+               isKnownNonZero(II->getArgOperand(1), DemandedElts, Q, Depth);
       case Intrinsic::cttz:
         return computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q)
             .Zero[0];
@@ -2794,12 +3177,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       case Intrinsic::fshl:
         // If Op0 == Op1, this is a rotate. rotate(x, y) != 0 iff x != 0.
         if (II->getArgOperand(0) == II->getArgOperand(1))
-          return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q);
+          return isKnownNonZero(II->getArgOperand(0), DemandedElts, Q, Depth);
         break;
       case Intrinsic::vscale:
         return true;
       case Intrinsic::experimental_get_vector_length:
-        return isKnownNonZero(I->getOperand(0), Depth, Q);
+        return isKnownNonZero(I->getOperand(0), Q, Depth);
       default:
         break;
       }
@@ -2807,6 +3190,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     }
 
     return false;
+  }
   }
 
   KnownBits Known(BitWidth);
@@ -2820,11 +3204,11 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
 /// specified, perform context-sensitive analysis and return true if the
 /// pointer couldn't possibly be null at the specified instruction.
 /// Supports values with integer or pointer type and vectors of integers.
-bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
-                    const SimplifyQuery &Q) {
+bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
+                    const SimplifyQuery &Q, unsigned Depth) {
+  Type *Ty = V->getType();
 
 #ifndef NDEBUG
-  Type *Ty = V->getType();
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
@@ -2844,20 +3228,24 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       // Must be non-zero due to null test above.
       return true;
 
-    // For constant vectors, check that all elements are undefined or known
+    // For constant vectors, check that all elements are poison or known
     // non-zero to determine that the whole vector is known non-zero.
-    if (auto *VecTy = dyn_cast<FixedVectorType>(C->getType())) {
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
       for (unsigned i = 0, e = VecTy->getNumElements(); i != e; ++i) {
         if (!DemandedElts[i])
           continue;
         Constant *Elt = C->getAggregateElement(i);
         if (!Elt || Elt->isNullValue())
           return false;
-        if (!isa<UndefValue>(Elt) && !isa<ConstantInt>(Elt))
+        if (!isa<PoisonValue>(Elt) && !isa<ConstantInt>(Elt))
           return false;
       }
       return true;
     }
+
+    // Constant ptrauth can be null, iff the base pointer can be.
+    if (auto *CPA = dyn_cast<ConstantPtrAuth>(V))
+      return isKnownNonZero(CPA->getPointer(), DemandedElts, Q, Depth);
 
     // A global variable in address space 0 is non null unless extern weak
     // or an absolute symbol reference. Other address spaces may have null as a
@@ -2873,17 +3261,12 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       return false;
   }
 
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    if (MDNode *Ranges = Q.IIQ.getMetadata(I, LLVMContext::MD_range)) {
-      // If the possible ranges don't contain zero, then the value is
-      // definitely non-zero.
-      if (auto *Ty = dyn_cast<IntegerType>(V->getType())) {
-        const APInt ZeroValue(Ty->getBitWidth(), 0);
-        if (rangeMetadataExcludesValue(Ranges, ZeroValue))
-          return true;
-      }
+  if (const auto *A = dyn_cast<Argument>(V))
+    if (std::optional<ConstantRange> Range = A->getRange()) {
+      const APInt ZeroValue(Range->getBitWidth(), 0);
+      if (!Range->contains(ZeroValue))
+        return true;
     }
-  }
 
   if (!isa<Constant>(V) && isKnownNonZeroFromAssume(V, Q))
     return true;
@@ -2894,7 +3277,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
 
   // Check for pointer simplifications.
 
-  if (PointerType *PtrTy = dyn_cast<PointerType>(V->getType())) {
+  if (PointerType *PtrTy = dyn_cast<PointerType>(Ty)) {
     // A byval, inalloca may not be null in a non-default addres space. A
     // nonnull argument is assumed never 0.
     if (const Argument *A = dyn_cast<Argument>(V)) {
@@ -2916,11 +3299,12 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   return false;
 }
 
-bool isKnownNonZero(const Value *V, unsigned Depth, const SimplifyQuery &Q) {
+bool llvm::isKnownNonZero(const Value *V, const SimplifyQuery &Q,
+                          unsigned Depth) {
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return isKnownNonZero(V, DemandedElts, Depth, Q);
+  return ::isKnownNonZero(V, DemandedElts, Q, Depth);
 }
 
 /// If the pair of operators are the same invertible function, return the
@@ -2942,7 +3326,20 @@ getInvertibleOperands(const Operator *Op1,
   switch (Op1->getOpcode()) {
   default:
     break;
-  case Instruction::Add:
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(Op1)->isDisjoint() ||
+        !cast<PossiblyDisjointInst>(Op2)->isDisjoint())
+      break;
+    [[fallthrough]];
+  case Instruction::Xor:
+  case Instruction::Add: {
+    Value *Other;
+    if (match(Op2, m_c_BinOp(m_Specific(Op1->getOperand(0)), m_Value(Other))))
+      return std::make_pair(Op1->getOperand(1), Other);
+    if (match(Op2, m_c_BinOp(m_Specific(Op1->getOperand(1)), m_Value(Other))))
+      return std::make_pair(Op1->getOperand(0), Other);
+    break;
+  }
   case Instruction::Sub:
     if (Op1->getOperand(0) == Op2->getOperand(0))
       return getOperands(1);
@@ -3030,50 +3427,68 @@ getInvertibleOperands(const Operator *Op1,
   return std::nullopt;
 }
 
-/// Return true if V2 == V1 + X, where X is known non-zero.
-static bool isAddOfNonZero(const Value *V1, const Value *V2, unsigned Depth,
-                           const SimplifyQuery &Q) {
+/// Return true if V1 == (binop V2, X), where X is known non-zero.
+/// Only handle a small subset of binops where (binop V2, X) with non-zero X
+/// implies V2 != V1.
+static bool isModifyingBinopOfNonZero(const Value *V1, const Value *V2,
+                                      const APInt &DemandedElts, unsigned Depth,
+                                      const SimplifyQuery &Q) {
   const BinaryOperator *BO = dyn_cast<BinaryOperator>(V1);
-  if (!BO || BO->getOpcode() != Instruction::Add)
+  if (!BO)
     return false;
-  Value *Op = nullptr;
-  if (V2 == BO->getOperand(0))
-    Op = BO->getOperand(1);
-  else if (V2 == BO->getOperand(1))
-    Op = BO->getOperand(0);
-  else
-    return false;
-  return isKnownNonZero(Op, Depth + 1, Q);
+  switch (BO->getOpcode()) {
+  default:
+    break;
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(V1)->isDisjoint())
+      break;
+    [[fallthrough]];
+  case Instruction::Xor:
+  case Instruction::Add:
+    Value *Op = nullptr;
+    if (V2 == BO->getOperand(0))
+      Op = BO->getOperand(1);
+    else if (V2 == BO->getOperand(1))
+      Op = BO->getOperand(0);
+    else
+      return false;
+    return isKnownNonZero(Op, DemandedElts, Q, Depth + 1);
+  }
+  return false;
 }
 
 /// Return true if V2 == V1 * C, where V1 is known non-zero, C is not 0/1 and
 /// the multiplication is nuw or nsw.
-static bool isNonEqualMul(const Value *V1, const Value *V2, unsigned Depth,
+static bool isNonEqualMul(const Value *V1, const Value *V2,
+                          const APInt &DemandedElts, unsigned Depth,
                           const SimplifyQuery &Q) {
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
     const APInt *C;
     return match(OBO, m_Mul(m_Specific(V1), m_APInt(C))) &&
            (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
-           !C->isZero() && !C->isOne() && isKnownNonZero(V1, Depth + 1, Q);
+           !C->isZero() && !C->isOne() &&
+           isKnownNonZero(V1, DemandedElts, Q, Depth + 1);
   }
   return false;
 }
 
 /// Return true if V2 == V1 << C, where V1 is known non-zero, C is not 0 and
 /// the shift is nuw or nsw.
-static bool isNonEqualShl(const Value *V1, const Value *V2, unsigned Depth,
+static bool isNonEqualShl(const Value *V1, const Value *V2,
+                          const APInt &DemandedElts, unsigned Depth,
                           const SimplifyQuery &Q) {
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
     const APInt *C;
     return match(OBO, m_Shl(m_Specific(V1), m_APInt(C))) &&
            (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
-           !C->isZero() && isKnownNonZero(V1, Depth + 1, Q);
+           !C->isZero() && isKnownNonZero(V1, DemandedElts, Q, Depth + 1);
   }
   return false;
 }
 
 static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
-                           unsigned Depth, const SimplifyQuery &Q) {
+                           const APInt &DemandedElts, unsigned Depth,
+                           const SimplifyQuery &Q) {
   // Check two PHIs are in same block.
   if (PN1->getParent() != PN2->getParent())
     return false;
@@ -3093,16 +3508,17 @@ static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
     if (UsedFullRecursion)
       return false;
 
-    SimplifyQuery RecQ = Q;
+    SimplifyQuery RecQ = Q.getWithoutCondContext();
     RecQ.CxtI = IncomBB->getTerminator();
-    if (!isKnownNonEqual(IV1, IV2, Depth + 1, RecQ))
+    if (!isKnownNonEqual(IV1, IV2, DemandedElts, Depth + 1, RecQ))
       return false;
     UsedFullRecursion = true;
   }
   return true;
 }
 
-static bool isNonEqualSelect(const Value *V1, const Value *V2, unsigned Depth,
+static bool isNonEqualSelect(const Value *V1, const Value *V2,
+                             const APInt &DemandedElts, unsigned Depth,
                              const SimplifyQuery &Q) {
   const SelectInst *SI1 = dyn_cast<SelectInst>(V1);
   if (!SI1)
@@ -3113,12 +3529,12 @@ static bool isNonEqualSelect(const Value *V1, const Value *V2, unsigned Depth,
     const Value *Cond2 = SI2->getCondition();
     if (Cond1 == Cond2)
       return isKnownNonEqual(SI1->getTrueValue(), SI2->getTrueValue(),
-                             Depth + 1, Q) &&
+                             DemandedElts, Depth + 1, Q) &&
              isKnownNonEqual(SI1->getFalseValue(), SI2->getFalseValue(),
-                             Depth + 1, Q);
+                             DemandedElts, Depth + 1, Q);
   }
-  return isKnownNonEqual(SI1->getTrueValue(), V2, Depth + 1, Q) &&
-         isKnownNonEqual(SI1->getFalseValue(), V2, Depth + 1, Q);
+  return isKnownNonEqual(SI1->getTrueValue(), V2, DemandedElts, Depth + 1, Q) &&
+         isKnownNonEqual(SI1->getFalseValue(), V2, DemandedElts, Depth + 1, Q);
 }
 
 // Check to see if A is both a GEP and is the incoming value for a PHI in the
@@ -3174,7 +3590,8 @@ static bool isNonEqualPointersWithRecursiveGEP(const Value *A, const Value *B,
 }
 
 /// Return true if it is known that V1 != V2.
-static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
+static bool isKnownNonEqual(const Value *V1, const Value *V2,
+                            const APInt &DemandedElts, unsigned Depth,
                             const SimplifyQuery &Q) {
   if (V1 == V2)
     return false;
@@ -3192,39 +3609,44 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   auto *O2 = dyn_cast<Operator>(V2);
   if (O1 && O2 && O1->getOpcode() == O2->getOpcode()) {
     if (auto Values = getInvertibleOperands(O1, O2))
-      return isKnownNonEqual(Values->first, Values->second, Depth + 1, Q);
+      return isKnownNonEqual(Values->first, Values->second, DemandedElts,
+                             Depth + 1, Q);
 
     if (const PHINode *PN1 = dyn_cast<PHINode>(V1)) {
       const PHINode *PN2 = cast<PHINode>(V2);
       // FIXME: This is missing a generalization to handle the case where one is
       // a PHI and another one isn't.
-      if (isNonEqualPHIs(PN1, PN2, Depth, Q))
+      if (isNonEqualPHIs(PN1, PN2, DemandedElts, Depth, Q))
         return true;
     };
   }
 
-  if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
+  if (isModifyingBinopOfNonZero(V1, V2, DemandedElts, Depth, Q) ||
+      isModifyingBinopOfNonZero(V2, V1, DemandedElts, Depth, Q))
     return true;
 
-  if (isNonEqualMul(V1, V2, Depth, Q) || isNonEqualMul(V2, V1, Depth, Q))
+  if (isNonEqualMul(V1, V2, DemandedElts, Depth, Q) ||
+      isNonEqualMul(V2, V1, DemandedElts, Depth, Q))
     return true;
 
-  if (isNonEqualShl(V1, V2, Depth, Q) || isNonEqualShl(V2, V1, Depth, Q))
+  if (isNonEqualShl(V1, V2, DemandedElts, Depth, Q) ||
+      isNonEqualShl(V2, V1, DemandedElts, Depth, Q))
     return true;
 
   if (V1->getType()->isIntOrIntVectorTy()) {
     // Are any known bits in V1 contradictory to known bits in V2? If V1
     // has a known zero where V2 has a known one, they must not be equal.
-    KnownBits Known1 = computeKnownBits(V1, Depth, Q);
+    KnownBits Known1 = computeKnownBits(V1, DemandedElts, Depth, Q);
     if (!Known1.isUnknown()) {
-      KnownBits Known2 = computeKnownBits(V2, Depth, Q);
+      KnownBits Known2 = computeKnownBits(V2, DemandedElts, Depth, Q);
       if (Known1.Zero.intersects(Known2.One) ||
           Known2.Zero.intersects(Known1.One))
         return true;
     }
   }
 
-  if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
+  if (isNonEqualSelect(V1, V2, DemandedElts, Depth, Q) ||
+      isNonEqualSelect(V2, V1, DemandedElts, Depth, Q))
     return true;
 
   if (isNonEqualPointersWithRecursiveGEP(V1, V2, Q) ||
@@ -3236,7 +3658,7 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   // Check PtrToInt type matches the pointer size.
   if (match(V1, m_PtrToIntSameSize(Q.DL, m_Value(A))) &&
       match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
-    return isKnownNonEqual(A, B, Depth + 1, Q);
+    return isKnownNonEqual(A, B, DemandedElts, Depth + 1, Q);
 
   return false;
 }
@@ -3375,7 +3797,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     default: break;
     case Instruction::SExt:
       Tmp = TyBits - U->getOperand(0)->getType()->getScalarSizeInBits();
-      return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q) + Tmp;
+      return ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q) +
+             Tmp;
 
     case Instruction::SDiv: {
       const APInt *Denominator;
@@ -3387,7 +3810,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
           break;
 
         // Calculate the incoming numerator bits.
-        unsigned NumBits = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+        unsigned NumBits =
+            ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
 
         // Add floor(log(C)) bits to the numerator bits.
         return std::min(TyBits, NumBits + Denominator->logBase2());
@@ -3396,7 +3820,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     }
 
     case Instruction::SRem: {
-      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
 
       const APInt *Denominator;
       // srem X, C -> we know that the result is within [-C+1,C) when C is a
@@ -3427,7 +3851,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     }
 
     case Instruction::AShr: {
-      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
       // ashr X, C   -> adds C sign bits.  Vectors too.
       const APInt *ShAmt;
       if (match(U->getOperand(1), m_APInt(ShAmt))) {
@@ -3441,11 +3865,22 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     }
     case Instruction::Shl: {
       const APInt *ShAmt;
+      Value *X = nullptr;
       if (match(U->getOperand(1), m_APInt(ShAmt))) {
         // shl destroys sign bits.
-        Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-        if (ShAmt->uge(TyBits) ||   // Bad shift.
-            ShAmt->uge(Tmp)) break; // Shifted all sign bits out.
+        if (ShAmt->uge(TyBits))
+          break; // Bad shift.
+        // We can look through a zext (more or less treating it as a sext) if
+        // all extended bits are shifted out.
+        if (match(U->getOperand(0), m_ZExt(m_Value(X))) &&
+            ShAmt->uge(TyBits - X->getType()->getScalarSizeInBits())) {
+          Tmp = ComputeNumSignBits(X, DemandedElts, Depth + 1, Q);
+          Tmp += TyBits - X->getType()->getScalarSizeInBits();
+        } else
+          Tmp =
+              ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
+        if (ShAmt->uge(Tmp))
+          break; // Shifted all sign bits out.
         Tmp2 = ShAmt->getZExtValue();
         return Tmp - Tmp2;
       }
@@ -3455,9 +3890,9 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::Or:
     case Instruction::Xor: // NOT is handled here.
       // Logical binary ops preserve the number of sign bits at the worst.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
       if (Tmp != 1) {
-        Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
+        Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Depth + 1, Q);
         FirstAnswer = std::min(Tmp, Tmp2);
         // We computed what we know about the sign bits as our first
         // answer. Now proceed to the generic code that uses
@@ -3473,9 +3908,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (isSignedMinMaxClamp(U, X, CLow, CHigh))
         return std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
 
-      Tmp = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-      if (Tmp == 1) break;
-      Tmp2 = ComputeNumSignBits(U->getOperand(2), Depth + 1, Q);
+      Tmp = ComputeNumSignBits(U->getOperand(1), DemandedElts, Depth + 1, Q);
+      if (Tmp == 1)
+        break;
+      Tmp2 = ComputeNumSignBits(U->getOperand(2), DemandedElts, Depth + 1, Q);
       return std::min(Tmp, Tmp2);
     }
 
@@ -3489,7 +3925,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (const auto *CRHS = dyn_cast<Constant>(U->getOperand(1)))
         if (CRHS->isAllOnesValue()) {
           KnownBits Known(TyBits);
-          computeKnownBits(U->getOperand(0), Known, Depth + 1, Q);
+          computeKnownBits(U->getOperand(0), DemandedElts, Known, Depth + 1, Q);
 
           // If the input is known to be 0 or 1, the output is 0/-1, which is
           // all sign bits set.
@@ -3502,19 +3938,21 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
             return Tmp;
         }
 
-      Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-      if (Tmp2 == 1) break;
+      Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Depth + 1, Q);
+      if (Tmp2 == 1)
+        break;
       return std::min(Tmp, Tmp2) - 1;
 
     case Instruction::Sub:
-      Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-      if (Tmp2 == 1) break;
+      Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Depth + 1, Q);
+      if (Tmp2 == 1)
+        break;
 
       // Handle NEG.
       if (const auto *CLHS = dyn_cast<Constant>(U->getOperand(0)))
         if (CLHS->isNullValue()) {
           KnownBits Known(TyBits);
-          computeKnownBits(U->getOperand(1), Known, Depth + 1, Q);
+          computeKnownBits(U->getOperand(1), DemandedElts, Known, Depth + 1, Q);
           // If the input is known to be 0 or 1, the output is 0/-1, which is
           // all sign bits set.
           if ((Known.Zero | 1).isAllOnes())
@@ -3531,17 +3969,22 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
       // Sub can have at most one carry bit.  Thus we know that the output
       // is, at worst, one more bit than the inputs.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-      if (Tmp == 1) break;
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
+      if (Tmp == 1)
+        break;
       return std::min(Tmp, Tmp2) - 1;
 
     case Instruction::Mul: {
       // The output of the Mul can be at most twice the valid bits in the
       // inputs.
-      unsigned SignBitsOp0 = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-      if (SignBitsOp0 == 1) break;
-      unsigned SignBitsOp1 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-      if (SignBitsOp1 == 1) break;
+      unsigned SignBitsOp0 =
+          ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
+      if (SignBitsOp0 == 1)
+        break;
+      unsigned SignBitsOp1 =
+          ComputeNumSignBits(U->getOperand(1), DemandedElts, Depth + 1, Q);
+      if (SignBitsOp1 == 1)
+        break;
       unsigned OutValidBits =
           (TyBits - SignBitsOp0 + 1) + (TyBits - SignBitsOp1 + 1);
       return OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
@@ -3557,13 +4000,13 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
       // Take the minimum of all incoming values.  This can't infinitely loop
       // because of our depth threshold.
-      SimplifyQuery RecQ = Q;
+      SimplifyQuery RecQ = Q.getWithoutCondContext();
       Tmp = TyBits;
       for (unsigned i = 0, e = NumIncomingValues; i != e; ++i) {
         if (Tmp == 1) return Tmp;
         RecQ.CxtI = PN->getIncomingBlock(i)->getTerminator();
-        Tmp = std::min(
-            Tmp, ComputeNumSignBits(PN->getIncomingValue(i), Depth + 1, RecQ));
+        Tmp = std::min(Tmp, ComputeNumSignBits(PN->getIncomingValue(i),
+                                               DemandedElts, Depth + 1, RecQ));
       }
       return Tmp;
     }
@@ -3624,10 +4067,13 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::Call: {
       if (const auto *II = dyn_cast<IntrinsicInst>(U)) {
         switch (II->getIntrinsicID()) {
-        default: break;
+        default:
+          break;
         case Intrinsic::abs:
-          Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-          if (Tmp == 1) break;
+          Tmp =
+              ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
+          if (Tmp == 1)
+            break;
 
           // Absolute value reduces number of sign bits by at most 1.
           return Tmp - 1;
@@ -3688,6 +4134,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_cosf:
   case LibFunc_cosl:
     return Intrinsic::cos;
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+    return Intrinsic::tan;
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -3903,7 +4353,7 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
                                                       Value *LHS, Value *RHS,
                                                       bool LookThroughSrc) {
   const APFloat *ConstRHS;
-  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
+  if (!match(RHS, m_APFloatAllowPoison(ConstRHS)))
     return {nullptr, fcAllFlags};
 
   return fcmpToClassTest(Pred, F, LHS, ConstRHS, LookThroughSrc);
@@ -3931,10 +4381,16 @@ std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        FPClassTest RHSClass, bool LookThroughSrc) {
   assert(RHSClass != fcNone);
+  Value *Src = LHS;
+
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return exactClass(Src, fcAllFlags);
+
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return exactClass(Src, fcNone);
 
   const FPClassTest OrigClass = RHSClass;
 
-  Value *Src = LHS;
   const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
   const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
   const bool IsNaN = (RHSClass & ~fcNan) == fcNone;
@@ -3952,12 +4408,6 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   // fcmp uno x, zero|normal|subnormal|inf -> fcNan
   if (Pred == FCmpInst::FCMP_UNO)
     return exactClass(Src, fcNan);
-
-  if (Pred == FCmpInst::FCMP_TRUE)
-    return exactClass(Src, fcAllFlags);
-
-  if (Pred == FCmpInst::FCMP_FALSE)
-    return exactClass(Src, fcNone);
 
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   if (IsFabs)
@@ -4304,7 +4754,7 @@ std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        Value *RHS, bool LookThroughSrc) {
   const APFloat *ConstRHS;
-  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
+  if (!match(RHS, m_APFloatAllowPoison(ConstRHS)))
     return {nullptr, fcAllFlags, fcAllFlags};
 
   // TODO: Just call computeKnownFPClass for RHS to handle non-constants.
@@ -4377,7 +4827,7 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
     assert(I->getFunction() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
-    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+    assert(I->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
 
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
@@ -4439,9 +4889,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
-  if (auto *CFP = dyn_cast_or_null<ConstantFP>(V)) {
+  if (auto *CFP = dyn_cast<ConstantFP>(V)) {
     Known.KnownFPClasses = CFP->getValueAPF().classify();
     Known.SignBit = CFP->isNegative();
+    return;
+  }
+
+  if (isa<ConstantAggregateZero>(V)) {
+    Known.KnownFPClasses = fcPosZero;
+    Known.SignBit = false;
+    return;
+  }
+
+  if (isa<PoisonValue>(V)) {
+    Known.KnownFPClasses = fcNone;
+    Known.SignBit = false;
     return;
   }
 
@@ -4456,12 +4918,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // For vectors, verify that each element is not NaN.
     unsigned NumElts = VFVTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
+      if (!DemandedElts[i])
+        continue;
+
       Constant *Elt = CV->getAggregateElement(i);
       if (!Elt) {
         Known = KnownFPClass();
         return;
       }
-      if (isa<UndefValue>(Elt))
+      if (isa<PoisonValue>(Elt))
         continue;
       auto *CElt = dyn_cast<ConstantFP>(Elt);
       if (!CElt) {
@@ -4650,11 +5115,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // subnormal input could produce a negative zero output.
       const Function *F = II->getFunction();
       if (Q.IIQ.hasNoSignedZeros(II) ||
-          (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType()))) {
+          (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType())))
         Known.knownNot(fcNegZero);
-        if (KnownSrc.isKnownNeverNaN())
-          Known.signBitMustBeZero();
-      }
 
       break;
     }
@@ -4804,6 +5266,25 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       break;
     }
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmin:
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fminimum: {
+      // reduce min/max will choose an element from one of the vector elements,
+      // so we can infer and class information that is common to all elements.
+      Known = computeKnownFPClass(II->getArgOperand(0), II->getFastMathFlags(),
+                                  InterestedClasses, Depth + 1, Q);
+      // Can only propagate sign if output is never NaN.
+      if (!Known.isKnownNeverNaN())
+        Known.SignBit.reset();
+      break;
+    }
+      // reverse preserves all characteristics of the input vec's element.
+    case Intrinsic::vector_reverse:
+      Known = computeKnownFPClass(
+          II->getArgOperand(0), DemandedElts.reverseBits(),
+          II->getFastMathFlags(), InterestedClasses, Depth + 1, Q);
+      break;
     case Intrinsic::trunc:
     case Intrinsic::floor:
     case Intrinsic::ceil:
@@ -5293,14 +5774,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const Value *Vec = Op->getOperand(0);
     const Value *Elt = Op->getOperand(1);
     auto *CIdx = dyn_cast<ConstantInt>(Op->getOperand(2));
-    // Early out if the index is non-constant or out-of-range.
     unsigned NumElts = DemandedElts.getBitWidth();
-    if (!CIdx || CIdx->getValue().uge(NumElts))
-      return;
+    APInt DemandedVecElts = DemandedElts;
+    bool NeedsElt = true;
+    // If we know the index we are inserting to, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      NeedsElt = DemandedElts[CIdx->getZExtValue()];
+    }
 
-    unsigned EltIdx = CIdx->getZExtValue();
     // Do we demand the inserted element?
-    if (DemandedElts[EltIdx]) {
+    if (NeedsElt) {
       computeKnownFPClass(Elt, Known, InterestedClasses, Depth + 1, Q);
       // If we don't know any bits, early out.
       if (Known.isUnknown())
@@ -5309,10 +5793,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known.KnownFPClasses = fcNone;
     }
 
-    // We don't need the base vector element that has been inserted.
-    APInt DemandedVecElts = DemandedElts;
-    DemandedVecElts.clearBit(EltIdx);
-    if (!!DemandedVecElts) {
+    // Do we need anymore elements from Vec?
+    if (!DemandedVecElts.isZero()) {
       KnownFPClass Known2;
       computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known2,
                           Depth + 1, Q);
@@ -5426,10 +5908,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Recurse, but cap the recursion to two levels, because we don't want
         // to waste time spinning around in loops. We need at least depth 2 to
         // detect known sign bits.
-        computeKnownFPClass(
-            IncValue, DemandedElts, InterestedClasses, KnownSrc,
-            PhiRecursionLimit,
-            Q.getWithInstruction(P->getIncomingBlock(U)->getTerminator()));
+        computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
+                            PhiRecursionLimit,
+                            Q.getWithoutCondContext().getWithInstruction(
+                                P->getIncomingBlock(U)->getTerminator()));
 
         if (First) {
           Known = KnownSrc;
@@ -5701,7 +6183,7 @@ llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
       // looking for, then.
       if (*req_idx != *i)
         return FindInsertedValue(I->getAggregateOperand(), idx_range,
-                                 *InsertBefore);
+                                 InsertBefore);
     }
     // If we end up here, the indices of the insertvalue match with those
     // requested (though possibly only partially). Now we recursively look at
@@ -5779,7 +6261,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
     // Fail if V is not based on constant global object.
     return false;
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   APInt Off(DL.getIndexTypeSizeInBits(V->getType()), 0);
 
   if (GV != V->stripAndAccumulateConstantOffsets(DL, Off,
@@ -6013,6 +6495,10 @@ bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     return true;
   case Intrinsic::ptrmask:
     return !MustPreserveNullness;
+  case Intrinsic::threadlocal_address:
+    // The underlying variable changes with thread ID. The Thread ID may change
+    // at coroutine suspend points.
+    return !Call->getParent()->getParent()->isPresplitCoroutine();
   default:
     return false;
   }
@@ -6053,9 +6539,10 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
-      V = cast<Operator>(V)->getOperand(0);
-      if (!V->getType()->isPointerTy())
+      Value *NewV = cast<Operator>(V)->getOperand(0);
+      if (!NewV->getType()->isPointerTy())
         return V;
+      V = NewV;
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (GA->isInterposable())
         return V;
@@ -6092,7 +6579,7 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
 
 void llvm::getUnderlyingObjects(const Value *V,
                                 SmallVectorImpl<const Value *> &Objects,
-                                LoopInfo *LI, unsigned MaxLookup) {
+                                const LoopInfo *LI, unsigned MaxLookup) {
   SmallPtrSet<const Value *, 4> Visited;
   SmallVector<const Value *, 4> Worklist;
   Worklist.push_back(V);
@@ -6123,11 +6610,55 @@ void llvm::getUnderlyingObjects(const Value *V,
       if (!LI || !LI->isLoopHeader(PN->getParent()) ||
           isSameUnderlyingObjectInLoop(PN, LI))
         append_range(Worklist, PN->incoming_values());
+      else
+        Objects.push_back(P);
       continue;
     }
 
     Objects.push_back(P);
   } while (!Worklist.empty());
+}
+
+const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
+  const unsigned MaxVisited = 8;
+
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *, 8> Worklist;
+  Worklist.push_back(V);
+  const Value *Object = nullptr;
+  // Used as fallback if we can't find a common underlying object through
+  // recursion.
+  bool First = true;
+  const Value *FirstObject = getUnderlyingObject(V);
+  do {
+    const Value *P = Worklist.pop_back_val();
+    P = First ? FirstObject : getUnderlyingObject(P);
+    First = false;
+
+    if (!Visited.insert(P).second)
+      continue;
+
+    if (Visited.size() == MaxVisited)
+      return FirstObject;
+
+    if (auto *SI = dyn_cast<SelectInst>(P)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+      continue;
+    }
+
+    if (auto *PN = dyn_cast<PHINode>(P)) {
+      append_range(Worklist, PN->incoming_values());
+      continue;
+    }
+
+    if (!Object)
+      Object = P;
+    else if (Object != P)
+      return FirstObject;
+  } while (!Worklist.empty());
+
+  return Object;
 }
 
 /// This is the function that does the work of looking through basic
@@ -6266,30 +6797,20 @@ bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
       V, /* AllowLifetime */ true, /* AllowDroppable */ true);
 }
 
-bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
-  if (!LI.isUnordered())
-    return true;
-  const Function &F = *LI.getFunction();
-  // Speculative load may create a race that did not exist in the source.
-  return F.hasFnAttribute(Attribute::SanitizeThread) ||
-    // Speculative load may load data from dirty regions.
-    F.hasFnAttribute(Attribute::SanitizeAddress) ||
-    F.hasFnAttribute(Attribute::SanitizeHWAddress);
-}
-
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         const Instruction *CtxI,
                                         AssumptionCache *AC,
                                         const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI) {
+                                        const TargetLibraryInfo *TLI,
+                                        bool UseVariableInfo) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI);
+                                                AC, DT, TLI, UseVariableInfo);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
-    AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI) {
+    AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
+    bool UseVariableInfo) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -6341,12 +6862,15 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     return false;
   }
   case Instruction::Load: {
+    if (!UseVariableInfo)
+      return false;
+
     const LoadInst *LI = dyn_cast<LoadInst>(Inst);
     if (!LI)
       return false;
     if (mustSuppressSpeculation(*LI))
       return false;
-    const DataLayout &DL = LI->getModule()->getDataLayout();
+    const DataLayout &DL = LI->getDataLayout();
     return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
                                               LI->getType(), LI->getAlign(), DL,
                                               CtxI, AC, DT, TLI);
@@ -6432,9 +6956,15 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
 
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const Value *RHS,
-                                                   const SimplifyQuery &SQ) {
+                                                   const SimplifyQuery &SQ,
+                                                   bool IsNSW) {
   KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, SQ);
   KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, SQ);
+
+  // mul nsw of two non-negative numbers is also nuw.
+  if (IsNSW && LHSKnown.isNonNegative() && RHSKnown.isNonNegative())
+    return OverflowResult::NeverOverflows;
+
   ConstantRange LHSRange = ConstantRange::fromKnownBits(LHSKnown, false);
   ConstantRange RHSRange = ConstantRange::fromKnownBits(RHSKnown, false);
   return mapOverflowResult(LHSRange.unsignedMulMayOverflow(RHSRange));
@@ -6568,16 +7098,13 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
     if (isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT))
       return OverflowResult::NeverOverflows;
 
-  // Checking for conditions implied by dominating conditions may be expensive.
-  // Limit it to usub_with_overflow calls for now.
-  if (match(SQ.CxtI,
-            m_Intrinsic<Intrinsic::usub_with_overflow>(m_Value(), m_Value())))
-    if (auto C = isImpliedByDomCondition(CmpInst::ICMP_UGE, LHS, RHS, SQ.CxtI,
-                                         SQ.DL)) {
-      if (*C)
-        return OverflowResult::NeverOverflows;
-      return OverflowResult::AlwaysOverflowsLow;
-    }
+  if (auto C = isImpliedByDomCondition(CmpInst::ICMP_UGE, LHS, RHS, SQ.CxtI,
+                                       SQ.DL)) {
+    if (*C)
+      return OverflowResult::NeverOverflows;
+    return OverflowResult::AlwaysOverflowsLow;
+  }
+
   ConstantRange LHSRange =
       computeConstantRangeIncludingKnownBits(LHS, /*ForSigned=*/false, SQ);
   ConstantRange RHSRange =
@@ -6707,7 +7234,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
 
   if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-      Op->hasPoisonGeneratingFlagsOrMetadata())
+      Op->hasPoisonGeneratingAnnotations())
     return true;
 
   unsigned Opcode = Op->getOpcode();
@@ -6950,10 +7477,13 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C))
-      return (!includesUndef(Kind) ? !C->containsPoisonElement()
-                                   : !C->containsUndefOrPoisonElement()) &&
-             !C->containsConstantExpression();
+    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C)) {
+      if (includesUndef(Kind) && C->containsUndefElement())
+        return false;
+      if (includesPoison(Kind) && C->containsPoisonElement())
+        return false;
+      return !C->containsConstantExpression();
+    }
   }
 
   // Strip cast operations from a pointer value.
@@ -7029,31 +7559,35 @@ static bool isGuaranteedNotToBeUndefOrPoison(
   // BB1:
   //   CtxI ; V cannot be undef or poison here
   auto *Dominator = DNode->getIDom();
-  while (Dominator) {
-    auto *TI = Dominator->getBlock()->getTerminator();
+  // This check is purely for compile time reasons: we can skip the IDom walk
+  // if what we are checking for includes undef and the value is not an integer.
+  if (!includesUndef(Kind) || V->getType()->isIntegerTy())
+    while (Dominator) {
+      auto *TI = Dominator->getBlock()->getTerminator();
 
-    Value *Cond = nullptr;
-    if (auto BI = dyn_cast_or_null<BranchInst>(TI)) {
-      if (BI->isConditional())
-        Cond = BI->getCondition();
-    } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
-      Cond = SI->getCondition();
-    }
-
-    if (Cond) {
-      if (Cond == V)
-        return true;
-      else if (!includesUndef(Kind) && isa<Operator>(Cond)) {
-        // For poison, we can analyze further
-        auto *Opr = cast<Operator>(Cond);
-        if (any_of(Opr->operands(),
-                   [V](const Use &U) { return V == U && propagatesPoison(U); }))
-          return true;
+      Value *Cond = nullptr;
+      if (auto BI = dyn_cast_or_null<BranchInst>(TI)) {
+        if (BI->isConditional())
+          Cond = BI->getCondition();
+      } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
+        Cond = SI->getCondition();
       }
-    }
 
-    Dominator = Dominator->getIDom();
-  }
+      if (Cond) {
+        if (Cond == V)
+          return true;
+        else if (!includesUndef(Kind) && isa<Operator>(Cond)) {
+          // For poison, we can analyze further
+          auto *Opr = cast<Operator>(Cond);
+          if (any_of(Opr->operands(), [V](const Use &U) {
+                return V == U && propagatesPoison(U);
+              }))
+            return true;
+        }
+      }
+
+      Dominator = Dominator->getIDom();
+    }
 
   if (getKnowledgeValidInContext(V, {Attribute::NoUndef}, CtxI, DT, AC))
     return true;
@@ -7795,17 +8329,27 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
-bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW) {
+bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
+                           bool AllowPoison) {
   assert(X && Y && "Invalid operand");
 
-  // X = sub (0, Y) || X = sub nsw (0, Y)
-  if ((!NeedNSW && match(X, m_Sub(m_ZeroInt(), m_Specific(Y)))) ||
-      (NeedNSW && match(X, m_NSWSub(m_ZeroInt(), m_Specific(Y)))))
-    return true;
+  auto IsNegationOf = [&](const Value *X, const Value *Y) {
+    if (!match(X, m_Neg(m_Specific(Y))))
+      return false;
 
-  // Y = sub (0, X) || Y = sub nsw (0, X)
-  if ((!NeedNSW && match(Y, m_Sub(m_ZeroInt(), m_Specific(X)))) ||
-      (NeedNSW && match(Y, m_NSWSub(m_ZeroInt(), m_Specific(X)))))
+    auto *BO = cast<BinaryOperator>(X);
+    if (NeedNSW && !BO->hasNoSignedWrap())
+      return false;
+
+    auto *Zero = cast<Constant>(BO->getOperand(0));
+    if (!AllowPoison && !Zero->isNullValue())
+      return false;
+
+    return true;
+  };
+
+  // X = -Y or Y = -X
+  if (IsNegationOf(X, Y) || IsNegationOf(Y, X))
     return true;
 
   // X = sub (A, B), Y = sub (B, A) || X = sub nsw (A, B), Y = sub nsw (B, A)
@@ -7814,6 +8358,28 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW) {
                         match(Y, m_Sub(m_Specific(B), m_Specific(A))))) ||
          (NeedNSW && (match(X, m_NSWSub(m_Value(A), m_Value(B))) &&
                        match(Y, m_NSWSub(m_Specific(B), m_Specific(A)))));
+}
+
+bool llvm::isKnownInversion(const Value *X, const Value *Y) {
+  // Handle X = icmp pred A, B, Y = icmp pred A, C.
+  Value *A, *B, *C;
+  ICmpInst::Predicate Pred1, Pred2;
+  if (!match(X, m_ICmp(Pred1, m_Value(A), m_Value(B))) ||
+      !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
+    return false;
+
+  if (B == C)
+    return Pred1 == ICmpInst::getInversePredicate(Pred2);
+
+  // Try to infer the relationship from constant ranges.
+  const APInt *RHSC1, *RHSC2;
+  if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
+    return false;
+
+  const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
+  const auto CR2 = ConstantRange::makeExactICmpRegion(Pred2, *RHSC2);
+
+  return CR1.inverse() == CR2;
 }
 
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
@@ -8041,7 +8607,7 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
   if (!C)
     return nullptr;
 
-  const DataLayout &DL = CmpI->getModule()->getDataLayout();
+  const DataLayout &DL = CmpI->getDataLayout();
   Constant *CastedTo = nullptr;
   switch (*CastOp) {
   case Instruction::ZExt:
@@ -8232,10 +8798,7 @@ llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
   if (all_of(VL, [&SelectPattern, &AllCmpSingleUse](Value *I) {
         Value *LHS, *RHS;
         auto CurrentPattern = matchSelectPattern(I, LHS, RHS);
-        if (!SelectPatternResult::isMinOrMax(CurrentPattern.Flavor) ||
-            CurrentPattern.Flavor == SPF_FMINNUM ||
-            CurrentPattern.Flavor == SPF_FMAXNUM ||
-            !I->getType()->isIntOrIntVectorTy())
+        if (!SelectPatternResult::isMinOrMax(CurrentPattern.Flavor))
           return false;
         if (SelectPattern.Flavor != SPF_UNKNOWN &&
             SelectPattern.Flavor != CurrentPattern.Flavor)
@@ -8254,6 +8817,10 @@ llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
       return {Intrinsic::smax, AllCmpSingleUse};
     case SPF_UMAX:
       return {Intrinsic::umax, AllCmpSingleUse};
+    case SPF_FMAXNUM:
+      return {Intrinsic::maxnum, AllCmpSingleUse};
+    case SPF_FMINNUM:
+      return {Intrinsic::minnum, AllCmpSingleUse};
     default:
       llvm_unreachable("unexpected select pattern flavor");
     }
@@ -8329,8 +8896,7 @@ bool llvm::matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
 
 /// Return true if "icmp Pred LHS RHS" is always true.
 static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
-                            const Value *RHS, const DataLayout &DL,
-                            unsigned Depth) {
+                            const Value *RHS) {
   if (ICmpInst::isTrueWhenEqual(Pred) && LHS == RHS)
     return true;
 
@@ -8342,8 +8908,26 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
     const APInt *C;
 
     // LHS s<= LHS +_{nsw} C   if C >= 0
-    if (match(RHS, m_NSWAdd(m_Specific(LHS), m_APInt(C))))
+    // LHS s<= LHS | C         if C >= 0
+    if (match(RHS, m_NSWAdd(m_Specific(LHS), m_APInt(C))) ||
+        match(RHS, m_Or(m_Specific(LHS), m_APInt(C))))
       return !C->isNegative();
+
+    // LHS s<= smax(LHS, V) for any V
+    if (match(RHS, m_c_SMax(m_Specific(LHS), m_Value())))
+      return true;
+
+    // smin(RHS, V) s<= RHS for any V
+    if (match(LHS, m_c_SMin(m_Specific(RHS), m_Value())))
+      return true;
+
+    // Match A to (X +_{nsw} CA) and B to (X +_{nsw} CB)
+    const Value *X;
+    const APInt *CLHS, *CRHS;
+    if (match(LHS, m_NSWAddLike(m_Value(X), m_APInt(CLHS))) &&
+        match(RHS, m_NSWAddLike(m_Specific(X), m_APInt(CRHS))))
+      return CLHS->sle(*CRHS);
+
     return false;
   }
 
@@ -8353,34 +8937,36 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
         cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
       return true;
 
+    // LHS u<= LHS | V for any V
+    if (match(RHS, m_c_Or(m_Specific(LHS), m_Value())))
+      return true;
+
+    // LHS u<= umax(LHS, V) for any V
+    if (match(RHS, m_c_UMax(m_Specific(LHS), m_Value())))
+      return true;
+
     // RHS >> V u<= RHS for any V
     if (match(LHS, m_LShr(m_Specific(RHS), m_Value())))
       return true;
 
+    // RHS u/ C_ugt_1 u<= RHS
+    const APInt *C;
+    if (match(LHS, m_UDiv(m_Specific(RHS), m_APInt(C))) && C->ugt(1))
+      return true;
+
+    // RHS & V u<= RHS for any V
+    if (match(LHS, m_c_And(m_Specific(RHS), m_Value())))
+      return true;
+
+    // umin(RHS, V) u<= RHS for any V
+    if (match(LHS, m_c_UMin(m_Specific(RHS), m_Value())))
+      return true;
+
     // Match A to (X +_{nuw} CA) and B to (X +_{nuw} CB)
-    auto MatchNUWAddsToSameValue = [&](const Value *A, const Value *B,
-                                       const Value *&X,
-                                       const APInt *&CA, const APInt *&CB) {
-      if (match(A, m_NUWAdd(m_Value(X), m_APInt(CA))) &&
-          match(B, m_NUWAdd(m_Specific(X), m_APInt(CB))))
-        return true;
-
-      // If X & C == 0 then (X | C) == X +_{nuw} C
-      if (match(A, m_Or(m_Value(X), m_APInt(CA))) &&
-          match(B, m_Or(m_Specific(X), m_APInt(CB)))) {
-        KnownBits Known(CA->getBitWidth());
-        computeKnownBits(X, Known, DL, Depth + 1, /*AC*/ nullptr,
-                         /*CxtI*/ nullptr, /*DT*/ nullptr);
-        if (CA->isSubsetOf(Known.Zero) && CB->isSubsetOf(Known.Zero))
-          return true;
-      }
-
-      return false;
-    };
-
     const Value *X;
     const APInt *CLHS, *CRHS;
-    if (MatchNUWAddsToSameValue(LHS, RHS, X, CLHS, CRHS))
+    if (match(LHS, m_NUWAddLike(m_Value(X), m_APInt(CLHS))) &&
+        match(RHS, m_NUWAddLike(m_Specific(X), m_APInt(CRHS))))
       return CLHS->ule(*CRHS);
 
     return false;
@@ -8392,50 +8978,39 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
 /// ALHS ARHS" is true.  Otherwise, return std::nullopt.
 static std::optional<bool>
 isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
-                      const Value *ARHS, const Value *BLHS, const Value *BRHS,
-                      const DataLayout &DL, unsigned Depth) {
+                      const Value *ARHS, const Value *BLHS, const Value *BRHS) {
   switch (Pred) {
   default:
     return std::nullopt;
 
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SLE:
-    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS) &&
+        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_SGT:
   case CmpInst::ICMP_SGE:
-    if (isTruePredicate(CmpInst::ICMP_SLE, ALHS, BLHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_SLE, BRHS, ARHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_SLE, ALHS, BLHS) &&
+        isTruePredicate(CmpInst::ICMP_SLE, BRHS, ARHS))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
-    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS) &&
+        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS))
       return true;
     return std::nullopt;
 
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_UGE:
-    if (isTruePredicate(CmpInst::ICMP_ULE, ALHS, BLHS, DL, Depth) &&
-        isTruePredicate(CmpInst::ICMP_ULE, BRHS, ARHS, DL, Depth))
+    if (isTruePredicate(CmpInst::ICMP_ULE, ALHS, BLHS) &&
+        isTruePredicate(CmpInst::ICMP_ULE, BRHS, ARHS))
       return true;
     return std::nullopt;
   }
-}
-
-/// Return true if the operands of two compares (expanded as "L0 pred L1" and
-/// "R0 pred R1") match. IsSwappedOps is true when the operands match, but are
-/// swapped.
-static bool areMatchingOperands(const Value *L0, const Value *L1, const Value *R0,
-                           const Value *R1, bool &AreSwappedOps) {
-  bool AreMatchingOps = (L0 == R0 && L1 == R1);
-  AreSwappedOps = (L0 == R1 && L1 == R0);
-  return AreMatchingOps || AreSwappedOps;
 }
 
 /// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
@@ -8443,11 +9018,7 @@ static bool areMatchingOperands(const Value *L0, const Value *L1, const Value *R
 /// Otherwise, return std::nullopt if we can't infer anything.
 static std::optional<bool>
 isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
-                              CmpInst::Predicate RPred, bool AreSwappedOps) {
-  // Canonicalize the predicate as if the operands were not commuted.
-  if (AreSwappedOps)
-    RPred = ICmpInst::getSwappedPredicate(RPred);
-
+                              CmpInst::Predicate RPred) {
   if (CmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
     return true;
   if (CmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
@@ -8456,20 +9027,20 @@ isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
   return std::nullopt;
 }
 
-/// Return true if "icmp LPred X, LC" implies "icmp RPred X, RC" is true.
-/// Return false if "icmp LPred X, LC" implies "icmp RPred X, RC" is false.
+/// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
+/// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondCommonOperandWithConstants(
-    CmpInst::Predicate LPred, const APInt &LC, CmpInst::Predicate RPred,
-    const APInt &RC) {
-  ConstantRange DomCR = ConstantRange::makeExactICmpRegion(LPred, LC);
-  ConstantRange CR = ConstantRange::makeExactICmpRegion(RPred, RC);
-  ConstantRange Intersection = DomCR.intersectWith(CR);
-  ConstantRange Difference = DomCR.difference(CR);
-  if (Intersection.isEmptySet())
-    return false;
-  if (Difference.isEmptySet())
+static std::optional<bool> isImpliedCondCommonOperandWithCR(
+    CmpInst::Predicate LPred, const ConstantRange &LCR,
+    CmpInst::Predicate RPred, const ConstantRange &RCR) {
+  ConstantRange DomCR = ConstantRange::makeAllowedICmpRegion(LPred, LCR);
+  // If all true values for lhs and true for rhs, lhs implies rhs
+  if (DomCR.icmp(RPred, RCR))
     return true;
+
+  // If there is no overlap, lhs implies not rhs
+  if (DomCR.icmp(CmpInst::getInversePredicate(RPred), RCR))
+    return false;
   return std::nullopt;
 }
 
@@ -8480,7 +9051,7 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
                                               CmpInst::Predicate RPred,
                                               const Value *R0, const Value *R1,
                                               const DataLayout &DL,
-                                              bool LHSIsTrue, unsigned Depth) {
+                                              bool LHSIsTrue) {
   Value *L0 = LHS->getOperand(0);
   Value *L1 = LHS->getOperand(1);
 
@@ -8489,42 +9060,63 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   CmpInst::Predicate LPred =
       LHSIsTrue ? LHS->getPredicate() : LHS->getInversePredicate();
 
-  // Can we infer anything when the 0-operands match and the 1-operands are
-  // constants (not necessarily matching)?
-  const APInt *LC, *RC;
-  if (L0 == R0 && match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)))
-    return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
-
-  // Can we infer anything when the two compares have matching operands?
-  bool AreSwappedOps;
-  if (areMatchingOperands(L0, L1, R0, R1, AreSwappedOps))
-    return isImpliedCondMatchingOperands(LPred, RPred, AreSwappedOps);
-
-  // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
-  if (ICmpInst::isUnsigned(LPred) && ICmpInst::isUnsigned(RPred)) {
-    if (L0 == R1) {
-      std::swap(R0, R1);
-      RPred = ICmpInst::getSwappedPredicate(RPred);
-    }
-    if (L1 == R0) {
-      std::swap(L0, L1);
-      LPred = ICmpInst::getSwappedPredicate(LPred);
-    }
-    if (L1 == R1) {
+  // We can have non-canonical operands, so try to normalize any common operand
+  // to L0/R0.
+  if (L0 == R1) {
+    std::swap(R0, R1);
+    RPred = ICmpInst::getSwappedPredicate(RPred);
+  }
+  if (R0 == L1) {
+    std::swap(L0, L1);
+    LPred = ICmpInst::getSwappedPredicate(LPred);
+  }
+  if (L1 == R1) {
+    // If we have L0 == R0 and L1 == R1, then make L1/R1 the constants.
+    if (L0 != R0 || match(L0, m_ImmConstant())) {
       std::swap(L0, L1);
       LPred = ICmpInst::getSwappedPredicate(LPred);
       std::swap(R0, R1);
       RPred = ICmpInst::getSwappedPredicate(RPred);
     }
-    if (L0 == R0 &&
-        (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
-        (RPred == ICmpInst::ICMP_ULT || RPred == ICmpInst::ICMP_UGE) &&
-        match(L0, m_c_Add(m_Specific(L1), m_Specific(R1))))
-      return LPred == RPred;
   }
 
+  // See if we can infer anything if operand-0 matches and we have at least one
+  // constant.
+  const APInt *Unused;
+  if (L0 == R0 && (match(L1, m_APInt(Unused)) || match(R1, m_APInt(Unused)))) {
+    // Potential TODO: We could also further use the constant range of L0/R0 to
+    // further constraint the constant ranges. At the moment this leads to
+    // several regressions related to not transforming `multi_use(A + C0) eq/ne
+    // C1` (see discussion: D58633).
+    ConstantRange LCR = computeConstantRange(
+        L1, ICmpInst::isSigned(LPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
+        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    ConstantRange RCR = computeConstantRange(
+        R1, ICmpInst::isSigned(RPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
+        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    // Even if L1/R1 are not both constant, we can still sometimes deduce
+    // relationship from a single constant. For example X u> Y implies X != 0.
+    if (auto R = isImpliedCondCommonOperandWithCR(LPred, LCR, RPred, RCR))
+      return R;
+    // If both L1/R1 were exact constant ranges and we didn't get anything
+    // here, we won't be able to deduce this.
+    if (match(L1, m_APInt(Unused)) && match(R1, m_APInt(Unused)))
+      return std::nullopt;
+  }
+
+  // Can we infer anything when the two compares have matching operands?
+  if (L0 == R0 && L1 == R1)
+    return isImpliedCondMatchingOperands(LPred, RPred);
+
+  // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
+  if (L0 == R0 &&
+      (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
+      (RPred == ICmpInst::ICMP_ULT || RPred == ICmpInst::ICMP_UGE) &&
+      match(L0, m_c_Add(m_Specific(L1), m_Specific(R1))))
+    return LPred == RPred;
+
   if (LPred == RPred)
-    return isImpliedCondOperands(LPred, L0, L1, R0, R1, DL, Depth);
+    return isImpliedCondOperands(LPred, L0, L1, R0, R1);
 
   return std::nullopt;
 }
@@ -8579,11 +9171,14 @@ llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
   assert(LHS->getType()->isIntOrIntVectorTy(1) &&
          "Expected integer type only!");
 
+  // Match not
+  if (match(LHS, m_Not(m_Value(LHS))))
+    LHSIsTrue = !LHSIsTrue;
+
   // Both LHS and RHS are icmps.
   const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
   if (LHSCmp)
-    return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
-                              Depth);
+    return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
 
   /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
   /// the RHS to be an icmp.
@@ -8605,10 +9200,21 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   if (LHS == RHS)
     return LHSIsTrue;
 
-  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS))
-    return isImpliedCondition(LHS, RHSCmp->getPredicate(),
-                              RHSCmp->getOperand(0), RHSCmp->getOperand(1), DL,
-                              LHSIsTrue, Depth);
+  // Match not
+  bool InvertRHS = false;
+  if (match(RHS, m_Not(m_Value(RHS)))) {
+    if (LHS == RHS)
+      return !LHSIsTrue;
+    InvertRHS = true;
+  }
+
+  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
+    if (auto Implied = isImpliedCondition(
+            LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
+            RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+      return InvertRHS ? !*Implied : *Implied;
+    return std::nullopt;
+  }
 
   if (Depth == MaxAnalysisRecursionDepth)
     return std::nullopt;
@@ -8620,21 +9226,21 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS1, DL, LHSIsTrue, Depth + 1))
       if (*Imp == true)
-        return true;
+        return !InvertRHS;
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS2, DL, LHSIsTrue, Depth + 1))
       if (*Imp == true)
-        return true;
+        return !InvertRHS;
   }
   if (match(RHS, m_LogicalAnd(m_Value(RHS1), m_Value(RHS2)))) {
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS1, DL, LHSIsTrue, Depth + 1))
       if (*Imp == false)
-        return false;
+        return InvertRHS;
     if (std::optional<bool> Imp =
             isImpliedCondition(LHS, RHS2, DL, LHSIsTrue, Depth + 1))
       if (*Imp == false)
-        return false;
+        return InvertRHS;
   }
 
   return std::nullopt;
@@ -8987,6 +9593,10 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
+                                      APInt(Width, 2));
   default:
     break;
   }
@@ -9068,19 +9678,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   if (Depth == MaxAnalysisRecursionDepth)
     return ConstantRange::getFull(V->getType()->getScalarSizeInBits());
 
-  const APInt *C;
-  if (match(V, m_APInt(C)))
-    return ConstantRange(*C);
+  if (auto *C = dyn_cast<Constant>(V))
+    return C->toConstantRange();
+
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
-
-  if (auto *VC = dyn_cast<ConstantDataVector>(V)) {
-    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
-    for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
-         ++ElemIdx)
-      CR = CR.unionWith(VC->getElementAsAPInt(ElemIdx));
-    return CR;
-  }
-
   InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
@@ -9104,11 +9705,18 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     // TODO: Return ConstantRange.
     setLimitForFPToI(cast<Instruction>(V), Lower, Upper);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
-  }
+  } else if (const auto *A = dyn_cast<Argument>(V))
+    if (std::optional<ConstantRange> Range = A->getRange())
+      CR = *Range;
 
-  if (auto *I = dyn_cast<Instruction>(V))
+  if (auto *I = dyn_cast<Instruction>(V)) {
     if (auto *Range = IIQ.getMetadata(I, LLVMContext::MD_range))
       CR = CR.intersectWith(getConstantRangeFromMetadata(*Range));
+
+    if (const auto *CB = dyn_cast<CallBase>(V))
+      if (std::optional<ConstantRange> Range = CB->getRange())
+        CR = CR.intersectWith(*Range);
+  }
 
   if (CtxI && AC) {
     // Try to restrict the range based on information from assumptions.
@@ -9118,7 +9726,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       CallInst *I = cast<CallInst>(AssumeVH);
       assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
-      assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+      assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
       if (!isValidAssumeForContext(I, CtxI, DT))
@@ -9204,18 +9812,41 @@ void llvm::findValuesAffectedByCondition(
 
       if (ICmpInst::isEquality(Pred)) {
         if (match(B, m_ConstantInt())) {
+          Value *Y;
           // (X & C) or (X | C) or (X ^ C).
           // (X << C) or (X >>_s C) or (X >>_u C).
           if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
               match(A, m_Shift(m_Value(X), m_ConstantInt())))
             AddAffected(X);
+          else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
+                   match(A, m_Or(m_Value(X), m_Value(Y)))) {
+            AddAffected(X);
+            AddAffected(Y);
+          }
         }
       } else {
-        // Handle (A + C1) u< C2, which is the canonical form of
-        // A > C3 && A < C4.
-        if (match(A, m_Add(m_Value(X), m_ConstantInt())) &&
-            match(B, m_ConstantInt()))
-          AddAffected(X);
+        if (match(B, m_ConstantInt())) {
+          // Handle (A + C1) u< C2, which is the canonical form of
+          // A > C3 && A < C4.
+          if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
+            AddAffected(X);
+
+          if (ICmpInst::isUnsigned(Pred)) {
+            Value *Y;
+            // X & Y u> C    -> X >u C && Y >u C
+            // X | Y u< C    -> X u< C && Y u< C
+            // X nuw+ Y u< C -> X u< C && Y u< C
+            if (match(A, m_And(m_Value(X), m_Value(Y))) ||
+                match(A, m_Or(m_Value(X), m_Value(Y))) ||
+                match(A, m_NUWAdd(m_Value(X), m_Value(Y)))) {
+              AddAffected(X);
+              AddAffected(Y);
+            }
+            // X nuw- Y u> C -> X u> C
+            if (match(A, m_NUWSub(m_Value(X), m_Value())))
+              AddAffected(X);
+          }
+        }
 
         // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported
         // by computeKnownFPClass().

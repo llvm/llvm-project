@@ -100,6 +100,7 @@ liveins:
   - { reg: '$rdi', virtual-reg: '%2' }
   - { reg: '$esi', virtual-reg: '%4' }
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |

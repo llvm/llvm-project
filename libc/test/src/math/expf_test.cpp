@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/expf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <stdint.h>
 
@@ -108,7 +108,7 @@ TEST_F(LlvmLibcExpfTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::expf(x);
@@ -117,7 +117,8 @@ TEST_F(LlvmLibcExpfTest, InFloatRange) {
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (isnan(result) || isinf(result) || LIBC_NAMESPACE::libc_errno != 0)
+    if (FPBits(result).is_nan() || FPBits(result).is_inf() ||
+        LIBC_NAMESPACE::libc_errno != 0)
       continue;
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x,
                                    LIBC_NAMESPACE::expf(x), 0.5);

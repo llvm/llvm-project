@@ -105,9 +105,9 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-      .EndsWith("Decl *", "Record.GetLocalDeclAs<" +
+      .EndsWith("Decl *", "Record.readDeclAs<" +
                               std::string(type.data(), 0, type.size() - 1) +
-                              ">(Record.readInt())")
+                              ">()")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
       .Case("IdentifierInfo *", "Record.readIdentifier()")
@@ -903,13 +903,15 @@ namespace {
     StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
     bool isExternal;
+    bool isCovered;
 
   public:
     EnumArgument(const Record &Arg, StringRef Attr)
         : Argument(Arg, Attr), values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
           uniques(uniqueEnumsInOrder(enums)),
-          isExternal(Arg.getValueAsBit("IsExternalType")) {
+          isExternal(Arg.getValueAsBit("IsExternalType")),
+          isCovered(Arg.getValueAsBit("IsCovered")) {
       StringRef Type = Arg.getValueAsString("Type");
       shortType = isExternal ? Type.rsplit("::").second : Type;
       // If shortType didn't contain :: at all rsplit will give us an empty
@@ -993,7 +995,7 @@ namespace {
         OS << "      OS << \" " << I << "\";\n";
         OS << "      break;\n";
       }
-      if (isExternal) {
+      if (!isCovered) {
         OS << "    default:\n";
         OS << "      llvm_unreachable(\"Invalid attribute value\");\n";
       }
@@ -1036,7 +1038,7 @@ namespace {
           OS << "  case " << fullType << "::" << enums[I] << ": return \""
              << values[I] << "\";\n";
       }
-      if (isExternal) {
+      if (!isCovered) {
         OS << "  default: llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "  }\n"
@@ -1050,6 +1052,7 @@ namespace {
     StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
     bool isExternal;
+    bool isCovered;
 
   protected:
     void writeValueImpl(raw_ostream &OS) const override {
@@ -1068,7 +1071,8 @@ namespace {
           values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
           uniques(uniqueEnumsInOrder(enums)),
-          isExternal(Arg.getValueAsBit("IsExternalType")) {
+          isExternal(Arg.getValueAsBit("IsExternalType")),
+          isCovered(Arg.getValueAsBit("IsCovered")) {
       StringRef Type = Arg.getValueAsString("Type");
       shortType = isExternal ? Type.rsplit("::").second : Type;
       // If shortType didn't contain :: at all rsplit will give us an empty
@@ -1110,6 +1114,10 @@ namespace {
         OS << "    case " << fullType << "::" << UI << ":\n";
         OS << "      OS << \" " << UI << "\";\n";
         OS << "      break;\n";
+      }
+      if (!isCovered) {
+        OS << "    default:\n";
+        OS << "      llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "      }\n";
       OS << "    }\n";
@@ -1167,6 +1175,9 @@ namespace {
         if (Uniques.insert(enums[I]).second)
           OS << "  case " << fullType << "::" << enums[I] << ": return \""
              << values[I] << "\";\n";
+      }
+      if (!isCovered) {
+        OS << "  default: llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "  }\n"
          << "  llvm_unreachable(\"No enumerator with that value\");\n"
@@ -1591,10 +1602,10 @@ writePrettyPrintFunction(const Record &R,
     std::string Variety = Spellings[I].variety();
 
     if (Variety == "GNU") {
-      Prefix = " __attribute__((";
+      Prefix = "__attribute__((";
       Suffix = "))";
     } else if (Variety == "CXX11" || Variety == "C23") {
-      Prefix = " [[";
+      Prefix = "[[";
       Suffix = "]]";
       std::string Namespace = Spellings[I].nameSpace();
       if (!Namespace.empty()) {
@@ -1602,13 +1613,13 @@ writePrettyPrintFunction(const Record &R,
         Spelling += "::";
       }
     } else if (Variety == "Declspec") {
-      Prefix = " __declspec(";
+      Prefix = "__declspec(";
       Suffix = ")";
     } else if (Variety == "Microsoft") {
       Prefix = "[";
       Suffix = "]";
     } else if (Variety == "Keyword") {
-      Prefix = " ";
+      Prefix = "";
       Suffix = "";
     } else if (Variety == "Pragma") {
       Prefix = "#pragma ";
@@ -1618,7 +1629,7 @@ writePrettyPrintFunction(const Record &R,
         Spelling += Namespace;
         Spelling += " ";
       }
-    } else if (Variety == "HLSLSemantic") {
+    } else if (Variety == "HLSLAnnotation") {
       Prefix = ":";
       Suffix = "";
     } else {
@@ -1822,26 +1833,99 @@ void WriteSemanticSpellingSwitch(const std::string &VarName,
   OS << "  }\n";
 }
 
+// Note: these values need to match the values used by LateAttrParseKind in
+// `Attr.td`
+enum class LateAttrParseKind { Never = 0, Standard = 1, ExperimentalExt = 2 };
+
+static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
+  // This function basically does
+  // `Attr->getValueAsDef("LateParsed")->getValueAsInt("Kind")` but does a bunch
+  // of sanity checking to ensure that `LateAttrParseMode` in `Attr.td` is in
+  // sync with the `LateAttrParseKind` enum in this source file.
+
+  static constexpr StringRef LateParsedStr = "LateParsed";
+  static constexpr StringRef LateAttrParseKindStr = "LateAttrParseKind";
+  static constexpr StringRef KindFieldStr = "Kind";
+
+  auto *LAPK = Attr->getValueAsDef(LateParsedStr);
+
+  // Typecheck the `LateParsed` field.
+  SmallVector<Record *, 1> SuperClasses;
+  LAPK->getDirectSuperClasses(SuperClasses);
+  if (SuperClasses.size() != 1)
+    PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
+                              "`should only have one super class");
+
+  if (SuperClasses[0]->getName() != LateAttrParseKindStr)
+    PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
+                              "`should only have type `" +
+                              llvm::Twine(LateAttrParseKindStr) +
+                              "` but found type `" +
+                              SuperClasses[0]->getName() + "`");
+
+  // Get Kind and verify the enum name matches the name in `Attr.td`.
+  unsigned Kind = LAPK->getValueAsInt(KindFieldStr);
+  switch (LateAttrParseKind(Kind)) {
+#define CASE(X)                                                                \
+  case LateAttrParseKind::X:                                                   \
+    if (LAPK->getName().compare("LateAttrParse" #X) != 0) {                    \
+      PrintFatalError(Attr,                                                    \
+                      "Field `" + llvm::Twine(LateParsedStr) + "` set to `" +  \
+                          LAPK->getName() +                                    \
+                          "` but this converts to `LateAttrParseKind::" +      \
+                          llvm::Twine(#X) + "`");                              \
+    }                                                                          \
+    return LateAttrParseKind::X;
+
+    CASE(Never)
+    CASE(Standard)
+    CASE(ExperimentalExt)
+#undef CASE
+  }
+
+  // The Kind value is completely invalid
+  auto KindValueStr = llvm::utostr(Kind);
+  PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) + "` set to `" +
+                            LAPK->getName() + "` has unexpected `" +
+                            llvm::Twine(KindFieldStr) + "` value of " +
+                            KindValueStr);
+}
+
 // Emits the LateParsed property for attributes.
-static void emitClangAttrLateParsedList(RecordKeeper &Records, raw_ostream &OS) {
-  OS << "#if defined(CLANG_ATTR_LATE_PARSED_LIST)\n";
-  std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
+static void emitClangAttrLateParsedListImpl(RecordKeeper &Records,
+                                            raw_ostream &OS,
+                                            LateAttrParseKind LateParseMode) {
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
 
   for (const auto *Attr : Attrs) {
-    bool LateParsed = Attr->getValueAsBit("LateParsed");
+    if (LateAttrParseKind LateParsed = getLateAttrParseKind(Attr);
+        LateParsed != LateParseMode)
+      continue;
 
-    if (LateParsed) {
-      std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
+    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
 
-      // FIXME: Handle non-GNU attributes
-      for (const auto &I : Spellings) {
-        if (I.variety() != "GNU")
-          continue;
-        OS << ".Case(\"" << I.name() << "\", " << LateParsed << ")\n";
-      }
+    // FIXME: Handle non-GNU attributes
+    for (const auto &I : Spellings) {
+      if (I.variety() != "GNU")
+        continue;
+      OS << ".Case(\"" << I.name() << "\", 1)\n";
     }
   }
+}
+
+static void emitClangAttrLateParsedList(RecordKeeper &Records,
+                                        raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_LATE_PARSED_LIST)\n";
+  emitClangAttrLateParsedListImpl(Records, OS, LateAttrParseKind::Standard);
   OS << "#endif // CLANG_ATTR_LATE_PARSED_LIST\n\n";
+}
+
+static void emitClangAttrLateParsedExperimentalList(RecordKeeper &Records,
+                                                    raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_LATE_PARSED_EXPERIMENTAL_EXT_LIST)\n";
+  emitClangAttrLateParsedListImpl(Records, OS,
+                                  LateAttrParseKind::ExperimentalExt);
+  OS << "#endif // CLANG_ATTR_LATE_PARSED_EXPERIMENTAL_EXT_LIST\n\n";
 }
 
 static bool hasGNUorCXX11Spelling(const Record &Attribute) {
@@ -2101,9 +2185,21 @@ bool PragmaClangAttributeSupport::isAttributedSupported(
     return SpecifiedResult;
 
   // Opt-out rules:
-  // An attribute requires delayed parsing (LateParsed is on)
-  if (Attribute.getValueAsBit("LateParsed"))
+
+  // An attribute requires delayed parsing (LateParsed is on).
+  switch (getLateAttrParseKind(&Attribute)) {
+  case LateAttrParseKind::Never:
+    break;
+  case LateAttrParseKind::Standard:
     return false;
+  case LateAttrParseKind::ExperimentalExt:
+    // This is only late parsed in certain parsing contexts when
+    // `LangOpts.ExperimentalLateParseAttributes` is true. Information about the
+    // parsing context and `LangOpts` is not available in this method so just
+    // opt this attribute out.
+    return false;
+  }
+
   // An attribute has no GNU/CXX11 spelling
   if (!hasGNUorCXX11Spelling(Attribute))
     return false;
@@ -2276,13 +2372,10 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   OS << "}\n\n";
 }
 
-template <typename Fn>
-static void forEachUniqueSpelling(const Record &Attr, Fn &&F) {
+template <typename Fn> static void forEachSpelling(const Record &Attr, Fn &&F) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attr);
-  SmallDenseSet<StringRef, 8> Seen;
   for (const FlattenedSpelling &S : Spellings) {
-    if (Seen.insert(S.name()).second)
-      F(S);
+    F(S);
   }
 }
 
@@ -2306,8 +2399,11 @@ static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
       continue;
 
     // All these spellings take a single type argument.
-    forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
+    forEachSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", true)\n";
     });
   }
   OS << "#endif // CLANG_ATTR_TYPE_ARG_LIST\n\n";
@@ -2325,8 +2421,11 @@ static void emitClangAttrArgContextList(RecordKeeper &Records, raw_ostream &OS) 
       continue;
 
     // All these spellings take are parsed unevaluated.
-    forEachUniqueSpelling(Attr, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
+    forEachSpelling(Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", true)\n";
     });
   }
   OS << "#endif // CLANG_ATTR_ARG_CONTEXT_LIST\n\n";
@@ -2387,10 +2486,11 @@ static void emitClangAttrVariadicIdentifierArgList(RecordKeeper &Records,
       continue;
 
     // All these spellings take an identifier argument.
-    forEachUniqueSpelling(*A, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", "
-         << "true"
-         << ")\n";
+    forEachSpelling(*A, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", true)\n";
     });
   }
   OS << "#endif // CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST\n\n";
@@ -2456,8 +2556,11 @@ static void emitClangAttrUnevaluatedStringLiteralList(RecordKeeper &Records,
       continue;
 
     // All these spellings have at least one string literal has argument.
-    forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", " << MaskStr << ")\n";
+    forEachSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", " << MaskStr << ")\n";
     });
   }
   OS << "#endif // CLANG_ATTR_STRING_LITERAL_ARG_LIST\n\n";
@@ -2475,11 +2578,42 @@ static void emitClangAttrIdentifierArgList(RecordKeeper &Records, raw_ostream &O
       continue;
 
     // All these spellings take an identifier argument.
-    forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
+    forEachSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", true)\n";
     });
   }
   OS << "#endif // CLANG_ATTR_IDENTIFIER_ARG_LIST\n\n";
+}
+
+// Emits the indexed-argument-is-identifier property for attributes.
+static void emitClangAttrStrictIdentifierArgAtIndexList(RecordKeeper &Records,
+                                                        raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST)\n";
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+
+  for (const auto *Attr : Attrs) {
+    if (!Attr->getValueAsBit("StrictEnumParameters"))
+      continue;
+    // Determine whether each argument is an identifier.
+    std::vector<Record *> Args = Attr->getValueAsListOfDefs("Args");
+    uint64_t enumAtIndex = 0;
+    for (size_t I = 0; I < Args.size(); I++)
+      enumAtIndex |= ((uint64_t)isIdentifierArgument(Args[I])) << I;
+    if (!enumAtIndex)
+      continue;
+
+    // All these spellings take an identifier argument.
+    forEachSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", " << enumAtIndex << "ull)\n";
+    });
+  }
+  OS << "#endif // CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST\n\n";
 }
 
 static bool keywordThisIsaIdentifierInArgument(const Record *Arg) {
@@ -2501,10 +2635,11 @@ static void emitClangAttrThisIsaIdentifierArgList(RecordKeeper &Records,
       continue;
 
     // All these spellings take an identifier argument.
-    forEachUniqueSpelling(*A, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", "
-         << "true"
-         << ")\n";
+    forEachSpelling(*A, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", true)\n";
     });
   }
   OS << "#endif // CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST\n\n";
@@ -2520,8 +2655,11 @@ static void emitClangAttrAcceptsExprPack(RecordKeeper &Records,
     if (!Attr.getValueAsBit("AcceptsExprPack"))
       continue;
 
-    forEachUniqueSpelling(Attr, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", true)\n";
+    forEachSpelling(Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.variety();
+      if (S.nameSpace().length())
+        OS << "::" << S.nameSpace();
+      OS << "::" << S.name() << "\", true)\n";
     });
   }
   OS << "#endif // CLANG_ATTR_ACCEPTS_EXPR_PACK\n\n";
@@ -2885,8 +3023,27 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         return;
       }
       OS << "\n  : " << SuperName << "(Ctx, CommonInfo, ";
-      OS << "attr::" << R.getName() << ", "
-         << (R.getValueAsBit("LateParsed") ? "true" : "false");
+      OS << "attr::" << R.getName() << ", ";
+
+      // Handle different late parsing modes.
+      OS << "/*IsLateParsed=*/";
+      switch (getLateAttrParseKind(&R)) {
+      case LateAttrParseKind::Never:
+        OS << "false";
+        break;
+      case LateAttrParseKind::ExperimentalExt:
+        // Currently no clients need to know the distinction between `Standard`
+        // and `ExperimentalExt` so treat `ExperimentalExt` just like
+        // `Standard` for now.
+      case LateAttrParseKind::Standard:
+        // Note: This is misleading. `IsLateParsed` doesn't mean the
+        // attribute was actually late parsed. Instead it means the attribute in
+        // `Attr.td` is marked as being late parsed. Maybe it should be called
+        // `IsLateParseable`?
+        OS << "true";
+        break;
+      }
+
       if (Inheritable) {
         OS << ", "
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
@@ -3317,37 +3474,6 @@ void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emits the enumeration list for attributes.
-void EmitClangAttrPrintList(const std::string &FieldName, RecordKeeper &Records,
-                            raw_ostream &OS) {
-  emitSourceFileHeader(
-      "List of attributes that can be print on the left side of a decl", OS,
-      Records);
-
-  AttrClassHierarchy Hierarchy(Records);
-
-  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::vector<Record *> PragmaAttrs;
-  bool first = false;
-
-  for (auto *Attr : Attrs) {
-    if (!Attr->getValueAsBit("ASTNode"))
-      continue;
-
-    if (!Attr->getValueAsBit(FieldName))
-      continue;
-
-    if (!first) {
-      first = true;
-      OS << "#define CLANG_ATTR_LIST_" << FieldName;
-    }
-
-    OS << " \\\n case attr::" << Attr->getName() << ":";
-  }
-
-  OS << '\n';
-}
-
-// Emits the enumeration list for attributes.
 void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader(
       "List of all attribute subject matching rules that Clang recognizes", OS,
@@ -3639,7 +3765,7 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // and declspecs. Then generate a big switch statement for each of them.
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::vector<std::pair<const Record *, FlattenedSpelling>> Declspec, Microsoft,
-      GNU, Pragma, HLSLSemantic;
+      GNU, Pragma, HLSLAnnotation;
   std::map<std::string,
            std::vector<std::pair<const Record *, FlattenedSpelling>>>
       CXX, C23;
@@ -3662,8 +3788,8 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
         C23[SI.nameSpace()].emplace_back(R, SI);
       else if (Variety == "Pragma")
         Pragma.emplace_back(R, SI);
-      else if (Variety == "HLSLSemantic")
-        HLSLSemantic.emplace_back(R, SI);
+      else if (Variety == "HLSLAnnotation")
+        HLSLAnnotation.emplace_back(R, SI);
     }
   }
 
@@ -3681,9 +3807,9 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "case AttributeCommonInfo::Syntax::AS_Pragma:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(Pragma, OS, "Pragma");
-  OS << "case AttributeCommonInfo::Syntax::AS_HLSLSemantic:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_HLSLAnnotation:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
-  GenerateHasAttrSpellingStringSwitch(HLSLSemantic, OS, "HLSLSemantic");
+  GenerateHasAttrSpellingStringSwitch(HLSLAnnotation, OS, "HLSLAnnotation");
   auto fn = [&OS](const char *Spelling,
                   const std::map<
                       std::string,
@@ -4676,7 +4802,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // Write out the declaration merging check logic.
   OS << "static bool DiagnoseMutualExclusions(Sema &S, const NamedDecl *D, "
      << "const Attr *A) {\n";
-  OS << MergeDeclOS.str();
+  OS << DeclMergeChecks;
   OS << "  return true;\n";
   OS << "}\n\n";
 
@@ -4686,7 +4812,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "static bool DiagnoseMutualExclusions(Sema &S, "
      << "const SmallVectorImpl<const Attr *> &C) {\n";
   OS << "  for (const Attr *A : C) {\n";
-  OS << MergeStmtOS.str();
+  OS << StmtMergeChecks;
   OS << "  }\n";
   OS << "  return true;\n";
   OS << "}\n\n";
@@ -4700,7 +4826,7 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::vector<StringMatcher::StringPair> GNU, Declspec, Microsoft, CXX11,
-      Keywords, Pragma, C23, HLSLSemantic;
+      Keywords, Pragma, C23, HLSLAnnotation;
   std::set<std::string> Seen;
   for (const auto *A : Attrs) {
     const Record &Attr = *A;
@@ -4751,8 +4877,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
           Matches = &Keywords;
         else if (Variety == "Pragma")
           Matches = &Pragma;
-        else if (Variety == "HLSLSemantic")
-          Matches = &HLSLSemantic;
+        else if (Variety == "HLSLAnnotation")
+          Matches = &HLSLAnnotation;
 
         assert(Matches && "Unsupported spelling variety found");
 
@@ -4788,8 +4914,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
   StringMatcher("Name", Keywords, OS).Emit();
   OS << "  } else if (AttributeCommonInfo::AS_Pragma == Syntax) {\n";
   StringMatcher("Name", Pragma, OS).Emit();
-  OS << "  } else if (AttributeCommonInfo::AS_HLSLSemantic == Syntax) {\n";
-  StringMatcher("Name", HLSLSemantic, OS).Emit();
+  OS << "  } else if (AttributeCommonInfo::AS_HLSLAnnotation == Syntax) {\n";
+  StringMatcher("Name", HLSLAnnotation, OS).Emit();
   OS << "  }\n";
   OS << "  return AttributeCommonInfo::UnknownAttribute;\n"
      << "}\n";
@@ -4829,7 +4955,7 @@ void EmitClangAttrTextNodeDump(RecordKeeper &Records, raw_ostream &OS) {
       if (!Args.empty())
         OS << "    const auto *SA = cast<" << R.getName()
            << "Attr>(A); (void)SA;\n";
-      OS << SS.str();
+      OS << FunctionContent;
       OS << "  }\n";
     }
   }
@@ -4858,7 +4984,7 @@ void EmitClangAttrNodeTraverse(RecordKeeper &Records, raw_ostream &OS) {
       if (!Args.empty())
         OS << "    const auto *SA = cast<" << R.getName()
            << "Attr>(A); (void)SA;\n";
-      OS << SS.str();
+      OS << FunctionContent;
       OS << "  }\n";
     }
   }
@@ -4874,6 +5000,8 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records, raw_ostream &OS) {
   emitClangAttrAcceptsExprPack(Records, OS);
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
+  emitClangAttrLateParsedExperimentalList(Records, OS);
+  emitClangAttrStrictIdentifierArgAtIndexList(Records, OS);
 }
 
 void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
@@ -4907,7 +5035,7 @@ enum class SpellingKind : size_t {
   Microsoft,
   Keyword,
   Pragma,
-  HLSLSemantic,
+  HLSLAnnotation,
   NumSpellingKinds
 };
 static const size_t NumSpellingKinds = (size_t)SpellingKind::NumSpellingKinds;
@@ -4921,15 +5049,16 @@ public:
   }
 
   void add(const Record &Attr, FlattenedSpelling Spelling) {
-    SpellingKind Kind = StringSwitch<SpellingKind>(Spelling.variety())
-                            .Case("GNU", SpellingKind::GNU)
-                            .Case("CXX11", SpellingKind::CXX11)
-                            .Case("C23", SpellingKind::C23)
-                            .Case("Declspec", SpellingKind::Declspec)
-                            .Case("Microsoft", SpellingKind::Microsoft)
-                            .Case("Keyword", SpellingKind::Keyword)
-                            .Case("Pragma", SpellingKind::Pragma)
-                            .Case("HLSLSemantic", SpellingKind::HLSLSemantic);
+    SpellingKind Kind =
+        StringSwitch<SpellingKind>(Spelling.variety())
+            .Case("GNU", SpellingKind::GNU)
+            .Case("CXX11", SpellingKind::CXX11)
+            .Case("C23", SpellingKind::C23)
+            .Case("Declspec", SpellingKind::Declspec)
+            .Case("Microsoft", SpellingKind::Microsoft)
+            .Case("Keyword", SpellingKind::Keyword)
+            .Case("Pragma", SpellingKind::Pragma)
+            .Case("HLSLAnnotation", SpellingKind::HLSLAnnotation);
     std::string Name;
     if (!Spelling.nameSpace().empty()) {
       switch (Kind) {
@@ -5038,7 +5167,8 @@ static void WriteDocumentation(RecordKeeper &Records,
   // so it must be last.
   OS << ".. csv-table:: Supported Syntaxes\n";
   OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
-  OS << " \"Keyword\", \"``#pragma``\", \"HLSL Semantic\", \"``#pragma clang ";
+  OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
+        "clang ";
   OS << "attribute``\"\n\n   \"";
   for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
     SpellingKind K = (SpellingKind)Kind;

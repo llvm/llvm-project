@@ -115,6 +115,20 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::find_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+#if TEST_STD_VER >= 23
+    (void)std::ranges::find_last(first, last, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last(a, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if(first, last, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if(a, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if_not(first, last, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if_not(a, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+#endif
     (void)std::ranges::for_each(first, last, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::for_each(a, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::for_each_n(first, count, UnaryVoid(), Proj(&copies)); assert(copies == 0);

@@ -146,10 +146,17 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::Template:
     AddDecl(Name.getAsTemplateDecl());
     break;
+  case TemplateName::QualifiedTemplate: {
+    QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
+    if (NestedNameSpecifier *NNS = QTN->getQualifier())
+      AddNestedNameSpecifier(NNS);
+    AddBoolean(QTN->hasTemplateKeyword());
+    AddTemplateName(QTN->getUnderlyingTemplate());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-  case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
@@ -244,7 +251,7 @@ unsigned ODRHash::CalculateHash() {
 
   assert(I == Bools.rend());
   Bools.clear();
-  return ID.ComputeHash();
+  return ID.computeStableHash();
 }
 
 namespace {
@@ -462,7 +469,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddTemplateArgument(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -480,7 +487,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddStmt(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -695,6 +702,12 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   AddBoolean(Function->isPureVirtual());
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
+
+  StringLiteral *DeletedMessage = Function->getDeletedMessage();
+  AddBoolean(DeletedMessage);
+
+  if (DeletedMessage)
+    ID.AddString(DeletedMessage->getBytes());
 
   AddDecl(Function);
 
@@ -942,6 +955,10 @@ public:
   void VisitConstantArrayType(const ConstantArrayType *T) {
     T->getSize().Profile(ID);
     VisitArrayType(T);
+  }
+
+  void VisitArrayParameterType(const ArrayParameterType *T) {
+    VisitConstantArrayType(T);
   }
 
   void VisitDependentSizedArrayType(const DependentSizedArrayType *T) {

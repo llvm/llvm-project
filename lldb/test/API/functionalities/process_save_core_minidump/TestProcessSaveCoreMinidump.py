@@ -2,7 +2,6 @@
 Test saving a mini dump.
 """
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -12,7 +11,12 @@ from lldbsuite.test import lldbutil
 
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
-        self, core_path, expected_pid, expected_modules, expected_threads
+        self,
+        core_path,
+        expected_pid,
+        expected_modules,
+        expected_threads,
+        stacks_to_sps_map,
     ):
         # To verify, we'll launch with the mini dump
         target = self.dbg.CreateTarget(None)
@@ -36,17 +40,36 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertEqual(module_file_name, expected_file_name)
             self.assertEqual(module.GetUUIDString(), expected.GetUUIDString())
 
+        red_zone = process.GetTarget().GetStackRedZoneSize()
         for thread_idx in range(process.GetNumThreads()):
             thread = process.GetThreadAtIndex(thread_idx)
             self.assertTrue(thread.IsValid())
             thread_id = thread.GetThreadID()
             self.assertIn(thread_id, expected_threads)
+            frame = thread.GetFrameAtIndex(0)
+            sp_region = lldb.SBMemoryRegionInfo()
+            sp = frame.GetSP()
+            err = process.GetMemoryRegionInfo(sp, sp_region)
+            self.assertTrue(err.Success(), err.GetCString())
+            error = lldb.SBError()
+            # Ensure thread_id is in the saved map
+            self.assertIn(thread_id, stacks_to_sps_map)
+            # Ensure the SP is correct
+            self.assertEqual(stacks_to_sps_map[thread_id], sp)
+            # Try to read at the end of the stack red zone and succeed
+            process.ReadMemory(sp - red_zone, 1, error)
+            self.assertTrue(error.Success(), error.GetCString())
+            # Try to read just past the red zone and fail
+            process.ReadMemory(sp - red_zone - 1, 1, error)
+            self.assertTrue(error.Fail(), "No failure when reading past the red zone")
+
         self.dbg.DeleteTarget(target)
 
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump(self):
         """Test that we can save a Linux mini dump."""
+
         self.build()
         exe = self.getBuildArtifact("a.out")
         core_stack = self.getBuildArtifact("core.stack.dmp")
@@ -69,54 +92,95 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             expected_modules = target.modules
             expected_number_of_threads = process.GetNumThreads()
             expected_threads = []
+            stacks_to_sp_map = {}
 
             for thread_idx in range(process.GetNumThreads()):
                 thread = process.GetThreadAtIndex(thread_idx)
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
+                stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
 
             # save core and, kill process and verify corefile existence
             base_command = "process save-core --plugin-name=minidump "
             self.runCmd(base_command + " --style=stack '%s'" % (core_stack))
             self.assertTrue(os.path.isfile(core_stack))
             self.verify_core_file(
-                core_stack, expected_pid, expected_modules, expected_threads
+                core_stack,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             self.runCmd(base_command + " --style=modified-memory '%s'" % (core_dirty))
             self.assertTrue(os.path.isfile(core_dirty))
             self.verify_core_file(
-                core_dirty, expected_pid, expected_modules, expected_threads
+                core_dirty,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             self.runCmd(base_command + " --style=full '%s'" % (core_full))
             self.assertTrue(os.path.isfile(core_full))
             self.verify_core_file(
-                core_full, expected_pid, expected_modules, expected_threads
+                core_full,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
+            options = lldb.SBSaveCoreOptions()
+            core_sb_stack_spec = lldb.SBFileSpec(core_sb_stack)
+            options.SetOutputFile(core_sb_stack_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreStackOnly)
             # validate saving via SBProcess
-            error = process.SaveCore(core_sb_stack, "minidump", lldb.eSaveCoreStackOnly)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_stack))
             self.verify_core_file(
-                core_sb_stack, expected_pid, expected_modules, expected_threads
+                core_sb_stack,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
-            error = process.SaveCore(core_sb_dirty, "minidump", lldb.eSaveCoreDirtyOnly)
+            options = lldb.SBSaveCoreOptions()
+            core_sb_dirty_spec = lldb.SBFileSpec(core_sb_dirty)
+            options.SetOutputFile(core_sb_dirty_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreDirtyOnly)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_dirty))
             self.verify_core_file(
-                core_sb_dirty, expected_pid, expected_modules, expected_threads
+                core_sb_dirty,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             # Minidump can now save full core files, but they will be huge and
             # they might cause this test to timeout.
-            error = process.SaveCore(core_sb_full, "minidump", lldb.eSaveCoreFull)
+            options = lldb.SBSaveCoreOptions()
+            core_sb_full_spec = lldb.SBFileSpec(core_sb_full)
+            options.SetOutputFile(core_sb_full_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreFull)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_full))
             self.verify_core_file(
-                core_sb_full, expected_pid, expected_modules, expected_threads
+                core_sb_full,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             self.assertSuccess(process.Kill())
@@ -135,3 +199,58 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 os.unlink(core_sb_dirty)
             if os.path.isfile(core_sb_full):
                 os.unlink(core_sb_full)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_linux_mini_dump_thread_options(self):
+        """Test that we can save a Linux mini dump
+        with a subset of threads"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        thread_subset_dmp = self.getBuildArtifact("core.thread.subset.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            thread_to_include = process.GetThreadAtIndex(0)
+            options = lldb.SBSaveCoreOptions()
+            thread_subset_spec = lldb.SBFileSpec(thread_subset_dmp)
+            options.AddThread(thread_to_include)
+            options.SetOutputFile(thread_subset_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreStackOnly)
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+
+            core_target = self.dbg.CreateTarget(None)
+            core_process = core_target.LoadCore(thread_subset_dmp)
+
+            self.assertTrue(core_process, PROCESS_IS_VALID)
+            self.assertEqual(core_process.GetNumThreads(), 1)
+            saved_thread = core_process.GetThreadAtIndex(0)
+            expected_thread = process.GetThreadAtIndex(0)
+            self.assertEqual(expected_thread.GetThreadID(), saved_thread.GetThreadID())
+            expected_sp = expected_thread.GetFrameAtIndex(0).GetSP()
+            saved_sp = saved_thread.GetFrameAtIndex(0).GetSP()
+            self.assertEqual(expected_sp, saved_sp)
+            expected_region = lldb.SBMemoryRegionInfo()
+            saved_region = lldb.SBMemoryRegionInfo()
+            error = core_process.GetMemoryRegionInfo(saved_sp, saved_region)
+            self.assertTrue(error.Success(), error.GetCString())
+            error = process.GetMemoryRegionInfo(expected_sp, expected_region)
+            self.assertTrue(error.Success(), error.GetCString())
+            self.assertEqual(
+                expected_region.GetRegionBase(), saved_region.GetRegionBase()
+            )
+            self.assertEqual(
+                expected_region.GetRegionEnd(), saved_region.GetRegionEnd()
+            )
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(thread_subset_dmp):
+                os.unlink(thread_subset_dmp)

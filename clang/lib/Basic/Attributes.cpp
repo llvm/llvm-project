@@ -47,8 +47,12 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
   // attributes. We support those, but not through the typical attribute
   // machinery that goes through TableGen. We support this in all OpenMP modes
   // so long as double square brackets are enabled.
-  if (LangOpts.OpenMP && ScopeName == "omp")
-    return (Name == "directive" || Name == "sequence") ? 1 : 0;
+  //
+  // Other OpenMP attributes (e.g. [[omp::assume]]) are handled via the
+  // regular attribute parsing machinery.
+  if (LangOpts.OpenMP && ScopeName == "omp" &&
+      (Name == "directive" || Name == "sequence"))
+    return 1;
 
   int res = hasAttributeImpl(Syntax, Name, ScopeName, Target, LangOpts);
   if (res)
@@ -147,6 +151,40 @@ AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
 std::string AttributeCommonInfo::getNormalizedFullName() const {
   return static_cast<std::string>(
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
+}
+
+static StringRef getSyntaxName(AttributeCommonInfo::Syntax SyntaxUsed) {
+  switch (SyntaxUsed) {
+  case AttributeCommonInfo::AS_GNU:
+    return "GNU";
+  case AttributeCommonInfo::AS_CXX11:
+    return "CXX11";
+  case AttributeCommonInfo::AS_C23:
+    return "C23";
+  case AttributeCommonInfo::AS_Declspec:
+    return "Declspec";
+  case AttributeCommonInfo::AS_Microsoft:
+    return "Microsoft";
+  case AttributeCommonInfo::AS_Keyword:
+    return "Keyword";
+  case AttributeCommonInfo::AS_Pragma:
+    return "Pragma";
+  case AttributeCommonInfo::AS_ContextSensitiveKeyword:
+    return "ContextSensitiveKeyword";
+  case AttributeCommonInfo::AS_HLSLAnnotation:
+    return "HLSLAnnotation";
+  case AttributeCommonInfo::AS_Implicit:
+    return "Implicit";
+  }
+  llvm_unreachable("Invalid attribute syntax");
+}
+
+std::string AttributeCommonInfo::normalizeFullNameWithSyntax(
+    const IdentifierInfo *Name, const IdentifierInfo *ScopeName,
+    Syntax SyntaxUsed) {
+  return (Twine(getSyntaxName(SyntaxUsed)) +
+          "::" + normalizeName(Name, ScopeName, SyntaxUsed))
+      .str();
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {

@@ -51,29 +51,58 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
       ]
   >;
 
-  HeaderSpec StdFix = HeaderSpec<
-      "stdfix.h",
-      [],  // macros
-      [],  // types
-      [],  // enums
-      [    // functions
-          GuardedFunctionSpec<"sqrtuhr", RetValSpec<UnsignedShortFractType>, [ArgSpec<UnsignedShortFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtur", RetValSpec<UnsignedFractType>, [ArgSpec<UnsignedFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtulr", RetValSpec<UnsignedLongFractType>, [ArgSpec<UnsignedLongFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+  HeaderSpec Math = HeaderSpec<
+      "math.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          GuardedFunctionSpec<"daddf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+          GuardedFunctionSpec<"ddivf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+          GuardedFunctionSpec<"dfmaf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+          GuardedFunctionSpec<"dsqrtf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+          GuardedFunctionSpec<"dsubf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
-          GuardedFunctionSpec<"sqrtuhk", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtuk", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtulk", RetValSpec<UnsignedLongAccumType>, [ArgSpec<UnsignedLongAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+	  
+          GuardedFunctionSpec<"f16add", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16addf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16addl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
 
-          GuardedFunctionSpec<"uhksqrtus", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"uksqrtui", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedIntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"f16sub", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16subf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16subl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"fmulf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          GuardedFunctionSpec<"dmulf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          GuardedFunctionSpec<"f16mul", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16mulf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16mull", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"f16div", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16divf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16divl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"f16fma", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16fmaf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16fmal", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"f16sqrt", RetValSpec<Float16Type>, [ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16sqrtf", RetValSpec<Float16Type>, [ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16sqrtl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"fsqrtf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"powi", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
+          FunctionSpec<"powif", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
       ]
   >;
 
   let Headers = [
     Assert,
+    Math,
     Sched,
-    StdFix,
     Strings,
   ];
 }

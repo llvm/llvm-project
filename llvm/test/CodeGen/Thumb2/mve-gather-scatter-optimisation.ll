@@ -609,7 +609,6 @@ define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    strd r0, r2, [sp, #24] @ 8-byte Folded Spill
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    itt ne
 ; CHECK-NEXT:    ldrne r0, [sp, #136]
 ; CHECK-NEXT:    cmpne r0, #0

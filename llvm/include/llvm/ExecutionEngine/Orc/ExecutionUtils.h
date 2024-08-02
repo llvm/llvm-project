@@ -328,6 +328,7 @@ private:
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
   DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
+  BumpPtrAllocator ObjFileNameStorage;
 };
 
 /// A utility class to create COFF dllimport GOT symbols (__imp_*) and PLT
@@ -352,7 +353,7 @@ private:
       : ES(ES), L(L) {}
 
   static Expected<unsigned> getTargetPointerSize(const Triple &TT);
-  static Expected<llvm::endianness> getTargetEndianness(const Triple &TT);
+  static Expected<llvm::endianness> getEndianness(const Triple &TT);
   Expected<std::unique_ptr<jitlink::LinkGraph>>
   createStubsGraph(const SymbolMap &Resolved);
 

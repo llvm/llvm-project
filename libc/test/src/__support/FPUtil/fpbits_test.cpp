@@ -9,11 +9,11 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/sign.h" // Sign
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::FPBits;
 using LIBC_NAMESPACE::fputil::FPType;
-using LIBC_NAMESPACE::fputil::Sign;
 using LIBC_NAMESPACE::fputil::internal::FPRep;
 
 using LIBC_NAMESPACE::operator""_u16;
@@ -238,6 +238,7 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
   case FP::QUIET_NAN:
     return T::quiet_nan(sign);
   }
+  __builtin_unreachable();
 }
 
 // Tests all properties for all types of float.

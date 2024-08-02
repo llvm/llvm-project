@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_FD_SET_H
 #define LLVM_LIBC_TYPES_FD_SET_H
 
-#include <llvm-libc-macros/sys-select-macros.h> // FD_SETSIZE
+#include "llvm-libc-macros/sys-select-macros.h" // FD_SETSIZE
 
 typedef struct {
   __FD_SET_WORD_TYPE __set[__FD_SET_ARRAYSIZE];

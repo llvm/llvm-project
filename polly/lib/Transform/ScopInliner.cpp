@@ -21,6 +21,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-scop-inliner"
 
 using namespace llvm;
@@ -60,8 +61,8 @@ public:
     if (!F)
       return false;
     if (F->isDeclaration()) {
-      LLVM_DEBUG(dbgs() << "Skipping " << F->getName()
-                        << "because it is a declaration.\n");
+      POLLY_DEBUG(dbgs() << "Skipping " << F->getName()
+                         << "because it is a declaration.\n");
       return false;
     }
 
@@ -86,8 +87,8 @@ public:
 
     bool Changed = false;
     if (HasScopAsTopLevelRegion) {
-      LLVM_DEBUG(dbgs() << "Skipping " << F->getName()
-                        << " has scop as top level region");
+      POLLY_DEBUG(dbgs() << "Skipping " << F->getName()
+                         << " has scop as top level region");
       F->addFnAttr(llvm::Attribute::AlwaysInline);
 
       ModulePassManager MPM;
@@ -98,8 +99,8 @@ public:
       if (!PA.areAllPreserved())
         Changed = true;
     } else {
-      LLVM_DEBUG(dbgs() << F->getName()
-                        << " does NOT have scop as top level region\n");
+      POLLY_DEBUG(dbgs() << F->getName()
+                         << " does NOT have scop as top level region\n");
     }
 
     return Changed;

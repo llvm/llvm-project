@@ -56,9 +56,9 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
-  bool RematOffset; // True if Offset is a constant that needs to be
-                    // rematerialized before the new load/store.
-  bool IsPre;
+  bool RematOffset = false; // True if Offset is a constant that needs to be
+                            // rematerialized before the new load/store.
+  bool IsPre = false;
 };
 
 struct PtrAddChain {
@@ -128,6 +128,12 @@ public:
   }
 
   const TargetLowering &getTargetLowering() const;
+
+  const MachineFunction &getMachineFunction() const;
+
+  const DataLayout &getDataLayout() const;
+
+  LLVMContext &getContext() const;
 
   /// \returns true if the combiner is running pre-legalization.
   bool isPreLegalize() const;
@@ -236,6 +242,11 @@ public:
   /// Replace \p MI with a flattened build_vector with \p Ops
   /// or an implicit_def if \p Ops is empty.
   void applyCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
+
+  bool matchCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
@@ -384,12 +395,6 @@ public:
                             std::tuple<Register, unsigned> &MatchInfo);
   void applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
-
-  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
-  bool matchCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
-  void applyCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
 
   /// Transform trunc (shl x, K) to shl (trunc x), K
   ///    if K < VT.getScalarSizeInBits().
@@ -673,6 +678,14 @@ public:
   bool matchSDivByConst(MachineInstr &MI);
   void applySDivByConst(MachineInstr &MI);
 
+  /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  bool matchDivByPow2(MachineInstr &MI, bool IsSigned);
+  void applySDivByPow2(MachineInstr &MI);
+  /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  void applyUDivByPow2(MachineInstr &MI);
+
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI);
   void applyUMulHToLShr(MachineInstr &MI);
@@ -695,10 +708,6 @@ public:
   /// Match:
   /// (G_*MULO x, 0) -> 0 + no carry out
   bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
-
-  /// Match:
-  /// (G_*ADDO x, 0) -> x + no carry out
-  bool matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Match:
   /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
@@ -801,20 +810,88 @@ public:
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI);
 
+  /// Combine sext of trunc.
+  bool matchSextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine zext of trunc.
+  bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine zext nneg to sext.
+  bool matchNonNegZext(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
 
+  /// Combine select to integer min/max.
+  bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ands,
+  /// Combine ands.
   bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ors,
+  /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine addos.
+  bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element.
+  bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector on the vector register.
+  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+                                                BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector trunc on the vector
+  /// register.
+  bool matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a shuffle vector on the vector
+  /// register.
+  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+                                                  BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a insert vector element on the vector
+  /// register and different indices.
+  bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction def'd on \p MO from the function.
+  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Match FPOWI if it's safe to extend it into a series of multiplications.
+  bool matchFPowIExpansion(MachineInstr &MI, int64_t Exponent);
+
+  /// Expands FPOWI into a series of multiplications and a division if the
+  /// exponent is negative.
+  void applyExpandFPowI(MachineInstr &MI, int64_t Exponent);
+
+  /// Combine insert vector element OOB.
+  bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo);
+
+  bool matchAddOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchMulOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+  bool matchTruncateOfExt(const MachineInstr &Root, const MachineInstr &ExtMI,
+                          BuildFnTy &MatchInfo);
+
+  bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
+                         BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -912,13 +989,11 @@ private:
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
 
-  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
-  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
-
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
   bool isConstantSplatVector(Register Src, int64_t SplatValue,
                              bool AllowUndefs);
+  bool isConstantOrConstantVectorI(Register Src) const;
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
 
@@ -930,6 +1005,8 @@ private:
 
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
+
+  bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
 };
 } // namespace llvm
 

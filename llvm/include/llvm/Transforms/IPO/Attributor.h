@@ -123,6 +123,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
@@ -1447,7 +1448,7 @@ struct AttributorConfig {
   /// Callback function to determine if an indirect call targets should be made
   /// direct call targets (with an if-cascade).
   std::function<bool(Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-                     Function &AssummedCallee)>
+                     Function &AssumedCallee, unsigned NumAssumedCallees)>
       IndirectCalleeSpecializationCallback = nullptr;
 
   /// Helper to update an underlying call graph and to delete functions.
@@ -1717,10 +1718,11 @@ struct Attributor {
   /// Return true if we should specialize the call site \b CB for the potential
   /// callee \p Fn.
   bool shouldSpecializeCallSiteForCallee(const AbstractAttribute &AA,
-                                         CallBase &CB, Function &Callee) {
+                                         CallBase &CB, Function &Callee,
+                                         unsigned NumAssumedCallees) {
     return Configuration.IndirectCalleeSpecializationCallback
-               ? Configuration.IndirectCalleeSpecializationCallback(*this, AA,
-                                                                    CB, Callee)
+               ? Configuration.IndirectCalleeSpecializationCallback(
+                     *this, AA, CB, Callee, NumAssumedCallees)
                : true;
   }
 
@@ -1825,14 +1827,6 @@ struct Attributor {
       identifyDefaultAbstractAttributes(const_cast<Function &>(F));
     if (Configuration.InitializationCallback)
       Configuration.InitializationCallback(*this, F);
-  }
-
-  /// Helper function to remove callsite.
-  void removeCallSite(CallInst *CI) {
-    if (!CI)
-      return;
-
-    Configuration.CGUpdater.removeCallSite(*CI);
   }
 
   /// Record that \p U is to be replaces with \p NV after information was
@@ -5143,9 +5137,7 @@ struct DenormalFPMathState : public AbstractState {
       return Mode != Other.Mode || ModeF32 != Other.ModeF32;
     }
 
-    bool isValid() const {
-      return Mode.isValid() && ModeF32.isValid();
-    }
+    bool isValid() const { return Mode.isValid() && ModeF32.isValid(); }
 
     static DenormalMode::DenormalModeKind
     unionDenormalKind(DenormalMode::DenormalModeKind Callee,
@@ -5185,9 +5177,7 @@ struct DenormalFPMathState : public AbstractState {
   // state.
   DenormalState getAssumed() const { return Known; }
 
-  bool isValidState() const override {
-    return Known.isValid();
-  }
+  bool isValidState() const override { return Known.isValid(); }
 
   /// Return true if there are no dynamic components to the denormal mode worth
   /// specializing.
@@ -5198,9 +5188,7 @@ struct DenormalFPMathState : public AbstractState {
            Known.ModeF32.Output != DenormalMode::Dynamic;
   }
 
-  bool isAtFixpoint() const override {
-    return IsAtFixedpoint;
-  }
+  bool isAtFixpoint() const override { return IsAtFixedpoint; }
 
   ChangeStatus indicateFixpoint() {
     bool Changed = !IsAtFixedpoint;
@@ -5418,9 +5406,13 @@ struct AANoFPClass
     return false;
   }
 
-  /// Return true if we assume that the underlying value is nofpclass.
+  /// Return the underlying assumed nofpclass.
   FPClassTest getAssumedNoFPClass() const {
     return static_cast<FPClassTest>(getAssumed());
+  }
+  /// Return the underlying known nofpclass.
+  FPClassTest getKnownNoFPClass() const {
+    return static_cast<FPClassTest>(getKnown());
   }
 
   /// Create an abstract attribute view for the position \p IRP.

@@ -46,6 +46,9 @@ let Definition = "target" in {
   def SourceMap: Property<"source-map", "PathMap">,
     DefaultStringValue<"">,
     Desc<"Source path remappings apply substitutions to the paths of source files, typically needed to debug from a different host than the one that built the target.  The source-map property consists of an array of pairs, the first element is a path prefix, and the second is its replacement.  The syntax is `prefix1 replacement1 prefix2 replacement2...`.  The pairs are checked in order, the first prefix that matches is used, and that prefix is substituted with the replacement.  A common pattern is to use source-map in conjunction with the clang -fdebug-prefix-map flag.  In the build, use `-fdebug-prefix-map=/path/to/build_dir=.` to rewrite the host specific build directory to `.`.  Then for debugging, use `settings set target.source-map . /path/to/local_dir` to convert `.` to a valid local path.">;
+  def ObjectMap: Property<"object-map", "PathMap">,
+    DefaultStringValue<"">,
+    Desc<"Object path remappings apply substitutions to the paths of object files, typically needed to debug from a different host than the one that built the target.  The object-map property consists of an array of pairs, the first element is a path prefix, and the second is its replacement.  The syntax is `prefix1 replacement1 prefix2 replacement2...`.  The pairs are checked in order, the first prefix that matches is used, and that prefix is substituted with the replacement.">;
   def AutoSourceMapRelative: Property<"auto-source-map-relative", "Boolean">,
     DefaultTrue,
     Desc<"Automatically deduce source path mappings based on source file breakpoint resolution. It only deduces source mapping if source file breakpoint request is using full path and if the debug info contains relative paths.">;
@@ -310,4 +313,10 @@ let Definition = "thread" in {
   def MaxBacktraceDepth: Property<"max-backtrace-depth", "UInt64">,
     DefaultUnsignedValue<600000>,
     Desc<"Maximum number of frames to backtrace.">;
+}
+
+let Definition = "language" in {
+  def EnableFilterForLineBreakpoints: Property<"enable-filter-for-line-breakpoints", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, allow Language plugins to filter locations when setting breakpoints by line number or regex.">;
 }

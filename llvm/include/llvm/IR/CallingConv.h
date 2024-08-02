@@ -264,6 +264,12 @@ namespace CallingConv {
     /// except that the first parameter is mapped to x9.
     ARM64EC_Thunk_Native = 109,
 
+    /// Calling convention used for RISC-V V-extension.
+    RISCV_VectorCall = 110,
+
+    /// Preserve X1-X15, X19-X29, SP, Z0-Z31, P0-P15.
+    AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 = 111,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

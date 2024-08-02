@@ -80,13 +80,13 @@ void f_va_caller(void) {
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[V]], align 4
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -111,7 +111,7 @@ int f_va_1(char *fmt, ...) {
 // CHECK-ILP32F-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-ILP32F-NEXT:    [[V:%.*]] = alloca double, align 8
 // CHECK-ILP32F-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32F-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32F-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32F-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32F-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 // CHECK-ILP32F-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP0]], i32 -8)
@@ -119,7 +119,7 @@ int f_va_1(char *fmt, ...) {
 // CHECK-ILP32F-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-ILP32F-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARGP_CUR_ALIGNED]], align 8
 // CHECK-ILP32F-NEXT:    store double [[TMP1]], ptr [[V]], align 8
-// CHECK-ILP32F-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32F-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32F-NEXT:    [[TMP2:%.*]] = load double, ptr [[V]], align 8
 // CHECK-ILP32F-NEXT:    ret double [[TMP2]]
 //
@@ -130,7 +130,7 @@ int f_va_1(char *fmt, ...) {
 // CHECK-ILP32D-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-ILP32D-NEXT:    [[V:%.*]] = alloca double, align 8
 // CHECK-ILP32D-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32D-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32D-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32D-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32D-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 // CHECK-ILP32D-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP0]], i32 -8)
@@ -138,7 +138,7 @@ int f_va_1(char *fmt, ...) {
 // CHECK-ILP32D-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-ILP32D-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARGP_CUR_ALIGNED]], align 8
 // CHECK-ILP32D-NEXT:    store double [[TMP1]], ptr [[V]], align 8
-// CHECK-ILP32D-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32D-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32D-NEXT:    [[TMP2:%.*]] = load double, ptr [[V]], align 8
 // CHECK-ILP32D-NEXT:    ret double [[TMP2]]
 //
@@ -149,13 +149,13 @@ int f_va_1(char *fmt, ...) {
 // CHECK-ILP32E-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-ILP32E-NEXT:    [[V:%.*]] = alloca double, align 8
 // CHECK-ILP32E-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32E-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32E-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32E-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32E-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 8
 // CHECK-ILP32E-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-ILP32E-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARGP_CUR]], align 4
 // CHECK-ILP32E-NEXT:    store double [[TMP0]], ptr [[V]], align 8
-// CHECK-ILP32E-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32E-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32E-NEXT:    [[TMP1:%.*]] = load double, ptr [[V]], align 8
 // CHECK-ILP32E-NEXT:    ret double [[TMP1]]
 //
@@ -180,7 +180,7 @@ double f_va_2(char *fmt, ...) {
 // CHECK-ILP32F-NEXT:    [[W:%.*]] = alloca i32, align 4
 // CHECK-ILP32F-NEXT:    [[X:%.*]] = alloca double, align 8
 // CHECK-ILP32F-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32F-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32F-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32F-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32F-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 // CHECK-ILP32F-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP0]], i32 -8)
@@ -200,7 +200,7 @@ double f_va_2(char *fmt, ...) {
 // CHECK-ILP32F-NEXT:    store ptr [[ARGP_NEXT4]], ptr [[VA]], align 4
 // CHECK-ILP32F-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARGP_CUR3_ALIGNED]], align 8
 // CHECK-ILP32F-NEXT:    store double [[TMP4]], ptr [[X]], align 8
-// CHECK-ILP32F-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32F-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32F-NEXT:    [[TMP5:%.*]] = load double, ptr [[V]], align 8
 // CHECK-ILP32F-NEXT:    [[TMP6:%.*]] = load double, ptr [[X]], align 8
 // CHECK-ILP32F-NEXT:    [[ADD:%.*]] = fadd double [[TMP5]], [[TMP6]]
@@ -215,7 +215,7 @@ double f_va_2(char *fmt, ...) {
 // CHECK-ILP32D-NEXT:    [[W:%.*]] = alloca i32, align 4
 // CHECK-ILP32D-NEXT:    [[X:%.*]] = alloca double, align 8
 // CHECK-ILP32D-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32D-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32D-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32D-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32D-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 // CHECK-ILP32D-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP0]], i32 -8)
@@ -235,7 +235,7 @@ double f_va_2(char *fmt, ...) {
 // CHECK-ILP32D-NEXT:    store ptr [[ARGP_NEXT4]], ptr [[VA]], align 4
 // CHECK-ILP32D-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARGP_CUR3_ALIGNED]], align 8
 // CHECK-ILP32D-NEXT:    store double [[TMP4]], ptr [[X]], align 8
-// CHECK-ILP32D-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32D-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32D-NEXT:    [[TMP5:%.*]] = load double, ptr [[V]], align 8
 // CHECK-ILP32D-NEXT:    [[TMP6:%.*]] = load double, ptr [[X]], align 8
 // CHECK-ILP32D-NEXT:    [[ADD:%.*]] = fadd double [[TMP5]], [[TMP6]]
@@ -250,7 +250,7 @@ double f_va_2(char *fmt, ...) {
 // CHECK-ILP32E-NEXT:    [[W:%.*]] = alloca i32, align 4
 // CHECK-ILP32E-NEXT:    [[X:%.*]] = alloca double, align 8
 // CHECK-ILP32E-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32E-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32E-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32E-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32E-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 8
 // CHECK-ILP32E-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
@@ -266,7 +266,7 @@ double f_va_2(char *fmt, ...) {
 // CHECK-ILP32E-NEXT:    store ptr [[ARGP_NEXT4]], ptr [[VA]], align 4
 // CHECK-ILP32E-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARGP_CUR3]], align 4
 // CHECK-ILP32E-NEXT:    store double [[TMP2]], ptr [[X]], align 8
-// CHECK-ILP32E-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32E-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32E-NEXT:    [[TMP3:%.*]] = load double, ptr [[V]], align 8
 // CHECK-ILP32E-NEXT:    [[TMP4:%.*]] = load double, ptr [[X]], align 8
 // CHECK-ILP32E-NEXT:    [[ADD:%.*]] = fadd double [[TMP3]], [[TMP4]]
@@ -296,7 +296,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-ILP32F-NEXT:    [[LS:%.*]] = alloca [[STRUCT_LARGE:%.*]], align 4
 // CHECK-ILP32F-NEXT:    [[RET:%.*]] = alloca i32, align 4
 // CHECK-ILP32F-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32F-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32F-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32F-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32F-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-ILP32F-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
@@ -321,7 +321,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-ILP32F-NEXT:    store ptr [[ARGP_NEXT8]], ptr [[VA]], align 4
 // CHECK-ILP32F-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARGP_CUR7]], align 4
 // CHECK-ILP32F-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[TMP3]], i32 16, i1 false)
-// CHECK-ILP32F-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32F-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32F-NEXT:    [[TMP4:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-ILP32F-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP4]] to fp128
 // CHECK-ILP32F-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[LD]], align 16
@@ -384,7 +384,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-ILP32D-NEXT:    [[LS:%.*]] = alloca [[STRUCT_LARGE:%.*]], align 4
 // CHECK-ILP32D-NEXT:    [[RET:%.*]] = alloca i32, align 4
 // CHECK-ILP32D-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32D-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32D-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32D-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32D-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-ILP32D-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
@@ -409,7 +409,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-ILP32D-NEXT:    store ptr [[ARGP_NEXT8]], ptr [[VA]], align 4
 // CHECK-ILP32D-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARGP_CUR7]], align 4
 // CHECK-ILP32D-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[TMP3]], i32 16, i1 false)
-// CHECK-ILP32D-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32D-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32D-NEXT:    [[TMP4:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-ILP32D-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP4]] to fp128
 // CHECK-ILP32D-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[LD]], align 16
@@ -472,7 +472,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-ILP32E-NEXT:    [[LS:%.*]] = alloca [[STRUCT_LARGE:%.*]], align 4
 // CHECK-ILP32E-NEXT:    [[RET:%.*]] = alloca i32, align 4
 // CHECK-ILP32E-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
-// CHECK-ILP32E-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-ILP32E-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-ILP32E-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-ILP32E-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-ILP32E-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
@@ -497,7 +497,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-ILP32E-NEXT:    store ptr [[ARGP_NEXT8]], ptr [[VA]], align 4
 // CHECK-ILP32E-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARGP_CUR7]], align 4
 // CHECK-ILP32E-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[TMP3]], i32 16, i1 false)
-// CHECK-ILP32E-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-ILP32E-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-ILP32E-NEXT:    [[TMP4:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-ILP32E-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP4]] to fp128
 // CHECK-ILP32E-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[LD]], align 16

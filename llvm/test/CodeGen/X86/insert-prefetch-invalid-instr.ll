@@ -8,17 +8,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
 entry:
   tail call void @llvm.prefetch(ptr inttoptr (i64 291 to ptr), i32 0, i32 0, i32 1), !dbg !9
-  tail call void @llvm.x86.avx512.gatherpf.dpd.512(i8 97, <8 x i32> undef, ptr null, i32 1, i32 2), !dbg !10
   ret i32 291, !dbg !11
 }
 
 ; Function Attrs: inaccessiblemem_or_argmemonly nounwind
 declare void @llvm.prefetch(ptr nocapture readonly, i32, i32, i32) #1
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.x86.avx512.gatherpf.dpd.512(i8, <8 x i32>, ptr, i32, i32) #2
-
-attributes #0 = {"target-cpu"="x86-64" "target-features"="+avx512pf,+sse4.2,+ssse3"}
+attributes #0 = {"target-cpu"="x86-64" "target-features"="+sse4.2,+ssse3"}
 attributes #1 = { inaccessiblemem_or_argmemonly nounwind }
 attributes #2 = { argmemonly nounwind }
 
@@ -43,4 +39,3 @@ attributes #2 = { argmemonly nounwind }
 ;CHECK:       # %bb.0:
 ;CHECK:       prefetchnta 291
 ;CHECK-NOT:   prefetchnta 42(%rax,%ymm0)
-;CHECK:       vgatherpf1dpd (%rax,%ymm0) {%k1}

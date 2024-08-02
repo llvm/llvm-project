@@ -45,6 +45,8 @@ constexpr int Failed2 = Failed1 + 1; // both-error {{must be initialized by a co
 static_assert(Failed2 == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{initializer of 'Failed2' is not a constant expression}}
 
+const int x = *(volatile int*)0x1234;
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");
@@ -66,7 +68,12 @@ namespace ScalarTypes {
     First = 0,
   };
   static_assert(getScalar<E>() == First, "");
-  /// FIXME: Member pointers.
+
+  struct S {
+    int v;
+  };
+  constexpr int S::* MemberPtr = &S::v;
+  static_assert(getScalar<decltype(MemberPtr)>() == nullptr, "");
 
 #if __cplusplus >= 201402L
   constexpr void Void(int n) {
@@ -561,37 +568,27 @@ namespace IncDec {
     return 1;
   }
   static_assert(uninit<int, true, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                // ref-note {{in call to 'uninit<int, true, true>()'}} \
-                                                // expected-note {{in call to 'uninit()'}}
+                                                // both-note {{in call to 'uninit<int, true, true>()'}}
   static_assert(uninit<int, false, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                 // ref-note {{in call to 'uninit<int, false, true>()'}} \
-                                                 // expected-note {{in call to 'uninit()'}}
+                                                 // both-note {{in call to 'uninit<int, false, true>()'}}
 
   static_assert(uninit<float, true, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                  // ref-note {{in call to 'uninit<float, true, true>()'}} \
-                                                  // expected-note {{in call to 'uninit()'}}
+                                                  // both-note {{in call to 'uninit<float, true, true>()'}}
   static_assert(uninit<float, false, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                   // ref-note {{in call to 'uninit<float, false, true>()'}} \
-                                                   // expected-note {{in call to 'uninit()'}}
+                                                   // both-note {{in call to 'uninit<float, false, true>()'}}
   static_assert(uninit<float, true, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                   // ref-note {{in call to 'uninit<float, true, false>()'}} \
-                                                   // expected-note {{in call to 'uninit()'}}
+                                                   // both-note {{in call to 'uninit<float, true, false>()'}}
   static_assert(uninit<float, false, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                    // ref-note {{in call to 'uninit<float, false, false>()'}} \
-                                                    // expected-note {{in call to 'uninit()'}}
+                                                    // both-note {{in call to 'uninit<float, false, false>()'}}
 
   static_assert(uninit<int*, true, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                 // ref-note {{in call to 'uninit<int *, true, true>()'}} \
-                                                 // expected-note {{in call to 'uninit()'}}
+                                                 // both-note {{in call to 'uninit<int *, true, true>()'}}
   static_assert(uninit<int*, false, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                  // ref-note {{in call to 'uninit<int *, false, true>()'}} \
-                                                  // expected-note {{in call to 'uninit()'}}
+                                                  // both-note {{in call to 'uninit<int *, false, true>()'}}
   static_assert(uninit<int*, true, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                  // ref-note {{in call to 'uninit<int *, true, false>()'}} \
-                                                  // expected-note {{in call to 'uninit()'}}
+                                                  // both-note {{in call to 'uninit<int *, true, false>()'}}
   static_assert(uninit<int*, false, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                   // ref-note {{in call to 'uninit<int *, false, false>()'}} \
-                                                   // expected-note {{in call to 'uninit()'}}
+                                                   // both-note {{in call to 'uninit<int *, false, false>()'}}
 
   constexpr int OverFlow() { // both-error {{never produces a constant expression}}
     int a = INT_MAX;
@@ -910,6 +907,18 @@ namespace TypeTraits {
   struct U {};
   static_assert(S3<U>{}.foo(), "");
   static_assert(!S3<T>{}.foo(), "");
+
+  typedef int Int;
+  typedef Int IntAr[10];
+  typedef const IntAr ConstIntAr;
+  typedef ConstIntAr ConstIntArAr[4];
+
+  static_assert(__array_rank(IntAr) == 1, "");
+  static_assert(__array_rank(ConstIntArAr) == 2, "");
+
+  static_assert(__array_extent(IntAr, 0) == 10, "");
+  static_assert(__array_extent(ConstIntArAr, 0) == 4, "");
+  static_assert(__array_extent(ConstIntArAr, 1) == 10, "");
 }
 
 #if __cplusplus >= 201402L
@@ -972,6 +981,8 @@ namespace DiscardExprs {
     (signed)4u;
     __uuidof(GuidType);
     __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
+
+    requires{false;};
 
     return 0;
   }
@@ -1113,6 +1124,9 @@ namespace InvalidDeclRefs {
   int b03 = 3; // both-note {{declared here}}
   static_assert(b03, ""); // both-error {{not an integral constant expression}} \
                           // both-note {{read of non-const variable}}
+
+  extern int var;
+  constexpr int *varp = &var; // Ok.
 }
 
 namespace NonConstReads {
@@ -1182,8 +1196,126 @@ namespace incdecbool {
 }
 
 #if __cplusplus >= 201402L
+/// NOTE: The diagnostics of the two interpreters are a little
+/// different here, but they both make sense.
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
-  extern char arr[]; // both-note {{declared here}}
-  return arr[0]; // both-note {{read of non-constexpr variable 'arr'}}
+  extern char arr[]; // ref-note {{declared here}}
+   return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
+                  // expected-note {{indexing of array without known bound}}
+}
+
+namespace StmtExprs {
+  constexpr int foo() {
+     ({
+       int i;
+       for (i = 0; i < 76; i++) {}
+       i; // both-warning {{expression result unused}}
+    });
+    return 76;
+  }
+  static_assert(foo() == 76, "");
+
+  namespace CrossFuncLabelDiff {
+    constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
+  }
+}
+#endif
+
+namespace Extern {
+  constexpr extern char Oops = 1;
+  static_assert(Oops == 1, "");
+
+#if __cplusplus >= 201402L
+  struct NonLiteral {
+    NonLiteral() {}
+  };
+  NonLiteral nl;
+  constexpr NonLiteral &ExternNonLiteralVarDecl() {
+    extern NonLiteral nl;
+    return nl;
+  }
+  static_assert(&ExternNonLiteralVarDecl() == &nl, "");
+#endif
+
+  struct A {
+    int b;
+  };
+
+  extern constexpr A a{12};
+  static_assert(a.b == 12, "");
+}
+
+#if __cplusplus >= 201402L
+constexpr int StmtExprEval() {
+  if (({
+    while (0);
+    true;
+  })) {
+    return 2;
+  }
+  return 1;
+}
+static_assert(StmtExprEval() == 2, "");
+
+constexpr int ReturnInStmtExpr() { // both-error {{never produces a constant expression}}
+  return ({
+      return 1; // both-note 2{{this use of statement expressions is not supported in a constant expression}}
+      2;
+      });
+}
+static_assert(ReturnInStmtExpr() == 1, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{in call to}}
+
+#endif
+
+namespace ComparisonAgainstOnePastEnd {
+  int a, b;
+  static_assert(&a + 1 == &b, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
+  static_assert(&a == &b + 1, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&b + 1' that points past the end of a complete object has unspecified value}}
+
+  static_assert(&a + 1 == &b + 1, ""); // both-error {{static assertion failed}}
+};
+
+namespace NTTP {
+  template <typename _Tp, unsigned _Nm>
+    constexpr unsigned
+    size(const _Tp (&)[_Nm]) noexcept
+    { return _Nm; }
+
+  template <char C>
+  static int write_padding() {
+    static const char Chars[] = {C};
+
+    return size(Chars);
+  }
+}
+
+#if __cplusplus >= 201402L
+namespace UnaryOpError {
+  constexpr int foo() {
+    int f = 0;
+    ++g; // both-error {{use of undeclared identifier 'g'}}
+    return f;
+  }
+}
+#endif
+
+namespace VolatileReads {
+  const volatile int b = 1;
+  static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+}
+#if __cplusplus >= 201703L
+namespace {
+  struct C {
+    int x;
+  };
+
+  template <const C *p> void f() {
+    const auto &[c] = *p;
+    &c; // both-warning {{expression result unused}}
+  }
 }
 #endif

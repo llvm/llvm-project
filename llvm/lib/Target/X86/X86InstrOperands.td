@@ -424,6 +424,12 @@ def u4imm : Operand<i8> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+def cflags : Operand<i8> {
+  let PrintMethod = "printCondFlags";
+  let ParserMatchClass = ImmUnsignedi4AsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 // Unsigned 8-bit immediate used by SSE/AVX instructions.
 def u8imm : Operand<i8> {
   let PrintMethod = "printU8Imm";

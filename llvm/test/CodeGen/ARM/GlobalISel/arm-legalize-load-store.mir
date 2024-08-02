@@ -9,7 +9,6 @@
   define void @test_load_store_64_novfp() #1 { ret void }
 
   define void @test_gep_s32() { ret void }
-  define void @test_gep_s16() { ret void }
 
   attributes #0 = { "target-features"="+vfp2" }
   attributes #1 = { "target-features"="-vfp2sp" }
@@ -207,33 +206,6 @@ body:             |
 
     ; CHECK: {{%[0-9]+}}:_(p0) = G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s32)
     %2(p0) = G_PTR_ADD %0, %1(s32)
-
-    $r0 = COPY %2(p0)
-    BX_RET 14, $noreg, implicit $r0
-...
----
-name:            test_gep_s16
-# CHECK-LABEL: name: test_gep_s16
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0
-
-    %0(p0) = COPY $r0
-    %1(s16) = G_LOAD %0(p0) :: (load (s16))
-
-    ; CHECK-NOT: G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s16)
-    ; CHECK: {{%[0-9]+}}:_(p0) = G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s32)
-    ; CHECK-NOT: G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s16)
-    %2(p0) = G_PTR_ADD %0, %1(s16)
 
     $r0 = COPY %2(p0)
     BX_RET 14, $noreg, implicit $r0

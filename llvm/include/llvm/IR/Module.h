@@ -245,6 +245,12 @@ public:
     else if (!UseNewFormat && IsNewDbgInfoFormat)
       convertFromNewDbgValues();
   }
+  void setNewDbgInfoFormatFlag(bool NewFlag) {
+    for (auto &F : *this) {
+      F.setNewDbgInfoFormatFlag(NewFlag);
+    }
+    IsNewDbgInfoFormat = NewFlag;
+  }
 
   /// The Module constructor. Note that there is no default constructor. You
   /// must provide a name for the module upon construction.
@@ -542,6 +548,8 @@ public:
   void addModuleFlag(MDNode *Node);
   /// Like addModuleFlag but replaces the old module flag if it already exists.
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
 
   /// @}
   /// @name Materialization

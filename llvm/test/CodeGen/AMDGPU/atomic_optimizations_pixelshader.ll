@@ -2,10 +2,10 @@
 ; RUN: llc -mtriple=amdgcn-- - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX7 %s
 ; RUN: llc  -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX89,GFX8 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX89,GFX9 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1064 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1032 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1164 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1132 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1064 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize32 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1032 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1164 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1132 %s
 
 declare i1 @llvm.amdgcn.wqm.vote(i1)
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32 immarg)
@@ -477,7 +477,6 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1032-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1032-NEXT:  ; %bb.2:
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s11
-; GFX1032-NEXT:    s_mov_b32 s10, s11
 ; GFX1032-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
 ; GFX1032-NEXT:  .LBB1_3:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
@@ -615,7 +614,6 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1132-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1132-NEXT:  ; %bb.2:
 ; GFX1132-NEXT:    v_mov_b32_e32 v0, s11
-; GFX1132-NEXT:    s_mov_b32 s10, s11
 ; GFX1132-NEXT:    buffer_atomic_add_u32 v0, off, s[4:7], 0 glc
 ; GFX1132-NEXT:  .LBB1_3:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s9

@@ -625,8 +625,8 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
                                             bool MarkAsSink) {
   HasGeneratedNodes = true;
   bool IsNew;
-  ExplodedNode *N = C.Eng.G.getNode(Loc, State, MarkAsSink, &IsNew);
-  N->addPredecessor(FromN, C.Eng.G);
+  ExplodedNode *N = C.getEngine().G.getNode(Loc, State, MarkAsSink, &IsNew);
+  N->addPredecessor(FromN, C.getEngine().G);
   Frontier.erase(FromN);
 
   if (!IsNew)
@@ -655,7 +655,7 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
   if (!isFeasible(branch))
     return nullptr;
 
-  ProgramPoint Loc = BlockEdge(C.Block, branch ? DstT:DstF,
+  ProgramPoint Loc = BlockEdge(C.getBlock(), branch ? DstT : DstF,
                                NodePred->getLocationContext());
   ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
   return Succ;

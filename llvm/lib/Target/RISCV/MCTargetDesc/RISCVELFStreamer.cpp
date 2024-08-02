@@ -19,7 +19,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -87,10 +87,10 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
 
 void RISCVTargetELFStreamer::finish() {
   RISCVTargetStreamer::finish();
-  MCAssembler &MCA = getStreamer().getAssembler();
+  ELFObjectWriter &W = getStreamer().getWriter();
   RISCVABI::ABI ABI = getTargetABI();
 
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  unsigned EFlags = W.getELFHeaderEFlags();
 
   if (hasRVC())
     EFlags |= ELF::EF_RISCV_RVC;
@@ -117,7 +117,7 @@ void RISCVTargetELFStreamer::finish() {
     llvm_unreachable("Improperly initialised target ABI");
   }
 
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 }
 
 void RISCVTargetELFStreamer::reset() {
@@ -132,7 +132,6 @@ void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
 void RISCVELFStreamer::reset() {
   static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
   MCELFStreamer::reset();
-  MappingSymbolCounter = 0;
   LastMappingSymbols.clear();
   LastEMS = EMS_None;
 }
@@ -152,15 +151,13 @@ void RISCVELFStreamer::emitInstructionsMappingSymbol() {
 }
 
 void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
-  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
-      Name + "." + Twine(MappingSymbolCounter++)));
+  auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);
 }
 
-void RISCVELFStreamer::changeSection(MCSection *Section,
-                                     const MCExpr *Subsection) {
+void RISCVELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // We have to keep track of the mapping symbol state of any sections we
   // use. Each one should start off as EMS_None, which is provided as the
   // default constructor by DenseMap::lookup.
@@ -197,11 +194,9 @@ namespace llvm {
 MCELFStreamer *createRISCVELFStreamer(MCContext &C,
                                       std::unique_ptr<MCAsmBackend> MAB,
                                       std::unique_ptr<MCObjectWriter> MOW,
-                                      std::unique_ptr<MCCodeEmitter> MCE,
-                                      bool RelaxAll) {
+                                      std::unique_ptr<MCCodeEmitter> MCE) {
   RISCVELFStreamer *S =
       new RISCVELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE));
-  S->getAssembler().setRelaxAll(RelaxAll);
   return S;
 }
 } // namespace llvm

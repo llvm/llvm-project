@@ -24,7 +24,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     DoubleComplex, Byte, StarKind, ExponentMatchingKindParam, QuadPrecision,
     SlashInitialization, TripletInArrayConstructor, MissingColons,
     SignedComplexLiteral, OldStyleParameter, ComplexConstructor, PercentLOC,
-    SignedPrimary, FileName, Carriagecontrol, Convert, Dispose,
+    SignedMultOperand, FileName, Carriagecontrol, Convert, Dispose,
     IOListLeadingComma, AbbreviatedEditDescriptor, ProgramParentheses,
     PercentRefAndVal, OmitFunctionDummies, CrayPointer, Hollerith, ArithmeticIF,
     Assign, AssignedGOTO, Pause, OpenACC, OpenMP, CUDA, CruftAfterAmpersand,
@@ -41,20 +41,36 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ActualIntegerConvertedToSmallerKind, HollerithOrCharacterAsBOZ,
     BindingAsProcedure, StatementFunctionExtensions,
     UseGenericIntrinsicWhenSpecificDoesntMatch, DataStmtExtensions,
-    RedundantContiguous, InitBlankCommon, EmptyBindCDerivedType,
-    MiscSourceExtensions, AllocateToOtherLength, LongNames, IntrinsicAsSpecific,
-    BenignNameClash, BenignRedundancy, NullMoldAllocatableComponentValue,
-    NopassScalarBase, MiscUseExtensions, ImpliedDoIndexScope,
-    DistinctCommonSizes, OddIndexVariableRestrictions,
-    IndistinguishableSpecifics)
+    RedundantContiguous, RedundantAttribute, InitBlankCommon,
+    EmptyBindCDerivedType, MiscSourceExtensions, AllocateToOtherLength,
+    LongNames, IntrinsicAsSpecific, BenignNameClash, BenignRedundancy,
+    NullMoldAllocatableComponentValue, NopassScalarBase, MiscUseExtensions,
+    ImpliedDoIndexScope, DistinctCommonSizes, OddIndexVariableRestrictions,
+    IndistinguishableSpecifics, SubroutineAndFunctionSpecifics,
+    EmptySequenceType, NonSequenceCrayPointee, BranchIntoConstruct,
+    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
+    NonBindCInteroperability, CudaManaged, CudaUnified,
+    PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
+    UndefinableAsynchronousOrVolatileActual)
 
-// Portability and suspicious usage warnings for conforming code
+// Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
-    ShortCharacterActual, ExprPassedToVolatile, ImplicitInterfaceActual,
+    ShortCharacterActual, ShortArrayActual, ImplicitInterfaceActual,
     PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
-    F202XAllocatableBreakingChange, DimMustBePresent, CommonBlockPadding,
-    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict)
+    F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
+    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
+    FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
+    FoldingFailure, FoldingLimit, Interoperability, Bounds, Preprocessing,
+    Scanning, OpenAccUsage, ProcPointerCompatibility, VoidMold,
+    KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
+    IgnoreTKRUsage, ExternalInterfaceMismatch, DefinedOperatorArgs, Final,
+    ZeroDoStep, UnusedForallIndex, OpenMPUsage, ModuleFile, DataLength,
+    IgnoredDirective, HomonymousSpecific, HomonymousResult,
+    IgnoredIntrinsicFunctionType, PreviousScalarUse,
+    RedeclaredInaccessibleComponent, ImplicitShared, IndexVarRedefinition,
+    IncompatibleImplicitInterfaces, BadTypeForTarget,
+    VectorSubscriptFinalization, UndefinedFunctionResult)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
@@ -67,6 +83,8 @@ public:
     disable_.set(LanguageFeature::OpenACC);
     disable_.set(LanguageFeature::OpenMP);
     disable_.set(LanguageFeature::CUDA); // !@cuf
+    disable_.set(LanguageFeature::CudaManaged);
+    disable_.set(LanguageFeature::CudaUnified);
     disable_.set(LanguageFeature::ImplicitNoneTypeNever);
     disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
     disable_.set(LanguageFeature::DefaultSave);
@@ -77,8 +95,59 @@ public:
     disable_.set(LanguageFeature::LogicalAbbreviations);
     disable_.set(LanguageFeature::XOROperator);
     disable_.set(LanguageFeature::OldStyleParameter);
+    // These warnings are enabled by default, but only because they used
+    // to be unconditional.  TODO: prune this list
+    warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
+    warnLanguage_.set(LanguageFeature::RedundantAttribute);
+    warnLanguage_.set(LanguageFeature::SubroutineAndFunctionSpecifics);
+    warnLanguage_.set(LanguageFeature::EmptySequenceType);
+    warnLanguage_.set(LanguageFeature::NonSequenceCrayPointee);
+    warnLanguage_.set(LanguageFeature::BranchIntoConstruct);
+    warnLanguage_.set(LanguageFeature::BadBranchTarget);
+    warnLanguage_.set(LanguageFeature::ConvertedArgument);
+    warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
+    warnLanguage_.set(LanguageFeature::ListDirectedSize);
+    warnUsage_.set(UsageWarning::ShortArrayActual);
+    warnUsage_.set(UsageWarning::FoldingException);
+    warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
+    warnUsage_.set(UsageWarning::FoldingValueChecks);
+    warnUsage_.set(UsageWarning::FoldingFailure);
+    warnUsage_.set(UsageWarning::FoldingLimit);
+    warnUsage_.set(UsageWarning::Interoperability);
+    warnUsage_.set(UsageWarning::Bounds);
+    warnUsage_.set(UsageWarning::Preprocessing);
+    warnUsage_.set(UsageWarning::Scanning);
+    warnUsage_.set(UsageWarning::OpenAccUsage);
+    warnUsage_.set(UsageWarning::ProcPointerCompatibility);
+    warnUsage_.set(UsageWarning::VoidMold);
+    warnUsage_.set(UsageWarning::KnownBadImplicitInterface);
+    warnUsage_.set(UsageWarning::EmptyCase);
+    warnUsage_.set(UsageWarning::CaseOverflow);
+    warnUsage_.set(UsageWarning::CUDAUsage);
+    warnUsage_.set(UsageWarning::IgnoreTKRUsage);
+    warnUsage_.set(UsageWarning::ExternalInterfaceMismatch);
+    warnUsage_.set(UsageWarning::DefinedOperatorArgs);
+    warnUsage_.set(UsageWarning::Final);
+    warnUsage_.set(UsageWarning::ZeroDoStep);
+    warnUsage_.set(UsageWarning::UnusedForallIndex);
+    warnUsage_.set(UsageWarning::OpenMPUsage);
+    warnUsage_.set(UsageWarning::ModuleFile);
+    warnUsage_.set(UsageWarning::DataLength);
+    warnUsage_.set(UsageWarning::IgnoredDirective);
+    warnUsage_.set(UsageWarning::HomonymousSpecific);
+    warnUsage_.set(UsageWarning::HomonymousResult);
+    warnUsage_.set(UsageWarning::IgnoredIntrinsicFunctionType);
+    warnUsage_.set(UsageWarning::PreviousScalarUse);
+    warnUsage_.set(UsageWarning::RedeclaredInaccessibleComponent);
+    warnUsage_.set(UsageWarning::ImplicitShared);
+    warnUsage_.set(UsageWarning::IndexVarRedefinition);
+    warnUsage_.set(UsageWarning::IncompatibleImplicitInterfaces);
+    warnUsage_.set(UsageWarning::BadTypeForTarget);
+    warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
+    warnUsage_.set(UsageWarning::UndefinedFunctionResult);
   }
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
+
   void Enable(LanguageFeature f, bool yes = true) { disable_.set(f, !yes); }
   void EnableWarning(LanguageFeature f, bool yes = true) {
     warnLanguage_.set(f, yes);
@@ -88,10 +157,19 @@ public:
   }
   void WarnOnAllNonstandard(bool yes = true) { warnAllLanguage_ = yes; }
   void WarnOnAllUsage(bool yes = true) { warnAllUsage_ = yes; }
+  void DisableAllNonstandardWarnings() {
+    warnAllLanguage_ = false;
+    warnLanguage_.clear();
+  }
+  void DisableAllUsageWarnings() {
+    warnAllUsage_ = false;
+    warnUsage_.clear();
+  }
+
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const {
     return (warnAllLanguage_ && f != LanguageFeature::OpenMP &&
-               f != LanguageFeature::OpenACC) ||
+               f != LanguageFeature::OpenACC && f != LanguageFeature::CUDA) ||
         warnLanguage_.test(f);
   }
   bool ShouldWarn(UsageWarning w) const {

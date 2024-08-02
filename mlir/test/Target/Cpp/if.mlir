@@ -49,7 +49,7 @@ func.func @test_if_else(%arg0: i1, %arg1: f32) {
 
 
 func.func @test_if_yield(%arg0: i1, %arg1: f32) {
-  %0 = arith.constant 0 : i8
+  %0 = "emitc.constant"() <{value = 0 : i8}> : () -> i8
   %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
   %y = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f64
   emitc.if %arg0 {

@@ -201,11 +201,10 @@ define void @fct1_64x1(ptr nocapture %array, i64 %offset) nounwind ssp {
 ; CHECK-LABEL: fct1_64x1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:globalArray64x1
-; CHECK-NEXT:    lsl x9, x1, #3
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:globalArray64x1]
-; CHECK-NEXT:    ldr d0, [x0, x9]
+; CHECK-NEXT:    ldr d0, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    str d0, [x8, x9]
+; CHECK-NEXT:    str d0, [x8, x1, lsl #3]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds <1 x i64>, ptr %array, i64 %offset
@@ -238,11 +237,10 @@ define void @fct1_32x2(ptr nocapture %array, i64 %offset) nounwind ssp {
 ; CHECK-LABEL: fct1_32x2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:globalArray32x2
-; CHECK-NEXT:    lsl x9, x1, #3
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:globalArray32x2]
-; CHECK-NEXT:    ldr d0, [x0, x9]
+; CHECK-NEXT:    ldr d0, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    str d0, [x8, x9]
+; CHECK-NEXT:    str d0, [x8, x1, lsl #3]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds <2 x i32>, ptr %array, i64 %offset
@@ -275,11 +273,10 @@ define void @fct1_16x4(ptr nocapture %array, i64 %offset) nounwind ssp {
 ; CHECK-LABEL: fct1_16x4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:globalArray16x4
-; CHECK-NEXT:    lsl x9, x1, #3
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:globalArray16x4]
-; CHECK-NEXT:    ldr d0, [x0, x9]
+; CHECK-NEXT:    ldr d0, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    str d0, [x8, x9]
+; CHECK-NEXT:    str d0, [x8, x1, lsl #3]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds <4 x i16>, ptr %array, i64 %offset
@@ -312,11 +309,10 @@ define void @fct1_8x8(ptr nocapture %array, i64 %offset) nounwind ssp {
 ; CHECK-LABEL: fct1_8x8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:globalArray8x8
-; CHECK-NEXT:    lsl x9, x1, #3
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:globalArray8x8]
-; CHECK-NEXT:    ldr d0, [x0, x9]
+; CHECK-NEXT:    ldr d0, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    str d0, [x8, x9]
+; CHECK-NEXT:    str d0, [x8, x1, lsl #3]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds <8 x i8>, ptr %array, i64 %offset

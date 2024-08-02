@@ -43,6 +43,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
@@ -380,7 +381,7 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
   static constexpr llvm::StringRef AttachSynchronousHijackListenerName =
       "lldb.internal.Process.AttachSynchronous.hijack";
@@ -389,7 +390,7 @@ public:
   static constexpr llvm::StringRef ResumeSynchronousHijackListenerName =
       "lldb.internal.Process.ResumeSynchronous.hijack";
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -464,6 +465,8 @@ public:
     static bool SetUpdateStateOnRemoval(Event *event_ptr);
 
   private:
+    bool ForwardEventToPendingListeners(Event *event_ptr) override;
+
     void SetUpdateStateOnRemoval() { m_update_state++; }
 
     void SetRestarted(bool new_value) { m_restarted = new_value; }
@@ -735,8 +738,14 @@ public:
   /// Helper function for Process::SaveCore(...) that calculates the address
   /// ranges that should be saved. This allows all core file plug-ins to save
   /// consistent memory ranges given a \a core_style.
-  Status CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+  Status CalculateCoreFileSaveRanges(const SaveCoreOptions &core_options,
                                      CoreFileMemoryRanges &ranges);
+
+  /// Helper function for Process::SaveCore(...) that calculates the thread list
+  /// based upon options set within a given \a core_options object.
+  /// \note If there is no thread list defined, all threads will be saved.
+  std::vector<lldb::ThreadSP>
+  CalculateCoreFileThreadList(const SaveCoreOptions &core_options);
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
@@ -914,8 +923,8 @@ public:
   /// \param[in] force_kill
   ///     Whether lldb should force a kill (instead of a detach) from
   ///     the inferior process.  Normally if lldb launched a binary and
-  ///     Destory is called, lldb kills it.  If lldb attached to a
-  ///     running process and Destory is called, lldb detaches.  If
+  ///     Destroy is called, lldb kills it.  If lldb attached to a
+  ///     running process and Destroy is called, lldb detaches.  If
   ///     this behavior needs to be over-ridden, this is the bool that
   ///     can be used.
   ///
@@ -2567,6 +2576,19 @@ void PruneThreadPlans();
   ///     information related to the process.
   virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
 
+  /// Fetch extended crash information held by the process.  This will never be
+  /// an empty shared pointer, it will always have a dict, though it may be
+  /// empty.
+  StructuredData::DictionarySP GetExtendedCrashInfoDict() {
+    assert(m_crash_info_dict_sp && "We always have a valid dictionary");
+    return m_crash_info_dict_sp;
+  }
+
+  void ResetExtendedCrashInfoDict() {
+    // StructuredData::Dictionary is add only, so we have to make a new one:
+    m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
+  }
+
   size_t AddImageToken(lldb::addr_t image_ptr);
 
   lldb::addr_t GetImagePtrFromToken(size_t token) const;
@@ -2661,6 +2683,37 @@ void PruneThreadPlans();
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;
   }
+
+  /// Find a pattern within a memory region.
+  ///
+  /// This function searches for a pattern represented by the provided buffer
+  /// within the memory range specified by the low and high addresses. It uses
+  /// a bad character heuristic to optimize the search process.
+  ///
+  /// \param[in] low The starting address of the memory region to be searched.
+  /// (inclusive)
+  ///
+  /// \param[in] high The ending address of the memory region to be searched.
+  /// (exclusive)
+  ///
+  /// \param[in] buf A pointer to the buffer containing the pattern to be
+  /// searched.
+  ///
+  /// \param[in] buffer_size The size of the buffer in bytes.
+  ///
+  /// \return The address where the pattern was found or LLDB_INVALID_ADDRESS if
+  /// not found.
+  lldb::addr_t FindInMemory(lldb::addr_t low, lldb::addr_t high,
+                            const uint8_t *buf, size_t size);
+
+  AddressRanges FindRangesInMemory(const uint8_t *buf, uint64_t size,
+                                   const AddressRanges &ranges,
+                                   size_t alignment, size_t max_matches,
+                                   Status &error);
+
+  lldb::addr_t FindInMemory(const uint8_t *buf, uint64_t size,
+                            const AddressRange &range, size_t alignment,
+                            Status &error);
 
 protected:
   friend class Trace;
@@ -2776,6 +2829,11 @@ protected:
   ///     Zero is returned in the case of an error.
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                               Status &error) = 0;
+
+  virtual void DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
+                              const uint8_t *buf, size_t size,
+                              AddressRanges &matches, size_t alignment,
+                              size_t max_matches);
 
   /// DoGetMemoryRegionInfo is called by GetMemoryRegionInfo after it has
   /// removed non address bits from load_addr. Override this method in
@@ -3147,6 +3205,10 @@ protected:
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;
 
+  /// A repository for extra crash information, consulted in
+  /// GetExtendedCrashInformation.
+  StructuredData::DictionarySP m_crash_info_dict_sp;
+
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;
 
@@ -3218,6 +3280,8 @@ protected:
   virtual Status UpdateAutomaticSignalFiltering();
 
   void LoadOperatingSystemPlugin(bool flush);
+
+  void SetAddressableBitMasks(AddressableBits bit_masks);
 
 private:
   Status DestroyImpl(bool force_kill);

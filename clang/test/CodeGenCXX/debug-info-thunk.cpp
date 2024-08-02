@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc -debug-info-kind=limited -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -debug-info-kind=limited -S -emit-llvm -o - | FileCheck %s -check-prefix=ITANIUM
+// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm -o - | FileCheck %s -check-prefix=ITANIUM
 //
 // Validate we emit a "DIFlagThunk" flag on DISubprogram entries for thunks.
 // This flag is used for emitting S_THUNK32 symbols for CodeView debugging.

@@ -316,52 +316,18 @@ declare float @baz(i32 signext %i3)
 define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-LABEL: test7:
 ; RV64I:       # %bb.0: # %bb
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    lui a1, 349525
-; RV64I-NEXT:    addiw s0, a1, 1365
-; RV64I-NEXT:    slli a1, s0, 32
-; RV64I-NEXT:    add s0, s0, a1
-; RV64I-NEXT:    lui a1, 209715
-; RV64I-NEXT:    addiw s1, a1, 819
-; RV64I-NEXT:    slli a1, s1, 32
-; RV64I-NEXT:    add s1, s1, a1
-; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addiw s2, a1, -241
-; RV64I-NEXT:    slli a1, s2, 32
-; RV64I-NEXT:    add s2, s2, a1
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addiw s3, a1, 257
-; RV64I-NEXT:    slli a1, s3, 32
-; RV64I-NEXT:    add s3, s3, a1
 ; RV64I-NEXT:  .LBB6_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    call foo
-; RV64I-NEXT:    srli a1, a0, 1
-; RV64I-NEXT:    and a1, a1, s0
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    and a1, a0, s1
-; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    and a0, a0, s1
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    srli a1, a0, 4
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    mul a0, a0, s3
-; RV64I-NEXT:    srli a0, a0, 56
+; RV64I-NEXT:    call __popcountdi2
 ; RV64I-NEXT:    bnez a0, .LBB6_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test7:
@@ -1047,25 +1013,25 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -8
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    srliw a2, a1, 28
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 2
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -4
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    srliw a2, a1, 30
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 1
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -2
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    srai a1, a1, 31
 ; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    srli a1, a1, 31
 ; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:  .LBB18_4: # %cleanup
 ; CHECK-NEXT:    ret
@@ -1087,28 +1053,27 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 3
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -8
 ; NOREMOVAL-NEXT:    add a0, a0, a2
 ; NOREMOVAL-NEXT:    srliw a2, a1, 28
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 2
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -4
 ; NOREMOVAL-NEXT:    add a0, a0, a2
 ; NOREMOVAL-NEXT:    srliw a2, a1, 30
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 1
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -2
 ; NOREMOVAL-NEXT:    add a0, a0, a2
-; NOREMOVAL-NEXT:    srai a1, a1, 31
 ; NOREMOVAL-NEXT:    not a1, a1
-; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    srli a1, a1, 31
+; NOREMOVAL-NEXT:    addw a0, a0, a1
 ; NOREMOVAL-NEXT:  .LBB18_4: # %cleanup
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %x, 0

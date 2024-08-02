@@ -359,6 +359,54 @@ namespace clang {
           Params, Importer.getToContext().getTranslationUnitDecl());
     }
 
+    template <typename TemplateParmDeclT>
+    void tryUpdateTemplateParmDeclInheritedFrom(NamedDecl *RecentParm,
+                                                NamedDecl *NewParm) {
+      if (auto *ParmT = dyn_cast<TemplateParmDeclT>(RecentParm)) {
+        if (ParmT->hasDefaultArgument()) {
+          auto *P = cast<TemplateParmDeclT>(NewParm);
+          P->removeDefaultArgument();
+          P->setInheritedDefaultArgument(Importer.ToContext, ParmT);
+        }
+      }
+    }
+
+    // Update the parameter list `NewParams` of a template declaration
+    // by "inheriting" default argument values from `RecentParams`,
+    // which is the parameter list of an earlier declaration of the
+    // same template. (Note that "inheriting" default argument values
+    // is not related to object-oriented inheritance.)
+    //
+    // In the clang AST template parameters (NonTypeTemplateParmDec,
+    // TemplateTypeParmDecl, TemplateTemplateParmDecl) have a reference to the
+    // default value, if one is specified at the first declaration. The default
+    // value can be specified only once. The template parameters of the
+    // following declarations have a reference to the original default value
+    // through the "inherited" value. This value should be set for all imported
+    // template parameters that have a previous declaration (also a previous
+    // template declaration).
+    //
+    // In the `Visit*ParmDecl` functions the default value of these template
+    // arguments is always imported. At that location the previous declaration
+    // is not easily accessible, it is not possible to call
+    // `setInheritedDefaultArgument` at that place.
+    // `updateTemplateParametersInheritedFrom` is called later when the already
+    // imported default value is erased and changed to "inherited".
+    // It is important to change the mode to "inherited" otherwise false
+    // structural in-equivalences could be detected.
+    void updateTemplateParametersInheritedFrom(
+        const TemplateParameterList &RecentParams,
+        TemplateParameterList &NewParams) {
+      for (auto [Idx, Param] : enumerate(RecentParams)) {
+        tryUpdateTemplateParmDeclInheritedFrom<NonTypeTemplateParmDecl>(
+            Param, NewParams.getParam(Idx));
+        tryUpdateTemplateParmDeclInheritedFrom<TemplateTypeParmDecl>(
+            Param, NewParams.getParam(Idx));
+        tryUpdateTemplateParmDeclInheritedFrom<TemplateTemplateParmDecl>(
+            Param, NewParams.getParam(Idx));
+      }
+    }
+
   public:
     explicit ASTNodeImporter(ASTImporter &Importer) : Importer(Importer) {}
 
@@ -443,8 +491,9 @@ namespace clang {
     Expected<FunctionTemplateAndArgsTy>
     ImportFunctionTemplateWithTemplateArgsFromSpecialization(
         FunctionDecl *FromFD);
-    Error ImportTemplateParameterLists(const DeclaratorDecl *FromD,
-                                       DeclaratorDecl *ToD);
+
+    template <typename DeclTy>
+    Error ImportTemplateParameterLists(const DeclTy *FromD, DeclTy *ToD);
 
     Error ImportTemplateInformation(FunctionDecl *FromFD, FunctionDecl *ToFD);
 
@@ -695,7 +744,7 @@ namespace clang {
     // Returns true if the given function has a placeholder return type and
     // that type is declared inside the body of the function.
     // E.g. auto f() { struct X{}; return X(); }
-    bool hasAutoReturnTypeDeclaredInside(FunctionDecl *D);
+    bool hasReturnTypeDeclaredInside(FunctionDecl *D);
   };
 
 template <typename InContainerTy>
@@ -1098,6 +1147,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case BuiltinType::Id:                                                        \
+    return Importer.getToContext().SingletonId;
+#include "clang/Basic/AMDGPUTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
@@ -1216,6 +1269,15 @@ ASTNodeImporter::VisitConstantArrayType(const ConstantArrayType *T) {
   return Importer.getToContext().getConstantArrayType(
       ToElementType, T->getSize(), ToSizeExpr, T->getSizeModifier(),
       T->getIndexTypeCVRQualifiers());
+}
+
+ExpectedType
+ASTNodeImporter::VisitArrayParameterType(const ArrayParameterType *T) {
+  ExpectedType ToArrayTypeOrErr = VisitConstantArrayType(T);
+  if (!ToArrayTypeOrErr)
+    return ToArrayTypeOrErr.takeError();
+
+  return Importer.getToContext().getArrayParameterType(*ToArrayTypeOrErr);
 }
 
 ExpectedType
@@ -1495,7 +1557,7 @@ ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
   // The InjectedClassNameType is created in VisitRecordDecl when the
   // T->getDecl() is imported. Here we can return the existing type.
   const Type *Ty = (*ToDeclOrErr)->getTypeForDecl();
-  assert(Ty && isa<InjectedClassNameType>(Ty));
+  assert(isa_and_nonnull<InjectedClassNameType>(Ty));
   return QualType(Ty, 0);
 }
 
@@ -1525,6 +1587,28 @@ ExpectedType ASTNodeImporter::VisitAttributedType(const AttributedType *T) {
 
   return Importer.getToContext().getAttributedType(T->getAttrKind(),
       *ToModifiedTypeOrErr, *ToEquivalentTypeOrErr);
+}
+
+ExpectedType
+ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
+  ExpectedType ToWrappedTypeOrErr = import(T->desugar());
+  if (!ToWrappedTypeOrErr)
+    return ToWrappedTypeOrErr.takeError();
+
+  Error Err = Error::success();
+  Expr *CountExpr = importChecked(Err, T->getCountExpr());
+
+  SmallVector<TypeCoupledDeclRefInfo, 1> CoupledDecls;
+  for (const TypeCoupledDeclRefInfo &TI : T->dependent_decls()) {
+    Expected<ValueDecl *> ToDeclOrErr = import(TI.getDecl());
+    if (!ToDeclOrErr)
+      return ToDeclOrErr.takeError();
+    CoupledDecls.emplace_back(*ToDeclOrErr, TI.isDeref());
+  }
+
+  return Importer.getToContext().getCountAttributedType(
+      *ToWrappedTypeOrErr, CountExpr, T->isCountInBytes(), T->isOrNull(),
+      ArrayRef(CoupledDecls.data(), CoupledDecls.size()));
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
@@ -2897,7 +2981,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
   // We may already have an enum of the same name; try to find and match it.
   EnumDecl *PrevDecl = nullptr;
-  if (!DC->isFunctionOrMethod() && SearchName) {
+  if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls =
         Importer.findDeclsInToCtx(DC, SearchName);
@@ -2913,7 +2997,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
         if (!hasSameVisibilityContextAndLinkage(FoundEnum, D))
           continue;
-        if (IsStructuralMatch(D, FoundEnum)) {
+        if (IsStructuralMatch(D, FoundEnum, !SearchName.isEmpty())) {
           EnumDecl *FoundDef = FoundEnum->getDefinition();
           if (D->isThisDeclarationADefinition() && FoundDef)
             return Importer.MapImported(D, FoundDef);
@@ -2924,7 +3008,12 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       }
     }
 
-    if (!ConflictingDecls.empty()) {
+    // In case of unnamed enums, we try to find an existing similar one, if none
+    // was found, perform the import always.
+    // Structural in-equivalence is not detected in this way here, but it may
+    // be found when the parent decl is imported (if the enum is part of a
+    // class). To make this totally exact a more difficult solution is needed.
+    if (SearchName && !ConflictingDecls.empty()) {
       ExpectedName NameOrErr = Importer.HandleNameConflict(
           SearchName, DC, IDNS, ConflictingDecls.data(),
           ConflictingDecls.size());
@@ -3291,8 +3380,9 @@ ExpectedDecl ASTNodeImporter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   return ToEnumerator;
 }
 
-Error ASTNodeImporter::ImportTemplateParameterLists(const DeclaratorDecl *FromD,
-                                                    DeclaratorDecl *ToD) {
+template <typename DeclTy>
+Error ASTNodeImporter::ImportTemplateParameterLists(const DeclTy *FromD,
+                                                    DeclTy *ToD) {
   unsigned int Num = FromD->getNumTemplateParameterLists();
   if (Num == 0)
     return Error::success();
@@ -3616,15 +3706,28 @@ private:
 };
 } // namespace
 
-/// This function checks if the function has 'auto' return type that contains
+/// This function checks if the given function has a return type that contains
 /// a reference (in any way) to a declaration inside the same function.
-bool ASTNodeImporter::hasAutoReturnTypeDeclaredInside(FunctionDecl *D) {
+bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
   QualType FromTy = D->getType();
   const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
   assert(FromFPT && "Must be called on FunctionProtoType");
 
+  auto IsCXX11LambdaWithouTrailingReturn = [&]() {
+    if (Importer.FromContext.getLangOpts().CPlusPlus14) // C++14 or later
+      return false;
+
+    if (FromFPT->hasTrailingReturn())
+      return false;
+
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
+      return cast<CXXRecordDecl>(MD->getDeclContext())->isLambda();
+
+    return false;
+  };
+
   QualType RetT = FromFPT->getReturnType();
-  if (isa<AutoType>(RetT.getTypePtr())) {
+  if (isa<AutoType>(RetT.getTypePtr()) || IsCXX11LambdaWithouTrailingReturn()) {
     FunctionDecl *Def = D->getDefinition();
     IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
     return Visitor.CheckType(RetT);
@@ -3780,7 +3883,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // E.g.: auto foo() { struct X{}; return X(); }
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
-    if (hasAutoReturnTypeDeclaredInside(D)) {
+    if (hasReturnTypeDeclaredInside(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
@@ -3916,6 +4019,14 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // decl and its redeclarations may be required.
   }
 
+  StringLiteral *Msg = D->getDeletedMessage();
+  if (Msg) {
+    auto Imported = import(Msg);
+    if (!Imported)
+      return Imported.takeError();
+    Msg = *Imported;
+  }
+
   ToFunction->setQualifierInfo(ToQualifierLoc);
   ToFunction->setAccess(D->getAccess());
   ToFunction->setLexicalDeclContext(LexicalDC);
@@ -3929,6 +4040,11 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
       D->FriendConstraintRefersToEnclosingTemplate());
   ToFunction->setRangeEnd(ToEndLoc);
   ToFunction->setDefaultLoc(ToDefaultLoc);
+
+  if (Msg)
+    ToFunction->setDefaultedOrDeletedInfo(
+        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+            Importer.getToContext(), {}, Msg));
 
   // Set the parameters.
   for (auto *Param : Parameters) {
@@ -4111,12 +4227,6 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
                               D->getInClassInitStyle()))
     return ToField;
 
-  // We need [[no_unqiue_address]] attributes to be added to FieldDecl, before
-  // we add fields in CXXRecordDecl::addedMember, otherwise record will be
-  // marked as having non-zero size.
-  Err = Importer.ImportAttrs(ToField, D);
-  if (Err)
-    return std::move(Err);
   ToField->setAccess(D->getAccess());
   ToField->setLexicalDeclContext(LexicalDC);
   ToField->setImplicit(D->isImplicit());
@@ -4510,6 +4620,10 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
   ToVar->setQualifierInfo(ToQualifierLoc);
   ToVar->setAccess(D->getAccess());
   ToVar->setLexicalDeclContext(LexicalDC);
+  if (D->isInlineSpecified())
+    ToVar->setInlineSpecified();
+  if (D->isInline())
+    ToVar->setImplicitlyInline();
 
   if (FoundByLookup) {
     auto *Recent = const_cast<VarDecl *>(FoundByLookup->getMostRecentDecl());
@@ -5854,11 +5968,11 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   if (D->hasDefaultArgument()) {
-    Expected<TypeSourceInfo *> ToDefaultArgOrErr =
-        import(D->getDefaultArgumentInfo());
+    Expected<TemplateArgumentLoc> ToDefaultArgOrErr =
+        import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    ToD->setDefaultArgument(*ToDefaultArgOrErr);
+    ToD->setDefaultArgument(ToD->getASTContext(), *ToDefaultArgOrErr);
   }
 
   return ToD;
@@ -5886,10 +6000,11 @@ ASTNodeImporter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     return ToD;
 
   if (D->hasDefaultArgument()) {
-    ExpectedExpr ToDefaultArgOrErr = import(D->getDefaultArgument());
+    Expected<TemplateArgumentLoc> ToDefaultArgOrErr =
+        import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    ToD->setDefaultArgument(*ToDefaultArgOrErr);
+    ToD->setDefaultArgument(Importer.getToContext(), *ToDefaultArgOrErr);
   }
 
   return ToD;
@@ -5917,7 +6032,8 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
           ToD, D, Importer.getToContext(),
           Importer.getToContext().getTranslationUnitDecl(), *LocationOrErr,
           D->getDepth(), D->getPosition(), D->isParameterPack(),
-          (*NameOrErr).getAsIdentifierInfo(), *TemplateParamsOrErr))
+          (*NameOrErr).getAsIdentifierInfo(), D->wasDeclaredWithTypename(),
+          *TemplateParamsOrErr))
     return ToD;
 
   if (D->hasDefaultArgument()) {
@@ -6064,6 +6180,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     }
 
     D2->setPreviousDecl(Recent);
+
+    updateTemplateParametersInheritedFrom(*(Recent->getTemplateParameters()),
+                                          **TemplateParamsOrErr);
   }
 
   return D2;
@@ -6148,15 +6267,16 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   if (!IdLocOrErr)
     return IdLocOrErr.takeError();
 
+  // Import TemplateArgumentListInfo.
+  TemplateArgumentListInfo ToTAInfo;
+  if (const auto *ASTTemplateArgs = D->getTemplateArgsAsWritten()) {
+    if (Error Err = ImportTemplateArgumentListInfo(*ASTTemplateArgs, ToTAInfo))
+      return std::move(Err);
+  }
+
   // Create the specialization.
   ClassTemplateSpecializationDecl *D2 = nullptr;
   if (PartialSpec) {
-    // Import TemplateArgumentListInfo.
-    TemplateArgumentListInfo ToTAInfo;
-    const auto &ASTTemplateArgs = *PartialSpec->getTemplateArgsAsWritten();
-    if (Error Err = ImportTemplateArgumentListInfo(ASTTemplateArgs, ToTAInfo))
-      return std::move(Err);
-
     QualType CanonInjType;
     if (Error Err = importInto(
         CanonInjType, PartialSpec->getInjectedSpecializationType()))
@@ -6166,7 +6286,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     if (GetImportedOrCreateDecl<ClassTemplatePartialSpecializationDecl>(
             D2, D, Importer.getToContext(), D->getTagKind(), DC, *BeginLocOrErr,
             *IdLocOrErr, ToTPList, ClassTemplate,
-            llvm::ArrayRef(TemplateArgs.data(), TemplateArgs.size()), ToTAInfo,
+            llvm::ArrayRef(TemplateArgs.data(), TemplateArgs.size()),
             CanonInjType,
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
@@ -6214,28 +6334,27 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   else
     return BraceRangeOrErr.takeError();
 
+  if (Error Err = ImportTemplateParameterLists(D, D2))
+    return std::move(Err);
+
   // Import the qualifier, if any.
   if (auto LocOrErr = import(D->getQualifierLoc()))
     D2->setQualifierInfo(*LocOrErr);
   else
     return LocOrErr.takeError();
 
-  if (auto *TSI = D->getTypeAsWritten()) {
-    if (auto TInfoOrErr = import(TSI))
-      D2->setTypeAsWritten(*TInfoOrErr);
-    else
-      return TInfoOrErr.takeError();
+  if (D->getTemplateArgsAsWritten())
+    D2->setTemplateArgsAsWritten(ToTAInfo);
 
-    if (auto LocOrErr = import(D->getTemplateKeywordLoc()))
-      D2->setTemplateKeywordLoc(*LocOrErr);
-    else
-      return LocOrErr.takeError();
+  if (auto LocOrErr = import(D->getTemplateKeywordLoc()))
+    D2->setTemplateKeywordLoc(*LocOrErr);
+  else
+    return LocOrErr.takeError();
 
-    if (auto LocOrErr = import(D->getExternLoc()))
-      D2->setExternLoc(*LocOrErr);
-    else
-      return LocOrErr.takeError();
-  }
+  if (auto LocOrErr = import(D->getExternKeywordLoc()))
+    D2->setExternKeywordLoc(*LocOrErr);
+  else
+    return LocOrErr.takeError();
 
   if (D->getPointOfInstantiation().isValid()) {
     if (auto POIOrErr = import(D->getPointOfInstantiation()))
@@ -6378,6 +6497,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateDecl(VarTemplateDecl *D) {
         ToTemplated->setPreviousDecl(PrevTemplated);
     }
     ToVarTD->setPreviousDecl(Recent);
+
+    updateTemplateParametersInheritedFrom(*(Recent->getTemplateParameters()),
+                                          **TemplateParamsOrErr);
   }
 
   return ToVarTD;
@@ -6455,7 +6577,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
   VarTemplateSpecializationDecl *D2 = nullptr;
 
   TemplateArgumentListInfo ToTAInfo;
-  if (const ASTTemplateArgumentListInfo *Args = D->getTemplateArgsInfo()) {
+  if (const auto *Args = D->getTemplateArgsAsWritten()) {
     if (Error Err = ImportTemplateArgumentListInfo(*Args, ToTAInfo))
       return std::move(Err);
   }
@@ -6463,14 +6585,6 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
   using PartVarSpecDecl = VarTemplatePartialSpecializationDecl;
   // Create a new specialization.
   if (auto *FromPartial = dyn_cast<PartVarSpecDecl>(D)) {
-    // Import TemplateArgumentListInfo
-    TemplateArgumentListInfo ArgInfos;
-    const auto *FromTAArgsAsWritten = FromPartial->getTemplateArgsAsWritten();
-    // NOTE: FromTAArgsAsWritten and template parameter list are non-null.
-    if (Error Err =
-            ImportTemplateArgumentListInfo(*FromTAArgsAsWritten, ArgInfos))
-      return std::move(Err);
-
     auto ToTPListOrErr = import(FromPartial->getTemplateParameters());
     if (!ToTPListOrErr)
       return ToTPListOrErr.takeError();
@@ -6479,7 +6593,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     if (GetImportedOrCreateDecl(ToPartial, D, Importer.getToContext(), DC,
                                 *BeginLocOrErr, *IdLocOrErr, *ToTPListOrErr,
                                 VarTemplate, QualType(), nullptr,
-                                D->getStorageClass(), TemplateArgs, ArgInfos))
+                                D->getStorageClass(), TemplateArgs))
       return ToPartial;
 
     if (Expected<PartVarSpecDecl *> ToInstOrErr =
@@ -6504,6 +6618,11 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return D2;
   }
 
+  // Update InsertPos, because preceding import calls may have invalidated
+  // it by adding new specializations.
+  if (!VarTemplate->findSpecialization(TemplateArgs, InsertPos))
+    VarTemplate->AddSpecialization(D2, InsertPos);
+
   QualType T;
   if (Error Err = importInto(T, D->getType()))
     return std::move(Err);
@@ -6522,7 +6641,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
   }
 
   D2->setSpecializationKind(D->getSpecializationKind());
-  D2->setTemplateArgsInfo(ToTAInfo);
+
+  if (D->getTemplateArgsAsWritten())
+    D2->setTemplateArgsAsWritten(ToTAInfo);
 
   if (auto LocOrErr = import(D->getQualifierLoc()))
     D2->setQualifierInfo(*LocOrErr);
@@ -6539,8 +6660,6 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
 
   if (FoundSpecialization)
     D2->setPreviousDecl(FoundSpecialization->getMostRecentDecl());
-
-  VarTemplate->AddSpecialization(D2, InsertPos);
 
   addDeclToContexts(D, D2);
 
@@ -6653,6 +6772,9 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
         TemplatedFD->setPreviousDecl(PrevTemplated);
     }
     ToFunc->setPreviousDecl(Recent);
+
+    updateTemplateParametersInheritedFrom(*(Recent->getTemplateParameters()),
+                                          *Params);
   }
 
   return ToFunc;
@@ -8348,8 +8470,8 @@ ASTNodeImporter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     return std::move(Err);
 
   PseudoDestructorTypeStorage Storage;
-  if (IdentifierInfo *FromII = E->getDestroyedTypeIdentifier()) {
-    IdentifierInfo *ToII = Importer.Import(FromII);
+  if (const IdentifierInfo *FromII = E->getDestroyedTypeIdentifier()) {
+    const IdentifierInfo *ToII = Importer.Import(FromII);
     ExpectedSLoc ToDestroyedTypeLocOrErr = import(E->getDestroyedTypeLoc());
     if (!ToDestroyedTypeLocOrErr)
       return ToDestroyedTypeLocOrErr.takeError();
@@ -8512,8 +8634,8 @@ ASTNodeImporter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 
   return UnresolvedLookupExpr::Create(
       Importer.getToContext(), *ToNamingClassOrErr, *ToQualifierLocOrErr,
-      ToNameInfo, E->requiresADL(), E->isOverloaded(), ToDecls.begin(),
-      ToDecls.end());
+      ToNameInfo, E->requiresADL(), ToDecls.begin(), ToDecls.end(),
+      /*KnownDependent=*/E->isTypeDependent());
 }
 
 ExpectedStmt
@@ -9305,16 +9427,6 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
                   From->args_size());
     break;
   }
-  case attr::CountedBy: {
-    AI.cloneAttr(FromAttr);
-    const auto *CBA = cast<CountedByAttr>(FromAttr);
-    Expected<SourceRange> SR = Import(CBA->getCountedByFieldLoc()).get();
-    if (!SR)
-      return SR.takeError();
-    AI.castAttrAs<CountedByAttr>()->setCountedByFieldLoc(SR.get());
-    break;
-  }
-
   default: {
     // The default branch works for attributes that have no arguments to import.
     // FIXME: Handle every attribute type that has arguments of type to import
@@ -9336,19 +9448,6 @@ TranslationUnitDecl *ASTImporter::GetFromTU(Decl *ToD) {
   if (FromDPos == ImportedFromDecls.end())
     return nullptr;
   return FromDPos->second->getTranslationUnitDecl();
-}
-
-Error ASTImporter::ImportAttrs(Decl *ToD, Decl *FromD) {
-  if (!FromD->hasAttrs() || ToD->hasAttrs())
-    return Error::success();
-  for (const Attr *FromAttr : FromD->getAttrs()) {
-    auto ToAttrOrErr = Import(FromAttr);
-    if (ToAttrOrErr)
-      ToD->addAttr(*ToAttrOrErr);
-    else
-      return ToAttrOrErr.takeError();
-  }
-  return Error::success();
 }
 
 Expected<Decl *> ASTImporter::Import(Decl *FromD) {
@@ -9484,8 +9583,15 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
   }
   // Make sure that ImportImpl registered the imported decl.
   assert(ImportedDecls.count(FromD) != 0 && "Missing call to MapImported?");
-  if (auto Error = ImportAttrs(ToD, FromD))
-    return std::move(Error);
+
+  if (FromD->hasAttrs())
+    for (const Attr *FromAttr : FromD->getAttrs()) {
+      auto ToAttrOrErr = Import(FromAttr);
+      if (ToAttrOrErr)
+        ToD->addAttr(*ToAttrOrErr);
+      else
+        return ToAttrOrErr.takeError();
+    }
 
   // Notify subclasses.
   Imported(FromD, ToD);
@@ -10169,7 +10275,7 @@ Expected<Selector> ASTImporter::Import(Selector FromSel) {
   if (FromSel.isNull())
     return Selector{};
 
-  SmallVector<IdentifierInfo *, 4> Idents;
+  SmallVector<const IdentifierInfo *, 4> Idents;
   Idents.push_back(Import(FromSel.getIdentifierInfoForSlot(0)));
   for (unsigned I = 1, N = FromSel.getNumArgs(); I < N; ++I)
     Idents.push_back(Import(FromSel.getIdentifierInfoForSlot(I)));

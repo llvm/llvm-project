@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -160,11 +161,28 @@ bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
                                     F->getFunctionType());
 }
 
+static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
+  bool ShouldExtI32Param, ShouldExtI32Return;
+  bool ShouldSignExtI32Param, ShouldSignExtI32Return;
+  TargetLibraryInfo::initExtensionsForTriple(
+      ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param,
+      ShouldSignExtI32Return, T);
+  TLI.setShouldExtI32Param(ShouldExtI32Param);
+  TLI.setShouldExtI32Return(ShouldExtI32Return);
+  TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
+  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
+
+  // Let's assume by default that the size of int is 32 bits, unless the target
+  // is a 16-bit architecture because then it most likely is 16 bits. If that
+  // isn't true for a target those defaults should be overridden below.
+  TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
+}
+
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
-static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringLiteral> StandardNames) {
+static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
+                               ArrayRef<StringLiteral> StandardNames) {
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
   TLI.setUnavailable(LibFunc_getc_unlocked);
@@ -177,20 +195,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fwrite_unlocked);
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
-
-  bool ShouldExtI32Param, ShouldExtI32Return;
-  bool ShouldSignExtI32Param, ShouldSignExtI32Return;
-  TargetLibraryInfo::initExtensionsForTriple(ShouldExtI32Param,
-       ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return, T);
-  TLI.setShouldExtI32Param(ShouldExtI32Param);
-  TLI.setShouldExtI32Return(ShouldExtI32Return);
-  TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
-  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
-
-  // Let's assume by default that the size of int is 32 bits, unless the target
-  // is a 16-bit architecture because then it most likely is 16 bits. If that
-  // isn't true for a target those defaults should be overridden below.
-  TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
 
   // There is really no runtime library on AMDGPU, apart from
   // __kmpc_alloc/free_shared.
@@ -301,6 +305,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_modff);
       TLI.setUnavailable(LibFunc_powf);
       TLI.setUnavailable(LibFunc_remainderf);
+      TLI.setUnavailable(LibFunc_remquof);
       TLI.setUnavailable(LibFunc_sinf);
       TLI.setUnavailable(LibFunc_sinhf);
       TLI.setUnavailable(LibFunc_sqrtf);
@@ -331,6 +336,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_modfl);
     TLI.setUnavailable(LibFunc_powl);
     TLI.setUnavailable(LibFunc_remainderl);
+    TLI.setUnavailable(LibFunc_remquol);
     TLI.setUnavailable(LibFunc_sinl);
     TLI.setUnavailable(LibFunc_sinhl);
     TLI.setUnavailable(LibFunc_sqrtl);
@@ -456,6 +462,11 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_uname);
     TLI.setUnavailable(LibFunc_unsetenv);
     TLI.setUnavailable(LibFunc_utimes);
+
+    // MinGW does have ldexpf, but it is a plain wrapper over regular ldexp.
+    // Therefore it's not beneficial to transform code to use it, i.e.
+    // just pretend that the function is not available.
+    TLI.setUnavailable(LibFunc_ldexpf);
   }
 
   // Pick just one set of new/delete variants.
@@ -808,9 +819,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_cabs);
     TLI.setUnavailable(LibFunc_cabsf);
     TLI.setUnavailable(LibFunc_cabsl);
-    TLI.setUnavailable(LibFunc_erf);
-    TLI.setUnavailable(LibFunc_erff);
-    TLI.setUnavailable(LibFunc_erfl);
     TLI.setUnavailable(LibFunc_ffs);
     TLI.setUnavailable(LibFunc_flockfile);
     TLI.setUnavailable(LibFunc_fseeko);
@@ -877,14 +885,25 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_vec_free);
   }
 
+  if (T.isOSAIX())
+    TLI.setUnavailable(LibFunc_memrchr);
+
   TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
 }
 
-TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
-  // Default to everything being available.
-  memset(AvailableArray, -1, sizeof(AvailableArray));
+/// Initialize the set of available library functions based on the specified
+/// target triple. This should be carefully written so that a missing target
+/// triple gets a sane set of defaults.
+static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
+                       ArrayRef<StringLiteral> StandardNames) {
+  initializeBase(TLI, T);
+  initializeLibCalls(TLI, T, StandardNames);
+}
 
-  initialize(*this, Triple(), StandardNames);
+TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
+  // Default to nothing being available.
+  memset(AvailableArray, 0, sizeof(AvailableArray));
+  initializeBase(*this, Triple());
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
@@ -1185,107 +1204,123 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
-void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
-    enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
-  switch (VecLib) {
-  case Accelerate: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_ACCELERATE_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case DarwinLibSystemM: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case LIBMVEC_X86: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case MASSV: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_MASSV_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case SVML: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_SVML_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case SLEEFGNUABI: {
-    const VecDesc VecFuncs_VF2[] = {
+static const VecDesc VecFuncs_Accelerate[] = {
+#define TLI_DEFINE_ACCELERATE_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_ACCELERATE_VECFUNCS
+};
+
+static const VecDesc VecFuncs_DarwinLibSystemM[] = {
+#define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
+};
+
+static const VecDesc VecFuncs_LIBMVEC_X86[] = {
+#define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
+};
+
+static const VecDesc VecFuncs_MASSV[] = {
+#define TLI_DEFINE_MASSV_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_MASSV_VECFUNCS
+};
+
+static const VecDesc VecFuncs_SVML[] = {
+#define TLI_DEFINE_SVML_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SVML_VECFUNCS
+};
+
+static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
-    };
-    const VecDesc VecFuncs_VF4[] = {
+#undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
+};
+static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
-    };
-    const VecDesc VecFuncs_VFScalable[] = {
+#undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
+};
+static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
-    };
+#undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
+};
 
+static const VecDesc VecFuncs_ArmPL[] = {
+#define TLI_DEFINE_ARMPL_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_ARMPL_VECFUNCS
+};
+
+const VecDesc VecFuncs_AMDLIBM[] = {
+#define TLI_DEFINE_AMDLIBM_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_AMDLIBM_VECFUNCS
+};
+
+void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
+    enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
+  switch (VecLib) {
+  case Accelerate: {
+    addVectorizableFunctions(VecFuncs_Accelerate);
+    break;
+  }
+  case DarwinLibSystemM: {
+    addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
+    break;
+  }
+  case LIBMVEC_X86: {
+    addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+    break;
+  }
+  case MASSV: {
+    addVectorizableFunctions(VecFuncs_MASSV);
+    break;
+  }
+  case SVML: {
+    addVectorizableFunctions(VecFuncs_SVML);
+    break;
+  }
+  case SLEEFGNUABI: {
     switch (TargetTriple.getArch()) {
     default:
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
-      addVectorizableFunctions(VecFuncs_VF2);
-      addVectorizableFunctions(VecFuncs_VF4);
-      addVectorizableFunctions(VecFuncs_VFScalable);
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF2);
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF4);
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VFScalable);
       break;
     }
     break;
   }
   case ArmPL: {
-    const VecDesc VecFuncs[] = {
-#define TLI_DEFINE_ARMPL_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
-#include "llvm/Analysis/VecFuncs.def"
-    };
-
     switch (TargetTriple.getArch()) {
     default:
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
-      addVectorizableFunctions(VecFuncs);
+      addVectorizableFunctions(VecFuncs_ArmPL);
       break;
     }
     break;
   }
   case AMDLIBM: {
-    const VecDesc VecFuncs[] = {
-#define TLI_DEFINE_AMDLIBM_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
-#include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
+    addVectorizableFunctions(VecFuncs_AMDLIBM);
     break;
   }
   case NoLibrary:
@@ -1374,6 +1409,10 @@ TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     : ImmutablePass(ID), TLA(TLIImpl) {
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
+
+TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
+    const TargetLibraryInfo &TLIOther)
+    : TargetLibraryInfoWrapperPass(*TLIOther.Impl) {}
 
 AnalysisKey TargetLibraryAnalysis::Key;
 

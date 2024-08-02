@@ -973,3 +973,47 @@ define <8 x i64> @combine_vpermvar_insertion_as_broadcast_v8i64(i64 %a0) {
   %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %1, <8 x i64> zeroinitializer)
   ret <8 x i64> %2
 }
+
+define <16 x i32> @blend_of_permutes_v16i32(<8 x i64> %a0, <8x i64> %a1) {
+; X86-AVX512F-LABEL: blend_of_permutes_v16i32:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5]
+; X86-AVX512F-NEXT:    vpermq {{.*#+}} zmm1 = zmm1[2,3,0,1,6,7,4,5]
+; X86-AVX512F-NEXT:    movw $-25958, %ax # imm = 0x9A9A
+; X86-AVX512F-NEXT:    kmovw %eax, %k1
+; X86-AVX512F-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; X86-AVX512F-NEXT:    retl
+;
+; X86-AVX512BW-LABEL: blend_of_permutes_v16i32:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5]
+; X86-AVX512BW-NEXT:    vpermq {{.*#+}} zmm1 = zmm1[2,3,0,1,6,7,4,5]
+; X86-AVX512BW-NEXT:    movw $-25958, %ax # imm = 0x9A9A
+; X86-AVX512BW-NEXT:    kmovd %eax, %k1
+; X86-AVX512BW-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512F-LABEL: blend_of_permutes_v16i32:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5]
+; X64-AVX512F-NEXT:    vpermq {{.*#+}} zmm1 = zmm1[2,3,0,1,6,7,4,5]
+; X64-AVX512F-NEXT:    movw $-25958, %ax # imm = 0x9A9A
+; X64-AVX512F-NEXT:    kmovw %eax, %k1
+; X64-AVX512F-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; X64-AVX512F-NEXT:    retq
+;
+; X64-AVX512BW-LABEL: blend_of_permutes_v16i32:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5]
+; X64-AVX512BW-NEXT:    vpermq {{.*#+}} zmm1 = zmm1[2,3,0,1,6,7,4,5]
+; X64-AVX512BW-NEXT:    movw $-25958, %ax # imm = 0x9A9A
+; X64-AVX512BW-NEXT:    kmovd %eax, %k1
+; X64-AVX512BW-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; X64-AVX512BW-NEXT:    retq
+  %s0 = shufflevector <8 x i64> %a0, <8 x i64> undef, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
+  %s1 = shufflevector <8 x i64> %a1, <8 x i64> undef, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
+  %x0 = bitcast <8 x i64> %s0 to <16 x i32>
+  %x1 = bitcast <8 x i64> %s1 to <16 x i32>
+  %r = shufflevector <16 x i32> %x0, <16 x i32> %x1, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 20, i32 5, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 28, i32 13, i32 14, i32 31>
+  ret <16 x i32> %r
+}

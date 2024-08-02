@@ -12,9 +12,11 @@
 #include "include/llvm-libc-macros/limits-macros.h" // CHAR_BIT
 #include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/CPP/type_traits/is_signed.h"
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h"       // LIBC_INLINE
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 namespace internal {
@@ -76,7 +78,7 @@ template <>
 struct numeric_limits<unsigned char>
     : public internal::integer_impl<unsigned char, 0, UCHAR_MAX> {};
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 // On platform where UInt128 resolves to __uint128_t, this specialization
 // provides the limits of UInt128.
 template <>
@@ -85,6 +87,6 @@ struct numeric_limits<__uint128_t>
 #endif
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H

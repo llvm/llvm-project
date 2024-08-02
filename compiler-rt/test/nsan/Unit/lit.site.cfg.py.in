@@ -1,0 +1,10 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Load common config for all compiler-rt unit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/unittests/lit.common.unit.configured")
+
+# Setup config name.
+config.name = 'NumericalStabilitySanitizer-Unit'
+
+config.test_exec_root = "@COMPILER_RT_BINARY_DIR@/lib/nsan/tests"
+config.test_source_root = config.test_exec_root

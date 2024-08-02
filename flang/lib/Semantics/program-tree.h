@@ -26,6 +26,7 @@
 namespace Fortran::semantics {
 
 class Scope;
+class SemanticsContext;
 
 class ProgramTree {
 public:
@@ -34,16 +35,25 @@ public:
       std::list<common::Reference<const parser::GenericSpec>>;
 
   // Build the ProgramTree rooted at one of these program units.
-  static ProgramTree Build(const parser::ProgramUnit &);
-  static ProgramTree Build(const parser::MainProgram &);
-  static ProgramTree Build(const parser::FunctionSubprogram &);
-  static ProgramTree Build(const parser::SubroutineSubprogram &);
-  static ProgramTree Build(const parser::SeparateModuleSubprogram &);
-  static ProgramTree Build(const parser::Module &);
-  static ProgramTree Build(const parser::Submodule &);
-  static ProgramTree Build(const parser::BlockData &);
-  static ProgramTree Build(const parser::CompilerDirective &);
-  static ProgramTree Build(const parser::OpenACCRoutineConstruct &);
+  static ProgramTree Build(const parser::ProgramUnit &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::MainProgram &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::FunctionSubprogram &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::SubroutineSubprogram &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::SeparateModuleSubprogram &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::Module &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::Submodule &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::BlockData &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::CompilerDirective &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
+      const parser::OpenACCRoutineConstruct &, SemanticsContext &);
 
   ENUM_CLASS(Kind, // kind of node
       Program, Function, Subroutine, MpSubprogram, Module, Submodule, BlockData)

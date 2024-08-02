@@ -215,8 +215,9 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
       }
     }
 
-    unsigned Size = getSizeInBits(Reg, MRI, TRI);
-    const ValueMapping *ValMapping = &getValueMapping(0, Size, *CurRegBank);
+    TypeSize Size = getSizeInBits(Reg, MRI, TRI);
+    const ValueMapping *ValMapping =
+        &getValueMapping(0, Size.getKnownMinValue(), *CurRegBank);
     if (IsCopyLike) {
       if (!OperandsMapping[0]) {
         if (MI.isRegSequence()) {
@@ -484,9 +485,10 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       // the storage. However, right now we don't necessarily bump all
       // the types to storage size. For instance, we can consider
       // s16 G_AND legal whereas the storage size is going to be 32.
-      assert(OrigTy.getSizeInBits() <= NewTy.getSizeInBits() &&
-             "Types with difference size cannot be handled by the default "
-             "mapping");
+      assert(
+          TypeSize::isKnownLE(OrigTy.getSizeInBits(), NewTy.getSizeInBits()) &&
+          "Types with difference size cannot be handled by the default "
+          "mapping");
       LLVM_DEBUG(dbgs() << "\nChange type of new opd from " << NewTy << " to "
                         << OrigTy);
       MRI.setType(NewReg, OrigTy);

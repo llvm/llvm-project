@@ -27,7 +27,7 @@ directly within the transform dialect.
 ## Simple match
 
 Let us reconsider the “fully connected layer” example from [Chapter
-1](Ch1.md#chaining-transformations-with-handles), reproduced below for
+1](Ch1.md/#chaining-transformations-with-handles), reproduced below for
 convenience.
 
 

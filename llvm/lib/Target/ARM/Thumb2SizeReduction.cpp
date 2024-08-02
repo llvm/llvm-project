@@ -1097,12 +1097,13 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
       // marker is only on the BUNDLE instruction. Process the BUNDLE
       // instruction as we finish with the bundled instruction to work around
       // the inconsistency.
-      if (BundleMI->killsRegister(ARM::CPSR))
+      if (BundleMI->killsRegister(ARM::CPSR, /*TRI=*/nullptr))
         LiveCPSR = false;
-      MachineOperand *MO = BundleMI->findRegisterDefOperand(ARM::CPSR);
+      MachineOperand *MO =
+          BundleMI->findRegisterDefOperand(ARM::CPSR, /*TRI=*/nullptr);
       if (MO && !MO->isDead())
         LiveCPSR = true;
-      MO = BundleMI->findRegisterUseOperand(ARM::CPSR);
+      MO = BundleMI->findRegisterUseOperand(ARM::CPSR, /*TRI=*/nullptr);
       if (MO && !MO->isKill())
         LiveCPSR = true;
     }

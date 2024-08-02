@@ -49,6 +49,10 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  void expandAddTPRel(const MCInst &MI, SmallVectorImpl<char> &CB,
+                      SmallVectorImpl<MCFixup> &Fixups,
+                      const MCSubtargetInfo &STI) const;
+
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -134,6 +138,9 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case LoongArchMCExpr::VK_LoongArch_None:
     case LoongArchMCExpr::VK_LoongArch_Invalid:
       llvm_unreachable("Unhandled fixup kind!");
+    case LoongArchMCExpr::VK_LoongArch_TLS_LE_ADD_R:
+      llvm_unreachable("VK_LoongArch_TLS_LE_ADD_R should not represent an "
+                       "instruction operand");
     case LoongArchMCExpr::VK_LoongArch_B16:
       FixupKind = LoongArch::fixup_loongarch_b16;
       break;
@@ -244,6 +251,54 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case LoongArchMCExpr::VK_LoongArch_CALL36:
       FixupKind = LoongArch::fixup_loongarch_call36;
       break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pc_hi20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pc_lo12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_pc_lo20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_pc_hi12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_hi20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_LO12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_lo12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_LO20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_lo20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_HI12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_hi12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_ld;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_call;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20_R:
+      FixupKind = LoongArch::fixup_loongarch_tls_le_hi20_r;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12_R:
+      FixupKind = LoongArch::fixup_loongarch_tls_le_lo12_r;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_pcrel20_s2;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_LD_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_tls_ld_pcrel20_s2;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_GD_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_tls_gd_pcrel20_s2;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pcrel20_s2;
+      break;
     }
   } else if (Kind == MCExpr::SymbolRef &&
              cast<MCSymbolRefExpr>(Expr)->getKind() ==
@@ -316,6 +371,38 @@ void LoongArchMCCodeEmitter::expandToVectorLDI(
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
+void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
+                                            SmallVectorImpl<char> &CB,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  MCOperand Rd = MI.getOperand(0);
+  MCOperand Rj = MI.getOperand(1);
+  MCOperand Rk = MI.getOperand(2);
+  MCOperand Symbol = MI.getOperand(3);
+  assert(Symbol.isExpr() &&
+         "Expected expression as third input to TP-relative add");
+
+  const LoongArchMCExpr *Expr = dyn_cast<LoongArchMCExpr>(Symbol.getExpr());
+  assert(Expr &&
+         Expr->getKind() == LoongArchMCExpr::VK_LoongArch_TLS_LE_ADD_R &&
+         "Expected %le_add_r relocation on TP-relative symbol");
+
+  // Emit the correct %le_add_r relocation for the symbol.
+  // TODO: Emit R_LARCH_RELAX for %le_add_r where the relax feature is enabled.
+  Fixups.push_back(MCFixup::create(
+      0, Expr, MCFixupKind(LoongArch::fixup_loongarch_tls_le_add_r),
+      MI.getLoc()));
+
+  // Emit a normal ADD instruction with the given operands.
+  unsigned ADD = MI.getOpcode() == LoongArch::PseudoAddTPRel_D
+                     ? LoongArch::ADD_D
+                     : LoongArch::ADD_W;
+  MCInst TmpInst =
+      MCInstBuilder(ADD).addOperand(Rd).addOperand(Rj).addOperand(Rk);
+  uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, llvm::endianness::little);
+}
+
 void LoongArchMCCodeEmitter::encodeInstruction(
     const MCInst &MI, SmallVectorImpl<char> &CB,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
@@ -336,6 +423,9 @@ void LoongArchMCCodeEmitter::encodeInstruction(
   case LoongArch::PseudoXVREPLI_W:
   case LoongArch::PseudoXVREPLI_D:
     return expandToVectorLDI<LoongArch::XVLDI>(MI, CB, Fixups, STI);
+  case LoongArch::PseudoAddTPRel_W:
+  case LoongArch::PseudoAddTPRel_D:
+    return expandAddTPRel(MI, CB, Fixups, STI);
   }
 
   switch (Size) {

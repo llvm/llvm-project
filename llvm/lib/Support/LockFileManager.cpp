@@ -66,7 +66,7 @@ LockFileManager::readLockFile(StringRef LockFileName) {
   StringRef Hostname;
   StringRef PIDStr;
   std::tie(Hostname, PIDStr) = getToken(MB.getBuffer(), " ");
-  PIDStr = PIDStr.substr(PIDStr.find_first_not_of(" "));
+  PIDStr = PIDStr.substr(PIDStr.find_first_not_of(' '));
   int PID;
   if (!PIDStr.getAsInteger(10, PID)) {
     auto Owner = std::make_pair(std::string(Hostname), PID);
@@ -87,7 +87,7 @@ static std::error_code getHostID(SmallVectorImpl<char> &HostID) {
   struct timespec wait = {1, 0}; // 1 second.
   uuid_t uuid;
   if (gethostuuid(uuid, &wait) != 0)
-    return std::error_code(errno, std::system_category());
+    return errnoAsErrorCode();
 
   uuid_string_t UUIDStr;
   uuid_unparse(uuid, UUIDStr);
@@ -228,7 +228,7 @@ LockFileManager::LockFileManager(StringRef FileName)
       std::string S("failed to create link ");
       raw_string_ostream OSS(S);
       OSS << LockFileName.str() << " to " << UniqueLockFileName.str();
-      setError(EC, OSS.str());
+      setError(EC, S);
       return;
     }
 
@@ -274,7 +274,7 @@ std::string LockFileManager::getErrorMessage() const {
     raw_string_ostream OSS(Str);
     if (!ErrCodeMsg.empty())
       OSS << ": " << ErrCodeMsg;
-    return OSS.str();
+    return Str;
   }
   return "";
 }

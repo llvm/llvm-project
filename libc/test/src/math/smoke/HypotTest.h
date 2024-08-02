@@ -9,29 +9,16 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 
-#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <math.h>
 
 template <typename T>
 class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T);
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
-  const T nan = FPBits::quiet_nan().get_val();
-  const T inf = FPBits::inf(Sign::POS).get_val();
-  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
-  const T zero = FPBits::zero(Sign::POS).get_val();
-  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
 
-  const T max_normal = FPBits::max_normal().get_val();
-  const T min_normal = FPBits::min_normal().get_val();
-  const T max_subnormal = FPBits::max_subnormal().get_val();
-  const T min_subnormal = FPBits::min_subnormal().get_val();
+  DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
   void test_special_numbers(Func func) {
@@ -39,11 +26,18 @@ public:
     // Pythagorean triples.
     constexpr T PYT[N][3] = {{3, 4, 5}, {5, 12, 13}, {8, 15, 17}, {7, 24, 25}};
 
-    EXPECT_FP_EQ(func(inf, nan), inf);
-    EXPECT_FP_EQ(func(nan, neg_inf), inf);
-    EXPECT_FP_EQ(func(nan, nan), nan);
-    EXPECT_FP_EQ(func(nan, zero), nan);
-    EXPECT_FP_EQ(func(neg_zero, nan), nan);
+#ifndef LIBC_TARGET_ARCH_IS_NVPTX
+    // TODO: Investigate why sNaN tests are failing on nVidia.
+    // https://github.com/llvm/llvm-project/issues/99706.
+    EXPECT_FP_EQ(func(inf, sNaN), aNaN);
+    EXPECT_FP_EQ(func(sNaN, neg_inf), aNaN);
+#endif // !LIBC_TARGET_ARCH_IS_NVPTX
+
+    EXPECT_FP_EQ(func(inf, aNaN), inf);
+    EXPECT_FP_EQ(func(aNaN, neg_inf), inf);
+    EXPECT_FP_EQ(func(aNaN, aNaN), aNaN);
+    EXPECT_FP_EQ(func(aNaN, zero), aNaN);
+    EXPECT_FP_EQ(func(neg_zero, aNaN), aNaN);
 
     for (int i = 0; i < N; ++i) {
       EXPECT_FP_EQ_ALL_ROUNDING(PYT[i][2], func(PYT[i][0], PYT[i][1]));

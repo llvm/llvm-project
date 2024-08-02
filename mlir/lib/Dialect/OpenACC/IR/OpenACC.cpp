@@ -26,6 +26,7 @@ using namespace acc;
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
+#include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.cpp.inc"
 
 namespace {
 struct MemRefPointerLikeModel
@@ -457,7 +458,7 @@ static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
 }
 
 static bool isComputeOperation(Operation *op) {
-  return isa<acc::ParallelOp>(op) || isa<acc::LoopOp>(op);
+  return isa<acc::ParallelOp, acc::LoopOp>(op);
 }
 
 namespace {
@@ -905,6 +906,31 @@ mlir::Value ParallelOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
                             deviceType);
 }
 
+void ParallelOp::build(mlir::OpBuilder &odsBuilder,
+                       mlir::OperationState &odsState,
+                       mlir::ValueRange numGangs, mlir::ValueRange numWorkers,
+                       mlir::ValueRange vectorLength,
+                       mlir::ValueRange asyncOperands,
+                       mlir::ValueRange waitOperands, mlir::Value ifCond,
+                       mlir::Value selfCond, mlir::ValueRange reductionOperands,
+                       mlir::ValueRange gangPrivateOperands,
+                       mlir::ValueRange gangFirstPrivateOperands,
+                       mlir::ValueRange dataClauseOperands) {
+
+  ParallelOp::build(
+      odsBuilder, odsState, asyncOperands, /*asyncOperandsDeviceType=*/nullptr,
+      /*asyncOnly=*/nullptr, waitOperands, /*waitOperandsSegments=*/nullptr,
+      /*waitOperandsDeviceType=*/nullptr, /*hasWaitDevnum=*/nullptr,
+      /*waitOnly=*/nullptr, numGangs, /*numGangsSegments=*/nullptr,
+      /*numGangsDeviceType=*/nullptr, numWorkers,
+      /*numWorkersDeviceType=*/nullptr, vectorLength,
+      /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
+      /*selfAttr=*/nullptr, reductionOperands, /*reductionRecipes=*/nullptr,
+      gangPrivateOperands, /*privatizations=*/nullptr, gangFirstPrivateOperands,
+      /*firstprivatizations=*/nullptr, dataClauseOperands,
+      /*defaultAttr=*/nullptr, /*combined=*/nullptr);
+}
+
 static ParseResult parseNumGangs(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
@@ -1281,6 +1307,50 @@ static void printDeviceTypeOperandsWithKeywordOnly(
     p << ", ";
   printDeviceTypeOperands(p, op, operands, types, deviceTypes);
   p << ")";
+}
+
+static ParseResult
+parseCombinedConstructsLoop(mlir::OpAsmParser &parser,
+                            mlir::acc::CombinedConstructsTypeAttr &attr) {
+  if (succeeded(parser.parseOptionalKeyword("combined"))) {
+    if (parser.parseLParen())
+      return failure();
+    if (succeeded(parser.parseOptionalKeyword("kernels"))) {
+      attr = mlir::acc::CombinedConstructsTypeAttr::get(
+          parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
+    } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
+      attr = mlir::acc::CombinedConstructsTypeAttr::get(
+          parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
+    } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
+      attr = mlir::acc::CombinedConstructsTypeAttr::get(
+          parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
+    } else {
+      parser.emitError(parser.getCurrentLocation(),
+                       "expected compute construct name");
+      return failure();
+    }
+    if (parser.parseRParen())
+      return failure();
+  }
+  return success();
+}
+
+static void
+printCombinedConstructsLoop(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                            mlir::acc::CombinedConstructsTypeAttr attr) {
+  if (attr) {
+    switch (attr.getValue()) {
+    case mlir::acc::CombinedConstructsType::KernelsLoop:
+      p << "combined(kernels)";
+      break;
+    case mlir::acc::CombinedConstructsType::ParallelLoop:
+      p << "combined(parallel)";
+      break;
+    case mlir::acc::CombinedConstructsType::SerialLoop:
+      p << "combined(serial)";
+      break;
+    };
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1851,6 +1921,13 @@ LogicalResult acc::LoopOp::verify() {
           "reductions", false)))
     return failure();
 
+  if (getCombined().has_value() &&
+      (getCombined().value() != acc::CombinedConstructsType::ParallelLoop &&
+       getCombined().value() != acc::CombinedConstructsType::KernelsLoop &&
+       getCombined().value() != acc::CombinedConstructsType::SerialLoop)) {
+    return emitError("unexpected combined constructs attribute");
+  }
+
   // Check non-empty body().
   if (getRegion().empty())
     return emitError("expected non-empty body.");
@@ -2034,8 +2111,8 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
     llvm::interleaveComma(regionArgs, p,
                           [&p](Value v) { p << v << " : " << v.getType(); });
     p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
-      << upperbound << " : " << upperboundType << ") "
-      << " step (" << steps << " : " << stepType << ") ";
+      << upperbound << " : " << upperboundType << ") " << " step (" << steps
+      << " : " << stepType << ") ";
   }
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
@@ -2827,6 +2904,36 @@ mlir::acc::getBounds(mlir::Operation *accDataClauseOp) {
             return mlir::SmallVector<mlir::Value, 0>();
           })};
   return bounds;
+}
+
+mlir::SmallVector<mlir::Value>
+mlir::acc::getAsyncOperands(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
+             accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
+        return mlir::SmallVector<mlir::Value>(
+            dataClause.getAsyncOperands().begin(),
+            dataClause.getAsyncOperands().end());
+      })
+      .Default([&](mlir::Operation *) {
+        return mlir::SmallVector<mlir::Value, 0>();
+      });
+}
+
+mlir::ArrayAttr
+mlir::acc::getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
+        return dataClause.getAsyncOperandsDeviceTypeAttr();
+      })
+      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
+}
+
+mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
+          [&](auto dataClause) { return dataClause.getAsyncOnlyAttr(); })
+      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
 }
 
 std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {

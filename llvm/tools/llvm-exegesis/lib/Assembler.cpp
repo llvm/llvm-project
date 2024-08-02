@@ -305,7 +305,7 @@ Error assembleToStream(const ExegesisTarget &ET,
 
   // prologue/epilogue pass needs the reserved registers to be frozen, this
   // is usually done by the SelectionDAGISel pass.
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 
   // We create the pass manager, run the passes to populate AsmBuffer.
   MCContext &MCContext = MMIWP->getMMI().getContext();

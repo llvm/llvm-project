@@ -73,6 +73,26 @@ protected:
   }
 };
 
+class TXTRecord : public Record {
+public:
+  /// \brief Maximum length of data; any more must go in continuation.
+  static const uint8_t TXTMaxDataLength = 56;
+
+  static Error getData(const uint8_t *Record, SmallString<256> &CompleteData);
+
+  static void getElementEsdId(const uint8_t *Record, uint32_t &EsdId) {
+    get<uint32_t>(Record, 4, EsdId);
+  }
+
+  static void getOffset(const uint8_t *Record, uint32_t &Offset) {
+    get<uint32_t>(Record, 12, Offset);
+  }
+
+  static void getDataLength(const uint8_t *Record, uint16_t &Length) {
+    get<uint16_t>(Record, 22, Length);
+  }
+};
+
 class HDRRecord : public Record {
 public:
   static Error getData(const uint8_t *Record, SmallString<256> &CompleteData);

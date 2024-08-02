@@ -363,6 +363,35 @@ exit:
   ret void
 }
 
+define void @test_sroa_gep_phi_select_same_block_nuw(i1 %c1, i1 %c2, ptr %ptr) {
+; CHECK-LABEL: @test_sroa_gep_phi_select_same_block_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[PAIR:%.*]], align 8
+; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[SELECT:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[SELECT]] = select i1 [[C1:%.*]], ptr [[PHI]], ptr [[PTR:%.*]]
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr nuw [[PAIR]], ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[PTR_SROA_GEP:%.*]] = getelementptr nuw [[PAIR]], ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[C1]], ptr [[PHI_SROA_GEP]], ptr [[PTR_SROA_GEP]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[WHILE_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca %pair, align 8
+  br label %while.body
+
+while.body:
+  %phi = phi ptr [ %alloca, %entry ], [ %select, %while.body ]
+  %select = select i1 %c1, ptr %phi, ptr %ptr
+  %gep = getelementptr nuw %pair, ptr %select, i64 1
+  br i1 %c2, label %exit, label %while.body
+
+exit:
+  ret void
+}
+
 define i32 @test_sroa_gep_cast_phi_gep(i1 %cond) {
 ; CHECK-LABEL: @test_sroa_gep_cast_phi_gep(
 ; CHECK-NEXT:  entry:
@@ -636,6 +665,41 @@ bb3:
   %gep = getelementptr i64, ptr %alloca, i64 %phi
   %icmp = icmp eq ptr %gep, null
   ret i1 %icmp
+}
+
+define i32 @test_phi_mem2reg_alloca_not_in_entry_block(i1 %arg) {
+; CHECK-LABEL: @test_phi_mem2reg_alloca_not_in_entry_block(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 123, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[ALLOCA2:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 124, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[ALLOCA]], [[BB2]] ], [ [[ALLOCA2]], [[BB3]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+bb:
+  %alloca = alloca i64
+  store i64 123, ptr %alloca
+  br label %bb2
+bb2:
+  %alloca2 = alloca i64
+  store i64 124, ptr %alloca
+  br i1 %arg, label %bb3, label %bb4
+bb3:
+  br label %bb4
+bb4:
+  %phi = phi ptr [ %alloca, %bb2 ], [ %alloca2, %bb3 ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  %load = load i32, ptr %gep
+  ret i32 %load
 }
 
 define i64 @test_unfold_phi_duplicate_phi_entry(ptr %arg, i8 %arg1, i1 %arg2) {

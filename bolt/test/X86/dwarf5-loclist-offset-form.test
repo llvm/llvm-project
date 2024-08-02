@@ -9,7 +9,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# Checks we can handle DWARF5 CU with DWARF4 DW_AT_location access pattern.
+## Checks we can handle DWARF5 CU with DWARF4 DW_AT_location access pattern.
 
 # PRECHECK: DW_TAG_compile_unit
 # PRECHECK: DW_TAG_variable [5]

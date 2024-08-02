@@ -9,8 +9,8 @@
 ; RUN: llvm-dwarfdump --debug-info --verbose --show-form main.dwo.dwo >> log.txt
 ; RUN: cat log.txt | FileCheck -check-prefix=BOLT-MAIN %s
 
-; Tests whether BOLT handles correctly DW_TAG_inlined_subroutine when DW_AT_low_pc is 0,
-; and split dwarf is enabled.
+;; Tests whether BOLT handles correctly DW_TAG_inlined_subroutine when DW_AT_low_pc is 0,
+;; and split dwarf is enabled.
 
 ; BOLT-MAIN: 0x
 ; BOLT-MAIN: 0x

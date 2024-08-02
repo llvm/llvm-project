@@ -54,10 +54,10 @@ module {
 
     // Build the sparse vector from straightline code.
     %0 = tensor.empty() : tensor<1024xf32, #SparseVector>
-    %1 = sparse_tensor.insert %f1 into %0[%c0] : tensor<1024xf32, #SparseVector>
-    %2 = sparse_tensor.insert %f2 into %1[%c1] : tensor<1024xf32, #SparseVector>
-    %3 = sparse_tensor.insert %f3 into %2[%c3] : tensor<1024xf32, #SparseVector>
-    %4 = sparse_tensor.insert %f4 into %3[%c1023] : tensor<1024xf32, #SparseVector>
+    %1 = tensor.insert %f1 into %0[%c0] : tensor<1024xf32, #SparseVector>
+    %2 = tensor.insert %f2 into %1[%c1] : tensor<1024xf32, #SparseVector>
+    %3 = tensor.insert %f3 into %2[%c3] : tensor<1024xf32, #SparseVector>
+    %4 = tensor.insert %f4 into %3[%c1023] : tensor<1024xf32, #SparseVector>
     %5 = sparse_tensor.load %4 hasInserts : tensor<1024xf32, #SparseVector>
 
     //
@@ -65,9 +65,9 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 1024 )
     // CHECK-NEXT: lvl = ( 1024 )
-    // CHECK-NEXT: pos[0] : ( 0, 4,
-    // CHECK-NEXT: crd[0] : ( 0, 1, 3, 1023,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4,
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 3, 1023 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %5 : tensor<1024xf32, #SparseVector>
@@ -76,7 +76,7 @@ module {
     %6 = tensor.empty() : tensor<1024xf32, #SparseVector>
     %7 = scf.for %i = %c0 to %c8 step %c1 iter_args(%vin = %6) -> tensor<1024xf32, #SparseVector> {
       %ii = arith.muli %i, %c3 : index
-      %vout = sparse_tensor.insert %f1 into %vin[%ii] : tensor<1024xf32, #SparseVector>
+      %vout = tensor.insert %f1 into %vin[%ii] : tensor<1024xf32, #SparseVector>
       scf.yield %vout : tensor<1024xf32, #SparseVector>
     }
     %8 = sparse_tensor.load %7 hasInserts : tensor<1024xf32, #SparseVector>
@@ -86,9 +86,9 @@ module {
     // CHECK-NEXT: nse = 8
     // CHECK-NEXT: dim = ( 1024 )
     // CHECK-NEXT: lvl = ( 1024 )
-    // CHECK-NEXT: pos[0] : ( 0, 8,
-    // CHECK-NEXT: crd[0] : ( 0, 3, 6, 9, 12, 15, 18, 21,
-    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 1, 1, 1,
+    // CHECK-NEXT: pos[0] : ( 0, 8 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 6, 9, 12, 15, 18, 21 )
+    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 1, 1, 1 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %8 : tensor<1024xf32, #SparseVector>

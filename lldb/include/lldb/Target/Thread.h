@@ -26,6 +26,7 @@
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #define LLDB_THREAD_MAX_STOP_EXC_DATA 8
 
@@ -74,9 +75,9 @@ public:
     eBroadcastBitThreadSelected = (1 << 4)
   };
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 

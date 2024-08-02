@@ -39,6 +39,12 @@ llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 // CHECK: @int_global_undef = internal global i64 undef
 llvm.mlir.global internal @int_global_undef() : i64
 
+// CHECK: @f8E3M4_global_as_i8 = internal global i8 56
+llvm.mlir.global internal @f8E3M4_global_as_i8(1.5 : f8E3M4) : i8
+
+// CHECK: @f8E4M3_global_as_i8 = internal global i8 60
+llvm.mlir.global internal @f8E4M3_global_as_i8(1.5 : f8E4M3) : i8
+
 // CHECK: @f8E4M3FN_global_as_i8 = internal global i8 60
 llvm.mlir.global internal @f8E4M3FN_global_as_i8(1.5 : f8E4M3FN) : i8
 
@@ -1730,12 +1736,11 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
   llvm.return
 }
 
 // CHECK: attributes #[[ATTR_GROUP]] = {
-// CHECK-DAG: noinline
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
@@ -2251,14 +2256,14 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA0:.+]] = alloca %struct.va_list, align 8
   %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_start(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_start.p0(ptr %[[ALLOCA0]])
   llvm.intr.vastart %2 : !llvm.ptr
   // CHECK: %[[ALLOCA1:.+]] = alloca ptr, align 8
   %4 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_copy(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_copy.p0(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
   llvm.intr.vacopy %2 to %4 : !llvm.ptr, !llvm.ptr
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA1]])
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA1]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA0]])
   llvm.intr.vaend %4 : !llvm.ptr
   llvm.intr.vaend %2 : !llvm.ptr
   // CHECK: ret void
@@ -2274,7 +2279,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 
 // CHECK: declare void @arg_mem_none_func() #[[ATTR:[0-9]+]]
 llvm.func @arg_mem_none_func() attributes {
-  memory = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+  memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 
 // CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none) }
 
@@ -2282,7 +2287,7 @@ llvm.func @arg_mem_none_func() attributes {
 
 // CHECK: declare void @readwrite_func() #[[ATTR:[0-9]+]]
 llvm.func @readwrite_func() attributes {
-  memory = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
+  memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
 // CHECK: attributes #[[ATTR]] = { memory(readwrite) }
 
@@ -2331,39 +2336,47 @@ llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
 // -----
 
 // CHECK-LABEL: @new_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @new_za_func() attributes {arm_new_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_new_za" }
+// CHECK: #[[ATTR]] = { "aarch64_new_za" }
+
+// -----
 
 // CHECK-LABEL: @in_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @in_za_func() attributes {arm_in_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_in_za" }
+// CHECK: #[[ATTR]] = { "aarch64_in_za" }
+
+// -----
 
 // CHECK-LABEL: @out_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @out_za_func() attributes {arm_out_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_out_za" }
+// CHECK: #[[ATTR]] = { "aarch64_out_za" }
+
+// -----
 
 // CHECK-LABEL: @inout_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @inout_za_func() attributes {arm_inout_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_inout_za" }
+// CHECK: #[[ATTR]] = { "aarch64_inout_za" }
+
+// -----
 
 // CHECK-LABEL: @preserves_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @preserves_za_func() attributes {arm_preserves_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_preserves_za" }
+// CHECK: #[[ATTR]] = { "aarch64_preserves_za" }
 
 // -----
 
@@ -2396,3 +2409,190 @@ llvm.func @zeroinit_complex_local_aggregate() {
 llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
 //CHECK: ![[MD1]] = !{!"/DEFAULTLIB:", !"libcmtd"}
 llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
+
+// -----
+
+// CHECK: @big_ = common global [4294967296 x i8] zeroinitializer
+llvm.mlir.global common @big_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
+
+// -----
+
+// CHECK-LABEL: @no_inline
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_inline() attributes { no_inline } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noinline
+
+// -----
+
+// CHECK-LABEL: @always_inline
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @always_inline() attributes { always_inline } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: alwaysinline
+
+// -----
+
+// CHECK-LABEL: @optimize_none
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @optimize_none() attributes { no_inline, optimize_none } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optnone
+
+// -----
+
+// CHECK-LABEL: @convergent
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @convergent() attributes { convergent } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: convergent
+
+// -----
+
+// CHECK-LABEL: @nounwind
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nounwind() attributes { no_unwind } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nounwind
+
+// -----
+
+// CHECK-LABEL: @willreturn
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @willreturn() attributes { will_return } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @convergent_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @convergent_call() {
+  llvm.call @f() {convergent} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: convergent
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @nounwind_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @nounwind_call() {
+  llvm.call @f() {no_unwind} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nounwind
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @willreturn_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @willreturn_call() {
+  llvm.call @f() {will_return} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @fa()
+llvm.func @fb()
+llvm.func @fc()
+llvm.func @fd()
+
+// CHECK-LABEL: @mem_effects_call
+// CHECK: call void @fa() #[[ATTRS_0:[0-9]+]]
+// CHECK: call void @fb() #[[ATTRS_1:[0-9]+]]
+// CHECK: call void @fc() #[[ATTRS_2:[0-9]+]]
+// CHECK: call void @fd() #[[ATTRS_3:[0-9]+]]
+llvm.func @mem_effects_call() {
+  llvm.call @fa() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>} : () -> ()
+  llvm.call @fb() {memory_effects = #llvm.memory_effects<other = read, argMem = none, inaccessibleMem = write>} : () -> ()
+  llvm.call @fc() {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = write>} : () -> ()
+  llvm.call @fd() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} : () -> ()
+  llvm.return
+
+}
+
+// CHECK: #[[ATTRS_0]]
+// CHECK-SAME: memory(none)
+// CHECK: #[[ATTRS_1]]
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write)
+// CHECK: #[[ATTRS_2]]
+// CHECK-SAME: memory(read, inaccessiblemem: write)
+// CHECK: #[[ATTRS_3]]
+// CHECK-SAME: memory(readwrite, argmem: read)
+
+// -----
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT:]] void @vec_type_hint()
+llvm.func @vec_type_hint() attributes {vec_type_hint = #llvm.vec_type_hint<hint = i32>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_SIGNED:]] void @vec_type_hint_signed()
+llvm.func @vec_type_hint_signed() attributes {vec_type_hint = #llvm.vec_type_hint<hint = i32, is_signed = true>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_SIGNED_VEC:]] void @vec_type_hint_signed_vec()
+llvm.func @vec_type_hint_signed_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<2xi32>, is_signed = true>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_FVEC:]] void @vec_type_hint_float_vec()
+llvm.func @vec_type_hint_float_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<3xf32>>}
+
+// CHECK: declare !vec_type_hint ![[#VEC_TYPE_HINT_BFVEC:]] void @vec_type_hint_bfloat_vec()
+llvm.func @vec_type_hint_bfloat_vec() attributes {vec_type_hint = #llvm.vec_type_hint<hint = vector<8xbf16>>}
+
+// CHECK: ![[#VEC_TYPE_HINT]] = !{i32 undef, i32 0}
+// CHECK: ![[#VEC_TYPE_HINT_SIGNED]] = !{i32 undef, i32 1}
+// CHECK: ![[#VEC_TYPE_HINT_SIGNED_VEC]] = !{<2 x i32> undef, i32 1}
+// CHECK: ![[#VEC_TYPE_HINT_FVEC]] = !{<3 x float> undef, i32 0}
+// CHECK: ![[#VEC_TYPE_HINT_BFVEC]] = !{<8 x bfloat> undef, i32 0}
+
+// -----
+
+// CHECK: declare !work_group_size_hint ![[#WORK_GROUP_SIZE_HINT:]] void @work_group_size_hint()
+llvm.func @work_group_size_hint() attributes {work_group_size_hint = array<i32: 128, 128, 128>}
+
+// CHECK: ![[#WORK_GROUP_SIZE_HINT]] = !{i32 128, i32 128, i32 128}
+
+// -----
+
+// CHECK: declare !reqd_work_group_size ![[#REQD_WORK_GROUP_SIZE:]] void @reqd_work_group_size()
+llvm.func @reqd_work_group_size() attributes {reqd_work_group_size = array<i32: 128, 256, 128>}
+
+// CHECK: ![[#REQD_WORK_GROUP_SIZE]] = !{i32 128, i32 256, i32 128}
+
+// -----
+
+// CHECK: declare !intel_reqd_sub_group_size ![[#INTEL_REQD_SUB_GROUP_SIZE:]] void @intel_reqd_sub_group_size()
+llvm.func @intel_reqd_sub_group_size() attributes {intel_reqd_sub_group_size = 32 : i32}
+
+// CHECK: ![[#INTEL_REQD_SUB_GROUP_SIZE]] = !{i32 32}

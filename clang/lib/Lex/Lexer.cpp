@@ -2261,8 +2261,17 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
 
   unsigned PrefixLen = 0;
 
-  while (PrefixLen != 16 && isRawStringDelimBody(CurPtr[PrefixLen]))
+  while (PrefixLen != 16 && isRawStringDelimBody(CurPtr[PrefixLen])) {
+    if (!isLexingRawMode() &&
+        llvm::is_contained({'$', '@', '`'}, CurPtr[PrefixLen])) {
+      const char *Pos = &CurPtr[PrefixLen];
+      Diag(Pos, LangOpts.CPlusPlus26
+                    ? diag::warn_cxx26_compat_raw_string_literal_character_set
+                    : diag::ext_cxx26_raw_string_literal_character_set)
+          << StringRef(Pos, 1);
+    }
     ++PrefixLen;
+  }
 
   // If the last character was not a '(', then we didn't lex a valid delimiter.
   if (CurPtr[PrefixLen] != '(') {
@@ -3867,7 +3876,7 @@ LexStart:
                                tok::utf16_char_constant);
 
       // UTF-16 raw string literal
-      if (Char == 'R' && LangOpts.CPlusPlus11 &&
+      if (Char == 'R' && LangOpts.RawStringLiterals &&
           getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == '"')
         return LexRawStringLiteral(Result,
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
@@ -3889,7 +3898,7 @@ LexStart:
                                   SizeTmp2, Result),
               tok::utf8_char_constant);
 
-        if (Char2 == 'R' && LangOpts.CPlusPlus11) {
+        if (Char2 == 'R' && LangOpts.RawStringLiterals) {
           unsigned SizeTmp3;
           char Char3 = getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3);
           // UTF-8 raw string literal
@@ -3925,7 +3934,7 @@ LexStart:
                                tok::utf32_char_constant);
 
       // UTF-32 raw string literal
-      if (Char == 'R' && LangOpts.CPlusPlus11 &&
+      if (Char == 'R' && LangOpts.RawStringLiterals &&
           getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == '"')
         return LexRawStringLiteral(Result,
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
@@ -3940,7 +3949,7 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
 
-    if (LangOpts.CPlusPlus11) {
+    if (LangOpts.RawStringLiterals) {
       Char = getCharAndSize(CurPtr, SizeTmp);
 
       if (Char == '"')
@@ -3963,7 +3972,7 @@ LexStart:
                               tok::wide_string_literal);
 
     // Wide raw string literal.
-    if (LangOpts.CPlusPlus11 && Char == 'R' &&
+    if (LangOpts.RawStringLiterals && Char == 'R' &&
         getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == '"')
       return LexRawStringLiteral(Result,
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),

@@ -94,6 +94,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
     libc.src.stdlib.free
+
+    # stdio.h external entrypoints
+    libc.src.stdio.snprintf
+    libc.src.stdio.sprintf
+    libc.src.stdio.asprintf
+    libc.src.stdio.asprintf
+    libc.src.stdio.vprintf
+    libc.src.stdio.vsnprintf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.vasprintf
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -107,10 +117,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fegetround
     libc.src.fenv.feholdexcept
     libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
+    libc.src.fenv.fetestexceptflag
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
@@ -118,8 +130,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
+    libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
@@ -127,7 +143,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceilf
     libc.src.math.ceill
     libc.src.math.coshf
+    libc.src.math.cos
     libc.src.math.cosf
+    libc.src.math.cospif
+    libc.src.math.dfmal
+    libc.src.math.dsqrtl
+    libc.src.math.daddl
+    libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.expf
@@ -221,14 +243,21 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinhf
+    libc.src.math.sin
     libc.src.math.sinf
+    libc.src.math.sinpif
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

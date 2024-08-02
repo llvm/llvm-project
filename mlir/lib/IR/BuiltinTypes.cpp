@@ -87,8 +87,9 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  if (llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
-          Float8E4M3FNUZType, Float8E4M3B11FNUZType>(*this))
+  if (llvm::isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType,
+                Float8E5M2FNUZType, Float8E4M3FNUZType, Float8E4M3B11FNUZType,
+                Float8E3M4Type>(*this))
     return 8;
   if (llvm::isa<Float16Type, BFloat16Type>(*this))
     return 16;
@@ -107,6 +108,8 @@ unsigned FloatType::getWidth() {
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
   if (llvm::isa<Float8E5M2Type>(*this))
     return APFloat::Float8E5M2();
+  if (llvm::isa<Float8E4M3Type>(*this))
+    return APFloat::Float8E4M3();
   if (llvm::isa<Float8E4M3FNType>(*this))
     return APFloat::Float8E4M3FN();
   if (llvm::isa<Float8E5M2FNUZType>(*this))
@@ -115,6 +118,8 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
     return APFloat::Float8E4M3FNUZ();
   if (llvm::isa<Float8E4M3B11FNUZType>(*this))
     return APFloat::Float8E4M3B11FNUZ();
+  if (llvm::isa<Float8E3M4Type>(*this))
+    return APFloat::Float8E3M4();
   if (llvm::isa<BFloat16Type>(*this))
     return APFloat::BFloat();
   if (llvm::isa<Float16Type>(*this))
@@ -408,24 +413,24 @@ unsigned BaseMemRefType::getMemorySpaceAsInt() const {
 // MemRefType
 //===----------------------------------------------------------------------===//
 
-/// Given an `originalShape` and a `reducedShape` assumed to be a subset of
-/// `originalShape` with some `1` entries erased, return the set of indices
-/// that specifies which of the entries of `originalShape` are dropped to obtain
-/// `reducedShape`. The returned mask can be applied as a projection to
-/// `originalShape` to obtain the `reducedShape`. This mask is useful to track
-/// which dimensions must be kept when e.g. compute MemRef strides under
-/// rank-reducing operations. Return std::nullopt if reducedShape cannot be
-/// obtained by dropping only `1` entries in `originalShape`.
 std::optional<llvm::SmallDenseSet<unsigned>>
 mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
-                               ArrayRef<int64_t> reducedShape) {
+                               ArrayRef<int64_t> reducedShape,
+                               bool matchDynamic) {
   size_t originalRank = originalShape.size(), reducedRank = reducedShape.size();
   llvm::SmallDenseSet<unsigned> unusedDims;
   unsigned reducedIdx = 0;
   for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
     // Greedily insert `originalIdx` if match.
-    if (reducedIdx < reducedRank &&
-        originalShape[originalIdx] == reducedShape[reducedIdx]) {
+    int64_t origSize = originalShape[originalIdx];
+    // if `matchDynamic`, count dynamic dims as a match, unless `origSize` is 1.
+    if (matchDynamic && reducedIdx < reducedRank && origSize != 1 &&
+        (ShapedType::isDynamic(reducedShape[reducedIdx]) ||
+         ShapedType::isDynamic(origSize))) {
+      reducedIdx++;
+      continue;
+    }
+    if (reducedIdx < reducedRank && origSize == reducedShape[reducedIdx]) {
       reducedIdx++;
       continue;
     }
@@ -433,7 +438,7 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
     unusedDims.insert(originalIdx);
     // If no match on `originalIdx`, the `originalShape` at this dimension
     // must be 1, otherwise we bail.
-    if (originalShape[originalIdx] != 1)
+    if (origSize != 1)
       return std::nullopt;
   }
   // The whole reducedShape must be scanned, otherwise we bail.

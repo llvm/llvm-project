@@ -471,6 +471,26 @@ TLI_DEFINE_ENUM_INTERNAL(cxa_atexit)
 TLI_DEFINE_STRING_INTERNAL("__cxa_atexit")
 TLI_DEFINE_SIG_INTERNAL(Int, Ptr, Ptr, Ptr)
 
+/// int atexit(void (*f)(void));
+TLI_DEFINE_ENUM_INTERNAL(atexit)
+TLI_DEFINE_STRING_INTERNAL("atexit")
+TLI_DEFINE_SIG_INTERNAL(Int, Ptr)
+
+/// void abort(void)
+TLI_DEFINE_ENUM_INTERNAL(abort)
+TLI_DEFINE_STRING_INTERNAL("abort")
+TLI_DEFINE_SIG_INTERNAL(Void)
+
+/// void exit(int)
+TLI_DEFINE_ENUM_INTERNAL(exit)
+TLI_DEFINE_STRING_INTERNAL("exit")
+TLI_DEFINE_SIG_INTERNAL(Void, Int)
+
+/// void _Exit(int)
+TLI_DEFINE_ENUM_INTERNAL(Exit)
+TLI_DEFINE_STRING_INTERNAL("_Exit")
+TLI_DEFINE_SIG_INTERNAL(Void, Int)
+
 /// void __cxa_guard_abort(guard_t *guard);
 /// guard_t is int64_t in Itanium ABI or int32_t on ARM eabi.
 TLI_DEFINE_ENUM_INTERNAL(cxa_guard_abort)
@@ -1787,6 +1807,21 @@ TLI_DEFINE_ENUM_INTERNAL(modfl)
 TLI_DEFINE_STRING_INTERNAL("modfl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Ptr)
 
+/// double nan(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nan)
+TLI_DEFINE_STRING_INTERNAL("nan")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Ptr)
+
+/// float nanf(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nanf)
+TLI_DEFINE_STRING_INTERNAL("nanf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Ptr)
+
+/// long double nanl(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nanl)
+TLI_DEFINE_STRING_INTERNAL("nanl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, Ptr)
+
 /// double nearbyint(double x);
 TLI_DEFINE_ENUM_INTERNAL(nearbyint)
 TLI_DEFINE_STRING_INTERNAL("nearbyint")
@@ -1947,6 +1982,21 @@ TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Flt)
 TLI_DEFINE_ENUM_INTERNAL(remainderl)
 TLI_DEFINE_STRING_INTERNAL("remainderl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl)
+
+/// double remquo(double x, double y, int *quo);
+TLI_DEFINE_ENUM_INTERNAL(remquo)
+TLI_DEFINE_STRING_INTERNAL("remquo")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Dbl, Ptr)
+
+/// float remquof(float x, float y, int *quo);
+TLI_DEFINE_ENUM_INTERNAL(remquof)
+TLI_DEFINE_STRING_INTERNAL("remquof")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Flt, Ptr)
+
+/// long double remquol(long double x, long double y, int *quo);
+TLI_DEFINE_ENUM_INTERNAL(remquol)
+TLI_DEFINE_STRING_INTERNAL("remquol")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl, Ptr)
 
 /// int remove(const char *path);
 TLI_DEFINE_ENUM_INTERNAL(remove)

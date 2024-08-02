@@ -767,19 +767,21 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
-    CallInst *NewCall = nullptr;
+    Value *V = nullptr;
     if (match(Src0, PatternMatch::m_NaN()) || isa<UndefValue>(Src0)) {
-      NewCall = IC.Builder.CreateMinNum(Src1, Src2);
+      V = IC.Builder.CreateMinNum(Src1, Src2);
     } else if (match(Src1, PatternMatch::m_NaN()) || isa<UndefValue>(Src1)) {
-      NewCall = IC.Builder.CreateMinNum(Src0, Src2);
+      V = IC.Builder.CreateMinNum(Src0, Src2);
     } else if (match(Src2, PatternMatch::m_NaN()) || isa<UndefValue>(Src2)) {
-      NewCall = IC.Builder.CreateMaxNum(Src0, Src1);
+      V = IC.Builder.CreateMaxNum(Src0, Src1);
     }
 
-    if (NewCall) {
-      NewCall->copyFastMathFlags(&II);
-      NewCall->takeName(&II);
-      return IC.replaceInstUsesWith(II, NewCall);
+    if (V) {
+      if (auto *CI = dyn_cast<CallInst>(V)) {
+        CI->copyFastMathFlags(&II);
+        CI->takeName(&II);
+      }
+      return IC.replaceInstUsesWith(II, V);
     }
 
     bool Swap = false;
@@ -852,8 +854,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (auto *CSrc0 = dyn_cast<Constant>(Src0)) {
       if (auto *CSrc1 = dyn_cast<Constant>(Src1)) {
-        Constant *CCmp = ConstantExpr::getCompare(CCVal, CSrc0, CSrc1);
-        if (CCmp->isNullValue()) {
+        Constant *CCmp = ConstantFoldCompareInstOperands(
+            (ICmpInst::Predicate)CCVal, CSrc0, CSrc1, DL);
+        if (CCmp && CCmp->isNullValue()) {
           return IC.replaceInstUsesWith(
               II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
@@ -1099,6 +1102,78 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_trig_preop: {
+    // The intrinsic is declared with name mangling, but currently the
+    // instruction only exists for f64
+    if (!II.getType()->isDoubleTy())
+      break;
+
+    Value *Src = II.getArgOperand(0);
+    Value *Segment = II.getArgOperand(1);
+    if (isa<PoisonValue>(Src) || isa<PoisonValue>(Segment))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+
+    if (isa<UndefValue>(Src)) {
+      auto *QNaN = ConstantFP::get(
+          II.getType(), APFloat::getQNaN(II.getType()->getFltSemantics()));
+      return IC.replaceInstUsesWith(II, QNaN);
+    }
+
+    const ConstantFP *Csrc = dyn_cast<ConstantFP>(Src);
+    if (!Csrc)
+      break;
+
+    if (II.isStrictFP())
+      break;
+
+    const APFloat &Fsrc = Csrc->getValueAPF();
+    if (Fsrc.isNaN()) {
+      auto *Quieted = ConstantFP::get(II.getType(), Fsrc.makeQuiet());
+      return IC.replaceInstUsesWith(II, Quieted);
+    }
+
+    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
+    if (!Cseg)
+      break;
+
+    unsigned Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
+    unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
+    unsigned Shift = SegmentVal * 53;
+    if (Exponent > 1077)
+      Shift += Exponent - 1077;
+
+    // 2.0/PI table.
+    static const uint32_t TwoByPi[] = {
+        0xa2f9836e, 0x4e441529, 0xfc2757d1, 0xf534ddc0, 0xdb629599, 0x3c439041,
+        0xfe5163ab, 0xdebbc561, 0xb7246e3a, 0x424dd2e0, 0x06492eea, 0x09d1921c,
+        0xfe1deb1c, 0xb129a73e, 0xe88235f5, 0x2ebb4484, 0xe99c7026, 0xb45f7e41,
+        0x3991d639, 0x835339f4, 0x9c845f8b, 0xbdf9283b, 0x1ff897ff, 0xde05980f,
+        0xef2f118b, 0x5a0a6d1f, 0x6d367ecf, 0x27cb09b7, 0x4f463f66, 0x9e5fea2d,
+        0x7527bac7, 0xebe5f17b, 0x3d0739f7, 0x8a5292ea, 0x6bfb5fb1, 0x1f8d5d08,
+        0x56033046};
+
+    // Return 0 for outbound segment (hardware behavior).
+    unsigned Idx = Shift >> 5;
+    if (Idx + 2 >= std::size(TwoByPi)) {
+      APFloat Zero = APFloat::getZero(II.getType()->getFltSemantics());
+      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getType(), Zero));
+    }
+
+    unsigned BShift = Shift & 0x1f;
+    uint64_t Thi = Make_64(TwoByPi[Idx], TwoByPi[Idx + 1]);
+    uint64_t Tlo = Make_64(TwoByPi[Idx + 2], 0);
+    if (BShift)
+      Thi = (Thi << BShift) | (Tlo >> (64 - BShift));
+    Thi = Thi >> 11;
+    APFloat Result = APFloat((double)Thi);
+
+    int Scale = -53 - Shift;
+    if (Exponent >= 1968)
+      Scale += 128;
+
+    Result = scalbn(Result, Scale, RoundingMode::NearestTiesToEven);
+    return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Result));
+  }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
@@ -1155,12 +1230,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, ConstantInt::getFalse(II.getType()));
     break;
   }
-  case Intrinsic::amdgcn_buffer_store_format:
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
   case Intrinsic::amdgcn_raw_tbuffer_store:
   case Intrinsic::amdgcn_struct_tbuffer_store:
-  case Intrinsic::amdgcn_tbuffer_store:
   case Intrinsic::amdgcn_image_store_1d:
   case Intrinsic::amdgcn_image_store_1darray:
   case Intrinsic::amdgcn_image_store_2d:
@@ -1373,8 +1446,6 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
-  case Intrinsic::amdgcn_buffer_load:
-  case Intrinsic::amdgcn_buffer_load_format:
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
@@ -1388,7 +1459,6 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-  case Intrinsic::amdgcn_tbuffer_load:
     return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
   default: {
     if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {

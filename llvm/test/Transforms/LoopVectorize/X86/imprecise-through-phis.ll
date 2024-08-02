@@ -84,8 +84,6 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; SSE-NEXT:    [[TMP6:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD]], <double 4.200000e+01, double 4.200000e+01>
 ; SSE-NEXT:    [[TMP7:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD2]], <double 4.200000e+01, double 4.200000e+01>
-; SSE-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>
-; SSE-NEXT:    [[TMP9:%.*]] = xor <2 x i1> [[TMP7]], <i1 true, i1 true>
 ; SSE-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[VEC_PHI]], [[WIDE_LOAD]]
 ; SSE-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[VEC_PHI1]], [[WIDE_LOAD2]]
 ; SSE-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP6]], <2 x double> [[TMP10]], <2 x double> [[VEC_PHI]]
@@ -99,7 +97,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    br i1 true, label [[DONE:%.*]], label [[SCALAR_PH]]
 ; SSE:       scalar.ph:
 ; SSE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; SSE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; SSE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP13]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; SSE-NEXT:    br label [[LOOP:%.*]]
 ; SSE:       loop:
 ; SSE-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
@@ -153,10 +151,6 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[TMP13:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD4]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
 ; AVX-NEXT:    [[TMP14:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD5]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
 ; AVX-NEXT:    [[TMP15:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD6]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
-; AVX-NEXT:    [[TMP16:%.*]] = xor <4 x i1> [[TMP12]], <i1 true, i1 true, i1 true, i1 true>
-; AVX-NEXT:    [[TMP17:%.*]] = xor <4 x i1> [[TMP13]], <i1 true, i1 true, i1 true, i1 true>
-; AVX-NEXT:    [[TMP18:%.*]] = xor <4 x i1> [[TMP14]], <i1 true, i1 true, i1 true, i1 true>
-; AVX-NEXT:    [[TMP19:%.*]] = xor <4 x i1> [[TMP15]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX-NEXT:    [[TMP20:%.*]] = fadd fast <4 x double> [[VEC_PHI]], [[WIDE_LOAD]]
 ; AVX-NEXT:    [[TMP21:%.*]] = fadd fast <4 x double> [[VEC_PHI1]], [[WIDE_LOAD4]]
 ; AVX-NEXT:    [[TMP22:%.*]] = fadd fast <4 x double> [[VEC_PHI2]], [[WIDE_LOAD5]]
@@ -176,7 +170,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    br i1 true, label [[DONE:%.*]], label [[SCALAR_PH]]
 ; AVX:       scalar.ph:
 ; AVX-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; AVX-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
+; AVX-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP25]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; AVX-NEXT:    br label [[LOOP:%.*]]
 ; AVX:       loop:
 ; AVX-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]

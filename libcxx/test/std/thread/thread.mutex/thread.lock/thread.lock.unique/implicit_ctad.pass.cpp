@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-threads
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <mutex>
 
@@ -18,12 +17,13 @@
 #include <mutex>
 
 #include "test_macros.h"
+#include "types.h"
 
 int main(int, char**) {
-  std::mutex mutex;
+  MyMutex mutex;
   {
     std::unique_lock lock(mutex);
-    ASSERT_SAME_TYPE(decltype(lock), std::unique_lock<std::mutex>);
+    ASSERT_SAME_TYPE(decltype(lock), std::unique_lock<MyMutex>);
   }
 
   return 0;

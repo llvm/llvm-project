@@ -1,6 +1,7 @@
 // RUN: %check_clang_tidy -std=c++20 %s modernize-use-starts-ends-with %t -- \
 // RUN:   -- -isystem %clang_tidy_headers
 
+#include <string.h>
 #include <string>
 
 std::string foo(std::string);
@@ -158,10 +159,64 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use startsWith
   // CHECK-FIXES: puvi.startsWith("a");
 
+  s.compare(0, 1, "a") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() == 0
+  // CHECK-FIXES: s.starts_with("a");
+
+  s.compare(0, 1, "a") != 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() != 0
+  // CHECK-FIXES: !s.starts_with("a");
+
+  s.compare(0, strlen("a"), "a") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("a");
+
+  s.compare(0, std::strlen("a"), "a") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("a");
+
+  s.compare(0, std::strlen(("a")), "a") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("a");
+
+  s.compare(0, std::strlen(("a")), (("a"))) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("a");
+
+  s.compare(0, s.size(), s) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with(s);
+
+  s.compare(0, s.length(), s) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with(s);
+
+  0 != s.compare(0, sv.length(), sv);
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with(sv);
+
+  #define LENGTH(x) (x).length()
+  s.compare(0, LENGTH(s), s) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with(s);
+
+  s.compare(ZERO, LENGTH(s), s) == ZERO;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with(s);
+
+  s.compare(ZERO, LENGTH(sv), sv) != 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: !s.starts_with(sv);
+
   // Expressions that don't trigger the check are here.
   #define EQ(x, y) ((x) == (y))
   EQ(s.find("a"), 0);
 
   #define DOTFIND(x, y) (x).find(y)
   DOTFIND(s, "a") == 0;
+
+  #define STARTS_WITH_COMPARE(x, y) (x).compare(0, (x).size(), (y))
+  STARTS_WITH_COMPARE(s, s) == 0;
+
+  s.compare(0, 1, "ab") == 0;
 }

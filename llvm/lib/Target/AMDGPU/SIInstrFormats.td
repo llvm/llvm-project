@@ -12,7 +12,7 @@
 
 class InstSI <dag outs, dag ins, string asm = "",
               list<dag> pattern = []> :
-  AMDGPUInst<outs, ins, asm, pattern>, GCNPredicateControl {
+  AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
   // Low bits - basic encoding information.
   field bit SALU = 0;
   field bit VALU = 0;
@@ -319,6 +319,12 @@ def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
 def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
+}
+
+// Source-encoded destination operand for instructions like v_swap_b16.
+def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+  let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
+  let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
 }
 
 class VINTRPe <bits<2> op> : Enc32 {

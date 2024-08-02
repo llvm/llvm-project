@@ -30,8 +30,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <system_error>
 
@@ -598,7 +598,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       // FIXME: Only pass GompNeedsRT = true for platforms with libgomp that
       // require librt. Most modern Linux platforms do, but some may not.
-      if (addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP,
+      if (addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP,
                            JA.isHostOffloading(Action::OFK_OpenMP),
                            /* GompNeedsRT= */ true))
         // OpenMP runtimes implies pthreads when using the GNU toolchain.
@@ -769,9 +769,10 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     StringRef ABIName = riscv::getRISCVABI(Args, getToolChain().getTriple());
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
-    StringRef MArchName = riscv::getRISCVArch(Args, getToolChain().getTriple());
+    std::string MArchName =
+        riscv::getRISCVArch(Args, getToolChain().getTriple());
     CmdArgs.push_back("-march");
-    CmdArgs.push_back(MArchName.data());
+    CmdArgs.push_back(Args.MakeArgString(MArchName));
     if (!Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
       Args.addOptOutFlag(CmdArgs, options::OPT_mrelax, options::OPT_mno_relax);
     break;
@@ -1796,9 +1797,7 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
       }
       auto &MLConfigISAInfo = *MLConfigParseResult;
 
-      const llvm::RISCVISAInfo::OrderedExtensionMap &MLConfigArchExts =
-          MLConfigISAInfo->getExtensions();
-      for (auto MLConfigArchExt : MLConfigArchExts) {
+      for (auto &MLConfigArchExt : MLConfigISAInfo->getExtensions()) {
         auto ExtName = MLConfigArchExt.first;
         NewMultilib.flag(Twine("-", ExtName).str());
 
@@ -1884,7 +1883,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   Multilib::flags_list Flags;
   llvm::StringSet<> Added_ABIs;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
-  StringRef MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
+  std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   for (auto Element : RISCVMultilibSet) {
     addMultilibFlag(MArch == Element.march,
                     Twine("-march=", Element.march).str().c_str(), Flags);
@@ -2229,10 +2228,19 @@ void Generic_GCC::GCCInstallationDetector::init(
   SmallVector<StringRef, 16> CandidateBiarchTripleAliases;
   // Add some triples that we want to check first.
   CandidateTripleAliases.push_back(TargetTriple.str());
-  std::string TripleNoVendor = TargetTriple.getArchName().str() + "-" +
-                               TargetTriple.getOSAndEnvironmentName().str();
-  if (TargetTriple.getVendor() == llvm::Triple::UnknownVendor)
+  std::string TripleNoVendor, BiarchTripleNoVendor;
+  if (TargetTriple.getVendor() == llvm::Triple::UnknownVendor) {
+    StringRef OSEnv = TargetTriple.getOSAndEnvironmentName();
+    if (TargetTriple.getEnvironment() == llvm::Triple::GNUX32)
+      OSEnv = "linux-gnu";
+    TripleNoVendor = (TargetTriple.getArchName().str() + '-' + OSEnv).str();
     CandidateTripleAliases.push_back(TripleNoVendor);
+    if (BiarchVariantTriple.getArch() != llvm::Triple::UnknownArch) {
+      BiarchTripleNoVendor =
+          (BiarchVariantTriple.getArchName().str() + '-' + OSEnv).str();
+      CandidateBiarchTripleAliases.push_back(BiarchTripleNoVendor);
+    }
+  }
 
   CollectLibDirsAndTriples(TargetTriple, BiarchVariantTriple, CandidateLibDirs,
                            CandidateTripleAliases, CandidateBiarchLibDirs,
@@ -2455,11 +2463,9 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   // lists should shrink over time. Please don't add more elements to *Triples.
   static const char *const AArch64LibDirs[] = {"/lib64", "/lib"};
   static const char *const AArch64Triples[] = {
-      "aarch64-none-linux-gnu", "aarch64-linux-gnu", "aarch64-redhat-linux",
-      "aarch64-suse-linux"};
+      "aarch64-none-linux-gnu", "aarch64-redhat-linux", "aarch64-suse-linux"};
   static const char *const AArch64beLibDirs[] = {"/lib"};
-  static const char *const AArch64beTriples[] = {"aarch64_be-none-linux-gnu",
-                                                 "aarch64_be-linux-gnu"};
+  static const char *const AArch64beTriples[] = {"aarch64_be-none-linux-gnu"};
 
   static const char *const ARMLibDirs[] = {"/lib"};
   static const char *const ARMTriples[] = {"arm-linux-gnueabi"};
@@ -2484,9 +2490,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "x86_64-linux-gnu",       "x86_64-unknown-linux-gnu",
       "x86_64-pc-linux-gnu",    "x86_64-redhat-linux6E",
       "x86_64-redhat-linux",    "x86_64-suse-linux",
-      "x86_64-manbo-linux-gnu", "x86_64-linux-gnu",
-      "x86_64-slackware-linux", "x86_64-unknown-linux",
-      "x86_64-amazon-linux"};
+      "x86_64-manbo-linux-gnu", "x86_64-slackware-linux",
+      "x86_64-unknown-linux",   "x86_64-amazon-linux"};
   static const char *const X32Triples[] = {"x86_64-linux-gnux32",
                                            "x86_64-pc-linux-gnux32"};
   static const char *const X32LibDirs[] = {"/libx32", "/lib"};
@@ -2502,26 +2507,24 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "loongarch64-linux-gnu", "loongarch64-unknown-linux-gnu"};
 
   static const char *const M68kLibDirs[] = {"/lib"};
-  static const char *const M68kTriples[] = {
-      "m68k-linux-gnu", "m68k-unknown-linux-gnu", "m68k-suse-linux"};
+  static const char *const M68kTriples[] = {"m68k-unknown-linux-gnu",
+                                            "m68k-suse-linux"};
 
   static const char *const MIPSLibDirs[] = {"/libo32", "/lib"};
   static const char *const MIPSTriples[] = {
       "mips-linux-gnu", "mips-mti-linux", "mips-mti-linux-gnu",
       "mips-img-linux-gnu", "mipsisa32r6-linux-gnu"};
   static const char *const MIPSELLibDirs[] = {"/libo32", "/lib"};
-  static const char *const MIPSELTriples[] = {
-      "mipsel-linux-gnu", "mips-img-linux-gnu", "mipsisa32r6el-linux-gnu"};
+  static const char *const MIPSELTriples[] = {"mipsel-linux-gnu",
+                                              "mips-img-linux-gnu"};
 
   static const char *const MIPS64LibDirs[] = {"/lib64", "/lib"};
   static const char *const MIPS64Triples[] = {
-      "mips64-linux-gnu",      "mips-mti-linux-gnu",
-      "mips-img-linux-gnu",    "mips64-linux-gnuabi64",
+      "mips-mti-linux-gnu", "mips-img-linux-gnu", "mips64-linux-gnuabi64",
       "mipsisa64r6-linux-gnu", "mipsisa64r6-linux-gnuabi64"};
   static const char *const MIPS64ELLibDirs[] = {"/lib64", "/lib"};
   static const char *const MIPS64ELTriples[] = {
-      "mips64el-linux-gnu",      "mips-mti-linux-gnu",
-      "mips-img-linux-gnu",      "mips64el-linux-gnuabi64",
+      "mips-mti-linux-gnu", "mips-img-linux-gnu", "mips64el-linux-gnuabi64",
       "mipsisa64r6el-linux-gnu", "mipsisa64r6el-linux-gnuabi64"};
 
   static const char *const MIPSN32LibDirs[] = {"/lib32"};
@@ -2536,32 +2539,28 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   static const char *const PPCLibDirs[] = {"/lib32", "/lib"};
   static const char *const PPCTriples[] = {
-      "powerpc-linux-gnu", "powerpc-unknown-linux-gnu", "powerpc-linux-gnuspe",
+      "powerpc-unknown-linux-gnu",
       // On 32-bit PowerPC systems running SUSE Linux, gcc is configured as a
       // 64-bit compiler which defaults to "-m32", hence "powerpc64-suse-linux".
       "powerpc64-suse-linux", "powerpc-montavista-linuxspe"};
   static const char *const PPCLELibDirs[] = {"/lib32", "/lib"};
-  static const char *const PPCLETriples[] = {"powerpcle-linux-gnu",
-                                             "powerpcle-unknown-linux-gnu",
+  static const char *const PPCLETriples[] = {"powerpcle-unknown-linux-gnu",
                                              "powerpcle-linux-musl"};
 
   static const char *const PPC64LibDirs[] = {"/lib64", "/lib"};
-  static const char *const PPC64Triples[] = {
-      "powerpc64-linux-gnu", "powerpc64-unknown-linux-gnu",
-      "powerpc64-suse-linux", "ppc64-redhat-linux"};
+  static const char *const PPC64Triples[] = {"powerpc64-unknown-linux-gnu",
+                                             "powerpc64-suse-linux",
+                                             "ppc64-redhat-linux"};
   static const char *const PPC64LELibDirs[] = {"/lib64", "/lib"};
   static const char *const PPC64LETriples[] = {
-      "powerpc64le-linux-gnu", "powerpc64le-unknown-linux-gnu",
-      "powerpc64le-none-linux-gnu", "powerpc64le-suse-linux",
-      "ppc64le-redhat-linux"};
+      "powerpc64le-unknown-linux-gnu", "powerpc64le-none-linux-gnu",
+      "powerpc64le-suse-linux", "ppc64le-redhat-linux"};
 
   static const char *const RISCV32LibDirs[] = {"/lib32", "/lib"};
   static const char *const RISCV32Triples[] = {"riscv32-unknown-linux-gnu",
-                                               "riscv32-linux-gnu",
                                                "riscv32-unknown-elf"};
   static const char *const RISCV64LibDirs[] = {"/lib64", "/lib"};
   static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
-                                               "riscv64-linux-gnu",
                                                "riscv64-unknown-elf"};
 
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
@@ -2573,9 +2572,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   static const char *const SystemZLibDirs[] = {"/lib64", "/lib"};
   static const char *const SystemZTriples[] = {
-      "s390x-linux-gnu", "s390x-unknown-linux-gnu", "s390x-ibm-linux-gnu",
-      "s390x-suse-linux", "s390x-redhat-linux"};
-
+      "s390x-unknown-linux-gnu", "s390x-ibm-linux-gnu", "s390x-suse-linux",
+      "s390x-redhat-linux"};
 
   using std::begin;
   using std::end;

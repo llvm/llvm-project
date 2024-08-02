@@ -22,16 +22,17 @@
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
-using Sign = fputil::Sign;
+
 using LIBC_NAMESPACE::operator""_u128;
 
 // log2(10)
@@ -476,4 +477,4 @@ LLVM_LIBC_FUNCTION(double, exp10, (double x)) {
   return static_cast<double>(r_f128);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

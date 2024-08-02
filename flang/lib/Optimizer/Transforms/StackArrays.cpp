@@ -25,7 +25,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
@@ -180,7 +179,7 @@ public:
 private:
   llvm::DenseMap<mlir::Operation *, AllocMemMap> funcMaps;
 
-  mlir::LogicalResult analyseFunction(mlir::Operation *func);
+  llvm::LogicalResult analyseFunction(mlir::Operation *func);
 };
 
 /// Converts a fir.allocmem to a fir.alloca
@@ -191,7 +190,7 @@ public:
       const StackArraysAnalysisWrapper::AllocMemMap &candidateOps)
       : OpRewritePattern(ctx), candidateOps{candidateOps} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::AllocMemOp allocmem,
                   mlir::PatternRewriter &rewriter) const override;
 
@@ -288,7 +287,7 @@ mlir::ChangeResult LatticePoint::join(const AbstractDenseLattice &lattice) {
 
 void LatticePoint::print(llvm::raw_ostream &os) const {
   for (const auto &[value, state] : stateMap) {
-    os << value << ": ";
+    os << "\n * " << value << ": ";
     ::print(os, state);
   }
 }
@@ -351,7 +350,7 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!retTy.isa<fir::SequenceType>()) {
+    if (!mlir::isa<fir::SequenceType>(retTy)) {
       LLVM_DEBUG(llvm::dbgs()
                  << "--Allocation is not for an array: skipping\n");
       return;
@@ -362,6 +361,13 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
   } else if (mlir::isa<fir::FreeMemOp>(op)) {
     assert(op->getNumOperands() == 1 && "fir.freemem has one operand");
     mlir::Value operand = op->getOperand(0);
+
+    // Note: StackArrays is scheduled in the pass pipeline after lowering hlfir
+    // to fir. Therefore, we only need to handle `fir::DeclareOp`s.
+    if (auto declareOp =
+            llvm::dyn_cast_if_present<fir::DeclareOp>(operand.getDefiningOp()))
+      operand = declareOp.getMemref();
+
     std::optional<AllocationState> operandState = before.get(operand);
     if (operandState && *operandState == AllocationState::Allocated) {
       // don't tag things not allocated in this function as freed, so that we
@@ -415,7 +421,7 @@ void AllocationAnalysis::processOperation(mlir::Operation *op) {
   visitOperationImpl(op, *before, after);
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   assert(mlir::isa<mlir::func::FuncOp>(func));
   size_t nAllocs = 0;
@@ -453,6 +459,9 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   };
   func->walk([&](mlir::func::ReturnOp child) { joinOperationLattice(child); });
   func->walk([&](fir::UnreachableOp child) { joinOperationLattice(child); });
+  func->walk(
+      [&](mlir::omp::TerminatorOp child) { joinOperationLattice(child); });
+
   llvm::DenseSet<mlir::Value> freedValues;
   point.appendFreedValues(freedValues);
 
@@ -507,7 +516,7 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
   return conv;
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
                                     mlir::PatternRewriter &rewriter) const {
   auto oldInsertionPt = rewriter.saveInsertionPoint();
@@ -519,9 +528,18 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
 
   // remove freemem operations
   llvm::SmallVector<mlir::Operation *> erases;
-  for (mlir::Operation *user : allocmem.getOperation()->getUsers())
+  for (mlir::Operation *user : allocmem.getOperation()->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          erases.push_back(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user))
       erases.push_back(user);
+  }
+
   // now we are done iterating the users, it is safe to mutate them
   for (mlir::Operation *erase : erases)
     rewriter.eraseOp(erase);
@@ -634,9 +652,19 @@ AllocMemConversion::findAllocaLoopInsertionPoint(fir::AllocMemOp &oldAlloc) {
 
   // find freemem ops
   llvm::SmallVector<mlir::Operation *, 1> freeOps;
-  for (mlir::Operation *user : oldAllocOp->getUsers())
+
+  for (mlir::Operation *user : oldAllocOp->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          freeOps.push_back(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user))
       freeOps.push_back(user);
+  }
+
   assert(freeOps.size() && "DFA should only return freed memory");
 
   // Don't attempt to reason about a stacksave/stackrestore between different
@@ -718,12 +746,23 @@ void AllocMemConversion::insertStackSaveRestore(
   mlir::SymbolRefAttr stackRestoreSym =
       builder.getSymbolRefAttr(stackRestoreFn.getName());
 
+  auto createStackRestoreCall = [&](mlir::Operation *user) {
+    builder.setInsertionPoint(user);
+    builder.create<fir::CallOp>(user->getLoc(),
+                                stackRestoreFn.getFunctionType().getResults(),
+                                stackRestoreSym, mlir::ValueRange{sp});
+  };
+
   for (mlir::Operation *user : oldAlloc->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          createStackRestoreCall(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user)) {
-      builder.setInsertionPoint(user);
-      builder.create<fir::CallOp>(user->getLoc(),
-                                  stackRestoreFn.getFunctionType().getResults(),
-                                  stackRestoreSym, mlir::ValueRange{sp});
+      createStackRestoreCall(user);
     }
   }
 
@@ -767,7 +806,7 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
   mlir::RewritePatternSet patterns(&context);
   mlir::GreedyRewriteConfig config;
   // prevent the pattern driver form merging blocks
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
   if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,
@@ -775,8 +814,4 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<mlir::Pass> fir::createStackArraysPass() {
-  return std::make_unique<StackArraysPass>();
 }

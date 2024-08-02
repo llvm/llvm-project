@@ -67,9 +67,11 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/big_int.h" // make_integral_or_big_int_unsigned_t
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace details {
 
@@ -163,7 +165,7 @@ template <size_t radix> using Custom = details::Fmt<radix>;
 
 // See file header for documentation.
 template <typename T, typename Fmt = radix::Dec> class IntegerToString {
-  static_assert(cpp::is_integral_v<T>);
+  static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
 
   LIBC_INLINE static constexpr size_t compute_buffer_size() {
     constexpr auto MAX_DIGITS = []() -> size_t {
@@ -208,8 +210,8 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
 
   // An internal stateless structure that handles the number formatting logic.
   struct IntegerWriter {
-    static_assert(cpp::is_integral_v<T>);
-    using UNSIGNED_T = cpp::make_unsigned_t<T>;
+    static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
+    using UNSIGNED_T = make_integral_or_big_int_unsigned_t<T>;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
       if (digit < 10)
@@ -316,6 +318,6 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H

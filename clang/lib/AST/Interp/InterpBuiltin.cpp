@@ -7,14 +7,28 @@
 //===----------------------------------------------------------------------===//
 #include "../ExprConstShared.h"
 #include "Boolean.h"
+#include "Compiler.h"
+#include "EvalEmitter.h"
 #include "Interp.h"
 #include "PrimType.h"
+#include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/SipHash.h"
 
 namespace clang {
 namespace interp {
+
+static unsigned callArgSize(const InterpState &S, const CallExpr *C) {
+  unsigned O = 0;
+
+  for (const Expr *E : C->arguments()) {
+    O += align(primSize(*S.getContext().classify(E)));
+  }
+
+  return O;
+}
 
 template <typename T>
 static T getParam(const InterpFrame *Frame, unsigned Index) {
@@ -53,11 +67,7 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
     Offset = align(primSize(T));
 
   APSInt R;
-  INT_TYPE_SWITCH(T, {
-    T Val = Stk.peek<T>(Offset);
-    R = APSInt(APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()),
-               !T::isSigned());
-  });
+  INT_TYPE_SWITCH(T, R = Stk.peek<T>(Offset).toAPSInt());
 
   return R;
 }
@@ -123,6 +133,36 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
 #undef RET_CASE
 }
 
+static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
+                                                  const InterpFrame *Frame,
+                                                  const CallExpr *Call) {
+  // The current frame is the one for __builtin_is_constant_evaluated.
+  // The one above that, potentially the one for std::is_constant_evaluated().
+  if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
+      Frame->Caller && S.getEvalStatus().Diag) {
+    auto isStdCall = [](const FunctionDecl *F) -> bool {
+      return F && F->isInStdNamespace() && F->getIdentifier() &&
+             F->getIdentifier()->isStr("is_constant_evaluated");
+    };
+    const InterpFrame *Caller = Frame->Caller;
+
+    if (Caller->Caller && isStdCall(Caller->getCallee())) {
+      const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
+      S.report(E->getExprLoc(),
+               diag::warn_is_constant_evaluated_always_true_constexpr)
+          << "std::is_constant_evaluated" << E->getSourceRange();
+    } else {
+      const Expr *E = Frame->Caller->getExpr(Frame->getRetPC());
+      S.report(E->getExprLoc(),
+               diag::warn_is_constant_evaluated_always_true_constexpr)
+          << "__builtin_is_constant_evaluated" << E->getSourceRange();
+    }
+  }
+
+  S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+  return true;
+}
+
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call) {
@@ -177,7 +217,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, StrPtr, AK_Read))
     return false;
 
-  if (!CheckDummy(S, OpPC, StrPtr))
+  if (!CheckDummy(S, OpPC, StrPtr, AK_Read))
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
@@ -537,11 +577,12 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call,
                                    bool Right) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+  PrimType AmountT = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType ValueT = *S.getContext().classify(Call->getArg(0)->getType());
 
-  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
-  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+  APSInt Amount = peekToAPSInt(S.Stk, AmountT);
+  APSInt Value = peekToAPSInt(
+      S.Stk, ValueT, align(primSize(AmountT)) + align(primSize(ValueT)));
 
   APSInt Result;
   if (Right)
@@ -570,8 +611,8 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
-  PrimType PtrT =
-      S.getContext().classify(Call->getArg(0)->getType()).value_or(PT_Ptr);
+  assert(Call->getArg(0)->isLValue());
+  PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
 
   if (PtrT == PT_FnPtr) {
     const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
@@ -609,10 +650,9 @@ static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_launder(InterpState &S, CodePtr OpPC,
-                                    const InterpFrame *Frame,
-                                    const Function *Func,
-                                    const CallExpr *Call) {
+/// Just takes the first Argument to the call and puts it on the stack.
+static bool noopPointer(InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
+                        const Function *Func, const CallExpr *Call) {
   const Pointer &Arg = S.Stk.peek<Pointer>();
   S.Stk.push<Pointer>(Arg);
   return true;
@@ -790,9 +830,10 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const Function *Func,
                                 const CallExpr *Call) {
+  unsigned CallSize = callArgSize(S, Call);
   unsigned BuiltinOp = Func->getBuiltinID();
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
   // When the argument is 0, the result of GCC builtins is undefined, whereas
   // for Microsoft intrinsics, the result is the bit-width of the argument.
@@ -800,8 +841,19 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                          BuiltinOp != Builtin::BI__lzcnt &&
                          BuiltinOp != Builtin::BI__lzcnt64;
 
-  if (ZeroIsUndefined && Val == 0)
-    return false;
+  if (Val == 0) {
+    if (Func->getBuiltinID() == Builtin::BI__builtin_clzg &&
+        Call->getNumArgs() == 2) {
+      // We have a fallback parameter.
+      PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
+      const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
+      pushInteger(S, Fallback, Call->getType());
+      return true;
+    }
+
+    if (ZeroIsUndefined)
+      return false;
+  }
 
   pushInteger(S, Val.countl_zero(), Call->getType());
   return true;
@@ -810,11 +862,21 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const Function *Func,
                                 const CallExpr *Call) {
+  unsigned CallSize = callArgSize(S, Call);
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
-  if (Val == 0)
+  if (Val == 0) {
+    if (Func->getBuiltinID() == Builtin::BI__builtin_ctzg &&
+        Call->getNumArgs() == 2) {
+      // We have a fallback parameter.
+      PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
+      const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
+      pushInteger(S, Fallback, Call->getType());
+      return true;
+    }
     return false;
+  }
 
   pushInteger(S, Val.countr_zero(), Call->getType());
   return true;
@@ -882,15 +944,29 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
       if (Ptr.isZero())
         return returnBool(true);
 
-      QualType PointeeType = Call->getArg(1)
-                                 ->IgnoreImpCasts()
-                                 ->getType()
-                                 ->castAs<PointerType>()
-                                 ->getPointeeType();
-      // OK, we will inline operations on this object.
-      if (!PointeeType->isIncompleteType() &&
-          S.getCtx().getTypeAlignInChars(PointeeType) >= Size)
-        return returnBool(true);
+      if (Ptr.isIntegralPointer()) {
+        uint64_t IntVal = Ptr.getIntegerRepresentation();
+        if (APSInt(APInt(64, IntVal, false), true).isAligned(Size.getAsAlign()))
+          return returnBool(true);
+      }
+
+      const Expr *PtrArg = Call->getArg(1);
+      // Otherwise, check if the type's alignment against Size.
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PtrArg)) {
+        // Drop the potential implicit-cast to 'const volatile void*', getting
+        // the underlying type.
+        if (ICE->getCastKind() == CK_BitCast)
+          PtrArg = ICE->getSubExpr();
+      }
+
+      if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+        QualType PointeeType = PtrTy->getPointeeType();
+        if (!PointeeType->isIncompleteType() &&
+            S.getCtx().getTypeAlignInChars(PointeeType) >= Size) {
+          // OK, we will inline operations on this object.
+          return returnBool(true);
+        }
+      }
     }
   }
 
@@ -919,16 +995,221 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// __builtin_is_aligned()
+/// __builtin_align_up()
+/// __builtin_align_down()
+/// The first parameter is either an integer or a pointer.
+/// The second parameter is the requested alignment as an integer.
+static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
+                                               const InterpFrame *Frame,
+                                               const Function *Func,
+                                               const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+  unsigned CallSize = callArgSize(S, Call);
+
+  PrimType AlignmentT = *S.Ctx.classify(Call->getArg(1));
+  const APSInt &Alignment = peekToAPSInt(S.Stk, AlignmentT);
+
+  if (Alignment < 0 || !Alignment.isPowerOf2()) {
+    S.FFDiag(Call, diag::note_constexpr_invalid_alignment) << Alignment;
+    return false;
+  }
+  unsigned SrcWidth = S.getCtx().getIntWidth(Call->getArg(0)->getType());
+  APSInt MaxValue(APInt::getOneBitSet(SrcWidth, SrcWidth - 1));
+  if (APSInt::compareValues(Alignment, MaxValue) > 0) {
+    S.FFDiag(Call, diag::note_constexpr_alignment_too_big)
+        << MaxValue << Call->getArg(0)->getType() << Alignment;
+    return false;
+  }
+
+  // The first parameter is either an integer or a pointer (but not a function
+  // pointer).
+  PrimType FirstArgT = *S.Ctx.classify(Call->getArg(0));
+
+  if (isIntegralType(FirstArgT)) {
+    const APSInt &Src = peekToAPSInt(S.Stk, FirstArgT, CallSize);
+    APSInt Align = Alignment.extOrTrunc(Src.getBitWidth());
+    if (BuiltinOp == Builtin::BI__builtin_align_up) {
+      APSInt AlignedVal =
+          APSInt((Src + (Align - 1)) & ~(Align - 1), Src.isUnsigned());
+      pushInteger(S, AlignedVal, Call->getType());
+    } else if (BuiltinOp == Builtin::BI__builtin_align_down) {
+      APSInt AlignedVal = APSInt(Src & ~(Align - 1), Src.isUnsigned());
+      pushInteger(S, AlignedVal, Call->getType());
+    } else {
+      assert(*S.Ctx.classify(Call->getType()) == PT_Bool);
+      S.Stk.push<Boolean>((Src & (Align - 1)) == 0);
+    }
+    return true;
+  }
+
+  assert(FirstArgT == PT_Ptr);
+  const Pointer &Ptr = S.Stk.peek<Pointer>(CallSize);
+
+  unsigned PtrOffset = Ptr.getByteOffset();
+  PtrOffset = Ptr.getIndex();
+  CharUnits BaseAlignment =
+      S.getCtx().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
+  CharUnits PtrAlign =
+      BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
+
+  if (BuiltinOp == Builtin::BI__builtin_is_aligned) {
+    if (PtrAlign.getQuantity() >= Alignment) {
+      S.Stk.push<Boolean>(true);
+      return true;
+    }
+    // If the alignment is not known to be sufficient, some cases could still
+    // be aligned at run time. However, if the requested alignment is less or
+    // equal to the base alignment and the offset is not aligned, we know that
+    // the run-time value can never be aligned.
+    if (BaseAlignment.getQuantity() >= Alignment &&
+        PtrAlign.getQuantity() < Alignment) {
+      S.Stk.push<Boolean>(false);
+      return true;
+    }
+
+    S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
+        << Alignment;
+    return false;
+  }
+
+  assert(BuiltinOp == Builtin::BI__builtin_align_down ||
+         BuiltinOp == Builtin::BI__builtin_align_up);
+
+  // For align_up/align_down, we can return the same value if the alignment
+  // is known to be greater or equal to the requested value.
+  if (PtrAlign.getQuantity() >= Alignment) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
+  // The alignment could be greater than the minimum at run-time, so we cannot
+  // infer much about the resulting pointer value. One case is possible:
+  // For `_Alignas(32) char buf[N]; __builtin_align_down(&buf[idx], 32)` we
+  // can infer the correct index if the requested alignment is smaller than
+  // the base alignment so we can perform the computation on the offset.
+  if (BaseAlignment.getQuantity() >= Alignment) {
+    assert(Alignment.getBitWidth() <= 64 &&
+           "Cannot handle > 64-bit address-space");
+    uint64_t Alignment64 = Alignment.getZExtValue();
+    CharUnits NewOffset =
+        CharUnits::fromQuantity(BuiltinOp == Builtin::BI__builtin_align_down
+                                    ? llvm::alignDown(PtrOffset, Alignment64)
+                                    : llvm::alignTo(PtrOffset, Alignment64));
+
+    S.Stk.push<Pointer>(Ptr.atIndex(NewOffset.getQuantity()));
+    return true;
+  }
+
+  // Otherwise, we cannot constant-evaluate the result.
+  S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_adjust) << Alignment;
+  return false;
+}
+
+static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
+                                                      CodePtr OpPC,
+                                                      const InterpFrame *Frame,
+                                                      const Function *Func,
+                                                      const CallExpr *Call) {
+  analyze_os_log::OSLogBufferLayout Layout;
+  analyze_os_log::computeOSLogBufferLayout(S.getCtx(), Call, Layout);
+  pushInteger(S, Layout.size().getQuantity(), Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ptrauth_string_discriminator(
+    InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
+    const Function *Func, const CallExpr *Call) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  assert(Ptr.getFieldDesc()->isPrimitiveArray());
+
+  StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
+  uint64_t Result = getPointerAuthStableSipHash(R);
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+// FIXME: This implementation is not complete.
+// The Compiler instance we create cannot access the current stack frame, local
+// variables, function parameters, etc. We also need protection from
+// side-effects, fatal errors, etc.
+static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  const Expr *Arg = Call->getArg(0);
+  QualType ArgType = Arg->getType();
+
+  auto returnInt = [&S, Call](bool Value) -> bool {
+    pushInteger(S, Value, Call->getType());
+    return true;
+  };
+
+  // __builtin_constant_p always has one operand. The rules which gcc follows
+  // are not precisely documented, but are as follows:
+  //
+  //  - If the operand is of integral, floating, complex or enumeration type,
+  //    and can be folded to a known value of that type, it returns 1.
+  //  - If the operand can be folded to a pointer to the first character
+  //    of a string literal (or such a pointer cast to an integral type)
+  //    or to a null pointer or an integer cast to a pointer, it returns 1.
+  //
+  // Otherwise, it returns 0.
+  //
+  // FIXME: GCC also intends to return 1 for literals of aggregate types, but
+  // its support for this did not work prior to GCC 9 and is not yet well
+  // understood.
+  if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
+      ArgType->isAnyComplexType() || ArgType->isPointerType() ||
+      ArgType->isNullPtrType()) {
+    InterpStack Stk;
+    Compiler<EvalEmitter> C(S.Ctx, S.P, S, Stk);
+    auto Res = C.interpretExpr(Arg, /*ConvertResultToRValue=*/Arg->isGLValue());
+    if (Res.isInvalid()) {
+      C.cleanup();
+      Stk.clear();
+    }
+
+    if (!Res.isInvalid() && !Res.empty()) {
+      const APValue &LV = Res.toAPValue();
+      if (LV.isLValue()) {
+        APValue::LValueBase Base = LV.getLValueBase();
+        if (Base.isNull()) {
+          // A null base is acceptable.
+          return returnInt(true);
+        } else if (const auto *E = Base.dyn_cast<const Expr *>()) {
+          if (!isa<StringLiteral>(E))
+            return returnInt(false);
+          return returnInt(LV.getLValueOffset().isZero());
+        } else if (Base.is<TypeInfoLValue>()) {
+          // Surprisingly, GCC considers __builtin_constant_p(&typeid(int)) to
+          // evaluate to true.
+          return returnInt(true);
+        } else {
+          // Any other base is not constant enough for GCC.
+          return returnInt(false);
+        }
+      }
+    }
+
+    // Otherwise, any constant value is good enough.
+    return returnInt(true);
+  }
+
+  return returnInt(false);
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
-  InterpFrame *Frame = S.Current;
+  const InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
-    S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+    if (!interp__builtin_is_constant_evaluated(S, OpPC, Frame, Call))
+      return false;
     break;
   case Builtin::BI__builtin_assume:
   case Builtin::BI__assume:
@@ -1052,6 +1333,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64:
@@ -1146,7 +1428,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_launder:
-    if (!interp__builtin_launder(S, OpPC, Frame, F, Call))
+    if (!noopPointer(S, OpPC, Frame, F, Call))
       return false;
     break;
 
@@ -1193,6 +1475,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64:
@@ -1204,6 +1487,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctzg:
     if (!interp__builtin_ctz(S, OpPC, Frame, F, Call))
       return false;
     break;
@@ -1224,6 +1508,28 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_complex:
     if (!interp__builtin_complex(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_is_aligned:
+  case Builtin::BI__builtin_align_up:
+  case Builtin::BI__builtin_align_down:
+    if (!interp__builtin_is_aligned_up_down(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_os_log_format_buffer_size:
+    if (!interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ptrauth_string_discriminator:
+    if (!interp__builtin_ptrauth_string_discriminator(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_constant_p:
+    if (!interp__builtin_constant_p(S, OpPC, Frame, F, Call))
       return false;
     break;
 
@@ -1327,6 +1633,51 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                   FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
   FieldPtr.initialize();
   return true;
+}
+
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+  assert(Src.isLive() && Dest.isLive());
+
+  [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
+  const Descriptor *DestDesc = Dest.getFieldDesc();
+
+  assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
+
+  if (DestDesc->isPrimitiveArray()) {
+    assert(SrcDesc->isPrimitiveArray());
+    assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    PrimType ET = DestDesc->getPrimType();
+    for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
+      Pointer DestElem = Dest.atIndex(I);
+      TYPE_SWITCH(ET, {
+        DestElem.deref<T>() = Src.atIndex(I).deref<T>();
+        DestElem.initialize();
+      });
+    }
+    return true;
+  }
+
+  if (DestDesc->isRecord()) {
+    assert(SrcDesc->isRecord());
+    assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
+    const Record *R = DestDesc->ElemRecord;
+    for (const Record::Field &F : R->fields()) {
+      Pointer DestField = Dest.atField(F.Offset);
+      if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
+        TYPE_SWITCH(*FT, {
+          DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
+          DestField.initialize();
+        });
+      } else {
+        return Invalid(S, OpPC);
+      }
+    }
+    return true;
+  }
+
+  // FIXME: Composite types.
+
+  return Invalid(S, OpPC);
 }
 
 } // namespace interp

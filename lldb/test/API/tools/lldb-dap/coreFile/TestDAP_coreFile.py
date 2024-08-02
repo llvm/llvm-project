@@ -13,7 +13,6 @@ import os
 
 class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_core_file(self):
         current_dir = os.path.dirname(__file__)
@@ -25,6 +24,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
 
         expected_frames = [
             {
+                "column": 0,
                 "id": 524288,
                 "line": 4,
                 "name": "bar",
@@ -32,6 +32,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
                 "instructionPointerReference": "0x40011C",
             },
             {
+                "column": 0,
                 "id": 524289,
                 "line": 10,
                 "name": "foo",
@@ -39,6 +40,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
                 "instructionPointerReference": "0x400142",
             },
             {
+                "column": 0,
                 "id": 524290,
                 "line": 16,
                 "name": "_start",
@@ -57,7 +59,6 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(self.get_stackFrames(), expected_frames)
 
     @skipIfWindows
-    @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping(self):
         """Test that sourceMap property is correctly applied when loading a core"""

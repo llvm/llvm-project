@@ -225,7 +225,7 @@ ParallelLoopGenerator::storeValuesIntoStruct(SetVector<Value *> &Values) {
   // in the entry block of the function and use annotations to denote the actual
   // live span (similar to clang).
   BasicBlock &EntryBB = Builder.GetInsertBlock()->getParent()->getEntryBlock();
-  Instruction *IP = &*EntryBB.getFirstInsertionPt();
+  BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
   StructType *Ty = StructType::get(Builder.getContext(), Members);
   AllocaInst *Struct = new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
                                       "polly.par.userContext", IP);

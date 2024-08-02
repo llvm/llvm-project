@@ -32,8 +32,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __starts_with {
-struct __fn {
+struct __starts_with {
   template <input_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
             input_iterator _Iter2,
@@ -42,15 +41,15 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<_Iter1, _Iter2, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
       _Pred __pred   = {},
       _Proj1 __proj1 = {},
-      _Proj2 __proj2 = {}) const {
-    return __mismatch::__fn::__go(
+      _Proj2 __proj2 = {}) {
+    return __mismatch::__go(
                std::move(__first1),
                std::move(__last1),
                std::move(__first2),
@@ -67,9 +66,9 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<iterator_t<_Range1>, iterator_t<_Range2>, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
-      _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    return __mismatch::__fn::__go(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool
+  operator()(_Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) {
+    return __mismatch::__go(
                ranges::begin(__range1),
                ranges::end(__range1),
                ranges::begin(__range2),
@@ -80,9 +79,8 @@ struct __fn {
                .in2 == ranges::end(__range2);
   }
 };
-} // namespace __starts_with
 inline namespace __cpo {
-inline constexpr auto starts_with = __starts_with::__fn{};
+inline constexpr auto starts_with = __starts_with{};
 } // namespace __cpo
 } // namespace ranges
 

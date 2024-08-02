@@ -44,7 +44,6 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
 
-extern cl::opt<bolt::MacroFusionType> AlignMacroOpFusion;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<unsigned> ExecutionCountThreshold;
@@ -106,6 +105,12 @@ static cl::opt<unsigned>
     PrintFuncStat("print-function-statistics",
                   cl::desc("print statistics about basic block ordering"),
                   cl::init(0), cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintLargeFunctions(
+    "print-large-functions",
+    cl::desc("print functions that could not be overwritten due to excessive "
+             "size"),
+    cl::init(false), cl::cat(BoltOptCategory));
 
 static cl::list<bolt::DynoStats::Category>
     PrintSortedBy("print-sorted-by", cl::CommaSeparated,
@@ -570,8 +575,12 @@ Error CheckLargeFunctions::runOnFunctions(BinaryContext &BC) {
     uint64_t HotSize, ColdSize;
     std::tie(HotSize, ColdSize) =
         BC.calculateEmittedSize(BF, /*FixBranches=*/false);
-    if (HotSize > BF.getMaxSize())
+    if (HotSize > BF.getMaxSize()) {
+      if (opts::PrintLargeFunctions)
+        BC.outs() << "BOLT-INFO: " << BF << " size exceeds allocated space by "
+                  << (HotSize - BF.getMaxSize()) << " bytes\n";
       BF.setSimple(false);
+    }
   };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
@@ -626,7 +635,9 @@ Error LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 Error CleanMCState::runOnFunctions(BinaryContext &BC) {
   MCContext &Ctx = *BC.Ctx;
   for (const auto &SymMapEntry : Ctx.getSymbols()) {
-    const MCSymbol *S = SymMapEntry.second;
+    const MCSymbol *S = SymMapEntry.getValue().Symbol;
+    if (!S)
+      continue;
     if (S->isDefined()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
                         << "\" is already defined\n");
@@ -664,7 +675,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
   MCPlusBuilder *MIB = Function.getBinaryContext().MIB.get();
   for (BinaryBasicBlock &BB : Function) {
     auto checkAndPatch = [&](BinaryBasicBlock *Pred, BinaryBasicBlock *Succ,
-                             const MCSymbol *SuccSym) {
+                             const MCSymbol *SuccSym,
+                             std::optional<uint32_t> Offset) {
       // Ignore infinite loop jumps or fallthrough tail jumps.
       if (Pred == Succ || Succ == &BB)
         return false;
@@ -705,6 +717,11 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
           Pred->removeSuccessor(&BB);
           Pred->eraseInstruction(Pred->findInstruction(Branch));
           Pred->addTailCallInstruction(SuccSym);
+          if (Offset) {
+            MCInst *TailCall = Pred->getLastNonPseudoInstr();
+            assert(TailCall);
+            MIB->setOffset(*TailCall, *Offset);
+          }
         } else {
           return false;
         }
@@ -747,7 +764,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
       if (Pred->getSuccessor() == &BB ||
           (Pred->getConditionalSuccessor(true) == &BB && !IsTailCall) ||
           Pred->getConditionalSuccessor(false) == &BB)
-        if (checkAndPatch(Pred, Succ, SuccSym) && MarkInvalid)
+        if (checkAndPatch(Pred, Succ, SuccSym, MIB->getOffset(*Inst)) &&
+            MarkInvalid)
           BB.markValid(BB.pred_size() != 0 || BB.isLandingPad() ||
                        BB.isEntryPoint());
     }
@@ -852,6 +870,10 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       assert(Result && "internal error analyzing conditional branch");
       assert(CondBranch && "conditional branch expected");
 
+      // Skip dynamic branches for now.
+      if (BF.getBinaryContext().MIB->isDynamicBranch(*CondBranch))
+        continue;
+
       // It's possible that PredBB is also a successor to BB that may have
       // been processed by a previous iteration of the SCTC loop, in which
       // case it may have been marked invalid.  We should skip rewriting in
@@ -896,6 +918,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       auto &CTCAnnotation =
           MIB->getOrCreateAnnotationAs<uint64_t>(*CondBranch, "CTCTakenCount");
       CTCAnnotation = CTCTakenFreq;
+      // Preserve Offset annotation, used in BAT.
+      // Instr is a direct tail call instruction that was created when CTCs are
+      // first expanded, and has the original CTC offset set.
+      if (std::optional<uint32_t> Offset = MIB->getOffset(*Instr))
+        MIB->setOffset(*CondBranch, *Offset);
 
       // Remove the unused successor which may be eliminated later
       // if there are no other users.
@@ -1012,6 +1039,10 @@ uint64_t ShortenInstructions::shortenInstructions(BinaryFunction &Function) {
   const BinaryContext &BC = Function.getBinaryContext();
   for (BinaryBasicBlock &BB : Function) {
     for (MCInst &Inst : BB) {
+      // Skip shortening instructions with Size annotation.
+      if (BC.MIB->getSize(Inst))
+        continue;
+
       MCInst OriginalInst;
       if (opts::Verbosity > 2)
         OriginalInst = Inst;
@@ -1056,10 +1087,9 @@ void Peepholes::addTailcallTraps(BinaryFunction &Function) {
     MCInst *Inst = BB.getLastNonPseudoInstr();
     if (Inst && MIB->isTailCall(*Inst) && MIB->isIndirectBranch(*Inst)) {
       MCInst Trap;
-      if (MIB->createTrap(Trap)) {
-        BB.addInstruction(Trap);
-        ++TailCallTraps;
-      }
+      MIB->createTrap(Trap);
+      BB.addInstruction(Trap);
+      ++TailCallTraps;
     }
   }
 }
@@ -1361,9 +1391,19 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (Function.isPLTFunction())
       continue;
 
+    // Adjustment for BAT mode: the profile for BOLT split fragments is combined
+    // so only count the hot fragment.
+    const uint64_t Address = Function.getAddress();
+    bool IsHotParentOfBOLTSplitFunction = !Function.getFragments().empty() &&
+                                          BAT && BAT->isBATFunction(Address) &&
+                                          !BAT->fetchParentAddress(Address);
+
     ++NumRegularFunctions;
 
-    if (!Function.isSimple()) {
+    // In BOLTed binaries split functions are non-simple (due to non-relocation
+    // mode), but the original function is known to be simple and we have a
+    // valid profile for it.
+    if (!Function.isSimple() && !IsHotParentOfBOLTSplitFunction) {
       if (Function.hasProfile())
         ++NumNonSimpleProfiledFunctions;
       continue;
@@ -1524,23 +1564,28 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     const bool Ascending =
         opts::DynoStatsSortOrderOpt == opts::DynoStatsSortOrder::Ascending;
 
-    if (SortAll) {
-      llvm::stable_sort(Functions,
-                        [Ascending, &Stats](const BinaryFunction *A,
-                                            const BinaryFunction *B) {
-                          return Ascending ? Stats.at(A) < Stats.at(B)
-                                           : Stats.at(B) < Stats.at(A);
-                        });
-    } else {
-      llvm::stable_sort(
-          Functions, [Ascending, &Stats](const BinaryFunction *A,
-                                         const BinaryFunction *B) {
-            const DynoStats &StatsA = Stats.at(A);
-            const DynoStats &StatsB = Stats.at(B);
-            return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
-                             : StatsB.lessThan(StatsA, opts::PrintSortedBy);
-          });
-    }
+    std::function<bool(const DynoStats &, const DynoStats &)>
+        DynoStatsComparator =
+            SortAll ? [](const DynoStats &StatsA,
+                         const DynoStats &StatsB) { return StatsA < StatsB; }
+                    : [](const DynoStats &StatsA, const DynoStats &StatsB) {
+                        return StatsA.lessThan(StatsB, opts::PrintSortedBy);
+                      };
+
+    llvm::stable_sort(Functions,
+                      [Ascending, &Stats, DynoStatsComparator](
+                          const BinaryFunction *A, const BinaryFunction *B) {
+                        auto StatsItr = Stats.find(A);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsA = StatsItr->second;
+
+                        StatsItr = Stats.find(B);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsB = StatsItr->second;
+
+                        return Ascending ? DynoStatsComparator(StatsA, StatsB)
+                                         : DynoStatsComparator(StatsB, StatsA);
+                      });
 
     BC.outs() << "BOLT-INFO: top functions sorted by ";
     if (SortAll) {
@@ -1588,25 +1633,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         BC.errs() << "  " << *Function << '\n';
     } else {
       BC.errs() << " Use -v=1 to see the list.\n";
-    }
-  }
-
-  // Print information on missed macro-fusion opportunities seen on input.
-  if (BC.Stats.MissedMacroFusionPairs) {
-    BC.outs() << format(
-        "BOLT-INFO: the input contains %zu (dynamic count : %zu)"
-        " opportunities for macro-fusion optimization",
-        BC.Stats.MissedMacroFusionPairs, BC.Stats.MissedMacroFusionExecCount);
-    switch (opts::AlignMacroOpFusion) {
-    case MFT_NONE:
-      BC.outs() << ". Use -align-macro-fusion to fix.\n";
-      break;
-    case MFT_HOT:
-      BC.outs() << ". Will fix instances on a hot path.\n";
-      break;
-    case MFT_ALL:
-      BC.outs() << " that are going to be fixed\n";
-      break;
     }
   }
 

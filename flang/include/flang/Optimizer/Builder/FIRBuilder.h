@@ -28,11 +28,22 @@
 #include <optional>
 #include <utility>
 
+namespace mlir {
+class SymbolTable;
+}
+
 namespace fir {
 class AbstractArrayBox;
 class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
+
+/// Get the integer type with a pointer size.
+inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
+  // TODO: Delay the need of such type until codegen or find a way to use
+  // llvm::DataLayout::getPointerSizeInBits here.
+  return builder.getI64Type();
+}
 
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
@@ -42,10 +53,14 @@ class BoxValue;
 /// patterns.
 class FirOpBuilder : public mlir::OpBuilder, public mlir::OpBuilder::Listener {
 public:
-  explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap)
-      : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)} {}
-  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap)
-      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)} {
+  explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap,
+                        mlir::SymbolTable *symbolTable = nullptr)
+      : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
+        symbolTable{symbolTable} {}
+  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
+                        mlir::SymbolTable *symbolTable = nullptr)
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
+        symbolTable{symbolTable} {
     setListener(this);
   }
   explicit FirOpBuilder(mlir::OpBuilder &builder, mlir::ModuleOp mod)
@@ -69,13 +84,14 @@ public:
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)
       : OpBuilder(other), OpBuilder::Listener(), kindMap{other.kindMap},
-        fastMathFlags{other.fastMathFlags} {
+        fastMathFlags{other.fastMathFlags}, symbolTable{other.symbolTable} {
     setListener(this);
   }
 
   FirOpBuilder(FirOpBuilder &&other)
       : OpBuilder(other), OpBuilder::Listener(),
-        kindMap{std::move(other.kindMap)}, fastMathFlags{other.fastMathFlags} {
+        kindMap{std::move(other.kindMap)}, fastMathFlags{other.fastMathFlags},
+        symbolTable{other.symbolTable} {
     setListener(this);
   }
 
@@ -94,6 +110,9 @@ public:
 
   /// Get a reference to the kind map.
   const fir::KindMapping &getKindMap() { return kindMap; }
+
+  /// Get func.func/fir.global symbol table attached to this builder if any.
+  mlir::SymbolTable *getMLIRSymbolTable() { return symbolTable; }
 
   /// Get the default integer type
   [[maybe_unused]] mlir::IntegerType getDefaultIntegerType() {
@@ -131,11 +150,7 @@ public:
 
   /// Get the integer type whose bit width corresponds to the width of pointer
   /// types, or is bigger.
-  mlir::Type getIntPtrType() {
-    // TODO: Delay the need of such type until codegen or find a way to use
-    // llvm::DataLayout::getPointerSizeInBits here.
-    return getI64Type();
-  }
+  mlir::Type getIntPtrType() { return fir::getIntPtrType(*this); }
 
   /// Wrap `str` to a SymbolRefAttr.
   mlir::SymbolRefAttr getSymbolRefAttr(llvm::StringRef str) {
@@ -154,8 +169,21 @@ public:
   mlir::Value createNullConstant(mlir::Location loc, mlir::Type ptrType = {});
 
   /// Create an integer constant of type \p type and value \p i.
+  /// Should not be used with negative values with integer types of more
+  /// than 64 bits.
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
                                     std::int64_t i);
+
+  /// Create an integer of \p integerType where all the bits have been set to
+  /// ones. Safe to use regardless of integerType bitwidth.
+  mlir::Value createAllOnesInteger(mlir::Location loc, mlir::Type integerType);
+
+  /// Create -1 constant of \p integerType. Safe to use regardless of
+  /// integerType bitwidth.
+  mlir::Value createMinusOneInteger(mlir::Location loc,
+                                    mlir::Type integerType) {
+    return createAllOnesInteger(loc, integerType);
+  }
 
   /// Create a real constant from an integer value.
   mlir::Value createRealConstant(mlir::Location loc, mlir::Type realType,
@@ -231,13 +259,13 @@ public:
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -261,6 +289,10 @@ public:
   fir::StringLitOp createStringLitOp(mlir::Location loc,
                                      llvm::StringRef string);
 
+  std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+  createTypeInfoOp(mlir::Location loc, fir::RecordType recordType,
+                   fir::RecordType parentType);
+
   //===--------------------------------------------------------------------===//
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
@@ -280,24 +312,27 @@ public:
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
   mlir::func::FuncOp getNamedFunction(llvm::StringRef name) {
-    return getNamedFunction(getModule(), name);
+    return getNamedFunction(getModule(), getMLIRSymbolTable(), name);
   }
-  static mlir::func::FuncOp getNamedFunction(mlir::ModuleOp module,
-                                             llvm::StringRef name);
+  static mlir::func::FuncOp
+  getNamedFunction(mlir::ModuleOp module, const mlir::SymbolTable *symbolTable,
+                   llvm::StringRef name);
 
   /// Get a function by symbol name. The result will be null if there is no
   /// function with the given symbol in the module.
   mlir::func::FuncOp getNamedFunction(mlir::SymbolRefAttr symbol) {
-    return getNamedFunction(getModule(), symbol);
+    return getNamedFunction(getModule(), getMLIRSymbolTable(), symbol);
   }
-  static mlir::func::FuncOp getNamedFunction(mlir::ModuleOp module,
-                                             mlir::SymbolRefAttr symbol);
+  static mlir::func::FuncOp
+  getNamedFunction(mlir::ModuleOp module, const mlir::SymbolTable *symbolTable,
+                   mlir::SymbolRefAttr symbol);
 
   fir::GlobalOp getNamedGlobal(llvm::StringRef name) {
-    return getNamedGlobal(getModule(), name);
+    return getNamedGlobal(getModule(), getMLIRSymbolTable(), name);
   }
 
   static fir::GlobalOp getNamedGlobal(mlir::ModuleOp module,
+                                      const mlir::SymbolTable *symbolTable,
                                       llvm::StringRef name);
 
   /// Lazy creation of fir.convert op.
@@ -309,35 +344,22 @@ public:
   void createStoreWithConvert(mlir::Location loc, mlir::Value val,
                               mlir::Value addr);
 
-  /// Create a new FuncOp. If the function may have already been created, use
-  /// `addNamedFunction` instead.
+  /// Create a fir.load if \p val is a reference or pointer type. Return the
+  /// result of the load if it was created, otherwise return \p val
+  mlir::Value loadIfRef(mlir::Location loc, mlir::Value val);
+
+  /// Determine if the named function is already in the module. Return the
+  /// instance if found, otherwise add a new named function to the module.
   mlir::func::FuncOp createFunction(mlir::Location loc, llvm::StringRef name,
                                     mlir::FunctionType ty) {
-    return createFunction(loc, getModule(), name, ty);
+    return createFunction(loc, getModule(), name, ty, getMLIRSymbolTable());
   }
 
   static mlir::func::FuncOp createFunction(mlir::Location loc,
                                            mlir::ModuleOp module,
                                            llvm::StringRef name,
-                                           mlir::FunctionType ty);
-
-  /// Determine if the named function is already in the module. Return the
-  /// instance if found, otherwise add a new named function to the module.
-  mlir::func::FuncOp addNamedFunction(mlir::Location loc, llvm::StringRef name,
-                                      mlir::FunctionType ty) {
-    if (auto func = getNamedFunction(name))
-      return func;
-    return createFunction(loc, name, ty);
-  }
-
-  static mlir::func::FuncOp addNamedFunction(mlir::Location loc,
-                                             mlir::ModuleOp module,
-                                             llvm::StringRef name,
-                                             mlir::FunctionType ty) {
-    if (auto func = getNamedFunction(module, name))
-      return func;
-    return createFunction(loc, module, name, ty);
-  }
+                                           mlir::FunctionType ty,
+                                           mlir::SymbolTable *);
 
   /// Cast the input value to IndexType.
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
@@ -511,6 +533,10 @@ private:
   /// FastMathFlags that need to be set for operations that support
   /// mlir::arith::FastMathAttr.
   mlir::arith::FastMathFlags fastMathFlags{};
+
+  /// fir::GlobalOp and func::FuncOp symbol table to speed-up
+  /// lookups.
+  mlir::SymbolTable *symbolTable = nullptr;
 };
 
 } // namespace fir
@@ -689,8 +715,20 @@ fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxType);
 
+/// Convert a value to a new type. Return the value directly if it has the right
+/// type.
+mlir::Value createConvert(mlir::OpBuilder &, mlir::Location, mlir::Type,
+                          mlir::Value);
+
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
+
+llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

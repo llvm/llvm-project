@@ -9,7 +9,7 @@ declare void @deref_phi_user(ptr %a);
 ; take mininimum of return values
 ;
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global i64 0
+; CHECK: @g = global i64 0
 ;.
 define ptr @test1(ptr dereferenceable(4) %0, ptr dereferenceable(8) %1, i1 zeroext %2) local_unnamed_addr {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -96,8 +96,8 @@ define void @deref_phi_growing(ptr dereferenceable(4000) %a) {
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[A_ADDR_0:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    call void @deref_phi_user(ptr nonnull [[A_ADDR_0]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[A_ADDR_0]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[TMP]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[A_ADDR_0]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[VAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
@@ -117,8 +117,8 @@ for.cond:                                         ; preds = %for.inc, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
   %a.addr.0 = phi ptr [ %a, %entry ], [ %incdec.ptr, %for.inc ]
   call void @deref_phi_user(ptr %a.addr.0)
-  %tmp = load i32, ptr %a.addr.0, align 4
-  %cmp = icmp slt i32 %i.0, %tmp
+  %val = load i32, ptr %a.addr.0, align 4
+  %cmp = icmp slt i32 %i.0, %val
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
@@ -147,8 +147,8 @@ define void @deref_phi_shrinking(ptr dereferenceable(4000) %a) {
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[A_ADDR_0:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    call void @deref_phi_user(ptr nonnull [[A_ADDR_0]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[A_ADDR_0]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[TMP]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[A_ADDR_0]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[VAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
@@ -168,8 +168,8 @@ for.cond:                                         ; preds = %for.inc, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
   %a.addr.0 = phi ptr [ %a, %entry ], [ %incdec.ptr, %for.inc ]
   call void @deref_phi_user(ptr %a.addr.0)
-  %tmp = load i32, ptr %a.addr.0, align 4
-  %cmp = icmp slt i32 %i.0, %tmp
+  %val = load i32, ptr %a.addr.0, align 4
+  %cmp = icmp slt i32 %i.0, %val
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
@@ -202,14 +202,14 @@ define ptr @f7_0(ptr %ptr) {
   ret ptr %ptr
 }
 
-define void @f7_1(ptr %ptr, i1 %c) {
+define void @f7_1(ptr %ptr, i1 %cnd) {
 ; CHECK: Function Attrs: mustprogress nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@f7_1
-; CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], i1 noundef [[C:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[PTR_0:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
-; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[CND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    [[C:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(8) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[D:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(8) [[PTR]]) #[[ATTR1]]
@@ -223,7 +223,7 @@ define void @f7_1(ptr %ptr, i1 %c) {
   ; deref 4 hold
 ; FIXME: this should be %B = tail call i32 @unkown_f(ptr nonnull dereferenceable(4) %ptr)
   %B = tail call i32 @unkown_f(ptr dereferenceable(1) %ptr)
-  br i1%c, label %if.true, label %if.false
+  br i1%cnd, label %if.true, label %if.false
 if.true:
   %C = tail call i32 @unkown_f(ptr %ptr)
   %D = tail call i32 @unkown_f(ptr dereferenceable(8) %ptr)
@@ -233,15 +233,15 @@ if.false:
   ret void
 }
 
-define void @f7_2(i1 %c) {
+define void @f7_2(i1 %cnd) {
 ; CHECK: Function Attrs: mustprogress nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@f7_2
-; CHECK-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 noundef [[CND:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call nonnull align 4 dereferenceable(4) ptr @unkown_ptr() #[[ATTR1]]
 ; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[ARG_A_0:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
-; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[CND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    [[C:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(8) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[D:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(8) [[PTR]]) #[[ATTR1]]
@@ -255,7 +255,7 @@ define void @f7_2(i1 %c) {
   %arg_a.0 = load i32, ptr %ptr
   ; deref 4 hold
   %B = tail call i32 @unkown_f(ptr dereferenceable(1) %ptr)
-  br i1%c, label %if.true, label %if.false
+  br i1%cnd, label %if.true, label %if.false
 if.true:
   %C = tail call i32 @unkown_f(ptr %ptr)
   %D = tail call i32 @unkown_f(ptr dereferenceable(8) %ptr)
@@ -837,5 +837,7 @@ f:
 ; CGSCC: attributes #[[ATTR9]] = { nofree willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR10]] = { nounwind }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{i64 10, i64 100}
+; TUNIT: [[RNG0]] = !{i64 10, i64 100}
+;.
+; CGSCC: [[RNG0]] = !{i64 10, i64 100}
 ;.

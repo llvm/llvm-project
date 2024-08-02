@@ -10,7 +10,6 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
@@ -21,6 +20,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
@@ -259,9 +259,7 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
     ++Index;
   }
 
-  llvm::stable_sort(SimpleNames, [](const MacroOpt &A, const MacroOpt &B) {
-    return A.first < B.first;
-  });
+  llvm::stable_sort(SimpleNames, llvm::less_first());
   // Keep the last instance of each macro name by going in reverse
   auto NewEnd = std::unique(
       SimpleNames.rbegin(), SimpleNames.rend(),
@@ -296,7 +294,7 @@ public:
         DisableFree(DisableFree), ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
-                     FileManager *FileMgr,
+                     FileManager *DriverFileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     // Make a deep copy of the original Clang invocation.
@@ -342,12 +340,13 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(OptimizeArgs & ScanningOptimizations::VFS);
 
-    ScanInstance.setFileManager(FileMgr);
     // Support for virtual file system overlays.
-    FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
+    auto FS = createVFSFromCompilerInvocation(
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
-        FileMgr->getVirtualFileSystemPtr()));
+        DriverFileMgr->getVirtualFileSystemPtr());
 
+    // Create a new FileManager to match the invocation's FileSystemOptions.
+    auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
 
     // Store the list of prebuilt module files into header search options. This
@@ -363,18 +362,16 @@ public:
         return false;
 
     // Use the dependency scanning optimized file system if requested to do so.
-    if (DepFS) {
-      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> LocalDepFS =
-          DepFS;
+    if (DepFS)
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = std::move(LocalDepFS)](FileEntryRef File)
+          [LocalDepFS = DepFS](FileEntryRef File)
           -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
         if (llvm::ErrorOr<EntryRef> Entry =
                 LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          return Entry->getDirectiveTokens();
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
         return std::nullopt;
       };
-    }
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -439,6 +436,9 @@ public:
 
     if (Result)
       setLastCC1Arguments(std::move(OriginalInvocation));
+
+    // Propagate the statistics to the parent FileManager.
+    DriverFileMgr->AddStats(ScanInstance.getFileManager());
 
     return Result;
   }
@@ -624,9 +624,8 @@ bool DependencyScanningWorker::computeDependencies(
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
   auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
-  FileSystemOptions FSOpts;
-  FSOpts.WorkingDir = WorkingDirectory.str();
-  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FSOpts, FinalFS);
+  auto FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions{}, FinalFS);
 
   std::vector<const char *> FinalCCommandLine(FinalCommandLine.size(), nullptr);
   llvm::transform(FinalCommandLine, FinalCCommandLine.begin(),

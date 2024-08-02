@@ -19,8 +19,8 @@
 ;; dbg.assigns for the split (then promoted) stores.
 ; CHECK: %c.coerce.fca.0.extract = extractvalue [2 x i64] %c.coerce, 0
 ; CHECK: %c.coerce.fca.1.extract = extractvalue [2 x i64] %c.coerce, 1
-; CHECK: call void @llvm.dbg.value(metadata i64 %c.coerce.fca.0.extract,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
-; CHECK: call void @llvm.dbg.value(metadata i64 %c.coerce.fca.1.extract,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
+; CHECK: #dbg_value(i64 %c.coerce.fca.0.extract,{{.+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+; CHECK: #dbg_value(i64 %c.coerce.fca.1.extract,{{.+}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64),
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7-apple-unknown"

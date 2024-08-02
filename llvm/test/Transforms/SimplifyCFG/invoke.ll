@@ -55,12 +55,12 @@ define ptr @f2_no_null_opt() nounwind uwtable ssp #0 personality ptr @__gxx_pers
 ; CHECK-LABEL: @f2_no_null_opt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = invoke noalias ptr null()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:            filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 0
 ; CHECK-NEXT:    tail call void @__cxa_call_unexpected(ptr [[TMP1]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    unreachable
@@ -148,7 +148,7 @@ define i32 @f5(i1 %cond, ptr %a, ptr %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[X:%.*]], label [[Y:%.*]]
 ; CHECK:       x:
 ; CHECK-NEXT:    [[CALL:%.*]] = invoke i32 @fn()
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       y:
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @nounwind_fn()
 ; CHECK-NEXT:    br label [[CONT]]
@@ -157,7 +157,7 @@ define i32 @f5(i1 %cond, ptr %a, ptr %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:            filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    tail call void @__cxa_call_unexpected(ptr [[A:%.*]]) #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ;
@@ -188,12 +188,12 @@ define void @f6() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FOO:%.*]] = invoke i32 @fn()
-; CHECK-NEXT:    to label [[COMMON_RET:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[COMMON_RET:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
@@ -218,12 +218,12 @@ define void @invoke_of_noreturn() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_of_noreturn(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT_UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT_UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont.unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @sideeffect(i32 1)
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ;
@@ -246,7 +246,7 @@ define void @invoke_of_noreturn_with_shared_normal_destination(i1 %c) personalit
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[INVOKE:%.*]], label [[INVOKE_CONT:%.*]]
 ; CHECK:       invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT_UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT_UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont.unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       invoke.cont:
@@ -254,7 +254,7 @@ define void @invoke_of_noreturn_with_shared_normal_destination(i1 %c) personalit
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @sideeffect(i32 1)
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ;

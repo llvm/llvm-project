@@ -15,8 +15,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -129,7 +129,7 @@ void mlir::transform::ChangeCallTargetOp::getEffects(
   // Indicate that the `call` handle is only read by this operation because the
   // associated operation is not erased but rather modified in-place, so the
   // reference to it remains valid.
-  onlyReadsHandle(getCall(), effects);
+  onlyReadsHandle(getCallMutable(), effects);
 
   // Indicate that the payload is modified by this operation.
   modifiesPayload(effects);

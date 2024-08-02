@@ -43,7 +43,7 @@ class GCNCreateVOPD : public MachineFunctionPass {
 private:
     class VOPDCombineInfo {
     public:
-      VOPDCombineInfo() {}
+      VOPDCombineInfo() = default;
       VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
           : FirstMI(First), SecondMI(Second) {}
 
@@ -101,6 +101,7 @@ public:
       }
     }
 
+    SII->fixImplicitOperands(*VOPDInst);
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
 

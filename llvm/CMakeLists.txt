@@ -15,18 +15,7 @@ if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 endif()
 
-if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 19)
-endif()
-if(NOT DEFINED LLVM_VERSION_MINOR)
-  set(LLVM_VERSION_MINOR 0)
-endif()
-if(NOT DEFINED LLVM_VERSION_PATCH)
-  set(LLVM_VERSION_PATCH 0)
-endif()
-if(NOT DEFINED LLVM_VERSION_SUFFIX)
-  set(LLVM_VERSION_SUFFIX git)
-endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
 
 set_directory_properties(PROPERTIES LLVM_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
 
@@ -158,7 +147,7 @@ endif()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -170,18 +159,33 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
   endif()
 endforeach()
 
+# Set a shorthand option to enable the GPU build of the 'libc' project.
+option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
+if(LIBC_GPU_BUILD)
+  if(LLVM_RUNTIME_TARGETS)
+    list(APPEND LLVM_RUNTIME_TARGETS "nvptx64-nvidia-cuda" "amdgcn-amd-amdhsa")
+  else()
+    set(LLVM_RUNTIME_TARGETS "default;nvptx64-nvidia-cuda;amdgcn-amd-amdhsa")
+  endif()
+  list(APPEND RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES "libc")
+  list(APPEND RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
+endif()
+
 set(NEED_LIBC_HDRGEN FALSE)
 if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
   set(NEED_LIBC_HDRGEN TRUE)
-else()
-  foreach(_name ${LLVM_RUNTIME_TARGETS})
-    if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-      set(NEED_LIBC_HDRGEN TRUE)
-      if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
-        set(LLVM_LIBC_GPU_BUILD ON)
-      endif()
+endif()
+foreach(_name ${LLVM_RUNTIME_TARGETS})
+  if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+    set(NEED_LIBC_HDRGEN TRUE)
+    if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
+      set(LLVM_LIBC_GPU_BUILD ON)
     endif()
-  endforeach()
+  endif()
+endforeach()
+if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
+   "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
+  set(LLVM_LIBC_GPU_BUILD ON)
 endif()
 if(NEED_LIBC_HDRGEN)
   # To build the libc runtime, we need to be able to build few libc build
@@ -535,8 +539,6 @@ set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should sear
 set(LLVM_TARGET_ARCH "host"
   CACHE STRING "Set target to use for LLVM JIT or use \"host\" for automatic detection.")
 
-option(LLVM_ENABLE_TERMINFO "Use terminfo database if available." ON)
-
 set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, OFF, or FORCE_ON")
 
 option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
@@ -558,6 +560,8 @@ set(LLVM_USE_STATIC_ZSTD FALSE CACHE BOOL "Use static version of zstd. Can be TR
 
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
 
+set(LLVM_HAS_LOGF128 "OFF" CACHE STRING "Use logf128 to constant fold fp128 logarithm calls. Can be ON, OFF, or FORCE_ON")
+
 set(LLVM_ENABLE_HTTPLIB "OFF" CACHE STRING "Use cpp-httplib HTTP server library if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
@@ -568,11 +572,11 @@ option(LLVM_ENABLE_Z3_SOLVER
 )
 
 if (LLVM_ENABLE_Z3_SOLVER)
-  find_package(Z3 4.7.1)
+  find_package(Z3 4.8.9)
 
   if (LLVM_Z3_INSTALL_DIR)
     if (NOT Z3_FOUND)
-      message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
+      message(FATAL_ERROR "Z3 >= 4.8.9 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
     endif()
   endif()
 
@@ -669,6 +673,9 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
+option(LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES
+  "Preserve exported symbols in executables" ON)
+
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")
 
@@ -720,15 +727,41 @@ if(LLVM_INDIVIDUAL_TEST_COVERAGE)
 endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
-option(LLVM_PARALLEL_LIT "Enable multiple lit suites to run in parallel" OFF)
-
 # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
 if( WIN32 AND NOT CYGWIN )
   set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
 endif()
 set(LLVM_NATIVE_TOOL_DIR "" CACHE PATH "Path to a directory containing prebuilt matching native tools (such as llvm-tblgen)")
 
-set(LLVM_INTEGRATED_CRT_ALLOC "" CACHE PATH "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.")
+set(LLVM_ENABLE_RPMALLOC "" CACHE BOOL "Replace the CRT allocator with rpmalloc.")
+if(LLVM_ENABLE_RPMALLOC)
+  if(NOT (CMAKE_SYSTEM_NAME MATCHES "Windows|Linux"))
+    message(FATAL_ERROR "LLVM_ENABLE_RPMALLOC is only supported on Windows and Linux.")
+  endif()
+  if(LLVM_USE_SANITIZER)
+    message(FATAL_ERROR "LLVM_ENABLE_RPMALLOC cannot be used along with LLVM_USE_SANITIZER!")
+  endif()
+  if(WIN32)
+    if(CMAKE_CONFIGURATION_TYPES)
+      foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER "${BUILD_MODE}" uppercase_BUILD_MODE)
+        if(uppercase_BUILD_MODE STREQUAL "DEBUG")
+          message(WARNING "The Debug target isn't supported along with LLVM_ENABLE_RPMALLOC!")
+        endif()
+      endforeach()
+    else()
+      if(CMAKE_BUILD_TYPE AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+        message(FATAL_ERROR "The Debug target isn't supported along with LLVM_ENABLE_RPMALLOC!")
+      endif()
+    endif()
+  endif()
+
+  # Override the C runtime allocator with the in-tree rpmalloc
+  set(LLVM_INTEGRATED_CRT_ALLOC "${CMAKE_CURRENT_SOURCE_DIR}/lib/Support")
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+endif()
+
+set(LLVM_INTEGRATED_CRT_ALLOC "${LLVM_INTEGRATED_CRT_ALLOC}" CACHE PATH "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.")
 if(LLVM_INTEGRATED_CRT_ALLOC)
   if(NOT WIN32)
     message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC is only supported on Windows.")
@@ -796,6 +829,9 @@ option (LLVM_BUILD_EXTERNAL_COMPILER_RT
 
 option (LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
   "Show target and host info when tools are invoked with --version." ON)
+
+option(LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
+  "Show the optional build config flags when tools are invoked with --version." ON)
 
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
@@ -895,8 +931,8 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
 
 if(LLVM_INCLUDE_TESTS)
-  # Lit test suite requires at least python 3.6
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.6)
+  # All LLVM Python files should be compatible down to this minimum version.
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
 else()
   # FIXME: it is unknown if this is the actual minimum bound
   set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
@@ -1099,25 +1135,6 @@ configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)
 
-# Add target for generating source rpm package.
-set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in
-    CACHE FILEPATH ".spec file to use for srpm generation")
-set(LLVM_SRPM_BINARY_SPECFILE ${CMAKE_CURRENT_BINARY_DIR}/llvm.spec)
-set(LLVM_SRPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/srpm")
-
-get_source_info(${CMAKE_CURRENT_SOURCE_DIR} revision repository)
-string(LENGTH "${revision}" revision_length)
-set(LLVM_RPM_SPEC_REVISION "${revision}")
-
-configure_file(
-  ${LLVM_SRPM_USER_BINARY_SPECFILE}
-  ${LLVM_SRPM_BINARY_SPECFILE} @ONLY)
-
-add_custom_target(srpm
-  COMMAND cpack -G TGZ --config CPackSourceConfig.cmake -B ${LLVM_SRPM_DIR}/SOURCES
-  COMMAND rpmbuild -bs --define '_topdir ${LLVM_SRPM_DIR}' ${LLVM_SRPM_BINARY_SPECFILE})
-set_target_properties(srpm PROPERTIES FOLDER "Misc")
-
 if(APPLE AND DARWIN_LTO_LIBRARY)
   set(CMAKE_EXE_LINKER_FLAGS
     "${CMAKE_EXE_LINKER_FLAGS} -Wl,-lto_library -Wl,${DARWIN_LTO_LIBRARY}")
@@ -1148,6 +1165,11 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
   add_compile_definitions(_EXT) # Needed for file data.
   add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
+  # Need to build LLVM as ASCII application.
+  # This can't be a global setting because other projects may
+  # need to be built in EBCDIC mode.
+  append("-fzos-le-char-mode=ascii" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  append("-m64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
 endif()
 
 # Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.
@@ -1214,7 +1236,9 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/split-file)
   add_subdirectory(utils/mlgo-utils)
   if( LLVM_INCLUDE_TESTS )
+    set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
+    set(LLVM_SUBPROJECT_TITLE) 
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )
@@ -1278,7 +1302,7 @@ if( LLVM_INCLUDE_TESTS )
   if(LLVM_ALL_LIT_DEPENDS OR LLVM_ALL_ADDITIONAL_TEST_DEPENDS)
     add_dependencies(test-depends ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
   endif()
-  set_target_properties(test-depends PROPERTIES FOLDER "Tests")
+  set_target_properties(test-depends PROPERTIES FOLDER "LLVM/Tests")
   add_dependencies(check-all test-depends)
 endif()
 
@@ -1335,7 +1359,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   # Installing the headers needs to depend on generating any public
   # tablegen'd headers.
   add_custom_target(llvm-headers DEPENDS intrinsics_gen omp_gen)
-  set_target_properties(llvm-headers PROPERTIES FOLDER "Misc")
+  set_target_properties(llvm-headers PROPERTIES FOLDER "LLVM/Resources")
 
   if (NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-llvm-headers
@@ -1345,7 +1369,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   # Custom target to install all libraries.
   add_custom_target(llvm-libraries)
-  set_target_properties(llvm-libraries PROPERTIES FOLDER "Misc")
+  set_target_properties(llvm-libraries PROPERTIES FOLDER "LLVM/Resources")
 
   if (NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-llvm-libraries
@@ -1391,9 +1415,24 @@ if (LLVM_INCLUDE_BENCHMARKS)
   set(HAVE_STD_REGEX ON CACHE BOOL "OK" FORCE)
   add_subdirectory(${LLVM_THIRD_PARTY_DIR}/benchmark
     ${CMAKE_CURRENT_BINARY_DIR}/third-party/benchmark)
+  set_target_properties(benchmark PROPERTIES FOLDER "Third-Party/Google Benchmark")
+  set_target_properties(benchmark_main PROPERTIES FOLDER "Third-Party/Google Benchmark")
   add_subdirectory(benchmarks)
 endif()
 
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
+endif()
+
+if (XCODE)
+  # For additional targets that you would like to add schemes, specify e.g:
+  #
+  #   -DLLVM_XCODE_EXTRA_TARGET_SCHEMES="TargetParserTests;SupportTests"
+  #
+  # at CMake configure time.
+  set(LLVM_XCODE_EXTRA_TARGET_SCHEMES "" CACHE STRING "Specifies an extra list of targets to turn into schemes")
+
+  foreach(target ${LLVM_XCODE_EXTRA_TARGET_SCHEMES})
+    set_target_properties(${target} PROPERTIES XCODE_GENERATE_SCHEME ON)
+  endforeach()
 endif()

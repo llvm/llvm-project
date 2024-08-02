@@ -160,6 +160,60 @@ void test_mm_clflush(void* A) {
   _mm_clflush(A);
 }
 
+__m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_eq_oq
+  // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
+}
+
+__m128d test_mm_cmp_pd_lt_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_lt_os
+  // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_LT_OS);
+}
+
+__m128d test_mm_cmp_pd_le_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_le_os
+  // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_LE_OS);
+}
+
+__m128d test_mm_cmp_pd_unord_q(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_unord_q
+  // CHECK: fcmp uno <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_UNORD_Q);
+}
+
+__m128d test_mm_cmp_pd_neq_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_neq_uq
+  // CHECK: fcmp une <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NEQ_UQ);
+}
+
+__m128d test_mm_cmp_pd_nlt_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nlt_us
+  // CHECK: fcmp uge <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NLT_US);
+}
+
+__m128d test_mm_cmp_pd_nle_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nle_us
+  // CHECK: fcmp ugt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NLE_US);
+}
+
+__m128d test_mm_cmp_pd_ord_q(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_ord_q
+  // CHECK: fcmp ord <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_ORD_Q);
+}
+
+__m128d test_mm_cmp_sd(__m128d A, __m128d B) {
+  // CHECK-LABEL: test_mm_cmp_sd
+  // CHECK: call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 7)
+  return _mm_cmp_sd(A, B, _CMP_ORD_Q);
+}
+
 __m128i test_mm_cmpeq_epi8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmpeq_epi8
   // CHECK: icmp eq <16 x i8>

@@ -42,6 +42,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include <algorithm>
 #include <vector>
@@ -58,6 +59,7 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class ProfileSummaryInfo;
+class TargetTransformInfo;
 class TargetTransformInfo;
 
 /// A private "module" namespace for types and utilities used by
@@ -172,11 +174,12 @@ private:
 
   void collectMatInsertPts(
       const consthoist::RebasedConstantListType &RebasedConstants,
-      SmallVectorImpl<Instruction *> &MatInsertPts) const;
-  Instruction *findMatInsertPt(Instruction *Inst, unsigned Idx = ~0U) const;
-  SetVector<Instruction *>
-  findConstantInsertionPoint(const consthoist::ConstantInfo &ConstInfo,
-                             const ArrayRef<Instruction *> MatInsertPts) const;
+      SmallVectorImpl<BasicBlock::iterator> &MatInsertPts) const;
+  BasicBlock::iterator findMatInsertPt(Instruction *Inst,
+                                       unsigned Idx = ~0U) const;
+  SetVector<BasicBlock::iterator> findConstantInsertionPoint(
+      const consthoist::ConstantInfo &ConstInfo,
+      const ArrayRef<BasicBlock::iterator> MatInsertPts) const;
   void collectConstantCandidates(ConstCandMapType &ConstCandMap,
                                  Instruction *Inst, unsigned Idx,
                                  ConstantInt *ConstInt);
@@ -203,9 +206,9 @@ private:
   struct UserAdjustment {
     Constant *Offset;
     Type *Ty;
-    Instruction *MatInsertPt;
+    BasicBlock::iterator MatInsertPt;
     const consthoist::ConstantUser User;
-    UserAdjustment(Constant *O, Type *T, Instruction *I,
+    UserAdjustment(Constant *O, Type *T, BasicBlock::iterator I,
                    consthoist::ConstantUser U)
         : Offset(O), Ty(T), MatInsertPt(I), User(U) {}
   };

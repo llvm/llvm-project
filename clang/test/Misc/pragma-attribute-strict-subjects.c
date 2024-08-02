@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-pragma-clang-attribute -verify %s
-// RUN: not %clang_cc1 -fsyntax-only -ast-dump -ast-dump-filter test %s | FileCheck %s
+// RUN: not %clang_cc1 -ast-dump -ast-dump-filter test %s | FileCheck %s
 
 // Check for contradictions in rules for attribute without a strict subject set:
 

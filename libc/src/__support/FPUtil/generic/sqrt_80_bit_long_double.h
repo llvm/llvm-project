@@ -13,10 +13,11 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace x86 {
 
@@ -134,6 +135,6 @@ LIBC_INLINE long double sqrt(long double x) {
 
 } // namespace x86
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H

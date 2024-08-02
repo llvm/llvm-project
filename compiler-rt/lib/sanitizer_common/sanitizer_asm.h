@@ -42,6 +42,16 @@
 # define CFI_RESTORE(reg)
 #endif
 
+#if defined(__aarch64__) && defined(__ARM_FEATURE_BTI_DEFAULT)
+# define ASM_STARTPROC CFI_STARTPROC; hint #34
+# define C_ASM_STARTPROC SANITIZER_STRINGIFY(CFI_STARTPROC) "\nhint #34"
+#else
+# define ASM_STARTPROC CFI_STARTPROC
+# define C_ASM_STARTPROC SANITIZER_STRINGIFY(CFI_STARTPROC)
+#endif
+#define ASM_ENDPROC CFI_ENDPROC
+#define C_ASM_ENDPROC SANITIZER_STRINGIFY(CFI_ENDPROC)
+
 #if defined(__x86_64__) || defined(__i386__) || defined(__sparc__)
 # define ASM_TAIL_CALL jmp
 #elif defined(__arm__) || defined(__aarch64__) || defined(__mips__) || \
@@ -114,9 +124,9 @@
          .globl __interceptor_trampoline_##name;                               \
          ASM_TYPE_FUNCTION(__interceptor_trampoline_##name);                   \
          __interceptor_trampoline_##name:                                      \
-                 CFI_STARTPROC;                                                \
+                 ASM_STARTPROC;                                                \
                  ASM_TAIL_CALL ASM_PREEMPTIBLE_SYM(__interceptor_##name);      \
-                 CFI_ENDPROC;                                                  \
+                 ASM_ENDPROC;                                                  \
          ASM_SIZE(__interceptor_trampoline_##name)
 #  define ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT 1
 # endif  // Architecture supports interceptor trampoline

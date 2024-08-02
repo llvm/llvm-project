@@ -17,14 +17,14 @@ entry:
   %nodebug2 = alloca ptr
   %nodebug3 = alloca ptr
   %a = alloca ptr
-  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
+  ; CHECK: #dbg_declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
   call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !14
-  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
+  ; CHECK: #dbg_declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
   call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !14
   %b = alloca ptr
-  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
+  ; CHECK: #dbg_declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
   call void @llvm.dbg.declare(metadata ptr %b, metadata !13, metadata !DIExpression()), !dbg !14
-  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
+  ; CHECK: #dbg_declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
   call void @llvm.dbg.declare(metadata ptr %b, metadata !13, metadata !DIExpression()), !dbg !14
   call void @g(ptr %nodebug0, ptr %nodebug1, ptr %nodebug2, ptr %nodebug3, ptr %a, ptr %b)
   ret void, !dbg !15

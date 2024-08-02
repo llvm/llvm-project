@@ -2,15 +2,15 @@
 
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1  -D__SVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1  -D__SVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -D__SVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -D__SVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
-// RUN: %clang_cc1 -DTEST_SME2 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme2 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -DTEST_SME2 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme2 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -DTEST_SME2 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme2 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sve -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sve -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sve -target-feature +sme2 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
 
@@ -21,10 +21,10 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
-#ifndef TEST_SME2
-#define ATTR
-#else
+#ifdef __ARM_FEATURE_SME
 #define ATTR __arm_streaming
+#else
+#define ATTR
 #endif
 
 // CHECK-LABEL: @test_qcvtn_s16_s32_x2(

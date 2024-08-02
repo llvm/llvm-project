@@ -51,11 +51,26 @@ define <3 x i32> @p_vec_undef(<3 x i32> %x, <3 x i32> %y, <3 x i32> noundef %m) 
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i32> [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor <3 x i32> [[M]], <i32 -1, i32 undef, i32 -1>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <3 x i32> [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or disjoint <3 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or <3 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %and = and <3 x i32> %x, %m
   %neg = xor <3 x i32> %m, <i32 -1, i32 undef, i32 -1>
+  %and1 = and <3 x i32> %neg, %y
+  %ret = or <3 x i32> %and, %and1
+  ret <3 x i32> %ret
+}
+
+define <3 x i32> @p_vec_poison(<3 x i32> %x, <3 x i32> %y, <3 x i32> noundef %m) {
+; CHECK-LABEL: @p_vec_poison(
+; CHECK-NEXT:    [[AND:%.*]] = and <3 x i32> [[X:%.*]], [[M:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor <3 x i32> [[M]], <i32 -1, i32 poison, i32 -1>
+; CHECK-NEXT:    [[AND1:%.*]] = and <3 x i32> [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint <3 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    ret <3 x i32> [[RET]]
+;
+  %and = and <3 x i32> %x, %m
+  %neg = xor <3 x i32> %m, <i32 -1, i32 poison, i32 -1>
   %and1 = and <3 x i32> %neg, %y
   %ret = or <3 x i32> %and, %and1
   ret <3 x i32> %ret

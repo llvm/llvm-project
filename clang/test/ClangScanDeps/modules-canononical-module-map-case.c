@@ -65,6 +65,12 @@ framework module FW {
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "FW"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "FW"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]

@@ -9,7 +9,7 @@ define void @"foo"(ptr addrspace(1) %0, ptr addrspace(1) %1) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr addrspace(1)> poison, ptr addrspace(1) [[TMP0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x ptr addrspace(1)> [[TMP3]], <4 x ptr addrspace(1)> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, <4 x ptr addrspace(1)> [[TMP4]], <4 x i64> <i64 8, i64 12, i64 28, i64 24>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr addrspace(1)> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP1:%.*]], i64 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p1(<4 x ptr addrspace(1)> [[TMP5]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <8 x i32> <i32 0, i32 3, i32 0, i32 3, i32 2, i32 1, i32 2, i32 1>

@@ -242,6 +242,17 @@ public:
     return static_cast<const StateT *>(it->second.get());
   }
 
+  /// Erase any analysis state associated with the given program point.
+  template <typename PointT>
+  void eraseState(PointT point) {
+    ProgramPoint pp(point);
+
+    for (auto it = analysisStates.begin(); it != analysisStates.end(); ++it) {
+      if (it->first.first == pp)
+        analysisStates.erase(it);
+    }
+  }
+
   /// Get a uniqued program point instance. If one is not present, it is
   /// created with the provided arguments.
   template <typename PointT, typename... Args>

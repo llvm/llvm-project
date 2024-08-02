@@ -40,6 +40,7 @@ module @index attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<index, 32>>} {
   func.func @query() {
     // CHECK: bitsize = 32
+    // CHECK: index = 32
     "test.data_layout_query"() : () -> index
     return
   }

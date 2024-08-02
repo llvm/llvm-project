@@ -12,10 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FLANG_FRONTEND_LANGOPTIONS_H
-#define LLVM_FLANG_FRONTEND_LANGOPTIONS_H
+#ifndef FORTRAN_FRONTEND_LANGOPTIONS_H
+#define FORTRAN_FRONTEND_LANGOPTIONS_H
 
 #include <string>
+#include <vector>
+
+#include "llvm/TargetParser/Triple.h"
 
 namespace Fortran::frontend {
 
@@ -58,9 +61,12 @@ public:
   /// host code generation.
   std::string OMPHostIRFile;
 
+  /// List of triples passed in using -fopenmp-targets.
+  std::vector<llvm::Triple> OMPTargetTriples;
+
   LangOptions();
 };
 
 } // end namespace Fortran::frontend
 
-#endif
+#endif // FORTRAN_FRONTEND_LANGOPTIONS_H

@@ -30,6 +30,7 @@
 #include "refactor/Rename.h"
 #include "refactor/Tweak.h"
 #include "support/Cancellation.h"
+#include "support/Context.h"
 #include "support/Logger.h"
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
@@ -112,7 +113,12 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                  // Index outlives TUScheduler (declared first)
                  FIndex(FIndex),
                  // shared_ptr extends lifetime
-                 Stdlib(Stdlib)]() mutable {
+                 Stdlib(Stdlib),
+                 // We have some FS implementations that rely on information in
+                 // the context.
+                 Ctx(Context::current().clone())]() mutable {
+      // Make sure we install the context into current thread.
+      WithContext C(std::move(Ctx));
       clang::noteBottomOfStack();
       IndexFileIn IF;
       IF.Symbols = indexStandardLibrary(std::move(CI), Loc, *TFS);
@@ -210,6 +216,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            Callbacks *Callbacks)
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      ModulesManager(Opts.ModulesManager),
       ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
@@ -302,6 +309,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.Index = Index;
   Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
+  Inputs.ModulesManager = ModulesManager;
   bool NewFile = WorkScheduler->update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
@@ -523,7 +531,7 @@ void ClangdServer::formatFile(PathRef File, std::optional<Range> Rng,
   auto Action = [File = File.str(), Code = std::move(*Code),
                  Ranges = std::vector<tooling::Range>{RequestedRange},
                  CB = std::move(CB), this]() mutable {
-    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS);
+    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS, true);
     tooling::Replacements IncludeReplaces =
         format::sortIncludes(Style, Code, Ranges, File);
     auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
@@ -551,7 +559,7 @@ void ClangdServer::formatOnType(PathRef File, Position Pos,
   auto Action = [File = File.str(), Code = std::move(*Code),
                  TriggerText = TriggerText.str(), CursorPos = *CursorPos,
                  CB = std::move(CB), this]() mutable {
-    auto Style = getFormatStyleForFile(File, Code, TFS);
+    auto Style = getFormatStyleForFile(File, Code, TFS, false);
     std::vector<TextEdit> Result;
     for (const tooling::Replacement &R :
          formatIncremental(Code, CursorPos, TriggerText, Style))
@@ -605,7 +613,7 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
 
     if (Opts.WantFormat) {
       auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                                         *InpAST->Inputs.TFS);
+                                         *InpAST->Inputs.TFS, false);
       llvm::Error Err = llvm::Error::success();
       for (auto &E : R->GlobalChanges)
         Err =
@@ -762,7 +770,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       for (auto &It : (*Effect)->ApplyEdits) {
         Edit &E = It.second;
         format::FormatStyle Style =
-            getFormatStyleForFile(File, E.InitialCode, TFS);
+            getFormatStyleForFile(File, E.InitialCode, TFS, false);
         if (llvm::Error Err = reformatEdit(E, Style))
           elog("Failed to format {0}: {1}", It.first(), std::move(Err));
       }
@@ -825,7 +833,7 @@ void ClangdServer::findHover(PathRef File, Position Pos,
     if (!InpAST)
       return CB(InpAST.takeError());
     format::FormatStyle Style = getFormatStyleForFile(
-        File, InpAST->Inputs.Contents, *InpAST->Inputs.TFS);
+        File, InpAST->Inputs.Contents, *InpAST->Inputs.TFS, false);
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 

@@ -119,7 +119,7 @@ private:
 };
 
 MacroExpander::MacroExpander(
-    const std::vector<std::string> &Macros, clang::SourceManager &SourceMgr,
+    const std::vector<std::string> &Macros, SourceManager &SourceMgr,
     const FormatStyle &Style,
     llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
     IdentifierTable &IdentTable)
@@ -134,7 +134,7 @@ MacroExpander::~MacroExpander() = default;
 void MacroExpander::parseDefinition(const std::string &Macro) {
   Buffers.push_back(
       llvm::MemoryBuffer::getMemBufferCopy(Macro, "<scratch space>"));
-  clang::FileID FID = SourceMgr.createFileID(Buffers.back()->getMemBufferRef());
+  FileID FID = SourceMgr.createFileID(Buffers.back()->getMemBufferRef());
   FormatTokenLexer Lex(SourceMgr, FID, 0, Style, encoding::Encoding_UTF8,
                        Allocator, IdentTable);
   const auto Tokens = Lex.lex();
@@ -150,20 +150,20 @@ void MacroExpander::parseDefinition(const std::string &Macro) {
   }
 }
 
-bool MacroExpander::defined(llvm::StringRef Name) const {
+bool MacroExpander::defined(StringRef Name) const {
   return FunctionLike.contains(Name) || ObjectLike.contains(Name);
 }
 
-bool MacroExpander::objectLike(llvm::StringRef Name) const {
+bool MacroExpander::objectLike(StringRef Name) const {
   return ObjectLike.contains(Name);
 }
 
-bool MacroExpander::hasArity(llvm::StringRef Name, unsigned Arity) const {
+bool MacroExpander::hasArity(StringRef Name, unsigned Arity) const {
   auto it = FunctionLike.find(Name);
   return it != FunctionLike.end() && it->second.contains(Arity);
 }
 
-llvm::SmallVector<FormatToken *, 8>
+SmallVector<FormatToken *, 8>
 MacroExpander::expand(FormatToken *ID,
                       std::optional<ArgsList> OptionalArgs) const {
   if (OptionalArgs)

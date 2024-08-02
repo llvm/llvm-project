@@ -784,7 +784,7 @@ let Command = "process save_core" in {
     EnumArg<"SaveCoreStyle">, Desc<"Request a specific style "
     "of corefile to be saved.">;
   def process_save_core_plugin_name : Option<"plugin-name", "p">,
-    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file."
+    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file. "
     "This allows core files to be saved in different formats.">;
 }
 
@@ -835,10 +835,16 @@ let Command = "container add" in {
   Desc<"Overwrite an existing command at this node.">;
 }
 
-let Command = "script" in {
+let Command = "scripting run" in {
   def script_language : Option<"language", "l">,
     EnumArg<"ScriptLang">, Desc<"Specify the scripting "
     " language. If none is specific the default scripting language is used.">;
+}
+
+let Command = "scripting template list" in {
+  def scripting_template_list_language : Option<"language", "l">,
+    EnumArg<"ScriptLang">, Desc<"Specify the scripting "
+    " language. If none is specified the default scripting language is used.">;
 }
 
 let Command = "source info" in {
@@ -1425,4 +1431,27 @@ let Command = "statistics dump" in {
     Desc<"Dump the total possible debug info statistics. "
     "Force loading all the debug information if not yet loaded, and collect "
     "statistics with those.">;
+  def statistics_dump_targets: Option<"targets", "r">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"Dump statistics for the targets, including breakpoints, expression "
+    "evaluations, frame variables, etc. "
+    "Defaults to true in both default mode and summary mode. "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_modules: Option<"modules", "m">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"Dump statistics for the modules, including time and size of various "
+    "aspects of the module and debug information, type system, path, etc. "
+    "Defaults to true, unless the '--summary' mode is enabled, in which case "
+    "this is turned off unless specified. "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"If the setting interpreter.save-transcript is enabled and this "
+    "option is 'true', include a JSON array with all commands the user and/or "
+    "scripts executed during a debug session. "
+    "Defaults to true, unless the '--summary' mode is enabled, in which case "
+    "this is turned off unless specified.">;
+
 }

@@ -149,8 +149,7 @@ public:
     // Keep track of how many bytes we've allocated.
     BytesAllocated += Size;
 
-    size_t Adjustment = offsetToAlignedAddr(CurPtr, Alignment);
-    assert(Adjustment + Size >= Size && "Adjustment + Size must not overflow");
+    uintptr_t AlignedPtr = alignAddr(CurPtr, Alignment);
 
     size_t SizeToAllocate = Size;
 #if LLVM_ADDRESS_SANITIZER_BUILD
@@ -158,21 +157,29 @@ public:
     SizeToAllocate += RedZoneSize;
 #endif
 
+    uintptr_t AllocEndPtr = AlignedPtr + SizeToAllocate;
+    assert(AllocEndPtr >= uintptr_t(CurPtr) &&
+           "Alignment + Size must not overflow");
+
     // Check if we have enough space.
-    if (Adjustment + SizeToAllocate <= size_t(End - CurPtr)
-        // We can't return nullptr even for a zero-sized allocation!
-        && CurPtr != nullptr) {
-      char *AlignedPtr = CurPtr + Adjustment;
-      CurPtr = AlignedPtr + SizeToAllocate;
+    if (LLVM_LIKELY(AllocEndPtr <= uintptr_t(End)
+                    // We can't return nullptr even for a zero-sized allocation!
+                    && CurPtr != nullptr)) {
+      CurPtr = reinterpret_cast<char *>(AllocEndPtr);
       // Update the allocation point of this memory block in MemorySanitizer.
       // Without this, MemorySanitizer messages for values originated from here
       // will point to the allocation of the entire slab.
-      __msan_allocated_memory(AlignedPtr, Size);
+      __msan_allocated_memory(reinterpret_cast<char *>(AlignedPtr), Size);
       // Similarly, tell ASan about this space.
-      __asan_unpoison_memory_region(AlignedPtr, Size);
-      return AlignedPtr;
+      __asan_unpoison_memory_region(reinterpret_cast<char *>(AlignedPtr), Size);
+      return reinterpret_cast<char *>(AlignedPtr);
     }
 
+    return AllocateSlow(Size, SizeToAllocate, Alignment);
+  }
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_NOINLINE void *
+  AllocateSlow(size_t Size, size_t SizeToAllocate, Align Alignment) {
     // If Size is really big, allocate a separate slab for it.
     size_t PaddedSize = SizeToAllocate + Alignment.value() - 1;
     if (PaddedSize > SizeThreshold) {
@@ -430,6 +437,13 @@ public:
 
   /// Allocate space for an array of objects without constructing them.
   T *Allocate(size_t num = 1) { return Allocator.Allocate<T>(num); }
+
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator.
+  /// Returns an empty optional if the pointer is not found in the allocator.
+  std::optional<int64_t> identifyObject(const void *Ptr) {
+    return Allocator.identifyObject(Ptr);
+  }
 };
 
 } // end namespace llvm

@@ -106,9 +106,8 @@ class ExprCommandWithFixits(TestBase):
         )
         self.assertIn("null_pointer->first", ret_val.GetError())
 
-    # The final function call runs into SIGILL on aarch64-linux.
     @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd", "linux"], bugnumber="llvm.org/pr49407"
+        archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49407"
     )
     def test_with_multiple_retries(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""

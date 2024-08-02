@@ -35,12 +35,25 @@ class OutputSection;
 
 LLVM_LIBRARY_VISIBILITY extern std::vector<Partition> partitions;
 
-// Returned by InputSectionBase::relsOrRelas. At least one member is empty.
+// Returned by InputSectionBase::relsOrRelas. At most one member is empty.
 template <class ELFT> struct RelsOrRelas {
-  ArrayRef<typename ELFT::Rel> rels;
-  ArrayRef<typename ELFT::Rela> relas;
+  Relocs<typename ELFT::Rel> rels;
+  Relocs<typename ELFT::Rela> relas;
+  Relocs<typename ELFT::Crel> crels;
   bool areRelocsRel() const { return rels.size(); }
+  bool areRelocsCrel() const { return crels.size(); }
 };
+
+#define invokeOnRelocs(sec, f, ...)                                            \
+  {                                                                            \
+    const RelsOrRelas<ELFT> rs = (sec).template relsOrRelas<ELFT>();           \
+    if (rs.areRelocsCrel())                                                    \
+      f(__VA_ARGS__, rs.crels);                                                \
+    else if (rs.areRelocsRel())                                                \
+      f(__VA_ARGS__, rs.rels);                                                 \
+    else                                                                       \
+      f(__VA_ARGS__, rs.relas);                                                \
+  }
 
 // This is the base class of all sections that lld handles. Some are sections in
 // input files, some are sections in the produced output file and some exist
@@ -48,18 +61,21 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, EHFrame, Merge, Output };
+  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output };
 
   Kind kind() const { return (Kind)sectionKind; }
 
+  LLVM_PREFERRED_TYPE(Kind)
   uint8_t sectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t bss : 1;
 
   // Set for sections that should not be folded by ICF.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t keepUnique : 1;
 
   uint8_t partition = 1;
@@ -197,7 +213,8 @@ public:
   // used by --gc-sections.
   InputSectionBase *nextInSectionGroup = nullptr;
 
-  template <class ELFT> RelsOrRelas<ELFT> relsOrRelas() const;
+  template <class ELFT>
+  RelsOrRelas<ELFT> relsOrRelas(bool supportsCrel = true) const;
 
   // InputSections that are dependent on us (reverse dependency for GC)
   llvm::TinyPtrVector<InputSection *> dependentSections;
@@ -282,6 +299,7 @@ struct SectionPiece {
       : inputOff(off), live(live), hash(hash >> 1) {}
 
   uint32_t inputOff;
+  LLVM_PREFERRED_TYPE(bool)
   uint32_t live : 1;
   uint32_t hash : 31;
   uint64_t outputOff = 0;
@@ -382,7 +400,8 @@ public:
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Regular ||
-           s->kind() == SectionBase::Synthetic;
+           s->kind() == SectionBase::Synthetic ||
+           s->kind() == SectionBase::Spill;
   }
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
@@ -402,7 +421,7 @@ public:
   InputSectionBase *getRelocatedSection() const;
 
   template <class ELFT, class RelTy>
-  void relocateNonAlloc(uint8_t *buf, llvm::ArrayRef<RelTy> rels);
+  void relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels);
 
   // Points to the canonical section. If ICF folds two sections, repl pointer of
   // one section points to the other.
@@ -423,6 +442,26 @@ private:
   void copyRelocations(uint8_t *buf, llvm::iterator_range<RelIt> rels);
 
   template <class ELFT> void copyShtGroup(uint8_t *buf);
+};
+
+// A marker for a potential spill location for another input section. This
+// broadly acts as if it were the original section until address assignment.
+// Then it is either replaced with the real input section or removed.
+class PotentialSpillSection : public InputSection {
+public:
+  // The containing input section description; used to quickly replace this stub
+  // with the actual section.
+  InputSectionDescription *isd;
+
+  // Next potential spill location for the same source input section.
+  PotentialSpillSection *next = nullptr;
+
+  PotentialSpillSection(const InputSectionBase &source,
+                        InputSectionDescription &isd);
+
+  static bool classof(const SectionBase *sec) {
+    return sec->kind() == InputSectionBase::Spill;
+  }
 };
 
 static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
@@ -447,6 +486,11 @@ public:
     return sec->kind() == InputSectionBase::Synthetic;
   }
 };
+
+inline bool isStaticRelSecType(uint32_t type) {
+  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_CREL ||
+         type == llvm::ELF::SHT_REL;
+}
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&

@@ -1,5 +1,5 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false \
+# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -x86-relax-relocations=false \
 # RUN:   -position-independent -filetype=obj -o %t/elf_reloc.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:              -abs external_data=0xdeadbeef \
@@ -50,6 +50,17 @@ test_adr_prel_lo21:
 ## ADR encoding is a bit tricky so use an offset with an irregular bit pattern
 ## to test this bit better
 adr_data = test_adr_prel_lo21 + 0xe46f2
+
+# Check R_AARCH64_LD_PREL_LO19 relocation of a local symbol
+#
+# jitlink-check: decode_operand(test_ldr_prel_lo19 + 0, 1)[19:0] = \
+# jitlink-check:     (ldr_data - test_ldr_prel_lo19 + 0x4)[21:2]
+        .globl  test_ldr_prel_lo19, ldr_data
+        .p2align  2
+test_ldr_prel_lo19:
+        ldr	x0, ldr_data + 0x4
+        .size test_ldr_prel_lo19, .-test_ldr_prel_lo19
+ldr_data = test_ldr_prel_lo19 + 4
 
 # Check R_AARCH64_ADR_PREL_PG_HI21 / R_AARCH64_ADD_ABS_LO12_NC relocation of a local symbol
 #

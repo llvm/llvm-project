@@ -17,6 +17,7 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
+#include <deque>
 #include <optional>
 #include <vector>
 
@@ -164,7 +165,8 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
     m_value = m_parent->GetValue();
     return true;
   }
-  size_t CalculateNumChildren(uint32_t max = UINT32_MAX) override {
+  llvm::Expected<uint32_t>
+  CalculateNumChildren(uint32_t max = UINT32_MAX) override {
     return m_parent->GetNumChildren(max);
   }
   CompilerType GetCompilerTypeImpl() override {

@@ -1382,6 +1382,34 @@ Sample usage:
   }];
 }
 
+def NoConvergentDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute prevents a function from being treated as convergent, which
+means that optimizations can only move calls to that function to
+control-equivalent blocks. If a statement is marked as ``noconvergent`` and
+contains calls, it also prevents those calls from being treated as convergent.
+In other words, those calls are not restricted to only being moved to
+control-equivalent blocks.
+
+In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
+declarations and calls are treated as convergent by default for correctness.
+This ``noconvergent`` attribute is helpful for developers to prevent them from
+being treated as convergent when it's safe.
+
+.. code-block:: c
+
+  __device__ float bar(float);
+  __device__ float foo(float) __attribute__((noconvergent)) {}
+
+  __device__ int example(void) {
+    float x;
+    [[clang::noconvergent]] x = bar(x);
+  }
+
+  }];
+}
+
 def NoSplitStackDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1593,6 +1621,11 @@ replacement=\ *string-literal*
   a warning about use of a deprecated declaration. The Fix-It will replace
   the deprecated declaration with the new declaration specified.
 
+environment=\ *identifier*
+  Target environment in which this declaration is available. If present,
+  the availability attribute applies only to targets with the same platform
+  and environment. The parameter is currently supported only in HLSL.
+
 Multiple availability attributes can be placed on a declaration, which may
 correspond to different platforms. For most platforms, the availability
 attribute with the platform corresponding to the target platform will be used;
@@ -1604,27 +1637,40 @@ specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
 ``ios``
-  Apple's iOS operating system. The minimum deployment target is specified by
-  the ``-mios-version-min=*version*`` or ``-miphoneos-version-min=*version*``
-  command-line arguments.
+  Apple's iOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-ios*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=ios*version*``
+  command-line argument.
 
 ``macos``
-  Apple's macOS operating system. The minimum deployment target is
-  specified by the ``-mmacosx-version-min=*version*`` command-line argument.
-  ``macosx`` is supported for backward-compatibility reasons, but it is
-  deprecated.
+  Apple's macOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-macos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=macos*version*``
+  command-line argument. ``macosx`` is supported for
+  backward-compatibility reasons, but it is deprecated.
 
 ``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified by
-  the ``-mtvos-version-min=*version*`` command-line argument.
+  Apple's tvOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-tvos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=tvos*version*``
+  command-line argument.
 
 ``watchos``
-  Apple's watchOS operating system. The minimum deployment target is specified by
-  the ``-mwatchos-version-min=*version*`` command-line argument.
+  Apple's watchOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-watchos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=watchos*version*``
+  command-line argument.
+
+``visionos``
+  Apple's visionOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-visionos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=visionos*version*``
+  command-line argument.
 
 ``driverkit``
   Apple's DriverKit userspace kernel extensions. The minimum deployment target
-  is specified as part of the triple.
+  is specified as part of the ``-target *arch*-apple-driverkit*version*``
+  command line argument.
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -1992,6 +2038,31 @@ Here is an example:
     q();
   case 77:  // warning: unannotated fall-through
     r();
+  }
+  }];
+}
+
+def CXXAssumeDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "assume";
+  let Content = [{
+The ``assume`` attribute is used to indicate to the optimizer that a
+certain condition is assumed to be true at a certain point in the
+program. If this condition is violated at runtime, the behavior is
+undefined. ``assume`` can only be applied to a null statement.
+
+Different optimisers are likely to react differently to the presence of
+this attribute; in some cases, adding ``assume`` may affect performance
+negatively. It should be used with parsimony and care.
+
+Example:
+
+.. code-block:: c++
+
+  int f(int x, int y) {
+    [[assume(x == 27)]];
+    [[assume(x == y)]];
+    return y + 1; // May be optimised to `return 28`.
   }
   }];
 }
@@ -2410,7 +2481,7 @@ For example:
   typedef vint8m1_t fixed_vint8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
   #endif
 
-Creates a type ``fixed_vint8m1_t_t`` that is a fixed-length variant of
+Creates a type ``fixed_vint8m1_t`` that is a fixed-length variant of
 ``vint8m1_t`` that contains exactly 512 bits. Unlike ``vint8m1_t``, this type
 can be used in globals, structs, unions, and arrays, all of which are
 unsupported for sizeless types.
@@ -2485,6 +2556,9 @@ effect on code generation are the same as for the command-line option
 Example "subtarget features" from the x86 backend include: "mmx", "sse", "sse4.2",
 "avx", "xop" and largely correspond to the machine specific options handled by
 the front end.
+
+Note that this attribute does not apply transitively to nested functions such
+as blocks or C++ lambdas.
 
 Additionally, this attribute supports function multiversioning for ELF based
 x86/x86-64 targets, which can be used to create multiple implementations of the
@@ -2710,6 +2784,33 @@ An error will be given if:
     attributes;
   - The AMDGPU target backend is unable to create machine code that can meet the
     request.
+  }];
+}
+
+def AMDGPUMaxNumWorkGroupsDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute specifies the max number of work groups when the kernel
+is dispatched.
+
+Clang supports the
+``__attribute__((amdgpu_max_num_work_groups(<x>, <y>, <z>)))`` or
+``[[clang::amdgpu_max_num_work_groups(<x>, <y>, <z>)]]`` attribute for the
+AMDGPU target. This attribute may be attached to HIP or OpenCL kernel function
+definitions and is an optimization hint.
+
+The ``<x>`` parameter specifies the maximum number of work groups in the x dimension.
+Similarly ``<y>`` and ``<z>`` are for the y and z dimensions respectively.
+Each of the three values must be greater than 0 when provided. The ``<x>`` parameter
+is required, while ``<y>`` and ``<z>`` are optional with default value of 1.
+
+If specified, the AMDGPU target backend might be able to produce better machine
+code.
+
+An error will be given if:
+  - Specified values violate subtarget specifications;
+  - Specified values are not compatible with values provided through other
+    attributes.
   }];
 }
 
@@ -3714,6 +3815,12 @@ for that function.
 
 This attribute is incompatible with the ``always_inline`` and ``minsize``
 attributes.
+
+Note that this attribute does not apply recursively to nested functions such as
+lambdas or blocks when using declaration-specific attribute syntaxes such as double
+square brackets (``[[]]``) or ``__attribute__``. The ``#pragma`` syntax can be
+used to apply the attribute to all functions, including nested functions, in a
+range of source code.
   }];
 }
 
@@ -4096,6 +4203,20 @@ non-underscored keywords. For example:
       @property (assign, nullable) NSView *superview;
       @property (readonly, nonnull) NSArray *subviews;
     @end
+
+As well as built-in pointer types, the nullability attributes can be attached
+to C++ classes marked with the ``_Nullable`` attribute.
+
+The following C++ standard library types are considered nullable:
+``unique_ptr``, ``shared_ptr``, ``auto_ptr``, ``exception_ptr``, ``function``,
+``move_only_function`` and ``coroutine_handle``.
+
+Types should be marked nullable only where the type itself leaves nullability
+ambiguous. For example, ``std::optional`` is not marked ``_Nullable``, because
+``optional<int> _Nullable`` is redundant and ``optional<int> _Nonnull`` is
+not a useful type. ``std::weak_ptr`` is not nullable, because its nullability
+can change with no visible modification, so static annotation is unlikely to be
+unhelpful.
   }];
 }
 
@@ -4130,6 +4251,17 @@ The ``_Nullable`` nullability qualifier indicates that a value of the
     int fetch_or_zero(int * _Nullable ptr);
 
 a caller of ``fetch_or_zero`` can provide null.
+
+The ``_Nullable`` attribute on classes indicates that the given class can
+represent null values, and so the ``_Nullable``, ``_Nonnull`` etc qualifiers
+make sense for this type. For example:
+
+  .. code-block:: c
+
+    class _Nullable ArenaPointer { ... };
+
+    ArenaPointer _Nonnull x = ...;
+    ArenaPointer _Nullable y = nullptr;
   }];
 }
 
@@ -4629,11 +4761,11 @@ For more information see
 }];
 }
 
-def AssumptionDocs : Documentation {
+def OMPAssumeDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "assume";
   let Content = [{
-Clang supports the ``__attribute__((assume("assumption")))`` attribute to
+Clang supports the ``[[omp::assume("assumption")]]`` attribute to
 provide additional information to the optimizer. The string-literal, here
 "assumption", will be attached to the function declaration such that later
 analysis and optimization passes can assume the "assumption" to hold.
@@ -4645,7 +4777,7 @@ A function can have multiple assume attributes and they propagate from prior
 declarations to later definitions. Multiple assumptions are aggregated into a
 single comma separated string. Thus, one can provide multiple assumptions via
 a comma separated string, i.a.,
-``__attribute__((assume("assumption1,assumption2")))``.
+``[[omp::assume("assumption1,assumption2")]]``.
 
 While LLVM plugins might provide more assumption strings, the default LLVM
 optimization passes are aware of the following assumptions:
@@ -5082,10 +5214,11 @@ that does not. A single parameter may not have multiple ABI treatment
 attributes.
 
 Support for this feature is target-dependent, although it should be
-supported on every target that Swift supports. Query for this support
-with ``__has_attribute(swiftcall)``. This implies support for the
-``swift_context``, ``swift_error_result``, and ``swift_indirect_result``
-attributes.
+supported on every target that Swift supports. Query for this attribute
+with ``__has_attribute(swiftcall)``. Query if the target supports the
+calling convention with ``__has_extension(swiftcc)``. This implies
+support for the ``swift_context``, ``swift_error_result``, and
+``swift_indirect_result`` attributes.
   }];
 }
 
@@ -5132,6 +5265,10 @@ the following:
   semantically be performed after a guaranteed tail call, such as the
   non-trivial destruction of a local variable or temporary,
   then the program is ill-formed.
+
+Query for this attribute with ``__has_attribute(swiftasynccall)``. Query if
+the target supports the calling convention with
+``__has_extension(swiftasynccc)``.
   }];
 }
 
@@ -5434,6 +5571,17 @@ for clang builtin functions.
   }];
 }
 
+def RISCVVectorCCDocs : Documentation {
+ let Category = DocCatCallingConvs;
+ let Heading = "riscv::vector_cc, riscv_vector_cc, clang::riscv_vector_cc";
+ let Content = [{
+The ``riscv_vector_cc`` attribute can be applied to a function. It preserves 15
+registers namely, v1-v7 and v24-v31 as callee-saved. Callers thus don't need
+to save these registers before function calls, and callees only need to save
+them if they use them.
+ }];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -5540,17 +5688,22 @@ experimental at this time.
 def PreserveNoneDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On X86-64 target, this attribute changes the calling convention of a function.
+On X86-64 and AArch64 targets, this attribute changes the calling convention of a function.
 The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
-impact floating-point registers (XMMs/YMMs). Floating-point registers still
-follow the c calling convention.
+impact floating-point registers. ``preserve_none``'s ABI is still unstable, and
+may be changed in the future.
 
-- Only RSP and RBP are preserved by callee.
-
-- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
-  be used to pass function arguments.
+- On X86-64, only RSP and RBP are preserved by the callee.
+  Registers R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
+  be used to pass function arguments. Floating-point registers (XMMs/YMMs) still
+  follow the C calling convention.
+- On AArch64, only LR and FP are preserved by the callee.
+  Registers X20-X28, X0-X7, and X9-X14 are used to pass function arguments.
+  X8, X16-X19, SIMD and floating-point registers follow the AAPCS calling
+  convention. X15 is not available for argument passing on Windows, but is
+  used to pass arguments on other platforms.
   }];
 }
 
@@ -5675,7 +5828,8 @@ takes precedence over the command line option ``-fpatchable-function-entry=N,M``
 ``M`` defaults to 0 if omitted.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
 
@@ -5859,6 +6013,16 @@ For more information see
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
 }]; }
 
+def HybridPatchableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hybrid_patchable`` attribute declares an ARM64EC function with an additional
+x86-64 thunk, which may be patched at runtime.
+
+For more information see
+`ARM64EC ABI documentation <https://learn.microsoft.com/en-us/windows/arm/arm64ec-abi>`_.
+}]; }
+
 def WebAssemblyExportNameDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -6009,6 +6173,9 @@ def AlwaysDestroyDocs : Documentation {
 The ``always_destroy`` attribute specifies that a variable with static or thread
 storage duration should have its exit-time destructor run. This attribute is the
 default unless clang was invoked with -fno-c++-static-destructors.
+
+If a variable is explicitly declared with this attribute, Clang will silence
+otherwise applicable ``-Wexit-time-destructors`` warnings.
   }];
 }
 
@@ -6457,7 +6624,8 @@ like pointers to an object of type ``T``:
   private:
     int *valuePointer;
   public:
-    int *getInt() { return &valuePointer; }
+    IntPointer(const IntOwner&);
+    int *getInt() { return valuePointer; }
   };
 
 The argument ``T`` is optional and is ignored.
@@ -6473,12 +6641,8 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
 .. code-block:: c++
 
   int f() {
-    IntPointer P;
-    if (true) {
-      IntOwner O(7);
-      P = IntPointer(O); // P "points into" O
-    } // P is dangling
-    return P.get(); // error: Using a dangling Pointer.
+    IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
+    P.getInt(); // P is dangling
   }
 
 }];
@@ -7218,6 +7382,100 @@ where shaders must be compiled into a library and linked at runtime.
   }];
 }
 
+def HLSLLoopHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "[loop]";
+  let Content = [{
+The ``[loop]`` directive allows loop optimization hints to be
+specified for the subsequent loop. The directive allows unrolling to
+be disabled and is not compatible with [unroll(x)]. 
+
+Specifying the parameter, ``[loop]``, directs the
+unroller to not unroll the loop. 
+
+.. code-block:: hlsl
+
+  [loop]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [loop]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [loop]
+  do {
+    ...
+  } while (...)
+
+See `hlsl loop extensions <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
+  }];
+}
+
+def HLSLUnrollHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "[unroll(x)], [unroll]";
+  let Content = [{
+Loop unrolling optimization hints can be specified with ``[unroll(x)]``
+. The attribute is placed immediately before a for, while,
+or do-while.
+Specifying the parameter, ``[unroll(_value_)]``, directs the
+unroller to unroll the loop ``_value_`` times. Note: [unroll(x)] is not compatible with [loop].
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  do {
+    ...
+  } while (...)
+
+.. code-block:: hlsl
+
+  [unroll]
+  do {
+    ...
+  } while (...)
+
+See `hlsl loop extensions <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
+  }];
+}
+
 def ClangRandomizeLayoutDocs : Documentation {
   let Category = DocCatDecl;
   let Heading = "randomize_layout, no_randomize_layout";
@@ -7277,12 +7535,33 @@ b for constant buffer views (CBV).
 
 Register space is specified in the format ``space[number]`` and defaults to ``space0`` if omitted.
 Here're resource binding examples with and without space:
-.. code-block:: c++
+
+.. code-block:: hlsl
 
   RWBuffer<float> Uav : register(u3, space1);
   Buffer<float> Buf : register(t1);
 
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3d12/resource-binding-in-hlsl
+  }];
+}
+
+def HLSLPackOffsetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The packoffset attribute is used to change the layout of a cbuffer.
+Attribute spelling in HLSL is: ``packoffset( c[Subcomponent][.component] )``.
+A subcomponent is a register number, which is an integer. A component is in the form of [.xyzw].
+
+Examples:
+
+.. code-block:: hlsl
+
+  cbuffer A {
+    float3 a : packoffset(c0.y);
+    float4 b : packoffset(c4);
+  }
+
+The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
   }];
 }
 
@@ -7410,7 +7689,7 @@ means that it can e.g no longer be part of an initializer expression.
 
       /* This may print something else than "6 * 7 = 42",
          if there is a non-weak definition of "ANSWER" in
-	 an object linked in */
+         an object linked in */
       printf("6 * 7 = %d\n", ANSWER);
 
       return 0;
@@ -7945,3 +8224,86 @@ requirement:
   }
   }];
 }
+
+def ClspvLibclcBuiltinDoc : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify functions coming from `libclc`_ (OpenCL-C builtin library).
+
+.. code-block:: c
+
+  void __attribute__((clspv_libclc_builtin)) libclc_builtin() {}
+
+.. _`clspv`: https://github.com/google/clspv
+.. _`libclc`: https://libclc.llvm.org
+}];
+}
+
+def DocCatNonBlockingNonAllocating : DocumentationCategory<"Performance Constraint Attributes"> {
+  let Content = [{
+The ``nonblocking``, ``blocking``, ``nonallocating`` and ``allocating`` attributes can be attached
+to function types, including blocks, C++ lambdas, and member functions. The attributes declare
+constraints about a function's behavior pertaining to blocking and heap memory allocation.
+
+There are several rules for function types with these attributes, enforced with
+compiler warnings:
+
+- When assigning or otherwise converting to a function pointer of ``nonblocking`` or
+  ``nonallocating`` type, the source must also be a function or function pointer of
+  that type, unless it is a null pointer, i.e. the attributes should not be "spoofed". Conversions
+  that remove the attributes are transparent and valid.
+
+- An override of a ``nonblocking`` or ``nonallocating`` virtual method must also be declared
+  with that same attribute (or a stronger one.) An overriding method may add an attribute.
+
+- A redeclaration of a ``nonblocking`` or ``nonallocating`` function must also be declared with
+  the same attribute (or a stronger one). A redeclaration may add an attribute.
+
+The warnings are controlled by ``-Wfunction-effects``, which is enabled by default.
+
+In a future commit, the compiler will diagnose function calls from ``nonblocking`` and ``nonallocating``
+functions to other functions which lack the appropriate attribute.
+  }];
+}
+
+def NonBlockingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "nonblocking";
+  let Content = [{
+Declares that a function or function type either does or does not block in any way, according
+to the optional, compile-time constant boolean argument, which defaults to true. When the argument
+is false, the attribute is equivalent to ``blocking``.
+
+For the purposes of diagnostics, ``nonblocking`` is considered to include the
+``nonallocating`` guarantee and is therefore a "stronger" constraint or attribute.
+  }];
+}
+
+def NonAllocatingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "nonallocating";
+  let Content = [{
+Declares that a function or function type either does or does not allocate heap memory, according
+to the optional, compile-time constant boolean argument, which defaults to true. When the argument
+is false, the attribute is equivalent to ``allocating``.
+  }];
+}
+
+def BlockingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "blocking";
+  let Content = [{
+Declares that a function potentially blocks, and prevents any potential inference of ``nonblocking``
+by the compiler.
+  }];
+}
+
+def AllocatingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "allocating";
+  let Content = [{
+Declares that a function potentially allocates heap memory, and prevents any potential inference
+of ``nonallocating`` by the compiler.
+  }];
+}
+

@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_TRUNCTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_TRUNCTEST_H
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-template <typename T> class TruncTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class TruncTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -57,10 +59,10 @@ public:
     EXPECT_FP_EQ(T(-10.0), func(T(-10.32)));
     EXPECT_FP_EQ(T(10.0), func(T(10.65)));
     EXPECT_FP_EQ(T(-10.0), func(T(-10.65)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1234.38)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1234.38)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1234.96)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1234.96)));
+    EXPECT_FP_EQ(T(123.0), func(T(123.38)));
+    EXPECT_FP_EQ(T(-123.0), func(T(-123.38)));
+    EXPECT_FP_EQ(T(123.0), func(T(123.96)));
+    EXPECT_FP_EQ(T(-123.0), func(T(-123.96)));
   }
 };
 

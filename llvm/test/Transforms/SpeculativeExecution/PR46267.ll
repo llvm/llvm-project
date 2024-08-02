@@ -31,17 +31,17 @@ define void @f(i32 %i) {
 entry:
 ; CHECK-LABEL: @f(
 ; CHECK:  %a2 = add i32 %i, 0
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 %a2
   br i1 undef, label %land.rhs, label %land.end
 
 land.rhs:                                         ; preds = %entry
 ; CHECK: land.rhs:
-; CHECK-NEXT: call void @llvm.dbg.label
+; CHECK-NEXT: #dbg_label
 ; CHECK-NEXT: %y = alloca i32, align 4
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %y
+; CHECK-NEXT: #dbg_declare(ptr %y
 ; CHECK-NEXT: %a0 = load i32, ptr undef, align 1
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a0
-; CHECK-NEXT: call void @llvm.dbg.label
+; CHECK-NEXT: #dbg_value(i32 %a0
+; CHECK-NEXT: #dbg_label
+; CHECK-NEXT: #dbg_value(i32 %a2
   call void @llvm.dbg.label(metadata !11), !dbg !10
   %y = alloca i32, align 4
   call void @llvm.dbg.declare(metadata ptr %y, metadata !14, metadata !DIExpression()), !dbg !10

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include "src/stdio/sprintf.h"
 
 #include "src/__support/FPUtil/FPBits.h"
@@ -16,7 +17,7 @@
 // TODO: Add a comment here explaining the printf format string.
 
 // #include <stdio.h>
-// namespace LIBC_NAMESPACE {
+// namespace LIBC_NAMESPACE_DECL {
 // using ::sprintf;
 // }
 
@@ -39,18 +40,19 @@ using LIBC_NAMESPACE::fputil::testing::RoundingMode;
     for (char &c : buff) {                                                     \
       c = 0;                                                                   \
     }                                                                          \
-    LIBC_NAMESPACE::sprintf(buff, "%" FMT, X);                                 \
-    ASSERT_STREQ(buff, expected);                                              \
+    written = LIBC_NAMESPACE::sprintf(buff, "%" FMT, X);                       \
+    ASSERT_STREQ_LEN(written, buff, expected);                                 \
   } while (0)
 
 TEST(LlvmLibcSPrintfTest, Macros) {
   char buff[128];
+  int written;
   macro_test(PRIu8, 1, "1");
   macro_test(PRIX16, 0xAA, "AA");
   macro_test(PRId32, -123, "-123");
   macro_test(PRIX32, 0xFFFFFF85, "FFFFFF85");
   macro_test(PRIo8, 0xFF, "377");
-  macro_test(PRIo64, 0123, "123");
+  macro_test(PRIo64, 0123456712345671234567ll, "123456712345671234567");
 }
 
 TEST(LlvmLibcSPrintfTest, SimpleNoConv) {
@@ -121,8 +123,8 @@ TEST(LlvmLibcSPrintfTest, StringConv) {
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   written = LIBC_NAMESPACE::sprintf(buff, "%s", nullptr);
-  EXPECT_EQ(written, 4);
-  ASSERT_STREQ(buff, "null");
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "(null)");
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 }
 
@@ -168,6 +170,93 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%lld", -9223372036854775807ll - 1ll);
   EXPECT_EQ(written, 20);
   ASSERT_STREQ(buff, "-9223372036854775808"); // ll min
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w3d", 5807);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "7");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w3d", 1);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w64d", 9223372036854775807ll);
+  EXPECT_EQ(written, 19);
+  ASSERT_STREQ(buff, "9223372036854775807");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w-1d", 5807);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "%w-1d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w0d", 5807);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "%w0d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w999d", 9223372036854775807ll);
+  EXPECT_EQ(written, 19);
+  ASSERT_STREQ(buff, "9223372036854775807");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%winvalid%w1d", 5807, 5807);
+  EXPECT_EQ(written, 10);
+  ASSERT_STREQ(buff, "%winvalid1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w-1d%w1d", 5807, 5807);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "%w-1d1");
+
+  char format[64];
+  char uintmax[128];
+  LIBC_NAMESPACE::sprintf(format, "%%w%du", sizeof(uintmax_t) * CHAR_BIT);
+  const int uintmax_len =
+      LIBC_NAMESPACE::sprintf(uintmax, "%ju", sizeof(uintmax_t) * CHAR_BIT);
+  written = LIBC_NAMESPACE::sprintf(buff, format, sizeof(uintmax_t) * CHAR_BIT);
+  EXPECT_EQ(written, uintmax_len);
+  ASSERT_STREQ(buff, uintmax);
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w64u", 18446744073709551615ull);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "18446744073709551615"); // ull max
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%w64d", -9223372036854775807ll - 1ll);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "-9223372036854775808"); // ll min
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf3d", 5807);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "7");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf3d", 1);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf64u", 18446744073709551615ull);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "18446744073709551615"); // ull max
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%wf64d", -9223372036854775807ll - 1ll);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "-9223372036854775808"); // ll min
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf0d", 5807);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "%wf0d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf-1d", 5807);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "%wf-1d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wfinvalid%wf1d", 5807, 5807);
+  EXPECT_EQ(written, 11);
+  ASSERT_STREQ(buff, "%wfinvalid1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf-1d%wf1d", 5807, 5807);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "%wf-1d1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf999d", 9223372036854775807ll);
+  EXPECT_EQ(written, 19);
+  ASSERT_STREQ(buff, "9223372036854775807");
 
   // Min Width Tests.
 
@@ -541,7 +630,7 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
     ASSERT_STREQ(buff, "0x1a2b3c4d5e6f7081");
   }
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%p", buff);
+  written = LIBC_NAMESPACE::sprintf(buff, "%p", &written);
   EXPECT_GT(written, 0);
 
   // Width tests:
@@ -1598,9 +1687,6 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
 
-  char big_buff[10000]; // Used for long doubles and other extremely wide
-                        // numbers.
-
   // Length Modifier Tests.
 
   // TODO(michaelrj): Add tests for LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 and 128
@@ -1651,6 +1737,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
       "000000000000000000000000000000000000000000000000000000000000000000000000"
       "000000000000000000000000000000000000000000000000000000000000000000000000"
       "00000000000000000000000000000000000000000000000000000000000000000000");
+
+  char big_buff[10000]; // Used for extremely wide numbers.
 
   written = LIBC_NAMESPACE::sprintf(big_buff, "%Lf", 1e1000L);
   ASSERT_STREQ_LEN(
@@ -3263,7 +3351,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
       LIBC_NAMESPACE::sprintf(buff, "%hR", 0xff); // unsigned short fract max
   ASSERT_STREQ_LEN(written, buff, "0.996094");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%lk", 0x0); // 0.0
+  written = LIBC_NAMESPACE::sprintf(buff, "%lk", 0x0ll); // 0.0
   ASSERT_STREQ_LEN(written, buff, "0.000000");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%lk",
@@ -3277,7 +3365,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
                                     0xffffffff); //-long fract max
   ASSERT_STREQ_LEN(written, buff, "-1.000000");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%lK", 0x0); // 0.0
+  written = LIBC_NAMESPACE::sprintf(buff, "%lK", 0x0ll); // 0.0
   ASSERT_STREQ_LEN(written, buff, "0.000000");
 
   written =
@@ -3405,7 +3493,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
   ASSERT_STREQ_LEN(written, buff, "       0.100 256.000     ");
 
   written =
-      LIBC_NAMESPACE::sprintf(buff, "%+-#12.3lk % 012.3k", 0x000000001013a92a,
+      LIBC_NAMESPACE::sprintf(buff, "%+-#12.3lk % 012.3k", 0x000000001013a92all,
                               0x02740000); // 0.126, 1256.0
   ASSERT_STREQ_LEN(written, buff, "+0.126        0001256.000");
 }

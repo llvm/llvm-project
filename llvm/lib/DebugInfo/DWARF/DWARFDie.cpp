@@ -313,13 +313,12 @@ DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
   DWARFDie Result;
-  if (auto SpecRef = V.getAsRelativeReference()) {
-    if (SpecRef->Unit)
-      Result = SpecRef->Unit->getDIEForOffset(SpecRef->Unit->getOffset() +
-                                              SpecRef->Offset);
-    else if (auto SpecUnit =
-                 U->getUnitVector().getUnitForOffset(SpecRef->Offset))
-      Result = SpecUnit->getDIEForOffset(SpecRef->Offset);
+  if (std::optional<uint64_t> Offset = V.getAsRelativeReference()) {
+    Result = const_cast<DWARFUnit *>(V.getUnit())
+                 ->getDIEForOffset(V.getUnit()->getOffset() + *Offset);
+  } else if (Offset = V.getAsDebugInfoReference(); Offset) {
+    if (DWARFUnit *SpecUnit = U->getUnitVector().getUnitForOffset(*Offset))
+      Result = SpecUnit->getDIEForOffset(*Offset);
   }
   return Result;
 }
@@ -515,6 +514,7 @@ getTypeSizeImpl(DWARFDie Die, uint64_t PointerSize,
   case DW_TAG_immutable_type:
   case DW_TAG_volatile_type:
   case DW_TAG_restrict_type:
+  case DW_TAG_template_alias:
   case DW_TAG_typedef: {
     if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
       return getTypeSizeImpl(BaseType, PointerSize, Visited);

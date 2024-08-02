@@ -31,8 +31,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __lexicographical_compare {
-struct __fn {
+struct __lexicographical_compare {
   template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Proj1, class _Proj2, class _Comp>
   _LIBCPP_HIDE_FROM_ABI constexpr static bool __lexicographical_compare_impl(
       _Iter1 __first1,
@@ -60,7 +59,7 @@ struct __fn {
             class _Proj1                                                                           = identity,
             class _Proj2                                                                           = identity,
             indirect_strict_weak_order<projected<_Iter1, _Proj1>, projected<_Iter2, _Proj2>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -78,7 +77,7 @@ struct __fn {
             class _Proj2 = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range1>, _Proj1>, projected<iterator_t<_Range2>, _Proj2>>
                 _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
       _Range1&& __range1, _Range2&& __range2, _Comp __comp = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     return __lexicographical_compare_impl(
         ranges::begin(__range1),
@@ -90,10 +89,9 @@ struct __fn {
         __proj2);
   }
 };
-} // namespace __lexicographical_compare
 
 inline namespace __cpo {
-inline constexpr auto lexicographical_compare = __lexicographical_compare::__fn{};
+inline constexpr auto lexicographical_compare = __lexicographical_compare{};
 } // namespace __cpo
 } // namespace ranges
 

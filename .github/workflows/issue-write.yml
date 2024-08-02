@@ -1,0 +1,157 @@
+name: Comment on an issue
+
+on:
+  workflow_run:
+    workflows:
+      - "Check code formatting"
+      - "Check for private emails used in PRs"
+      - "PR Request Release Note"
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  pr-comment:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      (
+        github.event.workflow_run.conclusion == 'success' ||
+        github.event.workflow_run.conclusion == 'failure'
+      )
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/unprivileged-download-artifact/action.yml
+          sparse-checkout-cone-mode: false
+      - name: 'Download artifact'
+        uses: ./.github/workflows/unprivileged-download-artifact
+        id: download-artifact
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          artifact-name: workflow-args
+
+      - name: 'Comment on PR'
+        if: steps.download-artifact.outputs.artifact-id != ''
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            var fs = require('fs');
+            const comments = JSON.parse(fs.readFileSync('./comments'));
+            if (!comments || comments.length == 0) {
+              return;
+            }
+
+            let runInfo = await github.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+
+            console.log(runInfo);
+
+
+            // Query to find the number of the pull request that triggered this job.
+            // The associated pull requests are based off of the branch name, so if
+            // you create a pull request for a branch, close it, and then create
+            // another pull request with the same branch, then this query will return
+            // two associated pull requests.  This is why we have to fetch all the
+            // associated pull requests and then iterate through them to find the
+            // one that is open.
+            const gql_query = `
+              query($repo_owner : String!, $repo_name : String!, $branch: String!) {
+                repository(owner: $repo_owner, name: $repo_name) {
+                  ref (qualifiedName: $branch) {
+                    associatedPullRequests(first: 100) {
+                      nodes {
+                        baseRepository {
+                          owner {
+                            login
+                          }
+                        }
+                        number
+                        state
+                      }
+                    }
+                  }
+                }
+              }
+            `
+            const gql_variables = {
+              repo_owner: runInfo.data.head_repository.owner.login,
+              repo_name: runInfo.data.head_repository.name,
+              branch: runInfo.data.head_branch
+            }
+            const gql_result = await github.graphql(gql_query, gql_variables);
+            console.log(gql_result);
+            // If the branch for the PR was deleted before this job has a chance
+            // to run, then the ref will be null.  This can happen if someone:
+            // 1. Rebase the PR, which triggers some workflow.
+            // 2. Immediately merges the PR and deletes the branch.
+            // 3. The workflow finishes and triggers this job.
+            if (!gql_result.repository.ref) {
+              console.log("Ref has been deleted");
+              return;
+            }
+            console.log(gql_result.repository.ref.associatedPullRequests.nodes);
+
+            var pr_number = 0;
+            gql_result.repository.ref.associatedPullRequests.nodes.forEach((pr) => {
+
+              // The largest PR number is the one we care about.  The only way
+              // to have more than one associated pull requests is if all the
+              // old pull requests are in the closed state.
+              if (pr.baseRepository.owner.login = context.repo.owner && pr.number > pr_number) {
+                pr_number = pr.number;
+              }
+            });
+            if (pr_number == 0) {
+              console.log("Error retrieving pull request number");
+              return;
+            }
+            
+            await comments.forEach(function (comment) {
+              if (comment.id) {
+                // Security check: Ensure that this comment was created by
+                // the github-actions bot, so a malicious input won't overwrite
+                // a user's comment.
+                github.issues.getComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id
+                }).then((old_comment) => {
+                  console.log(old_comment);
+                  if (old_comment.data.user.login != "github-actions[bot]") {
+                    console.log("Invalid comment id: " + comment.id);
+                    return;
+                  }
+                  github.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr_number,
+                    comment_id: comment.id,
+                    body: comment.body
+                  });
+                });
+              } else {
+                github.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr_number,
+                  body: comment.body
+                });
+              }
+            });
+
+      - name: Dump comments file
+        if: >-
+          always() &&
+          steps.download-artifact.outputs.artifact-id != ''
+        run: cat comments

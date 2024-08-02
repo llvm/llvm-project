@@ -236,8 +236,8 @@ declare void @has_sret(ptr sret([100 x i8])) nounwind;
 
 %TSRet = type { i64, i64 }
 declare void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m16a32$v;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m16a32$v
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m16$v;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m16$v
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub     sp, sp, #48
 ; CHECK-NEXT:     .seh_stackalloc 48
@@ -271,8 +271,8 @@ declare void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind;
 ; CHECK:          adrp    x11, has_aligned_sret
 ; CHECK:          add     x11, x11, :lo12:has_aligned_sret
 ; CHECK:          ldr     x9, [x9, :lo12:__os_arm64x_check_icall]
-; CHECK:          adrp    x10, ($iexit_thunk$cdecl$m16a32$v)
-; CHECK:          add     x10, x10, :lo12:($iexit_thunk$cdecl$m16a32$v)
+; CHECK:          adrp    x10, ($iexit_thunk$cdecl$m16$v)
+; CHECK:          add     x10, x10, :lo12:($iexit_thunk$cdecl$m16$v)
 ; CHECK:          blr     x9
 ; CHECK:          .seh_startepilogue
 ; CHECK:          ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -457,6 +457,109 @@ declare %T2 @simple_struct(%T1, %T2, %T3, %T4) nounwind;
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
 
+declare <4 x i8> @small_vector(<4 x i8> %0) nounwind;
+; CHECK-LABEL:    .def	$iexit_thunk$cdecl$m$m;
+; CHECK:          .section	.wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m$m
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     sub	sp, sp, #64
+; CHECK-NEXT:     .seh_stackalloc	64
+; CHECK-NEXT:     stp	x29, x30, [sp, #48]             // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr	48
+; CHECK-NEXT:     add	x29, sp, #48
+; CHECK-NEXT:     .seh_add_fp	48
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     uzp1	v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:     adrp	x8, __os_arm64x_dispatch_call_no_redirect
+; CHECK-NEXT:     ldr	x16, [x8, :lo12:__os_arm64x_dispatch_call_no_redirect]
+; CHECK-NEXT:     fmov	w0, s0
+; CHECK-NEXT:     stur	s0, [x29, #-4]
+; CHECK-NEXT:     blr	x16
+; CHECK-NEXT:     stur	w8, [x29, #-8]
+; CHECK-NEXT:     ldur	s0, [x29, #-8]
+; CHECK-NEXT:     ushll	v0.8h, v0.8b, #0
+; CHECK-NEXT:                                           // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp	x29, x30, [sp, #48]             // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr	48
+; CHECK-NEXT:     add	sp, sp, #64
+; CHECK-NEXT:     .seh_stackalloc	64
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     ret
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+; CHECK-LABEL:    .def	"#small_vector$exit_thunk";
+; CHECK:          .section	.wowthk$aa,"xr",discard,"#small_vector$exit_thunk"
+; CHECK:          .weak_anti_dep	small_vector
+; CHECK:          .weak_anti_dep	"#small_vector"
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     str	x30, [sp, #-16]!                // 8-byte Folded Spill
+; CHECK-NEXT:     .seh_save_reg_x	x30, 16
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp	x8, __os_arm64x_check_icall
+; CHECK-NEXT:     adrp	x11, small_vector
+; CHECK-NEXT:     add	x11, x11, :lo12:small_vector
+; CHECK-NEXT:     ldr	x8, [x8, :lo12:__os_arm64x_check_icall]
+; CHECK-NEXT:     adrp	x10, ($iexit_thunk$cdecl$m$m)
+; CHECK-NEXT:     add	x10, x10, :lo12:($iexit_thunk$cdecl$m$m)
+; CHECK-NEXT:     blr	x8
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldr	x30, [sp], #16                  // 8-byte Folded Reload
+; CHECK-NEXT:     .seh_save_reg_x	x30, 16
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br	x11
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+
+declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
+; CHECK-LABEL:    .def	$iexit_thunk$cdecl$m16$m16;
+; CHECK:          .section	.wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m16$m16
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     sub	sp, sp, #80
+; CHECK-NEXT:     .seh_stackalloc	80
+; CHECK-NEXT:     stp	x29, x30, [sp, #64]             // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr	64
+; CHECK-NEXT:     add	x29, sp, #64
+; CHECK-NEXT:     .seh_add_fp	64
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp	x8, __os_arm64x_dispatch_call_no_redirect
+; CHECK-NEXT:     sub	x0, x29, #16
+; CHECK-NEXT:     add	x1, sp, #32
+; CHECK-NEXT:     ldr	x16, [x8, :lo12:__os_arm64x_dispatch_call_no_redirect]
+; CHECK-NEXT:     str	q0, [sp, #32]
+; CHECK-NEXT:     blr	x16
+; CHECK-NEXT:     ldur	q0, [x29, #-16]
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp	x29, x30, [sp, #64]             // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr	64
+; CHECK-NEXT:     add	sp, sp, #80
+; CHECK-NEXT:     .seh_stackalloc	80
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     ret
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+; CHECK-LABEL:    .def	"#large_vector$exit_thunk";
+; CHECK:          .section	.wowthk$aa,"xr",discard,"#large_vector$exit_thunk"
+; CHECK:          .weak_anti_dep	large_vector
+; CHECK:          .weak_anti_dep	"#large_vector"
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     str	x30, [sp, #-16]!                // 8-byte Folded Spill
+; CHECK-NEXT:     .seh_save_reg_x	x30, 16
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp	x8, __os_arm64x_check_icall
+; CHECK-NEXT:     adrp	x11, large_vector
+; CHECK-NEXT:     add	x11, x11, :lo12:large_vector
+; CHECK-NEXT:     ldr	x8, [x8, :lo12:__os_arm64x_check_icall]
+; CHECK-NEXT:     adrp	x10, ($iexit_thunk$cdecl$m16$m16)
+; CHECK-NEXT:     add	x10, x10, :lo12:($iexit_thunk$cdecl$m16$m16)
+; CHECK-NEXT:     blr	x8
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldr	x30, [sp], #16                  // 8-byte Folded Reload
+; CHECK-NEXT:     .seh_save_reg_x	x30, 16
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br	x11
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+
 ; CHECK-LABEL:    .section        .hybmp$x,"yi"
 ; CHECK-NEXT:     .symidx "#func_caller"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$v$v
@@ -492,7 +595,7 @@ declare %T2 @simple_struct(%T1, %T2, %T3, %T4) nounwind;
 ; CHECK-NEXT:     .symidx has_sret
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx has_aligned_sret
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m16a32$v
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m16$v
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#has_aligned_sret$exit_thunk"
 ; CHECK-NEXT:     .symidx has_aligned_sret
@@ -515,6 +618,18 @@ declare %T2 @simple_struct(%T1, %T2, %T3, %T4) nounwind;
 ; CHECK-NEXT:     .symidx "#simple_struct$exit_thunk"
 ; CHECK-NEXT:     .symidx simple_struct
 ; CHECK-NEXT:     .word   0
+; CHECK-NEXT:     .symidx	small_vector
+; CHECK-NEXT:     .symidx	$iexit_thunk$cdecl$m$m
+; CHECK-NEXT:     .word	4
+; CHECK-NEXT:     .symidx	"#small_vector$exit_thunk"
+; CHECK-NEXT:     .symidx	small_vector
+; CHECK-NEXT:     .word	0
+; CHECK-NEXT:     .symidx	large_vector
+; CHECK-NEXT:     .symidx	$iexit_thunk$cdecl$m16$m16
+; CHECK-NEXT:     .word	4
+; CHECK-NEXT:     .symidx	"#large_vector$exit_thunk"
+; CHECK-NEXT:     .symidx	large_vector
+; CHECK-NEXT:     .word	0
 
 define void @func_caller() nounwind {
   call void @no_op()
@@ -529,5 +644,7 @@ define void @func_caller() nounwind {
   call [2 x i8] @small_array([2 x i8] [i8 0, i8 0], [2 x float] [float 0.0, float 0.0])
   call [3 x i64] @large_array([3 x i64] [i64 0, i64 0, i64 0], [2 x double] [double 0.0, double 0.0], [2 x [2 x i64]] [[2 x i64] [i64 0, i64 0], [2 x i64] [i64 0, i64 0]])
   call %T2 @simple_struct(%T1 { i16 0 }, %T2 { i32 0, float 0.0 }, %T3 { i64 0, double 0.0 }, %T4 { i64 0, double 0.0, i8 0 })
+  call <4 x i8> @small_vector(<4 x i8> <i8 0, i8 0, i8 0, i8 0>)
+  call <8 x i16> @large_vector(<8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
   ret void
 }

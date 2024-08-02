@@ -369,7 +369,7 @@ if.end:
 define i32 @degenerateicmp() {
 ; CHECK-LABEL: @degenerateicmp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 190, 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 -31, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 225, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 1, i32 0
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

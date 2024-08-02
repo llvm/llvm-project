@@ -13,7 +13,6 @@
 #include <__atomic/contention_t.h>
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
-#include <__availability>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__memory/addressof.h>
@@ -49,6 +48,7 @@ struct atomic_flag {
     __cxx_atomic_store(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(false), __m);
   }
 
+#if _LIBCPP_STD_VER >= 20
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const
       volatile _NOEXCEPT {
     std::__atomic_wait(*this, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);
@@ -65,6 +65,7 @@ struct atomic_flag {
     std::__atomic_notify_all(*this);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
+#endif
 
 #if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI constexpr atomic_flag() _NOEXCEPT : __a_(false) {}
@@ -141,6 +142,7 @@ inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_clear_explicit(atomic_flag* __o, m
   __o->clear(__m);
 }
 
+#if _LIBCPP_STD_VER >= 20
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
 atomic_flag_wait(const volatile atomic_flag* __o, bool __v) _NOEXCEPT {
   __o->wait(__v);
@@ -178,6 +180,7 @@ atomic_flag_notify_all(volatile atomic_flag* __o) _NOEXCEPT {
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT {
   __o->notify_all();
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

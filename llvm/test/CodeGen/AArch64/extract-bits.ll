@@ -972,10 +972,9 @@ define void @pr38938(ptr %a0, ptr %a1) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x1]
 ; CHECK-NEXT:    ubfx x8, x8, #21, #10
-; CHECK-NEXT:    lsl x8, x8, #2
-; CHECK-NEXT:    ldr w9, [x0, x8]
+; CHECK-NEXT:    ldr w9, [x0, x8, lsl #2]
 ; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    str w9, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
   %tmp = load i64, ptr %a1, align 8
   %tmp1 = lshr i64 %tmp, 21

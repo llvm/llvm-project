@@ -52,8 +52,8 @@ public:
     /// Context-sensitive version of a keyword attribute.
     AS_ContextSensitiveKeyword,
 
-    /// <vardecl> : <semantic>
-    AS_HLSLSemantic,
+    /// <vardecl> : <annotation>
+    AS_HLSLAnnotation,
 
     /// The attibute has no source code manifestation and is only created
     /// implicitly.
@@ -120,7 +120,7 @@ public:
     }
     static Form Pragma() { return AS_Pragma; }
     static Form ContextSensitiveKeyword() { return AS_ContextSensitiveKeyword; }
-    static Form HLSLSemantic() { return AS_HLSLSemantic; }
+    static Form HLSLAnnotation() { return AS_HLSLAnnotation; }
     static Form Implicit() { return AS_Implicit; }
 
   private:
@@ -190,6 +190,12 @@ public:
   /// with surrounding underscores removed as appropriate (e.g.
   /// __gnu__::__attr__ will be normalized to gnu::attr).
   std::string getNormalizedFullName() const;
+
+  /// Generate a normalized full name, with syntax, scope and name.
+  static std::string
+  normalizeFullNameWithSyntax(const IdentifierInfo *Name,
+                              const IdentifierInfo *Scope,
+                              AttributeCommonInfo::Syntax SyntaxUsed);
 
   bool isDeclspecAttribute() const { return SyntaxUsed == AS_Declspec; }
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }

@@ -357,9 +357,17 @@ public:
     return hasSparseSemantic();
   }
 
+  constexpr unsigned getNumBuffer() const {
+    return hasDenseSemantic() ? 0 : (isWithPosLT() ? 2 : 1);
+  }
+
   std::string toMLIRString() const {
     std::string lvlStr = toFormatString(getLvlFmt());
     std::string propStr = "";
+    if (isa<LevelFormat::NOutOfM>()) {
+      lvlStr +=
+          "[" + std::to_string(getN()) + ", " + std::to_string(getM()) + "]";
+    }
     if (isa<LevelPropNonDefault::Nonunique>())
       propStr += toPropString(LevelPropNonDefault::Nonunique);
 

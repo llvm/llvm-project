@@ -219,7 +219,7 @@ InstructionCost PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -504,7 +504,7 @@ unsigned PPCTTIImpl::getCacheLineSize() const {
   // Assume that Future CPU has the same cache line size as the others.
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
       Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR10 ||
-      Directive == PPC::DIR_PWR_FUTURE)
+      Directive == PPC::DIR_PWR11 || Directive == PPC::DIR_PWR_FUTURE)
     return 128;
 
   // On other processors return a default of 64 bytes.
@@ -538,7 +538,7 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   // Assume that future is the same as the others.
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
       Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR10 ||
-      Directive == PPC::DIR_PWR_FUTURE)
+      Directive == PPC::DIR_PWR11 || Directive == PPC::DIR_PWR_FUTURE)
     return 12;
 
   // For most things, modern systems have two execution units (and
@@ -607,7 +607,8 @@ InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                            ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, Type *SubTp,
-                                           ArrayRef<const Value *> Args) {
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) {
 
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);

@@ -10,7 +10,7 @@ from lldbsuite.test.decorators import *
 
 
 @skipIfRemote
-@skipIfWindows  # llvm.org/pr22274: need a pexpect replacement for windows
+@add_test_categories(["pexpect"])
 class PExpectTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     PROMPT = "(lldb) "

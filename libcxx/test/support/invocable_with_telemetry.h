@@ -31,7 +31,7 @@ public:
   constexpr invocable_with_telemetry(invocable_with_telemetry&& other)
     requires std::move_constructible<F>
       : f_(std::move(other.f_)),
-        telemetry_(assert(other.telemetry_ != nullptr), std::exchange(other.telemetry_, nullptr)) {
+        telemetry_((assert(other.telemetry_ != nullptr), std::exchange(other.telemetry_, nullptr))) {
     ++telemetry_->moves;
   }
 

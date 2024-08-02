@@ -150,7 +150,7 @@ define ptr @test7(ptr %v0) {
 ; CHECK-LABEL: define ptr @test7
 ; CHECK-SAME: (ptr [[V0:%.*]]) {
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8, !nonnull !0
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8, !nonnull [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @use2(ptr [[V1]])
 ; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:

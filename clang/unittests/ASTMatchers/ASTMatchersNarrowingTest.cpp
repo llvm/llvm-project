@@ -1569,11 +1569,12 @@ TEST_P(ASTMatchersTest, IsArrow_MatchesMemberVariablesViaArrow) {
       matches("class Y { void x() { y; } int y; };", memberExpr(isArrow())));
   EXPECT_TRUE(notMatches("class Y { void x() { (*this).y; } int y; };",
                          memberExpr(isArrow())));
-  EXPECT_TRUE(matches("template <class T> class Y { void x() { this->m; } };",
-                      cxxDependentScopeMemberExpr(isArrow())));
   EXPECT_TRUE(
-      notMatches("template <class T> class Y { void x() { (*this).m; } };",
-                 cxxDependentScopeMemberExpr(isArrow())));
+      matches("template <class T> class Y { void x() { this->m; } int m; };",
+              memberExpr(isArrow())));
+  EXPECT_TRUE(notMatches(
+      "template <class T> class Y { void x() { (*this).m; } int m; };",
+      memberExpr(isArrow())));
 }
 
 TEST_P(ASTMatchersTest, IsArrow_MatchesStaticMemberVariablesViaArrow) {
@@ -2107,6 +2108,20 @@ TEST_P(ASTMatchersTest, IsPure) {
   EXPECT_TRUE(notMatches("class X { int f(); };", cxxMethodDecl(isPure())));
 }
 
+TEST_P(ASTMatchersTest, IsExplicitObjectMemberFunction) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto ExpObjParamFn = cxxMethodDecl(isExplicitObjectMemberFunction());
+  EXPECT_TRUE(
+      notMatches("struct A { static int operator()(int); };", ExpObjParamFn));
+  EXPECT_TRUE(notMatches("struct A { int operator+(int); };", ExpObjParamFn));
+  EXPECT_TRUE(
+      matches("struct A { int operator-(this A, int); };", ExpObjParamFn));
+  EXPECT_TRUE(matches("struct A { void fun(this A &&self); };", ExpObjParamFn));
+}
+
 TEST_P(ASTMatchersTest, IsCopyAssignmentOperator) {
   if (!GetParam().isCXX()) {
     return;
@@ -2537,6 +2552,10 @@ TEST_P(ASTMatchersTest, HasName_MatchesNamespaces) {
                          recordDecl(hasName("a+b::C"))));
   EXPECT_TRUE(notMatches("namespace a { namespace b { class AC; } }",
                          recordDecl(hasName("C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::a::C"))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesOuterClasses) {

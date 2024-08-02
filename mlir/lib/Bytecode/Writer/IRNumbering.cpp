@@ -9,6 +9,7 @@
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -424,22 +425,22 @@ void IRNumberingState::number(Operation &op) {
     number(result.getType());
   }
 
-  // Only number the operation's dictionary if it isn't empty.
-  DictionaryAttr dictAttr = op.getDiscardableAttrDictionary();
   // Prior to a version with native property encoding, or when properties are
   // not used, we need to number also the merged dictionary containing both the
   // inherent and discardable attribute.
-  if (config.getDesiredBytecodeVersion() <
-          bytecode::kNativePropertiesEncoding ||
-      !op.getPropertiesStorage()) {
+  DictionaryAttr dictAttr;
+  if (config.getDesiredBytecodeVersion() >= bytecode::kNativePropertiesEncoding)
+    dictAttr = op.getRawDictionaryAttrs();
+  else
     dictAttr = op.getAttrDictionary();
-  }
+  // Only number the operation's dictionary if it isn't empty.
   if (!dictAttr.empty())
     number(dictAttr);
 
   // Visit the operation properties (if any) to make sure referenced attributes
   // are numbered.
-  if (config.getDesiredBytecodeVersion() >= bytecode::kNativePropertiesEncoding &&
+  if (config.getDesiredBytecodeVersion() >=
+          bytecode::kNativePropertiesEncoding &&
       op.getPropertiesStorageSize()) {
     if (op.isRegistered()) {
       // Operation that have properties *must* implement this interface.

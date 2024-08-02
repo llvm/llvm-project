@@ -21,7 +21,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/AtomicExpandUtils.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -37,6 +37,8 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -133,12 +135,27 @@ public:
 };
 
 // IRBuilder to be used for replacement atomic instructions.
-struct ReplacementIRBuilder : IRBuilder<InstSimplifyFolder> {
+struct ReplacementIRBuilder
+    : IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> {
+  MDNode *MMRAMD = nullptr;
+
   // Preserves the DebugLoc from I, and preserves still valid metadata.
+  // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
-      : IRBuilder(I->getContext(), DL) {
+      : IRBuilder(I->getContext(), InstSimplifyFolder(DL),
+                  IRBuilderCallbackInserter(
+                      [this](Instruction *I) { addMMRAMD(I); })) {
     SetInsertPoint(I);
     this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
+    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+      this->setIsFPConstrained(true);
+
+    MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
+  }
+
+  void addMMRAMD(Instruction *I) {
+    if (canInstructionHaveMMRAs(*I))
+      I->setMetadata(LLVMContext::MD_mmra, MMRAMD);
   }
 };
 
@@ -156,22 +173,22 @@ INITIALIZE_PASS_END(AtomicExpandLegacy, DEBUG_TYPE,
 
 // Helper functions to retrieve the size of atomic instructions.
 static unsigned getAtomicOpSize(LoadInst *LI) {
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   return DL.getTypeStoreSize(LI->getType());
 }
 
 static unsigned getAtomicOpSize(StoreInst *SI) {
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
   return DL.getTypeStoreSize(SI->getValueOperand()->getType());
 }
 
 static unsigned getAtomicOpSize(AtomicRMWInst *RMWI) {
-  const DataLayout &DL = RMWI->getModule()->getDataLayout();
+  const DataLayout &DL = RMWI->getDataLayout();
   return DL.getTypeStoreSize(RMWI->getValOperand()->getType());
 }
 
 static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
-  const DataLayout &DL = CASI->getModule()->getDataLayout();
+  const DataLayout &DL = CASI->getDataLayout();
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
 }
 
@@ -191,7 +208,7 @@ bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
   if (!Subtarget->enableAtomicExpand())
     return false;
   TLI = Subtarget->getTargetLowering();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   SmallVector<Instruction *, 1> AtomicInsts;
 
@@ -418,8 +435,9 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
                       ? Builder.CreatePtrToInt(Val, NewTy)
                       : Builder.CreateBitCast(Val, NewTy);
 
-  auto *NewRMWI = Builder.CreateAtomicRMW(
-      AtomicRMWInst::Xchg, Addr, NewVal, RMWI->getAlign(), RMWI->getOrdering());
+  auto *NewRMWI = Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, Addr, NewVal,
+                                          RMWI->getAlign(), RMWI->getOrdering(),
+                                          RMWI->getSyncScopeID());
   NewRMWI->setVolatile(RMWI->isVolatile());
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
 
@@ -559,9 +577,9 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
                                  Value *&Success, Value *&NewLoaded) {
   Type *OrigTy = NewVal->getType();
 
-  // This code can go away when cmpxchg supports FP types.
+  // This code can go away when cmpxchg supports FP and vector types.
   assert(!OrigTy->isPointerTy());
-  bool NeedBitcast = OrigTy->isFloatingPointTy();
+  bool NeedBitcast = OrigTy->isFloatingPointTy() || OrigTy->isVectorTy();
   if (NeedBitcast) {
     IntegerType *IntTy = Builder.getIntNTy(OrigTy->getPrimitiveSizeInBits());
     NewVal = Builder.CreateBitCast(NewVal, IntTy);
@@ -728,7 +746,7 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   unsigned ValueSize = DL.getTypeStoreSize(ValueType);
 
   PMV.ValueType = PMV.IntValueType = ValueType;
-  if (PMV.ValueType->isFloatingPointTy())
+  if (PMV.ValueType->isFloatingPointTy() || PMV.ValueType->isVectorTy())
     PMV.IntValueType =
         Type::getIntNTy(Ctx, ValueType->getPrimitiveSizeInBits());
 
@@ -747,7 +765,7 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   assert(ValueSize < MinWordSize);
 
   PointerType *PtrTy = cast<PointerType>(Addr->getType());
-  IntegerType *IntTy = DL.getIntPtrType(Ctx, PtrTy->getAddressSpace());
+  IntegerType *IntTy = DL.getIndexType(Ctx, PtrTy->getAddressSpace());
   Value *PtrLSB;
 
   if (AddrAlign < MinWordSize) {
@@ -892,9 +910,10 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
   Value *ValOperand_Shifted = nullptr;
   if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Add ||
       Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Nand) {
+    Value *ValOp = Builder.CreateBitCast(AI->getValOperand(), PMV.IntValueType);
     ValOperand_Shifted =
-        Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
-                          PMV.ShiftAmt, "ValOperand_Shifted");
+        Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
+                          "ValOperand_Shifted");
   }
 
   auto PerformPartwordOp = [&](IRBuilderBase &Builder, Value *Loaded) {
@@ -919,6 +938,36 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
   AI->eraseFromParent();
 }
 
+/// Copy metadata that's safe to preserve when widening atomics.
+static void copyMetadataForAtomic(Instruction &Dest,
+                                  const Instruction &Source) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
+  Source.getAllMetadata(MD);
+  LLVMContext &Ctx = Dest.getContext();
+  MDBuilder MDB(Ctx);
+
+  for (auto [ID, N] : MD) {
+    switch (ID) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
+    case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_access_group:
+    case LLVMContext::MD_mmra:
+      Dest.setMetadata(ID, N);
+      break;
+    default:
+      if (ID == Ctx.getMDKindID("amdgpu.no.remote.memory"))
+        Dest.setMetadata(ID, N);
+      else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
+        Dest.setMetadata(ID, N);
+
+      break;
+    }
+  }
+}
+
 // Widen the bitwise atomicrmw (or/xor/and) to the minimum supported width.
 AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   ReplacementIRBuilder Builder(AI, *DL);
@@ -940,14 +989,15 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
 
   if (Op == AtomicRMWInst::And)
     NewOperand =
-        Builder.CreateOr(PMV.Inv_Mask, ValOperand_Shifted, "AndOperand");
+        Builder.CreateOr(ValOperand_Shifted, PMV.Inv_Mask, "AndOperand");
   else
     NewOperand = ValOperand_Shifted;
 
   AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
-  // TODO: Preserve metadata
+
+  copyMetadataForAtomic(*NewAI, *AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
   AI->replaceAllUsesWith(FinalOldResult);
@@ -1155,7 +1205,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   Function *F = BB->getParent();
 
   assert(AddrAlign >=
-             F->getParent()->getDataLayout().getTypeStoreSize(ResultTy) &&
+             F->getDataLayout().getTypeStoreSize(ResultTy) &&
          "Expected at least natural alignment at this point.");
 
   // Given: atomicrmw some_op iN* %addr, iN %incr ordering
@@ -1595,7 +1645,7 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 // Note: This function is exposed externally by AtomicExpandUtils.h
 bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                     CreateCmpXchgInstFun CreateCmpXchg) {
-  ReplacementIRBuilder Builder(AI, AI->getModule()->getDataLayout());
+  ReplacementIRBuilder Builder(AI, AI->getDataLayout());
   Builder.setIsFPConstrained(
       AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
 

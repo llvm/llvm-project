@@ -1,7 +1,7 @@
 // Cross comdat example
 // Parent VTable is in a comdat section.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
 
 // The inline function is emitted in each module with the same comdat
 // CHECK: $_ZTS1A = comdat any

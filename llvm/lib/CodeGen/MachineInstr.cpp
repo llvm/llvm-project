@@ -39,6 +39,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -97,7 +98,7 @@ void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
 MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      DbgLoc(std::move(DL)), DebugInstrNum(0) {
+      DbgLoc(std::move(DL)), DebugInstrNum(0), Opcode(TID.Opcode) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
@@ -116,7 +117,8 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
 /// uniqueness.
 MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0) {
+      Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0),
+      Opcode(MI.getOpcode()) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   CapOperands = OperandCapacity::get(MI.getNumOperands());
@@ -142,6 +144,7 @@ void MachineInstr::setDesc(const MCInstrDesc &TID) {
   if (getParent())
     getMF()->handleChangeDesc(*this, TID);
   MCID = &TID;
+  Opcode = TID.Opcode;
 }
 
 void MachineInstr::moveBefore(MachineInstr *MovePos) {
@@ -317,14 +320,15 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
                                 MCSymbol *PreInstrSymbol,
                                 MCSymbol *PostInstrSymbol,
                                 MDNode *HeapAllocMarker, MDNode *PCSections,
-                                uint32_t CFIType) {
+                                uint32_t CFIType, MDNode *MMRAs) {
   bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
   bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
   bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
   bool HasPCSections = PCSections != nullptr;
   bool HasCFIType = CFIType != 0;
+  bool HasMMRAs = MMRAs != nullptr;
   int NumPointers = MMOs.size() + HasPreInstrSymbol + HasPostInstrSymbol +
-                    HasHeapAllocMarker + HasPCSections + HasCFIType;
+                    HasHeapAllocMarker + HasPCSections + HasCFIType + HasMMRAs;
 
   // Drop all extra info if there is none.
   if (NumPointers <= 0) {
@@ -336,11 +340,11 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
   // out of line because PointerSumType cannot hold more than 4 tag types with
   // 32-bit pointers.
   // FIXME: Maybe we should make the symbols in the extra info mutable?
-  else if (NumPointers > 1 || HasHeapAllocMarker || HasPCSections ||
+  else if (NumPointers > 1 || HasMMRAs || HasHeapAllocMarker || HasPCSections ||
            HasCFIType) {
     Info.set<EIIK_OutOfLine>(
         MF.createMIExtraInfo(MMOs, PreInstrSymbol, PostInstrSymbol,
-                             HeapAllocMarker, PCSections, CFIType));
+                             HeapAllocMarker, PCSections, CFIType, MMRAs));
     return;
   }
 
@@ -358,7 +362,8 @@ void MachineInstr::dropMemRefs(MachineFunction &MF) {
     return;
 
   setExtraInfo(MF, {}, getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), getCFIType());
+               getHeapAllocMarker(), getPCSections(), getCFIType(),
+               getMMRAMetadata());
 }
 
 void MachineInstr::setMemRefs(MachineFunction &MF,
@@ -369,7 +374,8 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
   }
 
   setExtraInfo(MF, MMOs, getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), getCFIType());
+               getHeapAllocMarker(), getPCSections(), getCFIType(),
+               getMMRAMetadata());
 }
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
@@ -393,7 +399,8 @@ void MachineInstr::cloneMemRefs(MachineFunction &MF, const MachineInstr &MI) {
   if (getPreInstrSymbol() == MI.getPreInstrSymbol() &&
       getPostInstrSymbol() == MI.getPostInstrSymbol() &&
       getHeapAllocMarker() == MI.getHeapAllocMarker() &&
-      getPCSections() == MI.getPCSections()) {
+      getPCSections() == MI.getPCSections() && getMMRAMetadata() &&
+      MI.getMMRAMetadata()) {
     Info = MI.Info;
     return;
   }
@@ -478,7 +485,8 @@ void MachineInstr::setPreInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
   }
 
   setExtraInfo(MF, memoperands(), Symbol, getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), getCFIType());
+               getHeapAllocMarker(), getPCSections(), getCFIType(),
+               getMMRAMetadata());
 }
 
 void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
@@ -493,7 +501,8 @@ void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
   }
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), Symbol,
-               getHeapAllocMarker(), getPCSections(), getCFIType());
+               getHeapAllocMarker(), getPCSections(), getCFIType(),
+               getMMRAMetadata());
 }
 
 void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
@@ -502,7 +511,7 @@ void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               Marker, getPCSections(), getCFIType());
+               Marker, getPCSections(), getCFIType(), getMMRAMetadata());
 }
 
 void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
@@ -511,7 +520,8 @@ void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), PCSections, getCFIType());
+               getHeapAllocMarker(), PCSections, getCFIType(),
+               getMMRAMetadata());
 }
 
 void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
@@ -520,7 +530,16 @@ void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), Type);
+               getHeapAllocMarker(), getPCSections(), Type, getMMRAMetadata());
+}
+
+void MachineInstr::setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs) {
+  // Do nothing if old and new symbols are the same.
+  if (MMRAs == getMMRAMetadata())
+    return;
+
+  setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
+               getHeapAllocMarker(), getPCSections(), getCFIType(), MMRAs);
 }
 
 void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
@@ -536,6 +555,7 @@ void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
   setPostInstrSymbol(MF, MI.getPostInstrSymbol());
   setHeapAllocMarker(MF, MI.getHeapAllocMarker());
   setPCSections(MF, MI.getPCSections());
+  setMMRAMetadata(MF, MI.getMMRAMetadata());
 }
 
 uint32_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
@@ -553,6 +573,27 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::NoSWrap;
     if (OB->hasNoUnsignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  } else if (const TruncInst *TI = dyn_cast<TruncInst>(&I)) {
+    if (TI->hasNoSignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoSWrap;
+    if (TI->hasNoUnsignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  } else if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    if (GEP->hasNoUnsignedSignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoUSWrap;
+    if (GEP->hasNoUnsignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  }
+
+  // Copy the nonneg flag.
+  if (const PossiblyNonNegInst *PNI = dyn_cast<PossiblyNonNegInst>(&I)) {
+    if (PNI->hasNonNeg())
+      MIFlags |= MachineInstr::MIFlag::NonNeg;
+    // Copy the disjoint flag.
+  } else if (const PossiblyDisjointInst *PD =
+                 dyn_cast<PossiblyDisjointInst>(&I)) {
+    if (PD->isDisjoint())
+      MIFlags |= MachineInstr::MIFlag::Disjoint;
   }
 
   // Copy the exact flag.
@@ -1000,8 +1041,7 @@ unsigned MachineInstr::getBundleSize() const {
 /// Returns true if the MachineInstr has an implicit-use operand of exactly
 /// the given register (not considering sub/super-registers).
 bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = getOperand(i);
+  for (const MachineOperand &MO : operands()) {
     if (MO.isReg() && MO.isUse() && MO.isImplicit() && MO.getReg() == Reg)
       return true;
   }
@@ -1011,8 +1051,9 @@ bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
 /// findRegisterUseOperandIdx() - Returns the MachineOperand that is a use of
 /// the specific register or -1 if it is not found. It further tightens
 /// the search criteria to a use that kills the register if isKill is true.
-int MachineInstr::findRegisterUseOperandIdx(
-    Register Reg, bool isKill, const TargetRegisterInfo *TRI) const {
+int MachineInstr::findRegisterUseOperandIdx(Register Reg,
+                                            const TargetRegisterInfo *TRI,
+                                            bool isKill) const {
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = getOperand(i);
     if (!MO.isReg() || !MO.isUse())
@@ -1059,9 +1100,9 @@ MachineInstr::readsWritesVirtualRegister(Register Reg,
 /// the specified register or -1 if it is not found. If isDead is true, defs
 /// that are not dead are skipped. If TargetRegisterInfo is non-null, then it
 /// also checks if there is a def of a super-register.
-int
-MachineInstr::findRegisterDefOperandIdx(Register Reg, bool isDead, bool Overlap,
-                                        const TargetRegisterInfo *TRI) const {
+int MachineInstr::findRegisterDefOperandIdx(Register Reg,
+                                            const TargetRegisterInfo *TRI,
+                                            bool isDead, bool Overlap) const {
   bool isPhys = Reg.isPhysical();
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = getOperand(i);
@@ -1252,7 +1293,7 @@ void MachineInstr::substituteRegister(Register FromReg, Register ToReg,
 /// isSafeToMove - Return true if it is safe to move this instruction. If
 /// SawStore is set to true, it means that there is a store (or call) between
 /// the instruction's location and its intended destination.
-bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
+bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Ignore stuff that we obviously can't move.
   //
   // Treat volatile loads as stores. This is not strictly necessary for
@@ -1302,10 +1343,11 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   int64_t OffsetB = MMOb->getOffset();
   int64_t MinOffset = std::min(OffsetA, OffsetB);
 
-  uint64_t WidthA = MMOa->getSize();
-  uint64_t WidthB = MMOb->getSize();
-  bool KnownWidthA = WidthA != MemoryLocation::UnknownSize;
-  bool KnownWidthB = WidthB != MemoryLocation::UnknownSize;
+  LocationSize WidthA = MMOa->getSize();
+  LocationSize WidthB = MMOb->getSize();
+  bool KnownWidthA = WidthA.hasValue();
+  bool KnownWidthB = WidthB.hasValue();
+  bool BothMMONonScalable = !WidthA.isScalable() && !WidthB.isScalable();
 
   const Value *ValA = MMOa->getValue();
   const Value *ValB = MMOb->getValue();
@@ -1321,11 +1363,13 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
       SameVal = true;
   }
 
-  if (SameVal) {
+  if (SameVal && BothMMONonScalable) {
     if (!KnownWidthA || !KnownWidthB)
       return true;
     int64_t MaxOffset = std::max(OffsetA, OffsetB);
-    int64_t LowWidth = (MinOffset == OffsetA) ? WidthA : WidthB;
+    int64_t LowWidth = (MinOffset == OffsetA)
+                           ? WidthA.getValue().getKnownMinValue()
+                           : WidthB.getValue().getKnownMinValue();
     return (MinOffset + LowWidth > MaxOffset);
   }
 
@@ -1338,15 +1382,29 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   assert((OffsetA >= 0) && "Negative MachineMemOperand offset");
   assert((OffsetB >= 0) && "Negative MachineMemOperand offset");
 
+  // If Scalable Location Size has non-zero offset, Width + Offset does not work
+  // at the moment
+  if ((WidthA.isScalable() && OffsetA > 0) ||
+      (WidthB.isScalable() && OffsetB > 0))
+    return true;
+
   int64_t OverlapA =
-      KnownWidthA ? WidthA + OffsetA - MinOffset : MemoryLocation::UnknownSize;
+      KnownWidthA ? WidthA.getValue().getKnownMinValue() + OffsetA - MinOffset
+                  : MemoryLocation::UnknownSize;
   int64_t OverlapB =
-      KnownWidthB ? WidthB + OffsetB - MinOffset : MemoryLocation::UnknownSize;
+      KnownWidthB ? WidthB.getValue().getKnownMinValue() + OffsetB - MinOffset
+                  : MemoryLocation::UnknownSize;
+
+  LocationSize LocA = (WidthA.isScalable() || !KnownWidthA)
+                          ? WidthA
+                          : LocationSize::precise(OverlapA);
+  LocationSize LocB = (WidthB.isScalable() || !KnownWidthB)
+                          ? WidthB
+                          : LocationSize::precise(OverlapB);
 
   return !AA->isNoAlias(
-      MemoryLocation(ValA, OverlapA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
-      MemoryLocation(ValB, OverlapB,
-                     UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
+      MemoryLocation(ValA, LocA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
+      MemoryLocation(ValB, LocB, UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
 }
 
 bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
@@ -1689,6 +1747,10 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (getFlag(MachineInstr::NonNeg))
+    OS << "nneg ";
+  if (getFlag(MachineInstr::Disjoint))
+    OS << "disjoint ";
 
   // Print the opcode name.
   if (TII)
@@ -1842,6 +1904,14 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
     OS << " pcsections ";
     PCSections->printAsOperand(OS, MST);
+  }
+  if (MDNode *MMRA = getMMRAMetadata()) {
+    if (!FirstOp) {
+      FirstOp = false;
+      OS << ',';
+    }
+    OS << " mmra ";
+    MMRA->printAsOperand(OS, MST);
   }
   if (uint32_t CFIType = getCFIType()) {
     if (!FirstOp)
@@ -2073,7 +2143,7 @@ void MachineInstr::setRegisterDefReadUndef(Register Reg, bool IsUndef) {
 void MachineInstr::addRegisterDefined(Register Reg,
                                       const TargetRegisterInfo *RegInfo) {
   if (Reg.isPhysical()) {
-    MachineOperand *MO = findRegisterDefOperand(Reg, false, false, RegInfo);
+    MachineOperand *MO = findRegisterDefOperand(Reg, RegInfo, false, false);
     if (MO)
       return;
   } else {
@@ -2146,7 +2216,7 @@ void MachineInstr::emitError(StringRef Msg) const {
 
   if (const MachineBasicBlock *MBB = getParent())
     if (const MachineFunction *MF = MBB->getParent())
-      return MF->getMMI().getModule()->getContext().emitError(LocCookie, Msg);
+      return MF->getFunction().getContext().emitError(LocCookie, Msg);
   report_fatal_error(Msg);
 }
 
@@ -2357,15 +2427,16 @@ using MMOList = SmallVector<const MachineMemOperand *, 2>;
 static LocationSize getSpillSlotSize(const MMOList &Accesses,
                                      const MachineFrameInfo &MFI) {
   uint64_t Size = 0;
-  for (const auto *A : Accesses)
+  for (const auto *A : Accesses) {
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
                 ->getFrameIndex())) {
-      uint64_t S = A->getSize();
-      if (S == ~UINT64_C(0))
+      LocationSize S = A->getSize();
+      if (!S.hasValue())
         return LocationSize::beforeOrAfterPointer();
-      Size += S;
+      Size += S.getValue();
     }
+  }
   return Size;
 }
 
@@ -2374,10 +2445,8 @@ MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
   int FI;
   if (TII->isStoreToStackSlotPostFE(*this, FI)) {
     const MachineFrameInfo &MFI = getMF()->getFrameInfo();
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      uint64_t Size = (*memoperands_begin())->getSize();
-      return Size == ~UINT64_C(0) ? LocationSize::beforeOrAfterPointer() : Size;
-    }
+    if (MFI.isSpillSlotObjectIndex(FI))
+      return (*memoperands_begin())->getSize();
   }
   return std::nullopt;
 }
@@ -2395,10 +2464,8 @@ MachineInstr::getRestoreSize(const TargetInstrInfo *TII) const {
   int FI;
   if (TII->isLoadFromStackSlotPostFE(*this, FI)) {
     const MachineFrameInfo &MFI = getMF()->getFrameInfo();
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      uint64_t Size = (*memoperands_begin())->getSize();
-      return Size == ~UINT64_C(0) ? LocationSize::beforeOrAfterPointer() : Size;
-    }
+    if (MFI.isSpillSlotObjectIndex(FI))
+      return (*memoperands_begin())->getSize();
   }
   return std::nullopt;
 }

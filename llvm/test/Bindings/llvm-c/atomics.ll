@@ -36,6 +36,31 @@ define void @atomic_load_store(ptr %word) {
   ret void
 }
 
+define void @atomic_rmw_ops(ptr %p, i32 %i, float %f) {
+  ; Test all atomicrmw operations
+  %a.xchg      = atomicrmw xchg      ptr %p, i32 %i acq_rel, align 8
+  %a.add       = atomicrmw add       ptr %p, i32 %i acq_rel, align 8
+  %a.sub       = atomicrmw sub       ptr %p, i32 %i acq_rel, align 8
+  %a.and       = atomicrmw and       ptr %p, i32 %i acq_rel, align 8
+  %a.nand      = atomicrmw nand      ptr %p, i32 %i acq_rel, align 8
+  %a.or        = atomicrmw or        ptr %p, i32 %i acq_rel, align 8
+  %a.xor       = atomicrmw xor       ptr %p, i32 %i acq_rel, align 8
+  %a.max       = atomicrmw max       ptr %p, i32 %i acq_rel, align 8
+  %a.min       = atomicrmw min       ptr %p, i32 %i acq_rel, align 8
+  %a.umax      = atomicrmw umax      ptr %p, i32 %i acq_rel, align 8
+  %a.umin      = atomicrmw umin      ptr %p, i32 %i acq_rel, align 8
+
+  %a.fadd      = atomicrmw fadd      ptr %p, float %f acq_rel, align 8
+  %a.fsub      = atomicrmw fsub      ptr %p, float %f acq_rel, align 8
+  %a.fmax      = atomicrmw fmax      ptr %p, float %f acq_rel, align 8
+  %a.fmin      = atomicrmw fmin      ptr %p, float %f acq_rel, align 8
+
+  %a.uinc_wrap = atomicrmw uinc_wrap ptr %p, i32 %i acq_rel, align 8
+  %a.udec_wrap = atomicrmw udec_wrap ptr %p, i32 %i acq_rel, align 8
+
+  ret void
+}
+
 define i32 @main() {
   %1 = alloca i32, align 4
   %2 = cmpxchg ptr %1, i32 2, i32 3 seq_cst acquire

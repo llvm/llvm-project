@@ -103,7 +103,7 @@ public:
   // Ensure that RingSize, RingMask and TabMask are set up in a way that
   // all accesses are within range of BufSize.
   bool isValid(uptr BufSize) const {
-    if (RingSize == 0 || !isPowerOfTwo(RingSize))
+    if (!isPowerOfTwo(RingSize))
       return false;
     uptr RingBytes = sizeof(atomic_u64) * RingSize;
     if (RingMask + 1 != RingSize)
@@ -198,6 +198,10 @@ public:
 
   void enable() NO_THREAD_SAFETY_ANALYSIS { RingEndMu.unlock(); }
 };
+
+// We need StackDepot to be aligned to 8-bytes so the ring we store after
+// is correctly assigned.
+static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
 
 } // namespace scudo
 

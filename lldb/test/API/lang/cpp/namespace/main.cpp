@@ -127,6 +127,22 @@ struct Foo {
 };
 } // namespace NS2
 
+namespace {
+namespace InAnon1 {
+int var_in_anon = 10;
+namespace {
+inline namespace inline_ns {
+int var_in_anon = 15;
+namespace InAnon2 {
+namespace {
+int var_in_anon = 5;
+} // namespace
+} // namespace InAnon2
+} // namespace inline_ns
+} // namespace
+} // namespace InAnon1
+} // namespace
+
 int
 main (int argc, char const *argv[])
 {
@@ -140,5 +156,6 @@ main (int argc, char const *argv[])
     ::B::Bar bb;
     A::B::Bar ab;
     return Foo::myfunc(12) + bb.x() + ab.y() + NS1::NS2::Foo{}.bar() +
-           NS2::Foo{}.bar();
+           NS2::Foo{}.bar() + InAnon1::var_in_anon +
+           InAnon1::InAnon2::var_in_anon + InAnon1::inline_ns::var_in_anon;
 }

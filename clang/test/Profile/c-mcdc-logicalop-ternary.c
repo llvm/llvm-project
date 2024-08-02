@@ -9,7 +9,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // NOMCDC-NOT: __profbm_test
 
 // MCDC BOOKKEEPING.
-// MCDC: @__profbm_test = private global [3 x i8] zeroinitializer
+// MCDC: @__profbm_test = private global [2 x i8] zeroinitializer
 
 // ALLOCATE MCDC TEMP AND ZERO IT.
 // MCDC-LABEL: @test(
@@ -18,13 +18,14 @@ int test(int a, int b, int c, int d, int e, int f) {
 
 // TERNARY TRUE SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 0.
 // MCDC-LABEL: cond.true:
-// MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
 // MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
 
@@ -34,25 +35,27 @@ int test(int a, int b, int c, int d, int e, int f) {
 // TERNARY TRUE YIELDS TERNARY LHS LOGICAL-AND.
 // TERNARY LHS LOGICAL-AND SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 1.
 // MCDC-LABEL: land.end:
-// MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
-// MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
-// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 1), i32 %[[LAB1]]
-// MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
-// MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
-// MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
-// MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
-// MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
-
-// TERNARY FALSE SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 0.
-// MCDC-LABEL: cond.false:
-// MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 3
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
+// MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
+
+// TERNARY FALSE SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 0.
+// MCDC-LABEL: cond.false:
+// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
+// MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
+// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
+// MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
+// MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
+// MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
 // MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
 
@@ -62,12 +65,13 @@ int test(int a, int b, int c, int d, int e, int f) {
 // TERNARY FALSE YIELDS TERNARY RHS LOGICAL-OR.
 // TERNARY RHS LOGICAL-OR SHOULD UPDATE THE BITMAP WITH RESULT AT ELEMENT 2.
 // MCDC-LABEL: lor.end:
-// MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
+// MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 6
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
-// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 2), i32 %[[LAB1]]
+// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
 // MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1

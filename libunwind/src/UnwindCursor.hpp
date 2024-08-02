@@ -36,7 +36,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
-#include <sys/uio.h>
 #include <unistd.h>
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
@@ -2416,7 +2415,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     }
 
     // Reset LR in the current context.
-    newRegisters.setLR(NULL);
+    newRegisters.setLR(static_cast<uintptr_t>(NULL));
 
     _LIBUNWIND_TRACE_UNWINDING(
         "Extract info from lastStack=%p, returnAddress=%p",
@@ -2588,6 +2587,15 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     pc -= 4;
 #else
     --pc;
+#endif
+
+#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)) &&            \
+    !defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  // In case of this is frame of signal handler, the IP saved in the signal
+  // handler points to first non-executed instruction, while FDE/CIE expects IP
+  // to be after the first non-executed instruction.
+  if (_isSignalFrame)
+    ++pc;
 #endif
 
   // Ask address space object to find unwind sections for this pc.

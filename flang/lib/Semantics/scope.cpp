@@ -56,7 +56,7 @@ Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
 
 template <typename T>
 static std::vector<common::Reference<T>> GetSortedSymbols(
-    std::map<SourceName, MutableSymbolRef> symbols) {
+    const std::map<SourceName, MutableSymbolRef> &symbols) {
   std::vector<common::Reference<T>> result;
   result.reserve(symbols.size());
   for (auto &pair : symbols) {

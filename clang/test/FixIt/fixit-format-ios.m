@@ -1,5 +1,5 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -triple thumbv7-apple-ios8.0.0 -fsyntax-only -Wformat-pedantic -fixit %t
+// RUN: %clang_cc1 -triple thumbv7-apple-ios8.0.0 -Wformat-pedantic -fixit %t
 // RUN: grep -v CHECK %t | FileCheck %s
 
 int printf(const char * restrict, ...);

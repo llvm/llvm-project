@@ -11,6 +11,8 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -22,7 +24,7 @@ static lldb::addr_t GetCoroFramePtrFromHandle(ValueObjectSP valobj_sp) {
 
   // We expect a single pointer in the `coroutine_handle` class.
   // We don't care about its name.
-  if (valobj_sp->GetNumChildren() != 1)
+  if (valobj_sp->GetNumChildrenIgnoringErrors() != 1)
     return LLDB_INVALID_ADDRESS;
   ValueObjectSP ptr_sp(valobj_sp->GetChildAtIndex(0));
   if (!ptr_sp)
@@ -104,8 +106,8 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     ~StdlibCoroutineHandleSyntheticFrontEnd() = default;
 
-size_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    StdlibCoroutineHandleSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
     return 0;
 
@@ -113,7 +115,7 @@ size_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   switch (idx) {
   case 0:
     return m_resume_ptr_sp;

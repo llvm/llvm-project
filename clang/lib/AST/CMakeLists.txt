@@ -65,8 +65,7 @@ add_clang_library(clangAST
   FormatString.cpp
   InheritViz.cpp
   Interp/ByteCodeEmitter.cpp
-  Interp/ByteCodeExprGen.cpp
-  Interp/ByteCodeStmtGen.cpp
+  Interp/Compiler.cpp
   Interp/Context.cpp
   Interp/Descriptor.cpp
   Interp/Disasm.cpp
@@ -76,6 +75,7 @@ add_clang_library(clangAST
   Interp/InterpBuiltin.cpp
   Interp/Floating.cpp
   Interp/EvaluationResult.cpp
+  Interp/DynamicAllocator.cpp
   Interp/Interp.cpp
   Interp/InterpBlock.cpp
   Interp/InterpFrame.cpp
@@ -87,6 +87,7 @@ add_clang_library(clangAST
   Interp/Record.cpp
   Interp/Source.cpp
   Interp/State.cpp
+  Interp/MemberPointer.cpp
   Interp/InterpShared.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
@@ -98,6 +99,7 @@ add_clang_library(clangAST
   NSAPI.cpp
   ODRDiagsEmitter.cpp
   ODRHash.cpp
+  OpenACCClause.cpp
   OpenMPClause.cpp
   OSLog.cpp
   ParentMap.cpp
@@ -137,4 +139,6 @@ add_clang_library(clangAST
   omp_gen
   ClangDriverOptions
   intrinsics_gen
+  # These generated headers are included transitively.
+  AArch64TargetParserTableGen
   )

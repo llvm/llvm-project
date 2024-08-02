@@ -43,9 +43,9 @@ class LibstdcppMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibstdcppMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -64,9 +64,9 @@ class LibStdcppSharedPtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibStdcppSharedPtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -132,12 +132,13 @@ lldb::ChildCacheState LibstdcppMapIteratorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eReuse;
 }
 
-size_t LibstdcppMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t>
+LibstdcppMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
   return 2;
 }
 
 lldb::ValueObjectSP
-LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_address != 0 && m_pair_type) {
     if (!m_pair_sp)
       m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
@@ -219,10 +220,13 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t VectorIteratorSyntheticFrontEnd::CalculateNumChildren() { return 1; }
+llvm::Expected<uint32_t>
+VectorIteratorSyntheticFrontEnd::CalculateNumChildren() {
+  return 1;
+}
 
 lldb::ValueObjectSP
-VectorIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx == 0)
     return m_item_sp;
   return lldb::ValueObjectSP();
@@ -371,10 +375,13 @@ LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
     Update();
 }
 
-size_t LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() { return 1; }
+llvm::Expected<uint32_t>
+LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
+  return 1;
+}
 
 lldb::ValueObjectSP
-LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx == 0)
     return m_ptr_obj->GetSP();
   if (idx == 1) {

@@ -213,7 +213,7 @@ define void @maxvisitor(i32 %limit, ptr %base) nounwind {
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[VAL]], [[MAX]]
 ; CHECK-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    br label [[LOOP_INC]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LOOP_INC]]

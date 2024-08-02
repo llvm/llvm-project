@@ -18,17 +18,20 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Debug.h"
 #include <numeric>
 #include <optional>
 #include <type_traits>
 
 using namespace mlir;
 using namespace mlir::affine;
+
+#define DEBUG_TYPE "affine-loop-analysis"
 
 /// Returns the trip count of the loop as an affine expression if the latter is
 /// expressible as an affine expression, and nullptr otherwise. The trip count
@@ -47,7 +50,8 @@ void mlir::affine::getTripCountMapAndOperands(
     loopSpan = ub - lb;
     if (loopSpan < 0)
       loopSpan = 0;
-    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
+    *tripCountMap = AffineMap::getConstantMap(
+        llvm::divideCeilSigned(loopSpan, step), context);
     tripCountOperands->clear();
     return;
   }
@@ -145,44 +149,35 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   return *gcd;
 }
 
-/// Given an induction variable `iv` of type AffineForOp and an access `index`
-/// of type index, returns `true` if `index` is independent of `iv` and
-/// false otherwise. The determination supports composition with at most one
-/// AffineApplyOp. The 'at most one AffineApplyOp' comes from the fact that
-/// the composition of AffineApplyOp needs to be canonicalized by construction
-/// to avoid writing code that composes arbitrary numbers of AffineApplyOps
-/// everywhere. To achieve this, at the very least, the compose-affine-apply
-/// pass must have been run.
+/// Given an affine.for `iv` and an access `index` of type index, returns `true`
+/// if `index` is independent of `iv` and false otherwise.
 ///
-/// Prerequisites:
-///   1. `iv` and `index` of the proper type;
-///   2. at most one reachable AffineApplyOp from index;
-///
-/// Returns false in cases with more than one AffineApplyOp, this is
-/// conservative.
+/// Prerequisites: `iv` and `index` of the proper type;
 static bool isAccessIndexInvariant(Value iv, Value index) {
-  assert(isAffineForInductionVar(iv) && "iv must be a AffineForOp");
-  assert(isa<IndexType>(index.getType()) && "index must be of IndexType");
-  SmallVector<Operation *, 4> affineApplyOps;
-  getReachableAffineApplyOps({index}, affineApplyOps);
-
-  if (affineApplyOps.empty()) {
-    // Pointer equality test because of Value pointer semantics.
-    return index != iv;
-  }
-
-  if (affineApplyOps.size() > 1) {
-    affineApplyOps[0]->emitRemark(
-        "CompositionAffineMapsPass must have been run: there should be at most "
-        "one AffineApplyOp, returning false conservatively.");
-    return false;
-  }
-
-  auto composeOp = cast<AffineApplyOp>(affineApplyOps[0]);
-  // We need yet another level of indirection because the `dim` index of the
-  // access may not correspond to the `dim` index of composeOp.
-  return !composeOp.getAffineValueMap().isFunctionOf(0, iv);
+  assert(isAffineForInductionVar(iv) && "iv must be an affine.for iv");
+  assert(isa<IndexType>(index.getType()) && "index must be of 'index' type");
+  auto map = AffineMap::getMultiDimIdentityMap(/*numDims=*/1, iv.getContext());
+  SmallVector<Value> operands = {index};
+  AffineValueMap avm(map, operands);
+  avm.composeSimplifyAndCanonicalize();
+  return !avm.isFunctionOf(0, iv);
 }
+
+// Pre-requisite: Loop bounds should be in canonical form.
+template <typename LoadOrStoreOp>
+bool mlir::affine::isInvariantAccess(LoadOrStoreOp memOp, AffineForOp forOp) {
+  AffineValueMap avm(memOp.getAffineMap(), memOp.getMapOperands());
+  avm.composeSimplifyAndCanonicalize();
+  return !llvm::is_contained(avm.getOperands(), forOp.getInductionVar());
+}
+
+// Explicitly instantiate the template so that the compiler knows we need them.
+template bool mlir::affine::isInvariantAccess(AffineReadOpInterface,
+                                              AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineWriteOpInterface,
+                                              AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineLoadOp, AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineStoreOp, AffineForOp);
 
 DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
                                                    ArrayRef<Value> indices) {
@@ -396,5 +391,60 @@ bool mlir::affine::isOpwiseShiftValid(AffineForOp forOp,
       }
     }
   }
+  return true;
+}
+
+bool mlir::affine::isTilingValid(ArrayRef<AffineForOp> loops) {
+  assert(!loops.empty() && "no original loops provided");
+
+  // We first find out all dependences we intend to check.
+  SmallVector<Operation *, 8> loadAndStoreOps;
+  loops[0]->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      loadAndStoreOps.push_back(op);
+  });
+
+  unsigned numOps = loadAndStoreOps.size();
+  unsigned numLoops = loops.size();
+  for (unsigned d = 1; d <= numLoops + 1; ++d) {
+    for (unsigned i = 0; i < numOps; ++i) {
+      Operation *srcOp = loadAndStoreOps[i];
+      MemRefAccess srcAccess(srcOp);
+      for (unsigned j = 0; j < numOps; ++j) {
+        Operation *dstOp = loadAndStoreOps[j];
+        MemRefAccess dstAccess(dstOp);
+
+        SmallVector<DependenceComponent, 2> depComps;
+        DependenceResult result = checkMemrefAccessDependence(
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
+            &depComps);
+
+        // Skip if there is no dependence in this case.
+        if (!hasDependence(result))
+          continue;
+
+        // Check whether there is any negative direction vector in the
+        // dependence components found above, which means that dependence is
+        // violated by the default hyper-rect tiling method.
+        LLVM_DEBUG(llvm::dbgs() << "Checking whether tiling legality violated "
+                                   "for dependence at depth: "
+                                << Twine(d) << " between:\n";);
+        LLVM_DEBUG(srcAccess.opInst->dump());
+        LLVM_DEBUG(dstAccess.opInst->dump());
+        for (const DependenceComponent &depComp : depComps) {
+          if (depComp.lb.has_value() && depComp.ub.has_value() &&
+              *depComp.lb < *depComp.ub && *depComp.ub < 0) {
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Dependence component lb = " << Twine(*depComp.lb)
+                       << " ub = " << Twine(*depComp.ub)
+                       << " is negative  at depth: " << Twine(d)
+                       << " and thus violates the legality rule.\n");
+            return false;
+          }
+        }
+      }
+    }
+  }
+
   return true;
 }

@@ -498,7 +498,7 @@ public:
                ProfileSummaryInfo *PSI = nullptr,
                OptimizationRemarkEmitter *ORE = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
-        PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()), ORE(ORE),
+        PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
         CandidateCall(Call) {}
 
   InlineResult analyze();
@@ -701,21 +701,26 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
                         bool DefaultDestUndefined) override {
-    if (!DefaultDestUndefined)
-      addCost(2 * InstrCost);
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
+      // Suppose a default branch includes one compare and one conditional
+      // branch if it's reachable.
+      if (!DefaultDestUndefined)
+        addCost(2 * InstrCost);
+      // Suppose a jump table requires one load and one jump instruction.
       int64_t JTCost =
-          static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
+          static_cast<int64_t>(JumpTableSize) * InstrCost + 2 * InstrCost;
       addCost(JTCost);
       return;
     }
 
     if (NumCaseCluster <= 3) {
       // Suppose a comparison includes one compare and one conditional branch.
-      addCost(NumCaseCluster * 2 * InstrCost);
+      // We can reduce a set of instructions if the default branch is
+      // undefined.
+      addCost((NumCaseCluster - DefaultDestUndefined) * 2 * InstrCost);
       return;
     }
 
@@ -800,7 +805,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         return false;
     } else {
       // Otherwise, require instrumentation profile.
-      if (!(PSI->hasInstrumentationProfile() || PSI->hasSampleProfile()))
+      if (!PSI->hasInstrumentationProfile())
         return false;
     }
 
@@ -1152,7 +1157,7 @@ private:
   // FIXME: These constants are taken from the heuristic-based cost visitor.
   // These should be removed entirely in a later revision to avoid reliance on
   // heuristics in the ML inliner.
-  static constexpr int JTCostMultiplier = 4;
+  static constexpr int JTCostMultiplier = 2;
   static constexpr int CaseClusterCostMultiplier = 2;
   static constexpr int SwitchDefaultDestCostMultiplier = 2;
   static constexpr int SwitchCostMultiplier = 2;
@@ -1235,11 +1240,10 @@ private:
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
                         bool DefaultDestUndefined) override {
-    if (!DefaultDestUndefined)
-      increment(InlineCostFeatureIndex::switch_default_dest_penalty,
-                SwitchDefaultDestCostMultiplier * InstrCost);
-
     if (JumpTableSize) {
+      if (!DefaultDestUndefined)
+        increment(InlineCostFeatureIndex::switch_default_dest_penalty,
+                  SwitchDefaultDestCostMultiplier * InstrCost);
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
                        JTCostMultiplier * InstrCost;
       increment(InlineCostFeatureIndex::jump_table_penalty, JTCost);
@@ -1248,7 +1252,8 @@ private:
 
     if (NumCaseCluster <= 3) {
       increment(InlineCostFeatureIndex::case_cluster_penalty,
-                NumCaseCluster * CaseClusterCostMultiplier * InstrCost);
+                (NumCaseCluster - DefaultDestUndefined) *
+                    CaseClusterCostMultiplier * InstrCost);
       return;
     }
 
@@ -2046,13 +2051,11 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
     if (RHSBase && LHSBase == RHSBase) {
       // We have common bases, fold the icmp to a constant based on the
       // offsets.
-      Constant *CLHS = ConstantInt::get(LHS->getContext(), LHSOffset);
-      Constant *CRHS = ConstantInt::get(RHS->getContext(), RHSOffset);
-      if (Constant *C = ConstantExpr::getICmp(I.getPredicate(), CLHS, CRHS)) {
-        SimplifiedValues[&I] = C;
-        ++NumConstantPtrCmps;
-        return true;
-      }
+      SimplifiedValues[&I] = ConstantInt::getBool(
+          I.getType(),
+          ICmpInst::compare(LHSOffset, RHSOffset, I.getPredicate()));
+      ++NumConstantPtrCmps;
+      return true;
     }
   }
 
@@ -2641,8 +2644,6 @@ ConstantInt *CallAnalyzer::stripAndComputeInBoundsConstantOffsets(Value *&V) {
       if (!GEP->isInBounds() || !accumulateGEPOffset(*GEP, Offset))
         return nullptr;
       V = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
-      V = cast<Operator>(V)->getOperand(0);
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
       if (GA->isInterposable())
         break;
@@ -2996,7 +2997,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // alloca, the inlined code would need to be adjusted to handle that the
   // argument is in the alloca address space (so it is a little bit complicated
   // to solve).
-  unsigned AllocaAS = Callee->getParent()->getDataLayout().getAllocaAddrSpace();
+  unsigned AllocaAS = Callee->getDataLayout().getAllocaAddrSpace();
   for (unsigned I = 0, E = Call.arg_size(); I != E; ++I)
     if (Call.isByValArgument(I)) {
       PointerType *PTy = cast<PointerType>(Call.getArgOperand(I)->getType());

@@ -20,7 +20,7 @@
   .text
 #endif
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__)
+#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
 
 #if defined(__i386__)
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
@@ -1169,7 +1169,11 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
     ILOAD x\i, (RISCV_ISIZE * \i)(a0)
   .endr
   // skip a0 for now
+#if defined(__riscv_32e)
+  .irp i,11,12,13,14,15
+#else
   .irp i,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+#endif
     ILOAD x\i, (RISCV_ISIZE * \i)(a0)
   .endr
   ILOAD    x10, (RISCV_ISIZE * 10)(a0)   // restore a0
@@ -1232,7 +1236,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
 
 #endif
 
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
 
 NO_EXEC_STACK_DIRECTIVE
 

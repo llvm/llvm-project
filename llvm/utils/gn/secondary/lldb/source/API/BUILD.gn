@@ -17,6 +17,7 @@ target(liblldb_type, "liblldb") {
 
   output_name = "liblldb"  # XXX lib prefix?
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  public_deps = [ "//lldb/include/lldb/API:SBLanguages" ]
   deps = [
     "//lldb/include/lldb/Host:Config",
     "//lldb/source/Breakpoint",
@@ -39,6 +40,8 @@ target(liblldb_type, "liblldb") {
   include_dirs = [ ".." ]
   sources = [
     "SBAddress.cpp",
+    "SBAddressRange.cpp",
+    "SBAddressRangeList.cpp",
     "SBAttachInfo.cpp",
     "SBBlock.cpp",
     "SBBreakpoint.cpp",
@@ -83,6 +86,7 @@ target(liblldb_type, "liblldb") {
     "SBQueue.cpp",
     "SBQueueItem.cpp",
     "SBReproducer.cpp",
+    "SBSaveCoreOptions.cpp",
     "SBScriptObject.cpp",
     "SBSection.cpp",
     "SBSourceManager.cpp",

@@ -33,7 +33,7 @@ StringRef AMDGPURegBankSelect::getPassName() const {
 
 void AMDGPURegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineCycleInfoWrapperPass>();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   // TODO: Preserve DomTree
   RegBankSelect::getAnalysisUsage(AU);
 }
@@ -41,7 +41,7 @@ void AMDGPURegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
 INITIALIZE_PASS_BEGIN(AMDGPURegBankSelect, "amdgpu-" DEBUG_TYPE,
                       "AMDGPU Register Bank Select", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AMDGPURegBankSelect, "amdgpu-" DEBUG_TYPE,
                     "AMDGPU Register Bank Select", false, false)
 
@@ -63,7 +63,8 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MachineCycleInfo &CycleInfo =
       getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  MachineDominatorTree &DomTree = getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree &DomTree =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   MachineUniformityInfo Uniformity =
       computeMachineUniformityInfo(MF, CycleInfo, DomTree.getBase(),

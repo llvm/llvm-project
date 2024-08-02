@@ -14,12 +14,13 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Exceptional cases for cosf.
 static constexpr size_t N_EXCEPTS = 6;
@@ -42,7 +43,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> COSF_EXCEPTS{{
 
 LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   xbits.set_sign(Sign::POS);
 
@@ -134,4 +135,4 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
       sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

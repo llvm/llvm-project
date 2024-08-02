@@ -38,6 +38,15 @@ target:
 # CHECK-OBJ: jalr a0, 0xa(a1)
 .insn i  JALR,  0, a0, 10(a1)
 
+# CHECK-ASM: .insn i 103, 0, a0, 0(a1)
+# CHECK-ASM: encoding: [0x67,0x85,0x05,0x00]
+# CHECK-OBJ: jalr a0, 0x0(a1)
+.insn i  0x67,  0, a0, (a1)
+# CHECK-ASM: .insn i 103, 0, a0, 0(a1)
+# CHECK-ASM: encoding: [0x67,0x85,0x05,0x00]
+# CHECK-OBJ: jalr a0, 0x0(a1)
+.insn i  JALR,  0, a0, (a1)
+
 # CHECK-ASM: .insn i 3, 0, a0, 4(a1)
 # CHECK-ASM: encoding: [0x03,0x85,0x45,0x00]
 # CHECK-OBJ: lb a0, 0x4(a1)
@@ -46,6 +55,15 @@ target:
 # CHECK-ASM: encoding: [0x03,0x85,0x45,0x00]
 # CHECK-OBJ: lb a0, 0x4(a1)
 .insn i   LOAD,  0, a0, 4(a1)
+
+# CHECK-ASM: .insn i 3, 0, a0, 0(a1)
+# CHECK-ASM: encoding: [0x03,0x85,0x05,0x00]
+# CHECK-OBJ: lb a0, 0x0(a1)
+.insn i   0x3,  0, a0, (a1)
+# CHECK-ASM: .insn i 3, 0, a0, 0(a1)
+# CHECK-ASM: encoding: [0x03,0x85,0x05,0x00]
+# CHECK-OBJ: lb a0, 0x0(a1)
+.insn i   LOAD,  0, a0, (a1)
 
 # CHECK-ASM: .insn b 99, 0, a0, a1, target
 # CHECK-ASM: [0x63'A',A,0xb5'A',A]
@@ -73,6 +91,15 @@ target:
 # CHECK-ASM: encoding: [0x23,0x82,0xa5,0x00]
 # CHECK-OBJ: sb a0, 0x4(a1)
 .insn s  STORE,  0, a0, 4(a1)
+
+# CHECK-ASM: .insn s 35, 0, a0, 0(a1)
+# CHECK-ASM: encoding: [0x23,0x80,0xa5,0x00]
+# CHECK-OBJ: sb a0, 0x0(a1)
+.insn s  0x23,  0, a0, (a1)
+# CHECK-ASM: .insn s 35, 0, a0, 0(a1)
+# CHECK-ASM: encoding: [0x23,0x80,0xa5,0x00]
+# CHECK-OBJ: sb a0, 0x0(a1)
+.insn s  STORE,  0, a0, (a1)
 
 # CHECK-ASM: .insn u 55, a0, 4095
 # CHECK-ASM: encoding: [0x37,0xf5,0xff,0x00]
@@ -127,3 +154,13 @@ target:
 # CHECK-ASM: encoding: [0x03,0xd3,0x03,0x80]
 # CHECK-OBJ: lhu t1, -0x800(t2)
 .insn i LOAD, 0x5, x6, %lo(2048)(x7)
+
+# CHECK-ASM: .insn 0x4, 19
+# CHECK-ASM: encoding: [0x13,0x00,0x00,0x00]
+# CHECK-OBJ: addi zero, zero, 0x0
+.insn 0x13
+
+# CHECK-ASM: .insn 0x4, 19
+# CHECK-ASM: encoding: [0x13,0x00,0x00,0x00]
+# CHECK-OBJ: addi zero, zero, 0x0
+.insn 0x4, 0x13

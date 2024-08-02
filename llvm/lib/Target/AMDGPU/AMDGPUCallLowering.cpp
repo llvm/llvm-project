@@ -260,7 +260,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     assignValueToAddress(ValVReg, Addr, MemTy, MPO, VA);
   }
 };
-}
+} // anonymous namespace
 
 AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
   : CallLowering(&TLI) {
@@ -416,7 +416,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
                                         Align Alignment) const {
   MachineFunction &MF = B.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
 
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -516,7 +516,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -598,7 +598,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -1301,6 +1301,9 @@ bool AMDGPUCallLowering::lowerTailCall(
   if (!handleAssignments(Handler, OutArgs, CCInfo, ArgLocs, MIRBuilder))
     return false;
 
+  if (Info.ConvergenceCtrlToken) {
+    MIB.addUse(Info.ConvergenceCtrlToken, RegState::Implicit);
+  }
   handleImplicitCallArguments(MIRBuilder, MIB, ST, *FuncInfo, CalleeCC,
                               ImplicitArgRegs);
 
@@ -1350,7 +1353,7 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
 
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // The function to jump to is actually the first argument, so we'll change the
   // Callee and other info to match that before using our existing helper.
@@ -1404,7 +1407,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs)
@@ -1483,6 +1486,9 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
+  if (Info.ConvergenceCtrlToken) {
+    MIB.addUse(Info.ConvergenceCtrlToken, RegState::Implicit);
+  }
   handleImplicitCallArguments(MIRBuilder, MIB, ST, *MFI, Info.CallConv,
                               ImplicitArgRegs);
 

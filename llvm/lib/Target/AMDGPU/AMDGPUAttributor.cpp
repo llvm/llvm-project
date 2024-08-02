@@ -14,6 +14,7 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CycleAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -24,7 +25,7 @@
 
 namespace llvm {
 void initializeCycleInfoWrapperPassPass(PassRegistry &);
-}
+} // namespace llvm
 
 using namespace llvm;
 
@@ -332,9 +333,9 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
 
     bool InitialValue = false;
     if (F->hasFnAttribute("uniform-work-group-size"))
-      InitialValue = F->getFnAttribute("uniform-work-group-size")
-                         .getValueAsString()
-                         .equals("true");
+      InitialValue =
+          F->getFnAttribute("uniform-work-group-size").getValueAsString() ==
+          "true";
 
     if (InitialValue)
       indicateOptimisticFixpoint();
@@ -918,6 +919,96 @@ AAAMDWavesPerEU &AAAMDWavesPerEU::createForPosition(const IRPosition &IRP,
   llvm_unreachable("AAAMDWavesPerEU is only valid for function position");
 }
 
+static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
+  for (const auto &CI : IA->ParseConstraints()) {
+    for (StringRef Code : CI.Codes) {
+      Code.consume_front("{");
+      if (Code.starts_with("a"))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+struct AAAMDGPUNoAGPR
+    : public IRAttribute<Attribute::NoUnwind,
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AAAMDGPUNoAGPR> {
+  AAAMDGPUNoAGPR(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  static AAAMDGPUNoAGPR &createForPosition(const IRPosition &IRP,
+                                           Attributor &A) {
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+      return *new (A.Allocator) AAAMDGPUNoAGPR(IRP, A);
+    llvm_unreachable("AAAMDGPUNoAGPR is only valid for function position");
+  }
+
+  void initialize(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    if (F->hasFnAttribute("amdgpu-no-agpr"))
+      indicateOptimisticFixpoint();
+  }
+
+  const std::string getAsStr(Attributor *A) const override {
+    return getAssumed() ? "amdgpu-no-agpr" : "amdgpu-maybe-agpr";
+  }
+
+  void trackStatistics() const override {}
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Use AACallEdges, but then we need a way to inspect asm edges.
+
+    auto CheckForNoAGPRs = [&](Instruction &I) {
+      const auto &CB = cast<CallBase>(I);
+      const Value *CalleeOp = CB.getCalledOperand();
+      const Function *Callee = dyn_cast<Function>(CalleeOp);
+      if (!Callee) {
+        if (const InlineAsm *IA = dyn_cast<InlineAsm>(CalleeOp))
+          return !inlineAsmUsesAGPRs(IA);
+        return false;
+      }
+
+      // Some intrinsics may use AGPRs, but if we have a choice, we are not
+      // required to use AGPRs.
+      if (Callee->isIntrinsic())
+        return true;
+
+      // TODO: Handle callsite attributes
+      const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoAGPR>(
+          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
+      return CalleeInfo && CalleeInfo->getAssumed();
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckForNoAGPRs, *this,
+                                           UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!getAssumed())
+      return ChangeStatus::UNCHANGED;
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "amdgpu-no-agpr")});
+  }
+
+  const std::string getName() const override { return "AAAMDGPUNoAGPR"; }
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUNoAGPRs
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  static const char ID;
+};
+
+const char AAAMDGPUNoAGPR::ID = 0;
+
 static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   for (unsigned I = 0;
@@ -946,13 +1037,26 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
   DenseSet<const char *> Allowed(
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDWavesPerEU::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID});
+       &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID, &AACallEdges::ID,
+       &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
+       &AAUnderlyingObjects::ID, &AAIndirectCallInfo::ID, &AAInstanceInfo::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.Allowed = &Allowed;
   AC.IsModulePass = true;
   AC.DefaultInitializeLiveInternals = false;
+  AC.IndirectCalleeSpecializationCallback =
+      [&TM](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+            Function &Callee, unsigned NumAssumedCallees) {
+        if (AMDGPU::isEntryFunctionCC(Callee.getCallingConv()))
+          return false;
+        // Singleton functions can be specialized.
+        if (NumAssumedCallees == 1)
+          return true;
+        // Otherwise specialize uniform values.
+        const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
+        return TTI.isAlwaysUniform(CB.getCalledOperand());
+      };
   AC.IPOAmendableCB = [](const Function &F) {
     return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
   };
@@ -960,16 +1064,18 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
   Attributor A(Functions, InfoCache, AC);
 
   for (Function &F : M) {
-    if (!F.isIntrinsic()) {
-      A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
-      A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
-      CallingConv::ID CC = F.getCallingConv();
-      if (!AMDGPU::isEntryFunctionCC(CC)) {
-        A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
-        A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
-      } else if (CC == CallingConv::AMDGPU_KERNEL) {
-        addPreloadKernArgHint(F, TM);
-      }
+    if (F.isIntrinsic())
+      continue;
+
+    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
+    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
+    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(F));
+    CallingConv::ID CC = F.getCallingConv();
+    if (!AMDGPU::isEntryFunctionCC(CC)) {
+      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
+      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
+    } else if (CC == CallingConv::AMDGPU_KERNEL) {
+      addPreloadKernArgHint(F, TM);
     }
   }
 

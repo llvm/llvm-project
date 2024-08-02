@@ -61,7 +61,11 @@
 #pragma push_macro("PTX81")
 #pragma push_macro("PTX82")
 #pragma push_macro("PTX83")
-#define PTX83 "ptx83"
+#pragma push_macro("PTX84")
+#pragma push_macro("PTX85")
+#define PTX85 "ptx85"
+#define PTX84 "ptx84|" PTX85
+#define PTX83 "ptx83|" PTX84
 #define PTX82 "ptx82|" PTX83
 #define PTX81 "ptx81|" PTX82
 #define PTX80 "ptx80|" PTX81
@@ -1091,3 +1095,5 @@ TARGET_BUILTIN(__nvvm_getctarank_shared_cluster, "iv*3", "", AND(SM_90,PTX78))
 #pragma pop_macro("PTX81")
 #pragma pop_macro("PTX82")
 #pragma pop_macro("PTX83")
+#pragma pop_macro("PTX84")
+#pragma pop_macro("PTX85")

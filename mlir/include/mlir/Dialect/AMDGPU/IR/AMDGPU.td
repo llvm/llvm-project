@@ -29,23 +29,6 @@ def AMDGPU_Dialect : Dialect {
     "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
-
-  let extraClassDeclaration = [{
-    /// Return true if the given MemRefType has an integer address
-    /// space that matches the ROCDL shared memory address space or
-    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
-    static bool hasSharedMemoryAddressSpace(MemRefType type);
-
-    /// Return true if the given Attribute has an integer address
-    /// space that matches the ROCDL shared memory address space or
-    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
-    static bool isSharedMemoryAddressSpace(Attribute type);
-
-    /// Defines the MemRef memory space attribute numeric value that indicates
-    /// a memref is located in shared memory. This should correspond to the
-    /// value used in ROCDL.
-    static constexpr unsigned kSharedMemoryAddressSpace = 3;
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -441,8 +424,53 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     to complete before execution continues. Therefore, it should be used when
     operations on global memory can be issued far in advance of when their results
     are used (for example, by writing them to LDS).
+
+    WARNING: On architectures that do not support the BackOffBarrier feature,
+    (those which will implement this barrier by emitting inline assembly),
+    use of this operation will impede the usabiliity of memory watches (including
+    breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def AMDGPU_SchedBarrierOpOpt : I32BitEnumAttr<"sched_barrier_opt_enum",
+    "The possible options for scheduling barriers",
+    [
+      I32BitEnumAttrCaseNone<"none">,
+      I32BitEnumAttrCaseBit<"non_mem_non_sideffect", 0>,
+      I32BitEnumAttrCaseBit<"valu", 1>,
+      I32BitEnumAttrCaseBit<"salu", 2>,
+      I32BitEnumAttrCaseBit<"mfma_wmma",  3>,
+      I32BitEnumAttrCaseBit<"all_vmem",  4>,
+      I32BitEnumAttrCaseBit<"vmem_read",  5>,
+      I32BitEnumAttrCaseBit<"vmem_write", 6>,
+      I32BitEnumAttrCaseBit<"all_ds", 7>,
+      I32BitEnumAttrCaseBit<"ds_read", 8>,
+      I32BitEnumAttrCaseBit<"ds_write", 9>,
+      I32BitEnumAttrCaseBit<"transcendental", 10>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_SchedBarrierOpOptAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_SchedBarrierOpOpt,
+  "sched_barrier_opt">{
+   let assemblyFormat = "`<` $value `>`";
+}
+
+def AMDGPU_SchedBarrierOp :
+  AMDGPU_Op<"sched_barrier">,
+  Arguments<(ins  AMDGPU_SchedBarrierOpOptAttr:$opts)>
+  {
+  let summary = "Barrier that limits the backend scheduler of instruction movement";
+  let description = [{
+    `amdgpu.sched_barrier` serves as a barrier that could be
+    configured to restrict movements of instructions through it as
+    defined by sched_barrier_opts.
+  }];
+  let assemblyFormat = [{
+    `allow` `=` $opts attr-dict
+  }];
 }
 
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",

@@ -28,7 +28,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -97,171 +97,6 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
 static cl::opt<bool> DisableStrictNodeMutation("disable-strictnode-mutation",
        cl::desc("Don't mutate strict-float node to a legalize node"),
        cl::init(false), cl::Hidden);
-
-static bool darwinHasSinCos(const Triple &TT) {
-  assert(TT.isOSDarwin() && "should be called with darwin triple");
-  // Don't bother with 32 bit x86.
-  if (TT.getArch() == Triple::x86)
-    return false;
-  // Macos < 10.9 has no sincos_stret.
-  if (TT.isMacOSX())
-    return !TT.isMacOSXVersionLT(10, 9) && TT.isArch64Bit();
-  // iOS < 7.0 has no sincos_stret.
-  if (TT.isiOS())
-    return !TT.isOSVersionLT(7, 0);
-  // Any other darwin such as WatchOS/TvOS is new enough.
-  return true;
-}
-
-void TargetLoweringBase::InitLibcalls(const Triple &TT) {
-#define HANDLE_LIBCALL(code, name) \
-  setLibcallName(RTLIB::code, name);
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-  // Initialize calling conventions to their default.
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
-
-  // Use the f128 variants of math functions on x86_64
-  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
-    setLibcallName(RTLIB::REM_F128, "fmodf128");
-    setLibcallName(RTLIB::FMA_F128, "fmaf128");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-    setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
-    setLibcallName(RTLIB::LOG_F128, "logf128");
-    setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
-    setLibcallName(RTLIB::LOG2_F128, "log2f128");
-    setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
-    setLibcallName(RTLIB::LOG10_F128, "log10f128");
-    setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
-    setLibcallName(RTLIB::EXP_F128, "expf128");
-    setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
-    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-    setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
-    setLibcallName(RTLIB::EXP10_F128, "exp10f128");
-    setLibcallName(RTLIB::SIN_F128, "sinf128");
-    setLibcallName(RTLIB::COS_F128, "cosf128");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-    setLibcallName(RTLIB::POW_F128, "powf128");
-    setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
-    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-    setLibcallName(RTLIB::RINT_F128, "rintf128");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-    setLibcallName(RTLIB::ROUND_F128, "roundf128");
-    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
-    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
-    setLibcallName(RTLIB::FMIN_F128, "fminf128");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-    setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
-    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
-  }
-
-  // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
-  if (TT.isPPC()) {
-    setLibcallName(RTLIB::ADD_F128, "__addkf3");
-    setLibcallName(RTLIB::SUB_F128, "__subkf3");
-    setLibcallName(RTLIB::MUL_F128, "__mulkf3");
-    setLibcallName(RTLIB::DIV_F128, "__divkf3");
-    setLibcallName(RTLIB::POWI_F128, "__powikf2");
-    setLibcallName(RTLIB::FPEXT_F32_F128, "__extendsfkf2");
-    setLibcallName(RTLIB::FPEXT_F64_F128, "__extenddfkf2");
-    setLibcallName(RTLIB::FPROUND_F128_F32, "__trunckfsf2");
-    setLibcallName(RTLIB::FPROUND_F128_F64, "__trunckfdf2");
-    setLibcallName(RTLIB::FPTOSINT_F128_I32, "__fixkfsi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I64, "__fixkfdi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I128, "__fixkfti");
-    setLibcallName(RTLIB::FPTOUINT_F128_I32, "__fixunskfsi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I64, "__fixunskfdi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I128, "__fixunskfti");
-    setLibcallName(RTLIB::SINTTOFP_I32_F128, "__floatsikf");
-    setLibcallName(RTLIB::SINTTOFP_I64_F128, "__floatdikf");
-    setLibcallName(RTLIB::SINTTOFP_I128_F128, "__floattikf");
-    setLibcallName(RTLIB::UINTTOFP_I32_F128, "__floatunsikf");
-    setLibcallName(RTLIB::UINTTOFP_I64_F128, "__floatundikf");
-    setLibcallName(RTLIB::UINTTOFP_I128_F128, "__floatuntikf");
-    setLibcallName(RTLIB::OEQ_F128, "__eqkf2");
-    setLibcallName(RTLIB::UNE_F128, "__nekf2");
-    setLibcallName(RTLIB::OGE_F128, "__gekf2");
-    setLibcallName(RTLIB::OLT_F128, "__ltkf2");
-    setLibcallName(RTLIB::OLE_F128, "__lekf2");
-    setLibcallName(RTLIB::OGT_F128, "__gtkf2");
-    setLibcallName(RTLIB::UO_F128, "__unordkf2");
-  }
-
-  // A few names are different on particular architectures or environments.
-  if (TT.isOSDarwin()) {
-    // For f16/f32 conversions, Darwin uses the standard naming scheme, instead
-    // of the gnueabi-style __gnu_*_ieee.
-    // FIXME: What about other targets?
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-
-    // Some darwins have an optimized __bzero/bzero function.
-    switch (TT.getArch()) {
-    case Triple::x86:
-    case Triple::x86_64:
-      if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
-        setLibcallName(RTLIB::BZERO, "__bzero");
-      break;
-    case Triple::aarch64:
-    case Triple::aarch64_32:
-      setLibcallName(RTLIB::BZERO, "bzero");
-      break;
-    default:
-      break;
-    }
-
-    if (darwinHasSinCos(TT)) {
-      setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
-      setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
-      if (TT.isWatchABI()) {
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F32,
-                              CallingConv::ARM_AAPCS_VFP);
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
-                              CallingConv::ARM_AAPCS_VFP);
-      }
-    }
-  } else {
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
-  }
-
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-      (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
-    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
-    setLibcallName(RTLIB::SINCOS_F64, "sincos");
-    setLibcallName(RTLIB::SINCOS_F80, "sincosl");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosl");
-    setLibcallName(RTLIB::SINCOS_PPCF128, "sincosl");
-  }
-
-  if (TT.isPS()) {
-    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
-    setLibcallName(RTLIB::SINCOS_F64, "sincos");
-  }
-
-  if (TT.isOSOpenBSD()) {
-    setLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL, nullptr);
-  }
-
-  if (TT.isOSWindows() && !TT.isOSCygMing()) {
-    setLibcallName(RTLIB::LDEXP_F32, nullptr);
-    setLibcallName(RTLIB::LDEXP_F80, nullptr);
-    setLibcallName(RTLIB::LDEXP_F128, nullptr);
-    setLibcallName(RTLIB::LDEXP_PPCF128, nullptr);
-
-    setLibcallName(RTLIB::FREXP_F32, nullptr);
-    setLibcallName(RTLIB::FREXP_F80, nullptr);
-    setLibcallName(RTLIB::FREXP_F128, nullptr);
-    setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
-  }
-}
 
 /// GetFPLibCall - Helper to return the right libcall for the given floating
 /// point type, or UNKNOWN_LIBCALL if there is none.
@@ -739,41 +574,42 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
-/// InitCmpLibcallCCs - Set default comparison libcall CC.
-static void InitCmpLibcallCCs(ISD::CondCode *CCs) {
-  std::fill(CCs, CCs + RTLIB::UNKNOWN_LIBCALL, ISD::SETCC_INVALID);
-  CCs[RTLIB::OEQ_F32] = ISD::SETEQ;
-  CCs[RTLIB::OEQ_F64] = ISD::SETEQ;
-  CCs[RTLIB::OEQ_F128] = ISD::SETEQ;
-  CCs[RTLIB::OEQ_PPCF128] = ISD::SETEQ;
-  CCs[RTLIB::UNE_F32] = ISD::SETNE;
-  CCs[RTLIB::UNE_F64] = ISD::SETNE;
-  CCs[RTLIB::UNE_F128] = ISD::SETNE;
-  CCs[RTLIB::UNE_PPCF128] = ISD::SETNE;
-  CCs[RTLIB::OGE_F32] = ISD::SETGE;
-  CCs[RTLIB::OGE_F64] = ISD::SETGE;
-  CCs[RTLIB::OGE_F128] = ISD::SETGE;
-  CCs[RTLIB::OGE_PPCF128] = ISD::SETGE;
-  CCs[RTLIB::OLT_F32] = ISD::SETLT;
-  CCs[RTLIB::OLT_F64] = ISD::SETLT;
-  CCs[RTLIB::OLT_F128] = ISD::SETLT;
-  CCs[RTLIB::OLT_PPCF128] = ISD::SETLT;
-  CCs[RTLIB::OLE_F32] = ISD::SETLE;
-  CCs[RTLIB::OLE_F64] = ISD::SETLE;
-  CCs[RTLIB::OLE_F128] = ISD::SETLE;
-  CCs[RTLIB::OLE_PPCF128] = ISD::SETLE;
-  CCs[RTLIB::OGT_F32] = ISD::SETGT;
-  CCs[RTLIB::OGT_F64] = ISD::SETGT;
-  CCs[RTLIB::OGT_F128] = ISD::SETGT;
-  CCs[RTLIB::OGT_PPCF128] = ISD::SETGT;
-  CCs[RTLIB::UO_F32] = ISD::SETNE;
-  CCs[RTLIB::UO_F64] = ISD::SETNE;
-  CCs[RTLIB::UO_F128] = ISD::SETNE;
-  CCs[RTLIB::UO_PPCF128] = ISD::SETNE;
+void RTLIB::initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs) {
+  std::fill(CmpLibcallCCs, CmpLibcallCCs + RTLIB::UNKNOWN_LIBCALL,
+            ISD::SETCC_INVALID);
+  CmpLibcallCCs[RTLIB::OEQ_F32] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::OEQ_F64] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::OEQ_F128] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::OEQ_PPCF128] = ISD::SETEQ;
+  CmpLibcallCCs[RTLIB::UNE_F32] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UNE_F64] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UNE_F128] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UNE_PPCF128] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::OGE_F32] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OGE_F64] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OGE_F128] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OGE_PPCF128] = ISD::SETGE;
+  CmpLibcallCCs[RTLIB::OLT_F32] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLT_F64] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLT_F128] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLT_PPCF128] = ISD::SETLT;
+  CmpLibcallCCs[RTLIB::OLE_F32] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OLE_F64] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OLE_F128] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OLE_PPCF128] = ISD::SETLE;
+  CmpLibcallCCs[RTLIB::OGT_F32] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::OGT_F64] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::OGT_F128] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::OGT_PPCF128] = ISD::SETGT;
+  CmpLibcallCCs[RTLIB::UO_F32] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UO_F64] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UO_F128] = ISD::SETNE;
+  CmpLibcallCCs[RTLIB::UO_PPCF128] = ISD::SETNE;
 }
 
 /// NOTE: The TargetMachine owns TLOF.
-TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
+TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
+    : TM(tm), Libcalls(TM.getTargetTriple()) {
   initActions();
 
   // Perform these initializations only once.
@@ -806,10 +642,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
 
-  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames), nullptr);
-
-  InitLibcalls(TM.getTargetTriple());
-  InitCmpLibcallCCs(CmpLibcallCCs);
+  RTLIB::initCmpLibcallCCs(CmpLibcallCCs);
 }
 
 void TargetLoweringBase::initActions() {
@@ -822,6 +655,12 @@ void TargetLoweringBase::initActions() {
   std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
   std::fill(std::begin(TargetDAGCombineArray),
             std::end(TargetDAGCombineArray), 0);
+
+  // Let extending atomic loads be unsupported by default.
+  for (MVT ValVT : MVT::all_valuetypes())
+    for (MVT MemVT : MVT::all_valuetypes())
+      setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, ValVT, MemVT,
+                             Expand);
 
   // We're somewhat special casing MVT::i2 and MVT::i4. Ideally we want to
   // remove this and targets should individually set these types if not legal.
@@ -903,6 +742,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}, VT,
                        Expand);
 
+    // [US]CMP default to expand
+    setOperationAction({ISD::UCMP, ISD::SCMP}, VT, Expand);
+
     // Halving adds
     setOperationAction(
         {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
@@ -926,7 +768,8 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN, ISD::FACOS,
+           ISD::FASIN, ISD::FATAN, ISD::FCOSH, ISD::FSINH, ISD::FTANH},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -949,6 +792,9 @@ void TargetLoweringBase::initActions() {
 
     // Named vector shuffles default to expand.
     setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
+
+    // Only some target support this vector operation. Most need to expand it.
+    setOperationAction(ISD::VECTOR_COMPRESS, VT, Expand);
 
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
@@ -978,12 +824,20 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
-                      ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
-                      ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
-                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN},
+  setOperationAction({ISD::FCBRT,      ISD::FLOG,  ISD::FLOG2,  ISD::FLOG10,
+                      ISD::FEXP,       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR,
+                      ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT,  ISD::FTRUNC,
+                      ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
+                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
+  // FIXME: Query RuntimeLibCalls to make the decision.
+  setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
+                     {MVT::f32, MVT::f64, MVT::f128}, LibCall);
+
+  setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
+                      ISD::FSINH, ISD::FTANH},
+                     MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
 
@@ -1001,6 +855,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SET_FPMODE, VT, Expand);
   }
   setOperationAction(ISD::RESET_FPMODE, MVT::Other, Expand);
+
+  // This one by default will call __clear_cache unless the target
+  // wants something different.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -1008,13 +866,12 @@ MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
-EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
-                                         bool LegalTypes) const {
+EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
+                                         const DataLayout &DL) const {
   assert(LHSTy.isInteger() && "Shift amount is not an integer type!");
   if (LHSTy.isVector())
     return LHSTy;
-  MVT ShiftVT =
-      LegalTypes ? getScalarShiftAmountTy(DL, LHSTy) : getPointerTy(DL);
+  MVT ShiftVT = getScalarShiftAmountTy(DL, LHSTy);
   // If any possible shift value won't fit in the prefered type, just use
   // something safe. Assume it will be legalized when the shift is expanded.
   if (ShiftVT.getSizeInBits() < Log2_32_Ceil(LHSTy.getSizeInBits()))
@@ -1040,6 +897,24 @@ bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
 bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
                                              unsigned DestAS) const {
   return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+}
+
+unsigned TargetLoweringBase::getBitWidthForCttzElements(
+    Type *RetTy, ElementCount EC, bool ZeroIsPoison,
+    const ConstantRange *VScaleRange) const {
+  // Find the smallest "sensible" element type to use for the expansion.
+  ConstantRange CR(APInt(64, EC.getKnownMinValue()));
+  if (EC.isScalable())
+    CR = CR.umul_sat(*VScaleRange);
+
+  if (ZeroIsPoison)
+    CR = CR.subtract(APInt(64, 1));
+
+  unsigned EltWidth = RetTy->getScalarSizeInBits();
+  EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+  EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
+
+  return EltWidth;
 }
 
 void TargetLoweringBase::setJumpIsExpensive(bool isExpensive) {
@@ -1378,9 +1253,6 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 /// this allows us to compute derived properties we expose.
 void TargetLoweringBase::computeRegisterProperties(
     const TargetRegisterInfo *TRI) {
-  static_assert(MVT::VALUETYPE_SIZE <= MVT::MAX_ALLOWED_VALUETYPE,
-                "Too many value types for ValueTypeActions to hold!");
-
   // Everything defaults to needing one register.
   for (unsigned i = 0; i != MVT::VALUETYPE_SIZE; ++i) {
     NumRegistersForVT[i] = 1;
@@ -1803,8 +1675,16 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    for (unsigned i = 0; i < NumParts; ++i) {
+      ISD::ArgFlagsTy OutFlags = Flags;
+      if (NumParts > 1 && i == 0)
+        OutFlags.setSplit();
+      else if (i == NumParts - 1 && i != 0)
+        OutFlags.setSplitEnd();
+
+      Outs.push_back(
+          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    }
   }
 }
 
@@ -2011,6 +1891,10 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
   // The default implementation of this implements a conservative RISCy, r+r and
   // r+i addr mode.
 
+  // Scalable offsets not supported
+  if (AM.ScalableOffset)
+    return false;
+
   // Allows a sign-extended 16-bit immediate field.
   if (AM.BaseOffs <= -(1LL << 16) || AM.BaseOffs >= (1LL << 16)-1)
     return false;
@@ -2069,7 +1953,8 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
     // FreeBSD has "__stack_chk_guard" defined externally on libc.so
     if (M.getDirectAccessExternalData() &&
         !TM.getTargetTriple().isWindowsGNUEnvironment() &&
-        !TM.getTargetTriple().isOSFreeBSD() &&
+        !(TM.getTargetTriple().isPPC64() &&
+          TM.getTargetTriple().isOSFreeBSD()) &&
         (!TM.getTargetTriple().isOSDarwin() ||
          TM.getRelocationModel() == Reloc::Static))
       GV->setDSOLocal(true);
@@ -2230,7 +2115,7 @@ static int getOpEnabled(bool IsSqrt, EVT VT, StringRef Override) {
     if (IsDisabled)
       RecipType = RecipType.substr(1);
 
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return IsDisabled ? TargetLoweringBase::ReciprocalEstimate::Disabled
                         : TargetLoweringBase::ReciprocalEstimate::Enabled;
   }
@@ -2280,7 +2165,7 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
       continue;
 
     RecipType = RecipType.substr(0, RefPos);
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return RefSteps;
   }
 
@@ -2336,7 +2221,7 @@ bool TargetLoweringBase::isLoadBitCastBeneficial(
 }
 
 void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 }
 
 MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(

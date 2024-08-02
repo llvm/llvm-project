@@ -21,7 +21,7 @@
 
 namespace llvm {
 class Type;
-}
+} // namespace llvm
 
 using namespace llvm;
 

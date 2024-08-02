@@ -322,34 +322,7 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    srli a1, a0, 32
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    not a0, a0
-; RV64I-NEXT:    srli a1, a0, 1
-; RV64I-NEXT:    lui a2, 349525
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a3, a2, 32
-; RV64I-NEXT:    add a2, a2, a3
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    lui a1, 209715
-; RV64I-NEXT:    addiw a1, a1, 819
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    and a2, a0, a1
-; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    add a0, a2, a0
-; RV64I-NEXT:    srli a1, a0, 4
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addiw a1, a1, -241
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addiw a1, a1, 257
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    call __muldi3
-; RV64I-NEXT:    srli a0, a0, 56
+; RV64I-NEXT:    call __popcountdi2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -444,7 +417,7 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    snez a1, s0
-; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -481,12 +454,10 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    addi a1, a1, %lo(.LCPI9_0)
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    lbu a0, 0(a0)
-; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    addiw a0, a0, 1
 ; RV64I-NEXT:    seqz a1, s0
-; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -495,11 +466,10 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64ZBB-LABEL: ffs_i32:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    ctzw a1, a0
-; RV64ZBB-NEXT:    addi a1, a1, 1
+; RV64ZBB-NEXT:    addiw a1, a1, 1
 ; RV64ZBB-NEXT:    seqz a0, a0
-; RV64ZBB-NEXT:    addi a0, a0, -1
+; RV64ZBB-NEXT:    addiw a0, a0, -1
 ; RV64ZBB-NEXT:    and a0, a0, a1
-; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    ret
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 true)
   %2 = add i32 %1, 1
@@ -626,39 +596,7 @@ declare i64 @llvm.ctpop.i64(i64)
 define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV64I-LABEL: ctpop_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    srli a1, a0, 1
-; RV64I-NEXT:    lui a2, 349525
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a3, a2, 32
-; RV64I-NEXT:    add a2, a2, a3
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    lui a1, 209715
-; RV64I-NEXT:    addiw a1, a1, 819
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    and a2, a0, a1
-; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    add a0, a2, a0
-; RV64I-NEXT:    srli a1, a0, 4
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addiw a1, a1, -241
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addiw a1, a1, 257
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    call __muldi3
-; RV64I-NEXT:    srli a0, a0, 56
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
+; RV64I-NEXT:    tail __popcountdi2
 ;
 ; RV64ZBB-LABEL: ctpop_i64:
 ; RV64ZBB:       # %bb.0:

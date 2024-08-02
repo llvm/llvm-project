@@ -28,6 +28,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -465,15 +466,14 @@ void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
     emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
     return;
   }
-  const MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
                                : FramePtr;
   unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
   // Offset = space for return address + size of the frame pointer itself.
-  unsigned Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
+  int64_t Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
   BuildCFI(MBB, MBBI, DebugLoc{},
            MCCFIInstruction::createOffset(nullptr, DwarfReg, -Offset));
   emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
@@ -484,8 +484,7 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
     const DebugLoc &DL, bool IsPrologue) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
 
   // Add callee saved registers to move list.
@@ -885,10 +884,7 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   }
 
   // Update Live In information
-  bool anyChange = false;
-  do {
-    anyChange = recomputeLiveIns(*tailMBB) || recomputeLiveIns(*testMBB);
-  } while (anyChange);
+  fullyRecomputeLiveIns({tailMBB, testMBB});
 }
 
 void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
@@ -1380,11 +1376,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
         footMBB->addSuccessor(&MBB);
       }
 
-      bool anyChange = false;
-      do {
-        anyChange = recomputeLiveIns(*footMBB) || recomputeLiveIns(*bodyMBB) ||
-                    recomputeLiveIns(*headMBB) || recomputeLiveIns(MBB);
-      } while (anyChange);
+      fullyRecomputeLiveIns({footMBB, bodyMBB, headMBB, &MBB});
     }
   } else {
     MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AndOp), Reg)
@@ -1538,7 +1530,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &Fn = MF.getFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
@@ -1553,8 +1544,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool IsWin64Prologue = isWin64Prologue(MF);
   bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
-  bool NeedsWinFPO =
-      !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
+  bool NeedsWinFPO = !IsFunclet && STI.isTargetWin32() &&
+                     MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
@@ -2562,7 +2553,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (!HasFP && NeedsDwarfCFI) {
     MBBI = FirstCSPop;
-    int64_t Offset = -CSSize - SlotSize;
+    int64_t Offset = -(int64_t)CSSize - SlotSize;
     // Mark callee-saved pop instruction.
     // Define the current CFA rule to use the provided offset.
     while (MBBI != MBB.end()) {
@@ -2601,7 +2592,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Emit tilerelease for AMX kernel.
-  if (X86FI->hasVirtualTileReg())
+  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
 }
 
@@ -3529,7 +3520,7 @@ void X86FrameLowering::adjustForHiPEPrologue(
 
   // HiPE-specific values
   NamedMDNode *HiPELiteralsMD =
-      MF.getMMI().getModule()->getNamedMetadata("hipe.literals");
+      MF.getFunction().getParent()->getNamedMetadata("hipe.literals");
   if (!HiPELiteralsMD)
     report_fatal_error(
         "Can't generate HiPE prologue without runtime parameters");
@@ -3888,8 +3879,7 @@ bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // If we may need to emit frameless compact unwind information, give
   // up as this is currently broken: PR25614.
   bool CompactUnwind =
-      MF.getMMI().getContext().getObjectFileInfo()->getCompactUnwindSection() !=
-      nullptr;
+      MF.getContext().getObjectFileInfo()->getCompactUnwindSection() != nullptr;
   return (MF.getFunction().hasFnAttribute(Attribute::NoUnwind) || hasFP(MF) ||
           !CompactUnwind) &&
          // The lowering of segmented stack and HiPE only support entry

@@ -11,13 +11,12 @@
 // CHECK-NEXT:  Type: SHT_RELA
 // CHECK-NEXT:  Flags [
 // CHECK-NEXT:    SHF_ALLOC
-// CHECK-NEXT:    SHF_INFO_LINK
 // CHECK-NEXT:  ]
 // CHECK-NEXT:  Address: [[RELA:.*]]
 // CHECK-NEXT:  Offset: 0x158
 // CHECK-NEXT:  Size: 48
 // CHECK-NEXT:  Link: 0
-// CHECK-NEXT:  Info: 4
+// CHECK-NEXT:  Info: 0
 // CHECK-NEXT:  AddressAlignment: 8
 // CHECK-NEXT:  EntrySize: 24
 // CHECK-NEXT: }
@@ -38,7 +37,7 @@
 // CHECK-NEXT:    Section: Undefined
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: $x.0
+// CHECK-NEXT:    Name: $x
 // CHECK-NEXT:    Value: 0x210188
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Local

@@ -12,12 +12,14 @@
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
-namespace LIBC_NAMESPACE::fixed_point {
+namespace LIBC_NAMESPACE_DECL {
+namespace fixed_point {
 
 namespace internal {
 
@@ -45,7 +47,7 @@ template <> struct FXRep<short fract> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return SFRACT_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return SFRACT_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return SFRACT_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0HR; }
   LIBC_INLINE static constexpr Type EPS() { return SFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5HR; }
@@ -65,7 +67,7 @@ template <> struct FXRep<unsigned short fract> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return USFRACT_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return USFRACT_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return USFRACT_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0UHR; }
   LIBC_INLINE static constexpr Type EPS() { return USFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UHR; }
@@ -85,7 +87,7 @@ template <> struct FXRep<fract> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return FRACT_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return FRACT_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return FRACT_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0R; }
   LIBC_INLINE static constexpr Type EPS() { return FRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5R; }
@@ -105,7 +107,7 @@ template <> struct FXRep<unsigned fract> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return UFRACT_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return UFRACT_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return UFRACT_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0UR; }
   LIBC_INLINE static constexpr Type EPS() { return UFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UR; }
@@ -125,7 +127,7 @@ template <> struct FXRep<long fract> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return LFRACT_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return LFRACT_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return LFRACT_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0LR; }
   LIBC_INLINE static constexpr Type EPS() { return LFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5LR; }
@@ -145,7 +147,7 @@ template <> struct FXRep<unsigned long fract> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return ULFRACT_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return ULFRACT_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return ULFRACT_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0ULR; }
   LIBC_INLINE static constexpr Type EPS() { return ULFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5ULR; }
@@ -165,7 +167,7 @@ template <> struct FXRep<short accum> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return SACCUM_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return SACCUM_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return SACCUM_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0HK; }
   LIBC_INLINE static constexpr Type EPS() { return SACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5HK; }
@@ -185,7 +187,7 @@ template <> struct FXRep<unsigned short accum> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return USACCUM_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return USACCUM_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return USACCUM_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0UHK; }
   LIBC_INLINE static constexpr Type EPS() { return USACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UHK; }
@@ -205,7 +207,7 @@ template <> struct FXRep<accum> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return ACCUM_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return ACCUM_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return ACCUM_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0K; }
   LIBC_INLINE static constexpr Type EPS() { return ACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5K; }
@@ -225,7 +227,7 @@ template <> struct FXRep<unsigned accum> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return UACCUM_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return UACCUM_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return UACCUM_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0UK; }
   LIBC_INLINE static constexpr Type EPS() { return UACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UK; }
@@ -245,7 +247,7 @@ template <> struct FXRep<long accum> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return LACCUM_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return LACCUM_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return LACCUM_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0LK; }
   LIBC_INLINE static constexpr Type EPS() { return LACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5LK; }
@@ -265,7 +267,7 @@ template <> struct FXRep<unsigned long accum> {
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return ULACCUM_MIN; }
-  LIBC_INLINE static constexpr Type MAX() { return ULACCUM_MIN; }
+  LIBC_INLINE static constexpr Type MAX() { return ULACCUM_MAX; }
   LIBC_INLINE static constexpr Type ZERO() { return 0.0ULK; }
   LIBC_INLINE static constexpr Type EPS() { return ULACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5ULK; }
@@ -293,7 +295,8 @@ template <> struct FXRep<unsigned sat accum> : FXRep<unsigned accum> {};
 template <>
 struct FXRep<unsigned long sat accum> : FXRep<unsigned long accum> {};
 
-} // namespace LIBC_NAMESPACE::fixed_point
+} // namespace fixed_point
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "OpenMP")
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
@@ -12,6 +13,8 @@ list(INSERT CMAKE_MODULE_PATH 0
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(openmp C CXX ASM)
+else()
+  set(OPENMP_STANDALONE_BUILD FALSE)
 endif()
 
 # Must go below project(..)
@@ -123,19 +126,6 @@ endif()
 # to enable time profiling support in the OpenMP runtime.
 add_subdirectory(runtime)
 
-if (OPENMP_ENABLE_LIBOMPTARGET)
-  # Check that the library can actually be built.
-  if (APPLE OR WIN32)
-    message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
-  elseif (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "libomptarget on 32-bit systems are not supported!")
-  endif()
-
-  add_subdirectory(libomptarget)
-endif()
-
 set(ENABLE_OMPT_TOOLS ON)
 # Currently tools are not tested well on Windows or MacOS X.
 if (APPLE OR WIN32)
@@ -146,6 +136,12 @@ option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
        ${ENABLE_OMPT_TOOLS})
 if (OPENMP_ENABLE_OMPT_TOOLS)
   add_subdirectory(tools)
+endif()
+
+# Propagate OMPT support to offload
+if(NOT ${OPENMP_STANDALONE_BUILD})
+  set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
+  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
 endif()
 
 option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)

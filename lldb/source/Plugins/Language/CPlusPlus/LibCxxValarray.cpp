@@ -24,9 +24,9 @@ public:
 
   ~LibcxxStdValarraySyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -63,8 +63,8 @@ lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
   // delete m_finish;
 }
 
-size_t lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdValarraySyntheticFrontEnd::CalculateNumChildren() {
   if (!m_start || !m_finish)
     return 0;
   uint64_t start_val = m_start->GetValueAsUnsigned(0);
@@ -84,7 +84,7 @@ size_t lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_start || !m_finish)
     return lldb::ValueObjectSP();
 

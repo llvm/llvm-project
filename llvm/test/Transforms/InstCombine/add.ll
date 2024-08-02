@@ -150,24 +150,24 @@ define i32 @test5_add_nsw(i32 %A, i32 %B) {
   ret i32 %D
 }
 
-define <2 x i8> @neg_op0_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: @neg_op0_vec_undef_elt(
+define <2 x i8> @neg_op0_vec_poison_elt(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @neg_op0_vec_poison_elt(
 ; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %nega = sub <2 x i8> <i8 0, i8 undef>, %a
+  %nega = sub <2 x i8> <i8 0, i8 poison>, %a
   %r = add <2 x i8> %nega, %b
   ret <2 x i8> %r
 }
 
-define <2 x i8> @neg_neg_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: @neg_neg_vec_undef_elt(
+define <2 x i8> @neg_neg_vec_poison_elt(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @neg_neg_vec_poison_elt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %nega = sub <2 x i8> <i8 undef, i8 0>, %a
-  %negb = sub <2 x i8> <i8 undef, i8 0>, %b
+  %nega = sub <2 x i8> <i8 poison, i8 0>, %a
+  %negb = sub <2 x i8> <i8 poison, i8 0>, %b
   %r = add <2 x i8> %nega, %negb
   ret <2 x i8> %r
 }
@@ -951,6 +951,21 @@ define i64 @test41(i32 %a) {
   ret i64 %sub
 }
 
+define i64 @test41_multiuse_constants_cancel(i32 %a) {
+; CHECK-LABEL: @test41_multiuse_constants_cancel(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nuw nsw i64 [[ZEXT]], [[SUB]]
+; CHECK-NEXT:    ret i64 [[EXTRAUSE]]
+;
+  %add = add nuw i32 %a, 1
+  %zext = zext i32 %add to i64
+  %sub = add i64 %zext, -1
+  %extrause = add i64 %zext, %sub
+  ret i64 %extrause
+}
+
 ; (add (zext (add nuw X, C2)), C) --> (zext (add nuw X, C2 + C))
 
 define <2 x i64> @test41vec(<2 x i32> %a) {
@@ -1196,14 +1211,14 @@ define <2 x i32> @test44_vec_non_matching(<2 x i32> %A) {
   ret <2 x i32> %C
 }
 
-define <2 x i32> @test44_vec_undef(<2 x i32> %A) {
-; CHECK-LABEL: @test44_vec_undef(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 undef>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], <i32 -123, i32 undef>
+define <2 x i32> @test44_vec_poison(<2 x i32> %A) {
+; CHECK-LABEL: @test44_vec_poison(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 poison>
+; CHECK-NEXT:    [[C:%.*]] = add nsw <2 x i32> [[B]], <i32 -123, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
-  %B = or <2 x i32> %A, <i32 123, i32 undef>
-  %C = add <2 x i32> %B, <i32 -123, i32 undef>
+  %B = or <2 x i32> %A, <i32 123, i32 poison>
+  %C = add <2 x i32> %B, <i32 -123, i32 poison>
   ret <2 x i32> %C
 }
 
@@ -1435,15 +1450,28 @@ define i32 @and31_add_sexts(i1 %x, i1 %y) {
   ret i32 %r
 }
 
-; Negative test - extra use
-
 define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts(
+; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xs = sext i1 %x to i32
+  %ys = sext i1 %y to i32
+  store i32 %ys, ptr %p
+  %sub = add i32 %xs, %ys
+  %r = lshr i32 %sub, 31
+  ret i32 %r
+}
+
+define i32 @lshr_add_use_sexts_2(i1 %x, i1 %y, ptr %p) {
+; CHECK-LABEL: @lshr_add_use_sexts_2(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[XS]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
@@ -1456,18 +1484,20 @@ define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, ptr %p) {
-; CHECK-LABEL: @lshr_add_use2_sexts(
+declare void @use_sexts(i32, i32)
+
+define i32 @lshr_add_use_sexts_both(i1 %x, i1 %y) {
+; CHECK-LABEL: @lshr_add_use_sexts_both(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    call void @use_sexts(i32 [[XS]], i32 [[YS]])
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, ptr %p
+  call void @use_sexts(i32 %xs, i32 %ys)
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r
@@ -1509,6 +1539,46 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
   call void @use(i8 %i1) ; extra use
   %r = add i8 %i1, 42
   ret i8 %r
+}
+define i8 @fold_add_constant_preserve_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, 8
+  ret i8 %add
+}
+define i8 @fold_add_constant_no_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_no_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, -8
+  ret i8 %add
+}
+define i8 @fold_add_constant_preserve_nuw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], -116
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, 128
+  %add = add nuw i8 %or, 12
+  ret i8 %add
+}
+define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @sdiv_to_udiv(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242049
+; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[T2]], 192
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = shl nuw nsw i32 %arg0, 8
+  %t1 = or disjoint i32 %t0, 1
+  %t2 = add nuw nsw i32 %t1, 6242048
+  %t3 = sdiv i32 %t2, 192
+  ret i32 %t3
 }
 
 define i8 @add_like_or_disjoint(i8 %x) {
@@ -2375,7 +2445,7 @@ define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[SUB]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[SUB]], 64
-; CHECK-NEXT:    [[DOTTR:%.*]] = trunc i128 [[TMP1]] to i64
+; CHECK-NEXT:    [[DOTTR:%.*]] = trunc nuw i128 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTNARROW:%.*]] = sub i64 [[DOTTR]], [[W:%.*]]
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } poison, i64 [[T]], 0
 ; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i64 } [[R1]], i64 [[DOTNARROW]], 1
@@ -2983,7 +3053,7 @@ define i8 @signum_i8_i8_use3(i8 %x) {
   ret i8 %r
 }
 
-; poison/undef is ok to propagate in shift amount
+; poison is ok to propagate in shift amount
 ; complexity canonicalization guarantees that shift is op0 of add
 
 define <2 x i5> @signum_v2i5_v2i5(<2 x i5> %x) {
@@ -3087,6 +3157,36 @@ define <2 x i32> @dec_zext_add_nonzero_vec(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %o = or <2 x i8> %x, <i8 8, i8 8>
+  %a = add <2 x i8> %o, <i8 -1, i8 -1>
+  %b = zext <2 x i8> %a to <2 x i32>
+  %c = add <2 x i32> %b, <i32 1, i32 1>
+  ret <2 x i32> %c
+}
+
+; Negative test: Folding this with undef is not safe.
+
+define <2 x i32> @dec_zext_add_nonzero_vec_undef0(<2 x i8> %x) {
+; CHECK-LABEL: @dec_zext_add_nonzero_vec_undef0(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 8, i8 undef>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[O]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i8> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw <2 x i32> [[B]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %o = or <2 x i8> %x, <i8 8, i8 undef>
+  %a = add <2 x i8> %o, <i8 -1, i8 -1>
+  %b = zext <2 x i8> %a to <2 x i32>
+  %c = add <2 x i32> %b, <i32 1, i32 1>
+  ret <2 x i32> %c
+}
+
+define <2 x i32> @dec_zext_add_nonzero_poison0(<2 x i8> %x) {
+; CHECK-LABEL: @dec_zext_add_nonzero_poison0(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 8, i8 poison>
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i8> [[O]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %o = or <2 x i8> %x, <i8 8, i8 poison>
   %a = add <2 x i8> %o, <i8 -1, i8 -1>
   %b = zext <2 x i8> %a to <2 x i32>
   %c = add <2 x i32> %b, <i32 1, i32 1>
@@ -3254,12 +3354,14 @@ define i32 @add_reduce_sqr_sum_flipped(i32 %a, i32 %b) {
   ret i32 %add
 }
 
-define i32 @add_reduce_sqr_sum_flipped2(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_flipped2(i32 %a, i32 %bx) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_flipped2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
+  %b = xor i32 %bx, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %two_a = shl i32 %a, 1
   %two_a_plus_b = add i32 %two_a, %b
@@ -3312,12 +3414,14 @@ define i32 @add_reduce_sqr_sum_order2_flipped(i32 %a, i32 %b) {
   ret i32 %ab2
 }
 
-define i32 @add_reduce_sqr_sum_order2_flipped2(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_order2_flipped2(i32 %a, i32 %bx) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_flipped2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[AB2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AB2]]
 ;
+  %b = xor i32 %bx, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
   %twoab = mul i32 %twoa, %b
@@ -3327,12 +3431,14 @@ define i32 @add_reduce_sqr_sum_order2_flipped2(i32 %a, i32 %b) {
   ret i32 %ab2
 }
 
-define i32 @add_reduce_sqr_sum_order2_flipped3(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_order2_flipped3(i32 %a, i32 %bx) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_flipped3(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[AB2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AB2]]
 ;
+  %b = xor i32 %bx, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
   %twoab = mul i32 %b, %twoa
@@ -3522,12 +3628,14 @@ define i32 @add_reduce_sqr_sum_order5_flipped2(i32 %a, i32 %b) {
   ret i32 %ab2
 }
 
-define i32 @add_reduce_sqr_sum_order5_flipped3(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_order5_flipped3(i32 %ax, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order5_flipped3(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[AX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    [[AB2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AB2]]
 ;
+  %a = xor i32 %ax, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %twob = mul i32 %b, 2
   %twoab = mul i32 %a, %twob
@@ -3984,6 +4092,119 @@ define i32 @add_reduce_sqr_sum_varC_invalid2(i32 %a, i32 %b) {
   %a2_b2 = add i32 %a_sq, %b_sq
   %ab2 = add i32 %not_twoab, %a2_b2
   ret i32 %ab2
+}
+
+define i32 @fold_sext_addition_or_disjoint(i8 %x) {
+; CHECK-LABEL: @fold_sext_addition_or_disjoint(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], 1246
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or disjoint i8 %x, 12
+  %se = sext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_sext_addition_fail(i8 %x) {
+; CHECK-LABEL: @fold_sext_addition_fail(
+; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[SE:%.*]] = sext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], 1234
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or i8 %x, 12
+  %se = sext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_or_disjoint(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_or_disjoint(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[TMP1]], 1246
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or disjoint i8 %x, 12
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_or_disjoint2(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_or_disjoint2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or disjoint i8 %x, 18
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, -14
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_fail(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_fail(
+; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SE]], 1234
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or i8 %x, 12
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, 1234
+  ret i32 %r
+}
+
+define i32 @fold_zext_addition_fail2(i8 %x) {
+; CHECK-LABEL: @fold_zext_addition_fail2(
+; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 18
+; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], -14
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = or i8 %x, 18
+  %se = zext i8 %xx to i32
+  %r = add i32 %se, -14
+  ret i32 %r
+}
+
+define i32 @fold_zext_nneg_add_const(i8 %x) {
+; CHECK-LABEL: @fold_zext_nneg_add_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], 98
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = add nsw i8 %x, 123
+  %ze = zext nneg i8 %xx to i32
+  %r = add nsw i32 %ze, -25
+  ret i32 %r
+}
+
+define i32 @fold_zext_nneg_add_const_fail1(i8 %x) {
+; CHECK-LABEL: @fold_zext_nneg_add_const_fail1(
+; CHECK-NEXT:    [[XX:%.*]] = add nsw i8 [[X:%.*]], 123
+; CHECK-NEXT:    [[ZE:%.*]] = zext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[ZE]], -25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = add nsw i8 %x, 123
+  %ze = zext i8 %xx to i32
+  %r = add nsw i32 %ze, -25
+  ret i32 %r
+}
+
+define i32 @fold_zext_nneg_add_const_fail2(i8 %x) {
+; CHECK-LABEL: @fold_zext_nneg_add_const_fail2(
+; CHECK-NEXT:    [[XX:%.*]] = add i8 [[X:%.*]], 123
+; CHECK-NEXT:    [[ZE:%.*]] = zext nneg i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[ZE]], -25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = add i8 %x, 123
+  %ze = zext nneg i8 %xx to i32
+  %r = add nsw i32 %ze, -25
+  ret i32 %r
 }
 
 declare void @llvm.assume(i1)

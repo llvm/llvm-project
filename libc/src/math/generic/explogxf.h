@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
 
 #include "common_constants.h"
-#include "math_utils.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -18,11 +17,12 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct ExpBase {
   // Base = e
@@ -380,6 +380,6 @@ LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
   return cpp::nullopt;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

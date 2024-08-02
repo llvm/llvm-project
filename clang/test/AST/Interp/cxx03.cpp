@@ -10,3 +10,22 @@ namespace NonInitializingMemberExpr {
                                                                                               // both-note {{required by}} \
                                                                                               // both-note {{subexpression not valid}}
 }
+
+
+namespace NonLValueMemberExpr {
+  struct PODType {
+    int value;
+  };
+
+#define ATTR __attribute__((require_constant_initialization))
+  struct TT1 {
+    ATTR static const int &subobj_init;
+  };
+
+  const int &TT1::subobj_init = PODType().value;
+}
+
+void LambdaAccessingADummy() {
+  int d;
+  int a9[1] = {[d = 0] = 1}; // both-error {{is not an integral constant expression}}
+}

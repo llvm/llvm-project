@@ -112,7 +112,7 @@ RT_API_ATTRS TypeCode::TypeCode(TypeCategory f, int kind) {
   }
 }
 
-RT_API_ATTRS std::optional<std::pair<TypeCategory, int>>
+RT_API_ATTRS Fortran::common::optional<std::pair<TypeCategory, int>>
 TypeCode::GetCategoryAndKind() const {
   switch (raw_) {
   case CFI_type_signed_char:
@@ -204,7 +204,7 @@ TypeCode::GetCategoryAndKind() const {
   case CFI_type_char32_t:
     return std::make_pair(TypeCategory::Character, 4);
   default:
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 }
 

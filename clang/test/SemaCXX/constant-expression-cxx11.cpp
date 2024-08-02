@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++23 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx20_23,cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++23 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx20_23,cxx23              -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23,pre-cxx23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11,pre-cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
 namespace StaticAssertFoldTest {
 
@@ -1011,10 +1011,12 @@ constexpr bool b(int n) { return &n; }
 static_assert(b(0), "");
 
 struct NonLiteral {
-  NonLiteral();
+  NonLiteral(); // cxx23-note {{declared here}}
   int f();
 };
-constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} expected-note {{non-literal type 'NonLiteral'}}
+constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} \
+				    // pre-cxx23-note {{non-literal type 'NonLiteral'}} \
+				    // cxx23-note {{non-constexpr constructor 'NonLiteral' cannot be used in a constant expression}}
 
 }
 
@@ -1270,11 +1272,13 @@ static_assert(makeComplexWrap(1,0) != complex(0, 1), "");
 
 namespace PR11595 {
   struct A { constexpr bool operator==(int x) const { return true; } };
-  struct B { B(); A& x; };
-  static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+  struct B { B(); A& x; }; // cxx23-note {{declared here}}
+  static_assert(B().x == 3, "");  // expected-error {{constant expression}} \
+				  // pre-cxx23-note {{non-literal type 'B' cannot be used in a constant expression}} \
+				  // cxx23-note {{non-constexpr constructor 'B' cannot be used in a constant expression}}
 
-  constexpr bool f(int k) { // expected-error {{constexpr function never produces a constant expression}}
-    return B().x == k; // expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+  constexpr bool f(int k) { // cxx11_20-error {{constexpr function never produces a constant expression}}
+    return B().x == k; // cxx11_20-note {{non-literal type 'B' cannot be used in a constant expression}}
   }
 }
 
@@ -1326,8 +1330,8 @@ namespace ExternConstexpr {
   constexpr int g() { return q; } // expected-note {{outside its lifetime}}
   constexpr int q = g(); // expected-error {{constant expression}} expected-note {{in call}}
 
-  extern int r; // expected-note {{here}}
-  constexpr int h() { return r; } // expected-error {{never produces a constant}} expected-note {{read of non-const}}
+  extern int r; // cxx11_20-note {{here}}
+  constexpr int h() { return r; } // cxx11_20-error {{never produces a constant}} cxx11_20-note {{read of non-const}}
 
   struct S { int n; };
   extern const S s;
@@ -1678,7 +1682,7 @@ namespace ImplicitConstexpr {
   struct R { constexpr R() noexcept; constexpr R(const R&) noexcept; constexpr R(R&&) noexcept; ~R() noexcept; };
   struct S { R r; }; // expected-note 3{{here}}
   struct T { T(const T&) noexcept; T(T &&) noexcept; ~T() noexcept; };
-  struct U { T t; }; // expected-note 3{{here}}
+  struct U { T t; }; // cxx11_20-note 3{{here}}
   static_assert(!__is_literal_type(Q), "");
   static_assert(!__is_literal_type(R), "");
   static_assert(!__is_literal_type(S), "");
@@ -1691,9 +1695,9 @@ namespace ImplicitConstexpr {
     friend S::S() noexcept; // expected-error {{follows constexpr}}
     friend S::S(S&&) noexcept; // expected-error {{follows constexpr}}
     friend S::S(const S&) noexcept; // expected-error {{follows constexpr}}
-    friend constexpr U::U() noexcept; // expected-error {{follows non-constexpr}}
-    friend constexpr U::U(U&&) noexcept; // expected-error {{follows non-constexpr}}
-    friend constexpr U::U(const U&) noexcept; // expected-error {{follows non-constexpr}}
+    friend constexpr U::U() noexcept; // cxx11_20-error {{follows non-constexpr}}
+    friend constexpr U::U(U&&) noexcept; // cxx11_20-error {{follows non-constexpr}}
+    friend constexpr U::U(const U&) noexcept; // cxx11_20-error {{follows non-constexpr}}
   };
 }
 
@@ -1906,9 +1910,9 @@ namespace StmtExpr {
     });
   }
   static_assert(g(123) == 15129, "");
-  constexpr int h() { // expected-error {{never produces a constant}}
+  constexpr int h() { // cxx11_20-error {{never produces a constant}}
     return ({ // expected-warning {{extension}}
-      return 0; // expected-note {{not supported}}
+      return 0; // cxx11_20-note {{not supported}}
       1;
     });
   }
@@ -2093,8 +2097,8 @@ namespace ZeroSizeTypes {
   // expected-note@-2 {{subtraction of pointers to type 'int[0]' of zero size}}
 
   int arr[5][0];
-  constexpr int f() { // expected-error {{never produces a constant expression}}
-    return &arr[3] - &arr[0]; // expected-note {{subtraction of pointers to type 'int[0]' of zero size}}
+  constexpr int f() { // cxx11_20-error {{never produces a constant expression}}
+    return &arr[3] - &arr[0]; // cxx11_20-note {{subtraction of pointers to type 'int[0]' of zero size}}
   }
 }
 
@@ -2118,8 +2122,8 @@ namespace NeverConstantTwoWays {
   // If we see something non-constant but foldable followed by something
   // non-constant and not foldable, we want the first diagnostic, not the
   // second.
-  constexpr int f(int n) { // expected-error {{never produces a constant expression}}
-    return (int *)(long)&n == &n ? // expected-note {{reinterpret_cast}}
+  constexpr int f(int n) { // cxx11_20-error {{never produces a constant expression}}
+    return (int *)(long)&n == &n ? // cxx11_20-note {{reinterpret_cast}}
         1 / 0 : // expected-warning {{division by zero}}
         0;
   }
@@ -2277,7 +2281,8 @@ namespace InheritedCtor {
   struct A { constexpr A(int) {} };
 
   struct B : A { int n; using A::A; }; // expected-note {{here}}
-  constexpr B b(0); // expected-error {{constant expression}} expected-note {{derived class}}
+  constexpr B b(0); // expected-error {{constant expression}} cxx11_20-note {{derived class}}\
+                    // cxx23-note {{not initialized}}
 
   struct C : A { using A::A; struct { union { int n, m = 0; }; union { int a = 0; }; int k = 0; }; struct {}; union {}; }; // expected-warning 6{{}}
   constexpr C c(0);
@@ -2316,10 +2321,11 @@ namespace InheritedCtor {
 namespace PR28366 {
 namespace ns1 {
 
-void f(char c) { //expected-note2{{declared here}}
+void f(char c) { //expected-note{{declared here}}
+  //cxx11_20-note@-1{{declared here}}
   struct X {
-    static constexpr char f() { //expected-error{{never produces a constant expression}}
-      return c; //expected-error{{reference to local}} expected-note{{function parameter}}
+    static constexpr char f() { // cxx11_20-error {{never produces a constant expression}}
+      return c; //expected-error{{reference to local}} cxx11_20-note{{function parameter}}
     }
   };
   int I = X::f();

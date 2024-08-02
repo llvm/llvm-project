@@ -84,6 +84,7 @@
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -252,12 +253,11 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
       M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy));
   LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
 
-  LPadIndexField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 0,
-                                          "lpad_index_gep");
-  LSDAField =
-      IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 1, "lsda_gep");
-  SelectorField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 2,
-                                         "selector_gep");
+  LPadIndexField = LPadContextGV;
+  LSDAField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContextGV, 0, 1,
+                                             "lsda_gep");
+  SelectorField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContextGV,
+                                                 0, 2, "selector_gep");
 
   // wasm.landingpad.index() intrinsic, which is to specify landingpad index
   LPadIndexF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_landingpad_index);

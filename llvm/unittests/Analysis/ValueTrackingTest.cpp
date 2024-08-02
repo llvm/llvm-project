@@ -2005,7 +2005,7 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPositive | fcQNan, UseInstrInfoNSZNoNan.KnownFPClasses);
-    EXPECT_EQ(false, UseInstrInfoNSZNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.SignBit);
 
     KnownFPClass NoUseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
@@ -2013,6 +2013,82 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
               NoUseInstrInfoNSZNoNan.KnownFPClasses);
     EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.SignBit);
+  }
+}
+
+TEST_F(ComputeKnownFPClassTest, Constants) {
+  parseAssembly("declare float @func()\n"
+                "define float @test() {\n"
+                "  %A = call float @func()\n"
+                "  ret float %A\n"
+                "}\n");
+
+  Type *F32 = Type::getFloatTy(Context);
+  Type *V4F32 = FixedVectorType::get(F32, 4);
+
+  {
+    KnownFPClass ConstAggZero = computeKnownFPClass(
+        ConstantAggregateZero::get(V4F32), M->getDataLayout(), fcAllFlags, 0,
+        nullptr, nullptr, nullptr, nullptr);
+
+    EXPECT_EQ(fcPosZero, ConstAggZero.KnownFPClasses);
+    ASSERT_TRUE(ConstAggZero.SignBit);
+    EXPECT_FALSE(*ConstAggZero.SignBit);
+  }
+
+  {
+    KnownFPClass Undef =
+        computeKnownFPClass(UndefValue::get(F32), M->getDataLayout(),
+                            fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcAllFlags, Undef.KnownFPClasses);
+    EXPECT_FALSE(Undef.SignBit);
+  }
+
+  {
+    KnownFPClass Poison =
+        computeKnownFPClass(PoisonValue::get(F32), M->getDataLayout(),
+                            fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNone, Poison.KnownFPClasses);
+    ASSERT_TRUE(Poison.SignBit);
+    EXPECT_FALSE(*Poison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 0.
+    Constant *ZeroF32 = ConstantFP::getZero(F32);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({ZeroF32, PoisonF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcPosZero, PartiallyPoison.KnownFPClasses);
+    ASSERT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_FALSE(*PartiallyPoison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 1.
+    Constant *NegZeroF32 = ConstantFP::getZero(F32, true);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({NegZeroF32, PoisonF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    ASSERT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_TRUE(*PartiallyPoison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 1.
+    Constant *NegZeroF32 = ConstantFP::getZero(F32, true);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({PoisonF32, NegZeroF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    EXPECT_TRUE(PartiallyPoison.SignBit);
   }
 }
 
@@ -2034,7 +2110,7 @@ TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   )");
   const DataLayout &DL = M->getDataLayout();
   AssumptionCache AC(*F);
-  EXPECT_TRUE(isKnownNonZero(A, DL, 0, &AC, CxtI));
+  EXPECT_TRUE(isKnownNonZero(A, SimplifyQuery(DL, /*DT=*/nullptr, &AC, CxtI)));
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
@@ -2057,8 +2133,9 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
   AssumptionCache AC(*F);
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI, &DT), true);
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI2, &DT), false);
+  const SimplifyQuery SQ(DL, &DT, &AC);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
@@ -2081,8 +2158,9 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
   AssumptionCache AC(*F);
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI, &DT), true);
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI2, &DT), false);
+  const SimplifyQuery SQ(DL, &DT, &AC);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {
@@ -2357,6 +2435,20 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
                                      F->front().getTerminator());
   EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
   EXPECT_EQ(Known.One.getZExtValue(), 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsReturnedRangeConflict) {
+  parseAssembly(
+      "declare i16 @foo(i16 returned)\n"
+      "\n"
+      "define i16 @test() {\n"
+      "  %A = call i16 @foo(i16 4095), !range !{i16 32, i16 33}\n"
+      "  ret i16 %A\n"
+      "}\n");
+  // The call returns 32 according to range metadata, but 4095 according to the
+  // returned arg operand. Given the conflicting information we expect that the
+  // known bits information simply is cleared.
+  expectKnownBits(/*zero*/ 0u, /*one*/ 0u);
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {

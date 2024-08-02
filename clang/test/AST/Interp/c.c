@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual %s
 // RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic,pedantic-ref,all -std=c11 -Wcast-qual %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -66,12 +66,10 @@ _Static_assert((&a - 100) != 0, ""); // pedantic-ref-warning {{is a GNU extensio
                                      // pedantic-ref-note {{-100 of non-array}} \
                                      // pedantic-expected-note {{-100 of non-array}}
 /// extern variable of a composite type.
-/// FIXME: The 'cast from void*' note is missing in the new interpreter.
 extern struct Test50S Test50;
 _Static_assert(&Test50 != (void*)0, ""); // all-warning {{always true}} \
-                                         // pedantic-ref-warning {{is a GNU extension}} \
-                                         // pedantic-ref-note {{cast from 'void *' is not allowed}} \
-                                         // pedantic-expected-warning {{is a GNU extension}}
+                                         // pedantic-warning {{is a GNU extension}} \
+                                         // pedantic-note {{this conversion is not allowed in a constant expression}}
 
 struct y {int x,y;};
 int a2[(intptr_t)&((struct y*)0)->y]; // all-warning {{folded to constant array}}
@@ -201,3 +199,105 @@ void localCompoundLiteral(void) {
        // pedantic-ref-warning {{use of an empty initializer}}
   };
 }
+
+/// struct copy
+struct StrA {int a; };
+const struct StrA sa = { 12 };
+const struct StrA * const sb = &sa;
+const struct StrA sc = *sb;
+_Static_assert(sc.a == 12, ""); // pedantic-ref-warning {{GNU extension}} \
+                                // pedantic-expected-warning {{GNU extension}}
+
+_Static_assert(((void*)0 + 1) != (void*)0, ""); // pedantic-expected-warning {{arithmetic on a pointer to void is a GNU extension}} \
+                                                // pedantic-expected-warning {{not an integer constant expression}} \
+                                                // pedantic-expected-note {{cannot perform pointer arithmetic on null pointer}} \
+                                                // pedantic-ref-warning {{arithmetic on a pointer to void is a GNU extension}} \
+                                                // pedantic-ref-warning {{not an integer constant expression}} \
+                                                // pedantic-ref-note {{cannot perform pointer arithmetic on null pointer}}
+
+typedef __INTPTR_TYPE__ intptr_t;
+int array[(intptr_t)(int*)1]; // ref-warning {{variable length array folded to constant array}} \
+                              // pedantic-ref-warning {{variable length array folded to constant array}} \
+                              // expected-warning {{variable length array folded to constant array}} \
+                              // pedantic-expected-warning {{variable length array folded to constant array}}
+
+int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length array}} \
+                                              // pedantic-ref-error {{variable length array}} \
+                                              // expected-error {{variable length array}} \
+                                              // pedantic-expected-error {{variable length array}}
+
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
+_Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
+                                       // pedantic-warning {{expression is not an integer constant expression}}
+_Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \
+                                         // pedantic-warning {{expression is not an integer constant expression}}
+
+void unaryops(void) {
+  (void)(++(struct x {unsigned x;}){3}.x);
+  (void)(--(struct y {unsigned x;}){3}.x);
+  (void)(++(struct z {float x;}){3}.x);
+  (void)(--(struct w {float x;}){3}.x);
+
+  (void)((struct xx {unsigned x;}){3}.x++);
+  (void)((struct yy {unsigned x;}){3}.x--);
+  (void)((struct zz {float x;}){3}.x++);
+  (void)((struct ww {float x;}){3}.x--);
+}
+
+/// This used to fail because we didn't properly mark the struct
+/// initialized through a CompoundLiteralExpr as initialized.
+struct TestStruct {
+  int a;
+  int b;
+};
+int Y __attribute__((annotate(
+  "GlobalValAnnotationWithArgs",
+  42,
+  (struct TestStruct) { .a = 1, .b = 2 }
+)));
+
+#ifdef __SIZEOF_INT128__
+const int *p = &b;
+const __int128 K = (__int128)(int*)0;
+const unsigned __int128 KU = (unsigned __int128)(int*)0;
+#endif
+
+
+int test3(void) {
+  int a[2];
+  a[0] = test3; // all-error {{incompatible pointer to integer conversion assigning to 'int' from 'int (void)'}}
+  return 0;
+}
+/// This tests that we have full type info, even for values we cannot read.
+int dummyarray[5];
+_Static_assert(&dummyarray[0] < &dummyarray[1], ""); // pedantic-warning {{GNU extension}}
+
+void addrlabelexpr(void) {
+ a0: ;
+  static void *ps[] = { &&a0 }; // pedantic-warning {{use of GNU address-of-label extension}}
+}
+
+extern void cv2;
+void *foo5 (void)
+{
+  return &cv2; // pedantic-warning{{address of an expression of type 'void'}}
+}
+
+__attribute__((weak)) const unsigned int test10_bound = 10;
+char test10_global[test10_bound]; // all-error {{variable length array declaration not allowed at file scope}}
+void test10(void) {
+  char test10_local[test10_bound] = "help"; // all-error {{variable-sized object may not be initialized}}
+}
+
+void SuperSpecialFunc(void) {
+const int SuperSpecialCase = 10;
+_Static_assert((sizeof(SuperSpecialCase) == 12 && SuperSpecialCase == 3) || SuperSpecialCase == 10, ""); // pedantic-warning {{GNU extension}}
+}
+
+
+void T1(void) {
+  static int *y[1] = {({ static int _x = 20; (void*)0;})}; // all-error {{initializer element is not a compile-time constant}} \
+                                                           // pedantic-warning {{use of GNU statement expression extension}}
+}
+
+
