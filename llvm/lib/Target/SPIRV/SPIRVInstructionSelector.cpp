@@ -307,6 +307,10 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
       default:
         MRI.setType(Reg, LLT::scalar(32));
       }
+    } else if (!Ty.isPointer()) {
+      if (auto *Def = MRI.getVRegDef(Reg))
+        if (Def->getOpcode() == SPIRV::ASSIGN_TYPE)
+          MRI.setType(Reg, LLT::scalar(32));
     }
   }
 }
