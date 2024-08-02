@@ -1482,10 +1482,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                                                   Sel->getDebugLoc());
               })
               .Case<VPInstruction>([&](VPInstruction *VPI) {
-                // TODO: Transform
-                //   select(HeaderMask, LHS, blend(RHS, LHS/BlendMask))
-                // into
-                //   MergeUntilPivot(BlendMask, LHS, RHS, EVL)
                 VPValue *LHS, *RHS;
                 if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
                                          m_VPValue(RHS))))
