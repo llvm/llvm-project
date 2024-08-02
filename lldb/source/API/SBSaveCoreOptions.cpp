@@ -7,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSaveCoreOptions.h"
-#include "lldb/API/SBError.h"
-#include "lldb/API/SBFileSpec.h"
-#include "lldb/API/SBProcess.h"
-#include "lldb/API/SBThread.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -82,11 +78,11 @@ SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
 }
 
 SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
-  return m_opaque_up->AddThread(thread.get_sp());
+  return m_opaque_up->AddThread(thread.GetSP());
 }
 
 bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
-  return m_opaque_up->RemoveThread(thread.get_sp());
+  return m_opaque_up->RemoveThread(thread.GetSP());
 }
 
 void SBSaveCoreOptions::Clear() {

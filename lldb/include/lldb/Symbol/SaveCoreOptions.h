@@ -13,7 +13,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include <map>
+#include <unordered_set>
 #include <optional>
 #include <string>
 
@@ -50,8 +50,8 @@ private:
   std::optional<lldb_private::FileSpec> m_file;
   std::optional<lldb::SaveCoreStyle> m_style;
   lldb::ProcessSP m_process_sp;
-  std::map<lldb::tid_t, lldb::ThreadSP> m_threads_to_save;
+  std::unordered_set<lldb::tid_t> m_threads_to_save;
 };
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_SAVECOREOPTIONS_H

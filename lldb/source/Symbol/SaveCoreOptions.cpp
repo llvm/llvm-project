@@ -61,6 +61,7 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
     return error;
   }
 
+  // Don't clear any process specific data if the process is the same.
   if (m_process_sp == process_sp)
     return error;
     
@@ -85,7 +86,7 @@ Status SaveCoreOptions::AddThread(lldb::ThreadSP thread_sp) {
     m_process_sp = thread_sp->GetProcess();
   }
 
-  m_threads_to_save[thread_sp->GetID()];
+  m_threads_to_save.insert(thread_sp->GetID());
   return error;
 }
 
