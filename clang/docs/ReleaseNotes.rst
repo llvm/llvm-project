@@ -295,6 +295,10 @@ Python Binding Changes
 OpenMP Support
 --------------
 
+Improvements
+^^^^^^^^^^^^
+- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
+
 Additional Information
 ======================
 
