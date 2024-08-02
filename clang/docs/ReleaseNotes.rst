@@ -447,6 +447,10 @@ Non-comprehensive list of changes in this release
   type of the pointer was taken into account. This improves
   compatibility with GCC's libstdc++.
 
+- The type traits builtin ``__is_nullptr`` is deprecated in CLang 19 and will be
+  removed in Clang 20. ``__is_same(__remove_cv(T), decltype(nullptr))`` can be
+  used instead to check whether a type ``T`` is a ``nullptr``.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -754,7 +758,7 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling assignments for pointer-like objects (annotated with `[[gsl::Pointer]]`) under `-Wdangling-assignment-gsl` (off by default)
   Fixes #GH63310.
-  
+
 - Clang now diagnoses uses of alias templates with a deprecated attribute. (Fixes #GH18236).
 
   .. code-block:: c++
