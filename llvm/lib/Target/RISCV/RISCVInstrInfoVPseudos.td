@@ -7034,7 +7034,8 @@ defm : VPatBinaryV_VM_XM_IM<"int_riscv_vmerge", "PseudoVMERGE">;
 // 11.16. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 foreach vti = AllVectors in {
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
+  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
+                       GetVTypePredicates<vti>.Predicates) in {
     def : Pat<(vti.Vector (int_riscv_vmv_v_v (vti.Vector vti.RegClass:$passthru),
                                              (vti.Vector vti.RegClass:$rs1),
                                              VLOpFrag)),
@@ -7229,19 +7230,20 @@ defm : VPatConversionVI_VF<"int_riscv_vfclass", "PseudoVFCLASS">;
 // NOTE: Clang previously used int_riscv_vfmerge for vector-vector, but now uses
 // int_riscv_vmerge. Support both for compatibility.
 foreach vti = AllFloatVectors in {
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
+  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
+                       GetVTypePredicates<vti>.Predicates) in
     defm : VPatBinaryCarryInTAIL<"int_riscv_vmerge", "PseudoVMERGE", "VVM",
                                  vti.Vector,
                                  vti.Vector, vti.Vector, vti.Mask,
                                  vti.Log2SEW, vti.LMul, vti.RegClass,
                                  vti.RegClass, vti.RegClass>;
+  let Predicates = GetVTypePredicates<vti>.Predicates in
     defm : VPatBinaryCarryInTAIL<"int_riscv_vfmerge", "PseudoVFMERGE",
                                  "V"#vti.ScalarSuffix#"M",
                                  vti.Vector,
                                  vti.Vector, vti.Scalar, vti.Mask,
                                  vti.Log2SEW, vti.LMul, vti.RegClass,
                                  vti.RegClass, vti.ScalarRegClass>;
-  }
 }
 
 foreach fvti = AllFloatVectors in {

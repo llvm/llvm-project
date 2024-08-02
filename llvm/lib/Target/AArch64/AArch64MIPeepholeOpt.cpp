@@ -52,14 +52,14 @@
 //   %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
 //   %2:fpr64 = MOVID 0
 //   %4:fpr128 = IMPLICIT_DEF
-//   %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64, %subreg.dsub
+//   %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), %2:fpr64, %subreg.dsub
 //   %6:fpr128 = IMPLICIT_DEF
-//   %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
-//   %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+//   %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
+//   %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, %3:fpr128, 0
 //   ==>
 //   %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
 //   %6:fpr128 = IMPLICIT_DEF
-//   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
+//   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
 //
 // 8. Remove redundant CSELs that select between identical registers, by
 //    replacing them with unconditional moves.
