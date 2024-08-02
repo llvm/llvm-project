@@ -20796,26 +20796,15 @@ struct MappableVarListInfo {
 };
 } // namespace
 
-static std::pair<DeclRefExpr *, VarDecl *>
-buildImplicitMap(Sema &S, QualType BaseType, DSAStackTy *Stack,
-                 SmallVectorImpl<OMPClause *> &Maps) {
+static DeclRefExpr *buildImplicitMap(Sema &S, QualType BaseType,
+                                     DSAStackTy *Stack,
+                                     SmallVectorImpl<OMPClause *> &Maps) {
 
   const RecordDecl *RD = BaseType->getAsRecordDecl();
-  // AST context is RD's ParentASTContext().
-  ASTContext &Ctx = RD->getParentASTContext();
-  // DeclContext is RD's DeclContext.
-  DeclContext *DCT = const_cast<DeclContext *>(RD->getDeclContext());
   SourceRange Range = RD->getSourceRange();
   DeclarationNameInfo ImplicitName;
   // Dummy variable _s for Mapper.
-  ImplicitName.setName(
-      Ctx.DeclarationNames.getIdentifier(&Ctx.Idents.get("_s")));
-  DeclarationName VN = ImplicitName.getName();
-  TypeSourceInfo *TInfo =
-      Ctx.getTrivialTypeSourceInfo(BaseType, Range.getEnd());
-  VarDecl *VD =
-      VarDecl::Create(Ctx, DCT, Range.getEnd(), Range.getEnd(),
-                      VN.getAsIdentifierInfo(), BaseType, TInfo, SC_None);
+  VarDecl *VD = buildVarDecl(S, Range.getEnd(), BaseType, "_s");
   DeclRefExpr *MapperVarRef =
       buildDeclRefExpr(S, VD, BaseType, SourceLocation());
 
@@ -20835,13 +20824,13 @@ buildImplicitMap(Sema &S, QualType BaseType, DSAStackTy *Stack,
   DeclarationNameInfo MapperId;
   OpenMPDirectiveKind DKind = Stack->getCurrentDirective();
 
-  OMPClause *MapClasue = S.OpenMP().ActOnOpenMPMapClause(
+  OMPClause *MapClause = S.OpenMP().ActOnOpenMPMapClause(
       nullptr, OMPC_MAP_MODIFIER_unknown, SourceLocation(), MapperIdScopeSpec,
       MapperId, DKind == OMPD_target_enter_data ? OMPC_MAP_to : OMPC_MAP_tofrom,
       /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(), SExprs,
       OMPVarListLocTy());
-  Maps.push_back(MapClasue);
-  return {MapperVarRef, VD};
+  Maps.push_back(MapClause);
+  return MapperVarRef;
 }
 
 static ExprResult buildImplicitMapper(Sema &S, QualType BaseType,
@@ -20849,9 +20838,7 @@ static ExprResult buildImplicitMapper(Sema &S, QualType BaseType,
 
   // Build impilicit map for mapper
   SmallVector<OMPClause *, 4> Maps;
-  VarDecl *VD;
-  DeclRefExpr *MapperVarRef;
-  std::tie(MapperVarRef, VD) = buildImplicitMap(S, BaseType, Stack, Maps);
+  DeclRefExpr *MapperVarRef = buildImplicitMap(S, BaseType, Stack, Maps);
 
   const RecordDecl *RD = BaseType->getAsRecordDecl();
   // AST context is RD's ParentASTContext().
@@ -20870,6 +20857,7 @@ static ExprResult buildImplicitMapper(Sema &S, QualType BaseType,
     S.PushOnScopeChains(DMD, Scope, /*AddToContext*/ false);
   DCT->addDecl(DMD);
   DMD->setAccess(clang::AS_none);
+  auto *VD = cast<DeclRefExpr>(MapperVarRef)->getDecl();
   VD->setDeclContext(DMD);
   VD->setLexicalDeclContext(DMD);
   DMD->addDecl(VD);
@@ -20880,18 +20868,86 @@ static ExprResult buildImplicitMapper(Sema &S, QualType BaseType,
                              DMD, false, SourceLocation(), BaseType, VK_LValue);
 }
 
-static bool IsImplicitMapperNeeded(Sema &S, DSAStackTy *Stack,
+// Look up the user-defined mapper given the mapper name and mapper type,
+// return true if found one.
+static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
+                                 CXXScopeSpec &MapperIdScopeSpec,
+                                 const DeclarationNameInfo &MapperId,
+                                 QualType Type) {
+  // Find all user-defined mappers with the given MapperId.
+  SmallVector<UnresolvedSet<8>, 4> Lookups;
+  LookupResult Lookup(SemaRef, MapperId, Sema::LookupOMPMapperName);
+  Lookup.suppressDiagnostics();
+  if (S)
+    while (S && SemaRef.LookupParsedName(Lookup, S, &MapperIdScopeSpec,
+                                         /*ObjectType=*/QualType())) {
+      NamedDecl *D = Lookup.getRepresentativeDecl();
+      while (S && !S->isDeclScope(D))
+        S = S->getParent();
+      if (S)
+        S = S->getParent();
+      Lookups.emplace_back();
+      Lookups.back().append(Lookup.begin(), Lookup.end());
+      Lookup.clear();
+    }
+  if (SemaRef.CurContext->isDependentContext() || Type->isDependentType() ||
+      Type->isInstantiationDependentType() ||
+      Type->containsUnexpandedParameterPack() ||
+      filterLookupForUDReductionAndMapper<bool>(Lookups, [](ValueDecl *D) {
+        return !D->isInvalidDecl() &&
+               (D->getType()->isDependentType() ||
+                D->getType()->isInstantiationDependentType() ||
+                D->getType()->containsUnexpandedParameterPack());
+      }))
+    return false;
+  // Perform argument dependent lookup.
+  SourceLocation Loc = MapperId.getLoc();
+  if (SemaRef.getLangOpts().CPlusPlus && !MapperIdScopeSpec.isSet())
+    argumentDependentLookup(SemaRef, MapperId, Loc, Type, Lookups);
+  if (filterLookupForUDReductionAndMapper<ValueDecl *>(
+          Lookups, [&SemaRef, Type](ValueDecl *D) -> ValueDecl * {
+            if (!D->isInvalidDecl() &&
+                SemaRef.Context.hasSameType(D->getType(), Type))
+              return D;
+            return nullptr;
+          }))
+    return true;
+  // Find the first user-defined mapper with a type derived from the desired
+  // type.
+  if (auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
+          Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
+            if (!D->isInvalidDecl() &&
+                SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
+                !Type.isMoreQualifiedThan(D->getType()))
+              return D;
+            return nullptr;
+          })) {
+    CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                       /*DetectVirtual=*/false);
+    if (SemaRef.IsDerivedFrom(Loc, Type, VD->getType(), Paths)) {
+      if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
+              VD->getType().getUnqualifiedType()))) {
+        if (SemaRef.CheckBaseClassAccess(
+                Loc, VD->getType(), Type, Paths.front(),
+                /*DiagID=*/0) != Sema::AR_inaccessible) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+static bool isImplicitMapperNeeded(Sema &S, DSAStackTy *Stack,
                                    QualType CanonType, const Expr *E) {
 
   // DFS over data members in structures/classes.
   SmallVector<std::pair<QualType, FieldDecl *>, 4> Types(1,
                                                          {CanonType, nullptr});
-  llvm::DenseMap<const Type *, Expr *> Visited;
+  llvm::DenseMap<const Type *, bool> Visited;
   SmallVector<std::pair<FieldDecl *, unsigned>, 4> ParentChain(1, {nullptr, 1});
   while (!Types.empty()) {
-    QualType BaseType;
-    FieldDecl *CurFD;
-    std::tie(BaseType, CurFD) = Types.pop_back_val();
+    auto [BaseType, CurFD] = Types.pop_back_val();
     while (ParentChain.back().second == 0)
       ParentChain.pop_back();
     --ParentChain.back().second;
@@ -20909,12 +20965,10 @@ static bool IsImplicitMapperNeeded(Sema &S, DSAStackTy *Stack,
       DefaultMapperId.setName(S.Context.DeclarationNames.getIdentifier(
           &S.Context.Idents.get("default")));
       DefaultMapperId.setLoc(E->getExprLoc());
-      ExprResult ER = buildUserDefinedMapperRef(
-          S, Stack->getCurScope(), MapperIdScopeSpec, DefaultMapperId, BaseType,
-          /*UnresolvedMapper=*/nullptr);
-      if (ER.isInvalid())
-        continue;
-      It = Visited.try_emplace(BaseType.getTypePtr(), ER.get()).first;
+      bool HasUDMapper =
+          hasUserDefinedMapper(S, Stack->getCurScope(), MapperIdScopeSpec,
+                               DefaultMapperId, BaseType);
+      It = Visited.try_emplace(BaseType.getTypePtr(), HasUDMapper).first;
     }
     // Found default mapper.
     if (It->second)
@@ -21253,7 +21307,7 @@ static void checkMappableExpressionList(
         BaseType = ElemType.getCanonicalType();
       }
       if (BaseType->getAsRecordDecl() &&
-          IsImplicitMapperNeeded(SemaRef, DSAS, BaseType, VE)) {
+          isImplicitMapperNeeded(SemaRef, DSAS, BaseType, VE)) {
         ER = buildImplicitMapper(SemaRef, BaseType, DSAS);
       }
     }

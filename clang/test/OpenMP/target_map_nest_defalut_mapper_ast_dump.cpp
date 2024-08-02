@@ -31,4 +31,4 @@ void foo() {
 // DUM-NEXT:  | | `-DeclRefExpr {{.*}}<<invalid sloc>> 'D' lvalue Var {{.*}} '_s' 'D'
 // DUM-NEXT:  | `-MemberExpr {{.*}}<line:11:3> 'int' lvalue .h {{.*}}
 // DUM-NEXT:  |   `-DeclRefExpr {{.*}}<<invalid sloc>> 'D' lvalue Var {{.*}} '_s' 'D'
-// DUM-NEXT:  `-VarDecl {{.*}} <line:12:1> col:1 used _s 'D'
+// DUM-NEXT:  `-VarDecl {{.*}} <line:12:1> col:1 implicit used _s 'D'
