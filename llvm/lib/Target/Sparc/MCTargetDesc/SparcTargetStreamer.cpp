@@ -14,7 +14,7 @@
 #include "SparcInstPrinter.h"
 #include "SparcMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormattedStream.h"
@@ -54,12 +54,12 @@ void SparcTargetAsmStreamer::emitSparcRegisterScratch(unsigned reg) {
 SparcTargetELFStreamer::SparcTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : SparcTargetStreamer(S) {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned EFlags = W.getELFHeaderEFlags();
 
   EFlags |= getEFlagsForFeatureSet(STI);
 
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 }
 
 MCELFStreamer &SparcTargetELFStreamer::getStreamer() {
