@@ -136,7 +136,8 @@ Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
 }
 
 Module::Module(const ModuleSpec &module_spec)
-    : m_file_has_changed(false), m_first_file_changed_log(false) {
+    : m_unwind_table(*this), m_file_has_changed(false),
+      m_first_file_changed_log(false) {
   // Scope for locker below...
   {
     std::lock_guard<std::recursive_mutex> guard(
@@ -243,7 +244,8 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
     : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_arch(arch), m_file(file_spec), m_object_name(object_name),
       m_object_offset(object_offset), m_object_mod_time(object_mod_time),
-      m_file_has_changed(false), m_first_file_changed_log(false) {
+      m_unwind_table(*this), m_file_has_changed(false),
+      m_first_file_changed_log(false) {
   // Scope for locker below...
   {
     std::lock_guard<std::recursive_mutex> guard(
@@ -259,7 +261,9 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
               m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
 }
 
-Module::Module() : m_file_has_changed(false), m_first_file_changed_log(false) {
+Module::Module()
+    : m_unwind_table(*this), m_file_has_changed(false),
+      m_first_file_changed_log(false) {
   std::lock_guard<std::recursive_mutex> guard(
       GetAllocationModuleCollectionMutex());
   GetModuleCollection().push_back(this);
@@ -328,6 +332,8 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
           // Augment the arch with the target's information in case
           // we are unable to extract the os/environment from memory.
           m_arch.MergeFrom(process_sp->GetTarget().GetArchitecture());
+
+          m_unwind_table.ModuleWasUpdated();
         } else {
           error.SetErrorString("unable to find suitable object file plug-in");
         }
@@ -1043,8 +1049,7 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
         m_symfile_up.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
         m_did_load_symfile = true;
-        if (m_unwind_table)
-          m_unwind_table->Update();
+        m_unwind_table.ModuleWasUpdated();
       }
     }
   }
@@ -1342,6 +1347,8 @@ ObjectFile *Module::GetObjectFile() {
           // more specific than the generic COFF architecture, only merge in
           // those values that overwrite unspecified unknown values.
           m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
+
+          m_unwind_table.ModuleWasUpdated();
         } else {
           ReportError("failed to load objfile for {0}\nDebugging will be "
                       "degraded for this module.",
@@ -1372,12 +1379,9 @@ void Module::SectionFileAddressesChanged() {
 }
 
 UnwindTable &Module::GetUnwindTable() {
-  if (!m_unwind_table) {
-    if (!m_symfile_spec)
-      SymbolLocator::DownloadSymbolFileAsync(GetUUID());
-    m_unwind_table.emplace(*this);
-  }
-  return *m_unwind_table;
+  if (!m_symfile_spec)
+    SymbolLocator::DownloadSymbolFileAsync(GetUUID());
+  return m_unwind_table;
 }
 
 SectionList *Module::GetUnifiedSectionList() {
