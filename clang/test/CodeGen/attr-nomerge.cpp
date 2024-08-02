@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -fms-extensions -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -fms-extensions -o - | FileCheck %s
 
 class A {
 public:
@@ -65,22 +65,22 @@ void something_else_again() {
   g(1);
 }
 
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0:[0-9]+]]
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
-// CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
-// CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0:[0-9]+]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv(){{$}}
+// CHECK: call noundef{{.*}} i1 @_Z3barv(){{$}}
 // CHECK: call void @_Z1fbb({{.*}}) #[[ATTR0]]
 // CHECK: %[[FPTR:.*]] = load ptr, ptr @fptr
 // CHECK-NEXT: call void %[[FPTR]]() #[[ATTR0]]
 // CHECK: call void @"_ZZ3fooiP1AP1BENK3$_0clEv"{{.*}} #[[ATTR0]]
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
 // CHECK-LABEL: for.cond:
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
 // CHECK-LABEL: for.inc:
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
 // CHECK: call void asm sideeffect "nop"{{.*}} #[[ATTR1:[0-9]+]]
-// CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
+// CHECK: call noundef{{.*}} i1 @_Z3barv(){{$}}
 // CHECK: load ptr, ptr
 // CHECK: load ptr, ptr
 // CHECK: %[[AG:.*]] = load ptr, ptr
