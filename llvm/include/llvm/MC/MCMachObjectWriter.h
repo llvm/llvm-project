@@ -241,7 +241,7 @@ public:
   /// Mach-O deployment target version information.
   void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
                      unsigned Update,
-                     VersionTuple SDKVersion = VersionTuple()) {
+                     VersionTuple SDKVersion = VersionTuple()) override {
     VersionInfo.EmitBuildVersion = false;
     VersionInfo.TypeOrPlatform.Type = Type;
     VersionInfo.Major = Major;
@@ -249,33 +249,38 @@ public:
     VersionInfo.Update = Update;
     VersionInfo.SDKVersion = SDKVersion;
   }
-  void setBuildVersion(MachO::PlatformType Platform, unsigned Major,
-                       unsigned Minor, unsigned Update,
-                       VersionTuple SDKVersion = VersionTuple()) {
+  void setBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
+                       unsigned Update,
+                       VersionTuple SDKVersion = VersionTuple()) override {
     VersionInfo.EmitBuildVersion = true;
-    VersionInfo.TypeOrPlatform.Platform = Platform;
+    VersionInfo.TypeOrPlatform.Platform = (MachO::PlatformType)Platform;
     VersionInfo.Major = Major;
     VersionInfo.Minor = Minor;
     VersionInfo.Update = Update;
     VersionInfo.SDKVersion = SDKVersion;
   }
-  void setTargetVariantBuildVersion(MachO::PlatformType Platform,
-                                    unsigned Major, unsigned Minor,
-                                    unsigned Update, VersionTuple SDKVersion) {
+  void setTargetVariantBuildVersion(unsigned Platform, unsigned Major,
+                                    unsigned Minor, unsigned Update,
+                                    VersionTuple SDKVersion) override {
     TargetVariantVersionInfo.EmitBuildVersion = true;
-    TargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
+    TargetVariantVersionInfo.TypeOrPlatform.Platform =
+        (MachO::PlatformType)Platform;
     TargetVariantVersionInfo.Major = Major;
     TargetVariantVersionInfo.Minor = Minor;
     TargetVariantVersionInfo.Update = Update;
     TargetVariantVersionInfo.SDKVersion = SDKVersion;
   }
 
-  std::optional<unsigned> getPtrAuthABIVersion() const {
+  std::optional<unsigned> getPtrAuthABIVersion() const override {
     return PtrAuthABIVersion;
   }
-  void setPtrAuthABIVersion(unsigned V) { PtrAuthABIVersion = V; }
-  bool getPtrAuthKernelABIVersion() const { return PtrAuthKernelABIVersion; }
-  void setPtrAuthKernelABIVersion(bool V) { PtrAuthKernelABIVersion = V; }
+  void setPtrAuthABIVersion(unsigned V) override { PtrAuthABIVersion = V; }
+  bool getPtrAuthKernelABIVersion() const override {
+    return PtrAuthKernelABIVersion;
+  }
+  void setPtrAuthKernelABIVersion(bool V) override {
+    PtrAuthKernelABIVersion = V;
+  }
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;
   }

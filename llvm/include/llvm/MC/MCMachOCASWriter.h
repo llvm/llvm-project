@@ -91,6 +91,43 @@ public:
     MOW.writeDataInCodeRegion(Asm);
   }
 
+  void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
+                     unsigned Update,
+                     VersionTuple SDKVersion = VersionTuple()) override {
+    MOW.setVersionMin(Type, Major, Minor, Update, SDKVersion);
+  }
+  void setBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
+                       unsigned Update,
+                       VersionTuple SDKVersion = VersionTuple()) override {
+    MOW.setBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+  }
+  void setTargetVariantBuildVersion(unsigned Platform, unsigned Major,
+                                    unsigned Minor, unsigned Update,
+                                    VersionTuple SDKVersion) override {
+    MOW.setTargetVariantBuildVersion(Platform, Major, Minor, Update,
+                                     SDKVersion);
+  }
+
+  std::optional<unsigned> getPtrAuthABIVersion() const override {
+    return MOW.getPtrAuthABIVersion();
+  }
+  void setPtrAuthABIVersion(unsigned V) override {
+    MOW.setPtrAuthABIVersion(V);
+  }
+  bool getPtrAuthKernelABIVersion() const override {
+    return MOW.getPtrAuthKernelABIVersion();
+  }
+  void setPtrAuthKernelABIVersion(bool V) override {
+    MOW.setPtrAuthKernelABIVersion(V);
+  }
+
+  bool getSubsectionsViaSymbols() const override {
+    return MOW.getSubsectionsViaSymbols();
+  }
+  void setSubsectionsViaSymbols(bool Value) override {
+    MOW.setSubsectionsViaSymbols(Value);
+  }
+
   void writeSymbolTable(MCAssembler &Asm) { MOW.writeSymbolTable(Asm); }
 
   uint64_t writeObject(MCAssembler &Asm) override;
