@@ -453,7 +453,7 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
 // MeshSharding
 //===----------------------------------------------------------------------===//
 
-bool MeshSharding::sameExceptConstraint(const MeshSharding &rhs) const {
+bool MeshSharding::equalSplitAndPartialAxes(const MeshSharding &rhs) const {
   if (getMesh() != rhs.getMesh()) {
     return false;
   }
@@ -478,7 +478,7 @@ bool MeshSharding::sameExceptConstraint(const MeshSharding &rhs) const {
                       std::mem_fn(&MeshAxesAttr::empty));
 }
 
-bool MeshSharding::sameConstraint(const MeshSharding &rhs) const {
+bool MeshSharding::equalHaloAndShardSizes(const MeshSharding &rhs) const {
   if (rhs.getStaticHaloSizes().size() != getStaticHaloSizes().size() ||
       !llvm::equal(llvm::make_range(getStaticHaloSizes().begin(),
                                     getStaticHaloSizes().end()),
@@ -512,13 +512,13 @@ bool MeshSharding::sameConstraint(const MeshSharding &rhs) const {
 }
 
 bool MeshSharding::operator==(Value rhs) const {
-  return sameExceptConstraint(rhs) && sameConstraint(rhs);
+  return equalSplitAndPartialAxes(rhs) && equalHaloAndShardSizes(rhs);
 }
 
 bool MeshSharding::operator!=(Value rhs) const { return !(*this == rhs); }
 
 bool MeshSharding::operator==(const MeshSharding &rhs) const {
-  return sameExceptConstraint(rhs) && sameConstraint(rhs);
+  return equalSplitAndPartialAxes(rhs) && equalHaloAndShardSizes(rhs);
 }
 
 bool MeshSharding::operator!=(const MeshSharding &rhs) const {

@@ -457,7 +457,7 @@ updateHalosInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
 // Detect if the resharding is a halo update.
 static bool detectUpdateHalosInResharding(MeshSharding sourceSharding,
                                           MeshSharding targetSharding) {
-  return (sourceSharding.sameExceptConstraint(targetSharding) &&
+  return (sourceSharding.equalSplitAndPartialAxes(targetSharding) &&
           !targetSharding.getStaticHaloSizes().empty());
 }
 
