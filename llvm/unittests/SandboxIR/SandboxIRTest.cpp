@@ -1976,16 +1976,17 @@ bb3:
   EXPECT_EQ(PHI->isComplete(), LLVMPHI->isComplete());
   // Check replaceIncomingBlockWith
   OrigBB = PHI->getIncomingBlock(0);
-  EXPECT_EQ(OrigBB, BB1);
-  EXPECT_NE(OrigBB, BB2);
-  PHI->replaceIncomingBlockWith(BB1, BB2);
-  EXPECT_EQ(PHI->getIncomingBlock(0), BB2);
+  auto *NewBB = BB2;
+  EXPECT_NE(NewBB, OrigBB);
+  PHI->replaceIncomingBlockWith(OrigBB, NewBB);
+  EXPECT_EQ(PHI->getIncomingBlock(0), NewBB);
   // Check replaceIncomingValueIf
   EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
   PHI->removeIncomingValueIf([&](unsigned Idx) {
     return PHI->getIncomingBlock(Idx) == BB2;
   });
   EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB1);
   // Check create().
   auto *NewPHI = cast<sandboxir::PHINode>(
       sandboxir::PHINode::create(PHI->getType(), 0, Br, Ctx, "NewPHI"));

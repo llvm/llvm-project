@@ -1152,10 +1152,10 @@ Value *PHINode::hasConstantValue() const {
 }
 void PHINode::replaceIncomingBlockWith (const BasicBlock *Old, BasicBlock *New) {
   assert(New && Old && "Sandbox IR PHI node got a null basic block!");
-  for (unsigned Op = 0,
-            NumOps = cast<llvm::PHINode>(Val)->getNumOperands(); Op != NumOps; ++Op)
-    if (getIncomingBlock(Op) == Old)
-      setIncomingBlock(Op, New);
+  for (unsigned Idx = 0,
+            NumOps = cast<llvm::PHINode>(Val)->getNumOperands(); Idx != NumOps; ++Idx)
+    if (getIncomingBlock(Idx) == Old)
+      setIncomingBlock(Idx, New);
 }
 void PHINode::removeIncomingValueIf(function_ref< bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
@@ -1164,7 +1164,7 @@ void PHINode::removeIncomingValueIf(function_ref< bool(unsigned)> Predicate,
   // directly if performance becomes an issue.
   for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
     if (Predicate(Idx))
-      removeIncomingValue(Idx);
+      removeIncomingValue(Idx, DeletePHIIfEmpty);
 }
 
 static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
