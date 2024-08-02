@@ -476,10 +476,8 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   if (!Off) {
     // Handle cases when LazyCompoundVal is used for an array index.
     // Such case is possible if code does:
-    //
     //   char b[4];
     //   a[__builtin_bitcast(int, b)];
-    //
     // Return UnknownVal, since we cannot model it.
     return UnknownVal();
   }
