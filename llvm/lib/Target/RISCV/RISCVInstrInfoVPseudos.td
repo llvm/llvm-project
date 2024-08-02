@@ -7246,6 +7246,14 @@ foreach vti = AllFloatVectors in {
                                  vti.RegClass, vti.ScalarRegClass>;
 }
 
+foreach vti = AllBFloatVectors in
+  let Predicates = [HasVInstructionsBF16Minimal] in
+    defm : VPatBinaryCarryInTAIL<"int_riscv_vmerge", "PseudoVMERGE", "VVM",
+                                 vti.Vector,
+                                 vti.Vector, vti.Vector, vti.Mask,
+                                 vti.Log2SEW, vti.LMul, vti.RegClass,
+                                 vti.RegClass, vti.RegClass>;
+
 foreach fvti = AllFloatVectors in {
   defvar instr = !cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX);
   let Predicates = GetVTypePredicates<fvti>.Predicates in
