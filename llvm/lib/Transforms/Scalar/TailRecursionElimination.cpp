@@ -243,6 +243,11 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
           isa<PseudoProbeInst>(&I))
         continue;
 
+      // Bail out intrinsic stackrestore call.
+      if (auto *II = dyn_cast<IntrinsicInst>(CI))
+        if (II->getIntrinsicID() == Intrinsic::stackrestore)
+          continue;
+
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
       bool IsNoTail = CI->isNoTailCall() ||
