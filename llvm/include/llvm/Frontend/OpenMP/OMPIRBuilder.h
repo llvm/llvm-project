@@ -196,6 +196,9 @@ private:
 /// Data structure to contain the information needed to uniquely identify
 /// a target entry.
 struct TargetRegionEntryInfo {
+  /// The prefix used for kernel names.
+  static constexpr const char *KernelNamePrefix = "__omp_offloading_";
+
   std::string ParentName;
   unsigned DeviceID;
   unsigned FileID;
