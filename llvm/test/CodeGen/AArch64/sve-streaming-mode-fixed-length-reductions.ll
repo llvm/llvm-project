@@ -36,12 +36,36 @@ define i32 @reduce_uaddv_v16i8(<32 x i8> %a) {
 ;
 ; STREAMING-SVE-LABEL: reduce_uaddv_v16i8:
 ; STREAMING-SVE:       // %bb.0:
-; STREAMING-SVE-NEXT:    mov z2.b, #1 // =0x1
-; STREAMING-SVE-NEXT:    mov z3.s, #0 // =0x0
+; STREAMING-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; STREAMING-SVE-NEXT:    uunpklo z2.h, z1.b
+; STREAMING-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; STREAMING-SVE-NEXT:    uunpklo z3.h, z0.b
 ; STREAMING-SVE-NEXT:    ptrue p0.s, vl4
-; STREAMING-SVE-NEXT:    udot v3.4s, v1.16b, v2.16b
-; STREAMING-SVE-NEXT:    udot v3.4s, v0.16b, v2.16b
-; STREAMING-SVE-NEXT:    uaddv d0, p0, z3.s
+; STREAMING-SVE-NEXT:    ext z1.b, z1.b, z1.b, #8
+; STREAMING-SVE-NEXT:    ext z0.b, z0.b, z0.b, #8
+; STREAMING-SVE-NEXT:    uunpklo z1.h, z1.b
+; STREAMING-SVE-NEXT:    uunpklo z0.h, z0.b
+; STREAMING-SVE-NEXT:    uunpklo z4.s, z2.h
+; STREAMING-SVE-NEXT:    ext z2.b, z2.b, z2.b, #8
+; STREAMING-SVE-NEXT:    uunpklo z6.s, z3.h
+; STREAMING-SVE-NEXT:    ext z3.b, z3.b, z3.b, #8
+; STREAMING-SVE-NEXT:    mov z5.d, z1.d
+; STREAMING-SVE-NEXT:    uunpklo z7.s, z0.h
+; STREAMING-SVE-NEXT:    ext z0.b, z0.b, z0.b, #8
+; STREAMING-SVE-NEXT:    uunpklo z2.s, z2.h
+; STREAMING-SVE-NEXT:    uunpklo z3.s, z3.h
+; STREAMING-SVE-NEXT:    add z4.s, z6.s, z4.s
+; STREAMING-SVE-NEXT:    ext z5.b, z5.b, z1.b, #8
+; STREAMING-SVE-NEXT:    uunpklo z1.s, z1.h
+; STREAMING-SVE-NEXT:    uunpklo z0.s, z0.h
+; STREAMING-SVE-NEXT:    add z2.s, z3.s, z2.s
+; STREAMING-SVE-NEXT:    uunpklo z5.s, z5.h
+; STREAMING-SVE-NEXT:    add z1.s, z7.s, z1.s
+; STREAMING-SVE-NEXT:    add z0.s, z0.s, z5.s
+; STREAMING-SVE-NEXT:    add z1.s, z4.s, z1.s
+; STREAMING-SVE-NEXT:    add z0.s, z2.s, z0.s
+; STREAMING-SVE-NEXT:    add z0.s, z1.s, z0.s
+; STREAMING-SVE-NEXT:    uaddv d0, p0, z0.s
 ; STREAMING-SVE-NEXT:    fmov x0, d0
 ; STREAMING-SVE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; STREAMING-SVE-NEXT:    ret
@@ -80,12 +104,36 @@ define i32 @reduce_saddv_v16i8(<32 x i8> %a) {
 ;
 ; STREAMING-SVE-LABEL: reduce_saddv_v16i8:
 ; STREAMING-SVE:       // %bb.0:
-; STREAMING-SVE-NEXT:    mov z2.b, #1 // =0x1
-; STREAMING-SVE-NEXT:    mov z3.s, #0 // =0x0
+; STREAMING-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; STREAMING-SVE-NEXT:    sunpklo z2.h, z1.b
+; STREAMING-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; STREAMING-SVE-NEXT:    sunpklo z3.h, z0.b
 ; STREAMING-SVE-NEXT:    ptrue p0.s, vl4
-; STREAMING-SVE-NEXT:    sdot v3.4s, v1.16b, v2.16b
-; STREAMING-SVE-NEXT:    sdot v3.4s, v0.16b, v2.16b
-; STREAMING-SVE-NEXT:    uaddv d0, p0, z3.s
+; STREAMING-SVE-NEXT:    ext z1.b, z1.b, z1.b, #8
+; STREAMING-SVE-NEXT:    ext z0.b, z0.b, z0.b, #8
+; STREAMING-SVE-NEXT:    sunpklo z1.h, z1.b
+; STREAMING-SVE-NEXT:    sunpklo z0.h, z0.b
+; STREAMING-SVE-NEXT:    sunpklo z4.s, z2.h
+; STREAMING-SVE-NEXT:    ext z2.b, z2.b, z2.b, #8
+; STREAMING-SVE-NEXT:    sunpklo z6.s, z3.h
+; STREAMING-SVE-NEXT:    ext z3.b, z3.b, z3.b, #8
+; STREAMING-SVE-NEXT:    mov z5.d, z1.d
+; STREAMING-SVE-NEXT:    sunpklo z7.s, z0.h
+; STREAMING-SVE-NEXT:    ext z0.b, z0.b, z0.b, #8
+; STREAMING-SVE-NEXT:    sunpklo z2.s, z2.h
+; STREAMING-SVE-NEXT:    sunpklo z3.s, z3.h
+; STREAMING-SVE-NEXT:    add z4.s, z6.s, z4.s
+; STREAMING-SVE-NEXT:    ext z5.b, z5.b, z1.b, #8
+; STREAMING-SVE-NEXT:    sunpklo z1.s, z1.h
+; STREAMING-SVE-NEXT:    sunpklo z0.s, z0.h
+; STREAMING-SVE-NEXT:    add z2.s, z3.s, z2.s
+; STREAMING-SVE-NEXT:    sunpklo z5.s, z5.h
+; STREAMING-SVE-NEXT:    add z1.s, z7.s, z1.s
+; STREAMING-SVE-NEXT:    add z0.s, z0.s, z5.s
+; STREAMING-SVE-NEXT:    add z1.s, z4.s, z1.s
+; STREAMING-SVE-NEXT:    add z0.s, z2.s, z0.s
+; STREAMING-SVE-NEXT:    add z0.s, z1.s, z0.s
+; STREAMING-SVE-NEXT:    uaddv d0, p0, z0.s
 ; STREAMING-SVE-NEXT:    fmov x0, d0
 ; STREAMING-SVE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; STREAMING-SVE-NEXT:    ret
