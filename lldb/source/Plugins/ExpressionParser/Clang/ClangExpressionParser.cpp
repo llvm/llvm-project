@@ -495,18 +495,24 @@ ClangExpressionParser::ClangExpressionParser(
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
 
-  auto target_info = TargetInfo::CreateTargetInfo(
-      m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
-  if (log) {
-    LLDB_LOGF(log, "Target datalayout string: '%s'",
-              target_info->getDataLayoutString());
-    LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
-    LLDB_LOGF(log, "Target vector alignment: %d",
-              target_info->getMaxVectorAlign());
-  }
-  m_compiler->setTarget(target_info);
+  if (auto *target_info = TargetInfo::CreateTargetInfo(
+          m_compiler->getDiagnostics(),
+          m_compiler->getInvocation().TargetOpts)) {
+    if (log) {
+      LLDB_LOGF(log, "Target datalayout string: '%s'",
+                target_info->getDataLayoutString());
+      LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
+      LLDB_LOGF(log, "Target vector alignment: %d",
+                target_info->getMaxVectorAlign());
+    }
+    m_compiler->setTarget(target_info);
+  } else {
+    if (log)
+      LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
+                m_compiler->getTargetOpts().Triple.c_str());
 
-  assert(m_compiler->hasTarget());
+    lldbassert(false && "Failed to create TargetInfo.");
+  }
 
   // 4. Set language options.
   lldb::LanguageType language = expr.Language().AsLanguageType();
