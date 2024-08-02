@@ -315,7 +315,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
     SpvType = GR.getSPIRVTypeForVReg(SrcReg);
   assert(SpvType && "VReg is expected to have SPIRV type");
   LLT SrcLLT = MRI.getType(SrcReg);
-  LLT NewT = LLT::scalar(32);
+  LLT NewT;
   bool IsFloat = SpvType->getOpcode() == SPIRV::OpTypeFloat;
   bool IsVectorFloat =
       SpvType->getOpcode() == SPIRV::OpTypeVector &&
@@ -348,6 +348,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
       }
     }
   } else if (SrcLLT.isVector()) {
+    NewT = LLT::scalar(32); //LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType));
     NewT = LLT::fixed_vector(2, NewT);
     if (IsFloat) {
       GetIdOp = SPIRV::GET_vfID;
@@ -356,6 +357,8 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
       GetIdOp = SPIRV::GET_vID;
       DstClass = &SPIRV::vIDRegClass;
     }
+  } else {
+    NewT = LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType));
   }
   Register IdReg = MRI.createGenericVirtualRegister(NewT);
   MRI.setRegClass(IdReg, DstClass);

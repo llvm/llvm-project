@@ -76,6 +76,7 @@ class SPIRVInstructionSelector : public InstructionSelector {
   SPIRVGlobalRegistry &GR;
   MachineRegisterInfo *MRI;
   SyncScopeIDs SSIDs;
+  MachineFunction *HasVRegsReset = nullptr;
 
   /// We need to keep track of the number we give to anonymous global values to
   /// generate the same name every time when this is needed.
@@ -101,6 +102,8 @@ public:
 #undef GET_GLOBALISEL_TEMPORARIES_DECL
 
 private:
+  void resetVRegsType(MachineFunction &MF);
+
   // tblgen-erated 'select' implementation, used as the initial selector for
   // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
@@ -285,12 +288,37 @@ void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 }
 
+// To ensure that pattern matching rules are working.
+void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
+  if (HasVRegsReset == &MF)
+    return;
+  HasVRegsReset = &MF;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    LLT Ty = MRI.getType(Reg);
+    if (Ty.isScalar()) {
+      unsigned Bits = Ty.getScalarSizeInBits();
+      switch (Bits) {
+      //case 1:
+      case 32:
+        break;
+      default:
+        MRI.setType(Reg, LLT::scalar(32));
+      }
+    }
+  }
+}
+
 static bool isImm(const MachineOperand &MO, MachineRegisterInfo *MRI);
 
 // Defined in SPIRVLegalizerInfo.cpp.
 extern bool isTypeFoldingSupported(unsigned Opcode);
 
 bool SPIRVInstructionSelector::select(MachineInstr &I) {
+  resetVRegsType(*I.getParent()->getParent());
+
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
