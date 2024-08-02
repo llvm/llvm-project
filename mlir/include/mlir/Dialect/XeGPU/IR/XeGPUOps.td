@@ -60,8 +60,8 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
 
     * source: an object representing (starting address/pointer of) a memory region.
        It can be either a memref object, or simply a pointer represented by uint64_t type.
-       for the later case, the shape and layout information of the memory region should
-       be explicitly passed via `shape` and `strides` parameters.
+       For the case of dynamic memrefs or pointer, the shape and layout information of the
+       memory region should be explicitly passed via `shape` and `strides` parameters.
 
     * offsets: index values represents offsets from the "source" at the each dimension
         at which the subview of the target memory will be created. It is encoded via
