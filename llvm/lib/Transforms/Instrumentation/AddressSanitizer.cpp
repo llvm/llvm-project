@@ -133,6 +133,7 @@ const char kAsanModuleDtorName[] = "asan.module_dtor";
 static const uint64_t kAsanCtorAndDtorPriority = 1;
 // On Emscripten, the system needs more than one priorities for constructors.
 static const uint64_t kAsanEmscriptenCtorAndDtorPriority = 50;
+static const uint64_t kMaxCtorAndDtorPriority = 65535;
 const char kAsanReportErrorTemplate[] = "__asan_report_";
 const char kAsanRegisterGlobalsName[] = "__asan_register_globals";
 const char kAsanUnregisterGlobalsName[] = "__asan_unregister_globals";
@@ -1993,6 +1994,29 @@ void ModuleAddressSanitizer::createInitializerPoisonCalls(
       poisonOneInitializer(*F, ModuleName);
     }
   }
+  assert(ClInitializers);
+  updateGlobalCtors(M, [](Constant *C) -> Constant * {
+    ConstantStruct *CS = dyn_cast<ConstantStruct>(C);
+    if (!CS)
+      return C;
+    auto *Priority = cast<ConstantInt>(CS->getOperand(0));
+    if (Priority->getLimitedValue() != kMaxCtorAndDtorPriority)
+      return C;
+    // As optimization, runtime needs to execute callback just after all
+    // constructors. We going to set priority to the max allowed value. However,
+    // the default constructor priorily is already max, so as-is we will not be
+    // able to guaranty desired order. So reduce the priority by one to reserve
+    // max value for the constructor in runtime.
+    StructType *EltTy = cast<StructType>(CS->getType());
+    Constant *CSVals[3] = {
+        ConstantInt::getSigned(Priority->getType(),
+                               kMaxCtorAndDtorPriority - 1),
+        CS->getOperand(1),
+        CS->getOperand(2),
+    };
+    return cast<ConstantStruct>(
+        ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements())));
+  });
 }
 
 const GlobalVariable *
