@@ -865,11 +865,6 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
 
-  // Expand vector predication intrinsics into standard IR instructions.
-  // This pass has to run before ScalarizeMaskedMemIntrin and ExpandReduction
-  // passes since it emits those kinds of intrinsics.
-  addPass(createExpandVectorPredicationPass());
-
   // Instrument function entry after all inlining.
   addPass(createPostInlineEntryExitInstrumenterPass());
 

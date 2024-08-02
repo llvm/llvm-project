@@ -16,6 +16,7 @@
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/ExpandVectorPredication.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -349,6 +350,16 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         bool Changed = lowerConstantIntrinsics(*Parent, TLI, /*DT=*/nullptr);
         assert(Changed && "lowerConstantIntrinsics did not lower intrinsic");
         return Changed;
+      });
+      break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                    \
+  case Intrinsic::VPID:
+#include "llvm/IR/VPIntrinsics.def"
+      Changed |= forEachCall(F, [&](CallInst *CI) {
+        Function *Parent = CI->getParent()->getParent();
+        const TargetTransformInfo &TTI = LookupTTI(*Parent);
+        auto *VPI = cast<VPIntrinsic>(CI);
+        return expandVectorPredicationIntrinsic(*VPI, TTI);
       });
       break;
     case Intrinsic::objc_autorelease:
