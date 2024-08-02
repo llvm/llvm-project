@@ -3233,12 +3233,19 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (!targetOpSupported(opInst))
     return failure();
 
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
   auto parentFn = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   auto targetOp = cast<omp::TargetOp>(opInst);
   auto &targetRegion = targetOp.getRegion();
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapVars = targetOp.getMapVars();
   llvm::Function *llvmOutlinedFn = nullptr;
+
+  // TODO: It can also be false if a compile-time constant `false` IF clause is
+  // specified.
+  bool isOffloadEntry =
+      isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
   LogicalResult bodyGenStatus = success();
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
@@ -3306,14 +3313,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   auto argAccessorCB = [&](llvm::Argument &arg, llvm::Value *input,
                            llvm::Value *&retVal, InsertPointTy allocaIP,
                            InsertPointTy codeGenIP) {
-    llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-
     // We just return the unaltered argument for the host function
     // for now, some alterations may be required in the future to
     // keep host fallback functions working identically to the device
     // version (e.g. pass ByCopy values should be treated as such on
     // host and device, currently not always the case)
-    if (!ompBuilder->Config.isTargetDevice()) {
+    if (!isTargetDevice) {
       retVal = cast<llvm::Value>(&arg);
       return codeGenIP;
     }
@@ -3339,9 +3344,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                   moduleTranslation, dds);
 
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
-      ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
-      defaultValThreads, kernelInput, genMapInfoCB, bodyCB, argAccessorCB,
-      dds));
+      ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
+      defaultValTeams, defaultValThreads, kernelInput, genMapInfoCB, bodyCB,
+      argAccessorCB, dds));
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary
@@ -3710,6 +3715,23 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
                     bitEnumContainsAll(flags, Requires::unified_shared_memory));
                 config.setHasRequiresDynamicAllocators(
                     bitEnumContainsAll(flags, Requires::dynamic_allocators));
+                return success();
+              }
+              return failure();
+            })
+      .Case("omp.target_triples",
+            [&](Attribute attr) {
+              if (auto triplesAttr = dyn_cast<ArrayAttr>(attr)) {
+                llvm::OpenMPIRBuilderConfig &config =
+                    moduleTranslation.getOpenMPBuilder()->Config;
+                config.TargetTriples.clear();
+                config.TargetTriples.reserve(triplesAttr.size());
+                for (Attribute tripleAttr : triplesAttr) {
+                  if (auto tripleStrAttr = dyn_cast<StringAttr>(tripleAttr))
+                    config.TargetTriples.emplace_back(tripleStrAttr.getValue());
+                  else
+                    return failure();
+                }
                 return success();
               }
               return failure();
