@@ -3124,26 +3124,40 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = Tmp.withElementType(LTy);
-  } else if (neededInt) {
-    RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, gp_offset),
-                      LTy, CharUnits::fromQuantity(8));
-
+  } else if (neededInt || neededSSE == 1) {
     // Copy to a temporary if necessary to ensure the appropriate alignment.
     auto TInfo = getContext().getTypeInfoInChars(Ty);
     uint64_t TySize = TInfo.Width.getQuantity();
     CharUnits TyAlign = TInfo.Align;
 
-    // Copy into a temporary if the type is more aligned than the
-    // register save area.
-    if (TyAlign.getQuantity() > 8) {
+    llvm::Value *GpOrFpOffset = neededInt ? gp_offset : fp_offset;
+    uint64_t Alignment = neededInt ? 8 : 16;
+    if (auto Offset = AI.getDirectOffset()) {
       Address Tmp = CGF.CreateMemTemp(Ty);
-      CGF.Builder.CreateMemCpy(Tmp, RegAddr, TySize, false);
-      RegAddr = Tmp;
+      llvm::Type *TyHi = AI.getCoerceToType();
+      llvm::Value *Addr =
+          CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, GpOrFpOffset);
+      llvm::Value *Src = CGF.Builder.CreateAlignedLoad(TyHi, Addr, TyAlign);
+      llvm::Value *PtrOffset = llvm::ConstantInt::get(CGF.Int32Ty, Offset);
+      Address Dst = Address(
+          CGF.Builder.CreateGEP(CGF.Int8Ty, Tmp.getBasePointer(), PtrOffset),
+          LTy, TyAlign);
+      CGF.Builder.CreateStore(Src, Dst);
+      RegAddr = Tmp.withElementType(LTy);
+    } else {
+      RegAddr =
+          Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, GpOrFpOffset),
+                  LTy, CharUnits::fromQuantity(Alignment));
+
+      // Copy into a temporary if the type is more aligned than the
+      // register save area.
+      if (neededInt && TyAlign.getQuantity() > 8) {
+        Address Tmp = CGF.CreateMemTemp(Ty);
+        CGF.Builder.CreateMemCpy(Tmp, RegAddr, TySize, false);
+        RegAddr = Tmp;
+      }
     }
 
-  } else if (neededSSE == 1) {
-    RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, fp_offset),
-                      LTy, CharUnits::fromQuantity(16));
   } else {
     assert(neededSSE == 2 && "Invalid number of needed registers!");
     // SSE registers are spaced 16 bytes apart in the register save
