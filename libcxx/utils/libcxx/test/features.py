@@ -497,6 +497,14 @@ DEFAULT_FEATURES += [
         ),
     ),
     Feature(
+        name="LIBCXX-AMDGPU-FIXME",
+        when=lambda cfg: "__AMDGPU__" in compilerMacros(cfg),
+    ),
+    Feature(
+        name="LIBCXX-NVPTX-FIXME",
+        when=lambda cfg: "__NVPTX__" in compilerMacros(cfg),
+    ),
+    Feature(
         name="can-create-symlinks",
         when=lambda cfg: "_WIN32" not in compilerMacros(cfg)
         or programSucceeds(
