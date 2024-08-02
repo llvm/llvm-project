@@ -62,7 +62,7 @@ public:
   ///
   /// \param process The process to save.
   /// \return Success if process was set, otherwise an error
-  /// \note This will clear all process specific options if a different process 
+  /// \note This will clear all process specific options if a different process
   /// is specified than the current set process, either explicitly from this
   /// api, or implicitly from any function that requires a process.
   SBError SetProcess(lldb::SBProcess process);

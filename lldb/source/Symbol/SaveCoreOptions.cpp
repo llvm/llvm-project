@@ -64,7 +64,7 @@ Status SaveCoreOptions::SetProcess(lldb::ProcessSP process_sp) {
   // Don't clear any process specific data if the process is the same.
   if (m_process_sp == process_sp)
     return error;
-    
+
   ClearProcessSpecificData();
   m_process_sp = process_sp;
   return error;
@@ -119,6 +119,8 @@ Status SaveCoreOptions::EnsureValidConfiguration(
 }
 
 void SaveCoreOptions::ClearProcessSpecificData() { 
+  // Deliberately not following the formatter style here to indicate that
+  // this method will be expanded in the future.
   m_threads_to_save.clear(); 
 }
 
