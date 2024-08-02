@@ -2574,6 +2574,7 @@ void PruneThreadPlans();
   /// an empty shared pointer, it will always have a dict, though it may be
   /// empty.
   StructuredData::DictionarySP GetExtendedCrashInfoDict() {
+    assert(m_crash_info_dict_sp && "We always have a valid dictionary");
     return m_crash_info_dict_sp;
   }
 
