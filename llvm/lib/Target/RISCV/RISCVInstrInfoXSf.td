@@ -75,6 +75,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;
+  let ActiveElementsAffectResult = 1;
 }
 
 class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
@@ -98,6 +99,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;
+  let ActiveElementsAffectResult = 1;
 }
 
 class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,
@@ -407,8 +409,6 @@ multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
                                                        UsesVXRM=0>;
 }
 
-let ActiveElementsAffectResult = true in {
-
 let Predicates = [HasVendorXSfvcp] in {
   foreach m = MxList in {
     defm X : VPseudoVC_X<m, GPR>;
@@ -459,8 +459,6 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
   defm VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
 }
-
-} // ActiveElementsAffectResult = true
 
 // SDNode
 def SDT_SF_VC_V_X : SDTypeProfile<1, 4, [SDTCisVec<0>,

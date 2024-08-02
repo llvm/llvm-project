@@ -235,13 +235,13 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV in
+  let RVVConstraint = WidenV, ActiveElementsAffectResult = 1 in
   def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>;
 }
 
 multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
     : THVdotVMAQA_VX<opcodestr, funct6> {
-  let RVVConstraint = WidenV in
+  let RVVConstraint = WidenV, ActiveElementsAffectResult = 1 in
   def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", EarlyClobber=1>;
 }
 
@@ -648,14 +648,10 @@ def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 (i32 GPR:$rs1)),
           (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
-let ActiveElementsAffectResult = true in {
-
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAUS    : VPseudoVMAQA_VX;
-
-} // ActiveElementsAffectResult = true
 
 let Predicates = [HasVendorXTHeadVdot] in {
 defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",

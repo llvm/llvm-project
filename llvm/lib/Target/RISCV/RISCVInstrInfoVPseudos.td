@@ -2020,7 +2020,7 @@ multiclass VPseudoVSFS_M {
   defvar constraint = "@earlyclobber $rd";
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
-    let VLMul = mti.LMul.value, ActiveElementsAffectResult = true in {
+    let VLMul = mti.LMul.value in {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskNoPolicy<VR, VR, constraint>,
                            SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                       forceMergeOpRead=true>;
@@ -2059,7 +2059,7 @@ multiclass VPseudoVIOTA_M {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList in {
     defvar mx = m.MX;
-    let VLMul = m.value, ActiveElementsAffectResult = 1 in {
+    let VLMul = m.value in {
       def "_" # mx : VPseudoUnaryNoMask<m.vrclass, VR, constraint>,
                        SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                   forceMergeOpRead=true>;
@@ -2075,7 +2075,7 @@ multiclass VPseudoVCPR_V {
   foreach m = MxList in {
     defvar mx = m.MX;
     defvar sews = SchedSEWSet<mx>.val;
-    let VLMul = m.value, ActiveElementsAffectResult = true in
+    let VLMul = m.value in
       foreach e = sews in {
         defvar suffix = "_" # m.MX # "_E" # e;
         let SEW = e in
@@ -3157,7 +3157,7 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
                                           DAGOperand Op2Class,
                                           LMULInfo MInfo,
                                           int sew> {
-  let VLMul = MInfo.value, SEW=sew, ActiveElementsAffectResult = true in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class>;
     def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class>,
@@ -3170,7 +3170,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
                                                     DAGOperand Op2Class,
                                                     LMULInfo MInfo,
                                                     int sew> {
-  let VLMul = MInfo.value, SEW=sew, ActiveElementsAffectResult = true in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew
         : VPseudoTernaryNoMaskWithPolicyRoundingMode<RetClass, Op1Class,
@@ -6711,14 +6711,14 @@ defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
 //===----------------------------------------------------------------------===//
 // 15.2. Vector mask population count vcpop
 //===----------------------------------------------------------------------===//
-let IsSignExtendingOpW = 1, ActiveElementsAffectResult = 1 in
+let IsSignExtendingOpW = 1 in
 defm PseudoVCPOP: VPseudoVPOP_M;
 
 //===----------------------------------------------------------------------===//
 // 15.3. vfirst find-first-set mask bit
 //===----------------------------------------------------------------------===//
 
-let IsSignExtendingOpW = 1, ActiveElementsAffectResult = 1 in
+let IsSignExtendingOpW = 1 in
 defm PseudoVFIRST: VPseudoV1ST_M;
 
 //===----------------------------------------------------------------------===//

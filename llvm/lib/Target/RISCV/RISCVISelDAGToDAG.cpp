@@ -15,6 +15,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVISelLowering.h"
+#include "RISCVInstrInfo.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -3845,7 +3846,8 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // Some operations produce different elementwise results depending on the
   // active elements, like viota.m or vredsum. This transformation is illegal
   // for these if we change the active elements (i.e. mask or VL).
-  if (RISCVII::activeElementsAffectResult(TrueTSFlags)) {
+  const MCInstrDesc &TrueBaseMCID = TII->get(RISCV::getRVVMCOpcode(TrueOpc));
+  if (RISCVII::activeElementsAffectResult(TrueBaseMCID.TSFlags)) {
     if (Mask && !usesAllOnesMask(Mask, Glue))
       return false;
     if (TrueVL != VL)
