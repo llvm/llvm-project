@@ -41,8 +41,6 @@ public:
 private:
   void printPrivateHeaders() override;
   void printFileHeader();
-  void printAuxiliaryHeader() {};
-  void printLoaderSectionHeader();
   FormattedString formatName(StringRef Name);
   void printHex(StringRef Name, uint64_t Value);
   void printNumber(StringRef Name, uint64_t Value);
@@ -52,8 +50,6 @@ private:
 
 void XCOFFDumper::printPrivateHeaders() {
   printFileHeader();
-  printAuxiliaryHeader();
-  printLoaderSectionHeader();
 }
 
 FormattedString XCOFFDumper::formatName(StringRef Name) {
@@ -80,11 +76,10 @@ void XCOFFDumper::printFileHeader() {
   printNumber("NumberOfSections:", Obj.getNumberOfSections());
 
   int32_t TimeStamp = Obj.getTimeStamp();
-  // Negative timestamp values are reserved for future use.
   if (TimeStamp > 0) {
     // This handling of the time stamp assumes that the host  system's time_t is
-    // compatible with AIX time_t. If a platform is not
-    //  compatible, the lit tests will let us know.
+    // compatible with AIX time_t. If a platform is not  compatible, the lit
+    // tests will let us know.
     time_t TimeDate = TimeStamp;
 
     char FormattedTime[80] = {};
@@ -96,6 +91,7 @@ void XCOFFDumper::printFileHeader() {
     else
       printHex("Timestamp:", TimeStamp);
   } else {
+    // Negative timestamp values are reserved for future use.
     printStrHex("TimeStamp:", TimeStamp == 0 ? "None" : "Reserved Value",
                 TimeStamp);
   }
@@ -119,44 +115,6 @@ void XCOFFDumper::printFileHeader() {
   printHex("Flags:", Obj.getFlags());
 }
 
-void XCOFFDumper::printLoaderSectionHeader() {
-  Expected<uintptr_t> LoaderSectionAddrOrError =
-      Obj.getSectionFileOffsetToRawData(XCOFF::STYP_LOADER);
-  if (!LoaderSectionAddrOrError) {
-    reportUniqueWarning(LoaderSectionAddrOrError.takeError());
-    return;
-  }
-  uintptr_t LoaderSectionAddr = LoaderSectionAddrOrError.get();
-
-  if (LoaderSectionAddr == 0)
-    return;
-
-  auto PrintLoadSecHeaderCommon = [&](const auto *LDHeader) {
-    printNumber("Version:", LDHeader->Version);
-    printNumber("NumberOfSymbolEntries:", LDHeader->NumberOfSymTabEnt);
-    printNumber("NumberOfRelocationEntries:", LDHeader->NumberOfRelTabEnt);
-    printNumber("LengthOfImportFileIDStringTable:",
-                LDHeader->LengthOfImpidStrTbl);
-    printNumber("NumberOfImportFileIDs:", LDHeader->NumberOfImpid);
-    printHex("OffsetToImportFileIDs:", LDHeader->OffsetToImpid);
-    printNumber("LengthOfStringTable:", LDHeader->LengthOfStrTbl);
-    printHex("OffsetToStringTable:", LDHeader->OffsetToStrTbl);
-  };
-
-  setWidth(35);
-  outs() << "\n---Loader Section Header:\n";
-  if (Obj.is64Bit()) {
-    const LoaderSectionHeader64 *LoaderSec64 =
-        reinterpret_cast<const LoaderSectionHeader64 *>(LoaderSectionAddr);
-    PrintLoadSecHeaderCommon(LoaderSec64);
-    printHex("OffsetToSymbolTable", LoaderSec64->OffsetToSymTbl);
-    printHex("OffsetToRelocationEntries", LoaderSec64->OffsetToRelEnt);
-  } else {
-    const LoaderSectionHeader32 *LoaderSec32 =
-        reinterpret_cast<const LoaderSectionHeader32 *>(LoaderSectionAddr);
-    PrintLoadSecHeaderCommon(LoaderSec32);
-  }
-}
 } // namespace
 
 std::unique_ptr<objdump::Dumper>
