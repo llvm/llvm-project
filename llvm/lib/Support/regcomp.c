@@ -582,8 +582,8 @@ p_ere_exp(struct parse *p)
 				count2 = p_count(p);
 				REQUIRE(count <= count2, REG_BADBR);
 			} else		/* single number with comma */
-				count2 = REGINFINITY;
-		} else		/* just a single number */
+                          count2 = REGINFINITY;
+                } else		/* just a single number */
 			count2 = count;
 		repeat(p, pos, count, count2);
 		if (!EAT('}')) {	/* error heuristics */
@@ -753,8 +753,8 @@ p_simp_re(struct parse *p,
 				count2 = p_count(p);
 				REQUIRE(count <= count2, REG_BADBR);
 			} else		/* single number with comma */
-				count2 = REGINFINITY;
-		} else		/* just a single number */
+                          count2 = REGINFINITY;
+                } else		/* just a single number */
 			count2 = count;
 		repeat(p, pos, count, count2);
 		if (!EATTWO('\\', '}')) {	/* error heuristics */
@@ -1115,8 +1115,8 @@ repeat(struct parse *p,
 #	define	N	2
 #	define	INF	3
 #	define	REP(f, t)	((f)*8 + (t))
-#	define	MAP(n)	(((n) <= 1) ? (n) : ((n) == REGINFINITY) ? INF : N)
-	sopno copy;
+#define MAP(n) (((n) <= 1) ? (n) : ((n) == REGINFINITY) ? INF : N)
+        sopno copy;
 
 	if (p->error != 0)	/* head off possible runaway recursion */
 		return;
