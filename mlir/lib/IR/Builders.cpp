@@ -58,6 +58,10 @@ FloatType Builder::getFloat8E4M3B11FNUZType() {
   return FloatType::getFloat8E4M3B11FNUZ(context);
 }
 
+FloatType Builder::getFloat8E3M4Type() {
+  return FloatType::getFloat8E3M4(context);
+}
+
 FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }
 
 FloatType Builder::getF16Type() { return FloatType::getF16(context); }

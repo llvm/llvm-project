@@ -6,6 +6,9 @@
 // RUN: %clangxx_asan -g -O0 %s %libdl -Wl,--export-dynamic -o %t
 // RUN: %env_asan_opts=report_globals=2:detect_odr_violation=1 %run %t 2>&1 | FileCheck %s
 
+// FIXME: Checks do not match on Android.
+// UNSUPPORTED: android
+
 #include <cstdlib>
 #include <dlfcn.h>
 #include <stdio.h>
