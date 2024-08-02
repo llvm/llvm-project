@@ -1271,9 +1271,9 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, name, internal_strlen(name) + 1);
   } else if (res != -1 && option == PR_SCHED_CORE &&
              arg2 == PR_SCHED_CORE_GET) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64*)(arg5), sizeof(u64));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg5), sizeof(u64));
   } else if (res != -1 && option == PR_GET_PDEATHSIG) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64*)(arg2), sizeof(u64));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg2), sizeof(u64));
   }
   return res;
 }
