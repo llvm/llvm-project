@@ -2579,6 +2579,12 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 // to wavespace. We can right shift after the computation to
                 // get back to the desired per-lane value. We are using the
                 // mad_u32_u24 primarily as an add with no carry out clobber.
+                if (!AMDGPU::isInlinableLiteral32(Offset,
+                                                  ST.hasInv2PiInlineImm()))
+                  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32),
+                          TmpResultReg)
+                      .addImm(Offset);
+
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg)
                           .addReg(TmpResultReg, RegState::Kill);
@@ -2593,9 +2599,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   Add.addImm(1).addImm(Offset).addImm(0);
                 } else {
                   Add.addImm(ST.getWavefrontSize()).addReg(FrameReg).addImm(0);
-                  BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_MOV_B32_e32),
-                          TmpResultReg)
-                      .addImm(Offset);
                   BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
                           TmpResultReg)
                       .addImm(ST.getWavefrontSizeLog2())
