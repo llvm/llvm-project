@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck %s -check-prefixes=RV32I
 ; RUN: llc -mtriple=riscv32 -mattr=+xtheadbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV32XTHEADBB
+; RUN: llc -mtriple=riscv32 -mattr=+xtheadbb,+zba,+zbb -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=RV32XTHEADBBZB
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 
@@ -52,6 +54,11 @@ define i32 @ctlz_i32(i32 %a) nounwind {
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: ctlz_i32:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    clz a0, a0
+; RV32XTHEADBBZB-NEXT:    ret
   %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 false)
   ret i32 %1
 }
@@ -140,6 +147,19 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    th.ff1 a0, a1
 ; RV32XTHEADBB-NEXT:    li a1, 0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: ctlz_i64:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    bnez a1, .LBB1_2
+; RV32XTHEADBBZB-NEXT:  # %bb.1:
+; RV32XTHEADBBZB-NEXT:    clz a0, a0
+; RV32XTHEADBBZB-NEXT:    addi a0, a0, 32
+; RV32XTHEADBBZB-NEXT:    li a1, 0
+; RV32XTHEADBBZB-NEXT:    ret
+; RV32XTHEADBBZB-NEXT:  .LBB1_2:
+; RV32XTHEADBBZB-NEXT:    clz a0, a1
+; RV32XTHEADBBZB-NEXT:    li a1, 0
+; RV32XTHEADBBZB-NEXT:    ret
   %1 = call i64 @llvm.ctlz.i64(i64 %a, i1 false)
   ret i64 %1
 }
@@ -184,6 +204,11 @@ define i32 @cttz_i32(i32 %a) nounwind {
 ; RV32XTHEADBB-NEXT:  .LBB2_2:
 ; RV32XTHEADBB-NEXT:    li a0, 32
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: cttz_i32:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    ctz a0, a0
+; RV32XTHEADBBZB-NEXT:    ret
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
   ret i32 %1
 }
@@ -262,6 +287,19 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    sub a0, a1, a0
 ; RV32XTHEADBB-NEXT:    li a1, 0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: cttz_i64:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    bnez a0, .LBB3_2
+; RV32XTHEADBBZB-NEXT:  # %bb.1:
+; RV32XTHEADBBZB-NEXT:    ctz a0, a1
+; RV32XTHEADBBZB-NEXT:    addi a0, a0, 32
+; RV32XTHEADBBZB-NEXT:    li a1, 0
+; RV32XTHEADBBZB-NEXT:    ret
+; RV32XTHEADBBZB-NEXT:  .LBB3_2:
+; RV32XTHEADBBZB-NEXT:    ctz a0, a0
+; RV32XTHEADBBZB-NEXT:    li a1, 0
+; RV32XTHEADBBZB-NEXT:    ret
   %1 = call i64 @llvm.cttz.i64(i64 %a, i1 false)
   ret i64 %1
 }
@@ -277,6 +315,11 @@ define i32 @sextb_i32(i32 %a) nounwind {
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    th.ext a0, a0, 7, 0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: sextb_i32:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    sext.b a0, a0
+; RV32XTHEADBBZB-NEXT:    ret
   %shl = shl i32 %a, 24
   %shr = ashr exact i32 %shl, 24
   ret i32 %shr
@@ -295,6 +338,12 @@ define i64 @sextb_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    th.ext a0, a0, 7, 0
 ; RV32XTHEADBB-NEXT:    srai a1, a0, 31
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: sextb_i64:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    sext.b a0, a0
+; RV32XTHEADBBZB-NEXT:    srai a1, a0, 31
+; RV32XTHEADBBZB-NEXT:    ret
   %shl = shl i64 %a, 56
   %shr = ashr exact i64 %shl, 56
   ret i64 %shr
@@ -311,6 +360,11 @@ define i32 @sexth_i32(i32 %a) nounwind {
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: sexth_i32:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    sext.h a0, a0
+; RV32XTHEADBBZB-NEXT:    ret
   %shl = shl i32 %a, 16
   %shr = ashr exact i32 %shl, 16
   ret i32 %shr
@@ -328,6 +382,12 @@ define i32 @no_sexth_i32(i32 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    slli a0, a0, 17
 ; RV32XTHEADBB-NEXT:    srai a0, a0, 16
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: no_sexth_i32:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    slli a0, a0, 17
+; RV32XTHEADBBZB-NEXT:    srai a0, a0, 16
+; RV32XTHEADBBZB-NEXT:    ret
   %shl = shl i32 %a, 17
   %shr = ashr exact i32 %shl, 16
   ret i32 %shr
@@ -346,6 +406,12 @@ define i64 @sexth_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 0
 ; RV32XTHEADBB-NEXT:    srai a1, a0, 31
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: sexth_i64:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    sext.h a0, a0
+; RV32XTHEADBBZB-NEXT:    srai a1, a0, 31
+; RV32XTHEADBBZB-NEXT:    ret
   %shl = shl i64 %a, 48
   %shr = ashr exact i64 %shl, 48
   ret i64 %shr
@@ -365,6 +431,13 @@ define i64 @no_sexth_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    srai a0, a1, 16
 ; RV32XTHEADBB-NEXT:    srai a1, a1, 31
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: no_sexth_i64:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    slli a1, a0, 17
+; RV32XTHEADBBZB-NEXT:    srai a0, a1, 16
+; RV32XTHEADBBZB-NEXT:    srai a1, a1, 31
+; RV32XTHEADBBZB-NEXT:    ret
   %shl = shl i64 %a, 49
   %shr = ashr exact i64 %shl, 48
   ret i64 %shr
@@ -381,6 +454,11 @@ define i32 @zexth_i32(i32 %a) nounwind {
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    th.extu a0, a0, 15, 0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: zexth_i32:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    zext.h a0, a0
+; RV32XTHEADBBZB-NEXT:    ret
   %and = and i32 %a, 65535
   ret i32 %and
 }
@@ -398,6 +476,12 @@ define i64 @zexth_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    th.extu a0, a0, 15, 0
 ; RV32XTHEADBB-NEXT:    li a1, 0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: zexth_i64:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    zext.h a0, a0
+; RV32XTHEADBBZB-NEXT:    li a1, 0
+; RV32XTHEADBBZB-NEXT:    ret
   %and = and i64 %a, 65535
   ret i64 %and
 }
@@ -424,6 +508,11 @@ define i32 @bswap_i32(i32 %a) nounwind {
 ; RV32XTHEADBB:       # %bb.0:
 ; RV32XTHEADBB-NEXT:    th.rev a0, a0
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: bswap_i32:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    rev8 a0, a0
+; RV32XTHEADBBZB-NEXT:    ret
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
   ret i32 %1
 }
@@ -462,6 +551,13 @@ define i64 @bswap_i64(i64 %a) {
 ; RV32XTHEADBB-NEXT:    th.rev a1, a0
 ; RV32XTHEADBB-NEXT:    mv a0, a2
 ; RV32XTHEADBB-NEXT:    ret
+;
+; RV32XTHEADBBZB-LABEL: bswap_i64:
+; RV32XTHEADBBZB:       # %bb.0:
+; RV32XTHEADBBZB-NEXT:    rev8 a2, a1
+; RV32XTHEADBBZB-NEXT:    rev8 a1, a0
+; RV32XTHEADBBZB-NEXT:    mv a0, a2
+; RV32XTHEADBBZB-NEXT:    ret
   %1 = call i64 @llvm.bswap.i64(i64 %a)
   ret i64 %1
 }

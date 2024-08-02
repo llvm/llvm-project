@@ -1228,6 +1228,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       if (!Subtarget->hasVendorXTHeadBb())
         return false;
 
+      if (Subtarget->hasStdExtZba() && Msb == 31 && Lsb == 0)
+        return false;
+
+      if (Subtarget->hasStdExtZbb() && (Msb == 7 || Msb == 15) && Lsb == 0)
+        return false;
+
       SDNode *TH_EXTU = CurDAG->getMachineNode(
           RISCV::TH_EXTU, DL, VT, X, CurDAG->getTargetConstant(Msb, DL, VT),
           CurDAG->getTargetConstant(Lsb, DL, VT));
