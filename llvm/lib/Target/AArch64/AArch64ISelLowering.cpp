@@ -18166,6 +18166,44 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, UADDLP);
 }
 
+// Turn vecreduce_add(zext/sext(...)) into SVE's  [US]ADDV instruction.
+static SDValue
+performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              const AArch64TargetLowering &TLI) {
+  if (N->getOperand(0).getOpcode() != ISD::ZERO_EXTEND &&
+      N->getOperand(0).getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  SDValue VecOp = N->getOperand(0).getOperand(0);
+  EVT VecOpVT = VecOp.getValueType();
+  if (VecOpVT.getScalarType() == MVT::i1 || !TLI.isTypeLegal(VecOpVT) ||
+      (VecOpVT.isFixedLengthVector() &&
+       !TLI.useSVEForFixedLengthVectorVT(VecOpVT, /*OverrideNEON=*/true)))
+    return SDValue();
+
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+
+  // The input type is legal so map VECREDUCE_ADD to UADDV/SADDV, e.g.
+  // i32 (vecreduce_add (zext nxv16i8 %op to nxv16i32))
+  // ->
+  // i32 (UADDV nxv16i8:%op)
+  EVT ElemType = N->getValueType(0);
+  SDValue Pg = getPredicateForVector(DAG, DL, VecOpVT);
+  if (VecOpVT.isFixedLengthVector()) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecOpVT);
+    VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+  }
+  bool IsSigned = N->getOperand(0).getOpcode() == ISD::SIGN_EXTEND;
+  SDValue Res =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+                  DAG.getConstant(IsSigned ? Intrinsic::aarch64_sve_saddv
+                                           : Intrinsic::aarch64_sve_uaddv,
+                                  DL, MVT::i64),
+                  Pg, VecOp);
+  return DAG.getAnyExtOrTrunc(Res, DL, ElemType);
+}
+
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
 //   vecreduce.add(ext(A)) to vecreduce.add(DOT(zero, A, one))
 //   vecreduce.add(mul(ext(A), ext(B))) to vecreduce.add(DOT(zero, A, B))
@@ -25888,8 +25926,11 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI, Subtarget);
-  case ISD::VECREDUCE_ADD:
-    return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
+  case ISD::VECREDUCE_ADD: {
+    if (SDValue Val = performVecReduceAddCombine(N, DCI.DAG, Subtarget))
+      return Val;
+    return performVecReduceAddExtCombine(N, DCI, *this);
+  }
   case AArch64ISD::UADDV:
     return performUADDVCombine(N, DAG);
   case AArch64ISD::SMULL:
