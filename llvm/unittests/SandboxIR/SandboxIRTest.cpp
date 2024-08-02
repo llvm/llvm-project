@@ -751,6 +751,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Ld));
   auto *VLd = cast<sandboxir::LoadInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
@@ -1489,79 +1490,105 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
 
   // Check classof(), getOpcode(), getSrcTy(), getDstTy()
   auto *ZExt = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::ZExtInst>(ZExt));
+  auto *ZExtI = cast<sandboxir::ZExtInst>(ZExt);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(ZExtI));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(ZExtI));
   EXPECT_EQ(ZExt->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
   EXPECT_EQ(ZExt->getSrcTy(), Ti32);
   EXPECT_EQ(ZExt->getDestTy(), Ti64);
 
   auto *SExt = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::SExtInst>(SExt));
+  auto *SExtI = cast<sandboxir::SExtInst>(SExt);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(SExt));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(SExtI));
   EXPECT_EQ(SExt->getOpcode(), sandboxir::Instruction::Opcode::SExt);
   EXPECT_EQ(SExt->getSrcTy(), Ti32);
   EXPECT_EQ(SExt->getDestTy(), Ti64);
 
   auto *FPToUI = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::FPToUIInst>(FPToUI));
+  auto *FPToUII = cast<sandboxir::FPToUIInst>(FPToUI);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPToUI));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPToUII));
   EXPECT_EQ(FPToUI->getOpcode(), sandboxir::Instruction::Opcode::FPToUI);
   EXPECT_EQ(FPToUI->getSrcTy(), Tfloat);
   EXPECT_EQ(FPToUI->getDestTy(), Ti32);
 
   auto *FPToSI = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::FPToSIInst>(FPToSI));
+  auto *FPToSII = cast<sandboxir::FPToSIInst>(FPToSI);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPToSI));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPToSII));
   EXPECT_EQ(FPToSI->getOpcode(), sandboxir::Instruction::Opcode::FPToSI);
   EXPECT_EQ(FPToSI->getSrcTy(), Tfloat);
   EXPECT_EQ(FPToSI->getDestTy(), Ti32);
 
   auto *FPExt = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::FPExtInst>(FPExt));
+  auto *FPExtI = cast<sandboxir::FPExtInst>(FPExt);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPExt));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPExtI));
   EXPECT_EQ(FPExt->getOpcode(), sandboxir::Instruction::Opcode::FPExt);
   EXPECT_EQ(FPExt->getSrcTy(), Tfloat);
   EXPECT_EQ(FPExt->getDestTy(), Tdouble);
 
   auto *PtrToInt = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::PtrToIntInst>(PtrToInt));
+  auto *PtrToIntI = cast<sandboxir::PtrToIntInst>(PtrToInt);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(PtrToInt));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(PtrToIntI));
   EXPECT_EQ(PtrToInt->getOpcode(), sandboxir::Instruction::Opcode::PtrToInt);
   EXPECT_EQ(PtrToInt->getSrcTy(), Tptr);
   EXPECT_EQ(PtrToInt->getDestTy(), Ti32);
 
   auto *IntToPtr = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::IntToPtrInst>(IntToPtr));
+  auto *IntToPtrI = cast<sandboxir::IntToPtrInst>(IntToPtr);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(IntToPtr));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(IntToPtrI));
   EXPECT_EQ(IntToPtr->getOpcode(), sandboxir::Instruction::Opcode::IntToPtr);
   EXPECT_EQ(IntToPtr->getSrcTy(), Ti32);
   EXPECT_EQ(IntToPtr->getDestTy(), Tptr);
 
   auto *SIToFP = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::SIToFPInst>(SIToFP));
+  auto *SIToFPI = cast<sandboxir::SIToFPInst>(SIToFP);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(SIToFP));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(SIToFPI));
   EXPECT_EQ(SIToFP->getOpcode(), sandboxir::Instruction::Opcode::SIToFP);
   EXPECT_EQ(SIToFP->getSrcTy(), Ti32);
   EXPECT_EQ(SIToFP->getDestTy(), Tfloat);
 
   auto *UIToFP = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::UIToFPInst>(UIToFP));
+  auto *UIToFPI = cast<sandboxir::UIToFPInst>(UIToFP);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(UIToFP));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(UIToFPI));
   EXPECT_EQ(UIToFP->getOpcode(), sandboxir::Instruction::Opcode::UIToFP);
   EXPECT_EQ(UIToFP->getSrcTy(), Ti32);
   EXPECT_EQ(UIToFP->getDestTy(), Tfloat);
 
   auto *Trunc = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::TruncInst>(Trunc));
+  auto *TruncI = cast<sandboxir::TruncInst>(Trunc);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Trunc));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(TruncI));
   EXPECT_EQ(Trunc->getOpcode(), sandboxir::Instruction::Opcode::Trunc);
   EXPECT_EQ(Trunc->getSrcTy(), Ti32);
   EXPECT_EQ(Trunc->getDestTy(), Ti16);
 
   auto *FPTrunc = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::FPTruncInst>(FPTrunc));
+  auto *FPTruncI = cast<sandboxir::FPTruncInst>(FPTrunc);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPTrunc));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(FPTruncI));
   EXPECT_EQ(FPTrunc->getOpcode(), sandboxir::Instruction::Opcode::FPTrunc);
   EXPECT_EQ(FPTrunc->getSrcTy(), Tdouble);
   EXPECT_EQ(FPTrunc->getDestTy(), Tfloat);
 
   auto *BitCast = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::BitCastInst>(BitCast));
+  auto *BitCastI = cast<sandboxir::BitCastInst>(BitCast);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(BitCast));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(BitCastI));
   EXPECT_EQ(BitCast->getOpcode(), sandboxir::Instruction::Opcode::BitCast);
   EXPECT_EQ(BitCast->getSrcTy(), Ti32);
   EXPECT_EQ(BitCast->getDestTy(), Tfloat);
 
   auto *AddrSpaceCast = cast<sandboxir::CastInst>(&*It++);
-  EXPECT_TRUE(isa<sandboxir::AddrSpaceCastInst>(AddrSpaceCast));
+  auto *AddrSpaceCastI = cast<sandboxir::AddrSpaceCastInst>(AddrSpaceCast);
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(AddrSpaceCast));
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(AddrSpaceCastI));
   EXPECT_EQ(AddrSpaceCast->getOpcode(),
             sandboxir::Instruction::Opcode::AddrSpaceCast);
   EXPECT_EQ(AddrSpaceCast->getSrcTy(), Tptr);

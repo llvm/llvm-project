@@ -269,6 +269,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
 
+  Tokens = annotate("template <typename T>\n"
+                    "enable_if_t<is_integral_v<T>, bool> // comment\n"
+                    "operator~(T &a);");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::amp, TT_PointerOrReference);
+
   Tokens = annotate("template <enable_if_t<foo && !bar>* = nullptr> void f();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
