@@ -115,8 +115,14 @@ template<typename T> int TestTemplate(T t){
 
 }
 
+
 auto v = TestTemplate<>(a);
 auto w = TestTemplate<>(p);
+
+std::map<int,int> TestMap;
+auto x = TestTemplate<>(TestMap);
+
+auto y = TestMap[0];
 
 //explicitely excluded classes / struct / template
 ExcludedClass1 E1;
@@ -124,9 +130,6 @@ auto x1 = E1[0];
 
 ExcludedClass2 E2;
 auto x2 = E1[0];
-
-std::map<int,int> TestMap;
-auto y = TestMap[0];
 
 #define SUBSCRIPT_BEHIND_MARCO(x) a[x]
 #define ARG_BEHIND_MACRO 0
