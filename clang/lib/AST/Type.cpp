@@ -5128,35 +5128,30 @@ StringRef FunctionEffect::name() const {
   llvm_unreachable("unknown effect kind");
 }
 
-bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
+std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
+    const Decl &Callee, const FunctionEffectsRef &CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
-    FunctionEffectsRef CalleeFX;
-    if (auto *FD = Callee.getAsFunction())
-      CalleeFX = FD->getFunctionEffects();
-    else if (auto *BD = dyn_cast<BlockDecl>(&Callee))
-      CalleeFX = BD->getFunctionEffects();
-    else
-      return false;
     for (const FunctionEffectWithCondition &CalleeEC : CalleeFX) {
       // nonblocking/nonallocating cannot call allocating.
       if (CalleeEC.Effect.kind() == Kind::Allocating)
-        return false;
+        return CalleeEC.Effect;
       // nonblocking cannot call blocking.
       if (kind() == Kind::NonBlocking &&
           CalleeEC.Effect.kind() == Kind::Blocking)
-        return false;
+        return CalleeEC.Effect;
     }
-    return true;
+    return std::nullopt;
   }
 
   case Kind::Allocating:
   case Kind::Blocking:
-    return false;
+    assert(0 && "effectProhibitingInference with non-inferable effect kind");
+    break;
 
   case Kind::None:
-    assert(0 && "canInferOnFunction with None");
+    assert(0 && "effectProhibitingInference with None");
     break;
   }
   llvm_unreachable("unknown effect kind");

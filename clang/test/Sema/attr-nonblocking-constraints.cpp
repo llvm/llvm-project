@@ -138,7 +138,7 @@ void nb11_no_inference_2() [[clang::nonblocking(false)]]; // expected-note {{fun
 
 template <bool V>
 struct ComputedNB {
-	void method() [[clang::nonblocking(V)]]; // expected-note {{function does not permit inference of 'nonblocking'}}
+	void method() [[clang::nonblocking(V)]]; // expected-note {{function does not permit inference of 'nonblocking' because it is declared 'blocking'}}
 };
 
 void nb11() [[clang::nonblocking]]

@@ -118,8 +118,9 @@ class EnumDecl;
 class Expr;
 class ExtQualsTypeCommonBase;
 class FunctionDecl;
-class FunctionEffectSet;
+class FunctionEffectsRef;
 class FunctionEffectKindSet;
+class FunctionEffectSet;
 class IdentifierInfo;
 class NamedDecl;
 class ObjCInterfaceDecl;
@@ -4745,11 +4746,15 @@ public:
   /// The description printed in diagnostics, e.g. 'nonblocking'.
   StringRef name() const;
 
-  /// Return true if the effect is allowed to be inferred on the callee,
-  /// which is either a FunctionDecl or BlockDecl.
+  /// Determine whether the effect is allowed to be inferred on the callee,
+  /// which is either a FunctionDecl or BlockDecl. If the returned optional
+  /// is empty, inference is permitted; otherwise it holds the effect which
+  /// blocked inference.
   /// Example: This allows nonblocking(false) to prevent inference for the
   /// function.
-  bool canInferOnFunction(const Decl &Callee) const;
+  std::optional<FunctionEffect>
+  effectProhibitingInference(const Decl &Callee,
+                             const FunctionEffectsRef &CalleeFX) const;
 
   // Return false for success. When true is returned for a direct call, then the
   // FE_InferrableOnCallees flag may trigger inference rather than an immediate

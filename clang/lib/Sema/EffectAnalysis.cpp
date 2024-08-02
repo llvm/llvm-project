@@ -22,8 +22,8 @@ using namespace clang;
 
 namespace {
 
-enum class DiagnosticID : uint8_t {
-  None = 0, // sentinel for an empty Diagnostic
+enum class ViolationID : uint8_t {
+  None = 0, // sentinel for an empty Violation
   Throws,
   Catches,
   CallsObjC,
@@ -38,20 +38,28 @@ enum class DiagnosticID : uint8_t {
   CallsExprWithoutEffect,
 };
 
-// Holds an effect diagnosis, potentially for the entire duration of the
-// analysis phase, in order to refer to it when explaining why a caller has been
-// made unsafe by a callee.
-struct Diagnostic {
+// Represents a violation of the rules, potentially for the entire duration of
+// the analysis phase, in order to refer to it when explaining why a caller has
+// been made unsafe by a callee. Can be transformed into either a Diagnostic
+// (warning or a note), depending on whether the violation pertains to a
+// function failing to be verifed as holding an effect vs. a function failing to
+// be inferred as holding that effect.
+struct Violation {
   FunctionEffect Effect;
-  DiagnosticID ID = DiagnosticID::None;
+  FunctionEffect CalleeEffectPreventingInference; // only for certain IDs
+  ViolationID ID = ViolationID::None;
   SourceLocation Loc;
   const Decl *Callee = nullptr; // only valid for Calls*
 
-  Diagnostic() = default;
+  Violation() = default;
 
-  Diagnostic(const FunctionEffect &Effect, DiagnosticID ID, SourceLocation Loc,
-             const Decl *Callee = nullptr)
-      : Effect(Effect), ID(ID), Loc(Loc), Callee(Callee) {}
+  Violation(const FunctionEffect &Effect, ViolationID ID, SourceLocation Loc,
+            const Decl *Callee = nullptr,
+            const FunctionEffect *CalleeEffect = nullptr)
+      : Effect(Effect), ID(ID), Loc(Loc), Callee(Callee) {
+    if (CalleeEffect != nullptr)
+      CalleeEffectPreventingInference = *CalleeEffect;
+  }
 };
 
 enum class SpecialFuncType : uint8_t { None, OperatorNew, OperatorDelete };
@@ -202,13 +210,13 @@ struct CallableInfo {
   // BlockDecl if CallType::Block
   const Decl *CDecl;
   SpecialFuncType FuncType = SpecialFuncType::None;
+  FunctionEffectsRef DeclEffects;
   FunctionEffectKindSet Effects;
   CallType CType = CallType::Unknown;
 
   CallableInfo(Sema &SemaRef, const Decl &CD,
                SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
-    FunctionEffectsRef FXRef;
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl)) {
       // Use the function's definition, if any.
@@ -218,15 +226,15 @@ struct CallableInfo {
       if (auto *Method = dyn_cast<CXXMethodDecl>(FD);
           Method && Method->isVirtual())
         CType = CallType::Virtual;
-      FXRef = FD->getFunctionEffects();
+      DeclEffects = FD->getFunctionEffects();
     } else if (auto *BD = dyn_cast<BlockDecl>(CDecl)) {
       CType = CallType::Block;
-      FXRef = BD->getFunctionEffects();
+      DeclEffects = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at its type.
-      FXRef = FunctionEffectsRef::get(VD->getType());
+      DeclEffects = FunctionEffectsRef::get(VD->getType());
     }
-    Effects = FunctionEffectKindSet(FXRef);
+    Effects = FunctionEffectKindSet(DeclEffects);
   }
 
   bool isDirectCall() const {
@@ -263,29 +271,29 @@ struct CallableInfo {
 };
 
 // ----------
-// Map effects to single diagnostics, to hold the first (of potentially many)
-// diagnostics pertaining to an effect, per function.
-class EffectToDiagnosticMap {
+// Map effects to single Violations, to hold the first (of potentially many)
+// violations pertaining to an effect, per function.
+class EffectToViolationMap {
   // Since we currently only have a tiny number of effects (typically no more
   // than 1), use a sorted SmallVector with an inline capacity of 1. Since it
   // is often empty, use a unique_ptr to the SmallVector.
-  // Note that Diagnostic itself contains a FunctionEffect which is the key.
-  using ImplVec = llvm::SmallVector<Diagnostic, 1>;
+  // Note that Violation itself contains a FunctionEffect which is the key.
+  using ImplVec = llvm::SmallVector<Violation, 1>;
   std::unique_ptr<ImplVec> Impl;
 
 public:
-  // Insert a new diagnostic if we do not already have one for its effect.
-  void maybeInsert(const Diagnostic &Diag) {
+  // Insert a new Violation if we do not already have one for its effect.
+  void maybeInsert(const Violation &Viol) {
     if (Impl == nullptr)
       Impl = std::make_unique<ImplVec>();
-    auto *Iter = _find(Diag.Effect);
-    if (Iter != Impl->end() && Iter->Effect == Diag.Effect)
+    auto *Iter = _find(Viol.Effect);
+    if (Iter != Impl->end() && Iter->Effect == Viol.Effect)
       return;
 
-    Impl->insert(Iter, Diag);
+    Impl->insert(Iter, Viol);
   }
 
-  const Diagnostic *lookup(FunctionEffect Key) {
+  const Violation *lookup(FunctionEffect Key) {
     if (Impl == nullptr)
       return nullptr;
 
@@ -334,11 +342,11 @@ public:
   FunctionEffectKindSet FXToInfer;
 
 private:
-  // Diagnostics pertaining to the function's explicit effects.
-  SmallVector<Diagnostic, 0> DiagnosticsForExplicitFX;
+  // Violations pertaining to the function's explicit effects.
+  SmallVector<Violation, 0> ViolationsForExplicitFX;
 
-  // Diagnostics pertaining to other, non-explicit, inferrable effects.
-  EffectToDiagnosticMap InferrableEffectToFirstDiagnostic;
+  // Violations pertaining to other, non-explicit, inferrable effects.
+  EffectToViolationMap InferrableEffectToFirstViolation;
 
   // These unverified direct calls are what keeps the analysis "pending",
   // until the callees can be verified.
@@ -353,14 +361,16 @@ public:
     FunctionEffectKindSet InferrableFX;
 
     for (const FunctionEffect &effect : AllInferrableEffectsToVerify) {
-      if (effect.canInferOnFunction(*CInfo.CDecl))
+      std::optional<FunctionEffect> ProblemCalleeEffect =
+          effect.effectProhibitingInference(*CInfo.CDecl, CInfo.DeclEffects);
+      if (!ProblemCalleeEffect)
         InferrableFX.insert(effect);
       else {
-        // Add a diagnostic for this effect if a caller were to
+        // Add a Violation for this effect if a caller were to
         // try to infer it.
-        InferrableEffectToFirstDiagnostic.maybeInsert(
-            Diagnostic(effect, DiagnosticID::DeclDisallowsInference,
-                       CInfo.CDecl->getLocation()));
+        InferrableEffectToFirstViolation.maybeInsert(Violation(
+            effect, ViolationID::DeclDisallowsInference,
+            CInfo.CDecl->getLocation(), nullptr, &*ProblemCalleeEffect));
       }
     }
     // InferrableFX is now the set of inferrable effects which are not
@@ -369,13 +379,13 @@ public:
                                                   DeclaredVerifiableEffects);
   }
 
-  // Hide the way that diagnostics for explicitly required effects vs. inferred
+  // Hide the way that Violations for explicitly required effects vs. inferred
   // ones are handled differently.
-  void checkAddDiagnostic(bool Inferring, const Diagnostic &NewDiag) {
+  void checkAddViolation(bool Inferring, const Violation &NewViol) {
     if (!Inferring)
-      DiagnosticsForExplicitFX.push_back(NewDiag);
+      ViolationsForExplicitFX.push_back(NewViol);
     else
-      InferrableEffectToFirstDiagnostic.maybeInsert(NewDiag);
+      InferrableEffectToFirstViolation.maybeInsert(NewViol);
   }
 
   void addUnverifiedDirectCall(const Decl *D, SourceLocation CallLoc) {
@@ -385,8 +395,8 @@ public:
   // Analysis is complete when there are no unverified direct calls.
   bool isComplete() const { return UnverifiedDirectCalls.empty(); }
 
-  const Diagnostic *diagnosticForInferrableEffect(FunctionEffect effect) {
-    return InferrableEffectToFirstDiagnostic.lookup(effect);
+  const Violation *violationForInferrableEffect(FunctionEffect effect) {
+    return InferrableEffectToFirstViolation.lookup(effect);
   }
 
   SmallVector<DirectCall, 0> &unverifiedCalls() {
@@ -394,17 +404,17 @@ public:
     return UnverifiedDirectCalls;
   }
 
-  SmallVector<Diagnostic, 0> &getDiagnosticsForExplicitFX() {
-    return DiagnosticsForExplicitFX;
+  SmallVector<Violation, 0> &getViolationsForExplicitFX() {
+    return ViolationsForExplicitFX;
   }
 
   void dump(Sema &SemaRef, llvm::raw_ostream &OS) const {
     OS << "Pending: Declared ";
     DeclaredVerifiableEffects.dump(OS);
-    OS << ", " << DiagnosticsForExplicitFX.size() << " diags; ";
+    OS << ", " << ViolationsForExplicitFX.size() << " violations; ";
     OS << " Infer ";
     FXToInfer.dump(OS);
-    OS << ", " << InferrableEffectToFirstDiagnostic.size() << " diags";
+    OS << ", " << InferrableEffectToFirstViolation.size() << " violations";
     if (!UnverifiedDirectCalls.empty()) {
       OS << "; Calls: ";
       for (const DirectCall &Call : UnverifiedDirectCalls) {
@@ -428,7 +438,7 @@ public:
 
 private:
   // This is used to generate notes about failed inference.
-  EffectToDiagnosticMap InferrableEffectToFirstDiagnostic;
+  EffectToViolationMap InferrableEffectToFirstViolation;
 
 public:
   // The incoming Pending analysis is consumed (member(s) are moved-from).
@@ -438,22 +448,22 @@ public:
       const FunctionEffectKindSet &AllInferrableEffectsToVerify)
       : VerifiedEffects(DeclaredEffects) {
     for (const FunctionEffect &effect : AllInferrableEffectsToVerify)
-      if (Pending.diagnosticForInferrableEffect(effect) == nullptr)
+      if (Pending.violationForInferrableEffect(effect) == nullptr)
         VerifiedEffects.insert(effect);
 
-    InferrableEffectToFirstDiagnostic =
-        std::move(Pending.InferrableEffectToFirstDiagnostic);
+    InferrableEffectToFirstViolation =
+        std::move(Pending.InferrableEffectToFirstViolation);
   }
 
-  const Diagnostic *firstDiagnosticForEffect(const FunctionEffect &Effect) {
-    return InferrableEffectToFirstDiagnostic.lookup(Effect);
+  const Violation *firstViolationForEffect(const FunctionEffect &Effect) {
+    return InferrableEffectToFirstViolation.lookup(Effect);
   }
 
   void dump(llvm::raw_ostream &OS) const {
     OS << "Complete: Verified ";
     VerifiedEffects.dump(OS);
     OS << "; Infer ";
-    OS << InferrableEffectToFirstDiagnostic.size() << " diags\n";
+    OS << InferrableEffectToFirstViolation.size() << " violations\n";
   }
 };
 
@@ -662,10 +672,9 @@ private:
   // inserted in the container.
   void completeAnalysis(const CallableInfo &CInfo,
                         PendingFunctionAnalysis &Pending) {
-    if (SmallVector<Diagnostic, 0> &Diags =
-            Pending.getDiagnosticsForExplicitFX();
-        !Diags.empty())
-      emitDiagnostics(Diags, CInfo, Sem);
+    if (SmallVector<Violation, 0> &Viols = Pending.getViolationsForExplicitFX();
+        !Viols.empty())
+      emitDiagnostics(Viols, CInfo, Sem);
 
     CompleteFunctionAnalysis *CompletePtr = new CompleteFunctionAnalysis(
         Sem.getASTContext(), Pending, CInfo.Effects,
@@ -741,16 +750,16 @@ private:
           Effect.shouldDiagnoseFunctionCall(DirectCall, CalleeEffects);
       if (Diagnose) {
         // If inference is not allowed, or the target is indirect (virtual
-        // method/function ptr?), generate a diagnostic now.
+        // method/function ptr?), generate a Violation now.
         if (!IsInferencePossible ||
             !(Flags & FunctionEffect::FE_InferrableOnCallees)) {
           if (Callee.FuncType == SpecialFuncType::None)
-            PFA.checkAddDiagnostic(
-                Inferring, {Effect, DiagnosticID::CallsDeclWithoutEffect,
-                            CallLoc, Callee.CDecl});
+            PFA.checkAddViolation(Inferring,
+                                  {Effect, ViolationID::CallsDeclWithoutEffect,
+                                   CallLoc, Callee.CDecl});
           else
-            PFA.checkAddDiagnostic(
-                Inferring, {Effect, DiagnosticID::AllocatesMemory, CallLoc});
+            PFA.checkAddViolation(
+                Inferring, {Effect, ViolationID::AllocatesMemory, CallLoc});
         } else {
           // Inference is allowed and necessary; defer it.
           PFA.addUnverifiedDirectCall(Callee.CDecl, CallLoc);
@@ -766,13 +775,13 @@ private:
   }
 
   // Should only be called when determined to be complete.
-  void emitDiagnostics(SmallVector<Diagnostic, 0> &Diags,
+  void emitDiagnostics(SmallVector<Violation, 0> &Viols,
                        const CallableInfo &CInfo, Sema &S) {
-    if (Diags.empty())
+    if (Viols.empty())
       return;
     const SourceManager &SM = S.getSourceManager();
-    std::sort(Diags.begin(), Diags.end(),
-              [&SM](const Diagnostic &LHS, const Diagnostic &RHS) {
+    std::sort(Viols.begin(), Viols.end(),
+              [&SM](const Violation &LHS, const Violation &RHS) {
                 return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
               });
 
@@ -786,55 +795,56 @@ private:
       }
     };
 
-    // Top-level diagnostics are warnings.
-    for (const Diagnostic &Diag : Diags) {
-      StringRef effectName = Diag.Effect.name();
-      switch (Diag.ID) {
-      case DiagnosticID::None:
-      case DiagnosticID::DeclDisallowsInference: // shouldn't happen
-                                                 // here
-        llvm_unreachable("Unexpected diagnostic kind");
+    // Top-level violations are warnings.
+    for (const Violation &Viol1 : Viols) {
+      StringRef effectName = Viol1.Effect.name();
+      switch (Viol1.ID) {
+      case ViolationID::None:
+      case ViolationID::DeclDisallowsInference: // shouldn't happen
+                                                // here
+        llvm_unreachable("Unexpected violation kind");
         break;
-      case DiagnosticID::AllocatesMemory:
-        S.Diag(Diag.Loc, diag::warn_func_effect_allocates) << effectName;
+      case ViolationID::AllocatesMemory:
+        S.Diag(Viol1.Loc, diag::warn_func_effect_allocates) << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         break;
-      case DiagnosticID::Throws:
-      case DiagnosticID::Catches:
-        S.Diag(Diag.Loc, diag::warn_func_effect_throws_or_catches)
+      case ViolationID::Throws:
+      case ViolationID::Catches:
+        S.Diag(Viol1.Loc, diag::warn_func_effect_throws_or_catches)
             << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         break;
-      case DiagnosticID::HasStaticLocal:
-        S.Diag(Diag.Loc, diag::warn_func_effect_has_static_local) << effectName;
-        checkAddTemplateNote(CInfo.CDecl);
-        break;
-      case DiagnosticID::AccessesThreadLocal:
-        S.Diag(Diag.Loc, diag::warn_func_effect_uses_thread_local)
+      case ViolationID::HasStaticLocal:
+        S.Diag(Viol1.Loc, diag::warn_func_effect_has_static_local)
             << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         break;
-      case DiagnosticID::CallsObjC:
-        S.Diag(Diag.Loc, diag::warn_func_effect_calls_objc) << effectName;
+      case ViolationID::AccessesThreadLocal:
+        S.Diag(Viol1.Loc, diag::warn_func_effect_uses_thread_local)
+            << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         break;
-      case DiagnosticID::CallsExprWithoutEffect:
-        S.Diag(Diag.Loc, diag::warn_func_effect_calls_expr_without_effect)
+      case ViolationID::CallsObjC:
+        S.Diag(Viol1.Loc, diag::warn_func_effect_calls_objc) << effectName;
+        checkAddTemplateNote(CInfo.CDecl);
+        break;
+      case ViolationID::CallsExprWithoutEffect:
+        S.Diag(Viol1.Loc, diag::warn_func_effect_calls_expr_without_effect)
             << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         break;
 
-      case DiagnosticID::CallsDeclWithoutEffect: {
-        CallableInfo CalleeInfo(S, *Diag.Callee);
+      case ViolationID::CallsDeclWithoutEffect: {
+        CallableInfo CalleeInfo(S, *Viol1.Callee);
         std::string CalleeName = CalleeInfo.name(S);
 
-        S.Diag(Diag.Loc, diag::warn_func_effect_calls_func_without_effect)
+        S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
             << effectName << CalleeName;
         checkAddTemplateNote(CInfo.CDecl);
 
         // Emit notes explaining the transitive chain of inferences: Why isn't
         // the callee safe?
-        for (const Decl *Callee = Diag.Callee; Callee != nullptr;) {
+        for (const Decl *Callee = Viol1.Callee; Callee != nullptr;) {
           std::optional<CallableInfo> MaybeNextCallee;
           CompleteFunctionAnalysis *Completed =
               DeclAnalysis.completedAnalysisForDecl(CalleeInfo.CDecl);
@@ -850,61 +860,62 @@ private:
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
                   << effectName;
-            else if (CalleeInfo.Effects.contains(Diag.Effect.oppositeKind()))
+            else if (CalleeInfo.Effects.contains(Viol1.Effect.oppositeKind()))
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_disallows_inference)
-                  << effectName;
+                  << effectName
+                  << FunctionEffect(Viol1.Effect.oppositeKind()).name();
             else
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_extern)
                   << effectName;
 
             break;
           }
-          const Diagnostic *PtrDiag2 =
-              Completed->firstDiagnosticForEffect(Diag.Effect);
-          if (PtrDiag2 == nullptr)
+          const Violation *PtrViol2 =
+              Completed->firstViolationForEffect(Viol1.Effect);
+          if (PtrViol2 == nullptr)
             break;
 
-          const Diagnostic &Diag2 = *PtrDiag2;
-          switch (Diag2.ID) {
-          case DiagnosticID::None:
-            llvm_unreachable("Unexpected diagnostic kind");
+          const Violation &Viol2 = *PtrViol2;
+          switch (Viol2.ID) {
+          case ViolationID::None:
+            llvm_unreachable("Unexpected violation kind");
             break;
-          case DiagnosticID::DeclDisallowsInference:
-            S.Diag(Diag2.Loc, diag::note_func_effect_call_disallows_inference)
+          case ViolationID::DeclDisallowsInference:
+            S.Diag(Viol2.Loc, diag::note_func_effect_call_disallows_inference)
+                << effectName << Viol2.CalleeEffectPreventingInference.name();
+            break;
+          case ViolationID::CallsExprWithoutEffect:
+            S.Diag(Viol2.Loc, diag::note_func_effect_call_func_ptr)
                 << effectName;
             break;
-          case DiagnosticID::CallsExprWithoutEffect:
-            S.Diag(Diag2.Loc, diag::note_func_effect_call_func_ptr)
+          case ViolationID::AllocatesMemory:
+            S.Diag(Viol2.Loc, diag::note_func_effect_allocates) << effectName;
+            break;
+          case ViolationID::Throws:
+          case ViolationID::Catches:
+            S.Diag(Viol2.Loc, diag::note_func_effect_throws_or_catches)
                 << effectName;
             break;
-          case DiagnosticID::AllocatesMemory:
-            S.Diag(Diag2.Loc, diag::note_func_effect_allocates) << effectName;
-            break;
-          case DiagnosticID::Throws:
-          case DiagnosticID::Catches:
-            S.Diag(Diag2.Loc, diag::note_func_effect_throws_or_catches)
+          case ViolationID::HasStaticLocal:
+            S.Diag(Viol2.Loc, diag::note_func_effect_has_static_local)
                 << effectName;
             break;
-          case DiagnosticID::HasStaticLocal:
-            S.Diag(Diag2.Loc, diag::note_func_effect_has_static_local)
+          case ViolationID::AccessesThreadLocal:
+            S.Diag(Viol2.Loc, diag::note_func_effect_uses_thread_local)
                 << effectName;
             break;
-          case DiagnosticID::AccessesThreadLocal:
-            S.Diag(Diag2.Loc, diag::note_func_effect_uses_thread_local)
-                << effectName;
+          case ViolationID::CallsObjC:
+            S.Diag(Viol2.Loc, diag::note_func_effect_calls_objc) << effectName;
             break;
-          case DiagnosticID::CallsObjC:
-            S.Diag(Diag2.Loc, diag::note_func_effect_calls_objc) << effectName;
-            break;
-          case DiagnosticID::CallsDeclWithoutEffect:
-            MaybeNextCallee.emplace(S, *Diag2.Callee);
-            S.Diag(Diag2.Loc, diag::note_func_effect_calls_func_without_effect)
+          case ViolationID::CallsDeclWithoutEffect:
+            MaybeNextCallee.emplace(S, *Viol2.Callee);
+            S.Diag(Viol2.Loc, diag::note_func_effect_calls_func_without_effect)
                 << effectName << MaybeNextCallee->name(S);
             break;
           }
           checkAddTemplateNote(Callee);
-          Callee = Diag2.Callee;
+          Callee = Viol2.Callee;
           if (MaybeNextCallee) {
             CalleeInfo = *MaybeNextCallee;
             CalleeName = CalleeInfo.name(S);
@@ -922,8 +933,7 @@ private:
   //  [2] The function has not explicitly declared an effect in question, and is
   //      being checked for implicit conformance.
   //
-  // Diagnostics are always routed to a PendingFunctionAnalysis, which holds
-  // all diagnostic output.
+  // Violations are always routed to a PendingFunctionAnalysis.
   struct FunctionBodyASTVisitor
       : public RecursiveASTVisitor<FunctionBodyASTVisitor> {
 
@@ -951,32 +961,32 @@ private:
     // -- Methods implementing common logic --
 
     // Handle a language construct forbidden by some effects. Only effects whose
-    // flags include the specified flag receive a diagnostic. \p Flag describes
+    // flags include the specified flag receive a violation. \p Flag describes
     // the construct.
-    void diagnoseLanguageConstruct(FunctionEffect::FlagBit Flag, DiagnosticID D,
+    void diagnoseLanguageConstruct(FunctionEffect::FlagBit Flag, ViolationID D,
                                    SourceLocation Loc,
                                    const Decl *Callee = nullptr) {
       // If there are any declared verifiable effects which forbid the construct
-      // represented by the flag, store just one diagnostic.
+      // represented by the flag, store just one violation..
       for (const FunctionEffect &Effect :
            CurrentFunction.DeclaredVerifiableEffects) {
         if (Effect.flags() & Flag) {
-          addDiagnostic(/*inferring=*/false, Effect, D, Loc, Callee);
+          addViolation(/*inferring=*/false, Effect, D, Loc, Callee);
           break;
         }
       }
       // For each inferred effect which forbids the construct, store a
-      // diagnostic, if we don't already have a diagnostic for that effect.
+      // violation, if we don't already have a violation for that effect.
       for (const FunctionEffect &Effect : CurrentFunction.FXToInfer)
         if (Effect.flags() & Flag)
-          addDiagnostic(/*inferring=*/true, Effect, D, Loc, Callee);
+          addViolation(/*inferring=*/true, Effect, D, Loc, Callee);
     }
 
-    void addDiagnostic(bool Inferring, const FunctionEffect &Effect,
-                       DiagnosticID D, SourceLocation Loc,
-                       const Decl *Callee = nullptr) {
-      CurrentFunction.checkAddDiagnostic(Inferring,
-                                         Diagnostic(Effect, D, Loc, Callee));
+    void addViolation(bool Inferring, const FunctionEffect &Effect,
+                      ViolationID D, SourceLocation Loc,
+                      const Decl *Callee = nullptr) {
+      CurrentFunction.checkAddViolation(Inferring,
+                                        Violation(Effect, D, Loc, Callee));
     }
 
     // Here we have a call to a Decl, either explicitly via a CallExpr or some
@@ -1003,8 +1013,8 @@ private:
       auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
         if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
                                   /*direct=*/false, CalleeFX))
-          addDiagnostic(Inferring, Effect, DiagnosticID::CallsExprWithoutEffect,
-                        Call->getBeginLoc());
+          addViolation(Inferring, Effect, ViolationID::CallsExprWithoutEffect,
+                       Call->getBeginLoc());
       };
 
       for (const FunctionEffect &Effect :
@@ -1057,31 +1067,31 @@ private:
 
     bool VisitCXXThrowExpr(CXXThrowExpr *Throw) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
-                                DiagnosticID::Throws, Throw->getThrowLoc());
+                                ViolationID::Throws, Throw->getThrowLoc());
       return true;
     }
 
     bool VisitCXXCatchStmt(CXXCatchStmt *Catch) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
-                                DiagnosticID::Catches, Catch->getCatchLoc());
+                                ViolationID::Catches, Catch->getCatchLoc());
       return true;
     }
 
     bool VisitObjCAtThrowStmt(ObjCAtThrowStmt *Throw) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
-                                DiagnosticID::Throws, Throw->getThrowLoc());
+                                ViolationID::Throws, Throw->getThrowLoc());
       return true;
     }
 
     bool VisitObjCAtCatchStmt(ObjCAtCatchStmt *Catch) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
-                                DiagnosticID::Catches, Catch->getAtCatchLoc());
+                                ViolationID::Catches, Catch->getAtCatchLoc());
       return true;
     }
 
     bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
-                                DiagnosticID::CallsObjC, Msg->getBeginLoc());
+                                ViolationID::CallsObjC, Msg->getBeginLoc());
       return true;
     }
 
@@ -1116,7 +1126,7 @@ private:
 
       if (Var->isStaticLocal())
         diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeStaticLocalVars,
-                                  DiagnosticID::HasStaticLocal,
+                                  ViolationID::HasStaticLocal,
                                   Var->getLocation());
 
       const QualType::DestructionKind DK =
@@ -1211,7 +1221,7 @@ private:
           // At least on macOS, thread-local variables are initialized on
           // first access, including a heap allocation.
           diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThreadLocalVars,
-                                    DiagnosticID::AccessesThreadLocal,
+                                    ViolationID::AccessesThreadLocal,
                                     E->getLocation());
         }
       }
