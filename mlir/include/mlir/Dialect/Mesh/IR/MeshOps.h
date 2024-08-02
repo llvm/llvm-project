@@ -78,8 +78,8 @@ public:
   bool operator!=(Value rhs) const;
   bool operator==(const MeshSharding &rhs) const;
   bool operator!=(const MeshSharding &rhs) const;
-  bool sameExceptConstraint(const MeshSharding &rhs) const;
-  bool sameConstraint(const MeshSharding &rhs) const;
+  bool equalSplitAndPartialAxes(const MeshSharding &rhs) const;
+  bool equalHaloAndShardSizes(const MeshSharding &rhs) const;
 };
 
 } // namespace mesh
