@@ -81,7 +81,7 @@ protected:
             FileContents))
       return "";
 
-    formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm");
+    formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm", /*StyleSearchPaths*/{});
     return Context.getRewrittenText(InputFileID);
   }
 

@@ -339,8 +339,9 @@ ChangeNamespaceTool::ChangeNamespaceTool(
     llvm::StringRef OldNs, llvm::StringRef NewNs, llvm::StringRef FilePattern,
     llvm::ArrayRef<std::string> AllowedSymbolPatterns,
     std::map<std::string, tooling::Replacements> *FileToReplacements,
-    llvm::StringRef FallbackStyle)
-    : FallbackStyle(FallbackStyle), FileToReplacements(*FileToReplacements),
+    llvm::StringRef FallbackStyle, const std::vector<std::string>& StyleSearchPaths)
+    : FallbackStyle(FallbackStyle), StyleSearchPaths(StyleSearchPaths),
+      FileToReplacements(*FileToReplacements),
       OldNamespace(OldNs.ltrim(':')), NewNamespace(NewNs.ltrim(':')),
       FilePattern(FilePattern), FilePatternRE(FilePattern) {
   FileToReplacements->clear();
@@ -1004,7 +1005,7 @@ void ChangeNamespaceTool::onEndOfTranslationUnit() {
     // which refers to the original code.
     Replaces = Replaces.merge(NewReplacements);
     auto Style =
-        format::getStyle(format::DefaultFormatStyle, FilePath, FallbackStyle);
+        format::getStyle(format::DefaultFormatStyle, FilePath, StyleSearchPaths, FallbackStyle);
     if (!Style) {
       llvm::errs() << llvm::toString(Style.takeError()) << "\n";
       continue;

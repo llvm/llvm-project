@@ -69,16 +69,20 @@ bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
 
 namespace {
 
+using llvm::cl::alias;
+using llvm::cl::aliasopt;
 using llvm::cl::cat;
 using llvm::cl::CommaSeparated;
 using llvm::cl::desc;
 using llvm::cl::Hidden;
 using llvm::cl::init;
 using llvm::cl::list;
+using llvm::cl::NotHidden;
 using llvm::cl::opt;
 using llvm::cl::OptionCategory;
 using llvm::cl::ValueOptional;
 using llvm::cl::values;
+using llvm::cl::value_desc;
 
 // All flags must be placed in a category, or they will be shown neither in
 // --help, nor --help-hidden!
@@ -240,6 +244,24 @@ opt<std::string> FallbackStyle{
     desc("clang-format style to apply by default when "
          "no .clang-format file is found"),
     init(clang::format::DefaultFallbackStyle),
+};
+
+list<std::string> StyleSearchPaths{
+    "style-search-path",
+    desc("Directory to search for BasedOnStyle files, when the value of the "
+         "BasedOnStyle directive is not one of the predefined styles, nor "
+         "InheritFromParent. Multiple style search paths may be specified, "
+         "and will be searched in order, stopping at the first file found."),
+    value_desc("directory"),
+    cat(Features)
+};
+
+alias StyleSearchPathShort{
+    "S",
+    desc("Alias for --style-search-path"),
+    cat(Features),
+    aliasopt(StyleSearchPaths),
+    NotHidden
 };
 
 opt<bool> EnableFunctionArgSnippets{
@@ -957,6 +979,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     ClangTidyOptProvider = combine(std::move(Providers));
     Opts.ClangTidyProvider = ClangTidyOptProvider;
   }
+  Opts.StyleSearchPaths = StyleSearchPaths;
   Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
   Opts.ImportInsertions = ImportInsertions;

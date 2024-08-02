@@ -68,7 +68,7 @@ int RefactoringTool::saveRewrittenFiles(Rewriter &Rewrite) {
 
 bool formatAndApplyAllReplacements(
     const std::map<std::string, Replacements> &FileToReplaces,
-    Rewriter &Rewrite, StringRef Style) {
+    Rewriter &Rewrite, StringRef Style, const std::vector<std::string>& StyleSearchPaths) {
   SourceManager &SM = Rewrite.getSourceMgr();
   FileManager &Files = SM.getFileManager();
 
@@ -82,7 +82,7 @@ bool formatAndApplyAllReplacements(
     FileID ID = SM.getOrCreateFileID(Entry, SrcMgr::C_User);
     StringRef Code = SM.getBufferData(ID);
 
-    auto CurStyle = format::getStyle(Style, FilePath, "LLVM");
+    auto CurStyle = format::getStyle(Style, FilePath, StyleSearchPaths, "LLVM");
     if (!CurStyle) {
       llvm::errs() << llvm::toString(CurStyle.takeError()) << "\n";
       return false;

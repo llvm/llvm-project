@@ -60,7 +60,8 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
       IgnoreHeaders(utils::options::parseStringList(
           Options.getLocalOrGlobal("IgnoreHeaders", ""))),
       DeduplicateFindings(
-          Options.getLocalOrGlobal("DeduplicateFindings", true)) {
+          Options.getLocalOrGlobal("DeduplicateFindings", true)),
+      StyleSearchPaths(Context->getGlobalOptions().StyleSearchPaths) {
   for (const auto &Header : IgnoreHeaders) {
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;
@@ -196,7 +197,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   llvm::StringRef Code = SM->getBufferData(SM->getMainFileID());
   auto FileStyle =
       format::getStyle(format::DefaultFormatStyle, getCurrentMainFile(),
-                       format::DefaultFallbackStyle, Code,
+                       StyleSearchPaths, format::DefaultFallbackStyle, Code,
                        &SM->getFileManager().getVirtualFileSystem());
   if (!FileStyle)
     FileStyle = format::getLLVMStyle();

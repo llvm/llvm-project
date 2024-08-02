@@ -47,6 +47,7 @@ private:
   std::vector<StringRef> IgnoreHeaders;
   // Whether emit only one finding per usage of a symbol.
   const bool DeduplicateFindings;
+  std::vector<std::string> StyleSearchPaths;
   llvm::SmallVector<llvm::Regex> IgnoreHeadersRegex;
   bool shouldIgnore(const include_cleaner::Header &H);
 };

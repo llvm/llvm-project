@@ -209,7 +209,8 @@ public:
         }
         StringRef Code = Buffer.get()->getBuffer();
         auto Style = format::getStyle(
-            *Context.getOptionsForFile(File).FormatStyle, File, "none");
+            *Context.getOptionsForFile(File).FormatStyle, File,
+            Context.getGlobalOptions().StyleSearchPaths, "none");
         if (!Style) {
           llvm::errs() << llvm::toString(Style.takeError()) << "\n";
           continue;

@@ -5274,9 +5274,17 @@ private:
 
   friend std::error_code
   parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                     const std::vector<std::string> &StyleSearchPaths,
                      bool AllowUnknownOptions,
                      llvm::SourceMgr::DiagHandlerTy DiagHandler,
                      void *DiagHandlerCtxt);
+
+  friend std::error_code
+  parseNestedConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                           const std::vector<std::string> &StyleSearchPaths,
+                           bool AllowUnknownOptions,
+                           llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                           void *DiagHandlerCtxt);
 };
 
 /// Returns a format style complying with the LLVM coding standards:
@@ -5340,16 +5348,29 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
 /// If set all diagnostics are emitted through the DiagHandler.
 std::error_code
 parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                   const std::vector<std::string> &StyleSearchPaths,
                    bool AllowUnknownOptions = false,
                    llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr,
                    void *DiagHandlerCtx = nullptr);
 
 /// Like above but accepts an unnamed buffer.
 inline std::error_code parseConfiguration(StringRef Config, FormatStyle *Style,
+                                          const std::vector<std::string> &StyleSearchPaths,
                                           bool AllowUnknownOptions = false) {
   return parseConfiguration(llvm::MemoryBufferRef(Config, "YAML"), Style,
-                            AllowUnknownOptions);
+                            StyleSearchPaths, AllowUnknownOptions);
 }
+
+/// Like above but discards Style->StyleSet after resolving the desired style.
+/// This allows a BasedOnStyle that references a YAML file included via StyleSearchPaths
+/// (which might contain styles for multiple langages) to be consumed while maintaining
+/// the invariant that a FormatStyle may belong to only one StyleSet.
+std::error_code
+parseNestedConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                         const std::vector<std::string> &StyleSearchPaths,
+                         bool AllowUnknownOptions,
+                         llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                         void *DiagHandlerCtxt);
 
 /// Gets configuration in a YAML string.
 std::string configurationAsText(const FormatStyle &Style);
@@ -5493,6 +5514,8 @@ extern const char *DefaultFallbackStyle;
 /// above.
 /// \param[in] FileName Path to start search for .clang-format if ``StyleName``
 /// == "file".
+/// \param[in] StyleSearchPaths The sequence of directories to be searched when
+/// resolving a non-built-in BasedOnStyle to a filesystem path.
 /// \param[in] FallbackStyle The name of a predefined style used to fallback to
 /// in case \p StyleName is "file" and no file can be found.
 /// \param[in] Code The actual code to be formatted. Used to determine the
@@ -5507,7 +5530,9 @@ extern const char *DefaultFallbackStyle;
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
 Expected<FormatStyle>
-getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
+getStyle(StringRef StyleName, StringRef FileName,
+         const std::vector<std::string> &StyleSearchPaths,
+         StringRef FallbackStyle,
          StringRef Code = "", llvm::vfs::FileSystem *FS = nullptr,
          bool AllowUnknownOptions = false,
          llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr);

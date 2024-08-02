@@ -512,7 +512,7 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
       config::Provider::combine({Opts.ConfigProvider, &OverrideConfig});
 
   auto ContextProvider = ClangdServer::createConfiguredContextProvider(
-      ConfigProvider.get(), nullptr);
+      ConfigProvider.get(), nullptr, Opts.StyleSearchPaths);
   WithContext Ctx(ContextProvider(
       FakeFile.empty()
           ? File

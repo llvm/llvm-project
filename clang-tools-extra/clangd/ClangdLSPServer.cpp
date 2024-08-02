@@ -1650,7 +1650,7 @@ ClangdLSPServer::ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
     assert(!Opts.ContextProvider &&
            "Only one of ConfigProvider and ContextProvider allowed!");
     this->Opts.ContextProvider = ClangdServer::createConfiguredContextProvider(
-        Opts.ConfigProvider, this);
+        Opts.ConfigProvider, this, Opts.StyleSearchPaths);
   }
   LSPBinder Bind(this->Handlers, *this);
   Bind.method("initialize", this, &ClangdLSPServer::onInitialize);

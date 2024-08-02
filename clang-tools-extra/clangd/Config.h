@@ -124,6 +124,10 @@ struct Config {
     // declarations, always spell out the whole name (with or without leading
     // ::). All nested namespaces are affected as well.
     std::vector<std::string> FullyQualifiedNamespaces;
+
+    // Specifies the list of paths to be searched when BasedOnStyle
+    // in a .clang-format file specifies an arbitrary file to include
+    std::vector<std::string> StyleSearchPaths;
   } Style;
 
   /// Configures code completion feature.

@@ -104,10 +104,23 @@ cl::opt<bool> Remove{
     cl::cat(IncludeCleaner),
 };
 
+static cl::list<std::string> StyleSearchPaths("style-search-path", cl::desc(R"(
+Directory to search for BasedOnStyle files, when the value of the
+BasedOnStyle directive is not one of the predefined styles, nor
+InheritFromParent. Multiple style search paths may be specified,
+and will be searched in order, stopping at the first file found.
+)"),
+                                              cl::value_desc("directory"),
+                                              cl::cat(IncludeCleaner));
+
+static cl::alias StyleSearchPathShort("S", cl::desc("Alias for --style-search-path"),
+                                      cl::cat(IncludeCleaner), cl::aliasopt(StyleSearchPaths),
+                                      cl::NotHidden);
+
 std::atomic<unsigned> Errors = ATOMIC_VAR_INIT(0);
 
 format::FormatStyle getStyle(llvm::StringRef Filename) {
-  auto S = format::getStyle(format::DefaultFormatStyle, Filename,
+  auto S = format::getStyle(format::DefaultFormatStyle, Filename, StyleSearchPaths,
                             format::DefaultFallbackStyle);
   if (!S || !S->isCpp()) {
     consumeError(S.takeError());

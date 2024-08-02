@@ -19,11 +19,13 @@ namespace {
 
 #define CHECK_PARSE(TEXT, FIELD, VALUE)                                        \
   EXPECT_NE(VALUE, Style.FIELD) << "Initial value already the same!";          \
-  EXPECT_EQ(0, parseConfiguration(TEXT, &Style).value());                      \
+  EXPECT_EQ(0, parseConfiguration(TEXT, &Style, /*StyleSearchPaths*/{})        \
+               .value());                                                      \
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
 
 #define FAIL_PARSE(TEXT, FIELD, VALUE)                                         \
-  EXPECT_NE(0, parseConfiguration(TEXT, &Style).value());                      \
+  EXPECT_NE(0, parseConfiguration(TEXT, &Style, /*StyleSearchPaths*/{})        \
+               .value());                                                      \
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
 
 class QualifierFixerTest : public FormatTestBase {

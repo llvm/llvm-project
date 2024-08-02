@@ -208,6 +208,20 @@ This option overrides the 'FormatStyle` option in
                                         cl::init("none"),
                                         cl::cat(ClangTidyCategory));
 
+static cl::list<std::string> StyleSearchPaths("style-search-path", desc(R"(
+Directory to search for BasedOnStyle files, when the value of the
+BasedOnStyle directive is not one of the predefined styles, nor
+InheritFromParent. Multiple style search paths may be specified,
+and will be searched in order, stopping at the first file found.
+)"),
+                                              cl::value_desc("directory"),
+                                              cl::cat(ClangTidyCategory));
+
+static cl::alias StyleSearchPathShort("S", cl::desc("Alias for --style-search-path"),
+                                      cl::cat(ClangTidyCategory),
+                                      cl::aliasopt(StyleSearchPaths),
+                                      cl::NotHidden);
+
 static cl::opt<bool> ListChecks("list-checks", desc(R"(
 List all enabled checks and exit. Use with
 -checks=* to list all available checks.
@@ -366,6 +380,7 @@ static void printStats(const ClangTidyStats &Stats) {
 static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
    llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   ClangTidyGlobalOptions GlobalOptions;
+  GlobalOptions.StyleSearchPaths = StyleSearchPaths;
   if (std::error_code Err = parseLineFilter(LineFilter, GlobalOptions)) {
     llvm::errs() << "Invalid LineFilter: " << Err.message() << "\n\nUsage:\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncludeCleaner.h"
+#include "Config.h"
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "ParsedAST.h"

@@ -781,6 +781,7 @@ void ClangMoveTool::removeDeclsInOldFiles() {
     if (SI == FilePathToFileID.end()) continue;
     llvm::StringRef Code = SM.getBufferData(SI->second);
     auto Style = format::getStyle(format::DefaultFormatStyle, FilePath,
+                                  Context->StyleSearchPaths,
                                   Context->FallbackStyle);
     if (!Style) {
       llvm::errs() << llvm::toString(Style.takeError()) << "\n";

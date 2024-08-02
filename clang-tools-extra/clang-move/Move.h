@@ -89,6 +89,9 @@ struct ClangMoveContext {
   // directory when analyzing the source file. We save the original working
   // directory in order to get the absolute file path for the fields in Spec.
   std::string OriginalRunningDirectory;
+  // Specifies the list of paths to be searched when BasedOnStyle
+  // in a .clang-format file specifies an arbitrary file to include
+  std::vector<std::string> StyleSearchPaths;
   // The name of a predefined code style.
   std::string FallbackStyle;
   // Whether dump all declarations in old header.

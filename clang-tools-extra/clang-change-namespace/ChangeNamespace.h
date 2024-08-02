@@ -51,7 +51,8 @@ public:
       llvm::StringRef OldNs, llvm::StringRef NewNs, llvm::StringRef FilePattern,
       llvm::ArrayRef<std::string> AllowedSymbolPatterns,
       std::map<std::string, tooling::Replacements> *FileToReplacements,
-      llvm::StringRef FallbackStyle = "LLVM");
+      llvm::StringRef FallbackStyle = "LLVM",
+      const std::vector<std::string>& StyleSearchPaths = {});
 
   void registerMatchers(ast_matchers::MatchFinder *Finder);
 
@@ -109,6 +110,9 @@ private:
   };
 
   std::string FallbackStyle;
+  // Specifies the list of paths to be searched when FormatStyle or a BasedOnStyle
+  // in a .clang-format file specifies an arbitrary file to include
+  std::vector<std::string> StyleSearchPaths;
   // In match callbacks, this contains replacements for replacing `typeLoc`s in
   // and deleting forward declarations in the moved namespace blocks.
   // In `onEndOfTranslationUnit` callback, the previous added replacements are

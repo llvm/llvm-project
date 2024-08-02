@@ -76,6 +76,22 @@ cl::opt<bool>
                             "add #include of old header to new header."),
                    cl::init(false), cl::cat(ClangMoveCategory));
 
+cl::list<std::string>
+    StyleSearchPaths("style-search-path",
+                     cl::desc("Directory to search for BasedOnStyle files, when the value of the\n"
+                              "BasedOnStyle directive is not one of the predefined styles, nor\n"
+                              "InheritFromParent. Multiple style search paths may be specified,\n"
+                              "and will be searched in order, stopping at the first file found."),
+                     cl::value_desc("directory"),
+                     cl::cat(ClangMoveCategory));
+
+cl::alias
+    StyleSearchPathShort("S",
+                         cl::desc("Alias for --style-search-path"),
+                         cl::cat(ClangMoveCategory),
+                         cl::aliasopt(StyleSearchPaths),
+                         cl::NotHidden);
+
 cl::opt<std::string>
     Style("style",
           cl::desc("The style name used for reformatting. Default is \"llvm\""),
@@ -131,8 +147,8 @@ int main(int argc, const char **argv) {
                              Twine(EC.message()));
 
   move::ClangMoveContext Context{Spec, Tool.getReplacements(),
-                                 std::string(InitialDirectory), Style,
-                                 DumpDecls};
+                                 std::string(InitialDirectory), StyleSearchPaths,
+                                 Style, DumpDecls};
   move::DeclarationReporter Reporter;
   move::ClangMoveActionFactory Factory(&Context, &Reporter);
 
@@ -185,7 +201,7 @@ int main(int argc, const char **argv) {
   SourceManager SM(Diagnostics, FileMgr);
   Rewriter Rewrite(SM, LangOptions());
 
-  if (!formatAndApplyAllReplacements(Tool.getReplacements(), Rewrite, Style)) {
+  if (!formatAndApplyAllReplacements(Tool.getReplacements(), Rewrite, Style, StyleSearchPaths)) {
     llvm::errs() << "Failed applying all replacements.\n";
     return 1;
   }
