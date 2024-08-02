@@ -43,10 +43,9 @@
 
 #include "test_iterators.h"
 
-// debug mode provides no complexity guarantees, testing them would be a waste of effort
-// but we still want to run this test, to ensure we don't trigger any assertions
+// Debug mode provides no complexity guarantees, testing them would be a waste of effort.
 #ifdef _LIBCPP_HARDENING_MODE_DEBUG
-#  define ASSERT_COMPLEXITY(expression)
+#  define ASSERT_COMPLEXITY(expression) (void)(expression)
 #else
 #  define ASSERT_COMPLEXITY(expression) assert(expression)
 #endif
@@ -306,7 +305,7 @@ constexpr bool testComplexityBasic() {
   std::array<int, 5> r2{2, 4, 6, 8, 10};
   std::array<int, 0> expected{};
 
-  [[maybe_unused]] const std::size_t maxOperation = 2 * (r1.size() + r2.size()) - 1;
+  const std::size_t maxOperation = 2 * (r1.size() + r2.size()) - 1;
 
   // std::set_intersection
   {
