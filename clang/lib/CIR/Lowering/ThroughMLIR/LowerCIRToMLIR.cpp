@@ -46,6 +46,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/LowerToMLIR.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/STLExtras.h"
@@ -936,7 +937,15 @@ public:
     mlir::Attribute initialValue = mlir::Attribute();
     std::optional<mlir::Attribute> init = op.getInitialValue();
     if (init.has_value()) {
-      if (auto constArr = mlir::dyn_cast<mlir::cir::ZeroAttr>(init.value())) {
+      if (auto constArr =
+              mlir::dyn_cast<mlir::cir::ConstArrayAttr>(init.value())) {
+        init = lowerConstArrayAttr(constArr, getTypeConverter());
+        if (init.has_value())
+          initialValue = init.value();
+        else
+          llvm_unreachable("GlobalOp lowering array with initial value fail");
+      } else if (auto constArr =
+                     mlir::dyn_cast<mlir::cir::ZeroAttr>(init.value())) {
         if (memrefType.getShape().size()) {
           auto elementType = memrefType.getElementType();
           auto rtt =

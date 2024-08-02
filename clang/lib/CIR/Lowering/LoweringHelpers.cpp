@@ -19,6 +19,11 @@ convertStringAttrToDenseElementsAttr(mlir::cir::ConstArrayAttr attr,
   assert(stringAttr && "expected string attribute here");
   for (auto element : stringAttr)
     values.push_back({8, (uint64_t)element});
+  auto arrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(attr.getType());
+  assert(arrayTy && "String attribute must have an array type");
+  if (arrayTy.getSize() != stringAttr.size())
+    llvm_unreachable("array type of the length not equal to that of the string "
+                     "attribute is not supported yet");
   return mlir::DenseElementsAttr::get(
       mlir::RankedTensorType::get({(int64_t)values.size()}, type),
       llvm::ArrayRef(values));
