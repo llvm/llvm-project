@@ -1958,7 +1958,7 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
-      // If this is (shr (sra X, C1), ShAmt), see if we can combine this into a
+      // If this is (srl (sra X, C1), ShAmt), see if we can combine this into a
       // single sra. We can do this if the top bits are never demanded.
       if (Op0.getOpcode() == ISD::SRA) {
         if (!DemandedBits.intersects(APInt::getHighBitsSet(BitWidth, ShAmt))) {
