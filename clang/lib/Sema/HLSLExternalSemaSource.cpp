@@ -81,7 +81,7 @@ struct BuiltinTypeDeclBuilder {
 
   BuiltinTypeDeclBuilder &
   addMemberVariable(StringRef Name, QualType Type,
-                    const llvm::SmallVector<Attr *, 2> &Attrs,
+                    llvm::ArrayRef<Attr *> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
