@@ -59,7 +59,7 @@ template <typename Class> struct bind_ty {
 struct specificval_ty {
   const VPValue *Val;
 
-  specificval_ty(const VPValue *V) : Val(V) {} //std::move?
+  specificval_ty(const VPValue *V) : Val(V) {}
 
   bool match(VPValue *VPV) { return VPV == Val; }
 };
