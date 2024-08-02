@@ -1262,3 +1262,13 @@ cir.func @address_space4(%p : !cir.ptr<!u64i, addrspace(foobar)>) { // expected-
   type_qual = [""],
   name = ["foo"]
 >
+
+// -----
+
+module {
+    // expected-error@+1 {{unknown calling convention}}
+    cir.func @foo() cc(foobar) {
+        cir.return
+    }
+}
+

@@ -157,6 +157,7 @@ template <typename Ty> struct EnumTraits {};
   }
 
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
+REGISTER_ENUM_TYPE(CallingConv);
 REGISTER_ENUM_TYPE_WITH_NS(sob, SignedOverflowBehavior);
 } // namespace
 
@@ -174,6 +175,20 @@ static RetTy parseOptionalCIRKeyword(AsmParser &parser, EnumTy defaultValue) {
   if (index == -1)
     return static_cast<RetTy>(defaultValue);
   return static_cast<RetTy>(index);
+}
+
+/// Parse an enum from the keyword, return failure if the keyword is not found.
+template <typename EnumTy, typename RetTy = EnumTy>
+static ParseResult parseCIRKeyword(AsmParser &parser, RetTy &result) {
+  SmallVector<StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return failure();
+  result = static_cast<RetTy>(index);
+  return success();
 }
 
 // Check if a region's termination omission is valid and, if so, creates and
@@ -1874,7 +1889,7 @@ static StringRef getLinkageAttrNameString() { return "linkage"; }
 
 void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, cir::FuncType type,
-                        GlobalLinkageKind linkage,
+                        GlobalLinkageKind linkage, CallingConv callingConv,
                         ArrayRef<NamedAttribute> attrs,
                         ArrayRef<DictionaryAttr> argAttrs) {
   result.addRegion();
@@ -1885,6 +1900,8 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(
       getLinkageAttrNameString(),
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+  result.addAttribute(getCallingConvAttrName(result.name),
+                      CallingConvAttr::get(builder.getContext(), callingConv));
   result.attributes.append(attrs.begin(), attrs.end());
   if (argAttrs.empty())
     return;
@@ -1990,6 +2007,20 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       return failure();
     hasAlias = true;
   }
+
+  // Default to C calling convention if no keyword is provided.
+  auto callConvNameAttr = getCallingConvAttrName(state.name);
+  CallingConv callConv = CallingConv::C;
+  if (parser.parseOptionalKeyword("cc").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parseCIRKeyword<CallingConv>(parser, callConv).failed())
+      return parser.emitError(loc) << "unknown calling convention";
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+  state.addAttribute(callConvNameAttr,
+                     CallingConvAttr::get(parser.getContext(), callConv));
 
   auto parseGlobalDtorCtor =
       [&](StringRef keyword,
@@ -2144,6 +2175,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
           getGlobalDtorAttrName(),
           getLambdaAttrName(),
           getLinkageAttrName(),
+          getCallingConvAttrName(),
           getNoProtoAttrName(),
           getSymVisibilityAttrName(),
           getArgAttrsAttrName(),
@@ -2154,6 +2186,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
+
+  if (getCallingConv() != CallingConv::C) {
+    p << " cc(";
+    p << stringifyCallingConv(getCallingConv());
     p << ")";
   }
 
