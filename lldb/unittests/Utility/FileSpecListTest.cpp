@@ -8,7 +8,9 @@
 
 #include "gtest/gtest.h"
 
+#include "MockSymlinkFileSystem.h"
 #include "lldb/Utility/FileSpecList.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 
 using namespace lldb_private;
 
@@ -122,4 +124,132 @@ TEST(SupportFileListTest, RelativePathMatchesWindows) {
 
   EXPECT_EQ((size_t)2, files.FindCompatibleIndex(0, rel3_wrong));
   EXPECT_EQ((size_t)6, files.FindCompatibleIndex(3, rel3_wrong));
+}
+
+// Support file is a symlink to the breakpoint file.
+// A matching prefix is set.
+// Should find the two compatible.
+// Absolute paths are used.
+TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
+  // Prepare FS
+  llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
+      FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
+
+  // Prepare RealpathPrefixes
+  FileSpecList temp;
+  temp.EmplaceBack("/symlink_dir");
+  RealpathPrefixes prefixes(std::move(temp));
+  prefixes.SetFileSystem(fs);
+
+  // Prepare FileSpecList
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("/real_dir/foo.h"), &prefixes);
+  EXPECT_EQ(ret, (size_t)0);
+}
+
+// Support file is a symlink to the breakpoint file.
+// A matching prefix is set.
+// Should find the two compatible.
+// Relative paths are used.
+TEST(SupportFileListTest, SymlinkedRelativePaths) {
+  // Prepare FS
+  llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
+      FileSpec("symlink_dir/foo.h"), FileSpec("real_dir/foo.h")));
+
+  // Prepare RealpathPrefixes
+  FileSpecList temp;
+  temp.EmplaceBack("symlink_dir");
+  RealpathPrefixes prefixes(std::move(temp));
+  prefixes.SetFileSystem(fs);
+
+  // Prepare FileSpecList
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("real_dir/foo.h"), &prefixes);
+  EXPECT_EQ(ret, (size_t)0);
+}
+
+// Support file is a symlink to the breakpoint file.
+// A matching prefix is set.
+// However, the breakpoint is set with a partial path.
+// Should find the two compatible.
+TEST(SupportFileListTest, PartialBreakpointPath) {
+  // Prepare FS
+  llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
+      FileSpec("symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
+
+  // Prepare RealpathPrefixes
+  FileSpecList temp;
+  temp.EmplaceBack("symlink_dir");
+  RealpathPrefixes prefixes(std::move(temp));
+  prefixes.SetFileSystem(fs);
+
+  // Prepare FileSpecList
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("real_dir/foo.h"), &prefixes);
+  EXPECT_EQ(ret, (size_t)0);
+}
+
+// Support file is a symlink to the breakpoint file.
+// A matching prefix is set.
+// However, the basename is different between the symlink and its target.
+// Should find the two incompatible.
+TEST(SupportFileListTest, DifferentBasename) {
+  // Prepare FS
+  llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
+      FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/bar.h")));
+
+  // Prepare RealpathPrefixes
+  FileSpecList temp;
+  temp.EmplaceBack("/symlink_dir");
+  RealpathPrefixes prefixes(std::move(temp));
+  prefixes.SetFileSystem(fs);
+
+  // Prepare FileSpecList
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("real_dir/bar.h"), &prefixes);
+  EXPECT_EQ(ret, UINT32_MAX);
+}
+
+// No prefixes are configured.
+// The support file and the breakpoint file are different.
+// Should find the two incompatible.
+TEST(SupportFileListTest, NoPrefixes) {
+  // Prepare FileSpecList
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("/real_dir/bar.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("/real_dir/foo.h"), nullptr);
+  EXPECT_EQ(ret, UINT32_MAX);
+}
+
+// No prefixes are configured.
+// The support file and the breakpoint file are the same.
+// Should find the two compatible.
+TEST(SupportFileListTest, SameFile) {
+  // Prepare FileSpecList
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("/real_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("/real_dir/foo.h"), nullptr);
+  EXPECT_EQ(ret, (size_t)0);
 }
