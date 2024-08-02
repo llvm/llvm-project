@@ -3460,6 +3460,15 @@ v_sqrt_f64 v[5:6], src_scc
 v_sqrt_f64 v[254:255], 0xaf123456
 // GFX12: v_sqrt_f64_e32 v[254:255], 0xaf123456   ; encoding: [0xff,0x68,0xfc,0x7f,0x56,0x34,0x12,0xaf]
 
+v_swap_b16 v5.l, v1.h
+// GFX12: v_swap_b16  v5.l, v1.h                  ; encoding: [0x81,0xcd,0x0a,0x7e]
+
+v_swap_b16 v5.h, v1.l
+// GFX12: v_swap_b16  v5.h, v1.l                  ; encoding: [0x01,0xcd,0x0a,0x7f]
+
+v_swap_b16 v127.l, v127.l
+// GFX12: v_swap_b16  v127.l, v127.l              ; encoding: [0x7f,0xcd,0xfe,0x7e]
+
 v_swap_b32 v5, v1
 // GFX12: v_swap_b32 v5, v1                       ; encoding: [0x01,0xcb,0x0a,0x7e]
 

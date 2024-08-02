@@ -32,15 +32,27 @@
 //                                      |                   |
 //                                      |                   +- BitCastInst
 //                                      |                   |
+//                                      |                   +- FPExtInst
+//                                      |                   |
 //                                      |                   +- FPToSIInst
 //                                      |                   |
 //                                      |                   +- FPToUIInst
+//                                      |                   |
+//                                      |                   +- FPTruncInst
 //                                      |                   |
 //                                      |                   +- IntToPtrInst
 //                                      |                   |
 //                                      |                   +- PtrToIntInst
 //                                      |                   |
+//                                      |                   +- SExtInst
+//                                      |                   |
 //                                      |                   +- SIToFPInst
+//                                      |                   |
+//                                      |                   +- TruncInst
+//                                      |                   |
+//                                      |                   +- UIToFPInst
+//                                      |                   |
+//                                      |                   +- ZExtInst
 //                                      |
 //                                      +- CallBase -----------+- CallBrInst
 //                                      |                      |
@@ -51,8 +63,6 @@
 //                                      +- GetElementPtrInst
 //                                      |
 //                                      +- InsertElementInst
-//                                      |
-//                                      +- LoadInst
 //                                      |
 //                                      +- OpaqueInst
 //                                      |
@@ -65,6 +75,10 @@
 //                                      +- ShuffleVectorInst
 //                                      |
 //                                      +- StoreInst
+//                                      |
+//                                      +- UnaryInstruction -+- LoadInst
+//                                      |                    |
+//                                      |                    +- CastInst
 //                                      |
 //                                      +- UnaryOperator
 //
@@ -96,6 +110,7 @@ class Function;
 class Instruction;
 class SelectInst;
 class BranchInst;
+class UnaryInstruction;
 class LoadInst;
 class ReturnInst;
 class StoreInst;
@@ -824,10 +839,26 @@ public:
 #endif
 };
 
-class LoadInst final : public Instruction {
+/// An abstract class, parent of unary instructions.
+class UnaryInstruction : public Instruction {
+protected:
+  UnaryInstruction(ClassID ID, Opcode Opc, llvm::Instruction *LLVMI,
+                   Context &Ctx)
+      : Instruction(ID, Opc, LLVMI, Ctx) {}
+
+public:
+  static bool classof(const Instruction *I) {
+    return isa<LoadInst>(I) || isa<CastInst>(I);
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+class LoadInst final : public UnaryInstruction {
   /// Use LoadInst::create() instead of calling the constructor.
   LoadInst(llvm::LoadInst *LI, Context &Ctx)
-      : Instruction(ClassID::Load, Opcode::Load, LI, Ctx) {}
+      : UnaryInstruction(ClassID::Load, Opcode::Load, LI, Ctx) {}
   friend Context; // for LoadInst()
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
@@ -1359,7 +1390,7 @@ public:
 #endif
 };
 
-class CastInst : public Instruction {
+class CastInst : public UnaryInstruction {
   static Opcode getCastOpcode(llvm::Instruction::CastOps CastOp) {
     switch (CastOp) {
     case llvm::Instruction::ZExt:
@@ -1396,8 +1427,9 @@ class CastInst : public Instruction {
   /// Use Context::createCastInst(). Don't call the
   /// constructor directly.
   CastInst(llvm::CastInst *CI, Context &Ctx)
-      : Instruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI, Ctx) {}
-  friend Context; // for SBCastInstruction()
+      : UnaryInstruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI,
+                         Ctx) {}
+  friend Context;        // for SBCastInstruction()
   friend class PtrToInt; // For constructor.
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
@@ -1433,88 +1465,64 @@ public:
 #endif
 };
 
-class SIToFPInst final : public CastInst {
+// Helper class to simplify stamping out CastInst subclasses.
+template <Instruction::Opcode Op> class CastInstImpl : public CastInst {
 public:
   static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
                        BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
+                       const Twine &Name = "") {
+    return CastInst::create(DestTy, Op, Src, WhereIt, WhereBB, Ctx, Name);
+  }
   static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
+                       Context &Ctx, const Twine &Name = "") {
+    return create(Src, DestTy, InsertBefore->getIterator(),
+                  InsertBefore->getParent(), Ctx, Name);
+  }
   static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
+                       Context &Ctx, const Twine &Name = "") {
+    return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+  }
 
   static bool classof(const Value *From) {
     if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::SIToFP;
+      return I->getOpcode() == Op;
     return false;
   }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
 };
 
-class FPToUIInst final : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::FPToUI;
-    return false;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
+class TruncInst final : public CastInstImpl<Instruction::Opcode::Trunc> {};
+class ZExtInst final : public CastInstImpl<Instruction::Opcode::ZExt> {};
+class SExtInst final : public CastInstImpl<Instruction::Opcode::SExt> {};
+class FPTruncInst final : public CastInstImpl<Instruction::Opcode::FPTrunc> {};
+class FPExtInst final : public CastInstImpl<Instruction::Opcode::FPExt> {};
+class UIToFPInst final : public CastInstImpl<Instruction::Opcode::UIToFP> {};
+class SIToFPInst final : public CastInstImpl<Instruction::Opcode::SIToFP> {};
+class FPToUIInst final : public CastInstImpl<Instruction::Opcode::FPToUI> {};
+class FPToSIInst final : public CastInstImpl<Instruction::Opcode::FPToSI> {};
+class IntToPtrInst final : public CastInstImpl<Instruction::Opcode::IntToPtr> {
 };
-
-class FPToSIInst final : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::FPToSI;
-    return false;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
+class PtrToIntInst final : public CastInstImpl<Instruction::Opcode::PtrToInt> {
 };
-
-class IntToPtrInst final : public CastInst {
+class BitCastInst final : public CastInstImpl<Instruction::Opcode::BitCast> {};
+class AddrSpaceCastInst final
+    : public CastInstImpl<Instruction::Opcode::AddrSpaceCast> {
 public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::IntToPtr;
-    return false;
+  /// \Returns the pointer operand.
+  Value *getPointerOperand() { return getOperand(0); }
+  /// \Returns the pointer operand.
+  const Value *getPointerOperand() const {
+    return const_cast<AddrSpaceCastInst *>(this)->getPointerOperand();
   }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
+  /// \Returns the operand index of the pointer operand.
+  static unsigned getPointerOperandIndex() { return 0u; }
+  /// \Returns the address space of the pointer operand.
+  unsigned getSrcAddressSpace() const {
+    return getPointerOperand()->getType()->getPointerAddressSpace();
+  }
+  /// \Returns the address space of the result.
+  unsigned getDestAddressSpace() const {
+    return getType()->getPointerAddressSpace();
+  }
 };
 
 class PHINode final : public Instruction {
@@ -1607,83 +1615,6 @@ public:
   void verify() const final {
     assert(isa<llvm::PHINode>(Val) && "Expected PHINode!");
   }
-  void dump(raw_ostream &OS) const override;
-  LLVM_DUMP_METHOD void dump() const override;
-#endif
-};
-class PtrToIntInst final : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    return isa<Instruction>(From) &&
-           cast<Instruction>(From)->getOpcode() == Opcode::PtrToInt;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
-};
-
-class BitCastInst : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Instruction::Opcode::BitCast;
-    return false;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const override;
-  LLVM_DUMP_METHOD void dump() const override;
-#endif
-};
-
-class AddrSpaceCastInst : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::AddrSpaceCast;
-    return false;
-  }
-  /// \Returns the pointer operand.
-  Value *getPointerOperand() { return getOperand(0); }
-  /// \Returns the pointer operand.
-  const Value *getPointerOperand() const {
-    return const_cast<AddrSpaceCastInst *>(this)->getPointerOperand();
-  }
-  /// \Returns the operand index of the pointer operand.
-  static unsigned getPointerOperandIndex() { return 0u; }
-  /// \Returns the address space of the pointer operand.
-  unsigned getSrcAddressSpace() const {
-    return getPointerOperand()->getType()->getPointerAddressSpace();
-  }
-  /// \Returns the address space of the result.
-  unsigned getDestAddressSpace() const {
-    return getType()->getPointerAddressSpace();
-  }
-#ifndef NDEBUG
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
 #endif

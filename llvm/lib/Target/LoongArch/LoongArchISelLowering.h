@@ -257,6 +257,9 @@ public:
   bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
   bool shouldExtendTypeInLibCall(EVT Type) const override;
 
+  bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
+                              Align &PrefAlign) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
