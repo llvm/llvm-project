@@ -2794,6 +2794,19 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
 // FuncOp
 //===----------------------------------------------------------------------===//
 
+// The enumeration values are not necessarily in sync with `clang::CallingConv`
+// or `llvm::CallingConv`.
+def CC_C : I32EnumAttrCase<"C", 1, "c">;
+def CC_SpirKernel : I32EnumAttrCase<"SpirKernel", 2, "spir_kernel">;
+def CC_SpirFunction : I32EnumAttrCase<"SpirFunction", 3, "spir_function">;
+
+def CallingConv : I32EnumAttr<
+    "CallingConv",
+    "calling convention",
+    [CC_C, CC_SpirKernel, CC_SpirFunction]> {
+  let cppNamespace = "::mlir::cir";
+}
+
 def FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2818,6 +2831,9 @@ def FuncOp : CIR_Op<"func", [
 
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
+
+    The `calling_conv` attribute specifies the calling convention of the function.
+    The default calling convention is `CallingConv::C`.
 
     A compiler builtin function must be marked as `builtin` for further
     processing when lowering from CIR.
@@ -2857,6 +2873,9 @@ def FuncOp : CIR_Op<"func", [
     // Linkage information
     cir.func linkonce_odr @some_method(...)
 
+    // Calling convention information
+    cir.func @another_func(...) cc(spir_kernel) extra(#fn_attr)
+
     // Builtin function
     cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
 
@@ -2878,6 +2897,8 @@ def FuncOp : CIR_Op<"func", [
                        UnitAttr:$dsolocal,
                        DefaultValuedAttr<GlobalLinkageKind,
                                          "GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       DefaultValuedAttr<CallingConv,
+                                         "CallingConv::C">:$calling_conv,
                        ExtraFuncAttr:$extra_attrs,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        UnitAttr:$comdat,
@@ -2893,6 +2914,7 @@ def FuncOp : CIR_Op<"func", [
   let builders = [OpBuilder<(ins
     "StringRef":$name, "FuncType":$type,
     CArg<"GlobalLinkageKind", "GlobalLinkageKind::ExternalLinkage">:$linkage,
+    CArg<"CallingConv", "CallingConv::C">:$callingConv,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
     CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
   >];

@@ -463,6 +463,22 @@ mlir::LLVM::Linkage convertLinkage(mlir::cir::GlobalLinkageKind linkage) {
   };
 }
 
+mlir::LLVM::CConv convertCallingConv(mlir::cir::CallingConv callinvConv) {
+  using CIR = mlir::cir::CallingConv;
+  using LLVM = mlir::LLVM::CConv;
+
+  switch (callinvConv) {
+  case CIR::C:
+    return LLVM::C;
+  case CIR::SpirKernel:
+    return LLVM::SPIR_KERNEL;
+  case CIR::SpirFunction:
+    return LLVM::SPIR_FUNC;
+  default:
+    llvm_unreachable("Unknown calling convention");
+  }
+}
+
 class CIRCopyOpLowering : public mlir::OpConversionPattern<mlir::cir::CopyOp> {
 public:
   using mlir::OpConversionPattern<mlir::cir::CopyOp>::OpConversionPattern;
@@ -1528,6 +1544,7 @@ public:
       if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
           attr.getName() == func.getFunctionTypeAttrName() ||
           attr.getName() == getLinkageAttrNameString() ||
+          attr.getName() == func.getCallingConvAttrName() ||
           (filterArgAndResAttrs &&
            (attr.getName() == func.getArgAttrsAttrName() ||
             attr.getName() == func.getResAttrsAttrName())))
@@ -1613,11 +1630,12 @@ public:
            "expected single location or unknown location here");
 
     auto linkage = convertLinkage(op.getLinkage());
+    auto cconv = convertCallingConv(op.getCallingConv());
     SmallVector<mlir::NamedAttribute, 4> attributes;
     lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
 
     auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
-        Loc, op.getName(), llvmFnTy, linkage, isDsoLocal, mlir::LLVM::CConv::C,
+        Loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
         mlir::SymbolRefAttr(), attributes);
 
     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
