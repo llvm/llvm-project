@@ -37,7 +37,7 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ; ATTRIBUTOR_GCN-NEXT:    [[FPTR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[FPTR]] to ptr
 ; ATTRIBUTOR_GCN-NEXT:    store ptr @indirect, ptr [[FPTR_CAST]], align 8
 ; ATTRIBUTOR_GCN-NEXT:    [[FP:%.*]] = load ptr, ptr [[FPTR_CAST]], align 8
-; ATTRIBUTOR_GCN-NEXT:    call void @indirect()
+; ATTRIBUTOR_GCN-NEXT:    call void [[FP]]()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
 ; GFX9-LABEL: test_simple_indirect_call:
@@ -75,16 +75,12 @@ define amdgpu_kernel void @test_simple_indirect_call() {
   ret void
 }
 
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
 ; AKF_GCN: attributes #[[ATTR0]] = { "amdgpu-calls" "amdgpu-stack-objects" }
 ;.
 ; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "uniform-work-group-size"="false" }
 ;.
-; AKF_GCN: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
-;.
-; ATTRIBUTOR_GCN: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
-;.
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
