@@ -1601,16 +1601,14 @@ define signext i32 @func0000000000000001(i32 signext %0, i8 signext %1) #0 {
 ; RV64I-LABEL: func0000000000000001:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    slli a1, a1, 59
-; RV64I-NEXT:    srai a1, a1, 56
-; RV64I-NEXT:    srli a1, a1, 7
+; RV64I-NEXT:    srai a1, a1, 63
 ; RV64I-NEXT:    addw a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: func0000000000000001:
 ; RV64ZBB:       # %bb.0: # %entry
-; RV64ZBB-NEXT:    slli a1, a1, 3
-; RV64ZBB-NEXT:    sext.b a1, a1
-; RV64ZBB-NEXT:    srli a1, a1, 7
+; RV64ZBB-NEXT:    slli a1, a1, 59
+; RV64ZBB-NEXT:    srai a1, a1, 63
 ; RV64ZBB-NEXT:    addw a0, a1, a0
 ; RV64ZBB-NEXT:    ret
 entry:
