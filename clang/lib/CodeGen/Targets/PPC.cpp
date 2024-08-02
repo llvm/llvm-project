@@ -219,11 +219,11 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
   }
 
   if (isPromotableTypeForABI(Ty))
-    return (IsTransparentUnion ?
-        ABIArgInfo::getExtend(Ty,
-            llvm::IntegerType::get(getVMContext(),
-                                   getContext().getTypeSize(Ty)))
-        : ABIArgInfo::getExtend(Ty));
+    return (IsTransparentUnion
+                ? ABIArgInfo::getExtend(
+                      Ty, llvm::IntegerType::get(getVMContext(),
+                                                 getContext().getTypeSize(Ty)))
+                : ABIArgInfo::getExtend(Ty));
 
   return (ABIArgInfo::getDirect());
 }
@@ -900,11 +900,11 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
   }
 
   if (isPromotableTypeForABI(Ty))
-    return (IsTransparentUnion ?
-        ABIArgInfo::getExtend(Ty,
-            llvm::IntegerType::get(getVMContext(),
-                                   getContext().getTypeSize(Ty)))
-        : ABIArgInfo::getExtend(Ty));
+    return (IsTransparentUnion
+                ? ABIArgInfo::getExtend(
+                      Ty, llvm::IntegerType::get(getVMContext(),
+                                                 getContext().getTypeSize(Ty)))
+                : ABIArgInfo::getExtend(Ty));
 
   return ABIArgInfo::getDirect();
 }
