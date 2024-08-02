@@ -2071,12 +2071,37 @@ libc_math_function(name = "fmaxl")
 libc_math_function(name = "fmaxf128")
 
 libc_math_function(
+    name = "cos",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction",
+        ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
     name = "cosf",
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
+        ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "sin",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction",
         ":sincosf_utils",
     ],
 )
@@ -2095,6 +2120,20 @@ libc_math_function(
 
 libc_math_function(
     name = "sinf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction",
+        ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "tan",
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
