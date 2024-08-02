@@ -79,50 +79,6 @@ void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *D
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
 }
 
-static void updateGlobalArray(StringRef ArrayName, Module &M,
-                              const GlobalCtorUpdateFn &Fn) {
-  GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName);
-  if (!GVCtor)
-    return;
-
-  IRBuilder<> IRB(M.getContext());
-  SmallVector<Constant *, 16> CurrentCtors;
-  bool Changed = false;
-  StructType *EltTy =
-      cast<StructType>(GVCtor->getValueType()->getArrayElementType());
-  if (Constant *Init = GVCtor->getInitializer()) {
-    CurrentCtors.reserve(Init->getNumOperands());
-    for (Value *OP : Init->operands()) {
-      Constant *C = cast<Constant>(OP);
-      Constant *NewC = Fn(C);
-      Changed |= (!NewC || NewC != C);
-      if (NewC)
-        CurrentCtors.push_back(NewC);
-    }
-  }
-  if (!Changed)
-    return;
-
-  GVCtor->eraseFromParent();
-
-  // Create a new initializer.
-  ArrayType *AT = ArrayType::get(EltTy, CurrentCtors.size());
-  Constant *NewInit = ConstantArray::get(AT, CurrentCtors);
-
-  // Create the new global variable and replace all uses of
-  // the old global variable with the new one.
-  (void)new GlobalVariable(M, NewInit->getType(), false,
-                           GlobalValue::AppendingLinkage, NewInit, ArrayName);
-}
-
-void llvm::updateGlobalCtors(Module &M, const GlobalCtorUpdateFn &Fn) {
-  updateGlobalArray("llvm.global_ctors", M, Fn);
-}
-
-void llvm::updateGlobalDtors(Module &M, const GlobalCtorUpdateFn &Fn) {
-  updateGlobalArray("llvm.global_dtors", M, Fn);
-}
-
 static void collectUsedGlobals(GlobalVariable *GV,
                                SmallSetVector<Constant *, 16> &Init) {
   if (!GV || !GV->hasInitializer())
