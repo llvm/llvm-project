@@ -650,7 +650,10 @@ class DiagnoseHLSLAvailability
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
 
 public:
-  DiagnoseHLSLAvailability(Sema &SemaRef) : SemaRef(SemaRef) {}
+  DiagnoseHLSLAvailability(Sema &SemaRef)
+      : SemaRef(SemaRef),
+        CurrentShaderEnvironment(llvm::Triple::UnknownEnvironment),
+        CurrentShaderStageBit(0), ReportOnlyShaderStageIssues(false) {}
 
   // AST traversal methods
   void RunOnTranslationUnit(const TranslationUnitDecl *TU);
@@ -1014,8 +1017,8 @@ void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
-  case Builtin::BI__builtin_hlsl_elementwise_all:
-  case Builtin::BI__builtin_hlsl_elementwise_any: {
+  case Builtin::BI__builtin_hlsl_all:
+  case Builtin::BI__builtin_hlsl_any: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     break;

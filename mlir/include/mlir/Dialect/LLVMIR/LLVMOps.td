@@ -1456,7 +1456,11 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$always_inline,
     OptionalAttr<UnitAttr>:$no_unwind,
     OptionalAttr<UnitAttr>:$will_return,
-    OptionalAttr<UnitAttr>:$optimize_none
+    OptionalAttr<UnitAttr>:$optimize_none,
+    OptionalAttr<LLVM_VecTypeHintAttr>:$vec_type_hint,
+    OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
+    OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
+    OptionalAttr<I32Attr>:$intel_reqd_sub_group_size
   );
 
   let regions = (region AnyRegion:$body);

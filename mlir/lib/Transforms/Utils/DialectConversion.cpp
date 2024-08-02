@@ -1328,15 +1328,19 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     mapping.map(origArg, argMat);
     appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
 
-    // FIXME: We simply pass through the replacement argument if there wasn't a
-    // converter, which isn't great as it allows implicit type conversions to
-    // appear. We should properly restructure this code to handle cases where a
-    // converter isn't provided and also to properly handle the case where an
-    // argument materialization is actually a temporary source materialization
-    // (e.g. in the case of 1->N).
     Type legalOutputType;
-    if (converter)
+    if (converter) {
       legalOutputType = converter->convertType(origArgType);
+    } else if (replArgs.size() == 1) {
+      // When there is no type converter, assume that the new block argument
+      // types are legal. This is reasonable to assume because they were
+      // specified by the user.
+      // FIXME: This won't work for 1->N conversions because multiple output
+      // types are not supported in parts of the dialect conversion. In such a
+      // case, we currently use the original block argument type (produced by
+      // the argument materialization).
+      legalOutputType = replArgs[0].getType();
+    }
     if (legalOutputType && legalOutputType != origArgType) {
       Value targetMat = buildUnresolvedTargetMaterialization(
           origArg.getLoc(), argMat, legalOutputType, converter);

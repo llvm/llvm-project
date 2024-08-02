@@ -333,6 +333,7 @@ struct Config {
   bool zPacPlt;
   bool zRelro;
   bool zRodynamic;
+  bool zSectionHeader;
   bool zShstk;
   bool zStartStopGC;
   uint8_t zStartStopVisibility;

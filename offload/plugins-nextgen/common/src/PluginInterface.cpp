@@ -14,6 +14,7 @@
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 
+#include "ErrorReporting.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "Utils/ELF.h"
@@ -30,6 +31,8 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
 #include <limits>
@@ -1337,6 +1340,25 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
       return std::move(Err);
 
+  // Keep track of the allocation stack if we track allocation traces.
+  if (OMPX_TrackAllocationTraces) {
+    std::string StackTrace;
+    llvm::raw_string_ostream OS(StackTrace);
+    llvm::sys::PrintStackTrace(OS);
+
+    AllocationTraceInfoTy *ATI = new AllocationTraceInfoTy();
+    ATI->AllocationTrace = std::move(StackTrace);
+    ATI->DevicePtr = Alloc;
+    ATI->HostPtr = HostPtr;
+    ATI->Size = Size;
+    ATI->Kind = Kind;
+
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    auto *&MapATI = (*AllocationTraceMap)[Alloc];
+    ATI->LastAllocationInfo = MapATI;
+    MapATI = ATI;
+  }
+
   return Alloc;
 }
 
@@ -1344,6 +1366,37 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Free is a noop when recording or replaying.
   if (Plugin.getRecordReplay().isRecordingOrReplaying())
     return Plugin::success();
+
+  // Keep track of the deallocation stack if we track allocation traces.
+  if (OMPX_TrackAllocationTraces) {
+    AllocationTraceInfoTy *ATI = nullptr;
+    {
+      auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+      ATI = (*AllocationTraceMap)[TgtPtr];
+    }
+
+    std::string StackTrace;
+    llvm::raw_string_ostream OS(StackTrace);
+    llvm::sys::PrintStackTrace(OS);
+
+    if (!ATI)
+      ErrorReporter::reportDeallocationOfNonAllocatedPtr(TgtPtr, Kind, ATI,
+                                                         StackTrace);
+
+    // ATI is not null, thus we can lock it to inspect and modify it further.
+    std::lock_guard<std::mutex> LG(ATI->Lock);
+    if (!ATI->DeallocationTrace.empty())
+      ErrorReporter::reportDeallocationOfDeallocatedPtr(TgtPtr, Kind, ATI,
+                                                        StackTrace);
+
+    if (ATI->Kind != Kind)
+      ErrorReporter::reportDeallocationOfWrongPtrKind(TgtPtr, Kind, ATI,
+                                                      StackTrace);
+
+    ATI->DeallocationTrace = StackTrace;
+
+#undef DEALLOCATION_ERROR
+  }
 
   int Res;
   switch (Kind) {
@@ -1414,6 +1467,18 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
+
+  {
+    std::string StackTrace;
+    if (OMPX_TrackNumKernelLaunches) {
+      llvm::raw_string_ostream OS(StackTrace);
+      llvm::sys::PrintStackTrace(OS);
+    }
+
+    auto KernelTraceInfoRecord = KernelLaunchTraces.getExclusiveAccessor();
+    (*KernelTraceInfoRecord)
+        .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
+  }
 
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
                                   AsyncInfoWrapper);
