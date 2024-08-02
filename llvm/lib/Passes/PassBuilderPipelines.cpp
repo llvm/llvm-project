@@ -1198,6 +1198,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(PGOInstrumentationGen(false));
     // In pre-link, we just want the instrumented IR. We use the contextual
     // profile in the post-thinlink phase.
+    // The instrumentation will be removed in post-thinlink after IPO.
     if (IsCtxProfUse)
       return MPM;
     addPostPGOLoopRotation(MPM, Level);
