@@ -45,7 +45,9 @@ template <typename Ptr> struct PunnedPointer {
   constexpr operator intptr_t() const { return asInt(); }
 
   constexpr PunnedPointer &operator=(intptr_t V) {
-    std::memcpy(Data, &V, sizeof(Data));
+    if (reinterpret_cast<intptr_t>(Data) != V) {
+      std::memcpy(Data, &V, sizeof(Data));
+    }
     return *this;
   }
 

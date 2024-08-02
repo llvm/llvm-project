@@ -37,10 +37,8 @@ struct ObjCMethodList {
         NextAndExtraBits(L.NextAndExtraBits) {}
 
   ObjCMethodList &operator=(const ObjCMethodList &L) {
-    if (this != &L) { // Check for self-assignment
-      MethodAndHasMoreThanOneDecl = L.MethodAndHasMoreThanOneDecl;
-      NextAndExtraBits = L.NextAndExtraBits;
-    }
+    MethodAndHasMoreThanOneDecl = L.MethodAndHasMoreThanOneDecl;
+    NextAndExtraBits = L.NextAndExtraBits;
     return *this;
   }
 
