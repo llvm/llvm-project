@@ -131,7 +131,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       << MatchedExpr->getSourceRange();
   diag(Alternative->getBeginLoc(), "alternative 'at()' defined here",
        DiagnosticIDs::Note)
-      << Alternative->getSourceRange();
+      << Alternative->getNameInfo().getSourceRange();
 }
 
 } // namespace clang::tidy::cppcoreguidelines
