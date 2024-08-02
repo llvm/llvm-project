@@ -20931,9 +20931,8 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
     if (IsAmbiguous)
       return false;
     if (SemaRef.CheckBaseClassAccess(Loc, VD->getType(), Type, Paths.front(),
-                                     /*DiagID=*/0) != Sema::AR_inaccessible) {
+                                     /*DiagID=*/0) != Sema::AR_inaccessible)
       return true;
-    }
   }
   return false;
 }
