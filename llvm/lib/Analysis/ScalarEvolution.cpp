@@ -777,8 +777,8 @@ CompareSCEVComplexity(EquivalenceClasses<const SCEV *> &EqCacheSCEV,
 /// results from this routine.  In other words, we don't want the results of
 /// this to depend on where the addresses of various SCEV objects happened to
 /// land in memory.
-static void GroupByComplexity(SmallVectorImpl<const SCEV *> &Ops,
-                              LoopInfo *LI, DominatorTree &DT) {
+static void GroupByComplexity(MutableArrayRef<const SCEV *> Ops, LoopInfo *LI,
+                              DominatorTree &DT) {
   if (Ops.size() < 2) return;  // Noop
 
   EquivalenceClasses<const SCEV *> EqCacheSCEV;
@@ -844,34 +844,39 @@ static const SCEV *
 constantFoldAndGroupOps(ScalarEvolution &SE, LoopInfo &LI, DominatorTree &DT,
                         SmallVectorImpl<const SCEV *> &Ops, FoldT Fold,
                         IsIdentityT IsIdentity, IsAbsorberT IsAbsorber) {
-  const SCEVConstant *Folded = nullptr;
+  bool HasConst = false;
   for (unsigned Idx = 0; Idx < Ops.size();) {
     const SCEV *Op = Ops[Idx];
     if (const auto *C = dyn_cast<SCEVConstant>(Op)) {
-      if (!Folded)
-        Folded = C;
-      else
-        Folded = cast<SCEVConstant>(
-            SE.getConstant(Fold(Folded->getAPInt(), C->getAPInt())));
-      Ops.erase(Ops.begin() + Idx);
-      continue;
+      if (!HasConst) {
+        // Move the constant to the start.
+        std::swap(Ops[0], Ops[Idx]);
+        HasConst = true;
+      } else {
+        Ops[0] = SE.getConstant(
+            Fold(cast<SCEVConstant>(Ops[0])->getAPInt(), C->getAPInt()));
+        Ops.erase(Ops.begin() + Idx);
+        // Revisit this index.
+        continue;
+      }
     }
     ++Idx;
   }
 
-  if (Ops.empty()) {
-    assert(Folded && "Must have folded value");
-    return Folded;
+  if (Ops.size() == 1)
+    return Ops[0];
+
+  if (HasConst && IsIdentity(cast<SCEVConstant>(Ops[0])->getAPInt())) {
+    Ops.erase(Ops.begin());
+    HasConst = false;
   }
 
-  if (Folded && IsAbsorber(Folded->getAPInt()))
-    return Folded;
+  if (Ops.size() == 1 ||
+      (HasConst && IsAbsorber(cast<SCEVConstant>(Ops[0])->getAPInt())))
+    return Ops[0];
 
-  GroupByComplexity(Ops, &LI, DT);
-  if (Folded && !IsIdentity(Folded->getAPInt()))
-    Ops.insert(Ops.begin(), Folded);
-
-  return Ops.size() == 1 ? Ops[0] : nullptr;
+  GroupByComplexity(MutableArrayRef(Ops).drop_front(HasConst), &LI, DT);
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
