@@ -18,54 +18,44 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
 ## Check that without '--skip-line-zero', line zero is displayed for a line-table entry which has no source correspondence.
-# RUN: llvm-symbolizer --obj=%t.o 0x16d4 | FileCheck --strict-whitespace --match-full-lines --check-prefix=DISABLE %s
+# RUN: llvm-symbolizer --obj=%t.o -f=none 0x16d4 | FileCheck --strict-whitespace --match-full-lines --check-prefix=DISABLE %s
 
-# DISABLE:main
-# DISABLE-NEXT:main.c:0:0
+# DISABLE:main.c:0:0
 
 ## Check that the '--skip-line-zero' does not cross sequence boundaries.
 ## If it fails to find in the current sequence then line zero is returned for the queried address.
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0x16c0 | FileCheck --strict-whitespace --match-full-lines --check-prefix=FAIL-ACROSS-SEQ %s
+# RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero 0x16c0 | FileCheck --strict-whitespace --match-full-lines --check-prefix=FAIL-ACROSS-SEQ %s
 
-# FAIL-ACROSS-SEQ:main
-# FAIL-ACROSS-SEQ-NEXT:main.c:0:0
+# FAIL-ACROSS-SEQ:main.c:0:0
 
 ## Check that with '--skip-line-zero', the last non-zero line in the current sequence is displayed.
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=WITHIN-SEQ %s
+# RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=WITHIN-SEQ %s
 
-# WITHIN-SEQ:foo
-# WITHIN-SEQ-NEXT:main.c:1:0 (approximate)
+# WITHIN-SEQ:main.c:1:0 (approximate)
 
 ## Check that with '--skip-line-zero', multiple line zero rows are skipped within the current sequence.
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0x16d9 | FileCheck --strict-whitespace --match-full-lines --check-prefix=MULTIPLE-ROWS %s
+# RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero 0x16d9 | FileCheck --strict-whitespace --match-full-lines --check-prefix=MULTIPLE-ROWS %s
 
-# MULTIPLE-ROWS:main
-# MULTIPLE-ROWS-NEXT:main.c:2:0 (approximate)
+# MULTIPLE-ROWS:main.c:2:0 (approximate)
 
 ## Check that '--skip-line-zero' only affects the line zero addresses when more than one address is specified.
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0x16d4 0x1719 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=ENABLE,NO-APPROX %s
+# RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero 0x16d4 0x1719 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=ENABLE,NO-APPROX %s
 
-# ENABLE:main
-# ENABLE-NEXT:main.c:2:0 (approximate)
-# NO-APPROX:foo
-# NO-APPROX-NEXT:main.c:1:2
+# ENABLE:main.c:2:0 (approximate)
+# NO-APPROX:main.c:1:2
 
 ## Check to ensure that '--skip-line-zero' with '--verbose' enabled displays approximate flag in verbose ouptut.
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --verbose 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=VERBOSE %s
+# RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero --verbose 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=VERBOSE %s
 
-# VERBOSE:foo
-# VERBOSE-NEXT:  Filename: main.c
-# VERBOSE-NEXT:  Function start filename: main.c
-# VERBOSE-NEXT:  Function start line: 1
-# VERBOSE-NEXT:  Function start address: 0x1710
+# VERBOSE:  Filename: main.c
 # VERBOSE-NEXT:  Line: 1
 # VERBOSE-NEXT:  Column: 0
 # VERBOSE-NEXT:  Approximate: true
 
 ## Check to ensure that '--skip-line-zero' with '--output-style=JSON' displays approximate flag in JSON output.
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --output-style=JSON 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=JSON %s
+# RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero --output-style=JSON 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=JSON %s
 
-# JSON:[{"Address":"0x1717","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}skip-line-zero.s.tmp.o","Symbol":[{"Approximate":true,"Column":0,"Discriminator":0,"FileName":"main.c","FunctionName":"foo","Line":1,"StartAddress":"0x1710","StartFileName":"main.c","StartLine":1}]}]
+# JSON:[{"Address":"0x1717","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}skip-line-zero.s.tmp.o","Symbol":[{"Approximate":true,"Column":0,"Discriminator":0,"FileName":"main.c","FunctionName":"","Line":1,"StartAddress":"","StartFileName":"","StartLine":0}]}]
 
 ## main.c
 ## __attribute__((section("def"))) int foo() { return 1234; }
@@ -74,73 +64,18 @@
 ## Generated using
 ## clang -S -gdwarf-4 --target=x86_64-pc-linux -fdebug-prefix-map=/tmp="" main.c -o main.s
 ##
-## Sections belonging to code segment(.text) are removed. Sections related to debug information(other than .debug_line) are modified. Section .debug_line is handwritten.
+## Sections belonging to code segment(.text) are removed. Sections related to debug information(other than .debug_line) are modified. Section .debug_line is handwritten. Section .debug_str is deleted.
 
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               # Abbreviation Code
 	.byte	17                              # DW_TAG_compile_unit
-	.byte	1                               # DW_CHILDREN_yes
+	.byte	0                               # DW_CHILDREN_no
 	.byte	16                              # DW_AT_stmt_list
 	.byte	23                              # DW_FORM_sec_offset
 	.byte	17                              # DW_AT_low_pc
 	.byte	1                               # DW_FORM_addr
 	.byte	85                              # DW_AT_ranges
 	.byte	23                              # DW_FORM_sec_offset
-	.byte	0                               # EOM(1)
-	.byte	0                               # EOM(2)
-	.byte	2                               # Abbreviation Code
-	.byte	46                              # DW_TAG_subprogram
-	.byte	0                               # DW_CHILDREN_no
-	.byte	17                              # DW_AT_low_pc
-	.byte	1                               # DW_FORM_addr
-	.byte	18                              # DW_AT_high_pc
-	.byte	6                               # DW_FORM_data4
-	.byte	64                              # DW_AT_frame_base
-	.byte	24                              # DW_FORM_exprloc
-	.byte	3                               # DW_AT_name
-	.byte	14                              # DW_FORM_strp
-	.byte	58                              # DW_AT_decl_file
-	.byte	11                              # DW_FORM_data1
-	.byte	59                              # DW_AT_decl_line
-	.byte	11                              # DW_FORM_data1
-	.byte	73                              # DW_AT_type
-	.byte	19                              # DW_FORM_ref4
-	.byte	63                              # DW_AT_external
-	.byte	25                              # DW_FORM_flag_present
-	.byte	0                               # EOM(1)
-	.byte	0                               # EOM(2)
-	.byte	3                               # Abbreviation Code
-	.byte	46                              # DW_TAG_subprogram
-	.byte	0                               # DW_CHILDREN_no
-	.byte	17                              # DW_AT_low_pc
-	.byte	1                               # DW_FORM_addr
-	.byte	18                              # DW_AT_high_pc
-	.byte	6                               # DW_FORM_data4
-	.byte	64                              # DW_AT_frame_base
-	.byte	24                              # DW_FORM_exprloc
-	.byte	3                               # DW_AT_name
-	.byte	14                              # DW_FORM_strp
-	.byte	58                              # DW_AT_decl_file
-	.byte	11                              # DW_FORM_data1
-	.byte	59                              # DW_AT_decl_line
-	.byte	11                              # DW_FORM_data1
-	.byte	39                              # DW_AT_prototyped
-	.byte	25                              # DW_FORM_flag_present
-	.byte	73                              # DW_AT_type
-	.byte	19                              # DW_FORM_ref4
-	.byte	63                              # DW_AT_external
-	.byte	25                              # DW_FORM_flag_present
-	.byte	0                               # EOM(1)
-	.byte	0                               # EOM(2)
-	.byte	4                               # Abbreviation Code
-	.byte	36                              # DW_TAG_base_type
-	.byte	0                               # DW_CHILDREN_no
-	.byte	3                               # DW_AT_name
-	.byte	14                              # DW_FORM_strp
-	.byte	62                              # DW_AT_encoding
-	.byte	11                              # DW_FORM_data1
-	.byte	11                              # DW_AT_byte_size
-	.byte	11                              # DW_FORM_data1
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
 	.byte	0                               # EOM(3)
@@ -155,31 +90,6 @@
 	.long	.Lline_table_start0             # DW_AT_stmt_list
 	.quad	0                               # DW_AT_low_pc
 	.long	.Ldebug_ranges0                 # DW_AT_ranges
-	.byte	2                               # Abbrev [2] 0x26:0x19 DW_TAG_subprogram
-	.quad	0x1710                          # DW_AT_low_pc (.Lfunc_begin0)
-	.long	0x171b-0x1710                   # DW_AT_high_pc(.Lfunc_end0-.Lfunc_begin0)
-	.byte	1                               # DW_AT_frame_base
-	.byte	86
-	.long	.Linfo_string2                  # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
-	.byte	1                               # DW_AT_decl_line
-	.long	88                              # DW_AT_type
-                                        # DW_AT_external
-	.byte	3                               # Abbrev [3] 0x3f:0x19 DW_TAG_subprogram
-	.quad	0x16c0                          # DW_AT_low_pc (.Lfunc_begin1)
-	.long	0x16df-0x16c0                   # DW_AT_high_pc (.Lfunc_end1-.Lfunc_begin1)
-	.byte	1                               # DW_AT_frame_base
-	.byte	86
-	.long	.Linfo_string4                  # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
-	.byte	2                               # DW_AT_decl_line
-                                        # DW_AT_prototyped
-	.long	88                              # DW_AT_type
-                                        # DW_AT_external
-	.byte	4                               # Abbrev [4] 0x58:0x7 DW_TAG_base_type
-	.long	.Linfo_string3                  # DW_AT_name
-	.byte	5                               # DW_AT_encoding
-	.byte	4                               # DW_AT_byte_size
 	.byte	0                               # End Of Children Mark
 .Ldebug_info_end0:
 	.section	.debug_ranges,"",@progbits
@@ -190,13 +100,6 @@
 	.quad	0x16df                          #.Lfunc_end1
 	.quad	0
 	.quad	0
-	.section	.debug_str,"MS",@progbits,1
-.Linfo_string2:
-	.asciz	"foo"                           # string offset=120
-.Linfo_string3:
-	.asciz	"int"                           # string offset=124
-.Linfo_string4:
-	.asciz	"main"                          # string offset=128
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 	.long	.Lunit_end - .Lunit_start     # unit length
@@ -212,7 +115,7 @@
 	.byte	13                                     # opcode_base
 	.byte	0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1     # arguments in standard opcodes
 	.byte	0                                      # end of include directories
-	.asciz	"main.c"                              # filename
+	.asciz	"main.c"                             # filename
 	.byte	0                                      # directory index
 	.byte	0                                      # modification time
 	.byte	0                                      # length of file (unavailable)
@@ -225,7 +128,7 @@
 	.byte	0x05, 2                                # DW_LNS_set_column (2)
 	.byte	0x59                                   # (address += 5,  line += 1,  op-index += 0)
 	.byte	0x02                                   # DW_LNS_advance_pc
-	.uleb128	0x02                                # (addr += 2, op-index += 0)
+	.uleb128 0x02                                # (addr += 2, op-index += 0)
 	.byte	0x00, 1, 1                             # DW_LNE_end_sequence
 	.byte	0x00, 9, 2                             # DW_LNE_set_address
 	.quad	0x16c0                                 # Address Value
@@ -234,7 +137,7 @@
 	.byte	0x56                                   # (address += 5,  line += -2,  op-index += 0)
 	.byte	0x58                                   # (address += 5,  line += 0,  op-index += 0)
 	.byte	0x02                                   # DW_LNS_advance_pc
-	.uleb128	0x06                                # (addr += 6, op-index += 0)
+	.uleb128 0x06                                # (addr += 6, op-index += 0)
 	.byte	0x00, 1, 1                             # DW_LNE_end_sequence
 .Lunit_end:
 
