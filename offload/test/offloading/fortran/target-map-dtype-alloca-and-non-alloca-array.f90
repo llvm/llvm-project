@@ -1,12 +1,7 @@
 ! Offload test that checks an allocatable array can be mapped alongside
 ! a non-allocatable array when both are contained within a derived type
 ! can be mapped correctly via member mapping and then written to.
-! REQUIRES: flang
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
