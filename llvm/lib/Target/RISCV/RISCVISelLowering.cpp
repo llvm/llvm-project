@@ -7497,8 +7497,8 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   // Store encoded instructions.
   for (auto [Idx, Encoding] : llvm::enumerate(Encodings)) {
     SDValue Addr = Idx > 0 ? DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                                     DAG.getConstant(Idx * 4, dl, MVT::i64))
-                       : Trmp;
+                                         DAG.getConstant(Idx * 4, dl, MVT::i64))
+                           : Trmp;
     OutChains[Idx] = DAG.getTruncStore(
         Root, dl, DAG.getConstant(Encoding, dl, MVT::i64), Addr,
         MachinePointerInfo(TrmpAddr, Idx * 4), MVT::i32);
@@ -7510,7 +7510,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 
   // Store the given static chain in the trampoline buffer.
   SDValue Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                     DAG.getConstant(StaticChainOffset, dl, MVT::i64));
+                             DAG.getConstant(StaticChainOffset, dl, MVT::i64));
   OutChains[4] = DAG.getStore(Root, dl, StaticChain, Addr,
                               MachinePointerInfo(TrmpAddr, StaticChainOffset));
 
