@@ -77,6 +77,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -351,6 +352,163 @@ static void SetupDefaultClangDiagnostics(CompilerInstance &compiler) {
   }
 }
 
+static void SetupLangOpts(CompilerInstance &compiler,
+                          ExecutionContextScope &exe_scope,
+                          Expression const &expr) {
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  // If the expression is being evaluated in the context of an existing stack
+  // frame, we introspect to see if the language runtime is available.
+
+  lldb::StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
+  lldb::ProcessSP process_sp = exe_scope.CalculateProcess();
+
+  // Defaults to lldb::eLanguageTypeUnknown.
+  lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
+
+  // Make sure the user hasn't provided a preferred execution language with
+  // `expression --language X -- ...`
+  if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
+    frame_lang = frame_sp->GetLanguage().AsLanguageType();
+
+  if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
+    LLDB_LOGF(log, "Frame has language of type %s",
+              lldb_private::Language::GetNameForLanguageType(frame_lang));
+  }
+
+  lldb::LanguageType language = expr.Language().AsLanguageType();
+  LangOptions &lang_opts = compiler.getLangOpts();
+
+  switch (language) {
+  case lldb::eLanguageTypeC:
+  case lldb::eLanguageTypeC89:
+  case lldb::eLanguageTypeC99:
+  case lldb::eLanguageTypeC11:
+    // FIXME: the following language option is a temporary workaround,
+    // to "ask for C, get C++."
+    // For now, the expression parser must use C++ anytime the language is a C
+    // family language, because the expression parser uses features of C++ to
+    // capture values.
+    lang_opts.CPlusPlus = true;
+    break;
+  case lldb::eLanguageTypeObjC:
+    lang_opts.ObjC = true;
+    // FIXME: the following language option is a temporary workaround,
+    // to "ask for ObjC, get ObjC++" (see comment above).
+    lang_opts.CPlusPlus = true;
+
+    // Clang now sets as default C++14 as the default standard (with
+    // GNU extensions), so we do the same here to avoid mismatches that
+    // cause compiler error when evaluating expressions (e.g. nullptr not found
+    // as it's a C++11 feature). Currently lldb evaluates C++14 as C++11 (see
+    // two lines below) so we decide to be consistent with that, but this could
+    // be re-evaluated in the future.
+    lang_opts.CPlusPlus11 = true;
+    break;
+  case lldb::eLanguageTypeC_plus_plus_20:
+    lang_opts.CPlusPlus20 = true;
+    [[fallthrough]];
+  case lldb::eLanguageTypeC_plus_plus_17:
+    // FIXME: add a separate case for CPlusPlus14. Currently folded into C++17
+    // because C++14 is the default standard for Clang but enabling CPlusPlus14
+    // expression evaluatino doesn't pass the test-suite cleanly.
+    lang_opts.CPlusPlus14 = true;
+    lang_opts.CPlusPlus17 = true;
+    [[fallthrough]];
+  case lldb::eLanguageTypeC_plus_plus:
+  case lldb::eLanguageTypeC_plus_plus_11:
+  case lldb::eLanguageTypeC_plus_plus_14:
+    lang_opts.CPlusPlus11 = true;
+    compiler.getHeaderSearchOpts().UseLibcxx = true;
+    [[fallthrough]];
+  case lldb::eLanguageTypeC_plus_plus_03:
+    lang_opts.CPlusPlus = true;
+    if (process_sp
+        // We're stopped in a frame without debug-info. The user probably
+        // intends to make global queries (which should include Objective-C).
+        && !(frame_sp && frame_sp->HasDebugInformation()))
+      lang_opts.ObjC =
+          process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
+    break;
+  case lldb::eLanguageTypeObjC_plus_plus:
+  case lldb::eLanguageTypeUnknown:
+  default:
+    lang_opts.ObjC = true;
+    lang_opts.CPlusPlus = true;
+    lang_opts.CPlusPlus11 = true;
+    compiler.getHeaderSearchOpts().UseLibcxx = true;
+    break;
+  }
+
+  lang_opts.Bool = true;
+  lang_opts.WChar = true;
+  lang_opts.Blocks = true;
+  lang_opts.DebuggerSupport =
+      true; // Features specifically for debugger clients
+  if (expr.DesiredResultType() == Expression::eResultTypeId)
+    lang_opts.DebuggerCastResultToId = true;
+
+  lang_opts.CharIsSigned =
+      ArchSpec(compiler.getTargetOpts().Triple.c_str()).CharIsSignedByDefault();
+
+  // Spell checking is a nice feature, but it ends up completing a lot of types
+  // that we didn't strictly speaking need to complete. As a result, we spend a
+  // long time parsing and importing debug information.
+  lang_opts.SpellChecking = false;
+
+  if (process_sp && lang_opts.ObjC) {
+    if (auto *runtime = ObjCLanguageRuntime::Get(*process_sp)) {
+      switch (runtime->GetRuntimeVersion()) {
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2:
+        lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eObjC_VersionUnknown:
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V1:
+        lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
+                                  VersionTuple(10, 7));
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eGNUstep_libobjc2:
+        lang_opts.ObjCRuntime.set(ObjCRuntime::GNUstep, VersionTuple(2, 0));
+        break;
+      }
+
+      if (runtime->HasNewLiteralsAndIndexing())
+        lang_opts.DebuggerObjCLiteral = true;
+    }
+  }
+
+  lang_opts.ThreadsafeStatics = false;
+  lang_opts.AccessControl = false; // Debuggers get universal access
+  lang_opts.DollarIdents = true;   // $ indicates a persistent variable name
+  // We enable all builtin functions beside the builtins from libc/libm (e.g.
+  // 'fopen'). Those libc functions are already correctly handled by LLDB, and
+  // additionally enabling them as expandable builtins is breaking Clang.
+  lang_opts.NoBuiltin = true;
+}
+
+void SetupImportStdModuleLangOpts(CompilerInstance &compiler) {
+  LangOptions &lang_opts = compiler.getLangOpts();
+  lang_opts.Modules = true;
+  // We want to implicitly build modules.
+  lang_opts.ImplicitModules = true;
+  // To automatically import all submodules when we import 'std'.
+  lang_opts.ModulesLocalVisibility = false;
+
+  // We use the @import statements, so we need this:
+  // FIXME: We could use the modules-ts, but that currently doesn't work.
+  lang_opts.ObjC = true;
+
+  // Options we need to parse libc++ code successfully.
+  // FIXME: We should ask the driver for the appropriate default flags.
+  lang_opts.GNUMode = true;
+  lang_opts.GNUKeywords = true;
+  lang_opts.CPlusPlus11 = true;
+  lang_opts.BuiltinHeadersInSystemModules = true;
+
+  // The Darwin libc expects this macro to be set.
+  lang_opts.GNUCVersion = 40201;
+}
+
 //===----------------------------------------------------------------------===//
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
@@ -392,30 +550,11 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
-  // Defaults to lldb::eLanguageTypeUnknown.
-  lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
-
   std::string abi;
   ArchSpec target_arch;
   target_arch = target_sp->GetArchitecture();
 
   const auto target_machine = target_arch.GetMachine();
-
-  // If the expression is being evaluated in the context of an existing stack
-  // frame, we introspect to see if the language runtime is available.
-
-  lldb::StackFrameSP frame_sp = exe_scope->CalculateStackFrame();
-  lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
-
-  // Make sure the user hasn't provided a preferred execution language with
-  // `expression --language X -- ...`
-  if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
-    frame_lang = frame_sp->GetLanguage().AsLanguageType();
-
-  if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
-    LLDB_LOGF(log, "Frame has language of type %s",
-              Language::GetNameForLanguageType(frame_lang));
-  }
 
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
@@ -479,142 +618,12 @@ ClangExpressionParser::ClangExpressionParser(
   assert(m_compiler->hasTarget());
 
   // 4. Set language options.
-  lldb::LanguageType language = expr.Language().AsLanguageType();
-  LangOptions &lang_opts = m_compiler->getLangOpts();
-
-  switch (language) {
-  case lldb::eLanguageTypeC:
-  case lldb::eLanguageTypeC89:
-  case lldb::eLanguageTypeC99:
-  case lldb::eLanguageTypeC11:
-    // FIXME: the following language option is a temporary workaround,
-    // to "ask for C, get C++."
-    // For now, the expression parser must use C++ anytime the language is a C
-    // family language, because the expression parser uses features of C++ to
-    // capture values.
-    lang_opts.CPlusPlus = true;
-    break;
-  case lldb::eLanguageTypeObjC:
-    lang_opts.ObjC = true;
-    // FIXME: the following language option is a temporary workaround,
-    // to "ask for ObjC, get ObjC++" (see comment above).
-    lang_opts.CPlusPlus = true;
-
-    // Clang now sets as default C++14 as the default standard (with
-    // GNU extensions), so we do the same here to avoid mismatches that
-    // cause compiler error when evaluating expressions (e.g. nullptr not found
-    // as it's a C++11 feature). Currently lldb evaluates C++14 as C++11 (see
-    // two lines below) so we decide to be consistent with that, but this could
-    // be re-evaluated in the future.
-    lang_opts.CPlusPlus11 = true;
-    break;
-  case lldb::eLanguageTypeC_plus_plus_20:
-    lang_opts.CPlusPlus20 = true;
-    [[fallthrough]];
-  case lldb::eLanguageTypeC_plus_plus_17:
-    // FIXME: add a separate case for CPlusPlus14. Currently folded into C++17
-    // because C++14 is the default standard for Clang but enabling CPlusPlus14
-    // expression evaluatino doesn't pass the test-suite cleanly.
-    lang_opts.CPlusPlus14 = true;
-    lang_opts.CPlusPlus17 = true;
-    [[fallthrough]];
-  case lldb::eLanguageTypeC_plus_plus:
-  case lldb::eLanguageTypeC_plus_plus_11:
-  case lldb::eLanguageTypeC_plus_plus_14:
-    lang_opts.CPlusPlus11 = true;
-    m_compiler->getHeaderSearchOpts().UseLibcxx = true;
-    [[fallthrough]];
-  case lldb::eLanguageTypeC_plus_plus_03:
-    lang_opts.CPlusPlus = true;
-    if (process_sp
-        // We're stopped in a frame without debug-info. The user probably
-        // intends to make global queries (which should include Objective-C).
-        && !(frame_sp && frame_sp->HasDebugInformation()))
-      lang_opts.ObjC =
-          process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
-    break;
-  case lldb::eLanguageTypeObjC_plus_plus:
-  case lldb::eLanguageTypeUnknown:
-  default:
-    lang_opts.ObjC = true;
-    lang_opts.CPlusPlus = true;
-    lang_opts.CPlusPlus11 = true;
-    m_compiler->getHeaderSearchOpts().UseLibcxx = true;
-    break;
-  }
-
-  lang_opts.Bool = true;
-  lang_opts.WChar = true;
-  lang_opts.Blocks = true;
-  lang_opts.DebuggerSupport =
-      true; // Features specifically for debugger clients
-  if (expr.DesiredResultType() == Expression::eResultTypeId)
-    lang_opts.DebuggerCastResultToId = true;
-
-  lang_opts.CharIsSigned = ArchSpec(m_compiler->getTargetOpts().Triple.c_str())
-                               .CharIsSignedByDefault();
-
-  // Spell checking is a nice feature, but it ends up completing a lot of types
-  // that we didn't strictly speaking need to complete. As a result, we spend a
-  // long time parsing and importing debug information.
-  lang_opts.SpellChecking = false;
-
-  auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
-  if (clang_expr && clang_expr->DidImportCxxModules()) {
+  SetupLangOpts(*m_compiler, *exe_scope, expr);
+  if (isa<ClangUserExpression>(&m_expr)) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
-
-    lang_opts.Modules = true;
-    // We want to implicitly build modules.
-    lang_opts.ImplicitModules = true;
-    // To automatically import all submodules when we import 'std'.
-    lang_opts.ModulesLocalVisibility = false;
-
-    // We use the @import statements, so we need this:
-    // FIXME: We could use the modules-ts, but that currently doesn't work.
-    lang_opts.ObjC = true;
-
-    // Options we need to parse libc++ code successfully.
-    // FIXME: We should ask the driver for the appropriate default flags.
-    lang_opts.GNUMode = true;
-    lang_opts.GNUKeywords = true;
-    lang_opts.CPlusPlus11 = true;
-    lang_opts.BuiltinHeadersInSystemModules = true;
-
-    // The Darwin libc expects this macro to be set.
-    lang_opts.GNUCVersion = 40201;
-
-    SetupModuleHeaderPaths(m_compiler.get(), m_include_directories,
-                           target_sp);
+    SetupImportStdModuleLangOpts(*m_compiler);
+    SetupModuleHeaderPaths(m_compiler.get(), m_include_directories, target_sp);
   }
-
-  if (process_sp && lang_opts.ObjC) {
-    if (auto *runtime = ObjCLanguageRuntime::Get(*process_sp)) {
-      switch (runtime->GetRuntimeVersion()) {
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2:
-        lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
-        break;
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eObjC_VersionUnknown:
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V1:
-        lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
-                                  VersionTuple(10, 7));
-        break;
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eGNUstep_libobjc2:
-        lang_opts.ObjCRuntime.set(ObjCRuntime::GNUstep, VersionTuple(2, 0));
-        break;
-      }
-
-      if (runtime->HasNewLiteralsAndIndexing())
-        lang_opts.DebuggerObjCLiteral = true;
-    }
-  }
-
-  lang_opts.ThreadsafeStatics = false;
-  lang_opts.AccessControl = false; // Debuggers get universal access
-  lang_opts.DollarIdents = true;   // $ indicates a persistent variable name
-  // We enable all builtin functions beside the builtins from libc/libm (e.g.
-  // 'fopen'). Those libc functions are already correctly handled by LLDB, and
-  // additionally enabling them as expandable builtins is breaking Clang.
-  lang_opts.NoBuiltin = true;
 
   // Set CodeGen options
   m_compiler->getCodeGenOpts().EmitDeclMetadata = true;
@@ -648,7 +657,7 @@ ClangExpressionParser::ClangExpressionParser(
     m_compiler->createSourceManager(m_compiler->getFileManager());
   m_compiler->createPreprocessor(TU_Complete);
 
-  switch (language) {
+  switch (expr.Language().AsLanguageType()) {
   case lldb::eLanguageTypeC:
   case lldb::eLanguageTypeC89:
   case lldb::eLanguageTypeC99:
