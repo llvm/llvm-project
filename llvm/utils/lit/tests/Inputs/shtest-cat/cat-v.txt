@@ -1,4 +1,4 @@
-# C Program to generate all ASCII characters in allchars.txt
+## C Program to generate all ASCII characters in allchars
 # #include <stdio.h>
 # int main() {
 #     FILE *fptr = fopen("allchars.txt", "w");
@@ -12,12 +12,12 @@
 #     return 0;
 # }
 
-
-## Tests to check cat -e output for ASCII characters and newlines
+## Tests to check cat -v output
 
 # RUN: cat -v %S/txt-files/allchars | FileCheck %s --check-prefix=ALLCHARS
 # RUN: cat -v %S/txt-files/newline | FileCheck %s --check-prefix=NEWLINE
 
+## Test output of -v for all ASCII characters in ^ and M- notation
 # ALLCHARS: ^@^A^B^C^D^E^F^G^H
 # ALLCHARS: ^K^L^M^N^O^P^Q^R^S^T^U^V^W^X^Y^Z
 # ALLCHARS-SAME: ^[^\^]^^^_
@@ -37,6 +37,7 @@
 # ALLCHARS-SAME: M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-oM-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-z
 # ALLCHARS-SAME: M-{M-|M-}M-~M-^?
 
+## Test output of -v for new lines
 # NEWLINE: first
 # NEWLINE-EMPTY:
 # NEWLINE-EMPTY:

@@ -1,9 +1,11 @@
-## Tests to check cat -e output for ASCII characters and newlines
+## Tests to check cat -e output
 
 # RUN: cat -e %S/txt-files/allchars | FileCheck %s --check-prefix=ALLCHARS
 # RUN: cat -e %S/txt-files/newline | FileCheck %s --check-prefix=NEWLINE
 
-# ALLCHARS: ^@^A^B^C^D^E^F^G^H      $
+## Test output of -e for all ASCII characters in ^ and M- notation
+# ALLCHARS: ^@^A^B^C^D^E^F^G^H      
+# ALLCHARS-SAME: $
 # ALLCHARS: ^K^L^M^N^O^P^Q^R^S^T^U^V^W^X^Y^Z
 # ALLCHARS-SAME: ^[^\^]^^^_ !"#$%&'()*+,-./
 # ALLCHARS-SAME: 0123456789
@@ -21,6 +23,7 @@
 # ALLCHARS-SAME: M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-oM-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-z
 # ALLCHARS-SAME: M-{M-|M-}M-~M-^?
 
+## Test output of -e for new lines
 # NEWLINE: first
 # NEWLINE: $
 # NEWLINE: $

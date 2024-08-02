@@ -1,4 +1,4 @@
-## Tests
+## Tests to check cat output
 
 # RUN: cat %S/txt-files/newline | FileCheck %s --check-prefix=NEWLINE
 
