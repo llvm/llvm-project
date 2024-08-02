@@ -79,8 +79,8 @@ void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *D
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
 }
 
-static void updateGlobalArray(StringRef ArrayName, Module &M,
-                              const GlobalCtorUpdateFn &Fn) {
+static void transformGlobalArray(StringRef ArrayName, Module &M,
+                                 const GlobalCtorTransformFn &Fn) {
   GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName);
   if (!GVCtor)
     return;
@@ -115,12 +115,12 @@ static void updateGlobalArray(StringRef ArrayName, Module &M,
                            GlobalValue::AppendingLinkage, NewInit, ArrayName);
 }
 
-void llvm::updateGlobalCtors(Module &M, const GlobalCtorUpdateFn &Fn) {
-  updateGlobalArray("llvm.global_ctors", M, Fn);
+void llvm::transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_ctors", M, Fn);
 }
 
-void llvm::updateGlobalDtors(Module &M, const GlobalCtorUpdateFn &Fn) {
-  updateGlobalArray("llvm.global_dtors", M, Fn);
+void llvm::transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_dtors", M, Fn);
 }
 
 static void collectUsedGlobals(GlobalVariable *GV,

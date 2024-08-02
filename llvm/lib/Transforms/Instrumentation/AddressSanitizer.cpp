@@ -1990,11 +1990,6 @@ void ModuleAddressSanitizer::createInitializerPoisonCalls(
       // Don't instrument CTORs that will run before asan.module_ctor.
       if (Priority->getLimitedValue() <= GetCtorAndDtorPriority(TargetTriple))
         continue;
-      if (Priority->getLimitedValue() == 65535) {
-        CS->setOperand(0,
-                       ConstantInt::getSigned(Priority->getType(),
-                                              Priority->getLimitedValue() - 1));
-      }
       poisonOneInitializer(*F, ModuleName);
     }
   }

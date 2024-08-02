@@ -70,21 +70,23 @@ TEST(ModuleUtils, AppendToUsedList2) {
 }
 
 using AppendFnType = decltype(&appendToGlobalCtors);
-using UpdateFnType = decltype(&updateGlobalCtors);
-using ParamType = std::tuple<StringRef, AppendFnType, UpdateFnType>;
+using TransformFnType = decltype(&transformGlobalCtors);
+using ParamType = std::tuple<StringRef, AppendFnType, TransformFnType>;
 class ModuleUtilsTest : public testing::TestWithParam<ParamType> {
 public:
   StringRef arrayName() const { return std::get<0>(GetParam()); }
   AppendFnType appendFn() const { return std::get<AppendFnType>(GetParam()); }
-  UpdateFnType updateFn() const { return std::get<UpdateFnType>(GetParam()); }
+  TransformFnType transformFn() const {
+    return std::get<TransformFnType>(GetParam());
+  }
 };
 
 INSTANTIATE_TEST_SUITE_P(
     ModuleUtilsTestCtors, ModuleUtilsTest,
     ::testing::Values(ParamType{"llvm.global_ctors", &appendToGlobalCtors,
-                                &updateGlobalCtors},
+                                &transformGlobalCtors},
                       ParamType{"llvm.global_dtors", &appendToGlobalDtors,
-                                &updateGlobalDtors}));
+                                &transformGlobalDtors}));
 
 TEST_P(ModuleUtilsTest, AppendToMissingArray) {
   LLVMContext C;
@@ -141,7 +143,7 @@ TEST_P(ModuleUtilsTest, UpdateArray) {
                      .str());
 
   EXPECT_EQ(2, getListSize(*M, arrayName()));
-  updateFn()(*M, [](Constant *C) -> Constant * {
+  transformFn()(*M, [](Constant *C) -> Constant * {
     ConstantStruct *CS = dyn_cast<ConstantStruct>(C);
     if (!CS)
       return nullptr;

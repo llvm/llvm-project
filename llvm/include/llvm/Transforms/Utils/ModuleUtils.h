@@ -49,9 +49,9 @@ void appendToGlobalDtors(Module &M, Function *F, int Priority,
 /// record with the one returned by `Fn`. If `nullptr` was returned, the
 /// corresponding constructor will be removed from the array. For details see
 /// https://llvm.org/docs/LangRef.html#the-llvm-global-ctors-global-variable
-using GlobalCtorUpdateFn = llvm::function_ref<Constant *(Constant *)>;
-void updateGlobalCtors(Module &M, const GlobalCtorUpdateFn &Fn);
-void updateGlobalDtors(Module &M, const GlobalCtorUpdateFn &Fn);
+using GlobalCtorTransformFn = llvm::function_ref<Constant *(Constant *)>;
+void transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn);
+void transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn);
 
 /// Sets the KCFI type for the function. Used for compiler-generated functions
 /// that are indirectly called in instrumented code.
