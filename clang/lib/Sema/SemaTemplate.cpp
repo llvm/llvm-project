@@ -9051,7 +9051,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
 
 bool
 Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
-  assert(!isa<TemplateDecl>(Member) && "Only for non-template members");
+  assert(!Member->isTemplateDecl() && !Member->getDescribedTemplate() &&
+         "Only for non-template members");
 
   // Try to find the member we are instantiating.
   NamedDecl *FoundInstantiation = nullptr;
@@ -9062,50 +9063,46 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
   if (Previous.empty()) {
     // Nowhere to look anyway.
   } else if (FunctionDecl *Function = dyn_cast<FunctionDecl>(Member)) {
-    LookupResult::Filter Filter = Previous.makeFilter();
-    while (Filter.hasNext()) {
-      auto *Method =
-          dyn_cast<CXXMethodDecl>(Filter.next()->getUnderlyingDecl());
-      // Discard any candidates that aren't member functions.
-      if (!Method) {
-        Filter.erase();
+    UnresolvedSet<8> Candidates;
+    for (NamedDecl *Candidate : Previous) {
+      auto *Method = dyn_cast<CXXMethodDecl>(Candidate->getUnderlyingDecl());
+      // Ignore any candidates that aren't member functions.
+      if (!Method)
         continue;
-      }
 
       QualType Adjusted = Function->getType();
       if (!hasExplicitCallingConv(Adjusted))
         Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
-      // Discard any candidates with the wrong type.
+      // Ignore any candidates with the wrong type.
       // This doesn't handle deduced return types, but both function
       // declarations should be undeduced at this point.
-      if (!Context.hasSameType(Adjusted, Method->getType())) {
-        Filter.erase();
+      // FIXME: The exception specification should probably be ignored when
+      // comparing the types.
+      if (!Context.hasSameType(Adjusted, Method->getType()))
         continue;
-      }
 
-      // Discard any candidates with unsatisfied constraints.
+      // Ignore any candidates with unsatisfied constraints.
       if (ConstraintSatisfaction Satisfaction;
           Method->getTrailingRequiresClause() &&
           (CheckFunctionConstraints(Method, Satisfaction,
                                     /*UsageLoc=*/Member->getLocation(),
                                     /*ForOverloadResolution=*/true) ||
-           !Satisfaction.IsSatisfied)) {
-        Filter.erase();
+           !Satisfaction.IsSatisfied))
         continue;
-      }
-    }
-    Filter.done();
 
-    // If we have no candidates left after filtering, we are done.
-    if (Previous.empty())
+      Candidates.addDecl(Candidate);
+    }
+
+    // If we have no viable candidates left after filtering, we are done.
+    if (Candidates.empty())
       return false;
 
     // Find the function that is more constrained than every other function it
     // has been compared to.
-    UnresolvedSetIterator Best = Previous.begin();
+    UnresolvedSetIterator Best = Candidates.begin();
     CXXMethodDecl *BestMethod = nullptr;
-    for (UnresolvedSetIterator I = Previous.begin(), E = Previous.end(); I != E;
-         ++I) {
+    for (UnresolvedSetIterator I = Candidates.begin(), E = Candidates.end();
+         I != E; ++I) {
       auto *Method = cast<CXXMethodDecl>(I->getUnderlyingDecl());
       if (I == Best ||
           getMoreConstrainedFunction(Method, BestMethod) == Method) {
@@ -9119,10 +9116,10 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
     InstantiatedFrom = BestMethod->getInstantiatedFromMemberFunction();
     MSInfo = BestMethod->getMemberSpecializationInfo();
 
-    // Make sure the best candidate is more specialized than all of the others.
+    // Make sure the best candidate is more constrained than all of the others.
     bool Ambiguous = false;
-    for (UnresolvedSetIterator I = Previous.begin(), E = Previous.end(); I != E;
-         ++I) {
+    for (UnresolvedSetIterator I = Candidates.begin(), E = Candidates.end();
+         I != E; ++I) {
       auto *Method = cast<CXXMethodDecl>(I->getUnderlyingDecl());
       if (I != Best &&
           getMoreConstrainedFunction(Method, BestMethod) != BestMethod) {
@@ -9134,7 +9131,7 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
     if (Ambiguous) {
       Diag(Member->getLocation(), diag::err_function_member_spec_ambiguous)
           << Member << (InstantiatedFrom ? InstantiatedFrom : Instantiation);
-      for (NamedDecl *Candidate : Previous) {
+      for (NamedDecl *Candidate : Candidates) {
         Candidate = Candidate->getUnderlyingDecl();
         Diag(Candidate->getLocation(), diag::note_function_member_spec_matched)
             << Candidate;
