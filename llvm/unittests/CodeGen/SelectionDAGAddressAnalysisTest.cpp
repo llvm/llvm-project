@@ -72,7 +72,7 @@ protected:
     MachineModuleInfo MMI(TM.get());
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           0, MMI);
+                                           MMI.getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)

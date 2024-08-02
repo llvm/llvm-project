@@ -692,12 +692,24 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                             Ty);
 
   // Add range attribute since known bits can't completely reflect what we know.
-  if (BitWidth != 1 && !II.hasRetAttr(Attribute::Range) &&
-      !II.getMetadata(LLVMContext::MD_range)) {
-    ConstantRange Range(APInt(BitWidth, Known.countMinPopulation()),
-                        APInt(BitWidth, Known.countMaxPopulation() + 1));
-    II.addRangeRetAttr(Range);
-    return &II;
+  if (BitWidth != 1) {
+    ConstantRange OldRange =
+        II.getRange().value_or(ConstantRange::getFull(BitWidth));
+
+    unsigned Lower = Known.countMinPopulation();
+    unsigned Upper = Known.countMaxPopulation() + 1;
+
+    if (Lower == 0 && OldRange.contains(APInt::getZero(BitWidth)) &&
+        isKnownNonZero(Op0, IC.getSimplifyQuery().getWithInstruction(&II)))
+      Lower = 1;
+
+    ConstantRange Range(APInt(BitWidth, Lower), APInt(BitWidth, Upper));
+    Range = Range.intersectWith(OldRange, ConstantRange::Unsigned);
+
+    if (Range != OldRange) {
+      II.addRangeRetAttr(Range);
+      return &II;
+    }
   }
 
   return nullptr;
@@ -1500,10 +1512,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // Don't try to simplify calls without uses. It will not do anything useful,
   // but will result in the following folds being skipped.
   if (!CI.use_empty()) {
-    SmallVector<Value *, 4> Args;
-    Args.reserve(CI.arg_size());
-    for (Value *Op : CI.args())
-      Args.push_back(Op);
+    SmallVector<Value *, 8> Args(CI.args());
     if (Value *V = simplifyCall(&CI, CI.getCalledOperand(), Args,
                                 SQ.getWithInstruction(&CI)))
       return replaceInstUsesWith(CI, V);
@@ -1575,14 +1584,28 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return eraseInstFromFunction(CI);
     }
 
+    auto IsPointerUndefined = [MI](Value *Ptr) {
+      return isa<ConstantPointerNull>(Ptr) &&
+             !NullPointerIsDefined(
+                 MI->getFunction(),
+                 cast<PointerType>(Ptr->getType())->getAddressSpace());
+    };
+    bool SrcIsUndefined = false;
     // If we can determine a pointer alignment that is bigger than currently
     // set, update the alignment.
     if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
       if (Instruction *I = SimplifyAnyMemTransfer(MTI))
         return I;
+      SrcIsUndefined = IsPointerUndefined(MTI->getRawSource());
     } else if (auto *MSI = dyn_cast<AnyMemSetInst>(MI)) {
       if (Instruction *I = SimplifyAnyMemSet(MSI))
         return I;
+    }
+
+    // If src/dest is null, this memory intrinsic must be a noop.
+    if (SrcIsUndefined || IsPointerUndefined(MI->getRawDest())) {
+      Builder.CreateAssumption(Builder.CreateIsNull(MI->getLength()));
+      return eraseInstFromFunction(CI);
     }
 
     if (Changed) return II;
@@ -3031,10 +3054,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // assume( (load addr) != null ) -> add 'nonnull' metadata to load
     // (if assume is valid at the load)
-    CmpInst::Predicate Pred;
     Instruction *LHS;
-    if (match(IIOperand, m_ICmp(Pred, m_Instruction(LHS), m_Zero())) &&
-        Pred == ICmpInst::ICMP_NE && LHS->getOpcode() == Instruction::Load &&
+    if (match(IIOperand, m_SpecificICmp(ICmpInst::ICMP_NE, m_Instruction(LHS),
+                                        m_Zero())) &&
+        LHS->getOpcode() == Instruction::Load &&
         LHS->getType()->isPointerTy() &&
         isValidAssumeForContext(II, LHS, &DT)) {
       MDNode *MD = MDNode::get(II->getContext(), std::nullopt);
@@ -3073,8 +3096,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // into
     // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
     if (EnableKnowledgeRetention &&
-        match(IIOperand, m_Cmp(Pred, m_Value(A), m_Zero())) &&
-        Pred == CmpInst::ICMP_NE && A->getType()->isPointerTy()) {
+        match(IIOperand,
+              m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
+        A->getType()->isPointerTy()) {
       if (auto *Replacement = buildAssumeFromKnowledge(
               {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
 
@@ -3094,9 +3118,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     uint64_t AlignMask;
     if (EnableKnowledgeRetention &&
         match(IIOperand,
-              m_Cmp(Pred, m_And(m_Value(A), m_ConstantInt(AlignMask)),
-                    m_Zero())) &&
-        Pred == CmpInst::ICMP_EQ) {
+              m_SpecificICmp(ICmpInst::ICMP_EQ,
+                             m_And(m_Value(A), m_ConstantInt(AlignMask)),
+                             m_Zero()))) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));

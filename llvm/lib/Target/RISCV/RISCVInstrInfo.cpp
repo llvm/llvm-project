@@ -1365,7 +1365,7 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
-  if (!MI->isSafeToMove(/* AliasAnalysis = */ nullptr, DontMoveAcrossStores))
+  if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
 }
@@ -3761,6 +3761,12 @@ RISCVInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
       {{MONontemporalBit0, "riscv-nontemporal-domain-bit-0"},
        {MONontemporalBit1, "riscv-nontemporal-domain-bit-1"}};
   return ArrayRef(TargetFlags);
+}
+
+unsigned RISCVInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
+  return OptLevel >= CodeGenOptLevel::Aggressive
+             ? STI.getTailDupAggressiveThreshold()
+             : 2;
 }
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.

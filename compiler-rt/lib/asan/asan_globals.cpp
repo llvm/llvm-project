@@ -21,6 +21,8 @@
 #include "asan_suppressions.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_dense_map.h"
+#include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -30,13 +32,14 @@ namespace __asan {
 
 typedef __asan_global Global;
 
-struct ListOfGlobals {
-  const Global *g;
-  ListOfGlobals *next;
+struct GlobalListNode {
+  const Global *g = nullptr;
+  GlobalListNode *next = nullptr;
 };
+typedef IntrusiveList<GlobalListNode> ListOfGlobals;
 
 static Mutex mu_for_globals;
-static ListOfGlobals *list_of_all_globals;
+static ListOfGlobals list_of_all_globals;
 
 static const int kDynamicInitGlobalsInitialCapacity = 512;
 struct DynInitGlobal {
@@ -55,6 +58,19 @@ struct GlobalRegistrationSite {
 typedef InternalMmapVector<GlobalRegistrationSite> GlobalRegistrationSiteVector;
 static GlobalRegistrationSiteVector *global_registration_site_vector;
 
+static ListOfGlobals &GlobalsByIndicator(uptr odr_indicator) {
+  using MapOfGlobals = DenseMap<uptr, ListOfGlobals>;
+
+  static MapOfGlobals *globals_by_indicator = nullptr;
+  if (!globals_by_indicator) {
+    alignas(
+        alignof(MapOfGlobals)) static char placeholder[sizeof(MapOfGlobals)];
+    globals_by_indicator = new (placeholder) MapOfGlobals();
+  }
+
+  return (*globals_by_indicator)[odr_indicator];
+}
+
 ALWAYS_INLINE void PoisonShadowForGlobal(const Global *g, u8 value) {
   FastPoisonShadow(g->beg, g->size_with_redzone, value);
 }
@@ -72,6 +88,10 @@ ALWAYS_INLINE void PoisonRedZones(const Global &g) {
 }
 
 const uptr kMinimalDistanceFromAnotherGlobal = 64;
+
+static void AddGlobalToList(ListOfGlobals &list, const Global *g) {
+  list.push_front(new (GetGlobalLowLevelAllocator()) GlobalListNode{g});
+}
 
 static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
   if (addr <= g.beg - kMinimalDistanceFromAnotherGlobal) return false;
@@ -114,8 +134,8 @@ int GetGlobalsForAddress(uptr addr, Global *globals, u32 *reg_sites,
   if (!flags()->report_globals) return 0;
   Lock lock(&mu_for_globals);
   int res = 0;
-  for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
-    const Global &g = *l->g;
+  for (const auto &l : list_of_all_globals) {
+    const Global &g = *l.g;
     if (flags()->report_globals >= 2)
       ReportGlobal(g, "Search");
     if (IsAddressNearGlobal(addr, g)) {
@@ -142,20 +162,24 @@ static void CheckODRViolationViaIndicator(const Global *g) {
   // Instrumentation requests to skip ODR check.
   if (g->odr_indicator == UINTPTR_MAX)
     return;
+
+  ListOfGlobals &relevant_globals = GlobalsByIndicator(g->odr_indicator);
+
   u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
-  if (*odr_indicator == UNREGISTERED) {
+  if (*odr_indicator == REGISTERED) {
+    // If *odr_indicator is REGISTERED, some module have already registered
+    // externally visible symbol with the same name. This is an ODR violation.
+    for (const auto &l : relevant_globals) {
+      if ((flags()->detect_odr_violation >= 2 || g->size != l.g->size) &&
+          !IsODRViolationSuppressed(g->name))
+        ReportODRViolation(g, FindRegistrationSite(g), l.g,
+                           FindRegistrationSite(l.g));
+    }
+  } else {  // UNREGISTERED
     *odr_indicator = REGISTERED;
-    return;
   }
-  // If *odr_indicator is DEFINED, some module have already registered
-  // externally visible symbol with the same name. This is an ODR violation.
-  for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
-    if (g->odr_indicator == l->g->odr_indicator &&
-        (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
-        !IsODRViolationSuppressed(g->name))
-      ReportODRViolation(g, FindRegistrationSite(g),
-                         l->g, FindRegistrationSite(l->g));
-  }
+
+  AddGlobalToList(relevant_globals, g);
 }
 
 // Check ODR violation for given global G by checking if it's already poisoned.
@@ -165,12 +189,13 @@ static void CheckODRViolationViaPoisoning(const Global *g) {
   if (__asan_region_is_poisoned(g->beg, g->size_with_redzone)) {
     // This check may not be enough: if the first global is much larger
     // the entire redzone of the second global may be within the first global.
-    for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
-      if (g->beg == l->g->beg &&
-          (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
-          !IsODRViolationSuppressed(g->name))
-        ReportODRViolation(g, FindRegistrationSite(g),
-                           l->g, FindRegistrationSite(l->g));
+    for (const auto &l : list_of_all_globals) {
+      if (g->beg == l.g->beg &&
+          (flags()->detect_odr_violation >= 2 || g->size != l.g->size) &&
+          !IsODRViolationSuppressed(g->name)) {
+        ReportODRViolation(g, FindRegistrationSite(g), l.g,
+                           FindRegistrationSite(l.g));
+      }
     }
   }
 }
@@ -225,10 +250,9 @@ static void RegisterGlobal(const Global *g) {
   }
   if (CanPoisonMemory())
     PoisonRedZones(*g);
-  ListOfGlobals *l = new (GetGlobalLowLevelAllocator()) ListOfGlobals;
-  l->g = g;
-  l->next = list_of_all_globals;
-  list_of_all_globals = l;
+
+  AddGlobalToList(list_of_all_globals, g);
+
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
       dynamic_init_globals = new (GetGlobalLowLevelAllocator()) VectorOfGlobals;

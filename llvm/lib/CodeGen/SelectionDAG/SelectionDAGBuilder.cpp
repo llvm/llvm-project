@@ -1246,9 +1246,7 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       SmallVector<Value *> Values(It->Values.location_ops());
       if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
                             It->Values.hasArgList())) {
-        SmallVector<Value *, 4> Vals;
-        for (Value *V : It->Values.location_ops())
-          Vals.push_back(V);
+        SmallVector<Value *, 4> Vals(It->Values.location_ops());
         addDanglingDebugInfo(Vals,
                              FnVarLocs->getDILocalVariable(It->VariableID),
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
@@ -6708,10 +6706,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::eh_sjlj_callsite: {
     ConstantInt *CI = cast<ConstantInt>(I.getArgOperand(0));
-    assert(DAG.getMMI()->getCurrentCallSite() == 0 &&
-           "Overlapping call sites!");
+    assert(FuncInfo.getCurrentCallSite() == 0 && "Overlapping call sites!");
 
-    DAG.getMMI()->setCurrentCallSite(CI->getZExtValue());
+    FuncInfo.setCurrentCallSite(CI->getZExtValue());
     return;
   }
   case Intrinsic::eh_sjlj_functioncontext: {
@@ -7451,6 +7448,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         break;
       default: llvm_unreachable("unknown trap intrinsic");
       }
+      DAG.addNoMergeSiteInfo(DAG.getRoot().getNode(),
+                             I.hasFnAttr(Attribute::NoMerge));
       return;
     }
     TargetLowering::ArgListTy Args;
@@ -7467,7 +7466,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         DAG.getExternalSymbol(TrapFuncName.data(),
                               TLI.getPointerTy(DAG.getDataLayout())),
         std::move(Args));
-
+    CLI.NoMerge = I.hasFnAttr(Attribute::NoMerge);
     std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
     DAG.setRoot(Result.second);
     return;
@@ -8619,7 +8618,6 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
                                           const BasicBlock *EHPadBB,
                                           MCSymbol *&BeginLabel) {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
 
   // Insert a label before the invoke call to mark the try range.  This can be
   // used to detect deletion of the invoke via the MachineModuleInfo.
@@ -8627,13 +8625,13 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // For SjLj, keep track of which landing pads go with which invokes
   // so as to maintain the ordering of pads in the LSDA.
-  unsigned CallSiteIndex = MMI.getCurrentCallSite();
+  unsigned CallSiteIndex = FuncInfo.getCurrentCallSite();
   if (CallSiteIndex) {
     MF.setCallSiteBeginLabel(BeginLabel, CallSiteIndex);
     LPadToCallSiteMap[FuncInfo.MBBMap[EHPadBB]].push_back(CallSiteIndex);
 
     // Now that the call site is handled, stop tracking it.
-    MMI.setCurrentCallSite(0);
+    FuncInfo.setCurrentCallSite(0);
   }
 
   return DAG.getEHLabel(getCurSDLoc(), Chain, BeginLabel);

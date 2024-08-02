@@ -128,6 +128,7 @@ enum NodeType : unsigned {
   FROUND,
 
   FCLASS,
+  FSGNJX,
 
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
@@ -237,7 +238,7 @@ enum NodeType : unsigned {
   VECREDUCE_FMIN_VL,
   VECREDUCE_FMAX_VL,
 
-  // Vector binary ops with a merge as a third operand, a mask as a fourth
+  // Vector binary ops with a passthru as a third operand, a mask as a fourth
   // operand, and VL as a fifth operand.
   ADD_VL,
   AND_VL,
@@ -293,7 +294,7 @@ enum NodeType : unsigned {
   FABS_VL,
   FSQRT_VL,
   FCLASS_VL,
-  FCOPYSIGN_VL, // Has a merge operand
+  FCOPYSIGN_VL, // Has a passthru operand
   VFCVT_RTZ_X_F_VL,
   VFCVT_RTZ_XU_F_VL,
   VFCVT_X_F_VL,
@@ -321,7 +322,7 @@ enum NodeType : unsigned {
   VFWMSUB_VL,
   VFWNMSUB_VL,
 
-  // Widening instructions with a merge value a third operand, a mask as a
+  // Widening instructions with a passthru value a third operand, a mask as a
   // fourth operand, and VL as a fifth operand.
   VWMUL_VL,
   VWMULU_VL,
