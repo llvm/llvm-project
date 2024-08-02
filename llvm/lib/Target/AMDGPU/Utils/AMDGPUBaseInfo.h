@@ -862,6 +862,9 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isFP8DstSelInst(unsigned Opc);
+
+LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);
 
 LLVM_READONLY

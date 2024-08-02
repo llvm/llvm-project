@@ -914,8 +914,7 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
     if (!AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel) ||
         !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
               SISrcMods::DST_OP_SEL ||
-          ((Opcode == AMDGPU::V_CVT_SR_BF8_F32_e64 ||
-            Opcode == AMDGPU::V_CVT_SR_FP8_F32_e64) &&
+          (AMDGPU::isFP8DstSelInst(Opcode) &&
            (TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm() &
             SISrcMods::OP_SEL_0))))
       return nullptr;
@@ -955,7 +954,6 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
     const int Shift16DefWaitstates = 1;
 
     auto IsShift16BitDefFn = [this, VALU](const MachineInstr &MI) {
-      const SIInstrInfo *TII = ST.getInstrInfo();
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
       SmallVector<const MachineOperand *, 4> Dsts;
       const MachineOperand *ForwardedDst = getDstSelForwardingOperand(MI, ST);
@@ -975,14 +973,16 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
         // We must consider implicit reads of the VALU. SDWA with dst_sel and
         // UNUSED_PRESERVE will implicitly read the result from forwarded dest,
         // and we must account for that hazard.
-        // We also must account for WAW hazards. In particular, WAW with dest preserve semantics
-        // (e.g. VOP3 with op_sel, VOP2 && !zeroesHigh16BitsOfDest) will read the forwarded dest
-        // for parity check for ECC. Without accounting for this hazard, the ECC
-        // will be wrong.
-        // TODO: limit to RAW (including implicit reads) + problematic WAW (i.e. complete zeroesHigh16BitsOfDest)
+        // We also must account for WAW hazards. In particular, WAW with dest
+        // preserve semantics (e.g. VOP3 with op_sel, VOP2 &&
+        // !zeroesHigh16BitsOfDest) will read the forwarded dest for parity
+        // check for ECC. Without accounting for this hazard, the ECC will be
+        // wrong.
+        // TODO: limit to RAW (including implicit reads) + problematic WAW (i.e.
+        // complete zeroesHigh16BitsOfDest)
         for (auto &Operand : VALU->operands()) {
           if (Operand.isReg() &&
-            TRI->regsOverlap(Dst->getReg(), Operand.getReg())) {
+              TRI->regsOverlap(Dst->getReg(), Operand.getReg())) {
             return true;
           }
         }
@@ -1088,11 +1088,13 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   for (const MachineOperand &Op :
        llvm::drop_begin(IA->operands(), InlineAsm::MIOp_FirstOperand)) {
     if (Op.isReg() && Op.isDef()) {
-      WaitStatesNeeded =
-          std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
-
       if (!TRI.isVectorRegister(MRI, Op.getReg()))
         continue;
+
+      if (ST.has12DWordStoreHazard()) {
+        WaitStatesNeeded =
+            std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
+      }
 
       if (ST.hasDstSelForwardingHazard()) {
         const int Shift16DefWaitstates = 1;
@@ -1104,7 +1106,7 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
             return true;
 
           if (MI.isInlineAsm()) {
-            // Assume other inline asm has dst forwarding hazard
+            // If MI is inline asm, assume it has dst forwarding hazard
             for (auto &Op :
                  drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
               if (Op.isReg() && IA->modifiesRegister(Op.getReg(), &TRI)) {

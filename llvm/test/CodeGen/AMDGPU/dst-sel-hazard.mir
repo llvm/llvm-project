@@ -78,6 +78,8 @@ body:            |
 ...
 
 
+# TODO -- there is no reason for s_nop (V_ADD_U16 doesn't preserve the dest)
+
 ---
 name:            opsel_no_sdwa_no_hazard
 body:            |
@@ -88,6 +90,7 @@ body:            |
     ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; HAZARD-NEXT: {{  $}}
     ; HAZARD-NEXT: renamable $vgpr0 = V_MAD_U16_gfx9_e64 12, killed $vgpr3, 4, killed $vgpr4, 4, killed $vgpr2, 0, 0, implicit $exec
+    ; HAZARD-NEXT: S_NOP 0
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec
     ; HAZARD-NEXT: S_ENDPGM 0
     ;
@@ -328,6 +331,8 @@ body:            |
   S_ENDPGM 0
 ...
 
+# TODO -- there is no reason for s_nop (V_ADD_U16 doesn't preserve the dest)
+
 ---
 name:            sdwa_nosdwa_no_hazard
 body:            |
@@ -338,6 +343,7 @@ body:            |
     ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; HAZARD-NEXT: {{  $}}
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec
+    ; HAZARD-NEXT: S_NOP 0
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec
     ; HAZARD-NEXT: S_ENDPGM 0
     ;
