@@ -486,7 +486,7 @@ static void SetupLangOpts(CompilerInstance &compiler,
   lang_opts.NoBuiltin = true;
 }
 
-void SetupImportStdModuleLangOpts(CompilerInstance &compiler) {
+static void SetupImportStdModuleLangOpts(CompilerInstance &compiler) {
   LangOptions &lang_opts = compiler.getLangOpts();
   lang_opts.Modules = true;
   // We want to implicitly build modules.
