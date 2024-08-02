@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/allocator.h"
-#include "../allocator-registry.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "../derived.h"
 #include "../stat.h"
 #include "../terminator.h"
