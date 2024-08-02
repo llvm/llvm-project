@@ -1216,3 +1216,49 @@ cir.func @address_space4(%p : !cir.ptr<!u64i, addrspace(foobar)>) { // expected-
   vec_type_hint = !s32i,
   vec_type_hint_signedness = 0
 >
+
+// -----
+
+// expected-error@+1 {{addr_space must be integer arrays}}
+#fn_attr = #cir.cl.kernel_arg_metadata<
+  addr_space = ["none"],
+  access_qual = ["none"],
+  type = ["uint*"],
+  base_type = ["uint*"],
+  type_qual = [""]
+>
+
+// -----
+
+// expected-error@+1 {{access_qual, type, base_type, type_qual must be string arrays}}
+#fn_attr = #cir.cl.kernel_arg_metadata<
+  addr_space = [0 : i32],
+  access_qual = [42 : i32],
+  type = ["uint*"],
+  base_type = ["uint*"],
+  type_qual = [""]
+>
+
+// -----
+
+// expected-error@+1 {{name must be a string array}}
+#fn_attr = #cir.cl.kernel_arg_metadata<
+  addr_space = [0 : i32],
+  access_qual = ["none"],
+  type = ["uint*"],
+  base_type = ["uint*"],
+  type_qual = [""],
+  name = [33 : i32]
+>
+
+// -----
+
+// expected-error@+1 {{all arrays must have the same number of elements}}
+#fn_attr = #cir.cl.kernel_arg_metadata<
+  addr_space = [0 : i32],
+  access_qual = ["none"],
+  type = ["uint*", "myunsignedint*"],
+  base_type = ["uint*", "uint*"],
+  type_qual = [""],
+  name = ["foo"]
+>

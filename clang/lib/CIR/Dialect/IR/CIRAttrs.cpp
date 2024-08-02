@@ -554,6 +554,43 @@ LogicalResult OpenCLKernelMetadataAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
+// OpenCLKernelArgMetadataAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult OpenCLKernelArgMetadataAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ArrayAttr addrSpaces, ArrayAttr accessQuals, ArrayAttr types,
+    ArrayAttr baseTypes, ArrayAttr typeQuals, ArrayAttr argNames) {
+  auto isIntArray = [](ArrayAttr elt) {
+    return llvm::all_of(
+        elt, [](Attribute elt) { return mlir::isa<IntegerAttr>(elt); });
+  };
+  auto isStrArray = [](ArrayAttr elt) {
+    return llvm::all_of(
+        elt, [](Attribute elt) { return mlir::isa<StringAttr>(elt); });
+  };
+
+  if (!isIntArray(addrSpaces))
+    return emitError() << "addr_space must be integer arrays";
+  if (!llvm::all_of<ArrayRef<ArrayAttr>>(
+          {accessQuals, types, baseTypes, typeQuals}, isStrArray))
+    return emitError()
+           << "access_qual, type, base_type, type_qual must be string arrays";
+  if (argNames && !isStrArray(argNames)) {
+    return emitError() << "name must be a string array";
+  }
+
+  if (!llvm::all_of<ArrayRef<ArrayAttr>>(
+          {addrSpaces, accessQuals, types, baseTypes, typeQuals, argNames},
+          [&](ArrayAttr arr) {
+            return !arr || arr.size() == addrSpaces.size();
+          })) {
+    return emitError() << "all arrays must have the same number of elements";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AddressSpaceAttr definitions
 //===----------------------------------------------------------------------===//
 
