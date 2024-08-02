@@ -162,9 +162,9 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
 }
 
 MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
-                                 const TargetSubtargetInfo &STI,
-                                 unsigned FunctionNum, MachineModuleInfo &mmi)
-    : F(F), Target(Target), STI(&STI), Ctx(mmi.getContext()), MMI(mmi) {
+                                 const TargetSubtargetInfo &STI, MCContext &Ctx,
+                                 unsigned FunctionNum)
+    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -307,7 +307,7 @@ void MachineFunction::clear() {
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
-  return F.getParent()->getDataLayout();
+  return F.getDataLayout();
 }
 
 /// Get the JumpTableInfo for this function.
@@ -654,9 +654,14 @@ void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
 
 /// True if this function needs frame moves for debug or exceptions.
 bool MachineFunction::needsFrameMoves() const {
-  return getMMI().hasDebugInfo() ||
-         getTarget().Options.ForceDwarfFrameSection ||
-         F.needsUnwindTableEntry();
+  // TODO: Ideally, what we'd like is to have a switch that allows emitting
+  // synchronous (precise at call-sites only) CFA into .eh_frame. However, even
+  // under this switch, we'd like .debug_frame to be precise when using -g. At
+  // this moment, there's no way to specify that some CFI directives go into
+  // .eh_frame only, while others go into .debug_frame only.
+  return getTarget().Options.ForceDwarfFrameSection ||
+         F.needsUnwindTableEntry() ||
+         !F.getParent()->debug_compile_units().empty();
 }
 
 namespace llvm {

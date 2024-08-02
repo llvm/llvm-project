@@ -120,6 +120,16 @@ enum NodeType : unsigned {
 
   // Vector Shuffle
   VREPLVE,
+  VSHUF,
+  VPICKEV,
+  VPICKOD,
+  VPACKEV,
+  VPACKOD,
+  VILVL,
+  VILVH,
+  VSHUF4I,
+  VREPLVEI,
+  XVPERMI,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -246,6 +256,9 @@ public:
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
   bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
   bool shouldExtendTypeInLibCall(EVT Type) const override;
+
+  bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
+                              Align &PrefAlign) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

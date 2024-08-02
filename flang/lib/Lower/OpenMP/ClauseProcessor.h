@@ -55,7 +55,7 @@ public:
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::CollapseClauseOps &result,
+                  mlir::omp::LoopRelatedOps &result,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
   bool processDefault() const;
   bool processDevice(lower::StatementContext &stmtCtx,
@@ -63,6 +63,8 @@ public:
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processDistSchedule(lower::StatementContext &stmtCtx,
                            mlir::omp::DistScheduleClauseOps &result) const;
+  bool processFilter(lower::StatementContext &stmtCtx,
+                     mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
@@ -77,6 +79,7 @@ public:
                        mlir::omp::NumTeamsClauseOps &result) const;
   bool processNumThreads(lower::StatementContext &stmtCtx,
                          mlir::omp::NumThreadsClauseOps &result) const;
+  bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
@@ -124,16 +127,14 @@ public:
       llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr,
       llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSyms =
           nullptr) const;
-  bool processSectionsReduction(mlir::Location currentLocation,
-                                mlir::omp::ReductionClauseOps &result) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processUseDeviceAddr(
-      mlir::omp::UseDeviceClauseOps &result,
+      mlir::omp::UseDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
   bool processUseDevicePtr(
-      mlir::omp::UseDeviceClauseOps &result,
+      mlir::omp::UseDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
@@ -203,9 +204,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
           std::stringstream asFortran;
           std::optional<omp::Object> parentObj;
 
-          Fortran::lower::AddrAndBoundsInfo info =
-              Fortran::lower::gatherDataOperandAddrAndBounds<
-                  mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
+          lower::AddrAndBoundsInfo info =
+              lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
+                                                    mlir::omp::MapBoundsType>(
                   converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
@@ -219,11 +220,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
             omp::ObjectList objectList = gatherObjects(object, semaCtx);
             parentObj = objectList[0];
             parentMemberIndices.insert({parentObj.value(), {}});
-            if (Fortran::semantics::IsAllocatableOrObjectPointer(
-                    object.sym()) ||
-                memberHasAllocatableParent(object, semaCtx)) {
-              llvm::SmallVector<int> indices =
-                  generateMemberPlacementIndices(object, semaCtx);
+            if (isMemberOrParentAllocatableOrPointer(object, semaCtx)) {
+              llvm::SmallVector<int64_t> indices;
+              generateMemberPlacementIndices(object, indices, semaCtx);
               symAddr = createParentSymAndGenIntermediateMaps(
                   clauseLocation, converter, objectList, indices,
                   parentMemberIndices[parentObj.value()], asFortran.str(),
@@ -240,7 +239,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
           mlir::omp::MapInfoOp mapOp = createMapInfoOp(
               firOpBuilder, location, symAddr,
               /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
-              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
+              /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),

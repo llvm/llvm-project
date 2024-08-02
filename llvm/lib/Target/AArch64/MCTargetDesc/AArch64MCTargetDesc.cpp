@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
 
@@ -51,6 +52,8 @@ static MCInstrInfo *createAArch64MCInstrInfo() {
 
 static MCSubtargetInfo *
 createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  CPU = AArch64::resolveCPUAlias(CPU);
+
   if (CPU.empty()) {
     CPU = "generic";
     if (FS.empty())
@@ -383,24 +386,21 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                   std::move(Emitter));
 }
 
-static MCStreamer *createMachOStreamer(MCContext &Ctx,
-                                       std::unique_ptr<MCAsmBackend> &&TAB,
-                                       std::unique_ptr<MCObjectWriter> &&OW,
-                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool DWARFMustBeAtTheEnd) {
+static MCStreamer *
+createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+                    std::unique_ptr<MCObjectWriter> &&OW,
+                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter), DWARFMustBeAtTheEnd,
+                             std::move(Emitter), /*ignore=*/false,
                              /*LabelSections*/ true);
 }
 
 static MCStreamer *
 createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter,
-                      bool IncrementalLinkerCompatible) {
+                      std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                      std::move(Emitter),
-                                      IncrementalLinkerCompatible);
+                                      std::move(Emitter));
 }
 
 namespace {

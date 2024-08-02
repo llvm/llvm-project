@@ -43,7 +43,7 @@
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
 ; CHECK-NEXT: body:
-define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) {
+define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) #0 {
 bb0:
   %tmp = icmp ne i32 %arg1, 0
   br i1 %tmp, label %bb2, label %bb3
@@ -66,5 +66,5 @@ bb4:
   ret void
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind readnone }

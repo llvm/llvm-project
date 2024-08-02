@@ -17,6 +17,8 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -39,18 +41,28 @@ namespace {
 /// A pass to perform the SPIR-V conversion.
 struct ConvertToSPIRVPass final
     : impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
+  using ConvertToSPIRVPassBase::ConvertToSPIRVPassBase;
 
   void runOnOperation() override {
-    MLIRContext *context = &getContext();
     Operation *op = getOperation();
+    MLIRContext *context = &getContext();
+
+    // Unroll vectors in function signatures to native size.
+    if (runSignatureConversion && failed(spirv::unrollVectorsInSignatures(op)))
+      return signalPassFailure();
+
+    // Unroll vectors in function bodies to native size.
+    if (runVectorUnrolling && failed(spirv::unrollVectorsInFuncBodies(op)))
+      return signalPassFailure();
 
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
+    std::unique_ptr<ConversionTarget> target =
+        SPIRVConversionTarget::get(targetAttr);
     SPIRVTypeConverter typeConverter(targetAttr);
-
     RewritePatternSet patterns(context);
     ScfToSPIRVContext scfToSPIRVContext;
 
-    // Populate patterns.
+    // Populate patterns for each dialect.
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);
     populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
@@ -59,9 +71,6 @@ struct ConvertToSPIRVPass final
     populateVectorToSPIRVPatterns(typeConverter, patterns);
     populateSCFToSPIRVPatterns(typeConverter, scfToSPIRVContext, patterns);
     ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
-
-    std::unique_ptr<ConversionTarget> target =
-        SPIRVConversionTarget::get(targetAttr);
 
     if (failed(applyPartialConversion(op, *target, std::move(patterns))))
       return signalPassFailure();

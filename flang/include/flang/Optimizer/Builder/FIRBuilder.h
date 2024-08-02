@@ -38,6 +38,13 @@ class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
 
+/// Get the integer type with a pointer size.
+inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
+  // TODO: Delay the need of such type until codegen or find a way to use
+  // llvm::DataLayout::getPointerSizeInBits here.
+  return builder.getI64Type();
+}
+
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
 //===----------------------------------------------------------------------===//
@@ -143,11 +150,7 @@ public:
 
   /// Get the integer type whose bit width corresponds to the width of pointer
   /// types, or is bigger.
-  mlir::Type getIntPtrType() {
-    // TODO: Delay the need of such type until codegen or find a way to use
-    // llvm::DataLayout::getPointerSizeInBits here.
-    return getI64Type();
-  }
+  mlir::Type getIntPtrType() { return fir::getIntPtrType(*this); }
 
   /// Wrap `str` to a SymbolRefAttr.
   mlir::SymbolRefAttr getSymbolRefAttr(llvm::StringRef str) {
@@ -207,6 +210,11 @@ public:
                             llvm::ArrayRef<mlir::Value> shape,
                             llvm::ArrayRef<mlir::Value> lenParams,
                             bool asTarget = false);
+
+  /// Create a two dimensional ArrayAttr containing integer data as
+  /// IntegerAttrs, effectively: ArrayAttr<ArrayAttr<IntegerAttr>>>.
+  mlir::ArrayAttr create2DIntegerArrayAttr(
+      llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &intData);
 
   /// Create a temporary using `fir.alloca`. This function does not hoist.
   /// It is the callers responsibility to set the insertion point if
@@ -285,6 +293,10 @@ public:
   /// Convert a StringRef string into a fir::StringLitOp.
   fir::StringLitOp createStringLitOp(mlir::Location loc,
                                      llvm::StringRef string);
+
+  std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+  createTypeInfoOp(mlir::Location loc, fir::RecordType recordType,
+                   fir::RecordType parentType);
 
   //===--------------------------------------------------------------------===//
   // Linkage helpers (inline). The default linkage is external.
@@ -707,6 +719,11 @@ fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate Null BoxProc for procedure pointer null initialization.
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxType);
+
+/// Convert a value to a new type. Return the value directly if it has the right
+/// type.
+mlir::Value createConvert(mlir::OpBuilder &, mlir::Location, mlir::Type,
+                          mlir::Value);
 
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);

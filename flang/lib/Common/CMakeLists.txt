@@ -43,6 +43,9 @@ add_flang_library(FortranCommon
   Version.cpp
   ${version_inc}
 
+  LINK_LIBS
+  MLIRDialect
+
   LINK_COMPONENTS
   Support
 )

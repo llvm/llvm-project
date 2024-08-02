@@ -24,20 +24,20 @@
 namespace llvm {
 
 class MCAssembler;
+class MCObjectStreamer;
 class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 
 class MCFragment {
-  friend class MCAsmLayout;
   friend class MCAssembler;
+  friend class MCObjectStreamer;
   friend class MCSection;
 
 public:
   enum FragmentType : uint8_t {
     FT_Align,
     FT_Data,
-    FT_CompactEncodedInst,
     FT_Fill,
     FT_Nops,
     FT_Relaxable,
@@ -69,8 +69,15 @@ private:
   FragmentType Kind;
 
 protected:
+  /// Used by subclasses for better packing.
+  ///
+  /// MCEncodedFragment
   bool HasInstructions : 1;
+  bool AlignToBundleEnd : 1;
+  /// MCDataFragment
   bool LinkerRelaxable : 1;
+  /// MCRelaxableFragment: x86-specific
+  bool AllowAutoPadding : 1;
 
   MCFragment(FragmentType Kind, bool HasInstructions);
 
@@ -115,9 +122,6 @@ public:
 /// data.
 ///
 class MCEncodedFragment : public MCFragment {
-  /// Should this fragment be aligned to the end of a bundle?
-  bool AlignToBundleEnd = false;
-
   uint8_t BundlePadding = 0;
 
 protected:
@@ -135,7 +139,6 @@ public:
     default:
       return false;
     case MCFragment::FT_Relaxable:
-    case MCFragment::FT_CompactEncodedInst:
     case MCFragment::FT_Data:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_DwarfFrame:
@@ -172,28 +175,11 @@ public:
 };
 
 /// Interface implemented by fragments that contain encoded instructions and/or
-/// data.
-///
-template<unsigned ContentsSize>
-class MCEncodedFragmentWithContents : public MCEncodedFragment {
-  SmallVector<char, ContentsSize> Contents;
-
-protected:
-  MCEncodedFragmentWithContents(MCFragment::FragmentType FType,
-                                bool HasInstructions)
-      : MCEncodedFragment(FType, HasInstructions) {}
-
-public:
-  SmallVectorImpl<char> &getContents() { return Contents; }
-  const SmallVectorImpl<char> &getContents() const { return Contents; }
-};
-
-/// Interface implemented by fragments that contain encoded instructions and/or
 /// data and also have fixups registered.
 ///
-template<unsigned ContentsSize, unsigned FixupsSize>
-class MCEncodedFragmentWithFixups :
-  public MCEncodedFragmentWithContents<ContentsSize> {
+template <unsigned ContentsSize, unsigned FixupsSize>
+class MCEncodedFragmentWithFixups : public MCEncodedFragment {
+  SmallVector<char, ContentsSize> Contents;
 
   /// The list of fixups in this fragment.
   SmallVector<MCFixup, FixupsSize> Fixups;
@@ -201,12 +187,15 @@ class MCEncodedFragmentWithFixups :
 protected:
   MCEncodedFragmentWithFixups(MCFragment::FragmentType FType,
                               bool HasInstructions)
-      : MCEncodedFragmentWithContents<ContentsSize>(FType, HasInstructions) {}
+      : MCEncodedFragment(FType, HasInstructions) {}
 
 public:
 
   using const_fixup_iterator = SmallVectorImpl<MCFixup>::const_iterator;
   using fixup_iterator = SmallVectorImpl<MCFixup>::iterator;
+
+  SmallVectorImpl<char> &getContents() { return Contents; }
+  const SmallVectorImpl<char> &getContents() const { return Contents; }
 
   SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
   const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
@@ -239,30 +228,12 @@ public:
   void setLinkerRelaxable() { LinkerRelaxable = true; }
 };
 
-/// This is a compact (memory-size-wise) fragment for holding an encoded
-/// instruction (non-relaxable) that has no fixups registered. When applicable,
-/// it can be used instead of MCDataFragment and lead to lower memory
-/// consumption.
-///
-class MCCompactEncodedInstFragment : public MCEncodedFragmentWithContents<4> {
-public:
-  MCCompactEncodedInstFragment()
-      : MCEncodedFragmentWithContents(FT_CompactEncodedInst, true) {}
-
-  static bool classof(const MCFragment *F) {
-    return F->getKind() == MCFragment::FT_CompactEncodedInst;
-  }
-};
-
 /// A relaxable fragment holds on to its MCInst, since it may need to be
 /// relaxed during the assembler layout and relaxation stage.
 ///
 class MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
-
   /// The instruction this is a fragment for.
   MCInst Inst;
-  /// Can we auto pad the instruction?
-  bool AllowAutoPadding = false;
 
 public:
   MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI)

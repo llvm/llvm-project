@@ -88,6 +88,7 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
+  let isConvergent         = ps.isConvergent;
 }
 
 class VOP1_Real_Gen <VOP1_Pseudo ps, GFXGen Gen, string real_name = ps.Mnemonic> :
@@ -729,12 +730,24 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
   let isAsCheapAsAMove = 1;
 }
 
+def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
+  let Outs32 = (outs VOPDstOperand_t16Lo128:$vdst,
+                     VOPSrcEncodedDstOperand_t16Lo128:$vdst1);
+  let Ins32 = (ins VOPSrcEncodedDstOperand_t16Lo128:$src0,
+                   VOPDstOperand_t16Lo128:$src1);
+  let Asm32 = " $vdst, $src0";
+}
+
 let SubtargetPredicate = isGFX11Plus in {
+  def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], /* VOP1Only= */true> {
+    let Constraints = "$vdst = $src1, $vdst1 = $src0";
+    let DisableEncoding = "$vdst1, $src1";
+    let SchedRW = [Write64Bit, Write64Bit];
+    let True16Predicate = UseRealTrue16Insts;
+  }
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
-                                      getVOP1Pat<int_amdgcn_permlane64,
-                                                 VOP_MOVRELS>.ret,
-                                      /*VOP1Only=*/ 1> {
+                                      [], /*VOP1Only=*/ 1> {
     let IsInvalidSingleUseConsumer = 1;
     let IsInvalidSingleUseProducer = 1;
   }
@@ -743,6 +756,12 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(int_amdgcn_permlane64 (vt VRegSrc_32:$src0)),
+        (vt (V_PERMLANE64_B32 (vt VRegSrc_32:$src0)))
+  >;
+}
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
@@ -948,7 +967,8 @@ defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11_gfx12<0x03a,
   "V_FFBL_B32", "v_ctz_i32_b32">;
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11_gfx12<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
-defm V_PERMLANE64_B32      : VOP1Only_Real_gfx11_gfx12<0x067>;
+defm V_SWAP_B16              : VOP1Only_Real_gfx11_gfx12<0x066>;
+defm V_PERMLANE64_B32        : VOP1Only_Real_gfx11_gfx12<0x067>;
 defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x01c, "v_mov_b16">;
 defm V_NOT_B16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x069, "v_not_b16">;
 defm V_CVT_I32_I16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x06a, "v_cvt_i32_i16">;

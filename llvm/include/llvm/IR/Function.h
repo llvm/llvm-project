@@ -47,6 +47,7 @@ typedef unsigned ID;
 class AssemblyAnnotationWriter;
 class Constant;
 class ConstantRange;
+class DataLayout;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -74,6 +75,13 @@ public:
 private:
   // Important things that make up a function!
   BasicBlockListType BasicBlocks;         ///< The basic blocks
+
+  // Basic blocks need to get their number when added to a function.
+  friend void BasicBlock::setParent(Function *);
+  unsigned NextBlockNum = 0;
+  /// Epoch of block numbers. (Could be shrinked to uint8_t if required.)
+  unsigned BlockNumEpoch = 0;
+
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
   size_t NumArgs;
   std::unique_ptr<ValueSymbolTable>
@@ -181,10 +189,14 @@ public:
                           const Twine &N, Module &M);
 
   /// Creates a function with some attributes recorded in llvm.module.flags
-  /// applied.
+  /// and the LLVMContext applied.
   ///
   /// Use this when synthesizing new functions that need attributes that would
   /// have been set by command line options.
+  ///
+  /// This function should not be called from backends or the LTO pipeline. If
+  /// it is called from one of those places, some default attributes will not be
+  /// applied to the function.
   static Function *createWithDefaultAttr(FunctionType *Ty, LinkageTypes Linkage,
                                          unsigned AddrSpace,
                                          const Twine &N = "",
@@ -209,6 +221,11 @@ public:
   /// getContext - Return a reference to the LLVMContext associated with this
   /// function.
   LLVMContext &getContext() const;
+
+  /// Get the data layout of the module this function belongs to.
+  ///
+  /// Requires the function to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// isVarArg - Return true if this function takes a variable number of
   /// arguments.
@@ -800,6 +817,34 @@ public:
     return SymTab.get();
   }
 
+  //===--------------------------------------------------------------------===//
+  // Block number functions
+
+  /// Return a value larger than the largest block number. Intended to allocate
+  /// a vector that is sufficiently large to hold all blocks indexed by their
+  /// number.
+  unsigned getMaxBlockNumber() const { return NextBlockNum; }
+
+  /// Renumber basic blocks into a dense value range starting from 0. Be aware
+  /// that other data structures and analyses (e.g., DominatorTree) may depend
+  /// on the value numbers and need to be updated or invalidated.
+  void renumberBlocks();
+
+  /// Return the "epoch" of current block numbers. This will return a different
+  /// value after every renumbering. The intention is: if something (e.g., an
+  /// analysis) uses block numbers, it also stores the number epoch and then
+  /// can assert later on that the epoch didn't change (indicating that the
+  /// numbering is still valid). If the epoch changed, blocks might have been
+  /// assigned new numbers and previous uses of the numbers needs to be
+  /// invalidated. This is solely intended as a debugging feature.
+  unsigned getBlockNumberEpoch() const { return BlockNumEpoch; }
+
+private:
+  /// Assert that all blocks have unique numbers within 0..NextBlockNum. This
+  /// has O(n) runtime complexity.
+  void validateBlockNumbers() const;
+
+public:
   //===--------------------------------------------------------------------===//
   // BasicBlock iterator forwarding functions
   //

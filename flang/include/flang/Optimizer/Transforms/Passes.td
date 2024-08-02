@@ -414,7 +414,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
     Option<"tuneCPU", "tune-cpu",
            "llvm::StringRef", /*default=*/"llvm::StringRef{}",
            "Set the tune-cpu attribute on functions in the module.">,
-  ];
+];
 }
 
 def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {

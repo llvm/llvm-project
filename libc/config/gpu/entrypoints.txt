@@ -1,13 +1,3 @@
-if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  set(extra_entrypoints
-      # stdio.h entrypoints
-      libc.src.stdio.sprintf
-      libc.src.stdio.snprintf
-      libc.src.stdio.vsprintf
-      libc.src.stdio.vsnprintf
-  )
-endif()
-
 set(TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
@@ -57,6 +47,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
+    libc.src.string.strerror
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
@@ -76,86 +67,90 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strxfrm
 
     # stdbit.h entrypoints
-    libc.src.stdbit.stdc_leading_zeros_uc
-    libc.src.stdbit.stdc_leading_zeros_us
-    libc.src.stdbit.stdc_leading_zeros_ui
-    libc.src.stdbit.stdc_leading_zeros_ul
-    libc.src.stdbit.stdc_leading_zeros_ull
-    libc.src.stdbit.stdc_leading_ones_uc
-    libc.src.stdbit.stdc_leading_ones_us
-    libc.src.stdbit.stdc_leading_ones_ui
-    libc.src.stdbit.stdc_leading_ones_ul
-    libc.src.stdbit.stdc_leading_ones_ull
-    libc.src.stdbit.stdc_trailing_zeros_uc
-    libc.src.stdbit.stdc_trailing_zeros_us
-    libc.src.stdbit.stdc_trailing_zeros_ui
-    libc.src.stdbit.stdc_trailing_zeros_ul
-    libc.src.stdbit.stdc_trailing_zeros_ull
-    libc.src.stdbit.stdc_trailing_ones_uc
-    libc.src.stdbit.stdc_trailing_ones_us
-    libc.src.stdbit.stdc_trailing_ones_ui
-    libc.src.stdbit.stdc_trailing_ones_ul
-    libc.src.stdbit.stdc_trailing_ones_ull
-    libc.src.stdbit.stdc_first_leading_zero_uc
-    libc.src.stdbit.stdc_first_leading_zero_us
-    libc.src.stdbit.stdc_first_leading_zero_ui
-    libc.src.stdbit.stdc_first_leading_zero_ul
-    libc.src.stdbit.stdc_first_leading_zero_ull
-    libc.src.stdbit.stdc_first_leading_one_uc
-    libc.src.stdbit.stdc_first_leading_one_us
-    libc.src.stdbit.stdc_first_leading_one_ui
-    libc.src.stdbit.stdc_first_leading_one_ul
-    libc.src.stdbit.stdc_first_leading_one_ull
-    libc.src.stdbit.stdc_first_trailing_zero_uc
-    libc.src.stdbit.stdc_first_trailing_zero_us
-    libc.src.stdbit.stdc_first_trailing_zero_ui
-    libc.src.stdbit.stdc_first_trailing_zero_ul
-    libc.src.stdbit.stdc_first_trailing_zero_ull
-    libc.src.stdbit.stdc_first_trailing_one_uc
-    libc.src.stdbit.stdc_first_trailing_one_us
-    libc.src.stdbit.stdc_first_trailing_one_ui
-    libc.src.stdbit.stdc_first_trailing_one_ul
-    libc.src.stdbit.stdc_first_trailing_one_ull
-    libc.src.stdbit.stdc_count_zeros_uc
-    libc.src.stdbit.stdc_count_zeros_us
-    libc.src.stdbit.stdc_count_zeros_ui
-    libc.src.stdbit.stdc_count_zeros_ul
-    libc.src.stdbit.stdc_count_zeros_ull
-    libc.src.stdbit.stdc_count_ones_uc
-    libc.src.stdbit.stdc_count_ones_us
-    libc.src.stdbit.stdc_count_ones_ui
-    libc.src.stdbit.stdc_count_ones_ul
-    libc.src.stdbit.stdc_count_ones_ull
-    libc.src.stdbit.stdc_has_single_bit_uc
-    libc.src.stdbit.stdc_has_single_bit_us
-    libc.src.stdbit.stdc_has_single_bit_ui
-    libc.src.stdbit.stdc_has_single_bit_ul
-    libc.src.stdbit.stdc_has_single_bit_ull
-    libc.src.stdbit.stdc_bit_width_uc
-    libc.src.stdbit.stdc_bit_width_us
-    libc.src.stdbit.stdc_bit_width_ui
-    libc.src.stdbit.stdc_bit_width_ul
-    libc.src.stdbit.stdc_bit_width_ull
-    libc.src.stdbit.stdc_bit_floor_uc
-    libc.src.stdbit.stdc_bit_floor_us
-    libc.src.stdbit.stdc_bit_floor_ui
-    libc.src.stdbit.stdc_bit_floor_ul
-    libc.src.stdbit.stdc_bit_floor_ull
     libc.src.stdbit.stdc_bit_ceil_uc
-    libc.src.stdbit.stdc_bit_ceil_us
     libc.src.stdbit.stdc_bit_ceil_ui
     libc.src.stdbit.stdc_bit_ceil_ul
     libc.src.stdbit.stdc_bit_ceil_ull
+    libc.src.stdbit.stdc_bit_ceil_us
+    libc.src.stdbit.stdc_bit_floor_uc
+    libc.src.stdbit.stdc_bit_floor_ui
+    libc.src.stdbit.stdc_bit_floor_ul
+    libc.src.stdbit.stdc_bit_floor_ull
+    libc.src.stdbit.stdc_bit_floor_us
+    libc.src.stdbit.stdc_bit_width_uc
+    libc.src.stdbit.stdc_bit_width_ui
+    libc.src.stdbit.stdc_bit_width_ul
+    libc.src.stdbit.stdc_bit_width_ull
+    libc.src.stdbit.stdc_bit_width_us
+    libc.src.stdbit.stdc_count_ones_uc
+    libc.src.stdbit.stdc_count_ones_ui
+    libc.src.stdbit.stdc_count_ones_ul
+    libc.src.stdbit.stdc_count_ones_ull
+    libc.src.stdbit.stdc_count_ones_us
+    libc.src.stdbit.stdc_count_zeros_uc
+    libc.src.stdbit.stdc_count_zeros_ui
+    libc.src.stdbit.stdc_count_zeros_ul
+    libc.src.stdbit.stdc_count_zeros_ull
+    libc.src.stdbit.stdc_count_zeros_us
+    libc.src.stdbit.stdc_first_leading_one_uc
+    libc.src.stdbit.stdc_first_leading_one_ui
+    libc.src.stdbit.stdc_first_leading_one_ul
+    libc.src.stdbit.stdc_first_leading_one_ull
+    libc.src.stdbit.stdc_first_leading_one_us
+    libc.src.stdbit.stdc_first_leading_zero_uc
+    libc.src.stdbit.stdc_first_leading_zero_ui
+    libc.src.stdbit.stdc_first_leading_zero_ul
+    libc.src.stdbit.stdc_first_leading_zero_ull
+    libc.src.stdbit.stdc_first_leading_zero_us
+    libc.src.stdbit.stdc_first_trailing_one_uc
+    libc.src.stdbit.stdc_first_trailing_one_ui
+    libc.src.stdbit.stdc_first_trailing_one_ul
+    libc.src.stdbit.stdc_first_trailing_one_ull
+    libc.src.stdbit.stdc_first_trailing_one_us
+    libc.src.stdbit.stdc_first_trailing_zero_uc
+    libc.src.stdbit.stdc_first_trailing_zero_ui
+    libc.src.stdbit.stdc_first_trailing_zero_ul
+    libc.src.stdbit.stdc_first_trailing_zero_ull
+    libc.src.stdbit.stdc_first_trailing_zero_us
+    libc.src.stdbit.stdc_has_single_bit_uc
+    libc.src.stdbit.stdc_has_single_bit_ui
+    libc.src.stdbit.stdc_has_single_bit_ul
+    libc.src.stdbit.stdc_has_single_bit_ull
+    libc.src.stdbit.stdc_has_single_bit_us
+    libc.src.stdbit.stdc_leading_ones_uc
+    libc.src.stdbit.stdc_leading_ones_ui
+    libc.src.stdbit.stdc_leading_ones_ul
+    libc.src.stdbit.stdc_leading_ones_ull
+    libc.src.stdbit.stdc_leading_ones_us
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_trailing_ones_uc
+    libc.src.stdbit.stdc_trailing_ones_ui
+    libc.src.stdbit.stdc_trailing_ones_ul
+    libc.src.stdbit.stdc_trailing_ones_ull
+    libc.src.stdbit.stdc_trailing_ones_us
+    libc.src.stdbit.stdc_trailing_zeros_uc
+    libc.src.stdbit.stdc_trailing_zeros_ui
+    libc.src.stdbit.stdc_trailing_zeros_ul
+    libc.src.stdbit.stdc_trailing_zeros_ull
+    libc.src.stdbit.stdc_trailing_zeros_us
 
     # stdlib.h entrypoints
+    libc.src.stdlib._Exit
+    libc.src.stdlib.abort
     libc.src.stdlib.abs
-    libc.src.stdlib.atoi
+    libc.src.stdlib.atexit
     libc.src.stdlib.atof
+    libc.src.stdlib.atoi
     libc.src.stdlib.atol
     libc.src.stdlib.atoll
-    libc.src.stdlib.div
-    libc.src.stdlib.labs
     libc.src.stdlib.bsearch
+    libc.src.stdlib.div
+    libc.src.stdlib.exit
+    libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
@@ -170,45 +165,54 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
-    libc.src.stdlib._Exit
-    libc.src.stdlib.atexit
-    libc.src.stdlib.exit
-    libc.src.stdlib.abort
 
-    # Only implemented in the test suite
-    libc.src.stdlib.malloc
+    # TODO: Implement these correctly
     libc.src.stdlib.aligned_alloc
-    libc.src.stdlib.realloc
+    libc.src.stdlib.calloc
     libc.src.stdlib.free
+    libc.src.stdlib.malloc
+    libc.src.stdlib.realloc
 
     # errno.h entrypoints
     libc.src.errno.errno
 
     # stdio.h entrypoints
-    ${extra_entrypoints}
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.printf
+    libc.src.stdio.vprintf
+    libc.src.stdio.fprintf
+    libc.src.stdio.vfprintf
+    libc.src.stdio.snprintf
+    libc.src.stdio.sprintf
+    libc.src.stdio.vsnprintf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.asprintf
+    libc.src.stdio.vasprintf
+    libc.src.stdio.sscanf
+    libc.src.stdio.vsscanf
     libc.src.stdio.feof
     libc.src.stdio.ferror
-    libc.src.stdio.fseek
     libc.src.stdio.fflush
-    libc.src.stdio.ftell
-    libc.src.stdio.clearerr
-    libc.src.stdio.puts
-    libc.src.stdio.fopen
-    libc.src.stdio.fclose
-    libc.src.stdio.fread
-    libc.src.stdio.fputs
-    libc.src.stdio.fwrite
-    libc.src.stdio.fputc
-    libc.src.stdio.putc
-    libc.src.stdio.putchar
-    libc.src.stdio.fgets
     libc.src.stdio.fgetc
+    libc.src.stdio.fgets
+    libc.src.stdio.fopen
+    libc.src.stdio.fputc
+    libc.src.stdio.fputs
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.ftell
+    libc.src.stdio.fwrite
     libc.src.stdio.getc
     libc.src.stdio.getchar
-    libc.src.stdio.ungetc
+    libc.src.stdio.putc
+    libc.src.stdio.putchar
+    libc.src.stdio.puts
+    libc.src.stdio.remove
+    libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
-    libc.src.stdio.stderr
+    libc.src.stdio.ungetc
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -218,11 +222,14 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.clock
+    libc.src.time.clock_gettime
     libc.src.time.nanosleep
+
+    # wchar.h entrypoints
+    libc.src.wchar.wctob
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
-    libc.src.gpu.rpc_fprintf
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -236,11 +243,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinh
     libc.src.math.asinhf
     libc.src.math.atan
-    libc.src.math.atanf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atanf
     libc.src.math.atanh
     libc.src.math.atanhf
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.copysign
@@ -251,16 +260,17 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.erf
     libc.src.math.erff
+    libc.src.math.exp
     libc.src.math.exp10
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
-    libc.src.math.exp
     libc.src.math.expf
     libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.floor
@@ -275,6 +285,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodf
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.getpayload
+    libc.src.math.getpayloadf
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -287,13 +299,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llrintf
     libc.src.math.llround
     libc.src.math.llroundf
+    libc.src.math.log
     libc.src.math.log10
     libc.src.math.log10f
     libc.src.math.log1p
     libc.src.math.log1pf
     libc.src.math.log2
     libc.src.math.log2f
-    libc.src.math.log
     libc.src.math.logf
     libc.src.math.lrint
     libc.src.math.lrintf
@@ -311,6 +323,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nexttowardf
     libc.src.math.pow
     libc.src.math.powf
+    libc.src.math.powi
+    libc.src.math.powif
     libc.src.math.remainder
     libc.src.math.remainderf
     libc.src.math.remquo
@@ -322,9 +336,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.sin
-    libc.src.math.sinf
     libc.src.math.sincos
     libc.src.math.sincosf
+    libc.src.math.sinf
     libc.src.math.sinh
     libc.src.math.sinhf
     libc.src.math.sqrt
@@ -338,6 +352,74 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
 )
+
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.canonicalizef16
+    libc.src.math.ceilf16
+    libc.src.math.copysignf16
+    libc.src.math.f16add
+    libc.src.math.f16addf
+    libc.src.math.f16div
+    libc.src.math.f16divf
+    libc.src.math.f16fma
+    libc.src.math.f16fmaf
+    libc.src.math.f16mul
+    libc.src.math.f16mulf
+    libc.src.math.f16sqrt
+    libc.src.math.f16sqrtf
+    libc.src.math.f16sub
+    libc.src.math.f16subf
+    libc.src.math.fabsf16
+    libc.src.math.fdimf16
+    libc.src.math.floorf16
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximum_mag_numf16
+    libc.src.math.fmaximum_magf16
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fmaximumf16
+    libc.src.math.fminf16
+    libc.src.math.fminimum_mag_numf16
+    libc.src.math.fminimum_magf16
+    libc.src.math.fminimum_numf16
+    libc.src.math.fminimumf16
+    libc.src.math.fmodf16
+    libc.src.math.frexpf16
+    libc.src.math.fromfpf16
+    libc.src.math.fromfpxf16
+    libc.src.math.getpayloadf16
+    libc.src.math.ilogbf16
+    libc.src.math.ldexpf16
+    libc.src.math.llogbf16
+    libc.src.math.llrintf16
+    libc.src.math.llroundf16
+    libc.src.math.logbf16
+    libc.src.math.lrintf16
+    libc.src.math.lroundf16
+    libc.src.math.modff16
+    libc.src.math.nanf16
+    libc.src.math.nearbyintf16
+    libc.src.math.nextafterf16
+    libc.src.math.nextdownf16
+    libc.src.math.nexttowardf16
+    libc.src.math.nextupf16
+    libc.src.math.remainderf16
+    libc.src.math.remquof16
+    libc.src.math.rintf16
+    libc.src.math.roundevenf16
+    libc.src.math.roundf16
+    libc.src.math.scalblnf16
+    libc.src.math.scalbnf16
+    libc.src.math.setpayloadf16
+    libc.src.math.setpayloadsigf16
+    libc.src.math.totalorderf16
+    libc.src.math.totalordermagf16
+    libc.src.math.truncf16
+    libc.src.math.ufromfpf16
+    libc.src.math.ufromfpxf16
+  )
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

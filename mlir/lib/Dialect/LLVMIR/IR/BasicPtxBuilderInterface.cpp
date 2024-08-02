@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "ptx-builder"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")

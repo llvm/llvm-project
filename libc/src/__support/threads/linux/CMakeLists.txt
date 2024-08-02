@@ -100,8 +100,10 @@ add_object_library(
     callonce.cpp
   HDRS
     ../callonce.h
+    callonce.h
   DEPENDS
     .futex_utils
+    libc.src.__support.macros.optimization
 )
 
 add_object_library(

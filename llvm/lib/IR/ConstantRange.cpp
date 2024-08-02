@@ -241,7 +241,36 @@ bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
 
 bool ConstantRange::icmp(CmpInst::Predicate Pred,
                          const ConstantRange &Other) const {
-  return makeSatisfyingICmpRegion(Pred, Other).contains(*this);
+  if (isEmptySet() || Other.isEmptySet())
+    return true;
+
+  switch (Pred) {
+  case CmpInst::ICMP_EQ:
+    if (const APInt *L = getSingleElement())
+      if (const APInt *R = Other.getSingleElement())
+        return *L == *R;
+    return false;
+  case CmpInst::ICMP_NE:
+    return inverse().contains(Other);
+  case CmpInst::ICMP_ULT:
+    return getUnsignedMax().ult(Other.getUnsignedMin());
+  case CmpInst::ICMP_ULE:
+    return getUnsignedMax().ule(Other.getUnsignedMin());
+  case CmpInst::ICMP_UGT:
+    return getUnsignedMin().ugt(Other.getUnsignedMax());
+  case CmpInst::ICMP_UGE:
+    return getUnsignedMin().uge(Other.getUnsignedMax());
+  case CmpInst::ICMP_SLT:
+    return getSignedMax().slt(Other.getSignedMin());
+  case CmpInst::ICMP_SLE:
+    return getSignedMax().sle(Other.getSignedMin());
+  case CmpInst::ICMP_SGT:
+    return getSignedMin().sgt(Other.getSignedMax());
+  case CmpInst::ICMP_SGE:
+    return getSignedMin().sge(Other.getSignedMax());
+  default:
+    llvm_unreachable("Invalid ICmp predicate");
+  }
 }
 
 /// Exact mul nuw region for single element RHS.
@@ -438,6 +467,16 @@ bool ConstantRange::isAllNegative() const {
 bool ConstantRange::isAllNonNegative() const {
   // Empty and full set are automatically treated correctly.
   return !isSignWrappedSet() && Lower.isNonNegative();
+}
+
+bool ConstantRange::isAllPositive() const {
+  // Empty set is all positive, full set is not.
+  if (isEmptySet())
+    return true;
+  if (isFullSet())
+    return false;
+
+  return !isSignWrappedSet() && Lower.isStrictlyPositive();
 }
 
 APInt ConstantRange::getUnsignedMax() const {
@@ -949,6 +988,8 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
     return subWithNoWrap(Other, NoWrapKind);
   case Instruction::Mul:
     return multiplyWithNoWrap(Other, NoWrapKind);
+  case Instruction::Shl:
+    return shlWithNoWrap(Other, NoWrapKind);
   default:
     // Don't know about this Overflowing Binary Operation.
     // Conservatively fallback to plain binop handling.
@@ -1202,6 +1243,17 @@ ConstantRange::multiplyWithNoWrap(const ConstantRange &Other,
 
   if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap)
     Result = Result.intersectWith(umul_sat(Other), RangeType);
+
+  // mul nsw nuw X, Y s>= 0 if X s> 1 or Y s> 1
+  if ((NoWrapKind == (OverflowingBinaryOperator::NoSignedWrap |
+                      OverflowingBinaryOperator::NoUnsignedWrap)) &&
+      !Result.isAllNonNegative()) {
+    if (getSignedMin().sgt(1) || Other.getSignedMin().sgt(1))
+      Result = Result.intersectWith(
+          getNonEmpty(APInt::getZero(getBitWidth()),
+                      APInt::getSignedMinValue(getBitWidth())),
+          RangeType);
+  }
 
   return Result;
 }
@@ -1563,6 +1615,23 @@ ConstantRange::shl(const ConstantRange &Other) const {
   Max <<= OtherMax;
 
   return ConstantRange::getNonEmpty(std::move(Min), std::move(Max) + 1);
+}
+
+ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
+                                           unsigned NoWrapKind,
+                                           PreferredRangeType RangeType) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  ConstantRange Result = shl(Other);
+
+  if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap)
+    Result = Result.intersectWith(sshl_sat(Other), RangeType);
+
+  if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap)
+    Result = Result.intersectWith(ushl_sat(Other), RangeType);
+
+  return Result;
 }
 
 ConstantRange

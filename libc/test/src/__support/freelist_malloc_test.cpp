@@ -7,20 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/freelist_heap.h"
+#include "src/stdlib/aligned_alloc.h"
 #include "src/stdlib/calloc.h"
 #include "src/stdlib/free.h"
 #include "src/stdlib/malloc.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::freelist_heap;
+using LIBC_NAMESPACE::FreeListHeapBuffer;
 
 TEST(LlvmLibcFreeListMalloc, MallocStats) {
   constexpr size_t kAllocSize = 256;
   constexpr size_t kCallocNum = 4;
   constexpr size_t kCallocSize = 64;
-
-  freelist_heap->reset_heap_stats(); // Do this because other tests might've
-                                     // called the same global allocator.
 
   void *ptr1 = LIBC_NAMESPACE::malloc(kAllocSize);
 
@@ -53,4 +52,21 @@ TEST(LlvmLibcFreeListMalloc, MallocStats) {
             kAllocSize + kCallocNum * kCallocSize);
   EXPECT_EQ(freelist_heap_stats.cumulative_freed,
             kAllocSize + kCallocNum * kCallocSize);
+
+  constexpr size_t ALIGN = kAllocSize;
+  void *ptr3 = LIBC_NAMESPACE::aligned_alloc(ALIGN, kAllocSize);
+  EXPECT_NE(ptr3, static_cast<void *>(nullptr));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr3) % ALIGN, size_t(0));
+  EXPECT_EQ(freelist_heap_stats.bytes_allocated, kAllocSize);
+  EXPECT_EQ(freelist_heap_stats.cumulative_allocated,
+            kAllocSize + kCallocNum * kCallocSize + kAllocSize);
+  EXPECT_EQ(freelist_heap_stats.cumulative_freed,
+            kAllocSize + kCallocNum * kCallocSize);
+
+  LIBC_NAMESPACE::free(ptr3);
+  EXPECT_EQ(freelist_heap_stats.bytes_allocated, size_t(0));
+  EXPECT_EQ(freelist_heap_stats.cumulative_allocated,
+            kAllocSize + kCallocNum * kCallocSize + kAllocSize);
+  EXPECT_EQ(freelist_heap_stats.cumulative_freed,
+            kAllocSize + kCallocNum * kCallocSize + kAllocSize);
 }

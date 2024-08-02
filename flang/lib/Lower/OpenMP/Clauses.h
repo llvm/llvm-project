@@ -55,7 +55,7 @@ struct IdTyTemplate {
     return designator == other.designator;
   }
 
-  // defining an "ordering" which allows types derived from this to be
+  // Defining an "ordering" which allows types derived from this to be
   // utilised in maps and other containers that require comparison
   // operators for ordering
   bool operator<(const IdTyTemplate &other) const {

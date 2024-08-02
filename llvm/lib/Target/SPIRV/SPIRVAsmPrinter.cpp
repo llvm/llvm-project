@@ -32,6 +32,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSPIRVObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -116,8 +117,8 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   // number and number of generated OpLabels
   unsigned Bound = 2 * (ST->getBound() + 1) + NLabels;
   if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
-    Asm->setBuildVersion(static_cast<MachO::PlatformType>(0), Major, Minor,
-                         Bound, VersionTuple(Major, Minor, 0, Bound));
+    static_cast<SPIRVObjectWriter &>(Asm->getWriter())
+        .setBuildVersion(Major, Minor, Bound);
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {

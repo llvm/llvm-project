@@ -69,6 +69,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -131,6 +132,7 @@ namespace {
 
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
 struct InstructionMapper {
+  const MachineModuleInfo &MMI;
 
   /// The next available integer to assign to a \p MachineInstr that
   /// cannot be outlined.
@@ -332,7 +334,7 @@ struct InstructionMapper {
       // which may be outlinable. Check if each instruction is known to be safe.
       for (; It != OutlinableRangeEnd; ++It) {
         // Keep track of where this instruction is in the module.
-        switch (TII.getOutliningType(It, Flags)) {
+        switch (TII.getOutliningType(MMI, It, Flags)) {
         case InstrType::Illegal:
           mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                                InstrListForMBB);
@@ -381,7 +383,7 @@ struct InstructionMapper {
     }
   }
 
-  InstructionMapper() {
+  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {
     // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
     // changed.
     assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
@@ -403,6 +405,8 @@ struct InstructionMapper {
 struct MachineOutliner : public ModulePass {
 
   static char ID;
+
+  MachineModuleInfo *MMI = nullptr;
 
   /// Set to true if the outliner should consider functions with
   /// linkonceodr linkage.
@@ -488,20 +492,19 @@ struct MachineOutliner : public ModulePass {
 
   /// Populate and \p InstructionMapper with instruction-to-integer mappings.
   /// These are used to construct a suffix tree.
-  void populateMapper(InstructionMapper &Mapper, Module &M,
-                      MachineModuleInfo &MMI);
+  void populateMapper(InstructionMapper &Mapper, Module &M);
 
   /// Initialize information necessary to output a size remark.
   /// FIXME: This should be handled by the pass manager, not the outliner.
   /// FIXME: This is nearly identical to the initSizeRemarkInfo in the legacy
   /// pass manager.
-  void initSizeRemarkInfo(const Module &M, const MachineModuleInfo &MMI,
+  void initSizeRemarkInfo(const Module &M,
                           StringMap<unsigned> &FunctionToInstrCount);
 
   /// Emit the remark.
   // FIXME: This should be handled by the pass manager, not the outliner.
   void
-  emitInstrCountChangedRemark(const Module &M, const MachineModuleInfo &MMI,
+  emitInstrCountChangedRemark(const Module &M,
                               const StringMap<unsigned> &FunctionToInstrCount);
 };
 } // Anonymous namespace.
@@ -668,7 +671,7 @@ void MachineOutliner::findCandidates(
         CandidatesForRepeatedSeq[0].getMF()->getSubtarget().getInstrInfo();
 
     std::optional<OutlinedFunction> OF =
-        TII->getOutliningCandidateInfo(CandidatesForRepeatedSeq);
+        TII->getOutliningCandidateInfo(*MMI, CandidatesForRepeatedSeq);
 
     // If we deleted too many candidates, then there's nothing worth outlining.
     // FIXME: This should take target-specified instruction sizes into account.
@@ -803,8 +806,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), StringRef(MangledNameStream.str()),
-        Unit /* File */,
+        Unit /* Context */, F->getName(), StringRef(Dummy), Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
         DB.createSubroutineType(
             DB.getOrCreateTypeArray(std::nullopt)), /* void type */
@@ -988,8 +990,7 @@ bool MachineOutliner::outline(Module &M,
   return OutlinedSomething;
 }
 
-void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
-                                     MachineModuleInfo &MMI) {
+void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
   // Build instruction mappings for each function in the module. Start by
   // iterating over each Function in M.
   LLVM_DEBUG(dbgs() << "*** Populating mapper ***\n");
@@ -1003,7 +1004,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
 
     // There's something in F. Check if it has a MachineFunction associated with
     // it.
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
 
     // If it doesn't, then there's nothing to outline from. Move to the next
     // Function.
@@ -1062,12 +1063,11 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
 }
 
 void MachineOutliner::initSizeRemarkInfo(
-    const Module &M, const MachineModuleInfo &MMI,
-    StringMap<unsigned> &FunctionToInstrCount) {
+    const Module &M, StringMap<unsigned> &FunctionToInstrCount) {
   // Collect instruction counts for every function. We'll use this to emit
   // per-function size remarks later.
   for (const Function &F : M) {
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
 
     // We only care about MI counts here. If there's no MachineFunction at this
     // point, then there won't be after the outliner runs, so let's move on.
@@ -1078,13 +1078,12 @@ void MachineOutliner::initSizeRemarkInfo(
 }
 
 void MachineOutliner::emitInstrCountChangedRemark(
-    const Module &M, const MachineModuleInfo &MMI,
-    const StringMap<unsigned> &FunctionToInstrCount) {
+    const Module &M, const StringMap<unsigned> &FunctionToInstrCount) {
   // Iterate over each function in the module and emit remarks.
   // Note that we won't miss anything by doing this, because the outliner never
   // deletes functions.
   for (const Function &F : M) {
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = MMI->getMachineFunction(F);
 
     // The outliner never deletes functions. If we don't have a MF here, then we
     // didn't have one prior to outlining either.
@@ -1135,6 +1134,8 @@ bool MachineOutliner::runOnModule(Module &M) {
   if (M.empty())
     return false;
 
+  MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+
   // Number to append to the current outlined function.
   unsigned OutlinedFunctionNum = 0;
 
@@ -1158,8 +1159,6 @@ bool MachineOutliner::runOnModule(Module &M) {
 }
 
 bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
-  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
   // If the user passed -enable-machine-outliner=always or
   // -enable-machine-outliner, the pass will run on all functions in the module.
   // Otherwise, if the target supports default outlining, it will run on all
@@ -1177,10 +1176,10 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   // If the user specifies that they want to outline from linkonceodrs, set
   // it here.
   OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
-  InstructionMapper Mapper;
+  InstructionMapper Mapper(*MMI);
 
   // Prepare instruction mappings for the suffix tree.
-  populateMapper(Mapper, M, MMI);
+  populateMapper(Mapper, M);
   std::vector<OutlinedFunction> FunctionList;
 
   // Find all of the outlining candidates.
@@ -1198,7 +1197,7 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   bool ShouldEmitSizeRemarks = M.shouldEmitInstrCountChangedRemark();
   StringMap<unsigned> FunctionToInstrCount;
   if (ShouldEmitSizeRemarks)
-    initSizeRemarkInfo(M, MMI, FunctionToInstrCount);
+    initSizeRemarkInfo(M, FunctionToInstrCount);
 
   // Outline each of the candidates and return true if something was outlined.
   bool OutlinedSomething =
@@ -1208,7 +1207,7 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   // module. If we've asked for size remarks, then output them.
   // FIXME: This should be in the pass manager.
   if (ShouldEmitSizeRemarks && OutlinedSomething)
-    emitInstrCountChangedRemark(M, MMI, FunctionToInstrCount);
+    emitInstrCountChangedRemark(M, FunctionToInstrCount);
 
   LLVM_DEBUG({
     if (!OutlinedSomething)

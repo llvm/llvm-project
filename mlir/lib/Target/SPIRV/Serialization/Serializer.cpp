@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -215,6 +214,9 @@ static std::string getDecorationName(StringRef attrName) {
   // expected FPFastMathMode.
   if (attrName == "fp_fast_math_mode")
     return "FPFastMathMode";
+  // similar here
+  if (attrName == "fp_rounding_mode")
+    return "FPRoundingMode";
 
   return llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
 }
@@ -242,6 +244,13 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
       break;
     }
     return emitError(loc, "expected FPFastMathModeAttr attribute for ")
+           << stringifyDecoration(decoration);
+  case spirv::Decoration::FPRoundingMode:
+    if (auto intAttr = dyn_cast<FPRoundingModeAttr>(attr)) {
+      args.push_back(static_cast<uint32_t>(intAttr.getValue()));
+      break;
+    }
+    return emitError(loc, "expected FPRoundingModeAttr attribute for ")
            << stringifyDecoration(decoration);
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:

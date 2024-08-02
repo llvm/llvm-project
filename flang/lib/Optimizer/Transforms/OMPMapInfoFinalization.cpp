@@ -25,7 +25,6 @@
 /// indirectly via a parent object.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -54,8 +53,7 @@ namespace {
 class OMPMapInfoFinalizationPass
     : public fir::impl::OMPMapInfoFinalizationPassBase<
           OMPMapInfoFinalizationPass> {
-
-  /// Small helper class tracking a members parent and its
+  /// Helper class tracking a members parent and its
   /// placement in the parents member list
   struct ParentAndPlacement {
     mlir::omp::MapInfoOp parent;
@@ -75,9 +73,22 @@ class OMPMapInfoFinalizationPass
                     llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers) {
     for (auto *users : op->getUsers())
       if (auto map = mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(users))
-        for (size_t i = 0; i < map.getMembers().size(); ++i)
-          if (map.getMembers()[i].getDefiningOp() == op)
+        for (auto [i, mapMember] : llvm::enumerate(map.getMembers()))
+          if (mapMember.getDefiningOp() == op)
             mapMemberUsers.push_back({map, i});
+  }
+
+  /// Returns the integer numbers contained within the mlir::Attributes within
+  /// the values array.
+  llvm::SmallVector<int64_t>
+  getAsIntegers(llvm::ArrayRef<mlir::Attribute> values) {
+    llvm::SmallVector<int64_t> ints;
+    ints.reserve(values.size());
+    llvm::transform(values, std::back_inserter(ints),
+                    [](mlir::Attribute value) {
+                      return mlir::cast<mlir::IntegerAttr>(value).getInt();
+                    });
+    return ints;
   }
 
   /// This function will expand a MapInfoOp's member indices back into a vector
@@ -86,19 +97,11 @@ class OMPMapInfoFinalizationPass
   /// awkward to work with)
   void getMemberIndicesAsVectors(
       mlir::omp::MapInfoOp mapInfo,
-      llvm::SmallVector<llvm::SmallVector<int32_t>> &indices) {
-    size_t row = 0;
-    size_t shapeX = mapInfo.getMembersIndexAttr().getShapedType().getShape()[0];
-    size_t shapeJ = mapInfo.getMembersIndexAttr().getShapedType().getShape()[1];
-
-    for (size_t i = 0; i < shapeX; ++i) {
-      llvm::SmallVector<int32_t> vec;
-      row = i * shapeJ;
-      for (size_t j = 0; j < shapeJ; ++j) {
-        vec.push_back(
-            mapInfo.getMembersIndexAttr().getValues<int32_t>()[row + j]);
-      }
-      indices.push_back(vec);
+      llvm::SmallVector<llvm::SmallVector<int64_t>> &indices) {
+    indices.reserve(mapInfo.getMembersIndexAttr().getValue().size());
+    for (auto v : mapInfo.getMembersIndexAttr().getValue()) {
+      auto memberIndex = mlir::cast<mlir::ArrayAttr>(v);
+      indices.push_back(getAsIntegers(memberIndex.getValue()));
     }
   }
 
@@ -157,13 +160,13 @@ class OMPMapInfoFinalizationPass
         mlir::TypeAttr::get(llvm::cast<mlir::omp::PointerLikeType>(
                                 fir::unwrapRefType(baseAddrAddr.getType()))
                                 .getElementType()),
-        baseAddrAddr, mlir::SmallVector<mlir::Value>{},
-        mlir::DenseIntElementsAttr{}, bounds,
+        baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
+        /*membersIndex=*/mlir::ArrayAttr{}, bounds,
         builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
-        builder.getStringAttr("") /*name*/,
-        builder.getBoolAttr(false) /*partial_map*/);
+        /*name=*/builder.getStringAttr(""),
+        /*partial_map=*/builder.getBoolAttr(false));
   }
 
   /// This function adjusts the member indices vector to include a new
@@ -172,61 +175,28 @@ class OMPMapInfoFinalizationPass
   /// addresses index will be based off of, as the base address is
   /// a member of the descriptor, we must also alter other members
   /// indices in the list to account for this new addition. This
-  /// requires extending all members with -1's if the addition of
-  /// the new base address has increased the member vector past the
-  /// original size, as we must make sure all member indices are of
-  /// the same length (think rectangle matrix) due to DenseIntElementsAttr
-  /// requiring this. We also need to be aware that we are inserting
-  /// into the middle of a member index vector in some cases (i.e.
-  /// we could be accessing the member of a descriptor type with a
-  /// subsequent map, so we must be sure to adjust any of these cases
-  /// with the addition of the new base address index value).
+  /// requires inserting into the middle of a member index vector
+  /// in some cases (i.e. we could be accessing the member of a
+  /// descriptor type with a subsequent map, so we must be sure to
+  /// adjust any of these cases with the addition of the new base
+  /// address index value).
   void adjustMemberIndices(
-      llvm::SmallVector<llvm::SmallVector<int32_t>> &memberIndices,
+      llvm::SmallVector<llvm::SmallVector<int64_t>> &memberIndices,
       size_t memberIndex) {
-    // Find if the descriptor member we are basing our new base address index
-    // off of has a -1 somewhere, indicating an empty index already exists (due
-    // to a larger sized member position elsewhere) which allows us to simplify
-    // later steps a little
-    auto baseAddrIndex = memberIndices[memberIndex];
-    auto *iterPos = std::find(baseAddrIndex.begin(), baseAddrIndex.end(), -1);
-
-    // If we aren't at the end, as we found a -1, we can simply modify the -1
-    // to the base addresses index in the descriptor (which will always be the
-    // first member in the descriptor, so 0). If not, then we're extending the
-    // index list and have to push on a 0 and adjust the position to the new
-    // end.
-    if (iterPos != baseAddrIndex.end()) {
-      *iterPos = 0;
-    } else {
-      baseAddrIndex.push_back(0);
-      iterPos = baseAddrIndex.end();
-    }
-
-    auto isEqual = [](auto first1, auto last1, auto first2, auto last2) {
-      int v1, v2;
-      for (; first1 != last1; ++first1, ++first2) {
-        v1 = (first1 == last1) ? -1 : *first1;
-        v2 = (first2 == last2) ? -1 : *first2;
-
-        if (!(v1 == v2))
-          return false;
-      }
-      return true;
-    };
+    llvm::SmallVector<int64_t> baseAddrIndex = memberIndices[memberIndex];
+    baseAddrIndex.push_back(0);
 
     // If we find another member that is "derived/a member of" the descriptor
     // that is not the descriptor itself, we must insert a 0 for the new base
     // address we have just added for the descriptor into the list at the
     // appropriate position to maintain correctness of the positional/index data
     // for that member.
-    size_t insertPosition = std::distance(baseAddrIndex.begin(), iterPos);
+    size_t insertPosition =
+        std::distance(baseAddrIndex.begin(), std::prev(baseAddrIndex.end()));
     for (size_t i = 0; i < memberIndices.size(); ++i) {
-      if (isEqual(baseAddrIndex.begin(), iterPos, memberIndices[i].begin(),
-                  memberIndices[i].end())) {
-        if (i == memberIndex)
-          continue;
-
+      if (memberIndices[i].size() > insertPosition &&
+          std::equal(baseAddrIndex.begin(), std::prev(baseAddrIndex.end()),
+                     memberIndices[i].begin())) {
         memberIndices[i].insert(
             std::next(memberIndices[i].begin(), insertPosition), 0);
       }
@@ -238,43 +208,42 @@ class OMPMapInfoFinalizationPass
                          baseAddrIndex);
   }
 
-  // Adjusts the descriptors map type based on the map type of the original
-  // map type which will apply to the base address, the main alteration that
-  // is done currently is appending OMP_MAP_TO in cases where we only have
-  // OMP_MAP_FROM or an ALLOC (lack of flag). This is because we will
-  // always need to map the descriptor to device (or at the very least it
-  // seems to be the case currently with the current lowered IR), as without
-  // the appropriate descriptor information on the device there is a risk
-  // of the kernel IR requesting for various data that will not have been
-  // copied to perform things like indexing, this can cause segfaults and
-  // memory access errors. These alterations are only unapplicable to
-  // target exit currently.
+  /// Adjusts the descriptors map type the main alteration that is done
+  /// currently is transforming the map type to OMP_MAP_TO where possible.
+  // This is because we will always need to map the descriptor to device
+  /// (or at the very least it seems to be the case currently with the
+  /// current lowered kernel IR), as without the appropriate descriptor
+  /// information on the device there is a risk of the kernel IR
+  /// requesting for various data that will not have been copied to
+  /// perform things like indexing, this can cause segfaults and
+  /// memory access errors. However, we do not need this data mapped
+  /// back to the host from the device, as we cannot alter the data
+  /// via resizing or deletion on the device, this is specified in the
+  /// OpenMP specification, so discarding any descriptor alterations via
+  /// no map back is reasonable (and required for certain segments
+  /// of descriptor data like the type descriptor that are global
+  /// constants). This alteration is only unapplicable to
+  /// target exit and target update currently, and that's due to
+  /// target exit not allowing To mappings, and target update not
+  /// allowing both to and from simultaneously. We currently try
+  /// to maintain the implicit flag where neccesary, although, it
+  /// does not seem strictly required.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
                                      mlir::Operation *target) {
-    auto newDescFlag = llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag);
+    if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp>(target) ||
+        llvm::isa_and_nonnull<mlir::omp::TargetUpdateOp>(target))
+      return mapTypeFlag;
 
-    if ((llvm::isa_and_nonnull<mlir::omp::TargetDataOp>(target) ||
-         llvm::isa_and_nonnull<mlir::omp::TargetOp>(target)) &&
-        static_cast<
-            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-            (newDescFlag &
-             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM)) &&
-        static_cast<
-            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-            (newDescFlag & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO) !=
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO))
-      return static_cast<
-          std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          newDescFlag | llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+    bool hasImplicitMap =
+        (llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
+         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
 
-    if ((llvm::isa_and_nonnull<mlir::omp::TargetDataOp>(target) ||
-         llvm::isa_and_nonnull<mlir::omp::TargetEnterDataOp>(target)) &&
-        mapTypeFlag == 0)
-      return static_cast<
-          std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-
-    return mapTypeFlag;
+    return llvm::to_underlying(
+        hasImplicitMap
+            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT
+            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
@@ -287,10 +256,11 @@ class OMPMapInfoFinalizationPass
     // base address/data pointer member.
     mlir::Value descriptor = getDescriptorFromBoxMap(op, builder);
     auto baseAddr = getBaseAddrMap(descriptor, op.getBounds(),
-                                   op.getMapType().value(), builder);
-    mlir::DenseIntElementsAttr newMembersAttr;
+                                   op.getMapType().value_or(0), builder);
+    mlir::ArrayAttr newMembersAttr;
     mlir::SmallVector<mlir::Value> newMembers;
-    llvm::SmallVector<llvm::SmallVector<int32_t>> memberIndices;
+    llvm::SmallVector<llvm::SmallVector<int64_t>> memberIndices;
+
     if (!mapMemberUsers.empty() || !op.getMembers().empty())
       getMemberIndicesAsVectors(
           !mapMemberUsers.empty() ? mapMemberUsers[0].parent : op,
@@ -304,41 +274,34 @@ class OMPMapInfoFinalizationPass
     // are expanding a parent that is a descriptor and we have to adjust all of
     // it's members to reflect the insertion of the base address.
     if (!mapMemberUsers.empty()) {
-      auto baseAddrIndex = memberIndices[mapMemberUsers[0].index];
-      adjustMemberIndices(memberIndices, mapMemberUsers[0].index);
+      // Currently, there should only be one user per map when this pass
+      // is executed, either a parent map, holding the current map in its
+      // member list, or a target operation that holds a map clause. This
+      // may change in the future if we aim to refactor the MLIR for map
+      // clauses to allow sharing of duplicate maps across target
+      // operations.
+      ParentAndPlacement mapUser = mapMemberUsers[0];
+      adjustMemberIndices(memberIndices, mapUser.index);
       llvm::SmallVector<mlir::Value> newMemberOps;
-      mlir::OperandRange membersArr = mapMemberUsers[0].parent.getMembers();
-      for (size_t i = 0; i < membersArr.size(); ++i) {
-        newMemberOps.push_back(membersArr[i]);
-        if (membersArr[i] == op)
+      for (auto v : mapUser.parent.getMembers()) {
+        newMemberOps.push_back(v);
+        if (v == op)
           newMemberOps.push_back(baseAddr);
       }
-      mapMemberUsers[0].parent.getMembersMutable().assign(newMemberOps);
-      Fortran::lower::omp::fillMemberIndices(memberIndices);
-      mapMemberUsers[0].parent.setMembersIndexAttr(
-          Fortran::lower::omp::createDenseElementsAttrFromIndices(memberIndices,
-                                                                  builder));
+      mapUser.parent.getMembersMutable().assign(newMemberOps);
+      mapUser.parent.setMembersIndexAttr(
+          builder.create2DIntegerArrayAttr(memberIndices));
     } else {
       newMembers.push_back(baseAddr);
       if (!op.getMembers().empty()) {
         for (auto &indices : memberIndices)
           indices.insert(indices.begin(), 0);
-        llvm::SmallVector<int> baseAddrIndex;
-        baseAddrIndex.resize(memberIndices[0].size());
-        std::fill(baseAddrIndex.begin(), baseAddrIndex.end(), -1);
-        baseAddrIndex[0] = 0;
-        memberIndices.insert(memberIndices.begin(), baseAddrIndex);
-        Fortran::lower::omp::fillMemberIndices(memberIndices);
-        newMembersAttr =
-            Fortran::lower::omp::createDenseElementsAttrFromIndices(
-                memberIndices, builder);
+        memberIndices.insert(memberIndices.begin(), {0});
+        newMembersAttr = builder.create2DIntegerArrayAttr(memberIndices);
         newMembers.append(op.getMembers().begin(), op.getMembers().end());
       } else {
-        newMembersAttr = mlir::DenseIntElementsAttr::get(
-            mlir::VectorType::get(
-                llvm::ArrayRef<int64_t>({1, 1}),
-                mlir::IntegerType::get(builder.getContext(), 32)),
-            llvm::ArrayRef<int32_t>({0}));
+        llvm::SmallVector<llvm::SmallVector<int64_t>> memberIdx = {{0}};
+        newMembersAttr = builder.create2DIntegerArrayAttr(memberIdx);
       }
     }
 
@@ -346,13 +309,13 @@ class OMPMapInfoFinalizationPass
         builder.create<mlir::omp::MapInfoOp>(
             op->getLoc(), op.getResult().getType(), descriptor,
             mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
-            mlir::Value{}, newMembers, newMembersAttr /*members_index*/,
-            mlir::SmallVector<mlir::Value>{},
+            /*varPtrPtr=*/mlir::Value{}, newMembers, newMembersAttr,
+            /*bounds=*/mlir::SmallVector<mlir::Value>{},
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
-                getDescriptorMapType(op.getMapType().value(), target)),
+                getDescriptorMapType(op.getMapType().value_or(0), target)),
             op.getMapCaptureTypeAttr(), op.getNameAttr(),
-            builder.getBoolAttr(false));
+            /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
     return newDescParentMapOp;
@@ -407,27 +370,27 @@ class OMPMapInfoFinalizationPass
       return;
 
     llvm::SmallVector<mlir::Value> newMapOps;
-    mlir::OperandRange mapOperandsArr = mapClauseOwner.getMapOperands();
+    mlir::OperandRange mapVarsArr = mapClauseOwner.getMapVars();
     auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target);
 
-    for (size_t i = 0; i < mapOperandsArr.size(); ++i) {
-      if (mapOperandsArr[i] == op) {
+    for (size_t i = 0; i < mapVarsArr.size(); ++i) {
+      if (mapVarsArr[i] == op) {
         for (auto [j, mapMember] : llvm::enumerate(op.getMembers())) {
           newMapOps.push_back(mapMember);
           // for TargetOp's which have IsolatedFromAbove we must align the
           // new additional map operand with an appropriate BlockArgument,
           // as the printing and later processing currently requires a 1:1
           // mapping of BlockArgs to MapInfoOp's at the same placement in
-          // each array (BlockArgs and MapOperands).
+          // each array (BlockArgs and MapVars).
           if (targetOp) {
             targetOp.getRegion().insertArgument(i + j, mapMember.getType(),
                                                 targetOp->getLoc());
           }
         }
       }
-      newMapOps.push_back(mapOperandsArr[i]);
+      newMapOps.push_back(mapVarsArr[i]);
     }
-    mapClauseOwner.getMapOperandsMutable().assign(newMapOps);
+    mapClauseOwner.getMapVarsMutable().assign(newMapOps);
   }
 
   // We retrieve the first user that is a Target operation, there
@@ -443,11 +406,9 @@ class OMPMapInfoFinalizationPass
   // find the first TargetOp user.
   mlir::Operation *getFirstTargetUser(mlir::omp::MapInfoOp mapOp) {
     for (auto *user : mapOp->getUsers()) {
-      if (llvm::isa<mlir::omp::TargetOp>(user) ||
-          llvm::isa<mlir::omp::TargetDataOp>(user) ||
-          llvm::isa<mlir::omp::TargetEnterDataOp>(user) ||
-          llvm::isa<mlir::omp::TargetExitDataOp>(user) ||
-          llvm::isa<mlir::omp::TargetUpdateOp>(user))
+      if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
+                    mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
+                    mlir::omp::TargetEnterDataOp>(user))
         return user;
 
       if (auto mapUser = llvm::dyn_cast_if_present<mlir::omp::MapInfoOp>(user))

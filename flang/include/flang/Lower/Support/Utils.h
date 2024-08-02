@@ -14,7 +14,6 @@
 #define FORTRAN_LOWER_SUPPORT_UTILS_H
 
 #include "flang/Common/indirection.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -22,7 +21,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
-#include <numeric>
+
 namespace Fortran::lower {
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 } // end namespace Fortran::lower
@@ -671,52 +670,5 @@ static inline bool isEqual(const Fortran::lower::SomeExpr *x,
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
 }
 } // end namespace Fortran::lower
-
-// OpenMP utility functions used in locations outside of the
-// OpenMP lowering.
-namespace Fortran::lower::omp {
-
-[[maybe_unused]] static void fillMemberIndices(
-    llvm::SmallVector<llvm::SmallVector<int>> &memberPlacementData) {
-  size_t largestIndicesSize =
-      std::max_element(memberPlacementData.begin(), memberPlacementData.end(),
-                       [](auto a, auto b) { return a.size() < b.size(); })
-          ->size();
-
-  // DenseElementsAttr expects a rectangular shape for the data, so all
-  // index lists have to be of the same length, this emplaces -1 as filler.
-  for (auto &v : memberPlacementData) {
-    if (v.size() < largestIndicesSize) {
-      auto *prevEnd = v.end();
-      v.resize(largestIndicesSize);
-      std::fill(prevEnd, v.end(), -1);
-    }
-  }
-}
-
-/// Helper function that will effectively repackage the modified
-/// memberPlacementData into a DenseIntElementsAttr so
-/// that it can be placed into the appropriate MapInfoOp
-[[maybe_unused]] static mlir::DenseIntElementsAttr
-createDenseElementsAttrFromIndices(
-    llvm::SmallVector<llvm::SmallVector<int>> &memberPlacementData,
-    fir::FirOpBuilder &builder) {
-  llvm::SmallVector<int> indicesFlattened =
-      std::accumulate(memberPlacementData.begin(), memberPlacementData.end(),
-                      llvm::SmallVector<int>(),
-                      [](llvm::SmallVector<int> &x, llvm::SmallVector<int> &y) {
-                        x.insert(x.end(), y.begin(), y.end());
-                        return x;
-                      });
-
-  return mlir::DenseIntElementsAttr::get(
-      mlir::VectorType::get(
-          {static_cast<int64_t>(memberPlacementData.size()),
-           static_cast<int64_t>(memberPlacementData[0].size())},
-          mlir::IntegerType::get(builder.getContext(), 32)),
-      llvm::ArrayRef<int32_t>(indicesFlattened));
-}
-
-} // end namespace Fortran::lower::omp
 
 #endif // FORTRAN_LOWER_SUPPORT_UTILS_H
