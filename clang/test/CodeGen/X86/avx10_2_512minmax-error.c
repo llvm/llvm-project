@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx10.2-512 \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2-512 \
+// RUN: -Wno-invalid-feature-combination -emit-llvm -verify
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2-512 \
 // RUN: -Wno-invalid-feature-combination -emit-llvm -verify
 
 #include <immintrin.h>
-#include <stddef.h>
 
 __m128bh test_mm_minmaxne_pbh(__m128bh __A, __m128bh __B) {
   return _mm_minmaxne_pbh(__A, __B, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}

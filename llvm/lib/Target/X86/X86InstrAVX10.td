@@ -37,7 +37,7 @@ let Predicates = [HasAVX10_2], hasEVEX_U = 1, OpEnc = EncEVEX in
 //-------------------------------------------------
 
 multiclass avx10_minmax_packed_base<string OpStr, X86VectorVTInfo VTI, SDNode OpNode> {
-  let ExeDomain = VTI.ExeDomain, mayRaiseFPException = 1 in {
+  let ExeDomain = VTI.ExeDomain, Uses = [MXCSR], mayRaiseFPException = 1 in {
     defm rri : AVX512_maskable<0x52, MRMSrcReg, VTI, (outs VTI.RC:$dst),
                                 (ins VTI.RC:$src1, VTI.RC:$src2, i32u8imm:$src3), OpStr,
                                 "$src3, $src2, $src1", "$src1, $src2, $src3",
@@ -63,7 +63,7 @@ multiclass avx10_minmax_packed_base<string OpStr, X86VectorVTInfo VTI, SDNode Op
 }
 
 multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
-  let Uses = [MXCSR], mayRaiseFPException = 0 in
+  let Uses = []<Register>, mayRaiseFPException = 0 in {
     defm Zrrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info512, (outs VTI.info512.RC:$dst),
                                 (ins VTI.info512.RC:$src1, VTI.info512.RC:$src2, i32u8imm:$src3), OpStr,
                                 "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
@@ -71,7 +71,7 @@ multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNod
                                                         (VTI.info512.VT VTI.info512.RC:$src2),
                                                         (i32 timm:$src3)))>,
                                 EVEX, VVVV, EVEX_B, EVEX_V512, Sched<[WriteFMAX]>;
-  let hasEVEX_U = 1 in
+    let hasEVEX_U = 1 in
     defm Z256rrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info256, (outs VTI.info256.RC:$dst),
                                 (ins VTI.info256.RC:$src1, VTI.info256.RC:$src2, i32u8imm:$src3), OpStr,
                                 "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
@@ -79,11 +79,12 @@ multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNod
                                                         (VTI.info256.VT VTI.info256.RC:$src2),
                                                         (i32 timm:$src3)))>,
                                 EVEX, VVVV, EVEX_B, EVEX_V256, Sched<[WriteFMAX]>;
+  }
 }
 
 multiclass avx10_minmax_packed<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
   let Predicates = [HasAVX10_2_512] in
-    defm Z      :   avx10_minmax_packed_base<OpStr, VTI.info512, OpNode>, EVEX_V512;
+    defm Z    :   avx10_minmax_packed_base<OpStr, VTI.info512, OpNode>, EVEX_V512;
   let Predicates = [HasAVX10_2] in {
     defm Z256 :   avx10_minmax_packed_base<OpStr, VTI.info256, OpNode>, EVEX_V256;
     defm Z128 :   avx10_minmax_packed_base<OpStr, VTI.info128, OpNode>, EVEX_V128;
@@ -108,7 +109,7 @@ multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
                                      (i32 timm:$src3)))>,
                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
     }
-    let Uses = [MXCSR], mayRaiseFPException = 0 in
+    let Uses = []<Register>, mayRaiseFPException = 0 in
       defm rrib : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
                         (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
                         OpStr, "$src3, {sae}, $src2, $src1",

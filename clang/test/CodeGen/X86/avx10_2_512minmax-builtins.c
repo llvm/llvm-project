@@ -1,10 +1,9 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx10.2-512 \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2-512 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown -target-feature +avx10.2-512 \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2-512 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
-#include <stddef.h>
 
 __m512bh test_mm512_minmaxne_pbh(__m512bh __A, __m512bh __B) {
   // CHECK-LABEL: @test_mm512_minmaxne_pbh(

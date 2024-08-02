@@ -1,5 +1,5 @@
 # RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck %s --check-prefixes=ATT
-# RUN: llvm-mc --disassemble %s -triple=i386 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+# RUN: llvm-mc --disassemble %s -triple=i386 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
 # ATT:   vminmaxnepbf16 $123, %xmm4, %xmm3, %xmm2
 # INTEL: vminmaxnepbf16 xmm2, xmm3, xmm4, 123
