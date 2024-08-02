@@ -20913,15 +20913,14 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
     return true;
   // Find the first user-defined mapper with a type derived from the desired
   // type.
-  auto *VD =
-      filterLookupForUDReductionAndMapper<ValueDecl *>(
-          Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
-            if (!D->isInvalidDecl() &&
-                SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
-                !Type.isMoreQualifiedThan(D->getType()))
-              return D;
-            return nullptr;
-          });
+  auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
+      Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
+        if (!D->isInvalidDecl() &&
+            SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
+            !Type.isMoreQualifiedThan(D->getType()))
+          return D;
+        return nullptr;
+      });
   if (!VD)
     return false;
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
