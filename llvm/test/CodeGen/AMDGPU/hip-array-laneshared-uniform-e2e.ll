@@ -8,7 +8,7 @@ target datalayout = "A5"
 define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr {
 entry:
 ; CHECK: s_getreg_b32 s33, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 3)
-; CHECK: s_mul_i32 s33, s33, 15
+; CHECK: s_mul_i32 s33, s33, [[VGPRsForWavesPerEU:[0-9]+]]
 ; CHECK: s_add_co_i32 s33, s33, 0x46
 ; CHECK: s_set_gpr_idx_u32 idx0, s33
 ; CHECK: s_getreg_b32 s33, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 3)
@@ -23,7 +23,6 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: s_set_gpr_idx_u32 idx1,
 ; CHECK: s_set_vgpr_frames 1                     ;  vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, v0
-; CHECK: .LBB0_2:
 ; CHECK: s_set_vgpr_frames 0
 ; CHECK: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
   %0 = load float, ptr addrspace(10) %arrayidx, align 4, !tbaa !4
@@ -52,6 +51,8 @@ for.body8:                                        ; preds = %for.body, %for.body
   %exitcond26.not = icmp eq i32 %inc15, 70
   br i1 %exitcond26.not, label %for.cond.cleanup6, label %for.body8, !llvm.loop !11
 }
+
+; CHECK: NumVGPRsForWavesPerEU: [[VGPRsForWavesPerEU]]
 
 !llvm.module.flags = !{!0, !1, !2}
 
