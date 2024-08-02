@@ -82,6 +82,10 @@ public:
     return static_cast<MachObjectWriter &>(getAssembler().getWriter());
   }
 
+  MCObjectWriter &getMCObjectWriter() {
+    return static_cast<MCObjectWriter &>(getAssembler().getWriter());
+  }
+
   /// @name MCStreamer Interface
   /// @{
 
@@ -222,7 +226,7 @@ void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   case MCAF_Code32: return; // Change parsing mode; no-op here.
   case MCAF_Code64: return; // Change parsing mode; no-op here.
   case MCAF_SubsectionsViaSymbols:
-    getWriter().setSubsectionsViaSymbols(true);
+    getMCObjectWriter().setSubsectionsViaSymbols(true);
     return;
   }
 }
@@ -254,21 +258,21 @@ void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
 void MCMachOStreamer::emitVersionMin(MCVersionMinType Kind, unsigned Major,
                                      unsigned Minor, unsigned Update,
                                      VersionTuple SDKVersion) {
-  getWriter().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
+  getMCObjectWriter().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                        unsigned Minor, unsigned Update,
                                        VersionTuple SDKVersion) {
-  getWriter().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
-                              Update, SDKVersion);
+  getMCObjectWriter().setBuildVersion((MachO::PlatformType)Platform, Major,
+                                      Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
-  getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
-                                           Minor, Update, SDKVersion);
+  getMCObjectWriter().setTargetVariantBuildVersion(
+      (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,

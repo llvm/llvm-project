@@ -45,6 +45,10 @@ public:
 
   void setBuildVersion(unsigned Major, unsigned Minor, unsigned Bound);
 
+  void setBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
+                       unsigned Update,
+                       VersionTuple SDKVersion = VersionTuple()) override {}
+
 private:
   void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
                         const MCFixup &Fixup, MCValue Target,

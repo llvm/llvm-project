@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCOBJECTWRITER_H
 #define LLVM_MC_MCOBJECTWRITER_H
 
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -116,8 +117,12 @@ public:
   SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
 
   // Mach-O specific: Whether .subsections_via_symbols is enabled.
-  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
-  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
+  virtual bool getSubsectionsViaSymbols() const {
+    return SubsectionsViaSymbols;
+  }
+  virtual void setSubsectionsViaSymbols(bool Value) {
+    SubsectionsViaSymbols = Value;
+  }
 
   /// Write the object file and returns the number of bytes written.
   ///
@@ -126,6 +131,22 @@ public:
   /// generated.
   virtual uint64_t writeObject(MCAssembler &Asm) = 0;
 
+  virtual void setVersionMin(MCVersionMinType Type, unsigned Major,
+                             unsigned Minor, unsigned Update,
+                             VersionTuple SDKVersion = VersionTuple()) {}
+  virtual void setBuildVersion(unsigned Platform, unsigned Major,
+                               unsigned Minor, unsigned Update,
+                               VersionTuple SDKVersion = VersionTuple()) {}
+
+  virtual void setTargetVariantBuildVersion(unsigned Platform, unsigned Major,
+                                            unsigned Minor, unsigned Update,
+                                            VersionTuple SDKVersion) {}
+  virtual std::optional<unsigned> getPtrAuthABIVersion() const {
+    return std::nullopt;
+  }
+  virtual void setPtrAuthABIVersion(unsigned V) {}
+  virtual bool getPtrAuthKernelABIVersion() const { return false; }
+  virtual void setPtrAuthKernelABIVersion(bool V) {}
   /// @}
 };
 
