@@ -1430,7 +1430,6 @@ class CastInst : public UnaryInstruction {
       : UnaryInstruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI,
                          Ctx) {}
   friend Context;        // for SBCastInstruction()
-  friend class PtrToInt; // For constructor.
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
   }
