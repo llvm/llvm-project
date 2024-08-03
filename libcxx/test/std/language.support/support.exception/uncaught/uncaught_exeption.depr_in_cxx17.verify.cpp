@@ -17,5 +17,5 @@
 #include <exception>
 
 void test() {
-    (void) std::uncaught_exception(); // expected-warning {{'uncaught_exception' is deprecated}}
+  (void)std::uncaught_exception(); // expected-warning {{'uncaught_exception' is deprecated}}
 }
