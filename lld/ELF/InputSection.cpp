@@ -679,7 +679,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   // Variant 2. Static TLS blocks, followed by alignment padding are placed
   // before TP. The alignment padding is added so that (TP - padding -
   // p_memsz) is congruent to p_vaddr modulo p_align.
-  PhdrEntry *tls = Out::tlsPhdr;
+  PhdrEntry *tls = ctx.tlsPhdr;
   switch (config->emachine) {
     // Variant 1.
   case EM_ARM:
