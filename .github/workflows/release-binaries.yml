@@ -126,10 +126,10 @@ jobs:
 
         # x86 macOS and x86 Windows have trouble building flang, so disable it.
         # Windows: https://github.com/llvm/llvm-project/issues/100202
-        # macOS: 'rebase opcodes terminated early at offset 1 of 80016' when building __fortran_builtins.mod
+        # macOS: https://github.com/llvm/llvm-project/issues/101789
         build_flang="true"
 
-        if [ "$target" = "Windows-X64" ]; then
+        if [ "$target" = "Windows-X64" -o "$target" = "macOS-X64" ]; then
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS=\"clang;lld;lldb;clang-tools-extra;bolt;polly;mlir\""
           build_flang="false"
         fi
