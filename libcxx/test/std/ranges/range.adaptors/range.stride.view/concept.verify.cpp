@@ -38,7 +38,8 @@ static_assert(std::movable<test_non_const_range<cpp17_input_iterator>>);
 static_assert(!std::ranges::view<test_non_const_range<cpp17_input_iterator>>);
 static_assert(!CanStrideView<test_non_const_range<cpp17_input_iterator>, 1>);
 
-// And now, let's satisfy all the prerequisites and make sure that we can stride over a range (that is an input range and is a view!)
+// And now, let's satisfy all the prerequisites and make sure that we can stride over a range (that is an input range
+// and is a view!)
 static_assert(std::ranges::range<test_view<cpp17_input_iterator>>);
 static_assert(std::ranges::input_range<test_view<cpp17_input_iterator>>);
 static_assert(std::ranges::view<test_view<cpp17_input_iterator>>);
