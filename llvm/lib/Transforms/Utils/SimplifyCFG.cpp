@@ -281,9 +281,6 @@ class SimplifyCFGOpt {
   bool hoistSuccIdenticalTerminatorToSwitchOrIf(
       Instruction *TI, Instruction *I1,
       SmallVectorImpl<Instruction *> &OtherSuccTIs);
-  bool
-  hoistLoadStoreWithCondFaultingFromSuccessors(BranchInst *BI,
-                                               BasicBlock *ThenBB = nullptr);
   bool speculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB);
   bool simplifyTerminatorOnSelect(Instruction *OldTerm, Value *Cond,
                                   BasicBlock *TrueBB, BasicBlock *FalseBB,
@@ -2987,216 +2984,10 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
   return BIEndProb < Likely;
 }
 
-/// Hoist load/store instructions from the conditional successor blocks up into
-/// the block.
-///
-/// \param BI conditional branch instruction for the successor blocks.
-/// \param ThenBB the successor block to hoist from. If NULL, both of the
-///        successors are considered.
-///
-/// We are looking for code like the following:
-/// \code
-///   BB:
-///     ...
-///     %cond = icmp ult %x, %y
-///     br i1 %cond, label %TrueBB, label %FalseBB
-///   FalseBB:
-///     store i32 1, ptr %q, align 4
-///     ...
-///   TrueBB:
-///     %0 = load i32, ptr %b, align 4
-///     store i32 %0, ptr %p, align 4
-///     ...
-/// \endcode
-//
-/// We are going to transform this into:
-///
-/// \code
-///   BB:
-///     ...
-///     %cond = icmp ult %x, %y
-///     %0 = cload i32, ptr %b, %cond
-///     cstore i32 %0, ptr %p, %cond
-///     cstore i32 1, ptr %q, ~%cond
-///     br i1 %cond, label %TrueBB, label %FalseBB
-///   FalseBB:
-///     ...
-///   TrueBB:
-///     ...
-/// \endcode
-///
-/// where cload/cstore is represented by intrinsic like llvm.masked.load/store,
-/// e.g.
-///
-/// \code
-///   %vcond = bitcast i1 %cond to <1 x i1>
-///   %v0 = call <1 x i32> @llvm.masked.load.v1i32.p0
-///                         (ptr %b, i32 4, <1 x i1> %vcond, <1 x i32> poison)
-///   %0 = bitcast <1 x i32> %v0 to i32
-///   call void @llvm.masked.store.v1i32.p0
-//                          (<1 x i32> %v0, ptr %p, i32 4, <1 x i1> %vcond)
-///   %cond.not = xor i1 %cond, true
-///   %vcond.not = bitcast i1 %cond.not to <1 x i>
-///   call void @llvm.masked.store.v1i32.p0
-///              (<1 x i32> <i32 1>, ptr %q, i32 4, <1x i1> %vcond.not)
-/// \endcode
-///
-/// \returns true if any load/store is hosited.
-///
-/// Note that this tranform should be run
-/// * before SpeculativelyExecuteBB so that the latter can have more chance.
-/// * after hoistCommonCodeFromSuccessors to ensure unconditional loads/stores
-///   are handled first.
-bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
-    BranchInst *BI, BasicBlock *ThenBB) {
-  if (!HoistLoadsStoresWithCondFaulting ||
-      !Options.HoistLoadsStoresWithCondFaulting ||
-      !TTI.hasConditionalLoadStoreForType())
-    return false;
-
-  if (!BI || !BI->isConditional())
-    return false;
-
-  if (!isProfitableToSpeculate(BI, ThenBB != BI->getSuccessor(0), TTI))
-    return false;
-
-  SmallVector<BasicBlock *, 2> Successors;
-  if (ThenBB)
-    Successors.push_back(ThenBB);
-  else
-    Successors.append({BI->getSuccessor(0), BI->getSuccessor(1)});
-
-  // If either of the blocks has it's address taken, then we can't do this fold,
-  // because the code we'd hoist would no longer run when we jump into the block
-  // by it's address.
-  for (auto *Succ : Successors)
-    if (Succ->hasAddressTaken())
-      return false;
-
-  // Not use isa<AllocaInst>(getUnderlyingObject(I.getOperand(0)) to avoid
-  // checking all intermediate operands dominate the branch.
-  auto IsLoadFromAlloca = [](const Instruction &I) {
-    return isa<LoadInst>(I) && isa<AllocaInst>((I.getOperand(0)));
-  };
-
-  // Collect hoisted loads/stores.
-  SmallSetVector<Instruction *, 4> HoistedInsts;
-  // Not hoist load/store if
-  // 1. target does not have corresponding conditional faulting load/store.
-  // 2. it's volatile or atomic.
-  // 3. there is a load/store that can not be hoisted in the same bb.
-  // 4. there is a non-load/store that's not safe to speculatively execute
-  //    in the same bb.
-  // 5. any operand of it does not dominate the branch.
-  // 6. it's a store and a memory read is skipped.
-  auto HoistInstsInBB = [&](BasicBlock *BB) {
-    bool SkipMemoryRead = false;
-    // A more efficient way to check domination. An operand dominates the
-    // BranchInst if
-    // 1. it's not defined in the same bb as the instruction.
-    // 2. it's to be hoisted.
-    //
-    // b/c BB is only predecessor and BranchInst does not define any value.
-    auto OpsDominatesBranch = [&](Instruction &I) {
-      return llvm::all_of(I.operands(), [&](Value *Op) {
-        if (auto *J = dyn_cast<Instruction>(Op)) {
-          if (HoistedInsts.contains(J))
-            return true;
-          if (J->getParent() == I.getParent())
-            return false;
-        }
-        return true;
-      });
-    };
-    for (auto &I : *BB) {
-      auto *LI = dyn_cast<LoadInst>(&I);
-      auto *SI = dyn_cast<StoreInst>(&I);
-      if (LI || SI) {
-        bool IsSimple = (LI && LI->isSimple()) || (SI && SI->isSimple());
-        if (!IsSimple || !OpsDominatesBranch(I))
-          return false;
-        auto *Type = getLoadStoreType(&I);
-        // a load from alloca is always safe.
-        if (!IsLoadFromAlloca(I) && !TTI.hasConditionalLoadStoreForType(Type))
-          return false;
-        // Conservative aliasing check.
-        if (SI && SkipMemoryRead)
-          return false;
-        HoistedInsts.insert(&I);
-      } else if (!I.isTerminator() && !isSafeToSpeculativelyExecute(&I))
-        return false;
-      else if (I.mayReadFromMemory())
-        SkipMemoryRead = true;
-    }
-    return true;
-  };
-
-  for (auto *Succ : Successors)
-    if (!HoistInstsInBB(Succ))
-      return false;
-
-  if (HoistedInsts.empty())
-    return false;
-
-  // Put newly added instructions before the BranchInst.
-  IRBuilder<> Builder(BI);
-  auto &Context = BI->getParent()->getContext();
-  auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
-  auto *Cond = BI->getOperand(0);
-  auto *VCond = Builder.CreateBitCast(Cond, VCondTy);
-  Value *VCondNot = nullptr;
-  for (auto *I : HoistedInsts) {
-    // Only need to move the position for load from alloca.
-    if (IsLoadFromAlloca(*I)) {
-      I->moveBefore(BI);
-      continue;
-    }
-
-    bool InvertCond = I->getParent() == BI->getSuccessor(1);
-    // Construct the inverted condition if need.
-    if (InvertCond && !VCondNot)
-      VCondNot = Builder.CreateBitCast(
-          Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
-
-    auto *Mask = InvertCond ? VCondNot : VCond;
-    auto *Op0 = I->getOperand(0);
-    if (auto *LI = dyn_cast<LoadInst>(I)) {
-      // Load
-      auto *Ty = I->getType();
-      // NOTE: Now we assume conditional faulting load/store is supported for
-      // scalar only when creating new instructions, but it's easy to extend it
-      // for vector types in the future.
-      assert(!Ty->isVectorTy() && "not implemented");
-      auto *V0 = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1), Op0,
-                                          LI->getAlign(), Mask);
-      auto *S0 = Builder.CreateBitCast(V0, Ty);
-      V0->copyMetadata(*I);
-      I->replaceAllUsesWith(S0);
-    } else {
-      // Store
-      assert(!Op0->getType()->isVectorTy() && "not implemented");
-      auto *StoredVal =
-          Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
-      auto *VStore = Builder.CreateMaskedStore(
-          StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
-      VStore->copyMetadata(*I);
-      // FIXME: DIAssignID is not supported for masked store yet.
-      // (Verifier::visitDIAssignIDMetadata)
-      at::deleteAssignmentMarkers(VStore);
-      VStore->eraseMetadataIf([](unsigned MDKind, MDNode *Node) {
-        return Node->getMetadataID() == Metadata::DIAssignIDKind;
-      });
-    }
-  }
-
-  // Erase the hoisted instrutions in reverse order to avoid use-w/o-define
-  // error.
-  std::for_each(HoistedInsts.rbegin(), HoistedInsts.rend(), [&](auto I) {
-    if (!IsLoadFromAlloca(*I))
-      I->eraseFromParent();
-  });
-
-  return true;
+static bool isSafeCheapLoadStore(const Instruction &I,
+                                 const TargetTransformInfo &TTI) {
+  return (isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         TTI.hasConditionalLoadStoreForType(getLoadStoreType(&I));
 }
 
 /// Speculate a conditional basic block flattening the CFG.
@@ -3273,6 +3064,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
   unsigned SpeculatedInstructions = 0;
+  bool HositLoadsStores = HoistLoadsStoresWithCondFaulting &&
+                          Options.HoistLoadsStoresWithCondFaulting;
+  SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
   EphemeralValueTracker EphTracker;
@@ -3301,16 +3095,24 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
     // Only speculatively execute a single instruction (not counting the
     // terminator) for now.
-    ++SpeculatedInstructions;
+    bool IsSafeCheapLoadStore =
+        HositLoadsStores && isSafeCheapLoadStore(I, TTI);
+    // Not count load/store into cost if target supports conditional faulting
+    // b/c it's cheap to speculate it.
+    if (IsSafeCheapLoadStore)
+      SpeculatedConditionalLoadsStores.push_back(&I);
+    else
+      ++SpeculatedInstructions;
+
     if (SpeculatedInstructions > 1)
       return false;
 
     // Don't hoist the instruction if it's unsafe or expensive.
-    if (!isSafeToSpeculativelyExecute(&I) &&
+    if (!IsSafeCheapLoadStore && !isSafeToSpeculativelyExecute(&I) &&
         !(HoistCondStores && (SpeculatedStoreValue = isSafeToSpeculateStore(
                                   &I, BB, ThenBB, EndBB))))
       return false;
-    if (!SpeculatedStoreValue &&
+    if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
@@ -3343,11 +3145,11 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
   // Check that we can insert the selects and that it's not too expensive to do
   // so.
-  bool Convert = SpeculatedStore != nullptr;
+  bool Convert =
+      SpeculatedStore != nullptr || !SpeculatedConditionalLoadsStores.empty();
   InstructionCost Cost = 0;
   Convert |= validateAndCostRequiredSelects(BB, ThenBB, EndBB,
-                                            SpeculatedInstructions,
-                                            Cost, TTI);
+                                            SpeculatedInstructions, Cost, TTI);
   if (!Convert || Cost > Budget)
     return false;
 
@@ -3434,6 +3236,102 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
         It.dropOneDbgRecord(&DR);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
+
+  // If the target supports conditional faulting,
+  // we are looking for code like the following:
+  // \code
+  //   BB:
+  //     ...
+  //     %cond = icmp ult %x, %y
+  //     br i1 %cond, label %TrueBB, label %FalseBB
+  //   FalseBB:
+  //     store i32 1, ptr %q, align 4
+  //     ...
+  //   TrueBB:
+  //     %0 = load i32, ptr %b, align 4
+  //     store i32 %0, ptr %p, align 4
+  //     ...
+  // \endcode
+  //
+  // and transform it into:
+  //
+  // \code
+  //   BB:
+  //     ...
+  //     %cond = icmp ult %x, %y
+  //     %0 = cload i32, ptr %b, %cond
+  //     cstore i32 %0, ptr %p, %cond
+  //     cstore i32 1, ptr %q, ~%cond
+  //     br i1 %cond, label %TrueBB, label %FalseBB
+  //   FalseBB:
+  //     ...
+  //   TrueBB:
+  //     ...
+  // \endcode
+  //
+  // where cload/cstore is represented by intrinsic like llvm.masked.load/store,
+  // e.g.
+  //
+  // \code
+  //   %vcond = bitcast i1 %cond to <1 x i1>
+  //   %v0 = call <1 x i32> @llvm.masked.load.v1i32.p0
+  //                         (ptr %b, i32 4, <1 x i1> %vcond, <1 x i32> poison)
+  //   %0 = bitcast <1 x i32> %v0 to i32
+  //   call void @llvm.masked.store.v1i32.p0
+  //                          (<1 x i32> %v0, ptr %p, i32 4, <1 x i1> %vcond)
+  //   %cond.not = xor i1 %cond, true
+  //   %vcond.not = bitcast i1 %cond.not to <1 x i>
+  //   call void @llvm.masked.store.v1i32.p0
+  //              (<1 x i32> <i32 1>, ptr %q, i32 4, <1x i1> %vcond.not)
+  // \endcode
+  //
+  // So we need to turn hoisted load/store into cload/cstore.
+  auto &Context = BI->getParent()->getContext();
+  auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
+  auto *Cond = BI->getOperand(0);
+  Value *VCond = nullptr;
+  Value *VCondNot = nullptr;
+  // Construct the condition if need.
+  if (!SpeculatedConditionalLoadsStores.empty()) {
+    IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
+    if (Invert)
+      VCondNot = Builder.CreateBitCast(
+          Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
+    else
+      VCond = Builder.CreateBitCast(Cond, VCondTy);
+  }
+  auto *Mask = Invert ? VCondNot : VCond;
+  for (auto *I : SpeculatedConditionalLoadsStores) {
+    IRBuilder<> Builder(I);
+    // NOTE: Now we assume conditional faulting load/store is supported for
+    // scalar only when creating new instructions, but it's easy to extend it
+    // for vector types in the future.
+    assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
+    auto *Op0 = I->getOperand(0);
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      // Load
+      auto *Ty = I->getType();
+      auto *V0 = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1), Op0,
+                                          LI->getAlign(), Mask);
+      auto *S0 = Builder.CreateBitCast(V0, Ty);
+      V0->copyMetadata(*I);
+      I->replaceAllUsesWith(S0);
+    } else {
+      // Store
+      auto *StoredVal =
+          Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
+      auto *VStore = Builder.CreateMaskedStore(
+          StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
+      VStore->copyMetadata(*I);
+      // FIXME: DIAssignID is not supported for masked store yet.
+      // (Verifier::visitDIAssignIDMetadata)
+      at::deleteAssignmentMarkers(VStore);
+      VStore->eraseMetadataIf([](unsigned MDKind, MDNode *Node) {
+        return Node->getMetadataID() == Metadata::DIAssignIDKind;
+      });
+    }
+    I->eraseFromParent();
+  }
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
@@ -7740,43 +7638,31 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   // We have a conditional branch to two blocks that are only reachable
-  // from BI.  We know that the condbr dominates the two blocks, so see
-  //
-  // * if there is any identical code in the "then" and "else" blocks.
-  // * if there is any different load/store in the "then" and "else" blocks.
-  //
-  // If so, we can hoist it up to the branching block.
+  // from BI.  We know that the condbr dominates the two blocks, so see if
+  // there is any identical code in the "then" and "else" blocks.  If so, we
+  // can hoist it up to the branching block.
   if (BI->getSuccessor(0)->getSinglePredecessor()) {
     if (BI->getSuccessor(1)->getSinglePredecessor()) {
       if (HoistCommon && hoistCommonCodeFromSuccessors(
                              BI->getParent(), !Options.HoistCommonInsts))
-        return requestResimplify();
-      if (hoistLoadStoreWithCondFaultingFromSuccessors(BI))
         return requestResimplify();
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally
       // execute Successor #0 if it branches to Successor #1.
       Instruction *Succ0TI = BI->getSuccessor(0)->getTerminator();
       if (Succ0TI->getNumSuccessors() == 1 &&
-          Succ0TI->getSuccessor(0) == BI->getSuccessor(1)) {
-        if (hoistLoadStoreWithCondFaultingFromSuccessors(BI,
-                                                         BI->getSuccessor(0)))
-          return requestResimplify();
+          Succ0TI->getSuccessor(0) == BI->getSuccessor(1))
         if (speculativelyExecuteBB(BI, BI->getSuccessor(0)))
           return requestResimplify();
-      }
     }
   } else if (BI->getSuccessor(1)->getSinglePredecessor()) {
     // If Successor #0 has multiple preds, we may be able to conditionally
     // execute Successor #1 if it branches to Successor #0.
     Instruction *Succ1TI = BI->getSuccessor(1)->getTerminator();
     if (Succ1TI->getNumSuccessors() == 1 &&
-        Succ1TI->getSuccessor(0) == BI->getSuccessor(0)) {
-      if (hoistLoadStoreWithCondFaultingFromSuccessors(BI, BI->getSuccessor(1)))
-        return requestResimplify();
+        Succ1TI->getSuccessor(0) == BI->getSuccessor(0))
       if (speculativelyExecuteBB(BI, BI->getSuccessor(1)))
         return requestResimplify();
-    }
   }
 
   // If this is a branch on something for which we know the constant value in
