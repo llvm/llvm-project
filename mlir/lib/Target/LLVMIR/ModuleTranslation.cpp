@@ -458,10 +458,11 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
 /// of the innermost dimension. Constants for other dimensions are still
 /// constructed recursively. Returns nullptr on failure and emits errors at
 /// `loc`.
-static llvm::Constant *convertDenseResourceElementsAttr(
-    Location loc, DenseResourceElementsAttr denseResourceAttr,
-    llvm::Type *llvmType, const ModuleTranslation &moduleTranslation) {
-  assert(denseResourceAttr && "expected non-null attribute");
+static llvm::Constant *
+convertResourceAttr(Location loc, ResourceAttr resourceAttr,
+                    llvm::Type *llvmType,
+                    const ModuleTranslation &moduleTranslation) {
+  assert(resourceAttr && "expected non-null attribute");
 
   llvm::Type *innermostLLVMType = getInnermostElementType(llvmType);
   if (!llvm::ConstantDataSequential::isElementTypeCompatible(
@@ -470,10 +471,10 @@ static llvm::Constant *convertDenseResourceElementsAttr(
     return nullptr;
   }
 
-  ShapedType type = denseResourceAttr.getType();
+  ShapedType type = mlir::cast<ShapedType>(resourceAttr.getType());
   assert(type.getNumElements() > 0 && "Expected non-empty elements attribute");
 
-  AsmResourceBlob *blob = denseResourceAttr.getRawHandle().getBlob();
+  AsmResourceBlob *blob = resourceAttr.getBlob();
   if (!blob) {
     emitError(loc, "resource does not exist");
     return nullptr;
@@ -486,7 +487,7 @@ static llvm::Constant *convertDenseResourceElementsAttr(
   // raw data.
   // TODO: we may also need to consider endianness when cross-compiling to an
   // architecture where it is different.
-  int64_t numElements = denseResourceAttr.getType().getNumElements();
+  int64_t numElements = type.getNumElements();
   int64_t elementByteSize = rawData.size() / numElements;
   if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits()) {
     emitError(loc, "raw data size does not match element type size");
@@ -497,9 +498,7 @@ static llvm::Constant *convertDenseResourceElementsAttr(
   // innermost dimension may be that of the vector element type.
   bool hasVectorElementType = isa<VectorType>(type.getElementType());
   int64_t numAggregates =
-      numElements / (hasVectorElementType
-                         ? 1
-                         : denseResourceAttr.getType().getShape().back());
+      numElements / (hasVectorElementType ? 1 : type.getShape().back());
   ArrayRef<int64_t> outerShape = type.getShape();
   if (!hasVectorElementType)
     outerShape = outerShape.drop_back();
@@ -533,8 +532,8 @@ static llvm::Constant *convertDenseResourceElementsAttr(
   // Create innermost constants and defer to the default constant creation
   // mechanism for other dimensions.
   SmallVector<llvm::Constant *> constants;
-  int64_t aggregateSize = denseResourceAttr.getType().getShape().back() *
-                          (innermostLLVMType->getScalarSizeInBits() / 8);
+  int64_t aggregateSize =
+      type.getShape().back() * (innermostLLVMType->getScalarSizeInBits() / 8);
   constants.reserve(numAggregates);
   for (unsigned i = 0; i < numAggregates; ++i) {
     StringRef data(rawData.data() + i * aggregateSize, aggregateSize);
@@ -679,9 +678,8 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     return result;
   }
 
-  if (auto denseResourceAttr = dyn_cast<DenseResourceElementsAttr>(attr)) {
-    return convertDenseResourceElementsAttr(loc, denseResourceAttr, llvmType,
-                                            moduleTranslation);
+  if (auto resourceAttr = dyn_cast<ResourceAttr>(attr)) {
+    return convertResourceAttr(loc, resourceAttr, llvmType, moduleTranslation);
   }
 
   // Fall back to element-by-element construction otherwise.

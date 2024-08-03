@@ -495,4 +495,35 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// ResourceAttrInterface
+//===----------------------------------------------------------------------===//
+
+def ResourceAttrInterface : AttrInterface<"ResourceAttr", [TypedAttrInterface]> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    The interface abstracts the nature of underlying resource blob from its handle.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      "Get blob key associated with the resource.",
+      "::mlir::StringRef", "getBlobKey", (ins),
+      [{}],
+      [{
+        return $_attr.getRawHandle().getKey();
+      }]
+    >,
+    InterfaceMethod<
+      "Get blob associated with the resource.",
+      "::mlir::AsmResourceBlob *", "getBlob", (ins),
+      [{}],
+      [{
+        return $_attr.getRawHandle().getBlob();
+      }]
+    >
+  ];
+}
+
 #endif // MLIR_IR_BUILTINATTRIBUTEINTERFACES_TD_

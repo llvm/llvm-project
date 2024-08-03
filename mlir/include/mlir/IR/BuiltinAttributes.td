@@ -431,7 +431,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
-    "dense_resource_elements", [ElementsAttrInterface]> {
+    "dense_resource_elements", [ElementsAttrInterface, ResourceAttrInterface]> {
   let summary = "An Attribute containing a dense multi-dimensional array "
                 "backed by a resource";
   let description = [{

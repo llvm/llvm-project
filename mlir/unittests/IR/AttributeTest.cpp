@@ -382,6 +382,23 @@ TEST(DenseResourceElementsAttrTest, CheckInvalidType) {
       },
       "invalid shape element type for provided type `T`");
 }
+
+TEST(DenseResourceElementsAttrTest, CheckResourceInterface) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  ArrayRef<double> data = {0, 1, 2};
+  auto elementType = builder.getF64Type();
+  auto type = RankedTensorType::get(data.size(), elementType);
+  auto attr = DenseF64ResourceElementsAttr::get(
+      type, "resource", UnmanagedAsmResourceBlob::allocateInferAlign(data));
+
+  EXPECT_TRUE(isa<DenseF64ResourceElementsAttr>(attr));
+  auto resourceAttr = dyn_cast<ResourceAttr>(attr);
+  EXPECT_TRUE(resourceAttr);
+  EXPECT_TRUE(resourceAttr.getBlobKey() == "resource");
+  EXPECT_TRUE(resourceAttr.getBlob());
+}
 } // namespace
 
 //===----------------------------------------------------------------------===//
