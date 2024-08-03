@@ -9919,6 +9919,103 @@ TEST_P(ImportTemplateParmDeclDefaultValue, ImportExistingVarTemplate) {
   testImport(FromLastD);
 }
 
+TEST_P(ImportTemplateParmDeclDefaultValue,
+       ImportParentTemplateDuringNonTypeTemplateParmDecl) {
+  // This wants to provoke that during import of 'Y' in "typename T = Y"
+  // (before this import returns) the later definition of 'X' is imported fully.
+  const char *Code =
+      R"(
+      struct Z;
+
+      struct Y {
+        Z *z;
+        static const int x = 1;
+      };
+
+      template <int P = Y::x>
+      struct X;
+
+      template <int P>
+      struct X {
+        static const int A = 1;
+      };
+
+      struct Z {
+        template<int P>
+        void f(int A = X<P>::A);
+      };
+      )";
+
+  Decl *FromTU = getTuDecl(Code, Lang_CXX14);
+  auto *FromD = FirstDeclMatcher<NonTypeTemplateParmDecl>().match(
+      FromTU, nonTypeTemplateParmDecl(hasName("P")));
+  auto *ToD = Import(FromD, Lang_CXX14);
+  EXPECT_TRUE(ToD);
+}
+
+TEST_P(ImportTemplateParmDeclDefaultValue,
+       ImportParentTemplateDuringTemplateTypeParmDecl) {
+  const char *Code =
+      R"(
+      struct Z;
+
+      struct Y {
+        Z *z;
+      };
+
+      template <typename T = Y>
+      struct X;
+
+      template <typename T>
+      struct X {
+        static const int A = 1;
+      };
+
+      struct Z {
+        template<typename T>
+        void f(int A = X<T>::A);
+      };
+      )";
+
+  Decl *FromTU = getTuDecl(Code, Lang_CXX14);
+  auto *FromD = FirstDeclMatcher<TemplateTypeParmDecl>().match(
+      FromTU, templateTypeParmDecl(hasName("T")));
+  auto *ToD = Import(FromD, Lang_CXX14);
+  EXPECT_TRUE(ToD);
+}
+
+TEST_P(ImportTemplateParmDeclDefaultValue,
+       ImportParentTemplateDuringTemplateTemplateParmDecl) {
+  const char *Code =
+      R"(
+      struct Z;
+
+      template <int>
+      struct Y {
+        Z *z;
+      };
+
+      template <template <int> class T = Y>
+      struct X;
+
+      template <template <int> class T>
+      struct X {
+        static const int A = 1;
+      };
+
+      struct Z {
+        template <template <int> class T>
+        void f(int A = X<T>::A);
+      };
+      )";
+
+  Decl *FromTU = getTuDecl(Code, Lang_CXX14);
+  auto *FromD = FirstDeclMatcher<TemplateTemplateParmDecl>().match(
+      FromTU, templateTemplateParmDecl(hasName("T")));
+  auto *ToD = Import(FromD, Lang_CXX14);
+  EXPECT_TRUE(ToD);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 

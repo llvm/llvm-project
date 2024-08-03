@@ -5972,7 +5972,11 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
         import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    ToD->setDefaultArgument(ToD->getASTContext(), *ToDefaultArgOrErr);
+    // The import process can trigger import of the parent template which can
+    // set the default argument value (to "inherited").
+    // In this case do nothing here.
+    if (!ToD->hasDefaultArgument())
+      ToD->setDefaultArgument(ToD->getASTContext(), *ToDefaultArgOrErr);
   }
 
   return ToD;
@@ -6004,7 +6008,8 @@ ASTNodeImporter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
         import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    ToD->setDefaultArgument(Importer.getToContext(), *ToDefaultArgOrErr);
+    if (!ToD->hasDefaultArgument())
+      ToD->setDefaultArgument(Importer.getToContext(), *ToDefaultArgOrErr);
   }
 
   return ToD;
@@ -6041,7 +6046,8 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
         import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    ToD->setDefaultArgument(Importer.getToContext(), *ToDefaultArgOrErr);
+    if (!ToD->hasDefaultArgument())
+      ToD->setDefaultArgument(Importer.getToContext(), *ToDefaultArgOrErr);
   }
 
   return ToD;
