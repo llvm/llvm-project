@@ -16,7 +16,7 @@
 
 void test() {
   const std::vector<int> intv = {1, 2, 3};
-  auto copyable_view = CopyableView<std::vector<int>::const_iterator>(intv.begin(), intv.end());
+  auto copyable_view          = CopyableView<std::vector<int>::const_iterator>(intv.begin(), intv.end());
 
   static_assert(std::copy_constructible<decltype(copyable_view)>);
 

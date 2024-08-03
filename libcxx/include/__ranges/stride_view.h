@@ -201,7 +201,9 @@ public:
         __stride_(__i.__stride_),
         __missing_(__i.__missing_) {}
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> const& base() const& noexcept { return __current_; }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> const& base() const& noexcept {
+    return __current_;
+  }
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
 
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {

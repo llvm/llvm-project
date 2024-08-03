@@ -14,8 +14,8 @@
 #include <ranges>
 #include <vector>
 
-#include "types.h"
 #include "test_range.h"
+#include "types.h"
 
 static_assert(std::ranges::enable_borrowed_range< std::ranges::stride_view<BorrowedView>>);
 static_assert(!std::ranges::enable_borrowed_range< std::ranges::stride_view<NonBorrowedView>>);

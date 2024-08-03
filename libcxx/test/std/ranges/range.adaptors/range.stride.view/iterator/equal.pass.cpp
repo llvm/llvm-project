@@ -14,8 +14,8 @@
 #include <cassert>
 #include <ranges>
 
-#include "test_iterators.h"
 #include "../types.h"
+#include "test_iterators.h"
 
 template <class Iter>
 constexpr void testOne() {
