@@ -7,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
-
 // test uncaught_exception
 
 #include <exception>
