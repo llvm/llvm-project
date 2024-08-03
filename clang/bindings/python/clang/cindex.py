@@ -169,6 +169,41 @@ c_object_p: TType[CObjectP] = convert_annotation(CObjectP)
 ### Exception Classes ###
 
 
+class CXError(Exception):
+    '''Represents C error of type enum CXErrorCode.'''
+
+    # A generic error code, no further details are available.
+    #
+    # Errors of this kind can get their own specific error codes in future
+    # libclang versions.
+    ERROR_FAILURE = 1
+
+    # libclang crashed while performing the requested operation.
+    ERROR_CRASHED = 2
+
+    # The function detected that the arguments violate the function
+    # contract.
+    ERROR_INVALID_ARGUMENTS = 3
+
+    # An AST deserialization error has occurred.
+    ERROR_AST_READ_ERROR = 4
+
+    error_code: int
+
+    def __init__(self, enumeration: int, message: str):
+        assert isinstance(enumeration, int)
+
+        if enumeration < 1 or enumeration > 4:
+            raise Exception(
+                "Encountered undefined CXError "
+                "constant: %d. Please file a bug to have this "
+                "value supported." % enumeration
+            )
+
+        self.error_code = enumeration
+        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+
+
 class TranslationUnitLoadError(Exception):
     """Represents an error that occurred when loading a TranslationUnit.
 
@@ -200,6 +235,8 @@ class TranslationUnitSaveError(Exception):
     # Indicates that the translation unit was somehow invalid.
     ERROR_INVALID_TU = 3
 
+    save_error: int
+
     def __init__(self, enumeration: int, message: str):
         assert isinstance(enumeration, int)
 
@@ -212,6 +249,7 @@ class TranslationUnitSaveError(Exception):
 
         self.save_error = enumeration
         Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+
 
 
 ### Structures and Utility Classes ###
@@ -254,6 +292,9 @@ class _CXString(Structure):
 
     _fields_ = [("spelling", c_char_p), ("free", c_int)]
 
+    spelling: r_char_p
+    free: r_int
+
     def __del__(self) -> None:
         conf.lib.clang_disposeString(self)
 
@@ -272,6 +313,8 @@ class SourceLocation(Structure):
     """
 
     _fields_ = [("ptr_data", c_void_p * 2), ("int_data", c_uint)]
+    ptr_data: CArray[c_void_p]
+    int_data: r_uint
     _data: Optional[Tuple[Optional[File], int, int, int]] = None
 
     def _get_instantiation(self) -> Tuple[Optional[File], int, int, int]:
@@ -361,6 +404,10 @@ class SourceRange(Structure):
         ("begin_int_data", c_uint),
         ("end_int_data", c_uint),
     ]
+
+    ptr_data: CArray[c_void_p]
+    begin_int_data: r_uint
+    end_int_data: r_uint
 
     # FIXME: Eliminate this and make normal constructor? Requires hiding ctypes
     # object.
@@ -636,8 +683,8 @@ class TokenGroup:
             token = Token()
             token.int_data = tokens_array[i].int_data
             token.ptr_data = tokens_array[i].ptr_data
-            token._tu = tu
-            token._group = token_group
+            token._tu = tu  # pyright: ignore[reportPrivateUsage]
+            token._group = token_group  # pyright: ignore[reportPrivateUsage]
 
             yield token
 
@@ -1583,6 +1630,10 @@ class Cursor(Structure):
     """
 
     _fields_ = [("_kind_id", c_int), ("xdata", c_int), ("data", c_void_p * 3)]
+    _tu: TranslationUnit
+    _kind_id: r_int
+    xdata: r_int
+    data: CArray[c_void_p]
 
     @staticmethod
     def from_location(tu: TranslationUnit, location: SourceLocation) -> Cursor:
@@ -2052,7 +2103,7 @@ class Cursor(Structure):
         """Returns the TranslationUnit to which this Cursor belongs."""
         # If this triggers an AttributeError, the instance was not properly
         # created.
-        return self._tu # type: ignore[no-any-return]
+        return self._tu
 
     @property
     def referenced(self) -> Optional[Cursor]:
@@ -2450,6 +2501,9 @@ class Type(Structure):
 
     _fields_ = [("_kind_id", c_int), ("data", c_void_p * 2)]
 
+    _kind_id: r_int
+    data: CArray[c_void_p]
+
     @property
     def kind(self) -> TypeKind:
         """Return the kind of this type."""
@@ -2676,7 +2730,7 @@ class Type(Structure):
             assert field != conf.lib.clang_getNullCursor()
 
             # Create reference to TU so it isn't GC'd before Cursor.
-            field._tu = self._tu
+            field._tu = self._tu # pyright: ignore[reportPrivateUsage]
             fields.append(field)
             return 1  # continue
 
@@ -2739,6 +2793,10 @@ class _CXUnsavedFile(Structure):
     """Helper for passing unsaved file arguments."""
 
     _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
+
+    name: r_char_p
+    contents: r_char_p
+    length: r_ulong
 
 UnsavedFileInfo: TypeAlias = Tuple['FsPath', TUnion['StrOrBytes', 'SupportsReadStringData']]
 
@@ -2922,30 +2980,38 @@ AVAILABILITY_KIND_MAP = {
 
 
 class CodeCompletionResult(Structure):
-    _fields_ = [("cursorKind", c_int), ("completionString", c_object_p)]
+    _fields_ = [("cursor_kind", c_int), ("completion_string", c_object_p)]
+
+    cursor_kind: r_int
+    completion_string: CObjectP
 
     def __repr__(self) -> str:
-        return str(CompletionString(self.completionString))
+        return str(CompletionString(self.completion_string))
 
     @property
     def kind(self) -> CursorKind:
-        return CursorKind.from_id(self.cursorKind)
+        return CursorKind.from_id(self.cursor_kind)
 
     @property
     def string(self) -> CompletionString:
-        return CompletionString(self.completionString)
+        return CompletionString(self.completion_string)
 
 
 class CCRStructure(Structure):
-    _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_int)]
+    _fields_ = [("results", POINTER(CodeCompletionResult)), ("n_results", c_int)]
+
+    results: CPointer[CodeCompletionResult]
+    n_results: r_int
 
     def __len__(self) -> r_int:
-        return self.numResults # type: ignore[no-any-return]
+        return self.n_results
 
     def __getitem__(self, key: int) -> CodeCompletionResult:
         if len(self) <= key:
             raise IndexError
-
+        # FIXME: Current type stub of ctypes does not provide signature of
+        #        __getitem__ in class _Pointer. Remove this ignore when they
+        #        fixed that.
         return self.results[key] # type: ignore[no-any-return]
 
 
@@ -2962,7 +3028,6 @@ class CodeCompletionResults(ClangObject):
 
     @property
     def results(self) -> CCRStructure:
-        # FIXME: should this return an array instead of a single one?
         return self.obj.contents
 
     @property
@@ -2990,13 +3055,13 @@ class Index(ClangObject):
     """
 
     @staticmethod
-    def create(excludeDecls: bool = False) -> Index:
+    def create(exclude_decls: bool = False) -> Index:
         """
         Create a new Index.
         Parameters:
         excludeDecls -- Exclude local declarations from translation units.
         """
-        return Index(conf.lib.clang_createIndex(excludeDecls, 0))
+        return Index(conf.lib.clang_createIndex(exclude_decls, 0))
 
     def __del__(self) -> None:
         conf.lib.clang_disposeIndex(self)
@@ -3064,6 +3129,8 @@ class TranslationUnit(ClangObject):
     # Used to indicate that brief documentation comments should be included
     # into the set of code completions returned from this translation unit.
     PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION = 128
+
+    index: Index
 
     @staticmethod
     def process_unsaved_files(unsaved_files: List[UnsavedFileInfo]) -> Optional[CArray[_CXUnsavedFile]]:
@@ -3326,10 +3393,11 @@ class TranslationUnit(ClangObject):
             unsaved_files = []
 
         unsaved_files_array = self.process_unsaved_files(unsaved_files)
-        # FIXME: ptr is unused, is this deliberate?
-        ptr = conf.lib.clang_reparseTranslationUnit( # pyright: ignore[reportUnusedVariable]
+        result = conf.lib.clang_reparseTranslationUnit(
             self, len(unsaved_files), unsaved_files_array, options
         )
+        if result != 0:
+            raise CXError(result, 'Error reparsing TranslationUnit.')
 
     def save(self, filename: FsPath) -> None:
         """Saves the TranslationUnit to a file.
@@ -3347,12 +3415,8 @@ class TranslationUnit(ClangObject):
         filename -- The path to save the translation unit to (str or PathLike).
         """
         options = conf.lib.clang_defaultSaveOptions(self)
-        result = int(
-            conf.lib.clang_saveTranslationUnit(
-                self,
-                os.fspath(filename),
-                options,
-            )
+        result = conf.lib.clang_saveTranslationUnit(
+            self, os.fspath(filename), options
         )
         if result != 0:
             raise TranslationUnitSaveError(result, "Error saving TranslationUnit.")
@@ -3523,7 +3587,7 @@ class CompileCommand:
     """Represents the compile command used to build a file"""
 
     cmd: CObjectP
-    ccmd: CompileCommands
+    ccmds: CompileCommands
 
     def __init__(self, cmd: CObjectP, ccmds: CompileCommands):
         self.cmd = cmd
@@ -3643,6 +3707,10 @@ class Token(Structure):
     """
 
     _fields_ = [("int_data", c_uint * 4), ("ptr_data", c_void_p)]
+    _tu: TranslationUnit
+    _group: TokenGroup
+    int_data: CArray[c_uint]
+    ptr_data: r_void_p
 
     @property
     def spelling(self) -> str:
@@ -3671,7 +3739,7 @@ class Token(Structure):
     def cursor(self) -> Cursor:
         """The Cursor this Token corresponds to."""
         cursor = Cursor()
-        cursor._tu = self._tu
+        cursor._tu = self._tu # pyright: ignore[reportPrivateUsage]
 
         conf.lib.clang_annotateTokens(self._tu, byref(self), 1, byref(cursor))
 
@@ -4378,6 +4446,8 @@ class LibclangExports:
 
 
 class LibclangError(Exception):
+    m: str
+
     def __init__(self, message: str):
         self.m = message
 
@@ -4386,10 +4456,10 @@ class LibclangError(Exception):
 
 
 class Config:
-    library_path = None
-    library_file: str | None = None
-    compatibility_check = True
-    loaded = False
+    library_path: Optional[str] = None
+    library_file: Optional[str] = None
+    compatibility_check: bool = True
+    loaded: bool = False
 
     @staticmethod
     def set_library_path(path: StrPath) -> None:
@@ -4485,7 +4555,7 @@ class Config:
         return library
 
     def function_exists(self, name: str) -> bool:
-        return hasattr(getattr(self.lib, name), '_missing_')
+        return not hasattr(getattr(self.lib, name), '_missing_')
 
 
 def generate_metadata_debug() -> Dict[str, Dict[str, Any]]:
