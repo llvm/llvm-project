@@ -109,7 +109,7 @@ static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
   // Clear OutputSection::ptLoad for sections contained in removed
   // segments.
   DenseSet<PhdrEntry *> removed(it, phdrs.end());
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (removed.count(sec->ptLoad))
       sec->ptLoad = nullptr;
   phdrs.erase(it, phdrs.end());
@@ -311,7 +311,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     sec->maybeCompress<ELFT>();
 
   if (script->hasSectionsCommand)
@@ -857,7 +857,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     // _edata points to the end of the last non-large mapped initialized
     // section.
     OutputSection *edata = nullptr;
-    for (OutputSection *os : outputSections) {
+    for (OutputSection *os : ctx.outputSections) {
       if (os->type != SHT_NOBITS && !isLarge(os))
         edata = os;
       if (os == last->lastSec)
@@ -888,7 +888,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   if (ctx.sym.mipsGp) {
     // Find GP-relative section with the lowest address
     // and use this address to calculate default _gp value.
-    for (OutputSection *os : outputSections) {
+    for (OutputSection *os : ctx.outputSections) {
       if (os->flags & SHF_MIPS_GPREL) {
         ctx.sym.mipsGp->section = os;
         ctx.sym.mipsGp->value = 0x7ff0;
@@ -1367,7 +1367,7 @@ static bool compareByFilePosition(InputSection *a, InputSection *b) {
 
 template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
   llvm::TimeTraceScope timeScope("Resolve SHF_LINK_ORDER");
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     if (!(sec->flags & SHF_LINK_ORDER))
       continue;
 
@@ -1440,12 +1440,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
   // Converts call x@GDPLT to call __tls_get_addr
   if (config->emachine == EM_HEXAGON)
-    hexagonTLSSymbolUpdate(outputSections);
+    hexagonTLSSymbolUpdate(ctx.outputSections);
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
-    bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
-                                       : target->relaxOnce(pass);
+    bool changed = target->needsThunks
+                       ? tc.createThunks(pass, ctx.outputSections)
+                       : target->relaxOnce(pass);
     bool spilled = script->spillSections();
     changed |= spilled;
     ++pass;
@@ -1532,7 +1533,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     target->finalizeRelax(pass);
 
   if (config->relocatable)
-    for (OutputSection *sec : outputSections)
+    for (OutputSection *sec : ctx.outputSections)
       sec->addr = 0;
 
   // If addrExpr is set, the address may not be a multiple of the alignment.
@@ -1609,7 +1610,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   //      jump to the following section as it is not required.
   //   2. If there are two consecutive jump instructions, it checks
   //      if they can be flipped and one can be deleted.
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     ArrayRef<InputSection *> sections = getInputSections(*osec, storage);
@@ -1631,7 +1632,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 
   fixSymbolsAfterShrinking();
 
-  for (OutputSection *osec : outputSections)
+  for (OutputSection *osec : ctx.outputSections)
     for (InputSection *is : getInputSections(*osec, storage))
       is->trim();
 }
@@ -1890,22 +1891,23 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       OutputSection *osec = &osd->osec;
       if (!in.shStrTab && !(osec->flags & SHF_ALLOC))
         continue;
-      outputSections.push_back(osec);
-      osec->sectionIndex = outputSections.size();
+      ctx.outputSections.push_back(osec);
+      osec->sectionIndex = ctx.outputSections.size();
       if (in.shStrTab)
         osec->shName = in.shStrTab->addString(osec->name);
     }
 
   // Prefer command line supplied address over other constraints.
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     auto i = config->sectionStartMap.find(sec->name);
     if (i != config->sectionStartMap.end())
       sec->addrExpr = [=] { return i->second; };
   }
 
-  // With the outputSections available check for GDPLT relocations
+  // With the ctx.outputSections available check for GDPLT relocations
   // and add __tls_get_addr symbol if needed.
-  if (config->emachine == EM_HEXAGON && hexagonNeedsTLSSymbol(outputSections)) {
+  if (config->emachine == EM_HEXAGON &&
+      hexagonNeedsTLSSymbol(ctx.outputSections)) {
     Symbol *sym =
         symtab.addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
                                    STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
@@ -2056,7 +2058,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     sec->finalize();
 
   script->checkFinalScriptConditions();
@@ -2075,7 +2077,7 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
     return;
 
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections)
+  for (OutputSection *osec : ctx.outputSections)
     if (osec->flags & SHF_EXECINSTR)
       for (InputSection *isec : getInputSections(*osec, storage))
         if (!(isec->flags & SHF_EXECINSTR))
@@ -2202,7 +2204,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   PhdrEntry *relRo = make<PhdrEntry>(PT_GNU_RELRO, PF_R);
   bool inRelroPhdr = false;
   OutputSection *relroEnd = nullptr;
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     if (sec->partition != partNo || !needsPtLoad(sec))
       continue;
     if (isRelroSection(sec)) {
@@ -2219,7 +2221,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   }
   relRo->p_align = 1;
 
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     if (!needsPtLoad(sec))
       continue;
 
@@ -2277,7 +2279,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
 
   // Add a TLS segment if any.
   PhdrEntry *tlsHdr = make<PhdrEntry>(PT_TLS, PF_R);
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->partition == partNo && sec->flags & SHF_TLS)
       tlsHdr->add(sec);
   if (tlsHdr->firstSec)
@@ -2337,7 +2339,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   // Create one PT_NOTE per a group of contiguous SHT_NOTE sections with the
   // same alignment.
   PhdrEntry *note = nullptr;
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     if (sec->partition != partNo)
       continue;
     if (sec->type == SHT_NOTE && (sec->flags & SHF_ALLOC)) {
@@ -2355,10 +2357,10 @@ template <class ELFT>
 void Writer<ELFT>::addPhdrForSection(Partition &part, unsigned shType,
                                      unsigned pType, unsigned pFlags) {
   unsigned partNo = part.getNumber();
-  auto i = llvm::find_if(outputSections, [=](OutputSection *cmd) {
+  auto i = llvm::find_if(ctx.outputSections, [=](OutputSection *cmd) {
     return cmd->partition == partNo && cmd->type == shType;
   });
-  if (i == outputSections.end())
+  if (i == ctx.outputSections.end())
     return;
 
   PhdrEntry *entry = make<PhdrEntry>(pType, pFlags);
@@ -2465,7 +2467,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
     return sec.type != SHT_NOBITS && (sec.flags & SHF_ALLOC) && sec.size > 0;
   };
   uint64_t minAddr = UINT64_MAX;
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (needsOffset(*sec)) {
       sec->offset = sec->getLMA();
       minAddr = std::min(minAddr, sec->offset);
@@ -2473,7 +2475,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
 
   // Sections are laid out at LMA minus minAddr.
   fileSize = 0;
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (needsOffset(*sec)) {
       sec->offset -= minAddr;
       fileSize = std::max(fileSize, sec->offset + sec->size);
@@ -2497,7 +2499,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 
   // Layout SHF_ALLOC sections before non-SHF_ALLOC sections. A non-SHF_ALLOC
   // will not occupy file offsets contained by a PT_LOAD.
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     if (!(sec->flags & SHF_ALLOC))
       continue;
     off = computeFileOffset(sec, off);
@@ -2512,7 +2514,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
         lastRX->lastSec == sec)
       off = alignToPowerOf2(off, config->maxPageSize);
   }
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (osec->flags & SHF_ALLOC)
       continue;
     osec->offset = alignToPowerOf2(off, osec->addralign);
@@ -2520,7 +2522,8 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   }
 
   sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
-  fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);
+  fileSize =
+      sectionHeaderOff + (ctx.outputSections.size() + 1) * sizeof(Elf_Shdr);
 
   // Our logic assumes that sections have rising VA within the same segment.
   // With use of linker scripts it is possible to violate this rule and get file
@@ -2531,7 +2534,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   // backwards, so we have to allow doing that to support linking them. We
   // perform non-critical checks for overlaps in checkSectionOverlap(), but here
   // we want to prevent file size overflows because it would crash the linker.
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     if (sec->type == SHT_NOBITS)
       continue;
     if ((sec->offset > fileSize) || (sec->offset + sec->size > fileSize))
@@ -2629,7 +2632,7 @@ static void checkOverlap(StringRef name, std::vector<SectionOffset> &sections,
 // ranges and the virtual address ranges don't overlap
 template <class ELFT> void Writer<ELFT>::checkSections() {
   // First, check that section's VAs fit in available address space for target.
-  for (OutputSection *os : outputSections)
+  for (OutputSection *os : ctx.outputSections)
     if ((os->addr + os->size < os->addr) ||
         (!ELFT::Is64Bits && os->addr + os->size > uint64_t(UINT32_MAX) + 1))
       errorOrWarn("section " + os->name + " at 0x" + utohexstr(os->addr) +
@@ -2642,7 +2645,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   // binary is specified only add SHF_ALLOC sections are added to the output
   // file so we skip any non-allocated sections in that case.
   std::vector<SectionOffset> fileOffs;
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->size > 0 && sec->type != SHT_NOBITS &&
         (!config->oFormatBinary || (sec->flags & SHF_ALLOC)))
       fileOffs.push_back({sec, sec->offset});
@@ -2660,7 +2663,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   // mapped to other addresses at runtime and can therefore have overlapping
   // ranges in the file.
   std::vector<SectionOffset> vmas;
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       vmas.push_back({sec, sec->addr});
   checkOverlap("virtual address", vmas, true);
@@ -2669,7 +2672,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   // the same as the virtual addresses but can be different when using a linker
   // script with AT().
   std::vector<SectionOffset> lmas;
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       lmas.push_back({sec, sec->getLMA()});
   checkOverlap("load address", lmas, false);
@@ -2730,7 +2733,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   // e_shnum = 0, SHdrs[0].sh_size = number of sections.
   // e_shstrndx = SHN_XINDEX, SHdrs[0].sh_link = .shstrtab section index.
   auto *sHdrs = reinterpret_cast<Elf_Shdr *>(ctx.bufferStart + eHdr->e_shoff);
-  size_t num = outputSections.size() + 1;
+  size_t num = ctx.outputSections.size() + 1;
   if (num >= SHN_LORESERVE)
     sHdrs->sh_size = num;
   else
@@ -2744,7 +2747,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     eHdr->e_shstrndx = strTabIndex;
   }
 
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     sec->writeHeaderTo<ELFT>(++sHdrs);
 }
 
@@ -2756,7 +2759,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
     raw_string_ostream s(msg);
     s << "output file too large: " << Twine(fileSize) << " bytes\n"
       << "section sizes:\n";
-    for (OutputSection *os : outputSections)
+    for (OutputSection *os : ctx.outputSections)
       s << os->name << ' ' << os->size << "\n";
     error(s.str());
     return;
@@ -2782,7 +2785,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   parallel::TaskGroup tg;
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->flags & SHF_ALLOC)
       sec->writeTo<ELFT>(ctx.bufferStart + sec->offset, tg);
 }
@@ -2831,20 +2834,20 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     // ELf_Rel targets we might find out that we need to modify the relocated
     // section while doing it.
     parallel::TaskGroup tg;
-    for (OutputSection *sec : outputSections)
+    for (OutputSection *sec : ctx.outputSections)
       if (isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(ctx.bufferStart + sec->offset, tg);
   }
   {
     parallel::TaskGroup tg;
-    for (OutputSection *sec : outputSections)
+    for (OutputSection *sec : ctx.outputSections)
       if (!isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(ctx.bufferStart + sec->offset, tg);
   }
 
   // Finally, check that all dynamic relocation addends were written correctly.
   if (config->checkDynamicRelocs && config->writeAddends) {
-    for (OutputSection *sec : outputSections)
+    for (OutputSection *sec : ctx.outputSections)
       if (isStaticRelSecType(sec->type))
         sec->checkDynRelAddends(ctx.bufferStart);
   }
