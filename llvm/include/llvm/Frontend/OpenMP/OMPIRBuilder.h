@@ -115,6 +115,10 @@ public:
   // Grid Value for the GPU target
   std::optional<omp::GV> GridValue;
 
+  /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
+  /// false`), this contains the list of offloading triples associated, if any.
+  SmallVector<Triple> TargetTriples;
+
   OpenMPIRBuilderConfig();
   OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
                         bool OpenMPOffloadMandatory,
@@ -2183,21 +2187,22 @@ public:
   /// kernel args vector.
   struct TargetKernelArgs {
     /// Number of arguments passed to the runtime library.
-    unsigned NumTargetItems;
+    unsigned NumTargetItems = 0;
     /// Arguments passed to the runtime library
     TargetDataRTArgs RTArgs;
     /// The number of iterations
-    Value *NumIterations;
+    Value *NumIterations = nullptr;
     /// The number of teams.
-    Value *NumTeams;
+    Value *NumTeams = nullptr;
     /// The number of threads.
-    Value *NumThreads;
+    Value *NumThreads = nullptr;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem;
+    Value *DynCGGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
-    bool HasNoWait;
+    bool HasNoWait = false;
 
-    /// Constructor for TargetKernelArgs
+    // Constructors for TargetKernelArgs.
+    TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, Value *NumTeams, Value *NumThreads,
                      Value *DynCGGroupMem, bool HasNoWait)
@@ -2834,6 +2839,7 @@ public:
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
+  /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
   /// function should be emitted.
   /// \param EntryInfo The entry information about the function.
@@ -2847,6 +2853,7 @@ public:
   /// \param Dependencies A vector of DependData objects that carry
   // dependency information as passed in the depend clause
   InsertPointTy createTarget(const LocationDescription &Loc,
+                             bool IsOffloadEntry,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
                              TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,

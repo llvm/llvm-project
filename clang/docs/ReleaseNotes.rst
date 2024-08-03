@@ -156,6 +156,7 @@ Bug Fixes in This Version
 
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
+- Fixed a failed assertion when checking required literal types in C context. (#GH101304).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -172,6 +173,8 @@ Bug Fixes to C++ Support
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
 - Fix a crash when checking the initialzier of an object that was initialized
   with a string literal. (#GH82167)
+- Fix a crash when matching template template parameters with templates which have
+  parameters of different class type. (#GH101394)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -305,9 +308,14 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
 
 OpenMP Support
 --------------
+
+Improvements
+^^^^^^^^^^^^
+- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
 
 Additional Information
 ======================
