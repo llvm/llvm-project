@@ -474,3 +474,18 @@ define i1 @shl_nuw_nsw_test4(i32 %x, i32 range(i32 0, 32) %k) {
   %cmp = icmp eq i64 %shl, -9223372036854775808
   ret i1 %cmp
 }
+
+define i1 @shl_nuw_nsw_test5(i32 %x) {
+; CHECK-LABEL: @shl_nuw_nsw_test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 768, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[SHL]], 1846
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %shl = shl nuw nsw i32 768, %x
+  %add = add nuw i32 %shl, 1846
+  %cmp = icmp sgt i32 %add, 0
+  ret i1 %cmp
+}
