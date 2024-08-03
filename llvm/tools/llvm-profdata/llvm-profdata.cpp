@@ -207,6 +207,12 @@ cl::opt<bool> GenPartialProfile(
     "gen-partial-profile", cl::init(false), cl::Hidden,
     cl::sub(MergeSubcommand),
     cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
+cl::opt<bool> SplitLayout(
+    "split_layout", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Split the profile to two sections with one containing sample "
+             "profiles with inlined functions and the another not (only "
+             "meaningful for -extbinary)"));
 cl::opt<std::string> SupplInstrWithSample(
     "supplement-instr-with-sample", cl::init(""), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -1491,6 +1497,12 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
       warn("-gen-partial-profile is ignored. Specify -extbinary to enable it");
     else
       Writer.setPartialProfile();
+  }
+  if (SplitLayout) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-split-layout is ignored. Specify -extbinary to enable it");
+    else
+      Writer.resetSecLayout(SectionLayout::CtxSplitLayout);
   }
 }
 

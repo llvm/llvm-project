@@ -1,0 +1,2 @@
+RUN: llvm-profdata merge --sample --extbinary --split_layout %p/Inputs/sample-profile.proftext -o %t-output
+RUN: diff %t-output %p/Inputs/split-layout.profdata
