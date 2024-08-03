@@ -59,16 +59,15 @@ concept CanSentinelMinus =
     // Note: Do *not* use std::iterator_traits here because T may not have
     // all the required pieces when it is not a forward_range.
     std::is_same_v<typename T::difference_type, decltype(std::declval<T>() - std::default_sentinel)> &&
-    std::is_same_v<typename T::difference_type, decltype(std::default_sentinel - std::declval<T>())> &&
-    requires(T& t) {
+    std::is_same_v<typename T::difference_type, decltype(std::default_sentinel - std::declval<T>())> && requires(T& t) {
       t - std::default_sentinel;
       std::default_sentinel - t;
     };
 
 template <class T>
-concept CanDifferencePlus =
-    std::is_same_v<T, decltype(std::declval<T>() + 1)> && requires(T& t) { t + 1; } &&
-    std::is_same_v<T, decltype(1 + std::declval<T>())> && requires(T& t) { 1 + t; };
+concept CanDifferencePlus = std::is_same_v<T, decltype(std::declval<T>() + 1)> && requires(T& t) {
+  t + 1;
+} && std::is_same_v<T, decltype(1 + std::declval<T>())> && requires(T& t) { 1 + t; };
 template <class T>
 concept CanDifferenceMinus = std::is_same_v<T, decltype(std::declval<T>() - 1)> && requires(T& t) { t - 1; };
 
@@ -301,7 +300,7 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
 
   assert(std::default_sentinel - stride_view_over_base_zero_offset.end() == 0);
   assert(stride_view_over_base_zero_offset.end() - std::default_sentinel == 0);
-  //assert((std::default_sentinel - )== 0);
+  // assert((std::default_sentinel - )== 0);
 
   assert(std::default_sentinel - stride_view_over_base_zero_offset.begin() ==
          std::ranges::distance(stride_view_over_base_zero_offset));

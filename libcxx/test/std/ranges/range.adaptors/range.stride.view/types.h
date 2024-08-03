@@ -251,12 +251,12 @@ struct MaybeConstCommonSimpleView : std::ranges::view_base {
     requires(IsSized);
 };
 
-using UnSimpleNoConstCommonView = MaybeConstCommonSimpleView<false, false, true>;
-using UnsimpleConstView         = MaybeConstCommonSimpleView<false, true, true>;
-using UnsimpleUnCommonConstView = MaybeConstCommonSimpleView<false, true, false>;
-using SimpleUnCommonConstView   = MaybeConstCommonSimpleView<true, true, false>;
-using SimpleCommonConstView     = MaybeConstCommonSimpleView<true, true, true>;
-using SimpleNoConstSizedCommonView   = MaybeConstCommonSimpleView<true, false, true, true>;
+using UnSimpleNoConstCommonView    = MaybeConstCommonSimpleView<false, false, true>;
+using UnsimpleConstView            = MaybeConstCommonSimpleView<false, true, true>;
+using UnsimpleUnCommonConstView    = MaybeConstCommonSimpleView<false, true, false>;
+using SimpleUnCommonConstView      = MaybeConstCommonSimpleView<true, true, false>;
+using SimpleCommonConstView        = MaybeConstCommonSimpleView<true, true, true>;
+using SimpleNoConstSizedCommonView = MaybeConstCommonSimpleView<true, false, true, true>;
 
 // Don't move/hold the iterator itself, copy/hold the base
 // of that iterator and reconstruct the iterator on demand.
