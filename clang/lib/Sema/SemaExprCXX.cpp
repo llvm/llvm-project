@@ -5039,6 +5039,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
 
   // LWG3823: T shall be an array type, a complete type, or cv void.
   case UTT_IsAggregate:
+  case UTT_IsImplicitLifetime:
     if (ArgTy->isArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -5637,6 +5638,27 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return false;
   case UTT_IsTriviallyEqualityComparable:
     return isTriviallyEqualityComparableType(Self, T, KeyLoc);
+  case UTT_IsImplicitLifetime: {
+    DiagnoseVLAInCXXTypeTrait(Self, TInfo,
+                              tok::kw___builtin_is_implicit_lifetime);
+    QualType UnqualT = T->getCanonicalTypeUnqualified();
+    if (UnqualT->isScalarType())
+      return true;
+    if (UnqualT->isArrayType())
+      return true;
+
+    CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
+    if (!RD)
+      return false;
+    if (UnqualT->isAggregateType())
+      if (!RD->getDestructor()->isUserProvided())
+        return true;
+    if (RD->hasTrivialDestructor())
+      if (RD->hasTrivialDefaultConstructor() ||
+          RD->hasTrivialCopyConstructor() || RD->hasTrivialMoveConstructor())
+        return true;
+    return false;
+  }
   }
 }
 

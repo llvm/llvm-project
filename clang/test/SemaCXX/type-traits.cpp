@@ -18,7 +18,7 @@ enum class SignedEnumClass : signed int {};
 enum class UnsignedEnumClass : unsigned int {};
 struct POD { Enum e; int i; float f; NonPOD* p; };
 struct Empty {};
-struct IncompleteStruct;
+struct IncompleteStruct; // expected-note {{forward declaration of 'IncompleteStruct'}}
 typedef Empty EmptyAr[10];
 typedef Empty EmptyArNB[];
 typedef Empty EmptyArMB[1][2];
@@ -1942,6 +1942,85 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
 }
+}
+
+struct NoEligibleTrivialContructor {
+  NoEligibleTrivialContructor() {};
+  NoEligibleTrivialContructor(const NoEligibleTrivialContructor&) {}
+  NoEligibleTrivialContructor(NoEligibleTrivialContructor&&) {}
+};
+
+struct OnlyDefaultConstructorIsTrivial {
+  OnlyDefaultConstructorIsTrivial() = default;
+  OnlyDefaultConstructorIsTrivial(const OnlyDefaultConstructorIsTrivial&) {}
+  OnlyDefaultConstructorIsTrivial(OnlyDefaultConstructorIsTrivial&&) {}
+};
+
+struct AllContstructorsAreTrivial {
+  AllContstructorsAreTrivial() = default;
+  AllContstructorsAreTrivial(const AllContstructorsAreTrivial&) = default;
+  AllContstructorsAreTrivial(AllContstructorsAreTrivial&&) = default;
+};
+
+struct InheritedNoEligibleTrivialConstructor : NoEligibleTrivialContructor {
+  using NoEligibleTrivialContructor::NoEligibleTrivialContructor;
+};
+
+struct InheritedOnlyDefaultConstructorIsTrivial : OnlyDefaultConstructorIsTrivial {
+  using OnlyDefaultConstructorIsTrivial::OnlyDefaultConstructorIsTrivial;
+};
+
+struct InheritedAllContstructorsAreTrivial : AllContstructorsAreTrivial {
+  using AllContstructorsAreTrivial::AllContstructorsAreTrivial;
+};
+
+struct UserDeclaredDestructor {
+  ~UserDeclaredDestructor() = default;
+};
+
+struct UserProvidedDestructor {
+  ~UserProvidedDestructor() {}
+};
+
+void is_implicit_lifetime(int n) {
+  static_assert(!__builtin_is_implicit_lifetime(void));
+  static_assert(!__builtin_is_implicit_lifetime(const void));
+  static_assert(!__builtin_is_implicit_lifetime(volatile void));
+  static_assert(__builtin_is_implicit_lifetime(int));
+  static_assert(!__builtin_is_implicit_lifetime(int&));
+  static_assert(!__builtin_is_implicit_lifetime(int&&));
+  static_assert(__builtin_is_implicit_lifetime(int*));
+  static_assert(__builtin_is_implicit_lifetime(int[]));
+  static_assert(__builtin_is_implicit_lifetime(int[5]));
+  static_assert(__builtin_is_implicit_lifetime(int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__builtin_is_implicit_lifetime'}}
+  static_assert(__builtin_is_implicit_lifetime(Enum));
+  static_assert(__builtin_is_implicit_lifetime(EnumClass));
+  static_assert(!__builtin_is_implicit_lifetime(void()));
+  static_assert(!__builtin_is_implicit_lifetime(void() &));
+  static_assert(!__builtin_is_implicit_lifetime(void() const));
+  static_assert(!__builtin_is_implicit_lifetime(void(&)()));
+  static_assert(__builtin_is_implicit_lifetime(void(*)()));
+  static_assert(__builtin_is_implicit_lifetime(decltype(nullptr)));
+  static_assert(__builtin_is_implicit_lifetime(int UserDeclaredDestructor::*));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)()));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() const));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &&));
+  static_assert(!__builtin_is_implicit_lifetime(IncompleteStruct));
+  // expected-error@-1 {{incomplete type 'IncompleteStruct' used in type trait expression}}
+  static_assert(__builtin_is_implicit_lifetime(IncompleteStruct[]));
+  static_assert(__builtin_is_implicit_lifetime(IncompleteStruct[5]));
+  static_assert(__builtin_is_implicit_lifetime(UserDeclaredDestructor));
+  static_assert(__builtin_is_implicit_lifetime(const UserDeclaredDestructor));
+  static_assert(__builtin_is_implicit_lifetime(volatile UserDeclaredDestructor));
+  static_assert(!__builtin_is_implicit_lifetime(UserProvidedDestructor));
+  static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
+  static_assert(__builtin_is_implicit_lifetime(OnlyDefaultConstructorIsTrivial));
+  static_assert(__builtin_is_implicit_lifetime(AllContstructorsAreTrivial));
+  static_assert(!__builtin_is_implicit_lifetime(InheritedNoEligibleTrivialConstructor));
+  static_assert(__builtin_is_implicit_lifetime(InheritedOnlyDefaultConstructorIsTrivial));
+  static_assert(__builtin_is_implicit_lifetime(InheritedAllContstructorsAreTrivial));
 }
 
 void is_signed()
