@@ -588,9 +588,23 @@ sdkSupportsBuiltinModulesImpl(const llvm::Triple &triple,
   }
 }
 
+/// Returns true if the SDK for the specified triple supports
+/// builtin modules in system headers. This is used to decide
+/// whether to pass -fbuiltin-headers-in-system-modules to
+/// the compiler instance when compiling the `std` module.
+///
+/// This function assumes one of the directories in \ref include_dirs
+/// is an SDK path that exists on the host. The SDK version is
+/// read from the SDKSettings.json in that directory.
+///
+/// \param[in] triple The target triple.
+/// \param[in] include_dirs The include directories the compiler will use
+///                         during header search.
+///
 static bool
 sdkSupportsBuiltinModules(llvm::Triple const &triple,
                           std::vector<std::string> const &include_dirs) {
+  // Find an SDK directory.
   static constexpr std::string_view s_sdk_suffix = ".sdk";
   auto it = llvm::find_if(include_dirs, [](std::string const &path) {
     return path.find(s_sdk_suffix) != std::string::npos;
@@ -599,14 +613,16 @@ sdkSupportsBuiltinModules(llvm::Triple const &triple,
     return false;
 
   size_t suffix = it->find(s_sdk_suffix);
-  if (suffix == std::string::npos)
-    return false;
+  assert (suffix == std::string::npos);
 
   auto VFS = FileSystem::Instance().GetVirtualFileSystem();
   if (!VFS)
     return false;
 
+  // Extract: /path/to/some.sdk
   std::string sdk_path = it->substr(0, suffix + s_sdk_suffix.size());
+
+  // Extract SDK version from the /path/to/some.sdk/SDKSettings.json
   auto parsed = clang::parseDarwinSDKInfo(*VFS, sdk_path);
   if (!parsed)
     return false;
@@ -614,6 +630,13 @@ sdkSupportsBuiltinModules(llvm::Triple const &triple,
   return sdkSupportsBuiltinModulesImpl(triple, *parsed);
 }
 
+/// Sets the LangOptions to prepare for running with `import-std-module` enabled.
+///
+/// \param[out] compiler CompilerInstance on which to set the LangOptions.
+/// \param[in] triple The target triple.
+/// \param[in] include_dirs The include directories the compiler will use
+///                         during header search.
+///
 static void
 SetupImportStdModuleLangOpts(CompilerInstance &compiler,
                              llvm::Triple const &triple,
