@@ -12,9 +12,10 @@ define arm_aapcs_vfpcc <2 x i64> @ctpop_2i64_t(<2 x i64> %src){
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __popcountdi2
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d8
+; CHECK-NEXT:    asrs r5, r4, #31
 ; CHECK-NEXT:    bl __popcountdi2
+; CHECK-NEXT:    asrs r1, r0, #31
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
 ; CHECK-NEXT:    vpop {d8, d9}

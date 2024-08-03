@@ -335,6 +335,7 @@ define i64 @ctpop64(i64 %x) nounwind readnone {
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    bl __popcountdi2
+; CHECK-NEXT:    asr r1, r0, #31
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)

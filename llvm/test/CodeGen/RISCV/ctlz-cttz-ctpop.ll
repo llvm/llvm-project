@@ -1730,6 +1730,8 @@ define i64 @test_ctlz_i64_zero_undef(i64 %a) nounwind {
 ;
 ; RV64NOZBB-LABEL: test_ctlz_i64_zero_undef:
 ; RV64NOZBB:       # %bb.0:
+; RV64NOZBB-NEXT:    addi sp, sp, -16
+; RV64NOZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
 ; RV64NOZBB-NEXT:    or a0, a0, a1
 ; RV64NOZBB-NEXT:    srli a1, a0, 2
@@ -1743,7 +1745,10 @@ define i64 @test_ctlz_i64_zero_undef(i64 %a) nounwind {
 ; RV64NOZBB-NEXT:    srli a1, a0, 32
 ; RV64NOZBB-NEXT:    or a0, a0, a1
 ; RV64NOZBB-NEXT:    not a0, a0
-; RV64NOZBB-NEXT:    tail __popcountdi2
+; RV64NOZBB-NEXT:    call __popcountdi2
+; RV64NOZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64NOZBB-NEXT:    addi sp, sp, 16
+; RV64NOZBB-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_ctlz_i64_zero_undef:
 ; RV32ZBB:       # %bb.0:
@@ -2058,13 +2063,19 @@ define i64 @test_ctpop_i64(i64 %a) nounwind {
 ; RV32_NOZBB-NEXT:    addi sp, sp, -16
 ; RV32_NOZBB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32_NOZBB-NEXT:    call __popcountdi2
+; RV32_NOZBB-NEXT:    srai a1, a0, 31
 ; RV32_NOZBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32_NOZBB-NEXT:    addi sp, sp, 16
 ; RV32_NOZBB-NEXT:    ret
 ;
 ; RV64NOZBB-LABEL: test_ctpop_i64:
 ; RV64NOZBB:       # %bb.0:
-; RV64NOZBB-NEXT:    tail __popcountdi2
+; RV64NOZBB-NEXT:    addi sp, sp, -16
+; RV64NOZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64NOZBB-NEXT:    call __popcountdi2
+; RV64NOZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64NOZBB-NEXT:    addi sp, sp, 16
+; RV64NOZBB-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_ctpop_i64:
 ; RV32ZBB:       # %bb.0:
@@ -2084,13 +2095,19 @@ define i64 @test_ctpop_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    addi sp, sp, -16
 ; RV32XTHEADBB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32XTHEADBB-NEXT:    call __popcountdi2
+; RV32XTHEADBB-NEXT:    srai a1, a0, 31
 ; RV32XTHEADBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32XTHEADBB-NEXT:    addi sp, sp, 16
 ; RV32XTHEADBB-NEXT:    ret
 ;
 ; RV64XTHEADBB-LABEL: test_ctpop_i64:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    tail __popcountdi2
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    call __popcountdi2
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
+; RV64XTHEADBB-NEXT:    ret
   %1 = call i64 @llvm.ctpop.i64(i64 %a)
   ret i64 %1
 }
@@ -2104,7 +2121,6 @@ define i128 @test_ctpop_i128(i128 %a) nounwind {
 ; RV32_NOZBB-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32_NOZBB-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32_NOZBB-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32_NOZBB-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32_NOZBB-NEXT:    lw s0, 0(a1)
 ; RV32_NOZBB-NEXT:    lw s1, 4(a1)
 ; RV32_NOZBB-NEXT:    lw a2, 8(a1)
@@ -2113,45 +2129,35 @@ define i128 @test_ctpop_i128(i128 %a) nounwind {
 ; RV32_NOZBB-NEXT:    mv a0, a2
 ; RV32_NOZBB-NEXT:    call __popcountdi2
 ; RV32_NOZBB-NEXT:    mv s3, a0
-; RV32_NOZBB-NEXT:    mv s4, a1
 ; RV32_NOZBB-NEXT:    mv a0, s0
 ; RV32_NOZBB-NEXT:    mv a1, s1
 ; RV32_NOZBB-NEXT:    call __popcountdi2
-; RV32_NOZBB-NEXT:    add a1, a1, s4
-; RV32_NOZBB-NEXT:    add s3, a0, s3
-; RV32_NOZBB-NEXT:    sltu a0, s3, a0
-; RV32_NOZBB-NEXT:    add a0, a1, a0
+; RV32_NOZBB-NEXT:    add a1, a0, s3
+; RV32_NOZBB-NEXT:    sltu a2, a1, a0
+; RV32_NOZBB-NEXT:    srai a3, s3, 31
+; RV32_NOZBB-NEXT:    srai a0, a0, 31
+; RV32_NOZBB-NEXT:    add a0, a0, a3
+; RV32_NOZBB-NEXT:    add a0, a0, a2
 ; RV32_NOZBB-NEXT:    sw zero, 12(s2)
 ; RV32_NOZBB-NEXT:    sw zero, 8(s2)
-; RV32_NOZBB-NEXT:    sw s3, 0(s2)
+; RV32_NOZBB-NEXT:    sw a1, 0(s2)
 ; RV32_NOZBB-NEXT:    sw a0, 4(s2)
 ; RV32_NOZBB-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32_NOZBB-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32_NOZBB-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32_NOZBB-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32_NOZBB-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32_NOZBB-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32_NOZBB-NEXT:    addi sp, sp, 32
 ; RV32_NOZBB-NEXT:    ret
 ;
 ; RV64NOZBB-LABEL: test_ctpop_i128:
 ; RV64NOZBB:       # %bb.0:
-; RV64NOZBB-NEXT:    addi sp, sp, -32
-; RV64NOZBB-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64NOZBB-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64NOZBB-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64NOZBB-NEXT:    mv s0, a0
-; RV64NOZBB-NEXT:    mv a0, a1
-; RV64NOZBB-NEXT:    call __popcountdi2
-; RV64NOZBB-NEXT:    mv s1, a0
-; RV64NOZBB-NEXT:    mv a0, s0
-; RV64NOZBB-NEXT:    call __popcountdi2
-; RV64NOZBB-NEXT:    add a0, a0, s1
-; RV64NOZBB-NEXT:    li a1, 0
-; RV64NOZBB-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64NOZBB-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64NOZBB-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64NOZBB-NEXT:    addi sp, sp, 32
+; RV64NOZBB-NEXT:    addi sp, sp, -16
+; RV64NOZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64NOZBB-NEXT:    call __popcountti2
+; RV64NOZBB-NEXT:    srai a1, a0, 63
+; RV64NOZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64NOZBB-NEXT:    addi sp, sp, 16
 ; RV64NOZBB-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_ctpop_i128:
@@ -2190,7 +2196,6 @@ define i128 @test_ctpop_i128(i128 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32XTHEADBB-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32XTHEADBB-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32XTHEADBB-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32XTHEADBB-NEXT:    lw s0, 0(a1)
 ; RV32XTHEADBB-NEXT:    lw s1, 4(a1)
 ; RV32XTHEADBB-NEXT:    lw a2, 8(a1)
@@ -2199,45 +2204,35 @@ define i128 @test_ctpop_i128(i128 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    mv a0, a2
 ; RV32XTHEADBB-NEXT:    call __popcountdi2
 ; RV32XTHEADBB-NEXT:    mv s3, a0
-; RV32XTHEADBB-NEXT:    mv s4, a1
 ; RV32XTHEADBB-NEXT:    mv a0, s0
 ; RV32XTHEADBB-NEXT:    mv a1, s1
 ; RV32XTHEADBB-NEXT:    call __popcountdi2
-; RV32XTHEADBB-NEXT:    add a1, a1, s4
-; RV32XTHEADBB-NEXT:    add s3, a0, s3
-; RV32XTHEADBB-NEXT:    sltu a0, s3, a0
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
+; RV32XTHEADBB-NEXT:    add a1, a0, s3
+; RV32XTHEADBB-NEXT:    sltu a2, a1, a0
+; RV32XTHEADBB-NEXT:    srai a3, s3, 31
+; RV32XTHEADBB-NEXT:    srai a0, a0, 31
+; RV32XTHEADBB-NEXT:    add a0, a0, a3
+; RV32XTHEADBB-NEXT:    add a0, a0, a2
 ; RV32XTHEADBB-NEXT:    sw zero, 12(s2)
 ; RV32XTHEADBB-NEXT:    sw zero, 8(s2)
-; RV32XTHEADBB-NEXT:    sw s3, 0(s2)
+; RV32XTHEADBB-NEXT:    sw a1, 0(s2)
 ; RV32XTHEADBB-NEXT:    sw a0, 4(s2)
 ; RV32XTHEADBB-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32XTHEADBB-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32XTHEADBB-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32XTHEADBB-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32XTHEADBB-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32XTHEADBB-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32XTHEADBB-NEXT:    addi sp, sp, 32
 ; RV32XTHEADBB-NEXT:    ret
 ;
 ; RV64XTHEADBB-LABEL: test_ctpop_i128:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    addi sp, sp, -32
-; RV64XTHEADBB-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64XTHEADBB-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64XTHEADBB-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64XTHEADBB-NEXT:    mv s0, a0
-; RV64XTHEADBB-NEXT:    mv a0, a1
-; RV64XTHEADBB-NEXT:    call __popcountdi2
-; RV64XTHEADBB-NEXT:    mv s1, a0
-; RV64XTHEADBB-NEXT:    mv a0, s0
-; RV64XTHEADBB-NEXT:    call __popcountdi2
-; RV64XTHEADBB-NEXT:    add a0, a0, s1
-; RV64XTHEADBB-NEXT:    li a1, 0
-; RV64XTHEADBB-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64XTHEADBB-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64XTHEADBB-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64XTHEADBB-NEXT:    addi sp, sp, 32
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    call __popcountti2
+; RV64XTHEADBB-NEXT:    srai a1, a0, 63
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
 ; RV64XTHEADBB-NEXT:    ret
   %1 = call i128 @llvm.ctpop.i128(i128 %a)
   ret i128 %1

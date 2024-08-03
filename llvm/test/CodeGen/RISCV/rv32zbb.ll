@@ -436,6 +436,7 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __popcountdi2
+; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -580,14 +581,15 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    call __popcountdi2
 ; RV32I-NEXT:    mv s3, a0
-; RV32I-NEXT:    mv s4, a1
+; RV32I-NEXT:    srai s4, a0, 31
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __popcountdi2
-; RV32I-NEXT:    sw a1, 12(s2)
+; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    sw a0, 8(s2)
-; RV32I-NEXT:    sw s4, 4(s2)
 ; RV32I-NEXT:    sw s3, 0(s2)
+; RV32I-NEXT:    sw a1, 12(s2)
+; RV32I-NEXT:    sw s4, 4(s2)
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload

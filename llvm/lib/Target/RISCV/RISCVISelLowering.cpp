@@ -394,7 +394,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
-    if (!Subtarget.is64Bit())
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::CTPOP, MVT::i128, LibCall);
+    else
       setOperationAction(ISD::CTPOP, MVT::i32, LibCall);
     setOperationAction(ISD::CTPOP, MVT::i64, LibCall);
     if (RV64LegalI32 && Subtarget.is64Bit())

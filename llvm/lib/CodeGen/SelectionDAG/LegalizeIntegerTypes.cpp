@@ -3866,8 +3866,10 @@ void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
     assert(LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC) &&
            "LibCall explicitly requested, but not available");
     TargetLowering::MakeLibCallOptions CallOptions;
-    SDValue Res = TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, DL).first;
-    SplitInteger(Res, Lo, Hi);
+    EVT IntVT =
+        EVT::getIntegerVT(*DAG.getContext(), DAG.getLibInfo().getIntSize());
+    SDValue Res = TLI.makeLibCall(DAG, LC, IntVT, Op, CallOptions, DL).first;
+    SplitInteger(DAG.getSExtOrTrunc(Res, DL, VT), Lo, Hi);
     return;
   }
 
