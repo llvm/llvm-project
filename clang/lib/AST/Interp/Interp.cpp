@@ -27,8 +27,6 @@
 #include <vector>
 
 using namespace clang;
-
-using namespace clang;
 using namespace clang::interp;
 
 static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
