@@ -30,11 +30,13 @@ add_flang_library(FIRTransforms
   DebugTypeGenerator.cpp
 
   DEPENDS
+  CUFDialect
   FIRDialect
   FIROptTransformsPassIncGen
   HLFIROpsIncGen
 
   LINK_LIBS
+  CUFDialect
   FIRAnalysis
   FIRBuilder
   FIRCodeGen
