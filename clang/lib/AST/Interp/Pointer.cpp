@@ -60,6 +60,7 @@ Pointer::~Pointer() {
 
   if (Block *Pointee = PointeeStorage.BS.Pointee) {
     Pointee->removePointer(this);
+    PointeeStorage.BS.Pointee = nullptr;
     Pointee->cleanup();
   }
 }
@@ -67,12 +68,17 @@ Pointer::~Pointer() {
 void Pointer::operator=(const Pointer &P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
-  bool WasBlockPointer = isBlockPointer();
-  if (StorageKind == Storage::Block) {
-    Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && Old) {
-      PointeeStorage.BS.Pointee->removePointer(this);
-      Old->cleanup();
+  if (isBlockPointer()) {
+    if (P.isBlockPointer() && this->block() == P.block()) {
+      Offset = P.Offset;
+      PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
+      return;
+    }
+
+    if (Block *Pointee = PointeeStorage.BS.Pointee) {
+      Pointee->removePointer(this);
+      PointeeStorage.BS.Pointee = nullptr;
+      Pointee->cleanup();
     }
   }
 
@@ -97,12 +103,18 @@ void Pointer::operator=(const Pointer &P) {
 void Pointer::operator=(Pointer &&P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
-  bool WasBlockPointer = isBlockPointer();
-  if (StorageKind == Storage::Block) {
-    Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && Old) {
-      PointeeStorage.BS.Pointee->removePointer(this);
-      Old->cleanup();
+  if (isBlockPointer()) {
+    if (P.isBlockPointer() && this->block() == P.block()) {
+      Offset = P.Offset;
+      PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
+      return;
+    }
+
+    if (Block *Pointee = PointeeStorage.BS.Pointee) {
+      assert(P.block() != this->block());
+      Pointee->removePointer(this);
+      PointeeStorage.BS.Pointee = nullptr;
+      Pointee->cleanup();
     }
   }
 
@@ -384,6 +396,12 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
     return false;
 
   return A.asBlockPointer().Pointee == B.asBlockPointer().Pointee;
+}
+
+bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return false;
+  return A.block() == B.block();
 }
 
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {

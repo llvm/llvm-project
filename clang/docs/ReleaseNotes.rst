@@ -173,6 +173,8 @@ Bug Fixes to C++ Support
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
 - Fix a crash when checking the initialzier of an object that was initialized
   with a string literal. (#GH82167)
+- Fix a crash when matching template template parameters with templates which have
+  parameters of different class type. (#GH101394)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -216,6 +218,8 @@ X86 Support
   removed. Any uses of these removed functions should migrate to the
   functions defined by the ``*mmintrin.h`` headers. A mapping can be
   found in the file ``clang/www/builtins.py``.
+
+- Support ISA of ``AVX10.2``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -306,6 +310,10 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+
+Improvements
+^^^^^^^^^^^^
+- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
 
 Additional Information
 ======================
