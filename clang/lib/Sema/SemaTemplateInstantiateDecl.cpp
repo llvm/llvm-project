@@ -4895,7 +4895,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   // Never implicitly instantiate a builtin; we don't actually need a function
   // body.
   if (Function->getBuiltinID() && TSK == TSK_ImplicitInstantiation &&
-      !DefinitionRequired)
+      !DefinitionRequired && !Function->getReturnType()->isUndeducedType())
     return;
 
   // Don't instantiate a definition if we already have one.

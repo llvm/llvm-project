@@ -9468,7 +9468,9 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
 }
 
 QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
-  assert(!E->hasPlaceholderType() && "unexpected placeholder");
+  assert((!E->hasPlaceholderType() ||
+          E->getType()->isSpecificBuiltinType(BuiltinType::Kind::BuiltinFn)) &&
+         "unexpected placeholder");
 
   if (AsUnevaluated && CodeSynthesisContexts.empty() &&
       !E->isInstantiationDependent() && E->HasSideEffects(Context, false)) {
