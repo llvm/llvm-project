@@ -98,6 +98,8 @@ void Ctx::reset() {
   tlsPhdr = nullptr;
   out = OutSections{};
 
+  sym = ElfSym{};
+
   memoryBuffers.clear();
   objectFiles.clear();
   sharedFiles.clear();
