@@ -608,7 +608,7 @@ static void checkZOptions(opt::InputArgList &args) {
 
 constexpr const char *saveTempsValues[] = {
     "resolution", "preopt",     "promote", "internalize",  "import",
-    "opt",        "precodegen", "prelink", "combinedindex"};
+    "opt",        "precodegen", "prelink", "combinedindex", "asm" };
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
@@ -1405,12 +1405,25 @@ static void readConfigs(opt::InputArgList &args) {
     for (const char *s : saveTempsValues)
       config->saveTempsArgs.insert(s);
   } else {
+    llvm::DenseSet<llvm::StringRef> toRemove;
     for (auto *arg : args.filtered(OPT_save_temps_eq)) {
+      llvm::DenseSet<llvm::StringRef> *set = &config->saveTempsArgs;
       StringRef s = arg->getValue();
+      if (s.consume_front("no-")) {
+        set = &toRemove;
+      }
       if (llvm::is_contained(saveTempsValues, s))
-        config->saveTempsArgs.insert(s);
+        set->insert(s);
       else
         error("unknown --save-temps value: " + s);
+    }
+    // All subtractive values implies starting with all temps
+    if (config->saveTempsArgs.empty() && !toRemove.empty()) {
+      for (const char *s : saveTempsValues)
+        config->saveTempsArgs.insert(s);
+    }
+    for (auto rm : toRemove) {
+      config->saveTempsArgs.erase(rm);
     }
   }
 

@@ -189,6 +189,8 @@ struct Config {
   /// with llvm-lto2.
   std::unique_ptr<raw_ostream> ResolutionFile;
 
+  std::string AsmFile;
+
   /// Tunable parameters for passes in the default pipelines.
   PipelineTuningOptions PTO;
 

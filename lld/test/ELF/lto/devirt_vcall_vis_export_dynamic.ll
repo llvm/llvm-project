@@ -61,7 +61,7 @@
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o -o %t3 --save-temps=no-asm --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
@@ -86,7 +86,7 @@
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o -o %t3 --save-temps=no-asm --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR

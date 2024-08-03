@@ -157,6 +157,8 @@ static lto::Config createConfig() {
 
   if (config->ltoEmitAsm) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
+  }
+  if (config->ltoEmitAsm || config->saveTempsArgs.contains("asm")) {
     c.Options.MCOptions.AsmVerbose = true;
   }
 
