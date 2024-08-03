@@ -58,22 +58,6 @@ std::string lld::toString(const elf::Symbol &sym) {
   return ret;
 }
 
-Defined *ElfSym::bss;
-Defined *ElfSym::etext1;
-Defined *ElfSym::etext2;
-Defined *ElfSym::edata1;
-Defined *ElfSym::edata2;
-Defined *ElfSym::end1;
-Defined *ElfSym::end2;
-Defined *ElfSym::globalOffsetTable;
-Defined *ElfSym::mipsGp;
-Defined *ElfSym::mipsGpDisp;
-Defined *ElfSym::mipsLocalGp;
-Defined *ElfSym::riscvGlobalPointer;
-Defined *ElfSym::relaIpltStart;
-Defined *ElfSym::relaIpltEnd;
-Defined *ElfSym::tlsModuleBase;
-
 static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   switch (sym.kind()) {
   case Symbol::DefinedKind: {
