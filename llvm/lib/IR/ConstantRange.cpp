@@ -1645,11 +1645,21 @@ ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
   }
 
   if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap) {
-    ConstantRange ShAmtRange =
-        getNonEmpty(APInt::getZero(getBitWidth()),
-                    APInt(getBitWidth(), Known.countMaxLeadingZeros() + 1));
-    Result = Result.intersectWith(
-        ushl_sat(Other.intersectWith(ShAmtRange, Unsigned)), RangeType);
+    bool Overflow;
+    APInt LHSMin = getUnsignedMin();
+    APInt MinShl = LHSMin.ushl_ov(Other.getUnsignedMin(), Overflow);
+    if (Overflow)
+      return getEmpty();
+    APInt LHSMax = getUnsignedMax();
+    APInt MaxShl = LHSMax << Other.getUnsignedMax().getLimitedValue(
+                       LHSMax.countLeadingZeros());
+    if (LHSMin.countLeadingZeros() != LHSMax.countLeadingZeros())
+      MaxShl = APIntOps::umax(
+          MaxShl, APInt::getHighBitsSet(
+                      getBitWidth(),
+                      getBitWidth() - Other.getUnsignedMax().getLimitedValue(
+                                          LHSMax.countLeadingZeros() + 1)));
+    Result = Result.intersectWith(getNonEmpty(MinShl, MaxShl + 1), RangeType);
   }
 
   return Result;
