@@ -9,8 +9,8 @@
 #include "src/pthread/pthread_spin_trylock.h"
 #include "hdr/errno_macros.h"
 #include "src/__support/common.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/spin_lock.h"
-#include "src/__support/threads/tid.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, pthread_spin_trylock, (pthread_spinlock_t * lock)) {
   if (!spin_lock->try_lock())
     return EBUSY;
   // We have acquired the lock. Update the owner field.
-  lock->__owner = gettid_inline();
+  lock->__owner = internal::gettid();
   return 0;
 }
 

@@ -9,8 +9,8 @@
 #include "src/pthread/pthread_spin_unlock.h"
 #include "hdr/errno_macros.h"
 #include "src/__support/common.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/spin_lock.h"
-#include "src/__support/threads/tid.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, pthread_spin_unlock, (pthread_spinlock_t * lock)) {
   // to pthread_spin_unlock() refers to a spin lock object for which the current
   // thread does not hold the lock, it is recommended that the function should
   // fail and report an [EPERM] error.
-  if (lock->__owner != gettid_inline())
+  if (lock->__owner != internal::gettid())
     return EPERM;
   // Release the lock.
   lock->__owner = 0;

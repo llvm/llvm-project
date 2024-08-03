@@ -653,7 +653,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.spin_lock
-    libc.src.__support.threads.tid
+    libc.src.__support.threads.identifier
     libc.hdr.errno_macros
 )
 
@@ -666,7 +666,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.spin_lock
-    libc.src.__support.threads.tid
+    libc.src.__support.threads.identifier
     libc.hdr.errno_macros
 )
 
@@ -679,7 +679,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.spin_lock
-    libc.src.__support.threads.tid
+    libc.src.__support.threads.identifier
     libc.hdr.errno_macros
 )
 
@@ -692,7 +692,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.spin_lock
-    libc.src.__support.threads.tid
+    libc.src.__support.threads.identifier
     libc.hdr.errno_macros
 )
 
@@ -705,7 +705,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.spin_lock
-    libc.src.__support.threads.tid
+    libc.src.__support.threads.identifier
     libc.hdr.errno_macros
 )
 

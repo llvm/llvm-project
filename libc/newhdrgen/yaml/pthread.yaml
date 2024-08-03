@@ -14,6 +14,7 @@ types:
   - type_name: __pthread_start_t
   - type_name: __pthread_once_func_t
   - type_name: __atfork_callback_t
+  - type_name: pthread_spinlock_t
 enums: []
 functions:
   - name: pthread_atfork

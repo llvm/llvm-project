@@ -9,8 +9,8 @@
 #include "src/pthread/pthread_spin_lock.h"
 #include "hdr/errno_macros.h"
 #include "src/__support/common.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/spin_lock.h"
-#include "src/__support/threads/tid.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -31,7 +31,7 @@ LLVM_LIBC_FUNCTION(int, pthread_spin_lock, (pthread_spinlock_t * lock)) {
   if (spin_lock->is_invalid())
     return EINVAL;
 
-  pid_t self_tid = gettid_inline();
+  pid_t self_tid = internal::gettid();
   // If an implementation detects that the value specified by the lock argument
   // to pthread_spin_lock() refers to a spin lock object for which the calling
   // thread already holds the lock, it is recommended that the function should
