@@ -398,6 +398,12 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   return A.asBlockPointer().Pointee == B.asBlockPointer().Pointee;
 }
 
+bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return false;
+  return A.block() == B.block();
+}
+
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
   return hasSameBase(A, B) &&
          A.PointeeStorage.BS.Base == B.PointeeStorage.BS.Base &&

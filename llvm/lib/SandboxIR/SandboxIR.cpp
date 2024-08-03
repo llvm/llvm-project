@@ -610,6 +610,13 @@ void BranchInst::dump() const {
 }
 #endif // NDEBUG
 
+void LoadInst::setVolatile(bool V) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  cast<llvm::LoadInst>(Val)->setVolatile(V);
+}
+
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx,
                            const Twine &Name) {
@@ -664,6 +671,14 @@ void LoadInst::dump() const {
   dbgs() << "\n";
 }
 #endif // NDEBUG
+
+void StoreInst::setVolatile(bool V) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  cast<llvm::StoreInst>(Val)->setVolatile(V);
+}
+
 StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
                              Instruction *InsertBefore, Context &Ctx) {
   return create(V, Ptr, Align, InsertBefore, /*IsVolatile=*/false, Ctx);
