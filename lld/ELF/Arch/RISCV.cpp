@@ -680,7 +680,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 
 void elf::initSymbolAnchors() {
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -719,7 +719,7 @@ void elf::initSymbolAnchors() {
   // efficiently. For a zero size symbol, ensure that its start anchor precedes
   // its end anchor. For two symbols with anchors at the same offset, their
   // order does not matter.
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -922,7 +922,7 @@ bool RISCV::relaxOnce(int pass) const {
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
@@ -935,7 +935,7 @@ void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
   log("relaxation passes: " + Twine(passes));
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {

@@ -494,6 +494,7 @@ struct Ctx {
     OutputSection *finiArray;
   };
   OutSections out;
+  SmallVector<OutputSection *, 0> outputSections;
 
   // Some linker-generated symbols need to be created as
   // Defined symbols.

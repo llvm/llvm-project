@@ -151,9 +151,6 @@ getInputSections(const OutputSection &os,
                  SmallVector<InputSection *, 0> &storage);
 
 uint64_t getHeaderSize();
-
-LLVM_LIBRARY_VISIBILITY extern llvm::SmallVector<OutputSection *, 0>
-    outputSections;
 } // namespace lld::elf
 
 #endif
