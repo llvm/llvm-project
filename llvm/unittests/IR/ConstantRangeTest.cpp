@@ -1515,7 +1515,7 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
           return std::nullopt;
         return Res;
       },
-      PreferSmallest, CheckCorrectnessOnly);
+      PreferSmallest, CheckNonWrappedOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shlWithNoWrap(CR2, OBO::NoSignedWrap);
@@ -1556,6 +1556,9 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
   EXPECT_EQ(ConstantRange(APInt(16, 768))
                 .shlWithNoWrap(Full, OBO::NoSignedWrap | OBO::NoUnsignedWrap),
             ConstantRange(APInt(16, 768), APInt(16, 24577)));
+  EXPECT_EQ(Full.shlWithNoWrap(ConstantRange(APInt(16, 1), APInt(16, 16)),
+                               OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 0), APInt(16, -1)));
 }
 
 TEST_F(ConstantRangeTest, Lshr) {

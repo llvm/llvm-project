@@ -1627,19 +1627,17 @@ ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
   if (!NoWrapKind)
     return Result;
 
-  KnownBits Known = toKnownBits();
-
   if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap) {
-    ConstantRange ShAmtRange = Other;
+    std::optional<unsigned> ShAmtBound;
     if (isAllNonNegative())
-      ShAmtRange = ShAmtRange.intersectWith(
-          ConstantRange(APInt::getZero(getBitWidth()),
-                        APInt(getBitWidth(), Known.countMaxLeadingZeros())),
-          Unsigned);
+      ShAmtBound = getSignedMin().countLeadingZeros();
     else if (isAllNegative())
+      ShAmtBound = getSignedMax().countLeadingOnes();
+    ConstantRange ShAmtRange = Other;
+    if (ShAmtBound)
       ShAmtRange = ShAmtRange.intersectWith(
-          ConstantRange(APInt::getZero(getBitWidth()),
-                        APInt(getBitWidth(), Known.countMaxLeadingOnes())),
+          ConstantRange(APInt(getBitWidth(), 0),
+                        APInt(getBitWidth(), *ShAmtBound)),
           Unsigned);
     Result = Result.intersectWith(sshl_sat(ShAmtRange), RangeType);
   }
@@ -1647,18 +1645,21 @@ ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
   if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap) {
     bool Overflow;
     APInt LHSMin = getUnsignedMin();
-    APInt MinShl = LHSMin.ushl_ov(Other.getUnsignedMin(), Overflow);
+    unsigned RHSMin = Other.getUnsignedMin().getLimitedValue(getBitWidth());
+    APInt MinShl = LHSMin.ushl_ov(RHSMin, Overflow);
     if (Overflow)
       return getEmpty();
     APInt LHSMax = getUnsignedMax();
-    APInt MaxShl = LHSMax << Other.getUnsignedMax().getLimitedValue(
-                       LHSMax.countLeadingZeros());
-    if (LHSMin.countLeadingZeros() != LHSMax.countLeadingZeros())
+    unsigned RHSMax = Other.getUnsignedMax().getLimitedValue(getBitWidth());
+    APInt MaxShl = MinShl;
+    unsigned MaxShAmt = LHSMax.countLeadingZeros();
+    if (RHSMin <= MaxShAmt)
+      MaxShl = LHSMax << std::min(RHSMax, MaxShAmt);
+    RHSMin = std::max(RHSMin, MaxShAmt + 1);
+    RHSMax = std::min(RHSMax, LHSMin.countLeadingZeros());
+    if (RHSMin <= RHSMax)
       MaxShl = APIntOps::umax(
-          MaxShl, APInt::getHighBitsSet(
-                      getBitWidth(),
-                      getBitWidth() - Other.getUnsignedMax().getLimitedValue(
-                                          LHSMax.countLeadingZeros() + 1)));
+          MaxShl, APInt::getHighBitsSet(getBitWidth(), getBitWidth() - RHSMin));
     Result = Result.intersectWith(getNonEmpty(MinShl, MaxShl + 1), RangeType);
   }
 
