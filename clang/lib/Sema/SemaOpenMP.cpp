@@ -2831,7 +2831,7 @@ static void checkReductionClauses(Sema &S, DSAStackTy *Stack,
         S.Diag(InscanLoc, diag::note_omp_previous_inscan_reduction);
         continue;
       }
-      for (Expr *Ref : RC->varlists()) {
+      for (Expr *Ref : RC->varlist()) {
         assert(Ref && "NULL expr in OpenMP nontemporal clause.");
         SourceLocation ELoc;
         SourceRange ERange;
@@ -2871,7 +2871,7 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
     for (OMPClause *C : D->clauses()) {
       if (auto *Clause = dyn_cast<OMPLastprivateClause>(C)) {
         SmallVector<Expr *, 8> PrivateCopies;
-        for (Expr *DE : Clause->varlists()) {
+        for (Expr *DE : Clause->varlist()) {
           if (DE->isValueDependent() || DE->isTypeDependent()) {
             PrivateCopies.push_back(nullptr);
             continue;
@@ -2909,7 +2909,7 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
       // Finalize nontemporal clause by handling private copies, if any.
       if (auto *Clause = dyn_cast<OMPNontemporalClause>(C)) {
         SmallVector<Expr *, 8> PrivateRefs;
-        for (Expr *RefExpr : Clause->varlists()) {
+        for (Expr *RefExpr : Clause->varlist()) {
           assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
           SourceLocation ELoc;
           SourceRange ERange;
@@ -3752,7 +3752,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
         !isOpenMPTaskLoopDirective(S->getDirectiveKind())) {
       for (OMPClause *C : S->clauses())
         if (auto *FC = dyn_cast<OMPFirstprivateClause>(C)) {
-          for (Expr *Ref : FC->varlists())
+          for (Expr *Ref : FC->varlist())
             Visit(Ref);
         }
     }
@@ -4729,7 +4729,7 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
               SemaRef.MarkDeclarationsReferencedInExpr(E);
         }
         if (auto *AC = dyn_cast<OMPAlignedClause>(C)) {
-          for (Expr *E : AC->varlists())
+          for (Expr *E : AC->varlist())
             SemaRef.MarkDeclarationsReferencedInExpr(E);
         }
       }
@@ -5311,7 +5311,7 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
              diag::warn_omp_allocate_thread_on_task_target_directive)
           << getOpenMPDirectiveName(Stack->getCurrentDirective());
     }
-    for (Expr *E : AC->varlists()) {
+    for (Expr *E : AC->varlist()) {
       SourceLocation ELoc;
       SourceRange ERange;
       Expr *SimpleRefExpr = E;
@@ -6135,7 +6135,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       SmallVector<Expr *, 4> ImplicitExprs;
       for (OMPClause *C : Clauses) {
         if (auto *RC = dyn_cast<OMPReductionClause>(C))
-          for (Expr *E : RC->varlists())
+          for (Expr *E : RC->varlist())
             if (!isa<DeclRefExpr>(E->IgnoreParenImpCasts()))
               ImplicitExprs.emplace_back(E);
       }
@@ -10445,7 +10445,7 @@ static bool checkGenericLoopLastprivate(Sema &S, ArrayRef<OMPClause *> Clauses,
   bool ErrorFound = false;
   for (OMPClause *C : Clauses) {
     if (auto *LPC = dyn_cast<OMPLastprivateClause>(C)) {
-      for (Expr *RefExpr : LPC->varlists()) {
+      for (Expr *RefExpr : LPC->varlist()) {
         SourceLocation ELoc;
         SourceRange ERange;
         Expr *SimpleRefExpr = RefExpr;
@@ -19123,7 +19123,7 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
   auto CurInit = Clause.inits().begin();
   auto CurPrivate = Clause.privates().begin();
   OpenMPLinearClauseKind LinKind = Clause.getModifier();
-  for (Expr *RefExpr : Clause.varlists()) {
+  for (Expr *RefExpr : Clause.varlist()) {
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -20796,6 +20796,203 @@ struct MappableVarListInfo {
 };
 } // namespace
 
+static DeclRefExpr *buildImplicitMap(Sema &S, QualType BaseType,
+                                     DSAStackTy *Stack,
+                                     SmallVectorImpl<OMPClause *> &Maps) {
+
+  const RecordDecl *RD = BaseType->getAsRecordDecl();
+  SourceRange Range = RD->getSourceRange();
+  DeclarationNameInfo ImplicitName;
+  // Dummy variable _s for Mapper.
+  VarDecl *VD = buildVarDecl(S, Range.getEnd(), BaseType, "_s");
+  DeclRefExpr *MapperVarRef =
+      buildDeclRefExpr(S, VD, BaseType, SourceLocation());
+
+  // Create implicit map clause for mapper.
+  SmallVector<Expr *, 4> SExprs;
+  for (auto *FD : RD->fields()) {
+    Expr *BE = S.BuildMemberExpr(
+        MapperVarRef, /*IsArrow=*/false, Range.getBegin(),
+        NestedNameSpecifierLoc(), Range.getBegin(), FD,
+        DeclAccessPair::make(FD, FD->getAccess()),
+        /*HadMultipleCandidates=*/false,
+        DeclarationNameInfo(FD->getDeclName(), FD->getSourceRange().getBegin()),
+        FD->getType(), VK_LValue, OK_Ordinary);
+    SExprs.push_back(BE);
+  }
+  CXXScopeSpec MapperIdScopeSpec;
+  DeclarationNameInfo MapperId;
+  OpenMPDirectiveKind DKind = Stack->getCurrentDirective();
+
+  OMPClause *MapClause = S.OpenMP().ActOnOpenMPMapClause(
+      nullptr, OMPC_MAP_MODIFIER_unknown, SourceLocation(), MapperIdScopeSpec,
+      MapperId, DKind == OMPD_target_enter_data ? OMPC_MAP_to : OMPC_MAP_tofrom,
+      /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(), SExprs,
+      OMPVarListLocTy());
+  Maps.push_back(MapClause);
+  return MapperVarRef;
+}
+
+static ExprResult buildImplicitMapper(Sema &S, QualType BaseType,
+                                      DSAStackTy *Stack) {
+
+  // Build impilicit map for mapper
+  SmallVector<OMPClause *, 4> Maps;
+  DeclRefExpr *MapperVarRef = buildImplicitMap(S, BaseType, Stack, Maps);
+
+  const RecordDecl *RD = BaseType->getAsRecordDecl();
+  // AST context is RD's ParentASTContext().
+  ASTContext &Ctx = RD->getParentASTContext();
+  // DeclContext is RD's DeclContext.
+  DeclContext *DCT = const_cast<DeclContext *>(RD->getDeclContext());
+
+  // Create implicit default mapper for "RD".
+  DeclarationName MapperId;
+  auto &DeclNames = Ctx.DeclarationNames;
+  MapperId = DeclNames.getIdentifier(&Ctx.Idents.get("default"));
+  auto *DMD = OMPDeclareMapperDecl::Create(Ctx, DCT, SourceLocation(), MapperId,
+                                           BaseType, MapperId, Maps, nullptr);
+  Scope *Scope = S.getScopeForContext(DCT);
+  if (Scope)
+    S.PushOnScopeChains(DMD, Scope, /*AddToContext*/ false);
+  DCT->addDecl(DMD);
+  DMD->setAccess(clang::AS_none);
+  auto *VD = cast<DeclRefExpr>(MapperVarRef)->getDecl();
+  VD->setDeclContext(DMD);
+  VD->setLexicalDeclContext(DMD);
+  DMD->addDecl(VD);
+  DMD->setMapperVarRef(MapperVarRef);
+  FieldDecl *FD = *RD->field_begin();
+  // create mapper refence.
+  return DeclRefExpr::Create(Ctx, NestedNameSpecifierLoc{}, FD->getLocation(),
+                             DMD, false, SourceLocation(), BaseType, VK_LValue);
+}
+
+// Look up the user-defined mapper given the mapper name and mapper type,
+// return true if found one.
+static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
+                                 CXXScopeSpec &MapperIdScopeSpec,
+                                 const DeclarationNameInfo &MapperId,
+                                 QualType Type) {
+  // Find all user-defined mappers with the given MapperId.
+  SmallVector<UnresolvedSet<8>, 4> Lookups;
+  LookupResult Lookup(SemaRef, MapperId, Sema::LookupOMPMapperName);
+  Lookup.suppressDiagnostics();
+  while (S && SemaRef.LookupParsedName(Lookup, S, &MapperIdScopeSpec,
+                                       /*ObjectType=*/QualType())) {
+    NamedDecl *D = Lookup.getRepresentativeDecl();
+    while (S && !S->isDeclScope(D))
+      S = S->getParent();
+    if (S)
+      S = S->getParent();
+    Lookups.emplace_back();
+    Lookups.back().append(Lookup.begin(), Lookup.end());
+    Lookup.clear();
+  }
+  if (SemaRef.CurContext->isDependentContext() || Type->isDependentType() ||
+      Type->isInstantiationDependentType() ||
+      Type->containsUnexpandedParameterPack() ||
+      filterLookupForUDReductionAndMapper<bool>(Lookups, [](ValueDecl *D) {
+        return !D->isInvalidDecl() &&
+               (D->getType()->isDependentType() ||
+                D->getType()->isInstantiationDependentType() ||
+                D->getType()->containsUnexpandedParameterPack());
+      }))
+    return false;
+  // Perform argument dependent lookup.
+  SourceLocation Loc = MapperId.getLoc();
+  if (SemaRef.getLangOpts().CPlusPlus && !MapperIdScopeSpec.isSet())
+    argumentDependentLookup(SemaRef, MapperId, Loc, Type, Lookups);
+  if (filterLookupForUDReductionAndMapper<ValueDecl *>(
+          Lookups, [&SemaRef, Type](ValueDecl *D) -> ValueDecl * {
+            if (!D->isInvalidDecl() &&
+                SemaRef.Context.hasSameType(D->getType(), Type))
+              return D;
+            return nullptr;
+          }))
+    return true;
+  // Find the first user-defined mapper with a type derived from the desired
+  // type.
+  auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
+      Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
+        if (!D->isInvalidDecl() &&
+            SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
+            !Type.isMoreQualifiedThan(D->getType()))
+          return D;
+        return nullptr;
+      });
+  if (!VD)
+    return false;
+  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                     /*DetectVirtual=*/false);
+  if (SemaRef.IsDerivedFrom(Loc, Type, VD->getType(), Paths)) {
+    bool IsAmbiguous = !Paths.isAmbiguous(
+        SemaRef.Context.getCanonicalType(VD->getType().getUnqualifiedType()));
+    if (IsAmbiguous)
+      return false;
+    if (SemaRef.CheckBaseClassAccess(Loc, VD->getType(), Type, Paths.front(),
+                                     /*DiagID=*/0) != Sema::AR_inaccessible)
+      return true;
+  }
+  return false;
+}
+
+static bool isImplicitMapperNeeded(Sema &S, DSAStackTy *Stack,
+                                   QualType CanonType, const Expr *E) {
+
+  // DFS over data members in structures/classes.
+  SmallVector<std::pair<QualType, FieldDecl *>, 4> Types(1,
+                                                         {CanonType, nullptr});
+  llvm::DenseMap<const Type *, bool> Visited;
+  SmallVector<std::pair<FieldDecl *, unsigned>, 4> ParentChain(1, {nullptr, 1});
+  while (!Types.empty()) {
+    auto [BaseType, CurFD] = Types.pop_back_val();
+    while (ParentChain.back().second == 0)
+      ParentChain.pop_back();
+    --ParentChain.back().second;
+    if (BaseType.isNull())
+      continue;
+    // Only structs/classes are allowed to have mappers.
+    const RecordDecl *RD = BaseType.getCanonicalType()->getAsRecordDecl();
+    if (!RD)
+      continue;
+    auto It = Visited.find(BaseType.getTypePtr());
+    if (It == Visited.end()) {
+      // Try to find the associated user-defined mapper.
+      CXXScopeSpec MapperIdScopeSpec;
+      DeclarationNameInfo DefaultMapperId;
+      DefaultMapperId.setName(S.Context.DeclarationNames.getIdentifier(
+          &S.Context.Idents.get("default")));
+      DefaultMapperId.setLoc(E->getExprLoc());
+      bool HasUDMapper =
+          hasUserDefinedMapper(S, Stack->getCurScope(), MapperIdScopeSpec,
+                               DefaultMapperId, BaseType);
+      It = Visited.try_emplace(BaseType.getTypePtr(), HasUDMapper).first;
+    }
+    // Found default mapper.
+    if (It->second)
+      return true;
+    // Check for the "default" mapper for data members.
+    bool FirstIter = true;
+    for (FieldDecl *FD : RD->fields()) {
+      if (!FD)
+        continue;
+      QualType FieldTy = FD->getType();
+      if (FieldTy.isNull() ||
+          !(FieldTy->isStructureOrClassType() || FieldTy->isUnionType()))
+        continue;
+      if (FirstIter) {
+        FirstIter = false;
+        ParentChain.emplace_back(CurFD, 1);
+      } else {
+        ++ParentChain.back().second;
+      }
+      Types.emplace_back(FieldTy, FD);
+    }
+  }
+  return false;
+}
+
 // Check the validity of the provided variable list for the provided clause kind
 // \a CKind. In the check process the valid expressions, mappable expression
 // components, variables, and user-defined mappers are extracted and used to
@@ -21095,6 +21292,24 @@ static void checkMappableExpressionList(
         Type.getCanonicalType(), UnresolvedMapper);
     if (ER.isInvalid())
       continue;
+    if (!ER.get() && isa<ArraySectionExpr>(VE)) {
+      // Create implicit mapper as needed.
+      QualType BaseType = VE->getType().getCanonicalType();
+      if (BaseType->isSpecificBuiltinType(BuiltinType::ArraySection)) {
+        const auto *OASE = cast<ArraySectionExpr>(VE->IgnoreParenImpCasts());
+        QualType BType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+        QualType ElemType;
+        if (const auto *ATy = BType->getAsArrayTypeUnsafe())
+          ElemType = ATy->getElementType();
+        else
+          ElemType = BType->getPointeeType();
+        BaseType = ElemType.getCanonicalType();
+      }
+      if (BaseType->getAsRecordDecl() &&
+          isImplicitMapperNeeded(SemaRef, DSAS, BaseType, VE)) {
+        ER = buildImplicitMapper(SemaRef, BaseType, DSAS);
+      }
+    }
     MVLI.UDMapperList.push_back(ER.get());
 
     // Save the current expression.
@@ -23087,8 +23302,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDoacrossClause(
   if (DSAStack->getCurrentDirective() == OMPD_ordered &&
       DepType != OMPC_DOACROSS_source && DepType != OMPC_DOACROSS_sink &&
       DepType != OMPC_DOACROSS_sink_omp_cur_iteration &&
-      DepType != OMPC_DOACROSS_source_omp_cur_iteration &&
-      DepType != OMPC_DOACROSS_source) {
+      DepType != OMPC_DOACROSS_source_omp_cur_iteration) {
     Diag(DepLoc, diag::err_omp_unexpected_clause_value)
         << "'source' or 'sink'" << getOpenMPClauseName(OMPC_doacross);
     return nullptr;

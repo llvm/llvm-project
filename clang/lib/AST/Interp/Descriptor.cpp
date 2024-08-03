@@ -33,7 +33,8 @@ static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
 template <typename T>
 static void moveTy(Block *, const std::byte *Src, std::byte *Dst,
                    const Descriptor *) {
-  const auto *SrcPtr = reinterpret_cast<const T *>(Src);
+  // FIXME: Get rid of the const_cast.
+  auto *SrcPtr = reinterpret_cast<T *>(const_cast<std::byte *>(Src));
   auto *DstPtr = reinterpret_cast<T *>(Dst);
   new (DstPtr) T(std::move(*SrcPtr));
 }
@@ -75,7 +76,7 @@ static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
   Src += sizeof(InitMapPtr);
   Dst += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    const auto *SrcPtr = &reinterpret_cast<const T *>(Src)[I];
+    auto *SrcPtr = &reinterpret_cast<T *>(const_cast<std::byte *>(Src))[I];
     auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
     new (DstPtr) T(std::move(*SrcPtr));
   }

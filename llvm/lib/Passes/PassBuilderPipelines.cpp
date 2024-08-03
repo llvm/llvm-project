@@ -304,6 +304,10 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<std::string>
+    UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
+                  cl::desc("Use the specified contextual profile file"));
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
@@ -979,7 +983,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       RequireAnalysisPass<ShouldNotRunFunctionPassesAnalysis, Function>()));
 
-  MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
   MIWP.addLateModulePass(createModuleToFunctionPassAdaptor(
@@ -1021,8 +1026,9 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
       buildFunctionSimplificationPipeline(Level, Phase),
       PTO.EagerlyInvalidateAnalyses));
 
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-      CoroSplitPass(Level != OptimizationLevel::O0)));
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+        CoroSplitPass(Level != OptimizationLevel::O0)));
 
   return MPM;
 }
@@ -1174,8 +1180,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
                             PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+  const bool IsCtxProfUse = !UseCtxProfile.empty() && !PGOOpt &&
+                            Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
-  if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen)
+  if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
+      IsCtxProfUse)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -1185,8 +1194,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                       /*IsCS=*/false, PGOOpt->AtomicCounterUpdate,
                       PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
                       PGOOpt->FS);
-  } else if (IsCtxProfGen) {
+  } else if (IsCtxProfGen || IsCtxProfUse) {
     MPM.addPass(PGOInstrumentationGen(false));
+    // In pre-link, we just want the instrumented IR. We use the contextual
+    // profile in the post-thinlink phase.
+    // The instrumentation will be removed in post-thinlink after IPO.
+    if (IsCtxProfUse)
+      return MPM;
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
   }
@@ -1219,7 +1233,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
 
-  MPM.addPass(CoroCleanupPass());
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    MPM.addPass(CoroCleanupPass());
 
   // Optimize globals now that functions are fully simplified.
   MPM.addPass(GlobalOptPass());
@@ -1652,6 +1667,11 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // can.
   MPM.addPass(buildModuleSimplificationPipeline(
       Level, ThinOrFullLTOPhase::ThinLTOPreLink));
+  // In pre-link, for ctx prof use, we stop here with an instrumented IR. We let
+  // thinlto use the contextual info to perform imports; then use the contextual
+  // profile in the post-thinlink phase.
+  if (!UseCtxProfile.empty() && !PGOOpt)
+    return MPM;
 
   // Run partial inlining pass to partially inline functions that have
   // large bodies.

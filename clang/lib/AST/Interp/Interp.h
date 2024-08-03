@@ -1158,6 +1158,21 @@ bool Pop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// [Value1, Value2] -> [Value2, Value1]
+template <PrimType TopName, PrimType BottomName>
+bool Flip(InterpState &S, CodePtr OpPC) {
+  using TopT = typename PrimConv<TopName>::T;
+  using BottomT = typename PrimConv<BottomName>::T;
+
+  const auto &Top = S.Stk.pop<TopT>();
+  const auto &Bottom = S.Stk.pop<BottomT>();
+
+  S.Stk.push<TopT>(Top);
+  S.Stk.push<BottomT>(Bottom);
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Const
 //===----------------------------------------------------------------------===//
@@ -2012,6 +2027,11 @@ inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
+  S.Current->initScope(I);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Cast, CastFP
 //===----------------------------------------------------------------------===//
@@ -2588,12 +2608,20 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
-  QualType DynamicType = ThisPtr.getDeclDesc()->getType();
-  const CXXRecordDecl *DynamicDecl;
-  if (DynamicType->isPointerType() || DynamicType->isReferenceType())
-    DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
-  else
-    DynamicDecl = ThisPtr.getDeclDesc()->getType()->getAsCXXRecordDecl();
+  const CXXRecordDecl *DynamicDecl = nullptr;
+  {
+    Pointer TypePtr = ThisPtr;
+    while (TypePtr.isBaseClass())
+      TypePtr = TypePtr.getBase();
+
+    QualType DynamicType = TypePtr.getType();
+    if (DynamicType->isPointerType() || DynamicType->isReferenceType())
+      DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
+    else
+      DynamicDecl = DynamicType->getAsCXXRecordDecl();
+  }
+  assert(DynamicDecl);
+
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
   const auto *InitialFunction = cast<CXXMethodDecl>(Func->getDecl());
   const CXXMethodDecl *Overrider = S.getContext().getOverridingFunction(
@@ -2620,7 +2648,29 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     }
   }
 
-  return Call(S, OpPC, Func, VarArgSize);
+  if (!Call(S, OpPC, Func, VarArgSize))
+    return false;
+
+  // Covariant return types. The return type of Overrider is a pointer
+  // or reference to a class type.
+  if (Overrider != InitialFunction &&
+      Overrider->getReturnType()->isPointerOrReferenceType() &&
+      InitialFunction->getReturnType()->isPointerOrReferenceType()) {
+    QualType OverriderPointeeType =
+        Overrider->getReturnType()->getPointeeType();
+    QualType InitialPointeeType =
+        InitialFunction->getReturnType()->getPointeeType();
+    // We've called Overrider above, but calling code expects us to return what
+    // InitialFunction returned. According to the rules for covariant return
+    // types, what InitialFunction returns needs to be a base class of what
+    // Overrider returns. So, we need to do an upcast here.
+    unsigned Offset = S.getContext().collectBaseOffset(
+        InitialPointeeType->getAsRecordDecl(),
+        OverriderPointeeType->getAsRecordDecl());
+    return GetPtrBasePop(S, OpPC, Offset);
+  }
+
+  return true;
 }
 
 inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,

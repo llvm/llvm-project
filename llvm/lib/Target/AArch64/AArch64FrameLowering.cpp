@@ -1487,7 +1487,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
-      CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
+      CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy)

@@ -52,7 +52,6 @@ const Symbol *FindPointerComponent(const DeclTypeSpec &);
 const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
-const Symbol *FindFunctionResult(const Symbol &);
 const Symbol *FindOverriddenBinding(
     const Symbol &, bool &isInaccessibleDeferred);
 const Symbol *FindGlobal(const Symbol &);
@@ -87,6 +86,7 @@ bool IsIntrinsicConcat(
 bool IsGenericDefinedOp(const Symbol &);
 bool IsDefinedOperator(SourceName);
 std::string MakeOpName(SourceName);
+bool IsCommonBlockContaining(const Symbol &, const Symbol &);
 
 // Returns true if maybeAncestor exists and is a proper ancestor of a
 // descendent scope (or symbol owner).  Will be false, unlike Scope::Contains(),
@@ -261,7 +261,7 @@ std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
 SymbolVector OrderParameterDeclarations(const Symbol &);
 // Returns the complete list of derived type parameter names in the
 // order defined by 7.5.3.2.
-std::list<SourceName> OrderParameterNames(const Symbol &);
+SymbolVector OrderParameterNames(const Symbol &);
 
 // Return an existing or new derived type instance
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,

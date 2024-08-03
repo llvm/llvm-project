@@ -3669,6 +3669,10 @@ LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 may use the following flags to enable otherwise unsafe
 floating-point transformations.
 
+``fast``
+   This flag is a shorthand for specifying all fast-math flags at once, and
+   imparts no additional semantics from using all of them.
+
 ``nnan``
    No NaNs - Allow optimizations to assume the arguments and result are not
    NaN. If an argument is a nan, or the result would be a nan, it produces
@@ -3684,9 +3688,51 @@ floating-point transformations.
    argument or zero result as insignificant. This does not imply that -0.0
    is poison and/or guaranteed to not exist in the operation.
 
+Rewrite-based flags
+^^^^^^^^^^^^^^^^^^^
+
+The following flags have rewrite-based semantics. These flags allow expressions,
+potentially containing multiple non-consecutive instructions, to be rewritten
+into alternative instructions. When multiple instructions are involved in an
+expression, it is necessary that all of the instructions have the necessary
+rewrite-based flag present on them, and the rewritten instructions will
+generally have the intersection of the flags present on the input instruction.
+
+In the following example, the floating-point expression in the body of ``@orig``
+has ``contract`` and ``reassoc`` in common, and thus if it is rewritten into the
+expression in the body of ``@target``, all of the new instructions get those two
+flags and only those flags as a result. Since the ``arcp`` is present on only
+one of the instructions in the expression, it is not present in the transformed
+expression. Furthermore, this reassociation here is only legal because both the
+instructions had the ``reassoc`` flag; if only one had it, it would not be legal
+to make the transformation.
+
+.. code-block:: llvm
+
+      define double @orig(double %a, double %b, double %c) {
+        %t1 = fmul contract reassoc double %a, %b
+        %val = fmul contract reassoc arcp double %t1, %c
+        ret double %val
+      }
+
+      define double @target(double %a, double %b, double %c) {
+        %t1 = fmul contract reassoc double %b, %c
+        %val = fmul contract reassoc double %a, %t1
+        ret double %val
+      }
+
+These rules do not apply to the other fast-math flags. Whether or not a flag
+like ``nnan`` is present on any or all of the rewritten instructions is based
+on whether or not it is possible for said instruction to have a NaN input or
+output, given the original flags.
+
 ``arcp``
-   Allow Reciprocal - Allow optimizations to use the reciprocal of an
-   argument rather than perform division.
+   Allows division to be treated as a multiplication by a reciprocal.
+   Specifically, this permits ``a / b`` to be considered equivalent to
+   ``a * (1.0 / b)`` (which may subsequently be susceptible to code motion),
+   and it also permits ``a / (b / c)`` to be considered equivalent to
+   ``a * (c / b)``. Both of these rewrites can be applied in either direction:
+   ``a * (c / b)`` can be rewritten into ``a / (b / c)``.
 
 ``contract``
    Allow floating-point contraction (e.g. fusing a multiply followed by an
@@ -3704,9 +3750,6 @@ floating-point transformations.
 ``reassoc``
    Allow reassociation transformations for floating-point instructions.
    This may dramatically change results in floating-point.
-
-``fast``
-   This flag implies all of the others.
 
 .. _uselistorder:
 
@@ -25139,7 +25182,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.load``' intrinsic is designed for conditional reading of selected vector elements in a single IR operation. It is useful for targets that support vector masked loads and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar load operations.
-The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask. However, using this intrinsic prevents exceptions on memory access to masked-off lanes.
+The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 
 ::
@@ -25181,7 +25227,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.store``' intrinsics is designed for conditional writing of selected vector elements in a single IR operation. It is useful for targets that support vector masked store and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar store operations.
-The result of this operation is equivalent to a load-modify-store sequence. However, using this intrinsic prevents exceptions and data races on memory access to masked-off lanes.
+The result of this operation is equivalent to a load-modify-store sequence, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 ::
 

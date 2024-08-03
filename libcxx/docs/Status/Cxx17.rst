@@ -46,6 +46,7 @@ Paper Status
    .. [#note-P0607] P0607: The parts of P0607 that are not done are the ``<regex>`` bits.
    .. [#note-P0154] P0154: The required macros are only implemented as of clang 19.
    .. [#note-P0452] P0452: The changes to ``std::transform_inclusive_scan`` and ``std::transform_exclusive_scan`` have not yet been implemented.
+   .. [#note-P0156] P0156: This paper was reverted in Kona.
 
 .. _issues-status-cxx17:
 

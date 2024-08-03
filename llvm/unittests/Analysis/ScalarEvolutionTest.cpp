@@ -1117,10 +1117,12 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 %sz, i32 %pp) { "
+      "define void @foo(i32 %sz, i32 %pp, i32 %x) { "
       "entry: "
       "  %v0 = add i32 %pp, 0 "
       "  %v3 = add i32 %pp, 3 "
+      "  %vx = add i32 %pp, %x "
+      "  %vx3 = add i32 %vx, 3 "
       "  br label %loop.body "
       "loop.body: "
       "  %iv = phi i32 [ %iv.next, %loop.body ], [ 0, %entry ] "
@@ -1141,6 +1143,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     auto *ScevV0 = SE.getSCEV(getInstructionByName(F, "v0")); // %pp
     auto *ScevV3 = SE.getSCEV(getInstructionByName(F, "v3")); // (3 + %pp)
+    auto *ScevVX = SE.getSCEV(getInstructionByName(F, "vx")); // (%pp + %x)
+    // (%pp + %x + 3)
+    auto *ScevVX3 = SE.getSCEV(getInstructionByName(F, "vx3"));
     auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
     auto *ScevXA = SE.getSCEV(getInstructionByName(F, "xa")); // {%pp,+,1}
     auto *ScevYY = SE.getSCEV(getInstructionByName(F, "yy")); // {(3 + %pp),+,1}
@@ -1162,6 +1167,7 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevV0, ScevV3), -3);
     EXPECT_EQ(diff(ScevV0, ScevV0), 0);
     EXPECT_EQ(diff(ScevV3, ScevV3), 0);
+    EXPECT_EQ(diff(ScevVX3, ScevVX), 3);
     EXPECT_EQ(diff(ScevIV, ScevIV), 0);
     EXPECT_EQ(diff(ScevXA, ScevXB), 0);
     EXPECT_EQ(diff(ScevXA, ScevYY), -3);
@@ -1622,6 +1628,42 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
     SE.forgetValue(IV);
     auto *ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
     EXPECT_EQ(ExtractValueScevForgotten, nullptr);
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
+  // Regression test for a case where caching of equivalent values caused the
+  // comparator to get inconsistent.
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define i32 @foo(i32 %arg0) {
+      %1 = add i32 %arg0, 1
+      %2 = add i32 %arg0, 1
+      %3 = xor i32 %2, %1
+      %4 = add i32 %3, %2
+      %5 = add i32 %arg0, 1
+      %6 = xor i32 %5, %arg0
+      %7 = add i32 %arg0, %6
+      %8 = add i32 %5, %7
+      %9 = xor i32 %8, %7
+      %10 = add i32 %9, %8
+      %11 = xor i32 %10, %9
+      %12 = add i32 %11, %10
+      %13 = xor i32 %12, %11
+      %14 = add i32 %12, %13
+      %15 = add i32 %14, %4
+      ret i32 %15
+    })",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+    // crash if the comparator has the specific caching bug.
+    SE.getSCEV(F.getEntryBlock().getTerminator()->getOperand(0));
   });
 }
 
