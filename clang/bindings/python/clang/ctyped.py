@@ -120,7 +120,7 @@ _Params = ParamSpec('_Params')
 _OrigRet = TypeVar('_OrigRet')
 _NewRet = TypeVar('_NewRet')
 
-def with_errcheck(checker: Callable[[_OrigRet, Callable[..., _OrigRet], Tuple[Any, ...]], _NewRet]):
+def with_errcheck(checker: Callable[[_OrigRet, Callable[..., _OrigRet], Tuple[Any, ...]], _NewRet]) -> Callable[[Callable[_Params, _OrigRet]], Callable[_Params, _NewRet]]:
     ''' Decorates a stub function with an error checker. '''
     def decorator(wrapped: Callable[_Params, _OrigRet]) -> Callable[_Params, _NewRet]:
         def wrapper(*args: _Params.args, **kwargs: _Params.kwargs) -> _NewRet:
@@ -141,7 +141,7 @@ def with_errcheck(checker: Callable[[_OrigRet, Callable[..., _OrigRet], Tuple[An
 #  processing or error checking use a ctypes data type as restype and
 #  assign a callable to the errcheck attribute."
 
-def with_converter(converter: Callable[[int], _NewRet]):
+def with_converter(converter: Callable[[int], _NewRet]) -> Callable[[Callable[_Params, r_int]], Callable[_Params, _NewRet]]:
     ''' Decorates a stub function with a converter, its return type MUST be `r_int`. '''
     def decorator(wrapped: Callable[_Params, r_int]) -> Callable[_Params, _NewRet]:
         def wrapper(*args: _Params.args, **kwargs: _Params.kwargs) -> _NewRet:
@@ -165,23 +165,23 @@ def convert_annotation(typ: Any, global_ns: Optional[Dict[str, Any]] = None) -> 
             raise ValueError('Evaluation of delayed annotation failed!') from exc
 
     if not hasattr(typ, '__metadata__'):
-        return typ
+        return cast(Type[Any], typ)
 
     # type is Annotated
     ident, *detail = typ.__metadata__
     if ident is ANNO_CONVERTIBLE:
         ctyp, = detail
-        return ctyp
+        return cast(Type[Any], ctyp)
     elif ident is ANNO_ARRAY:
         try: count, = detail
         except ValueError:
             raise ValueError('CArray needs to be annotated with its size')
         ctyp, = typ.__args__[0].__args__
-        return convert_annotation(ctyp, global_ns) * count
+        return cast(Type[Any], convert_annotation(ctyp, global_ns) * count)
     elif ident is ANNO_POINTER:
         assert not detail
         ctyp, = typ.__args__[0].__args__
-        return POINTER(convert_annotation(ctyp, global_ns)) # type: ignore
+        return POINTER(convert_annotation(ctyp, global_ns)) # pyright: ignore
     elif ident is ANNO_CFUNC:
         if not detail:
             raise ValueError('CFuncPointer needs to be annotated with its signature')
