@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// UNSUPPORTED: amdgcn-amd-amdhsa
+
 extern "C" int printf(const char *, ...);
 
 typedef struct {
