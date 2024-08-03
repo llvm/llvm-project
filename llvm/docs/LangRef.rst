@@ -25201,7 +25201,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.load``' intrinsic is designed for conditional reading of selected vector elements in a single IR operation. It is useful for targets that support vector masked loads and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar load operations.
-The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask. However, using this intrinsic prevents exceptions on memory access to masked-off lanes.
+The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 
 ::
@@ -25243,7 +25246,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.store``' intrinsics is designed for conditional writing of selected vector elements in a single IR operation. It is useful for targets that support vector masked store and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar store operations.
-The result of this operation is equivalent to a load-modify-store sequence. However, using this intrinsic prevents exceptions and data races on memory access to masked-off lanes.
+The result of this operation is equivalent to a load-modify-store sequence, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 ::
 
