@@ -222,6 +222,8 @@ X86 Support
   functions defined by the ``*mmintrin.h`` headers. A mapping can be
   found in the file ``clang/www/builtins.py``.
 
+- Support ISA of ``AVX10.2``.
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -311,6 +313,10 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+
+Improvements
+^^^^^^^^^^^^
+- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
 
 Additional Information
 ======================

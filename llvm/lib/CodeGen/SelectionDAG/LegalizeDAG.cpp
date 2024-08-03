@@ -140,9 +140,12 @@ private:
                        RTLIB::Libcall Call_F128,
                        RTLIB::Libcall Call_PPCF128,
                        SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandIntLibCall(SDNode *Node, bool IsSigned, RTLIB::Libcall Call_I8,
-                           RTLIB::Libcall Call_I16, RTLIB::Libcall Call_I32,
-                           RTLIB::Libcall Call_I64, RTLIB::Libcall Call_I128);
+  SDValue ExpandIntLibCall(SDNode *Node, bool isSigned,
+                           RTLIB::Libcall Call_I8,
+                           RTLIB::Libcall Call_I16,
+                           RTLIB::Libcall Call_I32,
+                           RTLIB::Libcall Call_I64,
+                           RTLIB::Libcall Call_I128);
   void ExpandArgFPLibCall(SDNode *Node,
                           RTLIB::Libcall Call_F32, RTLIB::Libcall Call_F64,
                           RTLIB::Libcall Call_F80, RTLIB::Libcall Call_F128,
@@ -2206,7 +2209,7 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
   ExpandFPLibCall(Node, LC, Results);
 }
 
-SDValue SelectionDAGLegalize::ExpandIntLibCall(SDNode *Node, bool IsSigned,
+SDValue SelectionDAGLegalize::ExpandIntLibCall(SDNode* Node, bool isSigned,
                                                RTLIB::Libcall Call_I8,
                                                RTLIB::Libcall Call_I16,
                                                RTLIB::Libcall Call_I32,
@@ -2221,9 +2224,7 @@ SDValue SelectionDAGLegalize::ExpandIntLibCall(SDNode *Node, bool IsSigned,
   case MVT::i64:  LC = Call_I64; break;
   case MVT::i128: LC = Call_I128; break;
   }
-  assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-         "LibCall explicitly requested, but not available");
-  return ExpandLibCall(LC, Node, IsSigned).first;
+  return ExpandLibCall(LC, Node, isSigned).first;
 }
 
 /// Expand the node to a libcall based on first argument type (for instance
@@ -4999,16 +5000,19 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                        RTLIB::MUL_I64, RTLIB::MUL_I128));
     break;
   case ISD::CTLZ_ZERO_UNDEF:
-    Results.push_back(ExpandIntLibCall(Node, /*IsSigned=*/false,
-                                       RTLIB::UNKNOWN_LIBCALL,
-                                       RTLIB::UNKNOWN_LIBCALL, RTLIB::CTLZ_I32,
-                                       RTLIB::CTLZ_I64, RTLIB::CTLZ_I128));
-    break;
-  case ISD::CTPOP:
-    Results.push_back(ExpandIntLibCall(Node, /*IsSigned=*/false,
-                                       RTLIB::UNKNOWN_LIBCALL,
-                                       RTLIB::UNKNOWN_LIBCALL, RTLIB::CTPOP_I32,
-                                       RTLIB::CTPOP_I64, RTLIB::CTPOP_I128));
+    switch (Node->getSimpleValueType(0).SimpleTy) {
+    default:
+      llvm_unreachable("LibCall explicitly requested, but not available");
+    case MVT::i32:
+      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I32, Node, false).first);
+      break;
+    case MVT::i64:
+      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I64, Node, false).first);
+      break;
+    case MVT::i128:
+      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I128, Node, false).first);
+      break;
+    }
     break;
   case ISD::RESET_FPENV: {
     // It is legalized to call 'fesetenv(FE_DFL_ENV)'. On most targets

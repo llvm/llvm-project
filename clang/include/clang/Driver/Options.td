@@ -6302,6 +6302,12 @@ def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group
 def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1 : Flag<["-"], "mavx10.1">, Alias<mavx10_1_256>;
 def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Alias<mno_avx10_1_256>;
+def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_2_256 : Flag<["-"], "mno-avx10.2-256">, Group<m_x86_AVX10_Features_Group>;
+def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_2_512 : Flag<["-"], "mno-avx10.2-512">, Group<m_x86_AVX10_Features_Group>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_256>;
+def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Alias<mno_avx10_2_256>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -8214,8 +8220,8 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
 } // let Visibility = [CC1Option]
 
 defm err_pragma_mc_func_aix : BoolFOption<"err-pragma-mc-func-aix",
-  PreprocessorOpts<"ErrorOnPragmaMcfuncOnAIX">, DefaultTrue,
-  PosFlag<SetTrue, [], [ClangOption],
+  PreprocessorOpts<"ErrorOnPragmaMcfuncOnAIX">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Treat uses of #pragma mc_func as errors">,
   NegFlag<SetFalse,[], [ClangOption, CC1Option],
           "Ignore uses of #pragma mc_func">>;

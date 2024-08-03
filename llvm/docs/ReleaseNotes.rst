@@ -120,6 +120,14 @@ Changes to the X86 Backend
   encoding. To use optimised NOP filling in a code section, leave off the
   "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
 
+* Due to the removal of the ``x86_mmx`` IR type, functions with
+  ``x86_mmx`` arguments or return values will use a different,
+  incompatible, calling convention ABI. Such functions are not
+  generally seen in the wild (Clang never generates them!), so this is
+  not expected to result in real-world compatibility problems.
+
+* Support ISA of ``AVX10.2-256`` and ``AVX10.2-512``.
+
 Changes to the OCaml bindings
 -----------------------------
 
