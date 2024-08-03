@@ -1624,12 +1624,30 @@ ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
     return getEmpty();
 
   ConstantRange Result = shl(Other);
+  KnownBits Known = toKnownBits();
 
-  if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap)
-    Result = Result.intersectWith(sshl_sat(Other), RangeType);
+  if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap) {
+    ConstantRange ShAmtRange = Other;
+    if (isAllNonNegative())
+      ShAmtRange = ShAmtRange.intersectWith(
+          ConstantRange(APInt::getZero(getBitWidth()),
+                        APInt(getBitWidth(), Known.countMaxLeadingZeros())),
+          Unsigned);
+    else if (isAllNegative())
+      ShAmtRange = ShAmtRange.intersectWith(
+          ConstantRange(APInt::getZero(getBitWidth()),
+                        APInt(getBitWidth(), Known.countMaxLeadingOnes())),
+          Unsigned);
+    Result = Result.intersectWith(sshl_sat(ShAmtRange), RangeType);
+  }
 
-  if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap)
-    Result = Result.intersectWith(ushl_sat(Other), RangeType);
+  if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap) {
+    ConstantRange ShAmtRange =
+        getNonEmpty(APInt::getZero(getBitWidth()),
+                    APInt(getBitWidth(), Known.countMaxLeadingZeros() + 1));
+    Result = Result.intersectWith(
+        ushl_sat(Other.intersectWith(ShAmtRange, Unsigned)), RangeType);
+  }
 
   return Result;
 }

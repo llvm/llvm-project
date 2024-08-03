@@ -105,7 +105,7 @@ exit:
 define i8 @test5(i8 %b) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 0, [[B:%.*]]
-; CHECK-NEXT:    ret i8 [[SHL]]
+; CHECK-NEXT:    ret i8 0
 ;
   %shl = shl i8 0, %b
   ret i8 %shl
@@ -479,9 +479,8 @@ define i1 @shl_nuw_nsw_test5(i32 %x) {
 ; CHECK-LABEL: @shl_nuw_nsw_test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 768, [[X:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[SHL]], 1846
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[SHL]], 1846
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %shl = shl nuw nsw i32 768, %x
