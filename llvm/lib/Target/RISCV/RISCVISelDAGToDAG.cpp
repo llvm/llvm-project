@@ -1217,8 +1217,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!N1C)
       break;
     uint64_t C1 = N1C->getZExtValue();
-    const bool isC1Mask = isMask_64(C1);
-    const bool isC1ANDI = isInt<12>(C1);
+    const bool IsC1Mask = isMask_64(C1);
+    const bool IsC1ANDI = isInt<12>(C1);
 
     SDValue N0 = Node->getOperand(0);
 
@@ -1266,7 +1266,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       // Turn (and (srl x, c2) c1) -> (srli (slli x, c3-c2), c3) if c1 is a mask
       // with c3 leading zeros.
-      if (!LeftShift && isC1Mask) {
+      if (!LeftShift && IsC1Mask) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         if (C2 < Leading) {
           // If the number of leading zeros is C2+32 this can be SRLIW.
@@ -1454,7 +1454,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (isC1Mask && !isC1ANDI) {
+    if (IsC1Mask && !IsC1ANDI) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;
