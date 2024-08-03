@@ -1604,12 +1604,12 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
   //
   const auto &BlockColors = SafetyInfo->getBlockColors();
   SmallSetVector<BasicBlock *, 8> PredBBs(pred_begin(ExitBB), pred_end(ExitBB));
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   while (!PredBBs.empty()) {
     BasicBlock *PredBB = *PredBBs.begin();
     assert(CurLoop->contains(PredBB) &&
            "Expect all predecessors are in the loop");
     if (PN->getBasicBlockIndex(PredBB) >= 0) {
+      DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
       BasicBlock *NewPred = SplitBlockPredecessors(
           ExitBB, PredBB, ".split.loop.exit", &DTU, LI, MSSAU, true);
       // Since we do not allow splitting EH-block with BlockColors in
