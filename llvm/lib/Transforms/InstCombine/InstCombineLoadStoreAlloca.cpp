@@ -1028,7 +1028,7 @@ static Value *foldLoadFromIndexedGlobal(LoadInst &LI, IRBuilderBase &Builder,
   if (!ConstOffset.isZero() || VariableOffsets.size() != 1)
     return nullptr;
 
-  auto &Step = VariableOffsets.front().second;
+  const APInt &Step = VariableOffsets.front().second;
   if (Step.isNonPositive())
     return nullptr;
   uint64_t ArraySize = DL.getTypeAllocSize(Init->getType()).getFixedValue();
@@ -1044,9 +1044,11 @@ static Value *foldLoadFromIndexedGlobal(LoadInst &LI, IRBuilderBase &Builder,
     return nullptr;
 
   Type *LoadTy = LI.getType();
-  SmallMapVector<Constant *, uint64_t, 2> ValueMap;
   // MultiMapIdx indicates that this value occurs more than once in the array.
   constexpr uint64_t MultiMapIdx = static_cast<uint64_t>(-1);
+  // Map from Value to single index where it occurs or MultiMapIdx if it occurs
+  // multiple times.
+  SmallMapVector<Constant *, uint64_t, 2> ValueMap;
   uint32_t MultiMapElts = 0;
   APInt Offset(IndexBW, 0);
   for (uint64_t I = 0; Offset.getZExtValue() < ArraySize; ++I, Offset += Step) {
@@ -1055,7 +1057,7 @@ static Value *foldLoadFromIndexedGlobal(LoadInst &LI, IRBuilderBase &Builder,
     if (!Elt)
       return nullptr;
 
-    // bail out if the array contains undef values
+    // Bail out if the array contains undef values.
     if (isa<UndefValue>(Elt))
       return nullptr;
 
