@@ -58,12 +58,16 @@ def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
+def ArgExpr : ArgType { let Name = "const Expr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
-def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 def ArgDecl : ArgType { let Name = "const Decl*"; }
 def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
+def ArgDesc : ArgType { let Name = "const Descriptor *"; }
+def ArgPrimType : ArgType { let Name = "PrimType"; }
+def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
+def ArgTypePtr : ArgType { let Name = "const Type *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -228,6 +232,9 @@ def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
 }
+def InitScope : Opcode {
+  let Args = [ArgUint32];
+}
 
 //===----------------------------------------------------------------------===//
 // Constants
@@ -385,6 +392,16 @@ def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
 def CheckDecl : Opcode {
   let Args = [ArgVarDecl];
+}
+
+def CheckEnumValue : Opcode {
+  let Args = [ArgEnumDecl];
+  let Types = [FixedSizeIntegralTypeClass];
+  let HasGroup = 1;
+}
+
+def CheckLiteralType : Opcode {
+  let Args = [ArgTypePtr];
 }
 
 // [] -> [Value]
@@ -712,6 +729,11 @@ def Dup : Opcode {
   let HasGroup = 1;
 }
 
+def Flip : Opcode {
+  let Types = [AllTypeClass, AllTypeClass];
+  let HasGroup = 1;
+}
+
 // [] -> []
 def Invalid : Opcode {}
 def Unsupported : Opcode {}
@@ -723,6 +745,8 @@ def InvalidCast : Opcode {
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
+
+def SizelessVectorElementSize : Opcode;
 
 def Assume : Opcode;
 
@@ -747,3 +771,23 @@ def GetMemberPtrDecl : Opcode;
 // Debugging.
 //===----------------------------------------------------------------------===//
 def Dump : Opcode;
+
+def Alloc : Opcode {
+  let Args = [ArgDesc];
+}
+
+def AllocN : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgPrimType, ArgExpr, ArgBool];
+  let HasGroup = 1;
+}
+
+def AllocCN : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgDesc, ArgBool];
+  let HasGroup = 1;
+}
+
+def Free : Opcode {
+  let Args = [ArgBool];
+}

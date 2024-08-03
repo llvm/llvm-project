@@ -280,17 +280,22 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   const auto *RD = Ty->getAsCXXRecordDecl();
   if (!RD)
     return;
-  const auto *Attr = RD->getAttr<HLSLResourceAttr>();
-  if (!Attr)
-    return;
+  // the resource related attributes are on the handle member
+  // inside the record decl
+  for (auto *FD : RD->fields()) {
+    const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
+    const auto *HLSLResClassAttr = FD->getAttr<HLSLResourceClassAttr>();
+    if (!HLSLResAttr || !HLSLResClassAttr)
+      continue;
 
-  llvm::hlsl::ResourceClass RC = Attr->getResourceClass();
-  llvm::hlsl::ResourceKind RK = Attr->getResourceKind();
-  bool IsROV = Attr->getIsROV();
-  llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
+    llvm::hlsl::ResourceClass RC = HLSLResClassAttr->getResourceClass();
+    llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
+    bool IsROV = HLSLResAttr->getIsROV();
+    llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
 
-  BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
-  addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
+    BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
+    addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
+  }
 }
 
 CGHLSLRuntime::BufferResBinding::BufferResBinding(

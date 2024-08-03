@@ -41,14 +41,14 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
   let cppNamespace = "::mlir::omp";
 
   let methods = [
-    InterfaceMethod<"Get map operands", "::mlir::OperandRange", "getMapOperands",
+    InterfaceMethod<"Get map operands", "::mlir::OperandRange", "getMapVars",
       (ins), [{
-        return $_op.getMapOperands();
+        return $_op.getMapVars();
       }]>,
       InterfaceMethod<"Get mutable map operands", "::mlir::MutableOperandRange",
-                      "getMapOperandsMutable",
+                      "getMapVarsMutable",
       (ins), [{
-        return $_op.getMapOperandsMutable();
+        return $_op.getMapVarsMutable();
       }]>,
   ];
 }
@@ -84,8 +84,8 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
       /*description=*/[{
         Tell whether the operation could be taking the role of a loop wrapper.
         That is, it has a single region with a single block in which there are
-        two operations: another wrapper or `omp.loop_nest` operation and a
-        terminator.
+        two operations: another wrapper (also taking a loop wrapper role) or
+        `omp.loop_nest` operation and a terminator.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isWrapper",
@@ -102,8 +102,14 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
 
         Operation &firstOp = *r.op_begin();
         Operation &secondOp = *(std::next(r.op_begin()));
-        return ::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp) &&
-               secondOp.hasTrait<OpTrait::IsTerminator>();
+
+        if (!secondOp.hasTrait<OpTrait::IsTerminator>())
+          return false;
+
+        if (auto wrapper = ::llvm::dyn_cast<LoopWrapperInterface>(firstOp))
+          return wrapper.isWrapper();
+
+        return ::llvm::isa<LoopNestOp>(firstOp);
       }]
     >,
     InterfaceMethod<
@@ -345,6 +351,34 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       (ins "::mlir::omp::ClauseRequires":$clauses), [{}], [{
         $_op->setAttr(mlir::StringAttr::get($_op->getContext(), "omp.requires"),
           mlir::omp::ClauseRequiresAttr::get($_op->getContext(), clauses));
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Get the omp.target_triples attribute on the operator if it's present and
+        return its value. If it doesn't exist, return an empty array by default.
+      }],
+      /*retTy=*/"::llvm::ArrayRef<::mlir::Attribute>",
+      /*methodName=*/"getTargetTriples",
+      (ins), [{}], [{
+        if (Attribute triplesAttr = $_op->getAttr("omp.target_triples"))
+          if (auto triples = ::llvm::dyn_cast<::mlir::ArrayAttr>(triplesAttr))
+            return triples.getValue();
+        return {};
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Set the omp.target_triples attribute on the operation.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setTargetTriples",
+      (ins "::llvm::ArrayRef<::std::string>":$targetTriples), [{}], [{
+        auto names = ::llvm::to_vector(::llvm::map_range(
+            targetTriples, [&](::std::string str) -> ::mlir::Attribute {
+              return mlir::StringAttr::get($_op->getContext(), str);
+            }));
+        $_op->setAttr(
+            ::mlir::StringAttr::get($_op->getContext(), "omp.target_triples"),
+            ::mlir::ArrayAttr::get($_op->getContext(), names));
       }]>
   ];
 }

@@ -14,11 +14,13 @@
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE::fputil {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 
 // A generic class to perform computations of high precision floating points.
 // We store the value in dyadic format, including 3 fields:
@@ -67,16 +69,26 @@ template <size_t Bits> struct DyadicFloat {
   }
 
   // Used for aligning exponents.  Output might not be normalized.
-  LIBC_INLINE constexpr DyadicFloat &shift_left(int shift_length) {
-    exponent -= shift_length;
-    mantissa <<= static_cast<size_t>(shift_length);
+  LIBC_INLINE constexpr DyadicFloat &shift_left(unsigned shift_length) {
+    if (shift_length < Bits) {
+      exponent -= static_cast<int>(shift_length);
+      mantissa <<= shift_length;
+    } else {
+      exponent = 0;
+      mantissa = MantissaType(0);
+    }
     return *this;
   }
 
   // Used for aligning exponents.  Output might not be normalized.
-  LIBC_INLINE constexpr DyadicFloat &shift_right(int shift_length) {
-    exponent += shift_length;
-    mantissa >>= static_cast<size_t>(shift_length);
+  LIBC_INLINE constexpr DyadicFloat &shift_right(unsigned shift_length) {
+    if (shift_length < Bits) {
+      exponent += static_cast<int>(shift_length);
+      mantissa >>= shift_length;
+    } else {
+      exponent = 0;
+      mantissa = MantissaType(0);
+    }
     return *this;
   }
 
@@ -261,9 +273,9 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
 
   // Align exponents
   if (a.exponent > b.exponent)
-    b.shift_right(a.exponent - b.exponent);
+    b.shift_right(static_cast<unsigned>(a.exponent - b.exponent));
   else if (b.exponent > a.exponent)
-    a.shift_right(b.exponent - a.exponent);
+    a.shift_right(static_cast<unsigned>(b.exponent - a.exponent));
 
   DyadicFloat<Bits> result;
 
@@ -361,6 +373,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(const DyadicFloat<Bits> &a,
   return result;
 }
 
-} // namespace LIBC_NAMESPACE::fputil
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H

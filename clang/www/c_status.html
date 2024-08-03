@@ -306,7 +306,10 @@ conformance.</p>
           glibc</a>, <a href="https://git.musl-libc.org/cgit/musl/tree/include/stdc-predef.h">
           musl</a> will define the macro regardless of compiler support unless
           the compiler defines <code>__GCC_IEC_559</code>, which Clang does not
-          currently define.
+          currently define.<br>
+          Additionally, Clang intentionally will not conform to Annex F on
+          32-bit x86 without SSE2 due to the behavior of floating-point
+          operations in x87.
         </details>
       </td>
     </tr>
@@ -501,7 +504,14 @@ conformance.</p>
     <tr>
       <td>Wide function returns (alternate proposal)</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1396.htm">N1396</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">
+        <details><summary>Yes*</summary>
+        Clang conforms to this paper on all targets except 32-bit x86 without
+        SSE2. However, Clang does not claim conformance to Annex F on any
+        target and does not intend to ever conform to Annex F on that specific
+        target, so no changes are needed to conform to this paper.
+        </details>
+      </td>
     </tr>
     <tr id="alignment">
       <td rowspan="3">Alignment</td>
@@ -995,7 +1005,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Contradiction about INFINITY macro</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf">N2848</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Require exact-width integer type interfaces</td>
@@ -1066,7 +1076,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>char8_t: A type for UTF-8 characters and strings</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2653.htm">N2653</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Clarification for max exponent macros-update</td>
@@ -1255,17 +1265,18 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Round-trip rounding</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3232.pdf">N3232</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
+      <!-- editorial changes, no tests required -->
     </tr>
     <tr>
       <td>Accessing byte arrays</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3254.pdf">N3254</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Slay some earthly demons I</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3244.pdf">N3244</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">
       <!-- Voted in:
              Annex J Item 21 (including additional change)
              Annex J Item 56
@@ -1273,6 +1284,14 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
              Annex J Item 67
              Annex J Item 69 (alternative wording for semantics)
       -->
+        <details><summary>Partial</summary>
+          Clang does not document the implementation-defined behavior for decay
+          of an array with the register storage class specifier. Clang does not
+          diagnose an <code>extern inline</code> function with no definition in
+          the TU. Clang accepts and rejects redeclarations with/without an
+          alignment specifier, depending on the order of the declarations.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Support ++ and -- on complex values</td>
@@ -1282,7 +1301,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Usability of a byte-wise copy of va_list</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3262.pdf">N3262</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>alignof of an incomplete array type</td>
@@ -1292,7 +1311,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Remove imaginary types</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3274.pdf">N3274</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
 </table>
 </details>

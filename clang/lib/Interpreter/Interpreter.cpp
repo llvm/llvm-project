@@ -26,7 +26,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleBuilder.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
+#include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
@@ -38,6 +38,7 @@
 #include "clang/Interpreter/Value.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
@@ -686,10 +687,12 @@ public:
   }
 
 private:
-  // Force cast these types to uint64 to reduce the number of overloads of
-  // `__clang_Interpreter_SetValueNoAlloc`.
+  // Force cast these types to the uint that fits the register size. That way we
+  // reduce the number of overloads of `__clang_Interpreter_SetValueNoAlloc`.
   void HandleIntegralOrEnumType(const Type *Ty) {
-    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.UnsignedLongLongTy);
+    uint64_t PtrBits = Ctx.getTypeSize(Ctx.VoidPtrTy);
+    QualType UIntTy = Ctx.getBitIntType(/*Unsigned=*/true, PtrBits);
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(UIntTy);
     ExprResult CastedExpr =
         S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
     assert(!CastedExpr.isInvalid() && "Cannot create cstyle cast expr");

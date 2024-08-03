@@ -174,6 +174,10 @@ inline StringRef getInstrProfCounterBiasVarName() {
   return INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_VAR);
 }
 
+inline StringRef getInstrProfBitmapBiasVarName() {
+  return INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_BITMAP_BIAS_VAR);
+}
+
 /// Return the marker used to separate PGO names during serialization.
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
 
@@ -794,9 +798,8 @@ struct InstrProfValueSiteRecord {
   std::vector<InstrProfValueData> ValueData;
 
   InstrProfValueSiteRecord() = default;
-  template <class InputIterator>
-  InstrProfValueSiteRecord(InputIterator F, InputIterator L)
-      : ValueData(F, L) {}
+  InstrProfValueSiteRecord(std::vector<InstrProfValueData> &&VD)
+      : ValueData(VD) {}
 
   /// Sort ValueData ascending by Value
   void sortByTargetValues() {
@@ -870,7 +873,7 @@ struct InstrProfRecord {
   /// Add ValueData for ValueKind at value Site.  We do not support adding sites
   /// out of order.  Site must go up from 0 one by one.
   void addValueData(uint32_t ValueKind, uint32_t Site,
-                    InstrProfValueData *VData, uint32_t N,
+                    ArrayRef<InstrProfValueData> VData,
                     InstrProfSymtab *SymTab);
 
   /// Merge the counts in \p Other into this one.

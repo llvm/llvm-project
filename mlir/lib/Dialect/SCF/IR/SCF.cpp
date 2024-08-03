@@ -618,44 +618,6 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
 
 SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
 
-FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
-    RewriterBase &rewriter, ValueRange newInitOperands,
-    bool replaceInitOperandUsesInLoop,
-    const NewYieldValuesFn &newYieldValuesFn) {
-  // Create a new loop before the existing one, with the extra operands.
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(getOperation());
-  SmallVector<Value> inits(getOutputs());
-  llvm::append_range(inits, newInitOperands);
-  scf::ForallOp newLoop = rewriter.create<scf::ForallOp>(
-      getLoc(), getMixedLowerBound(), getMixedUpperBound(), getMixedStep(),
-      inits, getMapping(),
-      /*bodyBuilderFn =*/[](OpBuilder &, Location, ValueRange) {});
-
-  // Move the loop body to the new op.
-  rewriter.mergeBlocks(getBody(), newLoop.getBody(),
-                       newLoop.getBody()->getArguments().take_front(
-                           getBody()->getNumArguments()));
-
-  if (replaceInitOperandUsesInLoop) {
-    // Replace all uses of `newInitOperands` with the corresponding basic block
-    // arguments.
-    for (auto &&[newOperand, oldOperand] :
-         llvm::zip(newInitOperands, newLoop.getBody()->getArguments().take_back(
-                                        newInitOperands.size()))) {
-      rewriter.replaceUsesWithIf(newOperand, oldOperand, [&](OpOperand &use) {
-        Operation *user = use.getOwner();
-        return newLoop->isProperAncestor(user);
-      });
-    }
-  }
-
-  // Replace the old loop.
-  rewriter.replaceOp(getOperation(),
-                     newLoop->getResults().take_front(getNumResults()));
-  return cast<LoopLikeOpInterface>(newLoop.getOperation());
-}
-
 /// Promotes the loop body of a forallOp to its containing block if it can be
 /// determined that the loop has a single iteration.
 LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
@@ -4335,33 +4297,42 @@ void IndexSwitchOp::getRegionInvocationBounds(
     bounds.emplace_back(/*lb=*/0, /*ub=*/i == liveIndex);
 }
 
-LogicalResult IndexSwitchOp::fold(FoldAdaptor adaptor,
-                                  SmallVectorImpl<OpFoldResult> &results) {
-  std::optional<int64_t> maybeCst = getConstantIntValue(getArg());
-  if (!maybeCst.has_value())
-    return failure();
-  int64_t cst = *maybeCst;
-  int64_t caseIdx, e = getNumCases();
-  for (caseIdx = 0; caseIdx < e; ++caseIdx) {
-    if (cst == getCases()[caseIdx])
-      break;
+struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
+  using OpRewritePattern<scf::IndexSwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::IndexSwitchOp op,
+                                PatternRewriter &rewriter) const override {
+    // If `op.getArg()` is a constant, select the region that matches with
+    // the constant value. Use the default region if no matche is found.
+    std::optional<int64_t> maybeCst = getConstantIntValue(op.getArg());
+    if (!maybeCst.has_value())
+      return failure();
+    int64_t cst = *maybeCst;
+    int64_t caseIdx, e = op.getNumCases();
+    for (caseIdx = 0; caseIdx < e; ++caseIdx) {
+      if (cst == op.getCases()[caseIdx])
+        break;
+    }
+
+    Region &r = (caseIdx < op.getNumCases()) ? op.getCaseRegions()[caseIdx]
+                                             : op.getDefaultRegion();
+    Block &source = r.front();
+    Operation *terminator = source.getTerminator();
+    SmallVector<Value> results = terminator->getOperands();
+
+    rewriter.inlineBlockBefore(&source, op);
+    rewriter.eraseOp(terminator);
+    // Repalce the operation with a potentially empty list of results.
+    // Fold mechanism doesn't support the case where the result list is empty.
+    rewriter.replaceOp(op, results);
+
+    return success();
   }
+};
 
-  Region &r = (caseIdx < getNumCases()) ? getCaseRegions()[caseIdx]
-                                        : getDefaultRegion();
-  Block &source = r.front();
-  results.assign(source.getTerminator()->getOperands().begin(),
-                 source.getTerminator()->getOperands().end());
-
-  Block *pDestination = (*this)->getBlock();
-  if (!pDestination)
-    return failure();
-  Block::iterator insertionPoint = (*this)->getIterator();
-  pDestination->getOperations().splice(insertionPoint, source.getOperations(),
-                                       source.getOperations().begin(),
-                                       std::prev(source.getOperations().end()));
-
-  return success();
+void IndexSwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldConstantCase>(context);
 }
 
 //===----------------------------------------------------------------------===//

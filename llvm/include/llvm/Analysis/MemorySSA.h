@@ -937,7 +937,7 @@ public:
   struct Result {
     Result(std::unique_ptr<MemorySSA> &&MSSA) : MSSA(std::move(MSSA)) {}
 
-    MemorySSA &getMSSA() { return *MSSA.get(); }
+    MemorySSA &getMSSA() { return *MSSA; }
 
     std::unique_ptr<MemorySSA> MSSA;
 

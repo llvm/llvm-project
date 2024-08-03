@@ -61,6 +61,11 @@ static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
 static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
                                       cl::init(true), cl::Hidden);
 
+// A complete guess as to a reasonable cost.
+static cl::opt<unsigned>
+    BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
+                    cl::desc("The cost of a histcnt instruction"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -249,7 +254,8 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CallerAttrs.requiresSMChange(CalleeAttrs)) {
+      CallerAttrs.requiresSMChange(CalleeAttrs) ||
+      CallerAttrs.requiresPreservingZT0(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -508,11 +514,39 @@ static bool isUnpackedVectorVT(EVT VecVT) {
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
 }
 
+static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
+  Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
+  Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
+
+  // Only allow (32b and 64b) integers or pointers for now...
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
+      (EltTy->getScalarSizeInBits() != 32 &&
+       EltTy->getScalarSizeInBits() != 64))
+    return InstructionCost::getInvalid();
+
+  // FIXME: Hacky check for legal vector types. We can promote smaller types
+  //        but we cannot legalize vectors via splitting for histcnt.
+  // FIXME: We should be able to generate histcnt for fixed-length vectors
+  //        using ptrue with a specific VL.
+  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy))
+    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
+         VTy->getElementCount().getKnownMinValue() != 4) ||
+        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
+        !VTy->isScalableTy())
+      return InstructionCost::getInvalid();
+
+  return InstructionCost(BaseHistCntCost);
+}
+
 InstructionCost
 AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
+  case Intrinsic::experimental_vector_histogram_add:
+    if (!ST->hasSVE2())
+      return InstructionCost::getInvalid();
+    return getHistogramCost(ICA);
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -715,22 +749,44 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // output are the same, or we are using cvt f64->i32 or f32->i64.
     if ((LT.second == MVT::f32 || LT.second == MVT::f64 ||
          LT.second == MVT::v2f32 || LT.second == MVT::v4f32 ||
-         LT.second == MVT::v2f64) &&
-        (LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits() ||
-         (LT.second == MVT::f64 && MTy == MVT::i32) ||
-         (LT.second == MVT::f32 && MTy == MVT::i64)))
+         LT.second == MVT::v2f64)) {
+      if ((LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits() ||
+           (LT.second == MVT::f64 && MTy == MVT::i32) ||
+           (LT.second == MVT::f32 && MTy == MVT::i64)))
+        return LT.first;
+      // Extending vector types v2f32->v2i64, fcvtl*2 + fcvt*2
+      if (LT.second.getScalarType() == MVT::f32 && MTy.isFixedLengthVector() &&
+          MTy.getScalarSizeInBits() == 64)
+        return LT.first * (MTy.getVectorNumElements() > 2 ? 4 : 2);
+    }
+    // Similarly for fp16 sizes. Without FullFP16 we generally need to fcvt to
+    // f32.
+    if (LT.second.getScalarType() == MVT::f16 && !ST->hasFullFP16())
+      return LT.first + getIntrinsicInstrCost(
+                            {ICA.getID(),
+                             RetTy,
+                             {ICA.getArgTypes()[0]->getWithNewType(
+                                 Type::getFloatTy(RetTy->getContext()))}},
+                            CostKind);
+    if ((LT.second == MVT::f16 && MTy == MVT::i32) ||
+        (LT.second == MVT::f16 && MTy == MVT::i64) ||
+        ((LT.second == MVT::v4f16 || LT.second == MVT::v8f16) &&
+         (LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits())))
       return LT.first;
-    // Similarly for fp16 sizes
-    if (ST->hasFullFP16() &&
-        ((LT.second == MVT::f16 && MTy == MVT::i32) ||
-         ((LT.second == MVT::v4f16 || LT.second == MVT::v8f16) &&
-          (LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits()))))
-      return LT.first;
+    // Extending vector types v8f16->v8i32, fcvtl*2 + fcvt*2
+    if (LT.second.getScalarType() == MVT::f16 && MTy.isFixedLengthVector() &&
+        MTy.getScalarSizeInBits() == 32)
+      return LT.first * (MTy.getVectorNumElements() > 4 ? 4 : 2);
+    // Extending vector types v8f16->v8i32. These current scalarize but the
+    // codegen could be better.
+    if (LT.second.getScalarType() == MVT::f16 && MTy.isFixedLengthVector() &&
+        MTy.getScalarSizeInBits() == 64)
+      return MTy.getVectorNumElements() * 3;
 
-    // Otherwise we use a legal convert followed by a min+max
+    // If we can we use a legal convert followed by a min+max
     if ((LT.second.getScalarType() == MVT::f32 ||
          LT.second.getScalarType() == MVT::f64 ||
-         (ST->hasFullFP16() && LT.second.getScalarType() == MVT::f16)) &&
+         LT.second.getScalarType() == MVT::f16) &&
         LT.second.getScalarSizeInBits() >= MTy.getScalarSizeInBits()) {
       Type *LegalTy =
           Type::getIntNTy(RetTy->getContext(), LT.second.getScalarSizeInBits());
@@ -743,9 +799,33 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       IntrinsicCostAttributes Attrs2(IsSigned ? Intrinsic::smax : Intrinsic::umax,
                                     LegalTy, {LegalTy, LegalTy});
       Cost += getIntrinsicInstrCost(Attrs2, CostKind);
-      return LT.first * Cost;
+      return LT.first * Cost +
+             ((LT.second.getScalarType() != MVT::f16 || ST->hasFullFP16()) ? 0
+                                                                           : 1);
     }
-    break;
+    // Otherwise we need to follow the default expansion that clamps the value
+    // using a float min/max with a fcmp+sel for nan handling when signed.
+    Type *FPTy = ICA.getArgTypes()[0]->getScalarType();
+    RetTy = RetTy->getScalarType();
+    if (LT.second.isVector()) {
+      FPTy = VectorType::get(FPTy, LT.second.getVectorElementCount());
+      RetTy = VectorType::get(RetTy, LT.second.getVectorElementCount());
+    }
+    IntrinsicCostAttributes Attrs1(Intrinsic::minnum, FPTy, {FPTy, FPTy});
+    InstructionCost Cost = getIntrinsicInstrCost(Attrs1, CostKind);
+    IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, FPTy, {FPTy, FPTy});
+    Cost += getIntrinsicInstrCost(Attrs2, CostKind);
+    Cost +=
+        getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
+                         RetTy, FPTy, TTI::CastContextHint::None, CostKind);
+    if (IsSigned) {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      Cost += getCmpSelInstrCost(BinaryOperator::FCmp, FPTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+    }
+    return LT.first * Cost;
   }
   case Intrinsic::fshl:
   case Intrinsic::fshr: {
@@ -2752,7 +2832,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     std::pair<InstructionCost, MVT> LT =
         getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
     unsigned NumElements = AArch64::SVEBitsPerBlock /
-                           LT.second.getVectorElementType().getSizeInBits();
+                           LT.second.getScalarSizeInBits();
     return AdjustCost(
         LT.first *
         getCastInstrCost(
@@ -4032,15 +4112,12 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
           NMask.push_back(MaskElt % LTNumElts);
       }
       // If the sub-mask has at most 2 input sub-vectors then re-cost it using
-      // getShuffleCost. If not then cost it using the worst case.
+      // getShuffleCost. If not then cost it using the worst case as the number
+      // of element moves into a new vector.
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
                                NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
-      else if (any_of(enumerate(NMask), [&](const auto &ME) {
-                 return ME.value() % LTNumElts == ME.index();
-               }))
-        Cost += LTNumElts - 1;
       else
         Cost += LTNumElts;
     }

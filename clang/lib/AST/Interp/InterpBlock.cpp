@@ -31,9 +31,13 @@ void Block::addPointer(Pointer *P) {
   P->Next = Pointers;
   P->Prev = nullptr;
   Pointers = P;
+#ifndef NDEBUG
+  assert(hasPointer(P));
+#endif
 }
 
 void Block::removePointer(Pointer *P) {
+  assert(P->isBlockPointer());
   assert(P);
   if (IsStatic) {
     assert(!Pointers);
@@ -51,6 +55,10 @@ void Block::removePointer(Pointer *P) {
     P->Prev->Next = P->Next;
   if (P->Next)
     P->Next->Prev = P->Prev;
+  P->PointeeStorage.BS.Pointee = nullptr;
+#ifndef NDEBUG
+  assert(!hasPointer(P));
+#endif
 }
 
 void Block::cleanup() {
@@ -106,9 +114,13 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   B.Pointers = Blk->Pointers;
   for (Pointer *P = Blk->Pointers; P; P = P->Next)
     P->PointeeStorage.BS.Pointee = &B;
+  Blk->Pointers = nullptr;
 }
 
 void DeadBlock::free() {
+  if (B.IsInitialized)
+    B.invokeDtor();
+
   if (Prev)
     Prev->Next = Next;
   if (Next)

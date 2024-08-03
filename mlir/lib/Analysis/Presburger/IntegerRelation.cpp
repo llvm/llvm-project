@@ -26,6 +26,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -510,10 +511,10 @@ void IntegerRelation::getLowerAndUpperBoundIndices(
       continue;
     if (atIneq(r, pos) >= 1) {
       // Lower bound.
-      lbIndices->push_back(r);
+      lbIndices->emplace_back(r);
     } else if (atIneq(r, pos) <= -1) {
       // Upper bound.
-      ubIndices->push_back(r);
+      ubIndices->emplace_back(r);
     }
   }
 
@@ -527,7 +528,7 @@ void IntegerRelation::getLowerAndUpperBoundIndices(
       continue;
     if (containsConstraintDependentOnRange(r, /*isEq=*/true))
       continue;
-    eqIndices->push_back(r);
+    eqIndices->emplace_back(r);
   }
 }
 
@@ -790,7 +791,7 @@ IntMatrix IntegerRelation::getBoundedDirections() const {
   // processes all the inequalities.
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
     if (simplex.isBoundedAlongConstraint(i))
-      boundedIneqs.push_back(i);
+      boundedIneqs.emplace_back(i);
   }
 
   // The direction vector is given by the coefficients and does not include the
@@ -1552,22 +1553,22 @@ static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
   return -1;
 }
 
-bool IntegerRelation::constantFoldVar(unsigned pos) {
+LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   int rowIdx;
   if ((rowIdx = findEqualityToConstant(*this, pos)) == -1)
-    return false;
+    return failure();
 
   // atEq(rowIdx, pos) is either -1 or 1.
   assert(atEq(rowIdx, pos) * atEq(rowIdx, pos) == 1);
   DynamicAPInt constVal = -atEq(rowIdx, getNumCols() - 1) / atEq(rowIdx, pos);
   setAndEliminate(pos, constVal);
-  return true;
+  return success();
 }
 
 void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
   for (unsigned s = pos, t = pos, e = pos + num; s < e; s++) {
-    if (!constantFoldVar(t))
+    if (constantFoldVar(t).failed())
       t++;
   }
 }
@@ -1944,9 +1945,9 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
     if (atEq(r, pos) != 0) {
       // Use Gaussian elimination here (since we have an equality).
-      bool ret = gaussianEliminateVar(pos);
+      LogicalResult ret = gaussianEliminateVar(pos);
       (void)ret;
-      assert(ret && "Gaussian elimination guaranteed to succeed");
+      assert(ret.succeeded() && "Gaussian elimination guaranteed to succeed");
       LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
       LLVM_DEBUG(dump());
       return;
@@ -1980,13 +1981,13 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     if (atIneq(r, pos) == 0) {
       // Var does not appear in bound.
-      nbIndices.push_back(r);
+      nbIndices.emplace_back(r);
     } else if (atIneq(r, pos) >= 1) {
       // Lower bound.
-      lbIndices.push_back(r);
+      lbIndices.emplace_back(r);
     } else {
       // Upper bound.
-      ubIndices.push_back(r);
+      ubIndices.emplace_back(r);
     }
   }
 
@@ -2027,8 +2028,8 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
           continue;
         assert(lbCoeff >= 1 && ubCoeff >= 1 && "bounds wrongly identified");
         DynamicAPInt lcm = llvm::lcm(lbCoeff, ubCoeff);
-        ineq.push_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
-                       atIneq(lbPos, l) * (lcm / lbCoeff));
+        ineq.emplace_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
+                          atIneq(lbPos, l) * (lcm / lbCoeff));
         assert(lcm > 0 && "lcm should be positive!");
         if (lcm != 1)
           allLCMsAreOne = false;
@@ -2056,7 +2057,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     for (unsigned l = 0, e = getNumCols(); l < e; l++) {
       if (l == pos)
         continue;
-      ineq.push_back(atIneq(nbPos, l));
+      ineq.emplace_back(atIneq(nbPos, l));
     }
     newRel.addInequality(ineq);
   }
@@ -2071,7 +2072,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     for (unsigned l = 0, e = getNumCols(); l < e; l++) {
       if (l == pos)
         continue;
-      eq.push_back(atEq(r, l));
+      eq.emplace_back(atEq(r, l));
     }
     newRel.addEquality(eq);
   }
@@ -2173,7 +2174,8 @@ static void getCommonConstraints(const IntegerRelation &a,
 
 // Computes the bounding box with respect to 'other' by finding the min of the
 // lower bounds and the max of the upper bounds along each of the dimensions.
-bool IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
+LogicalResult
+IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   assert(space.isEqual(otherCst.getSpace()) && "Spaces should match.");
   assert(getNumLocalVars() == 0 && "local ids not supported yet here");
 
@@ -2201,13 +2203,13 @@ bool IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     if (!extent.has_value())
       // TODO: symbolic extents when necessary.
       // TODO: handle union if a dimension is unbounded.
-      return false;
+      return failure();
 
     auto otherExtent = otherCst.getConstantBoundOnDimSize(
         d, &otherLb, &otherLbFloorDivisor, &otherUb);
     if (!otherExtent.has_value() || lbFloorDivisor != otherLbFloorDivisor)
       // TODO: symbolic extents when necessary.
-      return false;
+      return failure();
 
     assert(lbFloorDivisor > 0 && "divisor always expected to be positive");
 
@@ -2227,7 +2229,7 @@ bool IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constLb = getConstantBound(BoundType::LB, d);
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
       if (!constLb.has_value() || !constOtherLb.has_value())
-        return false;
+        return failure();
       std::fill(minLb.begin(), minLb.end(), 0);
       minLb.back() = std::min(*constLb, *constOtherLb);
     }
@@ -2243,7 +2245,7 @@ bool IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constUb = getConstantBound(BoundType::UB, d);
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
       if (!constUb.has_value() || !constOtherUb.has_value())
-        return false;
+        return failure();
       std::fill(maxUb.begin(), maxUb.end(), 0);
       maxUb.back() = std::max(*constUb, *constOtherUb);
     }
@@ -2262,8 +2264,8 @@ bool IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
                    std::negate<DynamicAPInt>());
     std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
 
-    boundingLbs.push_back(newLb);
-    boundingUbs.push_back(newUb);
+    boundingLbs.emplace_back(newLb);
+    boundingUbs.emplace_back(newUb);
   }
 
   // Clear all constraints and add the lower/upper bounds for the bounding box.
@@ -2281,7 +2283,7 @@ bool IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   // union (since the above are just the union along dimensions); we shouldn't
   // be discarding any other constraints on the symbols.
 
-  return true;
+  return success();
 }
 
 bool IntegerRelation::isColZero(unsigned pos) const {
@@ -2307,7 +2309,7 @@ static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
         break;
     }
     if (c == pos + num)
-      nbIneqIndices.push_back(r);
+      nbIneqIndices.emplace_back(r);
   }
 
   for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
@@ -2318,7 +2320,7 @@ static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
         break;
     }
     if (c == pos + num)
-      nbEqIndices.push_back(r);
+      nbEqIndices.emplace_back(r);
   }
 }
 

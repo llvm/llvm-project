@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 #include <string>
 
@@ -56,7 +57,7 @@ public:
   operator bool() = delete;
 
   bool isSelfClosing() const;
-  llvm::SmallString<16> ToString() const;
+  StringRef toString() const;
 
 private:
   TagType Value;
@@ -137,42 +138,42 @@ bool HTMLTag::isSelfClosing() const {
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
-llvm::SmallString<16> HTMLTag::ToString() const {
+StringRef HTMLTag::toString() const {
   switch (Value) {
   case HTMLTag::TAG_A:
-    return llvm::SmallString<16>("a");
+    return "a";
   case HTMLTag::TAG_DIV:
-    return llvm::SmallString<16>("div");
+    return "div";
   case HTMLTag::TAG_FOOTER:
-    return llvm::SmallString<16>("footer");
+    return "footer";
   case HTMLTag::TAG_H1:
-    return llvm::SmallString<16>("h1");
+    return "h1";
   case HTMLTag::TAG_H2:
-    return llvm::SmallString<16>("h2");
+    return "h2";
   case HTMLTag::TAG_H3:
-    return llvm::SmallString<16>("h3");
+    return "h3";
   case HTMLTag::TAG_HEADER:
-    return llvm::SmallString<16>("header");
+    return "header";
   case HTMLTag::TAG_LI:
-    return llvm::SmallString<16>("li");
+    return "li";
   case HTMLTag::TAG_LINK:
-    return llvm::SmallString<16>("link");
+    return "link";
   case HTMLTag::TAG_MAIN:
-    return llvm::SmallString<16>("main");
+    return "main";
   case HTMLTag::TAG_META:
-    return llvm::SmallString<16>("meta");
+    return "meta";
   case HTMLTag::TAG_OL:
-    return llvm::SmallString<16>("ol");
+    return "ol";
   case HTMLTag::TAG_P:
-    return llvm::SmallString<16>("p");
+    return "p";
   case HTMLTag::TAG_SCRIPT:
-    return llvm::SmallString<16>("script");
+    return "script";
   case HTMLTag::TAG_SPAN:
-    return llvm::SmallString<16>("span");
+    return "span";
   case HTMLTag::TAG_TITLE:
-    return llvm::SmallString<16>("title");
+    return "title";
   case HTMLTag::TAG_UL:
-    return llvm::SmallString<16>("ul");
+    return "ul";
   }
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
@@ -191,7 +192,7 @@ void TagNode::render(llvm::raw_ostream &OS, int IndentationLevel) {
       break;
     }
   OS.indent(IndentationLevel * 2);
-  OS << "<" << Tag.ToString();
+  OS << "<" << Tag.toString();
   for (const auto &A : Attributes)
     OS << " " << A.first << "=\"" << A.second << "\"";
   if (Tag.isSelfClosing()) {
@@ -216,7 +217,7 @@ void TagNode::render(llvm::raw_ostream &OS, int IndentationLevel) {
   }
   if (!InlineChildren)
     OS.indent(IndentationLevel * 2);
-  OS << "</" << Tag.ToString() << ">";
+  OS << "</" << Tag.toString() << ">";
 }
 
 template <typename Derived, typename Base,
@@ -979,6 +980,18 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
                                    "error creating index file: " +
                                        FileErr.message());
   }
+  llvm::SmallString<128> RootPath(CDCtx.OutDirectory);
+  if (llvm::sys::path::is_relative(RootPath)) {
+    llvm::sys::fs::make_absolute(RootPath);
+  }
+  // Replace the escaped characters with a forward slash. It shouldn't matter
+  // when rendering the webpage in a web browser. This helps to prevent the
+  // JavaScript from escaping characters incorrectly, and introducing  bad paths
+  // in the URLs.
+  std::string RootPathEscaped = RootPath.str().str();
+  std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
+  OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
+
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);
   std::function<void(Index)> IndexToJSON = [&](const Index &I) {

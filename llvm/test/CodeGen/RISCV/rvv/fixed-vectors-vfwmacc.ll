@@ -2027,3 +2027,63 @@ define <8 x double> @vfwnmsac_fv_v8f64_v8f16(<8 x double> %va, <8 x half> %vb, h
   %vg = call <8 x double> @llvm.fma.v8f64(<8 x double> %vd, <8 x double> %vf, <8 x double> %va)
   ret <8 x double> %vg
 }
+
+define <2 x float> @vfwmacc_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
+; CHECK-LABEL: vfwmacc_vf2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwmacc.vf v8, fa0, v9
+; CHECK-NEXT:    ret
+  %cext = fpext half %c to float
+  %head = insertelement <2 x float> poison, float %cext, i32 0
+  %splat = shufflevector <2 x float> %head, <2 x float> poison, <2 x i32> zeroinitializer
+  %vd = fpext <2 x half> %vb to <2 x float>
+  %vf = call <2 x float> @llvm.fma.v2f32(<2 x float> %vd, <2 x float> %splat, <2 x float> %va)
+  ret <2 x float> %vf
+}
+
+define <2 x float> @vfwmsac_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
+; CHECK-LABEL: vfwmsac_vf2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwmsac.vf v8, fa0, v9
+; CHECK-NEXT:    ret
+  %cext = fpext half %c to float
+  %head = insertelement <2 x float> poison, float %cext, i32 0
+  %splat = shufflevector <2 x float> %head, <2 x float> poison, <2 x i32> zeroinitializer
+  %vd = fpext <2 x half> %vb to <2 x float>
+  %ve = fneg <2 x float> %va
+  %vf = call <2 x float> @llvm.fma.v2f32(<2 x float> %vd, <2 x float> %splat, <2 x float> %ve)
+  ret <2 x float> %vf
+}
+
+define <2 x float> @vfwnmacc_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
+; CHECK-LABEL: vfwnmacc_vf2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
+; CHECK-NEXT:    ret
+  %cext = fpext half %c to float
+  %head = insertelement <2 x float> poison, float %cext, i32 0
+  %splat = shufflevector <2 x float> %head, <2 x float> poison, <2 x i32> zeroinitializer
+  %vd = fpext <2 x half> %vb to <2 x float>
+  %vf = fneg <2 x float> %va
+  %vg = fneg <2 x float> %vd
+  %vh = call <2 x float> @llvm.fma.v2f32(<2 x float> %vg, <2 x float> %splat, <2 x float> %vf)
+  ret <2 x float> %vh
+}
+
+define <2 x float> @vfwnmsac_vf2_v2f32(<2 x float> %va, <2 x half> %vb, half %c) {
+; CHECK-LABEL: vfwnmsac_vf2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
+; CHECK-NEXT:    ret
+  %cext = fpext half %c to float
+  %head = insertelement <2 x float> poison, float %cext, i32 0
+  %splat = shufflevector <2 x float> %head, <2 x float> poison, <2 x i32> zeroinitializer
+  %vd = fpext <2 x half> %vb to <2 x float>
+  %vf = fneg <2 x float> %vd
+  %vg = call <2 x float> @llvm.fma.v2f32(<2 x float> %vf, <2 x float> %splat, <2 x float> %va)
+  ret <2 x float> %vg
+}

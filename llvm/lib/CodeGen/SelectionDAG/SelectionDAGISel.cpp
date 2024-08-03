@@ -417,30 +417,6 @@ void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-static void computeUsesMSVCFloatingPoint(const Triple &TT, const Function &F,
-                                         MachineModuleInfo &MMI) {
-  // Only needed for MSVC
-  if (!TT.isWindowsMSVCEnvironment())
-    return;
-
-  // If it's already set, nothing to do.
-  if (MMI.usesMSVCFloatingPoint())
-    return;
-
-  for (const Instruction &I : instructions(F)) {
-    if (I.getType()->isFPOrFPVectorTy()) {
-      MMI.setUsesMSVCFloatingPoint(true);
-      return;
-    }
-    for (const auto &Op : I.operands()) {
-      if (Op->getType()->isFPOrFPVectorTy()) {
-        MMI.setUsesMSVCFloatingPoint(true);
-        return;
-      }
-    }
-  }
-}
-
 PreservedAnalyses
 SelectionDAGISelPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
@@ -509,7 +485,10 @@ void SelectionDAGISel::initializeAnalysisResults(
     FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
 
   auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, FnVarLocs);
+  MachineModuleInfo &MMI =
+      MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
+
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -562,7 +541,11 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   UniformityInfo *UA = nullptr;
   if (auto *UAPass = MFP.getAnalysisIfAvailable<UniformityInfoWrapperPass>())
     UA = &UAPass->getUniformityInfo();
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, FnVarLocs);
+
+  MachineModuleInfo &MMI =
+      MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+
+  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -794,9 +777,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       }
     }
   }
-
-  // Determine if floating point is used for msvc
-  computeUsesMSVCFloatingPoint(TM.getTargetTriple(), Fn, MF->getMMI());
 
   // Release function-specific state. SDB and CurDAG are already cleared
   // at this point.
@@ -1443,7 +1423,6 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
 
 // Mark and Report IPToState for each Block under IsEHa
 void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
-  MachineModuleInfo &MMI = MF->getMMI();
   llvm::WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo();
   if (!EHInfo)
     return;
@@ -1458,8 +1437,8 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
         continue;
 
       // Insert EH Labels
-      MCSymbol *BeginLabel = MMI.getContext().createTempSymbol();
-      MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
+      MCSymbol *BeginLabel = MF->getContext().createTempSymbol();
+      MCSymbol *EndLabel = MF->getContext().createTempSymbol();
       EHInfo->addIPToStateRange(State, BeginLabel, EndLabel);
       BuildMI(MBB, MBBb, SDB->getCurDebugLoc(),
               TII->get(TargetOpcode::EH_LABEL))
@@ -2220,24 +2199,27 @@ bool SelectionDAGISel::CheckOrMask(SDValue LHS, ConstantSDNode *RHS,
 /// by tblgen.  Others should not call it.
 void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
                                                      const SDLoc &DL) {
-  std::vector<SDValue> InOps;
-  std::swap(InOps, Ops);
+  // Change the vector of SDValue into a list of SDNodeHandle for x86 might call
+  // replaceAllUses when matching address.
 
-  Ops.push_back(InOps[InlineAsm::Op_InputChain]); // 0
-  Ops.push_back(InOps[InlineAsm::Op_AsmString]);  // 1
-  Ops.push_back(InOps[InlineAsm::Op_MDNode]);     // 2, !srcloc
-  Ops.push_back(InOps[InlineAsm::Op_ExtraInfo]);  // 3 (SideEffect, AlignStack)
+  std::list<HandleSDNode> Handles;
 
-  unsigned i = InlineAsm::Op_FirstOperand, e = InOps.size();
-  if (InOps[e-1].getValueType() == MVT::Glue)
+  Handles.emplace_back(Ops[InlineAsm::Op_InputChain]); // 0
+  Handles.emplace_back(Ops[InlineAsm::Op_AsmString]);  // 1
+  Handles.emplace_back(Ops[InlineAsm::Op_MDNode]);     // 2, !srcloc
+  Handles.emplace_back(
+      Ops[InlineAsm::Op_ExtraInfo]); // 3 (SideEffect, AlignStack)
+
+  unsigned i = InlineAsm::Op_FirstOperand, e = Ops.size();
+  if (Ops[e - 1].getValueType() == MVT::Glue)
     --e;  // Don't process a glue operand if it is here.
 
   while (i != e) {
-    InlineAsm::Flag Flags(InOps[i]->getAsZExtVal());
+    InlineAsm::Flag Flags(Ops[i]->getAsZExtVal());
     if (!Flags.isMemKind() && !Flags.isFuncKind()) {
       // Just skip over this operand, copying the operands verbatim.
-      Ops.insert(Ops.end(), InOps.begin() + i,
-                 InOps.begin() + i + Flags.getNumOperandRegisters() + 1);
+      Handles.insert(Handles.end(), Ops.begin() + i,
+                     Ops.begin() + i + Flags.getNumOperandRegisters() + 1);
       i += Flags.getNumOperandRegisters() + 1;
     } else {
       assert(Flags.getNumOperandRegisters() == 1 &&
@@ -2247,10 +2229,10 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
       if (Flags.isUseOperandTiedToDef(TiedToOperand)) {
         // We need the constraint ID from the operand this is tied to.
         unsigned CurOp = InlineAsm::Op_FirstOperand;
-        Flags = InlineAsm::Flag(InOps[CurOp]->getAsZExtVal());
+        Flags = InlineAsm::Flag(Ops[CurOp]->getAsZExtVal());
         for (; TiedToOperand; --TiedToOperand) {
           CurOp += Flags.getNumOperandRegisters() + 1;
-          Flags = InlineAsm::Flag(InOps[CurOp]->getAsZExtVal());
+          Flags = InlineAsm::Flag(Ops[CurOp]->getAsZExtVal());
         }
       }
 
@@ -2258,7 +2240,7 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
       std::vector<SDValue> SelOps;
       const InlineAsm::ConstraintCode ConstraintID =
           Flags.getMemoryConstraintID();
-      if (SelectInlineAsmMemoryOperand(InOps[i+1], ConstraintID, SelOps))
+      if (SelectInlineAsmMemoryOperand(Ops[i + 1], ConstraintID, SelOps))
         report_fatal_error("Could not match memory address.  Inline asm"
                            " failure!");
 
@@ -2267,15 +2249,19 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
                                                 : InlineAsm::Kind::Func,
                               SelOps.size());
       Flags.setMemConstraint(ConstraintID);
-      Ops.push_back(CurDAG->getTargetConstant(Flags, DL, MVT::i32));
-      llvm::append_range(Ops, SelOps);
+      Handles.emplace_back(CurDAG->getTargetConstant(Flags, DL, MVT::i32));
+      Handles.insert(Handles.end(), SelOps.begin(), SelOps.end());
       i += 2;
     }
   }
 
   // Add the glue input back if present.
-  if (e != InOps.size())
-    Ops.push_back(InOps.back());
+  if (e != Ops.size())
+    Handles.emplace_back(Ops.back());
+
+  Ops.clear();
+  for (auto &handle : Handles)
+    Ops.push_back(handle.getValue());
 }
 
 /// findGlueUse - Return use of MVT::Glue value produced by the specified
@@ -2610,6 +2596,17 @@ GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
   return Val;
 }
 
+/// getSimpleVT - Decode a value in MatcherTable, if it's a VBR encoded value,
+/// use GetVBR to decode it.
+LLVM_ATTRIBUTE_ALWAYS_INLINE static MVT::SimpleValueType
+getSimpleVT(const unsigned char *MatcherTable, unsigned &MatcherIndex) {
+  unsigned SimpleVT = MatcherTable[MatcherIndex++];
+  if (SimpleVT & 128)
+    SimpleVT = GetVBR(SimpleVT, MatcherTable, MatcherIndex);
+
+  return static_cast<MVT::SimpleValueType>(SimpleVT);
+}
+
 void SelectionDAGISel::Select_JUMP_TABLE_DEBUG_INFO(SDNode *N) {
   SDLoc dl(N);
   CurDAG->SelectNodeTo(N, TargetOpcode::JUMP_TABLE_DEBUG_INFO, MVT::Glue,
@@ -2889,8 +2886,7 @@ CheckChild2CondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckValueType(const unsigned char *MatcherTable, unsigned &MatcherIndex,
                SDValue N, const TargetLowering *TLI, const DataLayout &DL) {
-  MVT::SimpleValueType VT =
-      static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+  MVT::SimpleValueType VT = getSimpleVT(MatcherTable, MatcherIndex);
   if (cast<VTSDNode>(N)->getVT() == VT)
     return true;
 
@@ -3020,7 +3016,7 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
       VT = MVT::i64;
       break;
     default:
-      VT = static_cast<MVT::SimpleValueType>(Table[Index++]);
+      VT = getSimpleVT(Table, Index);
       break;
     }
     Result = !::CheckType(VT, N, SDISel.TLI, SDISel.CurDAG->getDataLayout());
@@ -3028,9 +3024,8 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
   }
   case SelectionDAGISel::OPC_CheckTypeRes: {
     unsigned Res = Table[Index++];
-    Result = !::CheckType(static_cast<MVT::SimpleValueType>(Table[Index++]),
-                          N.getValue(Res), SDISel.TLI,
-                          SDISel.CurDAG->getDataLayout());
+    Result = !::CheckType(getSimpleVT(Table, Index), N.getValue(Res),
+                          SDISel.TLI, SDISel.CurDAG->getDataLayout());
     return Index;
   }
   case SelectionDAGISel::OPC_CheckChild0Type:
@@ -3068,7 +3063,7 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
       VT = MVT::i64;
       ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeI64;
     } else {
-      VT = static_cast<MVT::SimpleValueType>(Table[Index++]);
+      VT = getSimpleVT(Table, Index);
       ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0Type;
     }
     Result = !::CheckChildType(VT, N, SDISel.TLI,
@@ -3572,7 +3567,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i64;
         break;
       default:
-        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
       if (!::CheckType(VT, N, TLI, CurDAG->getDataLayout()))
@@ -3581,9 +3576,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
     case OPC_CheckTypeRes: {
       unsigned Res = MatcherTable[MatcherIndex++];
-      if (!::CheckType(
-              static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]),
-              N.getValue(Res), TLI, CurDAG->getDataLayout()))
+      if (!::CheckType(getSimpleVT(MatcherTable, MatcherIndex), N.getValue(Res),
+                       TLI, CurDAG->getDataLayout()))
         break;
       continue;
     }
@@ -3630,8 +3624,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           CaseSize = GetVBR(CaseSize, MatcherTable, MatcherIndex);
         if (CaseSize == 0) break;
 
-        MVT CaseVT =
-            static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        MVT CaseVT = getSimpleVT(MatcherTable, MatcherIndex);
         if (CaseVT == MVT::iPTR)
           CaseVT = TLI->getPointerTy(CurDAG->getDataLayout());
 
@@ -3687,7 +3680,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i64;
         ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeI64;
       } else {
-        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        VT = getSimpleVT(MatcherTable, MatcherIndex);
         ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0Type;
       }
       if (!::CheckChildType(VT, N, TLI, CurDAG->getDataLayout(), ChildNo))
@@ -3781,7 +3774,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i64;
         break;
       default:
-        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
       int64_t Val = MatcherTable[MatcherIndex++];
@@ -3805,7 +3798,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i64;
         break;
       default:
-        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
       unsigned RegNo = MatcherTable[MatcherIndex++];
@@ -3817,8 +3810,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // For targets w/ more than 256 register names, the register enum
       // values are stored in two bytes in the matcher table (just like
       // opcodes).
-      MVT::SimpleValueType VT =
-          static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+      MVT::SimpleValueType VT = getSimpleVT(MatcherTable, MatcherIndex);
       unsigned RegNo = MatcherTable[MatcherIndex++];
       RegNo |= MatcherTable[MatcherIndex++] << 8;
       RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
@@ -4056,8 +4048,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         NumVTs = MatcherTable[MatcherIndex++];
       SmallVector<EVT, 4> VTs;
       for (unsigned i = 0; i != NumVTs; ++i) {
-        MVT::SimpleValueType VT =
-            static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        MVT::SimpleValueType VT = getSimpleVT(MatcherTable, MatcherIndex);
         if (VT == MVT::iPTR)
           VT = TLI->getPointerTy(CurDAG->getDataLayout()).SimpleTy;
         VTs.push_back(VT);

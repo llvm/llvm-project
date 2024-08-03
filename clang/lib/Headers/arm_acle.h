@@ -75,6 +75,14 @@ static __inline__ void __attribute__((__always_inline__, __nodebug__)) __yield(v
 #define __dbg(t) __builtin_arm_dbg(t)
 #endif
 
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+#define _CHKFEAT_GCS 1
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__chkfeat(uint64_t __features) {
+  return __builtin_arm_chkfeat(__features) ^ __features;
+}
+#endif
+
 /* 7.5 Swap */
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __swp(uint32_t __x, volatile uint32_t *__p) {
@@ -852,6 +860,24 @@ __rndr(uint64_t *__p) {
 static __inline__ int __attribute__((__always_inline__, __nodebug__, target("rand")))
 __rndrrs(uint64_t *__p) {
   return __builtin_arm_rndrrs(__p);
+}
+#endif
+
+/* 11.2 Guarded Control Stack intrinsics */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+static __inline__ void * __attribute__((__always_inline__, __nodebug__))
+__gcspr() {
+  return (void *)__builtin_arm_rsr64("gcspr_el0");
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target("gcs")))
+__gcspopm() {
+  return __builtin_arm_gcspopm(0);
+}
+
+static __inline__ const void * __attribute__((__always_inline__, __nodebug__, target("gcs")))
+__gcsss(const void *__stack) {
+  return __builtin_arm_gcsss(__stack);
 }
 #endif
 

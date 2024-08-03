@@ -411,7 +411,10 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
     Option<"unsafeFPMath", "unsafe-fp-math",
            "bool", /*default=*/"false",
            "Set the unsafe-fp-math attribute on functions in the module.">,
-  ];
+    Option<"tuneCPU", "tune-cpu",
+           "llvm::StringRef", /*default=*/"llvm::StringRef{}",
+           "Set the tune-cpu attribute on functions in the module.">,
+];
 }
 
 def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
@@ -423,6 +426,13 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+def CufOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some CUF operations to runtime calls";
+  let dependentDialects = [
+    "fir::FIROpsDialect"
   ];
 }
 

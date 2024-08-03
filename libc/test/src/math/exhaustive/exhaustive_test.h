@@ -61,9 +61,9 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
           TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, Func(x), 0.5, rounding);
       failed += (!correct);
       // Uncomment to print out failed values.
-      // if (!correct) {
-      //   EXPECT_MPFR_MATCH_ROUNDING(Op, x, Func(x), 0.5, rounding);
-      // }
+      if (!correct) {
+        EXPECT_MPFR_MATCH_ROUNDING(Op, x, Func(x), 0.5, rounding);
+      }
     } while (bits++ < stop);
     return failed;
   }
@@ -97,9 +97,9 @@ struct BinaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
                                                          0.5, rounding);
         failed += (!correct);
         // Uncomment to print out failed values.
-        // if (!correct) {
-        //   EXPECT_MPFR_MATCH_ROUNDING(Op, input, Func(x, y), 0.5, rounding);
-        // }
+        if (!correct) {
+          EXPECT_MPFR_MATCH_ROUNDING(Op, input, Func(x, y), 0.5, rounding);
+        }
       } while (ybits++ < y_stop);
     } while (xbits++ < x_stop);
     return failed;
@@ -187,7 +187,8 @@ struct LlvmLibcExhaustiveMathTest
             std::stringstream msg;
             msg << "Test failed for " << std::dec << failed_in_range
                 << " inputs in range: ";
-            explain_failed_range(msg, start, stop, extra_range_bounds...);
+            explain_failed_range(msg, range_begin, range_end,
+                                 extra_range_bounds...);
             msg << "\n";
             std::cerr << msg.str() << std::flush;
 

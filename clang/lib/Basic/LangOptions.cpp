@@ -34,8 +34,8 @@ void LangOptions::resetNonModularOptions() {
   // invocations that cannot be round-tripped to arguments.
   // FIXME: we should derive this automatically from ImpliedBy in tablegen.
   AllowFPReassoc = UnsafeFPMath;
-  NoHonorNaNs = FiniteMathOnly;
-  NoHonorInfs = FiniteMathOnly;
+  NoHonorInfs = FastMath;
+  NoHonorNaNs = FastMath;
 
   // These options do not affect AST generation.
   NoSanitizeFiles.clear();
@@ -125,6 +125,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.HexFloats = Std.hasHexFloats();
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
+  Opts.RawStringLiterals = Std.hasRawStringLiterals();
 
   Opts.HLSL = Lang == Language::HLSL;
   if (Opts.HLSL && Opts.IncludeDefaultHeader)

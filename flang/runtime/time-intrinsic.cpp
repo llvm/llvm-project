@@ -139,6 +139,7 @@ count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
   }
 }
 
+#ifndef _AIX
 // This is the fallback implementation, which should work everywhere.
 template <typename Unused = void>
 count_t GetSystemClockCount(int kind, fallback_implementation) {
@@ -153,6 +154,7 @@ count_t GetSystemClockCount(int kind, fallback_implementation) {
   // with the requested kind at the call site.
   return ConvertTimeSpecToCount(kind, tspec);
 }
+#endif
 
 template <typename Unused = void>
 count_t GetSystemClockCountRate(int kind, fallback_implementation) {

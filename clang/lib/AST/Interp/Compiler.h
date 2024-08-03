@@ -33,6 +33,7 @@ template <class Emitter> class DestructorScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class InitLinkScope;
+template <class Emitter> class InitStackScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
@@ -47,7 +48,9 @@ public:
   enum {
     K_This = 0,
     K_Field = 1,
-    K_Decl = 2,
+    K_Temp = 2,
+    K_Decl = 3,
+    K_Elem = 5,
   };
 
   static InitLink This() { return InitLink{K_This}; }
@@ -56,9 +59,19 @@ public:
     IL.Offset = Offset;
     return IL;
   }
+  static InitLink Temp(unsigned Offset) {
+    InitLink IL{K_Temp};
+    IL.Offset = Offset;
+    return IL;
+  }
   static InitLink Decl(const ValueDecl *D) {
     InitLink IL{K_Decl};
     IL.D = D;
+    return IL;
+  }
+  static InitLink Elem(unsigned Index) {
+    InitLink IL{K_Elem};
+    IL.Offset = Index;
     return IL;
   }
 
@@ -66,7 +79,6 @@ public:
   template <class Emitter>
   bool emit(Compiler<Emitter> *Ctx, const Expr *E) const;
 
-private:
   uint32_t Kind;
   union {
     unsigned Offset;
@@ -185,10 +197,11 @@ public:
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
   bool VisitStmtExpr(const StmtExpr *E);
+  bool VisitCXXNewExpr(const CXXNewExpr *E);
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
-  bool visitLoopBody(const Stmt *S);
   bool visitDeclStmt(const DeclStmt *DS);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
@@ -207,8 +220,9 @@ public:
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E) override;
-  bool visitDecl(const VarDecl *VD, bool ConstantContext) override;
   bool visitFunc(const FunctionDecl *F) override;
+
+  bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -262,6 +276,7 @@ protected:
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
   VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false);
+  VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);
@@ -270,45 +285,6 @@ protected:
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
-
-  /// Visits an initializer for a local.
-  bool visitLocalInitializer(const Expr *Init, unsigned I) {
-    if (!this->emitGetPtrLocal(I, Init))
-      return false;
-
-    if (!visitInitializer(Init))
-      return false;
-
-    if (!this->emitFinishInit(Init))
-      return false;
-
-    return this->emitPopPtr(Init);
-  }
-
-  /// Visits an initializer for a global.
-  bool visitGlobalInitializer(const Expr *Init, unsigned I) {
-    if (!this->emitGetPtrGlobal(I, Init))
-      return false;
-
-    if (!visitInitializer(Init))
-      return false;
-
-    if (!this->emitFinishInit(Init))
-      return false;
-
-    return this->emitPopPtr(Init);
-  }
-
-  /// Visits a delegated initializer.
-  bool visitThisInitializer(const Expr *I) {
-    if (!this->emitThis(I))
-      return false;
-
-    if (!visitInitializer(I))
-      return false;
-
-    return this->emitFinishInitPop(I);
-  }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
@@ -328,6 +304,7 @@ private:
   friend class DestructorScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
+  friend class InitStackScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
@@ -380,6 +357,8 @@ private:
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+
+  bool checkLiteralType(const Expr *E);
 
 protected:
   /// Variable to storage mapping.
@@ -472,11 +451,15 @@ public:
     }
 
     // Use the parent scope.
-    addExtended(Local);
+    if (this->Parent)
+      this->Parent->addLocal(Local);
+    else
+      this->addLocal(Local);
   }
 
   virtual void emitDestruction() {}
-  virtual bool emitDestructors() { return true; }
+  virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
+  virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
   VariableScope *getParent() const { return Parent; }
 
 protected:
@@ -491,6 +474,8 @@ protected:
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
   LocalScope(Compiler<Emitter> *Ctx) : VariableScope<Emitter>(Ctx, nullptr) {}
+  LocalScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
+      : VariableScope<Emitter>(Ctx, VD) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
@@ -501,16 +486,21 @@ public:
   }
 
   /// Overriden to support explicit destruction.
-  void emitDestruction() override { destroyLocals(); }
+  void emitDestruction() override {
+    if (!Idx)
+      return;
+
+    this->emitDestructors();
+    this->Ctx->emitDestroy(*Idx, SourceInfo{});
+  }
 
   /// Explicit destruction of local variables.
-  bool destroyLocals() {
+  bool destroyLocals(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
 
-    bool Success = this->emitDestructors();
-    this->Ctx->emitDestroy(*Idx, SourceInfo{});
-    removeStoredOpaqueValues();
+    bool Success = this->emitDestructors(E);
+    this->Ctx->emitDestroy(*Idx, E);
     this->Idx = std::nullopt;
     return Success;
   }
@@ -519,25 +509,26 @@ public:
     if (!Idx) {
       Idx = this->Ctx->Descriptors.size();
       this->Ctx->Descriptors.emplace_back();
+      this->Ctx->emitInitScope(*Idx, {});
     }
 
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
-  bool emitDestructors() override {
+  bool emitDestructors(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        if (!this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{}))
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;
 
         if (!this->Ctx->emitDestruction(Local.Desc))
           return false;
 
-        if (!this->Ctx->emitPopPtr(SourceInfo{}))
+        if (!this->Ctx->emitPopPtr(E))
           return false;
         removeIfStoredOpaqueValue(Local);
       }
@@ -567,33 +558,10 @@ public:
   std::optional<unsigned> Idx;
 };
 
-/// Emits the destructors of the variables of \param OtherScope
-/// when this scope is destroyed. Does not create a Scope in the bytecode at
-/// all, this is just a RAII object to emit destructors.
-template <class Emitter> class DestructorScope final {
-public:
-  DestructorScope(LocalScope<Emitter> &OtherScope) : OtherScope(OtherScope) {}
-
-  ~DestructorScope() { OtherScope.emitDestructors(); }
-
-private:
-  LocalScope<Emitter> &OtherScope;
-};
-
-/// Like a regular LocalScope, except that the destructors of all local
-/// variables are automatically emitted when the AutoScope is destroyed.
-template <class Emitter> class AutoScope : public LocalScope<Emitter> {
-public:
-  AutoScope(Compiler<Emitter> *Ctx) : LocalScope<Emitter>(Ctx), DS(*this) {}
-
-private:
-  DestructorScope<Emitter> DS;
-};
-
 /// Scope for storage declared in a compound statement.
-template <class Emitter> class BlockScope final : public AutoScope<Emitter> {
+template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
 public:
-  BlockScope(Compiler<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
+  BlockScope(Compiler<Emitter> *Ctx) : LocalScope<Emitter>(Ctx) {}
 
   void addExtended(const Scope::Local &Local) override {
     // If we to this point, just add the variable as a normal local
@@ -601,11 +569,6 @@ public:
     // like all others.
     this->addLocal(Local);
   }
-};
-
-template <class Emitter> class ExprScope final : public AutoScope<Emitter> {
-public:
-  ExprScope(Compiler<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
 };
 
 template <class Emitter> class ArrayIndexScope final {
@@ -653,6 +616,20 @@ public:
 
 private:
   Compiler<Emitter> *Ctx;
+};
+
+template <class Emitter> class InitStackScope final {
+public:
+  InitStackScope(Compiler<Emitter> *Ctx, bool Active)
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+    Ctx->InitStackActive = Active;
+  }
+
+  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  bool OldValue;
 };
 
 } // namespace interp

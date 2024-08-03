@@ -142,13 +142,12 @@ availability_error_occurred = False
 
 def availability(issue):
   status = status_map.get(issue, 'unknown')
-
   unresolved_status = ''
   proposed_resolution = ''
-  unresolved_status_match = re.search(r' (open|drafting|review|tentatively ready)', status)
+  unresolved_status_match = re.search(r' (open|drafting|review|tentatively ready|ready)', status)
   if unresolved_status_match:
     unresolved_status = unresolved_status_match.group(1)
-    proposed_resolution_match = re.search(r' (open|drafting|review|tentatively ready) (\d{4}-\d{2}(?:-\d{2})?|P\d{4}R\d+)$', status)
+    proposed_resolution_match = re.search(r' (open|drafting|review|tentatively ready|ready) (\d{4}-\d{2}(?:-\d{2})?|P\d{4}R\d+)$', status)
     if proposed_resolution_match is None:
       raise AvailabilityError('Issue {}: \'{}\' status should be followed by a paper number (P1234R5) or proposed resolution in YYYY-MM-DD format'.format(dr.issue, unresolved_status))
     proposed_resolution = proposed_resolution_match.group(2)
@@ -246,7 +245,7 @@ for dr in drs:
     avail = 'Extension'
     avail_style = ''
 
-  elif dr.status in ('open', 'drafting', 'review', 'tentatively ready'):
+  elif dr.status in ('open', 'drafting', 'review', 'tentatively ready', 'ready'):
     row_style = ' class="open"'
     try:
       avail, avail_style, unresolved_status, tooltip = availability(dr.issue)

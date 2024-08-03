@@ -352,6 +352,10 @@ class BTFDebug : public DebugHandlerBase {
   /// Generate types and variables for globals.
   void processGlobals(bool ProcessingMapDef);
 
+  /// Process global variable initializer in pursuit for function
+  /// pointers.
+  void processGlobalInitializer(const Constant *C);
+
   /// Generate types for function prototypes.
   void processFuncPrototypes(const Function *);
 

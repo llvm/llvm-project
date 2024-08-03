@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -295,8 +294,8 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 }
 
 /// Returns the trip count of `forOp` if its' low bound, high bound and step are
-/// constants, or optional otherwise. Trip count is computed as ceilDiv(highBound
-/// - lowBound, step).
+/// constants, or optional otherwise. Trip count is computed as
+/// ceilDiv(highBound - lowBound, step).
 static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
   std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
   std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
@@ -1263,131 +1262,54 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   return tileLoops;
 }
 
-//===----------------------------------------------------------------------===//
-// Fusion related helpers
-//===----------------------------------------------------------------------===//
-
-/// Check if `target` and `source` are siblings, in the context that `target`
-/// is being fused into `source`.
-///
-/// This is a simple check that just checks if both operations are in the same
-/// block and some checks to ensure that the fused IR does not violate
-/// dominance.
-static bool isOpSibling(Operation *target, Operation *source,
-                        Diagnostic &diag) {
-  // Check if both operations are same.
-  if (target == source) {
-    diag << "target and source need to be different loops";
-    return false;
-  }
-
-  // Check if both operations are in the same block.
-  if (target->getBlock() != source->getBlock()) {
-    diag << "target and source are not in the same block";
-    return false;
-  }
-
-  // Check if fusion will violate dominance.
-  DominanceInfo domInfo(source);
-  if (target->isBeforeInBlock(source)) {
-    // Since `target` is before `source`, all users of results of `target`
-    // need to be dominated by `source`.
-    for (Operation *user : target->getUsers()) {
-      if (!domInfo.properlyDominates(source, user, /*enclosingOpOk=*/false)) {
-        diag << "user of results of target should "
-                "be properly dominated by source";
-        return false;
-      }
-    }
-  } else {
-    // Since `target` is after `source`, all values used by `target` need
-    // to dominate `source`.
-
-    // Check if operands of `target` are dominated by `source`.
-    for (Value operand : target->getOperands()) {
-      Operation *operandOp = operand.getDefiningOp();
-      // Operands without defining operations are block arguments. When `target`
-      // and `source` occur in the same block, these operands dominate `source`.
-      if (!operandOp)
-        continue;
-
-      // Operand's defining operation should properly dominate `source`.
-      if (!domInfo.properlyDominates(operandOp, source,
-                                     /*enclosingOpOk=*/false)) {
-        diag << "operands of target should be properly dominated by source";
-        return false;
-      }
-    }
-
-    // Check if values used by `target` are dominated by `source`.
-    bool failed = false;
-    OpOperand *failedValue = nullptr;
-    visitUsedValuesDefinedAbove(target->getRegions(), [&](OpOperand *operand) {
-      Operation *operandOp = operand->get().getDefiningOp();
-      if (operandOp && !domInfo.properlyDominates(operandOp, source,
-                                                  /*enclosingOpOk=*/false)) {
-        // `operand` is not an argument of an enclosing block and the defining
-        // op of `operand` is outside `target` but does not dominate `source`.
-        failed = true;
-        failedValue = operand;
-      }
-    });
-
-    if (failed) {
-      diag << "values used inside regions of target should be properly "
-              "dominated by source";
-      diag.attachNote(failedValue->getOwner()->getLoc()) << "see operation";
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface target,
-                                         LoopLikeOpInterface source,
-                                         Diagnostic &diag) {
-  if (target->getName() != source->getName()) {
-    diag << "target and source must be same loop type";
-    return false;
-  }
-
-  bool iterSpaceEq =
-      target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
-      target.getLoopUpperBounds() == source.getLoopUpperBounds() &&
-      target.getLoopSteps() == source.getLoopSteps();
-  // TODO: Decouple checks on concrete loop types and move this function
-  // somewhere for general utility for `LoopLikeOpInterface`
-  if (auto forAllTarget = dyn_cast<scf::ForallOp>(*target))
-    iterSpaceEq = iterSpaceEq && forAllTarget.getMapping() ==
-                                     cast<scf::ForallOp>(*source).getMapping();
-  if (!iterSpaceEq) {
-    diag << "target and source iteration spaces must be equal";
-    return false;
-  }
-  return isOpSibling(target, source, diag);
-}
-
 scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
                                                       scf::ForallOp source,
                                                       RewriterBase &rewriter) {
-  scf::ForallOp fusedLoop = cast<scf::ForallOp>(createFused(
-      target, source, rewriter,
-      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
-        // `ForallOp` does not have yields, rather an `InParallelOp` terminator.
-        return ValueRange{};
-      },
-      [&](RewriterBase &b, LoopLikeOpInterface source,
-          LoopLikeOpInterface &target, IRMapping mapping) {
-        auto sourceForall = cast<scf::ForallOp>(source);
-        auto targetForall = cast<scf::ForallOp>(target);
-        scf::InParallelOp fusedTerm = targetForall.getTerminator();
-        b.setInsertionPointToEnd(fusedTerm.getBody());
-        for (Operation &op : sourceForall.getTerminator().getYieldingOps())
-          b.clone(op, mapping);
-      }));
-  rewriter.replaceOp(source,
-                     fusedLoop.getResults().take_back(source.getNumResults()));
+  unsigned numTargetOuts = target.getNumResults();
+  unsigned numSourceOuts = source.getNumResults();
+
+  // Create fused shared_outs.
+  SmallVector<Value> fusedOuts;
+  llvm::append_range(fusedOuts, target.getOutputs());
+  llvm::append_range(fusedOuts, source.getOutputs());
+
+  // Create a new scf.forall op after the source loop.
+  rewriter.setInsertionPointAfter(source);
+  scf::ForallOp fusedLoop = rewriter.create<scf::ForallOp>(
+      source.getLoc(), source.getMixedLowerBound(), source.getMixedUpperBound(),
+      source.getMixedStep(), fusedOuts, source.getMapping());
+
+  // Map control operands.
+  IRMapping mapping;
+  mapping.map(target.getInductionVars(), fusedLoop.getInductionVars());
+  mapping.map(source.getInductionVars(), fusedLoop.getInductionVars());
+
+  // Map shared outs.
+  mapping.map(target.getRegionIterArgs(),
+              fusedLoop.getRegionIterArgs().take_front(numTargetOuts));
+  mapping.map(source.getRegionIterArgs(),
+              fusedLoop.getRegionIterArgs().take_back(numSourceOuts));
+
+  // Append everything except the terminator into the fused operation.
+  rewriter.setInsertionPointToStart(fusedLoop.getBody());
+  for (Operation &op : target.getBody()->without_terminator())
+    rewriter.clone(op, mapping);
+  for (Operation &op : source.getBody()->without_terminator())
+    rewriter.clone(op, mapping);
+
+  // Fuse the old terminator in_parallel ops into the new one.
+  scf::InParallelOp targetTerm = target.getTerminator();
+  scf::InParallelOp sourceTerm = source.getTerminator();
+  scf::InParallelOp fusedTerm = fusedLoop.getTerminator();
+  rewriter.setInsertionPointToStart(fusedTerm.getBody());
+  for (Operation &op : targetTerm.getYieldingOps())
+    rewriter.clone(op, mapping);
+  for (Operation &op : sourceTerm.getYieldingOps())
+    rewriter.clone(op, mapping);
+
+  // Replace old loops by substituting their uses by results of the fused loop.
+  rewriter.replaceOp(target, fusedLoop.getResults().take_front(numTargetOuts));
+  rewriter.replaceOp(source, fusedLoop.getResults().take_back(numSourceOuts));
 
   return fusedLoop;
 }
@@ -1395,74 +1317,83 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
                                                 scf::ForOp source,
                                                 RewriterBase &rewriter) {
-  scf::ForOp fusedLoop = cast<scf::ForOp>(createFused(
-      target, source, rewriter,
-      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
-        return source.getYieldedValues();
-      },
-      [&](RewriterBase &b, LoopLikeOpInterface source,
-          LoopLikeOpInterface &target, IRMapping mapping) {
-        auto targetFor = cast<scf::ForOp>(target);
-        auto newTerm = b.clone(*targetFor.getBody()->getTerminator(), mapping);
-        b.replaceOp(targetFor.getBody()->getTerminator(), newTerm);
-      }));
-  rewriter.replaceOp(source,
-                     fusedLoop.getResults().take_back(source.getNumResults()));
+  unsigned numTargetOuts = target.getNumResults();
+  unsigned numSourceOuts = source.getNumResults();
+
+  // Create fused init_args, with target's init_args before source's init_args.
+  SmallVector<Value> fusedInitArgs;
+  llvm::append_range(fusedInitArgs, target.getInitArgs());
+  llvm::append_range(fusedInitArgs, source.getInitArgs());
+
+  // Create a new scf.for op after the source loop (with scf.yield terminator
+  // (without arguments) only in case its init_args is empty).
+  rewriter.setInsertionPointAfter(source);
+  scf::ForOp fusedLoop = rewriter.create<scf::ForOp>(
+      source.getLoc(), source.getLowerBound(), source.getUpperBound(),
+      source.getStep(), fusedInitArgs);
+
+  // Map original induction variables and operands to those of the fused loop.
+  IRMapping mapping;
+  mapping.map(target.getInductionVar(), fusedLoop.getInductionVar());
+  mapping.map(target.getRegionIterArgs(),
+              fusedLoop.getRegionIterArgs().take_front(numTargetOuts));
+  mapping.map(source.getInductionVar(), fusedLoop.getInductionVar());
+  mapping.map(source.getRegionIterArgs(),
+              fusedLoop.getRegionIterArgs().take_back(numSourceOuts));
+
+  // Merge target's body into the new (fused) for loop and then source's body.
+  rewriter.setInsertionPointToStart(fusedLoop.getBody());
+  for (Operation &op : target.getBody()->without_terminator())
+    rewriter.clone(op, mapping);
+  for (Operation &op : source.getBody()->without_terminator())
+    rewriter.clone(op, mapping);
+
+  // Build fused yield results by appropriately mapping original yield operands.
+  SmallVector<Value> yieldResults;
+  for (Value operand : target.getBody()->getTerminator()->getOperands())
+    yieldResults.push_back(mapping.lookupOrDefault(operand));
+  for (Value operand : source.getBody()->getTerminator()->getOperands())
+    yieldResults.push_back(mapping.lookupOrDefault(operand));
+  if (!yieldResults.empty())
+    rewriter.create<scf::YieldOp>(source.getLoc(), yieldResults);
+
+  // Replace old loops by substituting their uses by results of the fused loop.
+  rewriter.replaceOp(target, fusedLoop.getResults().take_front(numTargetOuts));
+  rewriter.replaceOp(source, fusedLoop.getResults().take_back(numSourceOuts));
+
   return fusedLoop;
 }
 
-// TODO: Finish refactoring this a la the above, but likely requires additional
-// interface methods.
-scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
-    scf::ParallelOp target, scf::ParallelOp source, RewriterBase &rewriter) {
-  OpBuilder::InsertionGuard guard(rewriter);
-  Block *block1 = target.getBody();
-  Block *block2 = source.getBody();
-  auto term1 = cast<scf::ReduceOp>(block1->getTerminator());
-  auto term2 = cast<scf::ReduceOp>(block2->getTerminator());
+FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
+                                                 scf::ForallOp forallOp) {
+  SmallVector<OpFoldResult> lbs = forallOp.getMixedLowerBound();
+  SmallVector<OpFoldResult> ubs = forallOp.getMixedUpperBound();
+  SmallVector<OpFoldResult> steps = forallOp.getMixedStep();
 
-  ValueRange inits1 = target.getInitVals();
-  ValueRange inits2 = source.getInitVals();
-
-  SmallVector<Value> newInitVars(inits1.begin(), inits1.end());
-  newInitVars.append(inits2.begin(), inits2.end());
-
-  rewriter.setInsertionPoint(source);
-  auto fusedLoop = rewriter.create<scf::ParallelOp>(
-      rewriter.getFusedLoc(target.getLoc(), source.getLoc()),
-      source.getLowerBound(), source.getUpperBound(), source.getStep(),
-      newInitVars);
-  Block *newBlock = fusedLoop.getBody();
-  rewriter.inlineBlockBefore(block2, newBlock, newBlock->begin(),
-                             newBlock->getArguments());
-  rewriter.inlineBlockBefore(block1, newBlock, newBlock->begin(),
-                             newBlock->getArguments());
-
-  ValueRange results = fusedLoop.getResults();
-  if (!results.empty()) {
-    rewriter.setInsertionPointToEnd(newBlock);
-
-    ValueRange reduceArgs1 = term1.getOperands();
-    ValueRange reduceArgs2 = term2.getOperands();
-    SmallVector<Value> newReduceArgs(reduceArgs1.begin(), reduceArgs1.end());
-    newReduceArgs.append(reduceArgs2.begin(), reduceArgs2.end());
-
-    auto newReduceOp = rewriter.create<scf::ReduceOp>(
-        rewriter.getFusedLoc(term1.getLoc(), term2.getLoc()), newReduceArgs);
-
-    for (auto &&[i, reg] : llvm::enumerate(llvm::concat<Region>(
-             term1.getReductions(), term2.getReductions()))) {
-      Block &oldRedBlock = reg.front();
-      Block &newRedBlock = newReduceOp.getReductions()[i].front();
-      rewriter.inlineBlockBefore(&oldRedBlock, &newRedBlock,
-                                 newRedBlock.begin(),
-                                 newRedBlock.getArguments());
-    }
+  if (llvm::all_of(
+          lbs, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }) &&
+      llvm::all_of(
+          steps, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); })) {
+    return forallOp;
   }
-  rewriter.replaceOp(target, results.take_front(inits1.size()));
-  rewriter.replaceOp(source, results.take_back(inits2.size()));
-  rewriter.eraseOp(term1);
-  rewriter.eraseOp(term2);
 
-  return fusedLoop;
+  SmallVector<OpFoldResult> newLbs, newUbs, newSteps;
+  for (auto [lb, ub, step] : llvm::zip_equal(lbs, ubs, steps)) {
+    Range normalizedLoopParams =
+        emitNormalizedLoopBounds(rewriter, forallOp.getLoc(), lb, ub, step);
+    newLbs.push_back(normalizedLoopParams.offset);
+    newUbs.push_back(normalizedLoopParams.size);
+    newSteps.push_back(normalizedLoopParams.stride);
+  }
+
+  auto normalizedForallOp = rewriter.create<scf::ForallOp>(
+      forallOp.getLoc(), newLbs, newUbs, newSteps, forallOp.getOutputs(),
+      forallOp.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+
+  rewriter.inlineRegionBefore(forallOp.getBodyRegion(),
+                              normalizedForallOp.getBodyRegion(),
+                              normalizedForallOp.getBodyRegion().begin());
+
+  rewriter.replaceAllOpUsesWith(forallOp, normalizedForallOp);
+  return success();
 }

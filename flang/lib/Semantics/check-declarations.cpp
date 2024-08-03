@@ -762,13 +762,10 @@ void CheckHelper::CheckObjectEntity(
     }
     if (auto ignoreTKR{GetIgnoreTKR(symbol)}; !ignoreTKR.empty()) {
       const Symbol *ownerSymbol{symbol.owner().symbol()};
-      const auto *ownerSubp{ownerSymbol->detailsIf<SubprogramDetails>()};
-      bool inInterface{ownerSubp && ownerSubp->isInterface()};
-      bool inExplicitInterface{
-          inInterface && !IsSeparateModuleProcedureInterface(ownerSymbol)};
-      bool inModuleProc{
-          !inInterface && ownerSymbol && IsModuleProcedure(*ownerSymbol)};
-      if (!inExplicitInterface && !inModuleProc) {
+      bool inModuleProc{ownerSymbol && IsModuleProcedure(*ownerSymbol)};
+      bool inExplicitExternalInterface{
+          InInterface() && !IsSeparateModuleProcedureInterface(ownerSymbol)};
+      if (!InInterface() && !inModuleProc) {
         messages_.Say(
             "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
       }
@@ -779,7 +776,7 @@ void CheckHelper::CheckObjectEntity(
       }
       if (IsPassedViaDescriptor(symbol)) {
         if (IsAllocatableOrObjectPointer(&symbol)) {
-          if (inExplicitInterface) {
+          if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR should not apply to an allocatable or pointer"_warn_en_US);
@@ -794,7 +791,7 @@ void CheckHelper::CheckObjectEntity(
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array"_warn_en_US);
             }
-          } else if (inExplicitInterface) {
+          } else if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) should not apply to a dummy argument passed via descriptor"_warn_en_US);
@@ -884,7 +881,7 @@ void CheckHelper::CheckObjectEntity(
       if (auto *msg{messages_.Say(
               "'%s' may not be a local variable in a pure subprogram"_err_en_US,
               symbol.name())}) {
-        msg->Attach(std::move(*whyNot));
+        msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       }
     }
   }
@@ -2922,7 +2919,7 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
     if (derived->sequence()) { // C1801
       msgs.Say(symbol.name(),
           "An interoperable derived type cannot have the SEQUENCE attribute"_err_en_US);
-    } else if (!derived->paramDecls().empty()) { // C1802
+    } else if (!derived->paramNameOrder().empty()) { // C1802
       msgs.Say(symbol.name(),
           "An interoperable derived type cannot have a type parameter"_err_en_US);
     } else if (const auto *parent{
@@ -2982,7 +2979,8 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
             msgs.Annex(std::move(bad));
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, context_.languageFeatures())) {
+                       *type, context_.languageFeatures())
+                        .value_or(false)) {
           auto maybeDyType{evaluate::DynamicType::From(*type)};
           if (type->category() == DeclTypeSpec::Logical) {
             if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
@@ -3084,7 +3082,8 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
         type->characterTypeSpec().length().isDeferred()) {
       // ok; F'2023 18.3.7 p2(6)
     } else if (derived ||
-        IsInteroperableIntrinsicType(*type, context_.languageFeatures())) {
+        IsInteroperableIntrinsicType(*type, context_.languageFeatures())
+            .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
     } else if (type->category() == DeclTypeSpec::Logical) {
       if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool) &&

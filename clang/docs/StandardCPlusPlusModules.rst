@@ -652,6 +652,149 @@ in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
    comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
    be meaningful to build systems which elect to support two-phase compilation.
 
+Experimental Non-Cascading Changes
+----------------------------------
+
+This section is primarily for build system vendors. For end compiler users,
+if you don't want to read it all, this is helpful to reduce recompilations.
+We encourage build system vendors and end users try this out and bring feedback.
+
+Before Clang 19, a change in BMI of any (transitive) dependency would cause the
+outputs of the BMI to change. Starting with Clang 19, changes to non-direct
+dependencies should not directly affect the output BMI, unless they affect the
+results of the compilations. We expect that there are many more opportunities
+for this optimization than we currently have realized and would appreaciate 
+feedback about missed optimization opportunities. For example,
+
+.. code-block:: c++
+
+  // m-partA.cppm
+  export module m:partA;
+
+  // m-partB.cppm
+  export module m:partB;
+  export int getB() { return 44; }
+
+  // m.cppm
+  export module m;
+  export import :partA;
+  export import :partB;
+
+  // useBOnly.cppm
+  export module useBOnly;
+  import m;
+  export int B() {
+    return getB();
+  }
+
+  // Use.cc
+  import useBOnly;
+  int get() {
+    return B();
+  }
+
+To compile the project (for brevity, some commands are omitted.):
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+If the interface of ``m-partA.cppm`` is changed to:
+
+.. code-block:: c++
+
+  // m-partA.v1.cppm
+  export module m:partA;
+  export int getA() { return 43; }
+
+and the BMI for ``useBOnly`` is recompiled as in:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+then the contents of ``useBOnly.pcm`` remain unchanged.
+Consequently, if the build system only bases recompilation decisions on directly imported modules,
+it becomes possible to skip the recompilation of ``Use.cc``.
+It should be fine because the altered interfaces do not affect ``Use.cc`` in any way;
+the changes do not cascade.
+
+When ``Clang`` generates a BMI, it records the hash values of all potentially contributory BMIs
+for the BMI being produced. This ensures that build systems are not required to consider
+transitively imported modules when deciding whether to recompile.
+
+What is considered to be a potential contributory BMIs is currently unspecified.
+However, it is a severe bug for a BMI to remain unchanged following an observable change
+that affects its consumers.
+
+Build systems may utilize this optimization by doing an update-if-changed operation to the BMI
+that is consumed from the BMI that is output by the compiler.
+
+We encourage build systems to add an experimental mode that
+reuses the cached BMI when **direct** dependencies did not change,
+even if **transitive** dependencies did change.
+
+Given there are potential compiler bugs, we recommend that build systems
+support this feature as a configurable option so that users
+can go back to the transitive change mode safely at any time.
+
+Interactions with Reduced BMI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With reduced BMI, non-cascading changes can be more powerful. For example,
+
+.. code-block:: c++
+
+  // A.cppm
+  export module A;
+  export int a() { return 44; }
+
+  // B.cppm
+  export module B;
+  import A;
+  export int b() { return a(); }
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+And let's change the implementation for ``A.cppm`` into:
+
+.. code-block:: c++
+
+  export module A;
+  int a_impl() { return 99; }
+  export int a() { return a_impl(); }
+
+and recompile the example:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $ md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+We should find the contents of ``B.pcm`` remains the same. In this case, the build system is
+allowed to skip recompilations of TUs which solely and directly depend on module ``B``.
+
+This only happens with a reduced BMI. With reduced BMIs, we won't record the function body
+of ``int b()`` in the BMI for ``B`` so that the module ``A`` doesn't contribute to the BMI of ``B``
+and we have less dependencies.
+
 Performance Tips
 ----------------
 
@@ -1091,6 +1234,74 @@ When creating a new issue for standard C++ modules, please start the title with
 A high-level overview of support for standards features, including modules, can
 be found on the `C++ Feature Status <https://clang.llvm.org/cxx_status.html>`_
 page.
+
+Missing VTables for classes attached to modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now the compiler may miss emitting the definition of vtables
+for classes attached to modules, if the definition of the class
+doesn't contain any key function in that module units
+(The key function is the first non-pure virtual function that is
+not inline at the point of class definition.)
+
+(Note: technically, the key function is not a thing for modules.
+We use the concept here for convinient.)
+
+For example,
+
+.. code-block:: c++
+
+  // layer1.cppm
+  export module foo:layer1;
+  struct Fruit {
+      virtual ~Fruit() = default;
+      virtual void eval() = 0;
+  };
+  struct Banana : public Fruit {
+      Banana() {}
+      void eval() override;
+  };
+
+  // layer2.cppm
+  export module foo:layer2;
+  import :layer1;
+  export void layer2_fun() {
+      Banana *b = new Banana();
+      b->eval();
+  }
+  void Banana::eval() {
+  }
+
+For the above example, we can't find the definition for the vtable of
+class ``Banana`` in any object files.
+
+The expected behavior is, for dynamic classes attached to named modules,
+the vtable should always be emitted to the module units the class attaches
+to.
+
+To workaround the problem, users can add the key function manually in the
+corresponding module units. e.g.,
+
+.. code-block:: c++
+
+  // layer1.cppm
+  export module foo:layer1;
+  struct Fruit {
+      virtual ~Fruit() = default;
+      virtual void eval() = 0;
+  };
+  struct Banana : public Fruit {
+      // Hack a key function to hint the compiler to emit the virtual table.
+      virtual void anchor();
+
+      Banana() {}
+      void eval() override;
+  };
+
+  void Banana::anchor() {}
+
+This is tracked by
+`#70585 <https://github.com/llvm/llvm-project/issues/70585>`_.
 
 Including headers after import is not well-supported
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

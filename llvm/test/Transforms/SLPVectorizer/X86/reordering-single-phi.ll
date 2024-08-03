@@ -12,27 +12,18 @@ define void @test() {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX31]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 5, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP6]], i32 3
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 4, i32 poison, i32 6>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 3>
+; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP14]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP11]], [[TMP14]]
 ; CHECK-NEXT:    store <4 x float> [[TMP15]], ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[TMP16]] = load float, ptr [[ARRAYIDX41]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP14]], i32 3
 ; CHECK-NEXT:    [[MUL45:%.*]] = fmul fast float [[TMP16]], [[TMP6]]
 ; CHECK-NEXT:    store float [[MUL45]], ptr [[ARRAYIDX31]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[INDVARS_IV]], 31990

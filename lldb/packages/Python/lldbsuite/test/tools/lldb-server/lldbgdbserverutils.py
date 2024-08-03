@@ -1042,7 +1042,7 @@ if lldbplatformutil.getHostPlatform() == "windows":
     class Pipe(object):
         def __init__(self, prefix):
             while True:
-                self.name = "lldb-" + str(random.randrange(1e10))
+                self.name = "lldb-" + str(random.randrange(10**10))
                 full_name = "\\\\.\\pipe\\" + self.name
                 self._handle = CreateNamedPipe(
                     full_name,

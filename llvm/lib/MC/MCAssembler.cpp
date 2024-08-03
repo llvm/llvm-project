@@ -56,8 +56,6 @@ STATISTIC(EmittedRelaxableFragments,
           "Number of emitted assembler fragments - relaxable");
 STATISTIC(EmittedDataFragments,
           "Number of emitted assembler fragments - data");
-STATISTIC(EmittedCompactEncodedInstFragments,
-          "Number of emitted assembler fragments - compact encoded inst");
 STATISTIC(EmittedAlignFragments,
           "Number of emitted assembler fragments - align");
 STATISTIC(EmittedFillFragments,
@@ -84,40 +82,22 @@ MCAssembler::MCAssembler(MCContext &Context,
                          std::unique_ptr<MCCodeEmitter> Emitter,
                          std::unique_ptr<MCObjectWriter> Writer)
     : Context(Context), Backend(std::move(Backend)),
-      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {
-  VersionInfo.Major = 0; // Major version == 0 for "none specified"
-  DarwinTargetVariantVersionInfo.Major = 0;
-}
-
-MCAssembler::~MCAssembler() = default;
+      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
 
 void MCAssembler::reset() {
   RelaxAll = false;
-  SubsectionsViaSymbols = false;
-  IncrementalLinkerCompatible = false;
   Sections.clear();
   Symbols.clear();
-  IndirectSymbols.clear();
-  DataRegions.clear();
-  LinkerOptions.clear();
-  FileNames.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
-  ELFHeaderEFlags = 0;
-  LOHContainer.reset();
-  VersionInfo.Major = 0;
-  VersionInfo.SDKVersion = VersionTuple();
-  DarwinTargetVariantVersionInfo.Major = 0;
-  DarwinTargetVariantVersionInfo.SDKVersion = VersionTuple();
 
   // reset objects owned by us
   if (getBackendPtr())
     getBackendPtr()->reset();
   if (getEmitterPtr())
     getEmitterPtr()->reset();
-  if (getWriterPtr())
-    getWriterPtr()->reset();
-  getLOHContainer().reset();
+  if (Writer)
+    Writer->reset();
 }
 
 bool MCAssembler::registerSection(MCSection &Section) {
@@ -158,17 +138,6 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
 
   ThumbFuncs.insert(Symbol); // Cache it.
   return true;
-}
-
-bool MCAssembler::isSymbolLinkerVisible(const MCSymbol &Symbol) const {
-  // Non-temporary labels should always be visible to the linker.
-  if (!Symbol.isTemporary())
-    return true;
-
-  if (Symbol.isUsedInReloc())
-    return true;
-
-  return false;
 }
 
 bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
@@ -221,9 +190,9 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       const MCSymbol &SA = A->getSymbol();
       if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
         IsResolved = false;
-      } else if (auto *Writer = getWriterPtr()) {
+      } else {
         IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     Writer->isSymbolRefDifferenceFullyResolvedImpl(
+                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
                          *this, SA, *DF, false, true);
       }
     }
@@ -282,8 +251,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return cast<MCDataFragment>(F).getContents().size();
   case MCFragment::FT_Relaxable:
     return cast<MCRelaxableFragment>(F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(F).getContents().size();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
@@ -713,11 +680,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     OS << cast<MCRelaxableFragment>(F).getContents();
     break;
 
-  case MCFragment::FT_CompactEncodedInst:
-    ++stats::EmittedCompactEncodedInstFragments;
-    OS << cast<MCCompactEncodedInstFragment>(F).getContents();
-    break;
-
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
@@ -1145,7 +1107,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
   // requires that .uleb128 A-B is foldable where A and B reside in different
   // fragments. This is used by __gcc_except_table.
-  bool Abs = getSubsectionsViaSymbols()
+  bool Abs = getWriter().getSubsectionsViaSymbols()
                  ? LF.getValue().evaluateKnownAbsolute(Value, *this)
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
@@ -1352,18 +1314,26 @@ LLVM_DUMP_METHOD void MCAssembler::dump() const{
 
   OS << "<MCAssembler\n";
   OS << "  Sections:[\n    ";
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if (it != begin()) OS << ",\n    ";
-    it->dump();
+  bool First = true;
+  for (const MCSection &Sec : *this) {
+    if (First)
+      First = false;
+    else
+      OS << ",\n    ";
+    Sec.dump();
   }
   OS << "],\n";
   OS << "  Symbols:[";
 
-  for (const_symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
-    if (it != symbol_begin()) OS << ",\n           ";
+  First = true;
+  for (const MCSymbol &Sym : symbols()) {
+    if (First)
+      First = false;
+    else
+      OS << ",\n           ";
     OS << "(";
-    it->dump();
-    OS << ", Index:" << it->getIndex() << ", ";
+    Sym.dump();
+    OS << ", Index:" << Sym.getIndex() << ", ";
     OS << ")";
   }
   OS << "]>\n";

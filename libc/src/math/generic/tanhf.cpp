@@ -11,11 +11,12 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/math/generic/explogxf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // 2^6 * log2(e)
 constexpr double LOG2_E_EXP2_6 = ExpBase::LOG2_B * 2.0;
@@ -116,4 +117,4 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   return static_cast<float>((r - mh) / (r + mh));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

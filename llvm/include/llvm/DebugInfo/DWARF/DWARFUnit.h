@@ -22,7 +22,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/RWMutex.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -257,10 +256,6 @@ class DWARFUnit {
       iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>;
 
   std::shared_ptr<DWARFUnit> DWO;
-
-  mutable llvm::sys::RWMutex FreeDIEsMutex;
-  mutable llvm::sys::RWMutex ExtractCUDieMutex;
-  mutable llvm::sys::RWMutex ExtractNonCUDIEsMutex;
 
 protected:
   friend dwarf_linker::parallel::CompileUnit;
@@ -571,9 +566,6 @@ public:
 
   Error tryExtractDIEsIfNeeded(bool CUDieOnly);
 
-  /// clearDIEs - Clear parsed DIEs to keep memory usage low.
-  void clearDIEs(bool KeepCUDie);
-
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
   size_t getDebugInfoSize() const {
@@ -585,21 +577,12 @@ private:
   /// hasn't already been done
   void extractDIEsIfNeeded(bool CUDieOnly);
 
-  /// extracCUDieIfNeeded - Parse CU DIE if it hasn't already been done.
-  /// Only to be used from extractDIEsIfNeeded, which holds the correct locks.
-  bool extractCUDieIfNeeded(bool CUDieOnly, bool &HasCUDie);
-
-  /// extractNonCUDIEsIfNeeded - Parses non-CU DIE's for a given CU if needed.
-  /// Only to be used from extractDIEsIfNeeded, which holds the correct locks.
-  Error extractNonCUDIEsIfNeeded(bool HasCUDie);
-
-  /// extractNonCUDIEsHelper - helper to be invoked *only* from inside
-  /// tryExtractDIEsIfNeeded, which holds the correct locks.
-  Error extractNonCUDIEsHelper();
-
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.
   void extractDIEsToVector(bool AppendCUDie, bool AppendNonCUDIEs,
                            std::vector<DWARFDebugInfoEntry> &DIEs) const;
+
+  /// clearDIEs - Clear parsed DIEs to keep memory usage low.
+  void clearDIEs(bool KeepCUDie);
 
   /// parseDWO - Parses .dwo file for current compile unit. Returns true if
   /// it was actually constructed.

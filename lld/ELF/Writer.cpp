@@ -401,10 +401,19 @@ template <class ELFT> static void markUsedLocalSymbols() {
       InputSection *isec = dyn_cast_or_null<InputSection>(s);
       if (!isec)
         continue;
-      if (isec->type == SHT_REL)
+      if (isec->type == SHT_REL) {
         markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rel>());
-      else if (isec->type == SHT_RELA)
+      } else if (isec->type == SHT_RELA) {
         markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rela>());
+      } else if (isec->type == SHT_CREL) {
+        // The is64=true variant also works with ELF32 since only the r_symidx
+        // member is used.
+        for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
+          Symbol &sym = file->getSymbol(r.r_symidx);
+          if (sym.isLocal())
+            sym.used = true;
+        }
+      }
     }
   }
 }
@@ -601,10 +610,16 @@ static bool isRelroSection(const OutputSection *sec) {
   // ELF in spirit. But in reality many linker features depend on
   // magic section names.
   StringRef s = sec->name;
-  return s == ".data.rel.ro" || s == ".bss.rel.ro" || s == ".ctors" ||
-         s == ".dtors" || s == ".jcr" || s == ".eh_frame" ||
-         s == ".fini_array" || s == ".init_array" ||
-         s == ".openbsd.randomdata" || s == ".preinit_array";
+
+  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
+                     s == ".ctors" || s == ".dtors" || s == ".jcr" ||
+                     s == ".eh_frame" || s == ".fini_array" ||
+                     s == ".init_array" || s == ".preinit_array";
+
+  bool abiSpecific =
+      config->osabi == ELFOSABI_OPENBSD && s == ".openbsd.randomdata";
+
+  return abiAgnostic || abiSpecific;
 }
 
 // We compute a rank for each section. The rank indicates where the
@@ -1869,13 +1884,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   sortSections();
 
   // Create a list of OutputSections, assign sectionIndex, and populate
-  // in.shStrTab.
+  // in.shStrTab. If -z nosectionheader is specified, drop non-ALLOC sections.
   for (SectionCommand *cmd : script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
       OutputSection *osec = &osd->osec;
+      if (!in.shStrTab && !(osec->flags & SHF_ALLOC))
+        continue;
       outputSections.push_back(osec);
       osec->sectionIndex = outputSections.size();
-      osec->shName = in.shStrTab->addString(osec->name);
+      if (in.shStrTab)
+        osec->shName = in.shStrTab->addString(osec->name);
     }
 
   // Prefer command line supplied address over other constraints.
@@ -1936,6 +1954,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Some symbols are defined in term of program headers. Now that we
   // have the headers, we can find out which sections they point to.
   setReservedSymbolSections();
+
+  if (script->noCrossRefs.size()) {
+    llvm::TimeTraceScope timeScope("Check NOCROSSREFS");
+    checkNoCrossRefs<ELFT>();
+  }
 
   {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections");
@@ -2273,10 +2296,22 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     addHdr(PT_GNU_EH_FRAME, part.ehFrameHdr->getParent()->getPhdrFlags())
         ->add(part.ehFrameHdr->getParent());
 
-  // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
-  // the dynamic linker fill the segment with random data.
-  if (OutputSection *cmd = findSection(".openbsd.randomdata", partNo))
-    addHdr(PT_OPENBSD_RANDOMIZE, cmd->getPhdrFlags())->add(cmd);
+  if (config->osabi == ELFOSABI_OPENBSD) {
+    // PT_OPENBSD_MUTABLE makes the dynamic linker fill the segment with
+    // zero data, like bss, but it can be treated differently.
+    if (OutputSection *cmd = findSection(".openbsd.mutable", partNo))
+      addHdr(PT_OPENBSD_MUTABLE, cmd->getPhdrFlags())->add(cmd);
+
+    // PT_OPENBSD_RANDOMIZE makes the dynamic linker fill the segment
+    // with random data.
+    if (OutputSection *cmd = findSection(".openbsd.randomdata", partNo))
+      addHdr(PT_OPENBSD_RANDOMIZE, cmd->getPhdrFlags())->add(cmd);
+
+    // PT_OPENBSD_SYSCALLS makes the kernel and dynamic linker register
+    // system call sites.
+    if (OutputSection *cmd = findSection(".openbsd.syscalls", partNo))
+      addHdr(PT_OPENBSD_SYSCALLS, cmd->getPhdrFlags())->add(cmd);
+  }
 
   if (config->zGnustack != GnuStackKind::None) {
     // PT_GNU_STACK is a special section to tell the loader to make the
@@ -2680,6 +2715,10 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   auto *eHdr = reinterpret_cast<Elf_Ehdr *>(Out::bufferStart);
   eHdr->e_type = getELFType();
   eHdr->e_entry = getEntryAddr();
+
+  // If -z nosectionheader is specified, omit the section header table.
+  if (!in.shStrTab)
+    return;
   eHdr->e_shoff = sectionHeaderOff;
 
   // Write the section header table.

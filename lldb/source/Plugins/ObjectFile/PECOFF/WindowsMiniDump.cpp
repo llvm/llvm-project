@@ -21,11 +21,11 @@
 namespace lldb_private {
 
 bool SaveMiniDump(const lldb::ProcessSP &process_sp,
-                  const lldb_private::FileSpec &outfile,
-                  lldb_private::Status &error) {
+                  SaveCoreOptions &core_options, lldb_private::Status &error) {
   if (!process_sp)
     return false;
 #ifdef _WIN32
+  const auto &outfile = core_options.GetOutputFile().value();
   HANDLE process_handle = ::OpenProcess(
       PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, process_sp->GetID());
   const std::string file_name = outfile.GetPath();
