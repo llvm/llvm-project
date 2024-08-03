@@ -68,6 +68,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strchr
     libc.src.string.strchrnul
     libc.src.string.strcmp
+    libc.src.string.strcoll
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
@@ -90,6 +91,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+    libc.src.string.strxfrm
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -185,6 +187,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
     libc.src.stdlib.srand
+    libc.src.stdlib.strfromd
+    libc.src.stdlib.strfromf
+    libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
@@ -202,17 +207,33 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.fdopen
-    #libc.src.stdio.fscanf
+    libc.src.stdio.fileno
+    libc.src.stdio.fprintf
+    libc.src.stdio.fscanf
+    libc.src.stdio.printf
     libc.src.stdio.remove
     libc.src.stdio.rename
+    libc.src.stdio.scanf
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
     libc.src.stdio.asprintf
-    #libc.src.stdio.scanf
-    #libc.src.stdio.sscanf
+    libc.src.stdio.sscanf
+    libc.src.stdio.vsscanf
+    libc.src.stdio.vfprintf
+    libc.src.stdio.vprintf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vasprintf
+
+    # sys/epoll.h entrypoints
+    libc.src.sys.epoll.epoll_create
+    libc.src.sys.epoll.epoll_create1
+    libc.src.sys.epoll.epoll_ctl
+    libc.src.sys.epoll.epoll_pwait
+    libc.src.sys.epoll.epoll_wait
+    # TODO: Need to check if pwait2 is available before providing.
+    # https://github.com/llvm/llvm-project/issues/80060
+    # libc.src.sys.epoll.epoll_pwait2
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -250,6 +271,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
 
+    # sys/statvfs.h
+    libc.src.sys.statvfs.fstatvfs
+    libc.src.sys.statvfs.statvfs
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -263,12 +288,6 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
-
-    # sys/epoll.h entrypoints
-    # Disabled due to epoll_wait syscalls not being available on this platform.
-    # libc.src.sys.epoll.epoll_wait
-    # libc.src.sys.epoll.epoll_pwait
-    # libc.src.sys.epoll.epoll_pwait2
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -306,6 +325,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.linkat
     libc.src.unistd.lseek
     libc.src.unistd.pathconf
+    libc.src.unistd.pipe
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -319,6 +339,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
     libc.src.unistd.write
+
+    # wchar.h entrypoints
+    libc.src.wchar.wctob
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -552,17 +575,27 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    # TODO: aarch64 bug
+    # Please see https://github.com/llvm/llvm-project/pull/100632#issuecomment-2258772681
+    # libc.src.math.expf16
     libc.src.math.f16add
     libc.src.math.f16addf
+    # libc.src.math.f16addl
     libc.src.math.f16div
     libc.src.math.f16divf
+    # libc.src.math.f16divl
+    libc.src.math.f16fma
     libc.src.math.f16fmaf
+    # libc.src.math.f16fmal
     libc.src.math.f16mul
     libc.src.math.f16mulf
+    # libc.src.math.f16mull
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
+    # libc.src.math.f16sqrtl
     libc.src.math.f16sub
     libc.src.math.f16subf
+    # libc.src.math.f16subl
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
@@ -576,6 +609,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fminimum_magf16
     libc.src.math.fminimum_numf16
     libc.src.math.fminimumf16
+    # libc.src.math.fmodf16
     libc.src.math.frexpf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
@@ -613,16 +647,30 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ufromfpf16
     libc.src.math.ufromfpxf16
   )
+
+  # if(LIBC_TYPES_HAS_FLOAT128)
+  #   list(APPEND TARGET_LIBM_ENTRYPOINTS
+  #     # math.h C23 mixed _Float16 and _Float128 entrypoints
+  #     libc.src.math.f16addf128
+  #     libc.src.math.f16divf128
+  #     libc.src.math.f16fmaf128
+  #     libc.src.math.f16mulf128
+  #     libc.src.math.f16sqrtf128
+  #     libc.src.math.f16subf128
+  #   )
+  # endif()
 endif()
 
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
+    libc.src.math.dmulf128
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
     libc.src.math.fabsf128
@@ -639,9 +687,11 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fminimum_numf128
     libc.src.math.fminimumf128
     libc.src.math.fmodf128
+    libc.src.math.fmulf128
     libc.src.math.frexpf128
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128
+    libc.src.math.fsqrtf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
@@ -659,8 +709,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.nextupf128
     libc.src.math.remquof128
     libc.src.math.rintf128
-    libc.src.math.roundf128
     libc.src.math.roundevenf128
+    libc.src.math.roundf128
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
     libc.src.math.sqrtf128
@@ -674,8 +724,17 @@ endif()
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # assert.h entrypoints
+    libc.src.assert.__assert_fail
+
     # compiler entrypoints (no corresponding header)
     libc.src.compiler.__stack_chk_fail
+
+    # dirent.h entrypoints
+    libc.src.dirent.closedir
+    libc.src.dirent.dirfd
+    libc.src.dirent.opendir
+    libc.src.dirent.readdir
 
     # network.h entrypoints
     libc.src.network.htonl
@@ -695,6 +754,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_setguardsize
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
+    libc.src.pthread.pthread_condattr_destroy
+    libc.src.pthread.pthread_condattr_getclock
+    libc.src.pthread.pthread_condattr_getpshared
+    libc.src.pthread.pthread_condattr_init
+    libc.src.pthread.pthread_condattr_setclock
+    libc.src.pthread.pthread_condattr_setpshared
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal
@@ -755,7 +820,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ferror_unlocked
     libc.src.stdio.fflush
     libc.src.stdio.fgetc
-    libc.src.stdio.fileno
+    libc.src.stdio.fgetc_unlocked
+    libc.src.stdio.fgets
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
     libc.src.stdio.fopencookie
@@ -764,29 +830,34 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fread
     libc.src.stdio.fread_unlocked
     libc.src.stdio.fseek
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftell
+    libc.src.stdio.ftello
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
+    libc.src.stdio.getc
+    libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
-    #TODO: Look into if fprintf can be enabled for overlay on aarch64
-    libc.src.stdio.fprintf
-    libc.src.stdio.printf
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
+    libc.src.stdio.setbuf
+    libc.src.stdio.setvbuf
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
-    libc.src.stdio.vfprintf
-    libc.src.stdio.vprintf
+    libc.src.stdio.ungetc
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
+    libc.src.stdlib.at_quick_exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.quick_exit
 
     # signal.h entrypoints
     libc.src.signal.kill
@@ -799,6 +870,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigfillset
     libc.src.signal.signal
     libc.src.signal.sigprocmask
+
+    # spawn.h entrypoints
+    libc.src.spawn.posix_spawn
+    libc.src.spawn.posix_spawn_file_actions_addclose
+    libc.src.spawn.posix_spawn_file_actions_adddup2
+    libc.src.spawn.posix_spawn_file_actions_addopen
+    libc.src.spawn.posix_spawn_file_actions_destroy
+    libc.src.spawn.posix_spawn_file_actions_init
 
     # search.h entrypoints
     libc.src.search.hcreate
@@ -860,6 +939,10 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.bind
+    libc.src.sys.socket.socket
   )
 endif()
 
