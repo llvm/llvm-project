@@ -215,9 +215,6 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION**:
-  This macro is used to re-enable `uncaught_exception`.
-
 **_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
   This macro is used to re-enable the function
   ``std::shared_ptr<...>::unique()``.
