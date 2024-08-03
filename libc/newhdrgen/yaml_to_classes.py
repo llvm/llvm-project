@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+#
 # ===- Generate headers for libc functions  -------------------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
