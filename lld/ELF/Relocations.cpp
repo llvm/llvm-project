@@ -2414,7 +2414,7 @@ static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
 // For each output section described by at least one NOCROSSREFS(_TO) command,
 // scan relocations from its input sections for prohibited cross references.
 template <class ELFT> void elf::checkNoCrossRefs() {
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     for (const NoCrossRefCommand &noxref : script->noCrossRefs) {
       if (!llvm::is_contained(noxref.outputSections, osec->name) ||
           (noxref.toFirst && noxref.outputSections[0] == osec->name))

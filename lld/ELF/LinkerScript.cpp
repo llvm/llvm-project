@@ -1020,7 +1020,7 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
 }
 
 static OutputSection *findFirstSection(PhdrEntry *load) {
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->ptLoad == load)
       return sec;
   return nullptr;
@@ -1340,7 +1340,7 @@ static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
 // and we'll also remove the PT_PHDR segment.
 void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->flags & SHF_ALLOC)
       min = std::min<uint64_t>(min, sec->addr);
 
@@ -1555,7 +1555,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
   }
 
   // Add output sections to program headers.
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     // Assign headers specified by linker script
     for (size_t id : getPhdrIndices(sec)) {
       ret[id]->add(sec);
@@ -1676,7 +1676,7 @@ static void checkMemoryRegion(const MemoryRegion *region,
 void LinkerScript::checkFinalScriptConditions() const {
   for (StringRef err : recordedErrors)
     errorOrWarn(err);
-  for (const OutputSection *sec : outputSections) {
+  for (const OutputSection *sec : ctx.outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
       checkMemoryRegion(memoryRegion, sec, sec->addr);
     if (const MemoryRegion *lmaRegion = sec->lmaRegion)
