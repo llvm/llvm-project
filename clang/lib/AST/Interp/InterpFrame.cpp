@@ -75,9 +75,7 @@ InterpFrame::~InterpFrame() {
   if (Func) {
     for (auto &Scope : Func->scopes()) {
       for (auto &Local : Scope.locals()) {
-        Block *B = localBlock(Local.Offset);
-        if (B->isInitialized())
-          B->invokeDtor();
+        S.deallocate(localBlock(Local.Offset));
       }
     }
   }
