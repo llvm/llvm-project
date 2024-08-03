@@ -909,6 +909,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
 float4 lerp(float4, float4, float4);
 
 //===----------------------------------------------------------------------===//
+// length builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T length(T x)
+/// \brief Returns the length of the specified floating-point vector.
+/// \param x [in] The vector of floats, or a scalar float.
+///
+/// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + …).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float4);
+
+//===----------------------------------------------------------------------===//
 // log builtins
 //===----------------------------------------------------------------------===//
 
