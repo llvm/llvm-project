@@ -1959,6 +1959,14 @@ TARGET_HEADER_BUILTIN(__readgsword,  "UsUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, 
 TARGET_HEADER_BUILTIN(__readgsdword, "UNiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__readgsqword, "ULLiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
+// AVX10.2 VMPSADBW
+TARGET_BUILTIN(__builtin_ia32_mpsadbw512, "V32sV64cV64cIc", "ncV:512:", "avx10.2-512")
+
+// AVX10.2 YMM Rounding
+TARGET_BUILTIN(__builtin_ia32_vaddpd256_round, "V4dV4dV4dIi", "nV:256:", "avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vaddph256_round, "V16xV16xV16xIi", "nV:256:", "avx10.2-256")
+TARGET_BUILTIN(__builtin_ia32_vaddps256_round, "V8fV8fV8fIi", "nV:256:", "avx10.2-256")
+
 // AVX-VNNI-INT16
 TARGET_BUILTIN(__builtin_ia32_vpdpwsud128, "V4iV4iV4iV4i", "nV:128:", "avxvnniint16")
 TARGET_BUILTIN(__builtin_ia32_vpdpwsud256, "V8iV8iV8iV8i", "nV:256:", "avxvnniint16")
