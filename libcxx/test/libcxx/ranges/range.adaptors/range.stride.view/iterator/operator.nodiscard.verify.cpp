@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr decltype(auto) operator[](difference_type __n) const
+// Test that std::ranges::stride_view::iterator::operator- is marked nodiscard.
 
 #include <ranges>
 
@@ -33,9 +33,9 @@ constexpr bool test_non_forward_operator_minus() {
 }
 
 constexpr bool test_forward_operator_minus() {
-  // Test the forward-range operator- between two iterators (i.e., no ceil).
-  using Base = BasicTestView<int*, int*>;
   int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+  using Base = BasicTestView<int*, int*>;
 
   auto base_view_offset_zero             = Base(arr, arr + 10);
   auto base_view_offset_one              = Base(arr + 1, arr + 10);
@@ -53,6 +53,12 @@ constexpr bool test_forward_operator_minus() {
 
   sv_one_offset_begin - // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
       sv_zero_offset_begin;
+
+  std::default_sentinel_t() - // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+      sv_zero_offset_begin;
+
+  sv_zero_offset_begin - // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+      std::default_sentinel_t();
 
   return true;
 }

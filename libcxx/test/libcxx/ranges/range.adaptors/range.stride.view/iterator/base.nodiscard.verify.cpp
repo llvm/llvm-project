@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Test that std::ranges::stride_view::iterator::operator*() is marked nodiscard.
+// Test that std::ranges::stride_view::iterator::base() is marked nodiscard.
 
 #include <ranges>
 #include <utility>
@@ -18,7 +18,8 @@ void test() {
     int range[] = {1, 2, 3};
     auto view   = std::ranges::views::stride(range, 3);
     auto it     = view.begin();
-    ++it;
-    *std::as_const(it); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    it.base();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::move(it).base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 }
