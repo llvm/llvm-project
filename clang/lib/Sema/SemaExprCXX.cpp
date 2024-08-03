@@ -5647,7 +5647,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (UnqualT->isArrayType())
       return true;
 
-    CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
+    const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
     if (!RD)
       return false;
     if (UnqualT->isAggregateType())
