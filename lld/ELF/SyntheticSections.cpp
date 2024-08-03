@@ -553,7 +553,7 @@ void EhFrameSection::finalizeContents() {
 // to get an FDE from an address to which FDE is applied. This function
 // returns a list of such pairs.
 SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
-  uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
+  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
   SmallVector<FdeData, 0> ret;
 
   uint64_t va = getPartition().ehFrameHdr->getVA();
@@ -1493,17 +1493,17 @@ DynamicSection<ELFT>::computeContents() {
     addInSec(DT_HASH, *part.hashTab);
 
   if (isMain) {
-    if (Out::preinitArray) {
-      addInt(DT_PREINIT_ARRAY, Out::preinitArray->addr);
-      addInt(DT_PREINIT_ARRAYSZ, Out::preinitArray->size);
+    if (ctx.out.preinitArray) {
+      addInt(DT_PREINIT_ARRAY, ctx.out.preinitArray->addr);
+      addInt(DT_PREINIT_ARRAYSZ, ctx.out.preinitArray->size);
     }
-    if (Out::initArray) {
-      addInt(DT_INIT_ARRAY, Out::initArray->addr);
-      addInt(DT_INIT_ARRAYSZ, Out::initArray->size);
+    if (ctx.out.initArray) {
+      addInt(DT_INIT_ARRAY, ctx.out.initArray->addr);
+      addInt(DT_INIT_ARRAYSZ, ctx.out.initArray->size);
     }
-    if (Out::finiArray) {
-      addInt(DT_FINI_ARRAY, Out::finiArray->addr);
-      addInt(DT_FINI_ARRAYSZ, Out::finiArray->size);
+    if (ctx.out.finiArray) {
+      addInt(DT_FINI_ARRAY, ctx.out.finiArray->addr);
+      addInt(DT_FINI_ARRAYSZ, ctx.out.finiArray->size);
     }
 
     if (Symbol *b = symtab.find(config->init))
@@ -3631,7 +3631,7 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
 // the starting PC from where FDEs covers, and the FDE's address.
 // It is sorted by PC.
 void EhFrameHeader::write() {
-  uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
+  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
   using FdeData = EhFrameSection::FdeData;
   SmallVector<FdeData, 0> fdes = getPartition().ehFrame->getFdeData();
 
@@ -4647,13 +4647,6 @@ static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
 }
 
 template <class ELFT> void elf::createSyntheticSections() {
-  // Initialize all pointers with NULL. This is needed because
-  // you can call lld::elf::main more than once as a library.
-  Out::tlsPhdr = nullptr;
-  Out::preinitArray = nullptr;
-  Out::initArray = nullptr;
-  Out::finiArray = nullptr;
-
   // Add the .interp section first because it is not a SyntheticSection.
   // The removeUnusedSyntheticSections() function relies on the
   // SyntheticSections coming last.
@@ -4669,8 +4662,8 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
 
-  Out::programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::programHeaders->addralign = config->wordsize;
+  ctx.out.programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.programHeaders->addralign = config->wordsize;
 
   if (config->strip != StripPolicy::All) {
     in.strTab = std::make_unique<StringTableSection>(".strtab", false);

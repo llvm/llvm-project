@@ -44,6 +44,8 @@ class InputSectionBase;
 class EhInputSection;
 class Symbol;
 class BitcodeCompiler;
+class OutputSection;
+struct PhdrEntry;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
@@ -477,6 +479,20 @@ struct DuplicateSymbol {
 
 struct Ctx {
   LinkerDriver driver;
+
+  // These variables are initialized by Writer and should not be used before
+  // Writer is initialized.
+  uint8_t *bufferStart;
+  PhdrEntry *tlsPhdr;
+  struct OutSections {
+    OutputSection *elfHeader;
+    OutputSection *programHeaders;
+    OutputSection *preinitArray;
+    OutputSection *initArray;
+    OutputSection *finiArray;
+  };
+  OutSections out;
+
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
   SmallVector<SharedFile *, 0> sharedFiles;

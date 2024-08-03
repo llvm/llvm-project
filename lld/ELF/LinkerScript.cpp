@@ -1359,8 +1359,8 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   if ((paged || hasExplicitHeaders) &&
       headerSize <= min - computeBase(min, hasExplicitHeaders)) {
     min = alignDown(min - headerSize, config->maxPageSize);
-    Out::elfHeader->addr = min;
-    Out::programHeaders->addr = min + Out::elfHeader->size;
+    ctx.out.elfHeader->addr = min;
+    ctx.out.programHeaders->addr = min + ctx.out.elfHeader->size;
     return;
   }
 
@@ -1368,8 +1368,8 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   if (hasExplicitHeaders)
     error("could not allocate headers");
 
-  Out::elfHeader->ptLoad = nullptr;
-  Out::programHeaders->ptLoad = nullptr;
+  ctx.out.elfHeader->ptLoad = nullptr;
+  ctx.out.programHeaders->ptLoad = nullptr;
   firstPTLoad->firstSec = findFirstSection(firstPTLoad);
 
   llvm::erase_if(phdrs,
@@ -1397,8 +1397,8 @@ LinkerScript::assignAddresses() {
   } else {
     // Assign addresses to headers right now.
     dot = target->getImageBase();
-    Out::elfHeader->addr = dot;
-    Out::programHeaders->addr = dot + Out::elfHeader->size;
+    ctx.out.elfHeader->addr = dot;
+    ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
     dot += getHeaderSize();
   }
 
@@ -1543,9 +1543,9 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
     PhdrEntry *phdr = make<PhdrEntry>(cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
-      phdr->add(Out::elfHeader);
+      phdr->add(ctx.out.elfHeader);
     if (cmd.hasPhdrs)
-      phdr->add(Out::programHeaders);
+      phdr->add(ctx.out.programHeaders);
 
     if (cmd.lmaExpr) {
       phdr->p_paddr = cmd.lmaExpr().getValue();
