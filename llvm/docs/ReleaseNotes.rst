@@ -138,6 +138,8 @@ Changes to the X86 Backend
   generally seen in the wild (Clang never generates them!), so this is
   not expected to result in real-world compatibility problems.
 
+* Support ISA of ``AVX10.2-256`` and ``AVX10.2-512``.
+
 Changes to the OCaml bindings
 -----------------------------
 
