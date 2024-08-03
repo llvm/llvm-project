@@ -74,8 +74,8 @@ findAlternative(const CXXMethodDecl *MatchedOperator) {
     if (SubscriptThisObjType != AtThisObjType)
       continue;
 
-    const bool CorrectName = Method->getNameInfo().getAsString() == "at";
-    if (!CorrectName)
+    if (!Method->getNameInfo().getName().isIdentifier() ||
+        Method->getName() != "at")
       continue;
 
     const bool SameReturnType =
