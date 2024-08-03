@@ -612,14 +612,13 @@ sdkSupportsBuiltinModules(llvm::Triple const &triple,
   if (it == include_dirs.end())
     return false;
 
-  size_t suffix = it->find(s_sdk_suffix);
-  assert(suffix == std::string::npos);
-
   auto VFS = FileSystem::Instance().GetVirtualFileSystem();
   if (!VFS)
     return false;
 
   // Extract: /path/to/some.sdk
+  size_t suffix = it->find(s_sdk_suffix);
+  assert(suffix != std::string::npos);
   std::string sdk_path = it->substr(0, suffix + s_sdk_suffix.size());
 
   // Extract SDK version from the /path/to/some.sdk/SDKSettings.json
