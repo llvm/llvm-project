@@ -134,7 +134,9 @@ constexpr bool test() {
   }
 
   // A final sanity check.
-  { static_assert(std::same_as<decltype(std::views::stride), decltype(std::ranges::views::stride)>); }
+  {
+    static_assert(std::same_as<decltype(std::views::stride), decltype(std::ranges::views::stride)>);
+  }
 
   return true;
 }

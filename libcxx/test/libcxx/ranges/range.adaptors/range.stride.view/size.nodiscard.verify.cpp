@@ -15,9 +15,9 @@
 #include "../../../../std/ranges/range.adaptors/range.stride.view/types.h"
 
 void test() {
-  auto sv = std::views::stride(SimpleNoConstSizedCommonView(), 2);
+  auto sv             = std::views::stride(SimpleNoConstSizedCommonView(), 2);
   const auto const_sv = std::views::stride(SimpleCommonConstView(), 2);
 
-  sv.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  sv.size();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   const_sv.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
