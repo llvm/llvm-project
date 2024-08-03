@@ -1038,15 +1038,14 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {
   if (MF.getTarget().getTargetTriple().getArch() == Triple::amdgcn)
     return static_cast<const AMDGPUSubtarget&>(MF.getSubtarget<GCNSubtarget>());
-  else
-    return static_cast<const AMDGPUSubtarget&>(MF.getSubtarget<R600Subtarget>());
+  return static_cast<const AMDGPUSubtarget &>(MF.getSubtarget<R600Subtarget>());
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Function &F) {
   if (TM.getTargetTriple().getArch() == Triple::amdgcn)
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
-  else
-    return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<R600Subtarget>(F));
+  return static_cast<const AMDGPUSubtarget &>(
+      TM.getSubtarget<R600Subtarget>(F));
 }
 
 GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,

@@ -33,7 +33,8 @@ static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
 template <typename T>
 static void moveTy(Block *, const std::byte *Src, std::byte *Dst,
                    const Descriptor *) {
-  const auto *SrcPtr = reinterpret_cast<const T *>(Src);
+  // FIXME: Get rid of the const_cast.
+  auto *SrcPtr = reinterpret_cast<T *>(const_cast<std::byte *>(Src));
   auto *DstPtr = reinterpret_cast<T *>(Dst);
   new (DstPtr) T(std::move(*SrcPtr));
 }
@@ -162,7 +163,8 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
 }
 
 static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
-                     bool IsActive, const Descriptor *D, unsigned FieldOffset) {
+                     bool IsActive, const Descriptor *D, unsigned FieldOffset,
+                     bool IsVirtualBase) {
   assert(D);
   assert(D->ElemRecord);
 
@@ -172,13 +174,14 @@ static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->Desc = D;
   Desc->IsInitialized = D->IsArray;
   Desc->IsBase = true;
+  Desc->IsVirtualBase = IsVirtualBase;
   Desc->IsActive = IsActive && !IsUnion;
   Desc->IsConst = IsConst || D->IsConst;
   Desc->IsFieldMutable = IsMutable || D->IsMutable;
 
   for (const auto &V : D->ElemRecord->bases())
     initBase(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, V.Desc,
-             V.Offset);
+             V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
     initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, IsUnion,
               F.Desc, F.Offset);
@@ -187,11 +190,11 @@ static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
 static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                        bool IsActive, const Descriptor *D) {
   for (const auto &V : D->ElemRecord->bases())
-    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset);
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
     initField(B, Ptr, IsConst, IsMutable, IsActive, D->ElemRecord->isUnion(), F.Desc, F.Offset);
   for (const auto &V : D->ElemRecord->virtual_bases())
-    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset);
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, true);
 }
 
 static void destroyField(Block *B, std::byte *Ptr, const Descriptor *D,
@@ -303,6 +306,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
       IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
   assert(Source && "Missing source");
+  assert(NumElems <= (MaxArrayElemBytes / ElemSize));
 }
 
 /// Primitive unknown-size arrays.

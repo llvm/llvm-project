@@ -52,14 +52,14 @@
 //   %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
 //   %2:fpr64 = MOVID 0
 //   %4:fpr128 = IMPLICIT_DEF
-//   %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64, %subreg.dsub
+//   %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), %2:fpr64, %subreg.dsub
 //   %6:fpr128 = IMPLICIT_DEF
-//   %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
-//   %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+//   %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
+//   %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, %3:fpr128, 0
 //   ==>
 //   %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
 //   %6:fpr128 = IMPLICIT_DEF
-//   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
+//   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
 //
 //===----------------------------------------------------------------------===//
 
@@ -701,10 +701,13 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
     return false;
 
   MachineInstr *SrcMI = MRI->getUniqueVRegDef(InputReg);
-  MachineInstr *CopyMI = SrcMI;
+  SmallPtrSet<MachineInstr *, 4> DeadInstrs;
+  DeadInstrs.insert(SrcMI);
   while (SrcMI && SrcMI->isFullCopy() &&
-         MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg()))
+         MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg())) {
     SrcMI = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
+    DeadInstrs.insert(SrcMI);
+  }
 
   if (!SrcMI || SrcMI->getOpcode() != AArch64::SBFMXri ||
       SrcMI->getOperand(2).getImm() != 0 || SrcMI->getOperand(3).getImm() != 31)
@@ -712,10 +715,13 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
 
   Register SrcReg = SrcMI->getOperand(1).getReg();
   MRI->constrainRegClass(SrcReg, MRI->getRegClass(InputReg));
+  LLVM_DEBUG(dbgs() << "Optimizing: " << MI);
   MI.getOperand(1).setReg(SrcReg);
-  if (CopyMI != SrcMI)
-    CopyMI->eraseFromParent();
-  SrcMI->eraseFromParent();
+  LLVM_DEBUG(dbgs() << "        to: " << MI);
+  for (auto *DeadMI : DeadInstrs) {
+    LLVM_DEBUG(dbgs() << "  Removing: " << *DeadMI);
+    DeadMI->eraseFromParent();
+  }
   return true;
 }
 

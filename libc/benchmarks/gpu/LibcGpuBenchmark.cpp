@@ -7,6 +7,8 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf.h"
+#include "src/stdlib/srand.h"
 #include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -73,11 +75,10 @@ struct AtomicBenchmarkSums {
 };
 
 AtomicBenchmarkSums all_results;
+constexpr auto GREEN = "\033[32m";
+constexpr auto RESET = "\033[0m";
 
 void print_results(Benchmark *b) {
-  constexpr auto GREEN = "\033[32m";
-  constexpr auto RESET = "\033[0m";
-
   BenchmarkResult result;
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
   int num_threads = all_results.active_threads.load(cpp::MemoryOrder::RELAXED);
@@ -92,21 +93,55 @@ void print_results(Benchmark *b) {
       all_results.samples_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
   result.total_iterations =
       all_results.iterations_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
-  result.total_time =
+  const uint64_t duration_ns =
       all_results.time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  const uint64_t duration_us = duration_ns / 1000;
+  const uint64_t duration_ms = duration_ns / (1000 * 1000);
+  uint64_t converted_duration = duration_ns;
+  const char *time_unit;
+  if (duration_ms != 0) {
+    converted_duration = duration_ms;
+    time_unit = "ms";
+  } else if (duration_us != 0) {
+    converted_duration = duration_us;
+    time_unit = "us";
+  } else {
+    converted_duration = duration_ns;
+    time_unit = "ns";
+  }
+  result.total_time = converted_duration;
+  // result.total_time =
+  //     all_results.time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
 
-  log << GREEN << "[ RUN      ] " << RESET << b->get_name() << '\n';
-  log << GREEN << "[       OK ] " << RESET << b->get_name() << ": "
-      << result.cycles << " cycles, " << result.min << " min, " << result.max
-      << " max, " << result.total_iterations << " iterations, "
-      << result.total_time << " ns, "
-      << static_cast<uint64_t>(result.standard_deviation)
-      << " stddev (num threads: " << num_threads << ")\n";
+  LIBC_NAMESPACE::printf(
+      "%-20s |%8ld |%8ld |%8ld |%11d |%9ld %2s |%9ld |%9d |\n",
+      b->get_test_name().data(), result.cycles, result.min, result.max,
+      result.total_iterations, result.total_time, time_unit,
+      static_cast<uint64_t>(result.standard_deviation), num_threads);
+}
+
+void print_header() {
+  LIBC_NAMESPACE::printf("%s", GREEN);
+  LIBC_NAMESPACE::printf("Running Suite: %-10s\n",
+                         benchmarks[0]->get_suite_name().data());
+  LIBC_NAMESPACE::printf("%s", RESET);
+  LIBC_NAMESPACE::printf("Benchmark            |  Cycles |     Min |     Max | "
+                         "Iterations |        "
+                         "Time |   Stddev |  Threads |\n");
+  LIBC_NAMESPACE::printf(
+      "---------------------------------------------------------------------"
+      "--------------------------------\n");
 }
 
 void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
+
+  if (id == 0) {
+    print_header();
+    LIBC_NAMESPACE::srand(gpu::processor_clock());
+  }
+
   gpu::sync_threads();
 
   for (Benchmark *b : benchmarks) {
@@ -114,8 +149,10 @@ void Benchmark::run_benchmarks() {
       all_results.reset();
 
     gpu::sync_threads();
-    auto current_result = b->run();
-    all_results.update(current_result);
+    if (b->num_threads == static_cast<uint32_t>(-1) || id < b->num_threads) {
+      auto current_result = b->run();
+      all_results.update(current_result);
+    }
     gpu::sync_threads();
 
     if (id == 0)
@@ -171,6 +208,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     if (samples >= options.max_samples || iterations >= options.max_iterations)
       break;
     if (total_time >= options.min_duration && samples >= options.min_samples &&
+        total_iterations >= options.min_iterations &&
         change_ratio < options.epsilon)
       break;
 

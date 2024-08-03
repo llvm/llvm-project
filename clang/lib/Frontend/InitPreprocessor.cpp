@@ -1170,6 +1170,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
+  if (LangOpts.C23)
+    DefineType("__CHAR8_TYPE__", TI.UnsignedChar, Builder);
   DefineType("__CHAR16_TYPE__", TI.getChar16Type(), Builder);
   DefineType("__CHAR32_TYPE__", TI.getChar32Type(), Builder);
 
@@ -1316,7 +1318,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (!LangOpts.MathErrno)
     Builder.defineMacro("__NO_MATH_ERRNO__");
 
-  if (LangOpts.FastMath || LangOpts.FiniteMathOnly)
+  if (LangOpts.FastMath || (LangOpts.NoHonorInfs && LangOpts.NoHonorNaNs))
     Builder.defineMacro("__FINITE_MATH_ONLY__", "1");
   else
     Builder.defineMacro("__FINITE_MATH_ONLY__", "0");
@@ -1349,8 +1351,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       getLockFreeValue(TI.get##Type##Width(), TI));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
-    if (LangOpts.Char8)
-      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char); // Treat char8_t like char.
+    // char8_t has the same representation / width as unsigned
+    // char in C++ and is a typedef for unsigned char in C23
+    if (LangOpts.Char8 || LangOpts.C23)
+      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char);
     DEFINE_LOCK_FREE_MACRO(CHAR16_T, Char16);
     DEFINE_LOCK_FREE_MACRO(CHAR32_T, Char32);
     DEFINE_LOCK_FREE_MACRO(WCHAR_T, WChar);

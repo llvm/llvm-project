@@ -500,10 +500,10 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
     if (named.getName() != "llvm.linker.options")
       continue;
     // llvm.linker.options operands are lists of strings.
-    for (const llvm::MDNode *md : named.operands()) {
+    for (const llvm::MDNode *node : named.operands()) {
       SmallVector<StringRef> options;
-      options.reserve(md->getNumOperands());
-      for (const llvm::MDOperand &option : md->operands())
+      options.reserve(node->getNumOperands());
+      for (const llvm::MDOperand &option : node->operands())
         options.push_back(cast<llvm::MDString>(option)->getString());
       builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
                                             builder.getStrArrayAttr(options));
@@ -1471,6 +1471,28 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     callOp.setTailCallKind(
         convertTailCallKindFromLLVM(callInst->getTailCallKind()));
     setFastmathFlagsAttr(inst, callOp);
+
+    // Handle function attributes.
+    if (callInst->hasFnAttr(llvm::Attribute::Convergent))
+      callOp.setConvergent(true);
+    if (callInst->hasFnAttr(llvm::Attribute::NoUnwind))
+      callOp.setNoUnwind(true);
+    if (callInst->hasFnAttr(llvm::Attribute::WillReturn))
+      callOp.setWillReturn(true);
+
+    llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
+    ModRefInfo othermem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+    ModRefInfo argMem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+    ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
+        memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+    auto memAttr = MemoryEffectsAttr::get(callOp.getContext(), othermem, argMem,
+                                          inaccessibleMem);
+    // Only set the attribute when it does not match the default value.
+    if (!memAttr.isReadWrite())
+      callOp.setMemoryEffectsAttr(memAttr);
+
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
     else
@@ -1661,7 +1683,7 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   // Only set the attr when it does not match the default value.
   if (memAttr.isReadWrite())
     return;
-  funcOp.setMemoryAttr(memAttr);
+  funcOp.setMemoryEffectsAttr(memAttr);
 }
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
@@ -1686,11 +1708,13 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
     StringLiteral("noinline"),
+    StringLiteral("nounwind"),
     StringLiteral("optnone"),
     StringLiteral("target-features"),
     StringLiteral("tune-cpu"),
     StringLiteral("unsafe-fp-math"),
     StringLiteral("vscale_range"),
+    StringLiteral("willreturn"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1763,6 +1787,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setOptimizeNone(true);
   if (func->hasFnAttribute(llvm::Attribute::Convergent))
     funcOp.setConvergent(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoUnwind))
+    funcOp.setNoUnwind(true);
+  if (func->hasFnAttribute(llvm::Attribute::WillReturn))
+    funcOp.setWillReturn(true);
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);

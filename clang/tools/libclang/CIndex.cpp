@@ -2182,6 +2182,8 @@ public:
   VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
+  void VisitOMPReverseDirective(const OMPReverseDirective *D);
+  void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
   void VisitOMPForDirective(const OMPForDirective *D);
   void VisitOMPForSimdDirective(const OMPForSimdDirective *D);
   void VisitOMPSectionsDirective(const OMPSectionsDirective *D);
@@ -2524,7 +2526,7 @@ void OMPClauseEnqueue::VisitOMPHintClause(const OMPHintClause *C) {
 }
 
 template <typename T> void OMPClauseEnqueue::VisitOMPClauseList(T *Node) {
-  for (const auto *I : Node->varlists()) {
+  for (const auto *I : Node->varlist()) {
     Visitor->AddStmt(I);
   }
 }
@@ -2744,7 +2746,7 @@ void OMPClauseEnqueue::VisitOMPUsesAllocatorsClause(
 }
 void OMPClauseEnqueue::VisitOMPAffinityClause(const OMPAffinityClause *C) {
   Visitor->AddStmt(C->getModifier());
-  for (const Expr *E : C->varlists())
+  for (const Expr *E : C->varlist())
     Visitor->AddStmt(E);
 }
 void OMPClauseEnqueue::VisitOMPBindClause(const OMPBindClause *C) {}
@@ -3225,6 +3227,15 @@ void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
 }
 
 void EnqueueVisitor::VisitOMPUnrollDirective(const OMPUnrollDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPInterchangeDirective(
+    const OMPInterchangeDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -6097,6 +6108,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPTileDirective");
   case CXCursor_OMPUnrollDirective:
     return cxstring::createRef("OMPUnrollDirective");
+  case CXCursor_OMPReverseDirective:
+    return cxstring::createRef("OMPReverseDirective");
+  case CXCursor_OMPInterchangeDirective:
+    return cxstring::createRef("OMPInterchangeDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:

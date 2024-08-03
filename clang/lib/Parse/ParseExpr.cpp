@@ -763,6 +763,9 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
                                    tok::TokenKind *Kind) {
   if (RevertibleTypeTraits.empty()) {
+// Revertible type trait is a feature for backwards compatibility with older
+// standard libraries that declare their own structs with the same name as
+// the builtins listed below. New builtins should NOT be added to this list.
 #define RTT_JOIN(X, Y) X##Y
 #define REVERTIBLE_TYPE_TRAIT(Name)                                            \
   RevertibleTypeTraits[PP.getIdentifierInfo(#Name)] = RTT_JOIN(tok::kw_, Name)
@@ -790,7 +793,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_fundamental);
     REVERTIBLE_TYPE_TRAIT(__is_integral);
     REVERTIBLE_TYPE_TRAIT(__is_interface_class);
-    REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
     REVERTIBLE_TYPE_TRAIT(__is_literal);
     REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
     REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
@@ -839,6 +841,26 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     return true;
   }
   return false;
+}
+
+ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
+  SourceLocation Loc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return ExprError();
+
+  TypeResult Ty = ParseTypeName();
+  if (Ty.isInvalid()) {
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return ExprError();
+  }
+
+  SourceLocation EndLoc = Tok.getLocation();
+  T.consumeClose();
+  return Actions.ActOnUnaryExprOrTypeTraitExpr(
+      Loc, UETT_PtrAuthTypeDiscriminator,
+      /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
 }
 
 /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
@@ -1806,6 +1828,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Res = ParseArrayTypeTrait();
     break;
 
+  case tok::kw___builtin_ptrauth_type_discriminator:
+    return ParseBuiltinPtrauthTypeDiscriminator();
+
   case tok::kw___is_lvalue_expr:
   case tok::kw___is_rvalue_expr:
     if (NotPrimaryExpression)
@@ -2454,7 +2479,19 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
       return ExprError();
     }
 
-    Operand = ParseCastExpression(UnaryExprOnly);
+    // If we're parsing a chain that consists of keywords that could be
+    // followed by a non-parenthesized expression, BalancedDelimiterTracker
+    // is not going to help when the nesting is too deep. In this corner case
+    // we continue to parse with sufficient stack space to avoid crashing.
+    if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
+                      tok::kw_alignof, tok::kw__Alignof) &&
+        Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
+                    tok::kw_alignof, tok::kw__Alignof))
+      Actions.runWithSufficientStackSpace(Tok.getLocation(), [&] {
+        Operand = ParseCastExpression(UnaryExprOnly);
+      });
+    else
+      Operand = ParseCastExpression(UnaryExprOnly);
   } else {
     // If it starts with a '(', we know that it is either a parenthesized
     // type-name, or it is a unary-expression that starts with a compound
@@ -3597,7 +3634,7 @@ void Parser::injectEmbedTokens() {
     I += 2;
   }
   PP.EnterTokenStream(std::move(Toks), /*DisableMacroExpansion=*/true,
-                      /*IsReinject=*/false);
+                      /*IsReinject=*/true);
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 }
 

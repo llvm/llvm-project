@@ -609,8 +609,6 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMPointerTypeKind;
   case Type::FixedVectorTyID:
     return LLVMVectorTypeKind;
-  case Type::X86_MMXTyID:
-    return LLVMX86_MMXTypeKind;
   case Type::X86_AMXTyID:
     return LLVMX86_AMXTypeKind;
   case Type::TokenTyID:
@@ -725,9 +723,6 @@ LLVMTypeRef LLVMFP128TypeInContext(LLVMContextRef C) {
 LLVMTypeRef LLVMPPCFP128TypeInContext(LLVMContextRef C) {
   return (LLVMTypeRef) Type::getPPC_FP128Ty(*unwrap(C));
 }
-LLVMTypeRef LLVMX86MMXTypeInContext(LLVMContextRef C) {
-  return (LLVMTypeRef) Type::getX86_MMXTy(*unwrap(C));
-}
 LLVMTypeRef LLVMX86AMXTypeInContext(LLVMContextRef C) {
   return (LLVMTypeRef) Type::getX86_AMXTy(*unwrap(C));
 }
@@ -752,9 +747,6 @@ LLVMTypeRef LLVMFP128Type(void) {
 }
 LLVMTypeRef LLVMPPCFP128Type(void) {
   return LLVMPPCFP128TypeInContext(LLVMGetGlobalContext());
-}
-LLVMTypeRef LLVMX86MMXType(void) {
-  return LLVMX86MMXTypeInContext(LLVMGetGlobalContext());
 }
 LLVMTypeRef LLVMX86AMXType(void) {
   return LLVMX86AMXTypeInContext(LLVMGetGlobalContext());
@@ -915,6 +907,22 @@ unsigned LLVMGetPointerAddressSpace(LLVMTypeRef PointerTy) {
 
 unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy) {
   return unwrap<VectorType>(VectorTy)->getElementCount().getKnownMinValue();
+}
+
+LLVMValueRef LLVMGetConstantPtrAuthPointer(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getPointer());
+}
+
+LLVMValueRef LLVMGetConstantPtrAuthKey(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getKey());
+}
+
+LLVMValueRef LLVMGetConstantPtrAuthDiscriminator(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getDiscriminator());
+}
+
+LLVMValueRef LLVMGetConstantPtrAuthAddrDiscriminator(LLVMValueRef PtrAuth) {
+  return wrap(unwrap<ConstantPtrAuth>(PtrAuth)->getAddrDiscriminator());
 }
 
 /*--.. Operations on other types ...........................................--*/
@@ -1661,6 +1669,13 @@ LLVMValueRef LLVMConstNamedStruct(LLVMTypeRef StructTy,
 LLVMValueRef LLVMConstVector(LLVMValueRef *ScalarConstantVals, unsigned Size) {
   return wrap(ConstantVector::get(
       ArrayRef(unwrap<Constant>(ScalarConstantVals, Size), Size)));
+}
+
+LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
+                                 LLVMValueRef Disc, LLVMValueRef AddrDisc) {
+  return wrap(ConstantPtrAuth::get(
+      unwrap<Constant>(Ptr), unwrap<ConstantInt>(Key),
+      unwrap<ConstantInt>(Disc), unwrap<Constant>(AddrDisc)));
 }
 
 /*-- Opcode mapping */

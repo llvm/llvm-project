@@ -44,6 +44,20 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+
+add_fp_unittest(
+  daddl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    daddl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.daddl
+)
+
 add_fp_unittest(
   sinf_test
   NEED_MPFR
@@ -172,6 +186,20 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fabsl
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fadd_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fadd_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.fadd
+    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
@@ -875,6 +903,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expf_test
   NEED_MPFR
   SUITE
@@ -888,16 +929,14 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- exp_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   exp_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.src.math.exp
-   libc.src.__support.FPUtil.fp_bits
+  expf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expf16_test.cpp
+  DEPENDS
+    libc.src.math.expf16
 )
 
 add_fp_unittest(
@@ -1847,10 +1886,28 @@ add_fp_unittest(
   SRCS
     fmul_test.cpp
   HDRS
-    FMulTest.h
+    MulTest.h
   DEPENDS
     libc.src.math.fmul
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
+
+add_fp_unittest(
+  fmull_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fmull_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.fmull
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
 add_fp_unittest(
   asinhf_test
   NEED_MPFR
@@ -2009,6 +2066,18 @@ add_fp_unittest(
     atan2f_test.cpp
   DEPENDS
     libc.src.math.atan2f
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atan2_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atan2_test.cpp
+  DEPENDS
+    libc.src.math.atan2
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2214,6 +2283,45 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fsqrt_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsqrt_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrt
+)
+
+add_fp_unittest(
+  fsqrtl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrtl
+)
+
+add_fp_unittest(
+  dsqrtl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.dsqrtl
+)
+
+add_fp_unittest(
   cbrtf_test
   NEED_MPFR
   SUITE
@@ -2224,6 +2332,107 @@ add_fp_unittest(
     libc.src.math.cbrtf
     libc.src.__support.FPUtil.fp_bits
 )
+
+add_fp_unittest(
+  cbrt_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cbrt_test.cpp
+  DEPENDS
+    libc.src.math.cbrt
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  dmull_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dmull_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.dmull
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  f16mul_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16mul_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.f16mul
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  f16mulf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16mulf_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.f16mulf
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  f16mull_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16mull_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.f16mull
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  dfmal_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dfmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.dfmal
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  dsubl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dsubl_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.dsubl
+)
+
 
 add_subdirectory(generic)
 add_subdirectory(smoke)

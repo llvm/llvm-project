@@ -153,8 +153,6 @@ struct TypeCloner {
         return LLVMMetadataTypeInContext(Ctx);
       case LLVMX86_AMXTypeKind:
         return LLVMX86AMXTypeInContext(Ctx);
-      case LLVMX86_MMXTypeKind:
-        return LLVMX86MMXTypeInContext(Ctx);
       case LLVMTokenTypeKind:
         return LLVMTokenTypeInContext(Ctx);
       case LLVMTargetExtTypeKind: {
@@ -389,6 +387,16 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     for (unsigned i = 0; i < EltCount; i++)
       Elts.push_back(clone_constant(LLVMGetAggregateElement(Cst, i), M));
     return LLVMConstVector(Elts.data(), EltCount);
+  }
+
+  if (LLVMIsAConstantPtrAuth(Cst)) {
+    LLVMValueRef Ptr = clone_constant(LLVMGetConstantPtrAuthPointer(Cst), M);
+    LLVMValueRef Key = clone_constant(LLVMGetConstantPtrAuthKey(Cst), M);
+    LLVMValueRef Disc =
+        clone_constant(LLVMGetConstantPtrAuthDiscriminator(Cst), M);
+    LLVMValueRef AddrDisc =
+        clone_constant(LLVMGetConstantPtrAuthAddrDiscriminator(Cst), M);
+    return LLVMConstantPtrAuth(Ptr, Key, Disc, AddrDisc);
   }
 
   // At this point, if it's not a constant expression, it's a kind of constant

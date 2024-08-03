@@ -401,10 +401,19 @@ template <class ELFT> static void markUsedLocalSymbols() {
       InputSection *isec = dyn_cast_or_null<InputSection>(s);
       if (!isec)
         continue;
-      if (isec->type == SHT_REL)
+      if (isec->type == SHT_REL) {
         markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rel>());
-      else if (isec->type == SHT_RELA)
+      } else if (isec->type == SHT_RELA) {
         markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rela>());
+      } else if (isec->type == SHT_CREL) {
+        // The is64=true variant also works with ELF32 since only the r_symidx
+        // member is used.
+        for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
+          Symbol &sym = file->getSymbol(r.r_symidx);
+          if (sym.isLocal())
+            sym.used = true;
+        }
+      }
     }
   }
 }
@@ -1875,13 +1884,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   sortSections();
 
   // Create a list of OutputSections, assign sectionIndex, and populate
-  // in.shStrTab.
+  // in.shStrTab. If -z nosectionheader is specified, drop non-ALLOC sections.
   for (SectionCommand *cmd : script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
       OutputSection *osec = &osd->osec;
+      if (!in.shStrTab && !(osec->flags & SHF_ALLOC))
+        continue;
       outputSections.push_back(osec);
       osec->sectionIndex = outputSections.size();
-      osec->shName = in.shStrTab->addString(osec->name);
+      if (in.shStrTab)
+        osec->shName = in.shStrTab->addString(osec->name);
     }
 
   // Prefer command line supplied address over other constraints.
@@ -1942,6 +1954,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Some symbols are defined in term of program headers. Now that we
   // have the headers, we can find out which sections they point to.
   setReservedSymbolSections();
+
+  if (script->noCrossRefs.size()) {
+    llvm::TimeTraceScope timeScope("Check NOCROSSREFS");
+    checkNoCrossRefs<ELFT>();
+  }
 
   {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections");
@@ -2698,6 +2715,10 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   auto *eHdr = reinterpret_cast<Elf_Ehdr *>(Out::bufferStart);
   eHdr->e_type = getELFType();
   eHdr->e_entry = getEntryAddr();
+
+  // If -z nosectionheader is specified, omit the section header table.
+  if (!in.shStrTab)
+    return;
   eHdr->e_shoff = sectionHeaderOff;
 
   // Write the section header table.

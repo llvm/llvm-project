@@ -87,6 +87,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MGATHER:     Res = PromoteIntRes_MGATHER(cast<MaskedGatherSDNode>(N));
     break;
+  case ISD::VECTOR_COMPRESS:
+    Res = PromoteIntRes_VECTOR_COMPRESS(N);
+    break;
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::VP_SELECT:
@@ -993,6 +996,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   return Res;
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_COMPRESS(SDNode *N) {
+  SDValue Vec = GetPromotedInteger(N->getOperand(0));
+  SDValue Passthru = GetPromotedInteger(N->getOperand(2));
+  return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
+                     N->getOperand(1), Passthru);
 }
 
 /// Promote the overflow flag of an overflowing arithmetic node.
@@ -1944,6 +1954,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                                                  OpNo); break;
   case ISD::MSCATTER: Res = PromoteIntOp_MSCATTER(cast<MaskedScatterSDNode>(N),
                                                   OpNo); break;
+  case ISD::VECTOR_COMPRESS:
+    Res = PromoteIntOp_VECTOR_COMPRESS(N, OpNo);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::BF16_TO_FP:
@@ -2281,12 +2294,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_Shift(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_CMP(SDNode *N) {
-  SDValue LHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(0))
-                    : SExtPromotedInteger(N->getOperand(0));
-  SDValue RHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(1))
-                    : SExtPromotedInteger(N->getOperand(1));
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (N->getOpcode() == ISD::SCMP) {
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+  } else {
+    SExtOrZExtPromotedOperands(LHS, RHS);
+  }
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS), 0);
 }
@@ -2440,6 +2456,16 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
   return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), N->getMemoryVT(),
                               SDLoc(N), NewOps, N->getMemOperand(),
                               N->getIndexType(), TruncateStore);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_COMPRESS(SDNode *N,
+                                                       unsigned OpNo) {
+  assert(OpNo == 1 && "Can only promote VECTOR_COMPRESS mask.");
+  SDValue Vec = N->getOperand(0);
+  EVT VT = Vec.getValueType();
+  SDValue Passthru = N->getOperand(2);
+  SDValue Mask = PromoteTargetBoolean(N->getOperand(1), VT);
+  return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {
@@ -3372,13 +3398,13 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
       Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::UADDO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::UADDO_CARRY, dl, VTList, HiOps);
     } else {
       Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::USUBO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::USUBO_CARRY, dl, VTList, HiOps);
     }
     return;
@@ -3824,15 +3850,33 @@ void DAGTypeLegalizer::ExpandIntRes_CTLZ(SDNode *N,
   Hi = DAG.getConstant(0, dl, NVT);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N,
-                                          SDValue &Lo, SDValue &Hi) {
-  SDLoc dl(N);
+void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  if (TLI.getOperationAction(ISD::CTPOP, VT) == TargetLoweringBase::LibCall) {
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (VT == MVT::i32)
+      LC = RTLIB::CTPOP_I32;
+    else if (VT == MVT::i64)
+      LC = RTLIB::CTPOP_I64;
+    else if (VT == MVT::i128)
+      LC = RTLIB::CTPOP_I128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC) &&
+           "LibCall explicitly requested, but not available");
+    TargetLowering::MakeLibCallOptions CallOptions;
+    SDValue Res = TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, DL).first;
+    SplitInteger(Res, Lo, Hi);
+    return;
+  }
+
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)
-  GetExpandedInteger(N->getOperand(0), Lo, Hi);
+  GetExpandedInteger(Op, Lo, Hi);
   EVT NVT = Lo.getValueType();
-  Lo = DAG.getNode(ISD::ADD, dl, NVT, DAG.getNode(ISD::CTPOP, dl, NVT, Lo),
-                   DAG.getNode(ISD::CTPOP, dl, NVT, Hi));
-  Hi = DAG.getConstant(0, dl, NVT);
+  Lo = DAG.getNode(ISD::ADD, DL, NVT, DAG.getNode(ISD::CTPOP, DL, NVT, Lo),
+                   DAG.getNode(ISD::CTPOP, DL, NVT, Hi));
+  Hi = DAG.getConstant(0, DL, NVT);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CTTZ(SDNode *N,

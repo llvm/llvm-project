@@ -1051,10 +1051,10 @@ IdentifierID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) 
   return Reader.getGlobalIdentifierID(F, RawID >> 1);
 }
 
-static void markIdentifierFromAST(ASTReader &Reader, IdentifierInfo &II) {
+static void markIdentifierFromAST(ASTReader &Reader, IdentifierInfo &II,
+                                  bool IsModule) {
   if (!II.isFromAST()) {
     II.setIsFromAST();
-    bool IsModule = Reader.getPreprocessor().getCurrentModule() != nullptr;
     if (isInterestingIdentifier(Reader, II, IsModule))
       II.setChangedSinceDeserialization();
   }
@@ -1080,7 +1080,8 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     II = &Reader.getIdentifierTable().getOwn(k);
     KnownII = II;
   }
-  markIdentifierFromAST(Reader, *II);
+  bool IsModule = Reader.getPreprocessor().getCurrentModule() != nullptr;
+  markIdentifierFromAST(Reader, *II, IsModule);
   Reader.markIdentifierUpToDate(II);
 
   IdentifierID ID = Reader.getGlobalIdentifierID(F, RawID);
@@ -3023,8 +3024,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
     case METADATA: {
       if (Record[0] != VERSION_MAJOR && !DisableValidation) {
         if ((ClientLoadCapabilities & ARR_VersionMismatch) == 0)
-          Diag(Record[0] < VERSION_MAJOR? diag::err_pch_version_too_old
-                                        : diag::err_pch_version_too_new);
+          Diag(Record[0] < VERSION_MAJOR ? diag::err_ast_file_version_too_old
+                                         : diag::err_ast_file_version_too_new)
+              << moduleKindForDiagnostic(F.Kind) << F.FileName;
         return VersionMismatch;
       }
 
@@ -3037,7 +3039,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           return OutOfDate;
 
         if (!AllowASTWithCompilerErrors) {
-          Diag(diag::err_pch_with_compiler_errors);
+          Diag(diag::err_ast_file_with_compiler_errors)
+              << moduleKindForDiagnostic(F.Kind) << F.FileName;
           return HadErrors;
         }
       }
@@ -3060,7 +3063,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       StringRef ASTBranch = Blob;
       if (StringRef(CurBranch) != ASTBranch && !DisableValidation) {
         if ((ClientLoadCapabilities & ARR_VersionMismatch) == 0)
-          Diag(diag::err_pch_different_branch) << ASTBranch << CurBranch;
+          Diag(diag::err_ast_file_different_branch)
+              << moduleKindForDiagnostic(F.Kind) << F.FileName << ASTBranch
+              << CurBranch;
         return VersionMismatch;
       }
       break;
@@ -4543,7 +4548,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
 
       // Mark this identifier as being from an AST file so that we can track
       // whether we need to serialize it.
-      markIdentifierFromAST(*this, *II);
+      markIdentifierFromAST(*this, *II, /*IsModule=*/true);
 
       // Associate the ID with the identifier so that the writer can reuse it.
       auto ID = Trait.ReadIdentifierID(Data + KeyDataLen.first);
@@ -4827,7 +4832,8 @@ ASTReader::ReadASTCore(StringRef FileName,
     case AST_BLOCK_ID:
       if (!HaveReadControlBlock) {
         if ((ClientLoadCapabilities & ARR_VersionMismatch) == 0)
-          Diag(diag::err_pch_version_too_old);
+          Diag(diag::err_ast_file_version_too_old)
+              << moduleKindForDiagnostic(Type) << FileName;
         return VersionMismatch;
       }
 
@@ -8961,7 +8967,8 @@ IdentifierInfo *ASTReader::DecodeIdentifierInfo(IdentifierID ID) {
     auto Key = Trait.ReadKey(Data, KeyDataLen.first);
     auto &II = PP.getIdentifierTable().get(Key);
     IdentifiersLoaded[Index] = &II;
-    markIdentifierFromAST(*this,  II);
+    bool IsModule = getPreprocessor().getCurrentModule() != nullptr;
+    markIdentifierFromAST(*this, II, IsModule);
     if (DeserializationListener)
       DeserializationListener->IdentifierRead(ID, &II);
   }
@@ -9875,6 +9882,7 @@ void ASTReader::finishPendingActions() {
             // We only perform ODR checks for decls not in the explicit
             // global module fragment.
             !shouldSkipCheckingODR(FD) &&
+            !shouldSkipCheckingODR(NonConstDefn) &&
             FD->getODRHash() != NonConstDefn->getODRHash()) {
           if (!isa<CXXMethodDecl>(FD)) {
             PendingFunctionOdrMergeFailures[FD].push_back(NonConstDefn);

@@ -1247,6 +1247,41 @@ static LogicalResult checkedAddLLVMFnAttribute(Location loc,
   return success();
 }
 
+/// Return a representation of `value` as metadata.
+static llvm::Metadata *convertIntegerToMetadata(llvm::LLVMContext &context,
+                                                const llvm::APInt &value) {
+  llvm::Constant *constant = llvm::ConstantInt::get(context, value);
+  return llvm::ConstantAsMetadata::get(constant);
+}
+
+/// Return a representation of `value` as an MDNode.
+static llvm::MDNode *convertIntegerToMDNode(llvm::LLVMContext &context,
+                                            const llvm::APInt &value) {
+  return llvm::MDNode::get(context, convertIntegerToMetadata(context, value));
+}
+
+/// Return an MDNode encoding `vec_type_hint` metadata.
+static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
+                                                llvm::Type *type,
+                                                bool isSigned) {
+  llvm::Metadata *typeMD =
+      llvm::ConstantAsMetadata::get(llvm::UndefValue::get(type));
+  llvm::Metadata *isSignedMD =
+      convertIntegerToMetadata(context, llvm::APInt(32, isSigned ? 1 : 0));
+  return llvm::MDNode::get(context, {typeMD, isSignedMD});
+}
+
+/// Return an MDNode with a tuple given by the values in `values`.
+static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
+                                                 ArrayRef<int32_t> values) {
+  SmallVector<llvm::Metadata *> mdValues;
+  llvm::transform(
+      values, std::back_inserter(mdValues), [&context](int32_t value) {
+        return convertIntegerToMetadata(context, llvm::APInt(32, value));
+      });
+  return llvm::MDNode::get(context, mdValues);
+}
+
 /// Attaches the attributes listed in the given array attribute to `llvmFunc`.
 /// Reports error to `loc` if any and returns immediately. Expects `attributes`
 /// to be an array attribute containing either string attributes, treated as
@@ -1412,10 +1447,10 @@ LogicalResult ModuleTranslation::convertDialectAttributes(
 /// `llvmFunc`.
 static void convertFunctionMemoryAttributes(LLVMFuncOp func,
                                             llvm::Function *llvmFunc) {
-  if (!func.getMemory())
+  if (!func.getMemoryEffects())
     return;
 
-  MemoryEffectsAttr memEffects = func.getMemoryAttr();
+  MemoryEffectsAttr memEffects = func.getMemoryEffectsAttr();
 
   // Add memory effects incrementally.
   llvm::MemoryEffects newMemEffects =
@@ -1441,7 +1476,49 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
   if (func.getConvergentAttr())
     llvmFunc->addFnAttr(llvm::Attribute::Convergent);
+  if (func.getNoUnwindAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
+  if (func.getWillReturnAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   convertFunctionMemoryAttributes(func, llvmFunc);
+}
+
+/// Converts function attributes from `func` and attaches them to `llvmFunc`.
+static void convertFunctionKernelAttributes(LLVMFuncOp func,
+                                            llvm::Function *llvmFunc,
+                                            ModuleTranslation &translation) {
+  llvm::LLVMContext &llvmContext = llvmFunc->getContext();
+
+  if (VecTypeHintAttr vecTypeHint = func.getVecTypeHintAttr()) {
+    Type type = vecTypeHint.getHint().getValue();
+    llvm::Type *llvmType = translation.convertType(type);
+    bool isSigned = vecTypeHint.getIsSigned();
+    llvmFunc->setMetadata(
+        func.getVecTypeHintAttrName(),
+        convertVecTypeHintToMDNode(llvmContext, llvmType, isSigned));
+  }
+
+  if (std::optional<ArrayRef<int32_t>> workGroupSizeHint =
+          func.getWorkGroupSizeHint()) {
+    llvmFunc->setMetadata(
+        func.getWorkGroupSizeHintAttrName(),
+        convertIntegerArrayToMDNode(llvmContext, *workGroupSizeHint));
+  }
+
+  if (std::optional<ArrayRef<int32_t>> reqdWorkGroupSize =
+          func.getReqdWorkGroupSize()) {
+    llvmFunc->setMetadata(
+        func.getReqdWorkGroupSizeAttrName(),
+        convertIntegerArrayToMDNode(llvmContext, *reqdWorkGroupSize));
+  }
+
+  if (std::optional<uint32_t> intelReqdSubGroupSize =
+          func.getIntelReqdSubGroupSize()) {
+    llvmFunc->setMetadata(
+        func.getIntelReqdSubGroupSizeAttrName(),
+        convertIntegerToMDNode(llvmContext,
+                               llvm::APInt(32, *intelReqdSubGroupSize)));
+  }
 }
 
 FailureOr<llvm::AttrBuilder>
@@ -1487,6 +1564,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     // Convert function attributes.
     convertFunctionAttributes(function, llvmFunc);
+
+    // Convert function kernel attributes to metadata.
+    convertFunctionKernelAttributes(function, llvmFunc, *this);
 
     // Convert function_entry_count attribute to metadata.
     if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())

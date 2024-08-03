@@ -861,9 +861,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       Constant *nval;
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i = 0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         nval = ConstantDataVector::get(context, tmp);
       } else { // F64
@@ -1082,9 +1081,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
       }
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i=0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         cnval = ConstantDataVector::get(M->getContext(), tmp);
       } else {

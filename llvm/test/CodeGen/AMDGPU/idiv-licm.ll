@@ -638,9 +638,9 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-LABEL: udiv16_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
-; GFX9-NEXT:    s_movk_i32 s4, 0x400
+; GFX9-NEXT:    s_movk_i32 s2, 0x400
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
@@ -651,14 +651,14 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    v_cvt_f32_u32_sdwa v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
 ; GFX9-NEXT:    v_lshlrev_b32_sdwa v5, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    v_add_u16_e32 v2, 1, v2
-; GFX9-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v2
+; GFX9-NEXT:    v_cmp_eq_u16_e32 vcc, s2, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v6, v4, v1
 ; GFX9-NEXT:    v_trunc_f32_e32 v6, v6
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v7, v6
 ; GFX9-NEXT:    v_mad_f32 v4, -v6, v0, v4
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, v0
 ; GFX9-NEXT:    v_addc_co_u32_e64 v4, s[0:1], 0, v7, s[0:1]
-; GFX9-NEXT:    global_store_short v5, v4, s[2:3]
+; GFX9-NEXT:    global_store_short v5, v4, s[4:5]
 ; GFX9-NEXT:    s_cbranch_vccz .LBB4_1
 ; GFX9-NEXT:  ; %bb.2: ; %bb2
 ; GFX9-NEXT:    s_endpgm

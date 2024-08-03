@@ -1333,7 +1333,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
-                        BlockFrequencyInfo *BFIin,
+                        BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
                         FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
@@ -1345,6 +1345,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;
+  MMI = &MMIin;
   FnVarLocs = VarLocs;
 }
 
@@ -2482,6 +2483,11 @@ Align SelectionDAG::getReducedAlign(EVT VT, bool UseABI) {
     Align RedAlign2 = UseABI ? DL.getABITypeAlign(Ty) : DL.getPrefTypeAlign(Ty);
     if (RedAlign2 < RedAlign)
       RedAlign = RedAlign2;
+
+    if (!getMachineFunction().getFrameInfo().isStackRealignable())
+      // If the stack is not realignable, the alignment should be limited to the
+      // StackAlignment
+      RedAlign = std::min(RedAlign, StackAlign);
   }
 
   return RedAlign;
@@ -4705,14 +4711,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       return 1;  // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
+  case ISD::SSUBO_CARRY:
+  case ISD::USUBO_CARRY:
+    // sub_carry(x,x,c) -> 0/-1 (sext carry)
+    if (Op.getResNo() == 0 && Op.getOperand(0) == Op.getOperand(1))
+      return VTBits;
+    [[fallthrough]];
   case ISD::SADDO:
   case ISD::UADDO:
   case ISD::SADDO_CARRY:
   case ISD::UADDO_CARRY:
   case ISD::SSUBO:
   case ISD::USUBO:
-  case ISD::SSUBO_CARRY:
-  case ISD::USUBO_CARRY:
   case ISD::SMULO:
   case ISD::UMULO:
     if (Op.getResNo() != 1)
@@ -7556,6 +7566,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
+  case ISD::VECTOR_COMPRESS: {
+    [[maybe_unused]] EVT VecVT = N1.getValueType();
+    [[maybe_unused]] EVT MaskVT = N2.getValueType();
+    [[maybe_unused]] EVT PassthruVT = N3.getValueType();
+    assert(VT == VecVT && "Vector and result type don't match.");
+    assert(VecVT.isVector() && MaskVT.isVector() && PassthruVT.isVector() &&
+           "All inputs must be vectors.");
+    assert(VecVT == PassthruVT && "Vector and passthru types don't match.");
+    assert(VecVT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "Vector and mask must have same number of elements.");
+
+    if (N1.isUndef() || N2.isUndef())
+      return N3;
+
+    break;
+  }
   }
 
   // Memoize node if it doesn't produce a glue result.
@@ -11561,6 +11587,19 @@ public:
 
 } // end anonymous namespace
 
+/// Return true if a glue output should propagate divergence information.
+static bool gluePropagatesDivergence(const SDNode *Node) {
+  switch (Node->getOpcode()) {
+  case ISD::CopyFromReg:
+  case ISD::CopyToReg:
+    return false;
+  default:
+    return true;
+  }
+
+  llvm_unreachable("covered opcode switch");
+}
+
 bool SelectionDAG::calculateDivergence(SDNode *N) {
   if (TLI->isSDNodeAlwaysUniform(N)) {
     assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, UA) &&
@@ -11570,7 +11609,11 @@ bool SelectionDAG::calculateDivergence(SDNode *N) {
   if (TLI->isSDNodeSourceOfDivergence(N, FLI, UA))
     return true;
   for (const auto &Op : N->ops()) {
-    if (Op.Val.getValueType() != MVT::Other && Op.getNode()->isDivergent())
+    EVT VT = Op.getValueType();
+
+    // Skip Chain. It does not carry divergence.
+    if (VT != MVT::Other && Op.getNode()->isDivergent() &&
+        (VT != MVT::Glue || gluePropagatesDivergence(Op.getNode())))
       return true;
   }
   return false;
@@ -13109,8 +13152,14 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   for (unsigned I = 0; I != Vals.size(); ++I) {
     Ops[I].setUser(Node);
     Ops[I].setInitial(Vals[I]);
-    if (Ops[I].Val.getValueType() != MVT::Other) // Skip Chain. It does not carry divergence.
-      IsDivergent |= Ops[I].getNode()->isDivergent();
+    EVT VT = Ops[I].getValueType();
+
+    // Skip Chain. It does not carry divergence.
+    if (VT != MVT::Other &&
+        (VT != MVT::Glue || gluePropagatesDivergence(Ops[I].getNode())) &&
+        Ops[I].getNode()->isDivergent()) {
+      IsDivergent = true;
+    }
   }
   Node->NumOperands = Vals.size();
   Node->OperandList = Ops;

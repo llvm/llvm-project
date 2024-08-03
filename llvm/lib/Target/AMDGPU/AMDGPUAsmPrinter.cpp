@@ -1450,7 +1450,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     AMDGPUInstPrinter::printRegOperand(MO.getReg(), O,
                                        *MF->getSubtarget().getRegisterInfo());
     return false;
-  } else if (MO.isImm()) {
+  }
+  if (MO.isImm()) {
     int64_t Val = MO.getImm();
     if (AMDGPU::isInlinableIntLiteral(Val)) {
       O << Val;
@@ -1484,6 +1485,10 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   // If the remark is not specifically enabled, do not output to yaml
   LLVMContext &Ctx = MF.getFunction().getContext();
   if (!Ctx.getDiagHandlerPtr()->isAnalysisRemarkEnabled(Name))
+    return;
+
+  // Currently non-kernel functions have no resources to emit.
+  if (!isEntryFunctionCC(MF.getFunction().getCallingConv()))
     return;
 
   auto EmitResourceUsageRemark = [&](StringRef RemarkName,

@@ -75,7 +75,7 @@ bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
 const IdentifierInfo* QualType::getBaseTypeIdentifier() const {
   const Type* ty = getTypePtr();
   NamedDecl *ND = nullptr;
-  if (ty->isPointerType() || ty->isReferenceType())
+  if (ty->isPointerOrReferenceType())
     return ty->getPointeeType().getBaseTypeIdentifier();
   else if (ty->isRecordType())
     ND = ty->castAs<RecordType>()->getDecl();
@@ -1627,9 +1627,10 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
 }
 
 QualType QualType::getAtomicUnqualifiedType() const {
-  if (const auto AT = getTypePtr()->getAs<AtomicType>())
-    return AT->getValueType().getUnqualifiedType();
-  return getUnqualifiedType();
+  QualType T = *this;
+  if (const auto AT = T.getTypePtr()->getAs<AtomicType>())
+    T = AT->getValueType();
+  return T.getUnqualifiedType();
 }
 
 std::optional<ArrayRef<QualType>>
@@ -3797,9 +3798,18 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   }
 
   epi.ExtInfo.Profile(ID);
-  ID.AddInteger((epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
 
-  epi.FunctionEffects.Profile(ID);
+  unsigned EffectCount = epi.FunctionEffects.size();
+  bool HasConds = !epi.FunctionEffects.Conditions.empty();
+
+  ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
+                (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
+
+  for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
+    ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());
+    if (HasConds)
+      ID.AddPointer(epi.FunctionEffects.Conditions[Idx].getCondition());
+  }
 }
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
@@ -3890,18 +3900,19 @@ QualType MacroQualifiedType::getModifiedType() const {
   return Inner;
 }
 
-TypeOfExprType::TypeOfExprType(Expr *E, TypeOfKind Kind, QualType Can)
+TypeOfExprType::TypeOfExprType(const ASTContext &Context, Expr *E,
+                               TypeOfKind Kind, QualType Can)
     : Type(TypeOfExpr,
            // We have to protect against 'Can' being invalid through its
            // default argument.
            Kind == TypeOfKind::Unqualified && !Can.isNull()
-               ? Can.getAtomicUnqualifiedType()
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
                : Can,
            toTypeDependence(E->getDependence()) |
                (E->getType()->getDependence() &
                 TypeDependence::VariablyModified)),
-      TOExpr(E) {
-  TypeOfBits.IsUnqual = Kind == TypeOfKind::Unqualified;
+      TOExpr(E), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
 }
 
 bool TypeOfExprType::isSugared() const {
@@ -3911,7 +3922,9 @@ bool TypeOfExprType::isSugared() const {
 QualType TypeOfExprType::desugar() const {
   if (isSugared()) {
     QualType QT = getUnderlyingExpr()->getType();
-    return TypeOfBits.IsUnqual ? QT.getAtomicUnqualifiedType() : QT;
+    return getKind() == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+               : QT;
   }
   return QualType(this, 0);
 }
@@ -3921,6 +3934,24 @@ void DependentTypeOfExprType::Profile(llvm::FoldingSetNodeID &ID,
                                       bool IsUnqual) {
   E->Profile(ID, Context, true);
   ID.AddBoolean(IsUnqual);
+}
+
+TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
+                       TypeOfKind Kind)
+    : Type(TypeOf,
+           Kind == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
+               : Can,
+           T->getDependence()),
+      TOType(T), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
+}
+
+QualType TypeOfType::desugar() const {
+  QualType QT = getUnmodifiedType();
+  return getKind() == TypeOfKind::Unqualified
+             ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+             : QT;
 }
 
 DecltypeType::DecltypeType(Expr *E, QualType underlyingType, QualType can)
@@ -5159,17 +5190,6 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
 
 // =====
 
-void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
-  bool HasConds = !Conditions.empty();
-
-  ID.AddInteger(size() | (HasConds << 31u));
-  for (unsigned Idx = 0, Count = Effects.size(); Idx != Count; ++Idx) {
-    ID.AddInteger(Effects[Idx].toOpaqueInt32());
-    if (HasConds)
-      ID.AddPointer(Conditions[Idx].getCondition());
-  }
-}
-
 bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
                                Conflicts &Errs) {
   FunctionEffect::Kind NewOppositeKind = NewEC.Effect.oppositeKind();
@@ -5289,18 +5309,6 @@ LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
   FunctionEffectsRef(*this).dump(OS);
-}
-
-FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
-  while (true) {
-    QualType Pointee = QT->getPointeeType();
-    if (Pointee.isNull())
-      break;
-    QT = Pointee;
-  }
-  if (const auto *FPT = QT->getAs<FunctionProtoType>())
-    return FPT->getFunctionEffects();
-  return {};
 }
 
 FunctionEffectsRef

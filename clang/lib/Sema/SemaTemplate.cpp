@@ -3344,6 +3344,10 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
         *this, /*PointOfInstantiation=*/TemplateLoc,
         /*Entity=*/AliasTemplate,
         /*TemplateArgs=*/TemplateArgLists.getInnermost());
+
+    // Diagnose uses of this alias.
+    (void)DiagnoseUseOfDecl(AliasTemplate, TemplateLoc);
+
     if (Inst.isInvalid())
       return QualType();
 
@@ -6715,7 +6719,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
-      assert(ParamType->isPointerType() || ParamType->isReferenceType() ||
+      assert(ParamType->isPointerOrReferenceType() ||
              ParamType->isNullPtrType());
       // -- a temporary object
       // -- a string literal

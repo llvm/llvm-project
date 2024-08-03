@@ -72,59 +72,6 @@
 ; BOLT-NEXT: "helper.cpp"
 ; BOLT-NEXT: "helper.dwo"
 
-
-;; Tests that BOLT correctly handles updating DW_AT_dwo_name when it outputs a DWP file.
-;; Currently skipping one of Type units because it is not being de-dupped.
-;; In the tu-index this TU is not present.
-; RUN: rm main.exe.bolt
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
-; RUN: llvm-dwarfdump --debug-info -r 0 main.exe.bolt.dwp > logDWP.txt
-; RUN: llvm-dwarfdump --debug-str-offsets main.exe.bolt.dwp >> logDWP.txt
-; RUN: cat logDWP.txt | FileCheck -check-prefix=BOLT-DWP %s
-; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DWP: DW_AT_comp_dir  (".")
-; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
-; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DWP: DW_AT_comp_dir  (".")
-; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
-; BOLT-DWP: DW_TAG_compile_unit
-; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
-; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DW-NOT: DW_AT_dwo_name
-; BOLT-DWP:       Contribution size = 68, Format = DWARF32, Version = 5
-; BOLT-DWP-NEXT: "main"
-; BOLT-DWP-NEXT: "int"
-; BOLT-DWP-NEXT: "argc"
-; BOLT-DWP-NEXT: "argv"
-; BOLT-DWP-NEXT: "char"
-; BOLT-DWP-NEXT: "f2"
-; BOLT-DWP-NEXT: "."
-; BOLT-DWP-NEXT: "main.dwo.dwo"
-; BOLT-DWP-NEXT: "c1"
-; BOLT-DWP-NEXT: "Foo2"
-; BOLT-DWP-NEXT: "f3"
-; BOLT-DWP-NEXT: "c2"
-; BOLT-DWP-NEXT: "c3"
-; BOLT-DWP-NEXT: "Foo2a"
-; BOLT-DWP-NEXT: "clang version 18.0.0git (git@github.com:ayermolo/llvm-project.git db35fa8fc524127079662802c4735dbf397f86d0)"
-; BOLT-DWP-NEXT: "main.cpp"
-; BOLT-DWP-NEXT: Contribution size = 64, Format = DWARF32, Version = 5
-; BOLT-DWP-NEXT: "fooint"
-; BOLT-DWP-NEXT: "int"
-; BOLT-DWP-NEXT: "_Z3foov"
-; BOLT-DWP-NEXT: "foo"
-; BOLT-DWP-NEXT: "fint"
-; BOLT-DWP-NEXT: "c1"
-; BOLT-DWP-NEXT: "c2"
-; BOLT-DWP-NEXT: "Foo2Int"
-; BOLT-DWP-NEXT: "f"
-; BOLT-DWP-NEXT: "char"
-; BOLT-DWP-NEXT: "c3"
-; BOLT-DWP-NEXT: "Foo2a"
-; BOLT-DWP-NEXT: "clang version 18.0.0"
-; BOLT-DWP-NEXT: "helper.cpp"
-; BOLT-DWP-NEXT: "helper.dwo
-
 ;; Tests that BOLT correctly handles updating DW_AT_comp_dir/DW_AT_dwo_name when outptut directory is specified.
 
 ; RUN: mkdir DWOOut

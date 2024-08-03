@@ -27,11 +27,13 @@ public:
       : m_stream_sp(stream_sp) {}
 
   void Emit(llvm::StringRef message) override {
+    std::lock_guard<std::mutex> guard(m_mutex);
     (*m_stream_sp) << message;
     m_stream_sp->flush();
   }
 
 private:
+  std::mutex m_mutex;
   std::shared_ptr<raw_ostream> m_stream_sp;
 };
 

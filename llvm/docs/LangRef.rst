@@ -3945,24 +3945,6 @@ or constants of this type.
       x86_amx
 
 
-X86_mmx Type
-""""""""""""
-
-:Overview:
-
-The x86_mmx type represents a value held in an MMX register on an x86
-machine. The operations allowed on it are quite limited: parameters and
-return values, load and store, and bitcast. User-specified MMX
-instructions are represented as intrinsic or asm calls with arguments
-and/or results of this type. There are no arrays, vectors or constants
-of this type.
-
-:Syntax:
-
-::
-
-      x86_mmx
-
 
 .. _t_pointer:
 
@@ -4396,7 +4378,7 @@ represented by ``0xH`` followed by 4 hexadecimal digits. The bfloat 16-bit
 format is represented by ``0xR`` followed by 4 hexadecimal digits. All
 hexadecimal formats are big-endian (sign bit at the left).
 
-There are no constants of type x86_mmx and x86_amx.
+There are no constants of type x86_amx.
 
 .. _complexconstants:
 
@@ -19524,6 +19506,93 @@ the follow sequence of operations:
    the ``ptrs`` operand.
 
 The ``mask`` operand will apply to at least the gather and scatter operations.
+
+
+.. _int_vector_compress:
+
+'``llvm.experimental.vector.compress.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+LLVM provides an intrinsic for compressing data within a vector based on a selection mask.
+Semantically, this is similar to :ref:`llvm.masked.compressstore <int_compressstore>` but with weaker assumptions
+and without storing the results to memory, i.e., the data remains in the vector.
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. A number of scalar values of integer, floating point or pointer data type are collected
+from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
+The remaining lanes are filled with values from ``passthru``.
+
+:: code-block:: llvm
+
+      declare <8 x i32> @llvm.experimental.vector.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>, <8 x i32> <passthru>)
+      declare <16 x float> @llvm.experimental.vector.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>, <16 x float> undef)
+
+Overview:
+"""""""""
+
+Selects elements from input vector ``value`` according to the ``mask``.
+All selected elements are written into adjacent lanes in the result vector,
+from lower to higher.
+The mask holds an entry for each vector lane, and is used to select elements
+to be kept.
+If a ``passthru`` vector is given, all remaining lanes are filled with the
+corresponding lane's value from ``passthru``.
+The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is
+that the we do not need to guard against memory access for unselected lanes.
+This allows for branchless code and better optimization for all targets that
+do not support or have inefficient
+instructions of the explicit semantics of
+:ref:`llvm.masked.compressstore <int_compressstore>` but still have some form
+of compress operations.
+The result vector can be written with a similar effect, as all the selected
+values are at the lower positions of the vector, but without requiring
+branches to avoid writes where the mask is ``false``.
+
+Arguments:
+""""""""""
+
+The first operand is the input vector, from which elements are selected.
+The second operand is the mask, a vector of boolean values.
+The third operand is the passthru vector, from which elements are filled
+into remaining lanes.
+The mask and the input vector must have the same number of vector elements.
+The input and passthru vectors must have the same type.
+
+Semantics:
+""""""""""
+
+The ``llvm.experimental.vector.compress`` intrinsic compresses data within a vector.
+It collects elements from possibly non-adjacent lanes of a vector and places
+them contiguously in the result vector based on a selection mask, filling the
+remaining lanes with values from ``passthru``.
+This intrinsic performs the logic of the following C++ example.
+All values in ``out`` after the last selected one are undefined if
+``passthru`` is undefined.
+If all entries in the ``mask`` are 0, the ``out`` vector is ``passthru``.
+If any element of the mask is poison, all elements of the result are poison.
+Otherwise, if any element of the mask is undef, all elements of the result are undef.
+If ``passthru`` is undefined, the number of valid lanes is equal to the number
+of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values
+are undefined.
+
+.. code-block:: cpp
+
+    // Consecutively place selected values in a vector.
+    using VecT __attribute__((vector_size(N))) = int;
+    VecT compress(VecT vec, VecT mask, VecT passthru) {
+      VecT out;
+      int idx = 0;
+      for (int i = 0; i < N / sizeof(int); ++i) {
+        out[idx] = vec[i];
+        idx += static_cast<bool>(mask[i]);
+      }
+      for (; idx < N / sizeof(int); ++idx) {
+        out[idx] = passthru[idx];
+      }
+      return out;
+    }
+
 
 Matrix Intrinsics
 -----------------

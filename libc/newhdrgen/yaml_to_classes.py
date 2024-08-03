@@ -16,7 +16,6 @@ from gpu_headers import GpuHeaderFile as GpuHeader
 from class_implementation.classes.macro import Macro
 from class_implementation.classes.type import Type
 from class_implementation.classes.function import Function
-from class_implementation.classes.include import Include
 from class_implementation.classes.enumeration import Enumeration
 from class_implementation.classes.object import Object
 
@@ -103,9 +102,6 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
             Object(object_data["object_name"], object_data["object_type"])
         )
 
-    for include_data in yaml_data.get("includes", []):
-        header.add_include(Include(include_data))
-
     return header
 
 
@@ -122,7 +118,7 @@ def load_yaml_file(yaml_file, header_class, entry_points):
         HeaderFile: An instance of HeaderFile populated with the data.
     """
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.safe_load(f)
+        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
     return yaml_to_classes(yaml_data, header_class, entry_points)
 
 
@@ -177,8 +173,7 @@ def add_function_to_yaml(yaml_file, function_details):
     new_function = parse_function_details(function_details)
 
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.safe_load(f)
-
+        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
     if "functions" not in yaml_data:
         yaml_data["functions"] = []
 
@@ -256,8 +251,6 @@ def main(
     else:
         with open(output_file_path, "w") as f:
             f.write(header_str)
-
-    print(f"Generated header file: {output_file_path}")
 
 
 if __name__ == "__main__":
