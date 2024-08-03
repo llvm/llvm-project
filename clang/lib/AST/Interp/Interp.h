@@ -2012,6 +2012,11 @@ inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
+  S.Current->initScope(I);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Cast, CastFP
 //===----------------------------------------------------------------------===//

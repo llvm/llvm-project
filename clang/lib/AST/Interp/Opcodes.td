@@ -232,6 +232,9 @@ def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
 }
+def InitScope : Opcode {
+  let Args = [ArgUint32];
+}
 
 //===----------------------------------------------------------------------===//
 // Constants
