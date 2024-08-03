@@ -702,7 +702,7 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &b) const {
 
 void GotSection::finalizeContents() {
   if (config->emachine == EM_PPC64 &&
-      numEntries <= target->gotHeaderEntriesNum && !ElfSym::globalOffsetTable)
+      numEntries <= target->gotHeaderEntriesNum && !ctx.sym.globalOffsetTable)
     size = 0;
   else
     size = numEntries * config->wordsize;
@@ -1090,7 +1090,7 @@ uint64_t MipsGotSection::getGp(const InputFile *f) const {
   // returns "common" _gp value. For secondary GOTs calculate
   // individual _gp values.
   if (!f || f->mipsGotIndex == uint32_t(-1) || f->mipsGotIndex == 0)
-    return ElfSym::mipsGp->getVA(0);
+    return ctx.sym.mipsGp->getVA(0);
   return getVA() + gots[f->mipsGotIndex].startIndex * config->wordsize + 0x7ff0;
 }
 
@@ -4860,7 +4860,7 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
   // it as a relocation and ensure the referenced section is created.
-  if (ElfSym::globalOffsetTable && config->emachine != EM_MIPS) {
+  if (ctx.sym.globalOffsetTable && config->emachine != EM_MIPS) {
     if (target->gotBaseSymInGotPlt)
       in.gotPlt->hasGotPltOffRel = true;
     else
