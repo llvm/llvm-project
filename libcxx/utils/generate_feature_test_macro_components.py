@@ -1956,6 +1956,55 @@ def get_ftms(
     return result
 
 
+def generate_version_header_dialect_block(data: Dict[str, Any]) -> str:
+    """Generates the contents of the version header for a dialect.
+
+    This generates the contents of a
+      #if  _LIBCPP_STD_VER >= XY
+      #endif // _LIBCPP_STD_VER >= XY
+    block.
+    """
+    result = ""
+    for element in data:
+        for ftm, entry in element.items():
+            if not entry["implemented"]:
+                # When a FTM is not implemented don't add the guards
+                # or undefine the (possibly) defined macro.
+                result += f'// define {ftm} {entry["value"]}\n'
+            else:
+                need_undef = entry["need_undef"]
+                if entry["condition"]:
+                    result += f'#  if {entry["condition"]}\n'
+                    if entry["need_undef"]:
+                        result += f"#    undef {ftm}\n"
+                    result += f'#    define {ftm} {entry["value"]}\n'
+                    result += f"#  endif\n"
+                else:
+                    if entry["need_undef"]:
+                        result += f"#  undef {ftm}\n"
+                    result += f'#  define {ftm} {entry["value"]}\n'
+
+    return result
+
+
+def generate_version_header_implementation(data: Dict[str, Dict[str, Any]]) -> str:
+    """Generates the body of the version header."""
+
+    template = """#if _LIBCPP_STD_VER >= {dialect}
+{feature_test_macros}#endif // _LIBCPP_STD_VER >= {dialect}"""
+
+    result = []
+    for std, ftms in data.items():
+        result.append(
+            template.format(
+                dialect=std,
+                feature_test_macros=generate_version_header_dialect_block(ftms),
+            )
+        )
+
+    return "\n\n".join(result)
+
+
 class FeatureTestMacros:
     """Provides all feature-test macro (FTM) output components.
 
@@ -2107,11 +2156,105 @@ class FeatureTestMacros:
 
         return get_ftms(self.__data, self.std_dialects, True)
 
+    @functools.cached_property
+    def ftm_metadata(self) -> Dict[str, Dict[str, Any]]:
+        """Returns the metadata of the FTMs defined in the Standard.
+
+        The metadata does not depend on the C++ dialect used.
+        The result is a dict with the following contents:
+        - key: Name of the feature test macro.
+        - value: A dict with the following content:
+          * headers: The list of headers that should provide the FTM
+          * test_suite_guard: The condition for testing the FTM in the test suite.
+          * test_suite_guard: The condition for testing the FTM in the version header.
+        """
+        result = dict()
+        for feature in self.__data:
+            entry = dict()
+            entry["headers"] = feature["headers"]
+            entry["test_suite_guard"] = feature.get("test_suite_guard", None)
+            entry["libcxx_guard"] = feature.get("libcxx_guard", None)
+            result[feature["name"]] = entry
+
+        return result
+
+    @property
+    def version_header_implementation(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Generates the body of the version header."""
+        result = dict()
+        for std in self.std_dialects:
+            result[get_std_number(std)] = list()
+
+        for ftm, values in self.standard_ftms.items():
+            need_undef = False
+            last_value = None
+            for std, value in values.items():
+                # When a newer Standard does not change the value of the macro
+                # there is no need to redefine it with the same value.
+                if last_value and value == last_value:
+                    continue
+                last_value = value
+
+                entry = dict()
+                entry["value"] = value
+                entry["implemented"] = self.implemented_ftms[ftm][std] != None
+                entry["need_undef"] = need_undef
+                entry["condition"] = self.ftm_metadata[ftm]["libcxx_guard"]
+
+                need_undef = entry["implemented"]
+
+                result[get_std_number(std)].append(dict({ftm: entry}))
+
+        return result
+
+    @property
+    def version_header(self) -> str:
+        """Generates the version header."""
+        template = """// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_VERSION
+#define _LIBCPP_VERSION
+
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+{feature_test_macros}
+
+#endif // _LIBCPP_VERSION
+"""
+        return template.format(
+            feature_test_macros=generate_version_header_implementation(
+                self.version_header_implementation
+            )
+        )
+
 
 def main():
     produce_version_header()
     produce_tests()
     produce_docs()
+
+    # Example how to use the new version header generation function to generate
+    # the file.
+    if False:
+        ftm = FeatureTestMacros(
+            os.path.join(
+                source_root, "test", "libcxx", "feature_test_macro", "test_data.json"
+            )
+        )
+        version_header_path = os.path.join(include_path, "version")
+        with open(version_header_path, "w", newline="\n") as f:
+            f.write(ftm.version_header)
 
 
 if __name__ == "__main__":
