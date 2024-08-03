@@ -1912,8 +1912,18 @@ def vfcvt_rtz_x_f_v : RVVConvToSignedBuiltin<"vfcvt_rtz_x">;
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfwcvt_rtz_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_rtz_xu">;
   def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
-  def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "csi", "vfwcvt_f">;
-  def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "csi", "vfwcvt_f">;
+  def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "si", "vfwcvt_f">;
+  def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "si", "vfwcvt_f">;
+  let RequiredFeatures = ["Zvfh"] in {
+    let Name = "vfwcvt_f_xu_v",
+        IRName = "vfwcvt_f_xu_v",
+        MaskedIRName = "vfwcvt_f_xu_v_mask" in
+      def : RVVConvBuiltin<"Fw", "FwUv", "c", "vfwcvt_f">;
+    let Name = "vfwcvt_f_x_v",
+        IRName = "vfwcvt_f_x_v",
+        MaskedIRName = "vfwcvt_f_x_v_mask" in
+      def : RVVConvBuiltin<"Fw", "Fwv", "c", "vfwcvt_f">;
+  }
   def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "f", "vfwcvt_f">;
   let RequiredFeatures = ["Zvfhmin"] in
     def vfwcvt_f_f_v_fp16 : RVVConvBuiltin<"w", "wv", "x", "vfwcvt_f"> {
@@ -1927,6 +1937,16 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_rtz_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_rtz_xu">;
   def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
+  let RequiredFeatures = ["Zvfh"] in {
+    let Name = "vfncvt_rtz_xu_f_w",
+        IRName = "vfncvt_rtz_xu_f_w",
+        MaskedIRName = "vfncvt_rtz_xu_f_w_mask" in
+      def : RVVConvBuiltin<"Uv", "UvFw", "c", "vfncvt_rtz_xu">;
+    let Name = "vfncvt_rtz_x_f_w",
+        IRName = "vfncvt_rtz_x_f_w",
+        MaskedIRName = "vfncvt_rtz_x_f_w_mask" in
+      def : RVVConvBuiltin<"Iv", "IvFw", "c", "vfncvt_rtz_x">;
+  }
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
 }
 
@@ -2005,10 +2025,18 @@ let ManualCodegen = [{
     let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
       let OverloadedName = "vfncvt_x" in
         defm :
-          RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_x_f_w", "si", [["Iv", "IvFwu"]]>;
       let OverloadedName = "vfncvt_xu" in
         defm :
-          RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_xu_f_w", "si", [["Uv", "UvFwu"]]>;
+      let RequiredFeatures = ["Zvfh"] in {
+        let OverloadedName = "vfncvt_x" in
+          defm :
+            RVVConvBuiltinSet<"vfncvt_x_f_w", "c", [["Iv", "IvFwu"]]>;
+        let OverloadedName = "vfncvt_xu" in
+          defm :
+            RVVConvBuiltinSet<"vfncvt_xu_f_w", "c", [["Uv", "UvFwu"]]>;
+      }
       let OverloadedName = "vfncvt_f" in {
         defm :
           RVVConvBuiltinSet<"vfncvt_f_x_w", "xf", [["v", "vIwu"]]>;
@@ -2055,10 +2083,18 @@ let ManualCodegen = [{
   let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
     let OverloadedName = "vfncvt_x" in
       defm :
-        RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFw"]]>;
+        RVVConvBuiltinSet<"vfncvt_x_f_w", "si", [["Iv", "IvFw"]]>;
     let OverloadedName = "vfncvt_xu" in
       defm :
-        RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFw"]]>;
+        RVVConvBuiltinSet<"vfncvt_xu_f_w", "si", [["Uv", "UvFw"]]>;
+    let RequiredFeatures = ["Zvfh"] in {
+      let OverloadedName = "vfncvt_x" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_x_f_w", "c", [["Iv", "IvFw"]]>;
+      let OverloadedName = "vfncvt_xu" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_xu_f_w", "c", [["Uv", "UvFw"]]>;
+    }
     let OverloadedName = "vfncvt_f" in {
       defm :
         RVVConvBuiltinSet<"vfncvt_f_x_w", "xf", [["v", "vIw"]]>;
