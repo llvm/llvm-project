@@ -1624,6 +1624,9 @@ ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
     return getEmpty();
 
   ConstantRange Result = shl(Other);
+  if (!NoWrapKind)
+    return Result;
+
   KnownBits Known = toKnownBits();
 
   if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap) {
