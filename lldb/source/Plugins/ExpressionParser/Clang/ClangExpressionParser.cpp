@@ -635,7 +635,7 @@ SetupImportStdModuleLangOpts(CompilerInstance &compiler,
   lang_opts.GNUKeywords = true;
   lang_opts.CPlusPlus11 = true;
 
-  // FIXME: We should use the driver to derive this for use.
+  // FIXME: We should use the driver to derive this for us.
   // ClangModulesDeclVendor already parses the SDKSettings for the purposes of
   // this check.
   lang_opts.BuiltinHeadersInSystemModules =
