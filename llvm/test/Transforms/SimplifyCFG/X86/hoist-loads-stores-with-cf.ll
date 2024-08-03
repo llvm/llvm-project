@@ -120,36 +120,6 @@ if.end:
   ret void
 }
 
-;; Both of successor 0 and successor 1 have a single predecessor.
-define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
-; CHECK-LABEL: @single_predecessor(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       if.end:
-; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
-;
-entry:
-  %tobool = icmp ne i32 %a, 0
-  br i1 %tobool, label %if.end, label %if.then
-
-if.end:
-  store i32 1, ptr %q
-  ret void
-
-if.then:
-  %0 = load i32, ptr %q
-  store i32 %0, ptr %p
-  ret void
-}
-
 ;; Load after store can be hoisted.
 define i64 @load_after_store(i32 %a, ptr %b, ptr %p) {
 ; CHECK-LABEL: @load_after_store(
@@ -231,6 +201,37 @@ if.false:
 if.true:
   %res = phi i32 [ %0, %if.false ], [ 0, %entry ]
   ret i32 %res
+}
+
+;; Both of successor 0 and successor 1 have a single predecessor.
+;; TODO: Support transform for this case.
+define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
+; CHECK-LABEL: @single_predecessor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.end:
+; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %tobool = icmp ne i32 %a, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.end:
+  store i32 1, ptr %q
+  ret void
+
+if.then:
+  %0 = load i32, ptr %q
+  store i32 %0, ptr %p
+  ret void
 }
 
 ;; Not do hoist if the cost of instructions to be hoisted is expensive.
