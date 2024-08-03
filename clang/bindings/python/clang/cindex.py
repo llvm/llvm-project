@@ -386,6 +386,10 @@ class SourceRange(Structure):
         # same file, in between lines
         if self.start.line < other.line < self.end.line:
             return True
+        # between columns in one-liner range
+        elif self.start.line == other.line == self.end.line:
+            if self.start.column <= other.column <= self.end.column:
+                return True
         elif self.start.line == other.line:
             # same file first line
             if self.start.column <= other.column:
