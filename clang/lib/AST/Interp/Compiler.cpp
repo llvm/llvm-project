@@ -1282,21 +1282,31 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-  const Expr *Base = E->getBase();
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
   const Expr *Index = E->getIdx();
 
   if (DiscardResult)
-    return this->discard(Base) && this->discard(Index);
+    return this->discard(LHS) && this->discard(RHS);
 
-  // Take pointer of LHS, add offset from RHS.
-  // What's left on the stack after this is a pointer.
-  if (!this->visit(Base))
-    return false;
+  // C++17's rules require us to evaluate the LHS first, regardless of which
+  // side is the base.
+  bool Success = true;
+  for (const Expr *SubExpr : {LHS, RHS}) {
+    if (!this->visit(SubExpr))
+      Success = false;
+  }
 
-  if (!this->visit(Index))
+  if (!Success)
     return false;
 
   PrimType IndexT = classifyPrim(Index->getType());
+  // If the index is first, we need to change that.
+  if (LHS == Index) {
+    if (!this->emitFlip(PT_Ptr, IndexT, E))
+      return false;
+  }
+
   return this->emitArrayElemPtrPop(IndexT, E);
 }
 
