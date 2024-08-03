@@ -185,9 +185,7 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
           FCC) {
         if (CreateAnd)
           V = Builder.CreateAnd(V, MaskC);
-        if (Opc == Instruction::Sub)
-          return Builder.CreateSub(TCC, V);
-        return Builder.CreateBinOp(Opc, V, TCC);
+        return Builder.CreateBinOp(Opc, TCC, V);
       }
     }
 
