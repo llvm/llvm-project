@@ -8279,9 +8279,16 @@ public:
     return ActOnFinishFullExpr(
         Expr, Expr ? Expr->getExprLoc() : SourceLocation(), DiscardedValue);
   }
+  ExprResult ActOnFinishFullExprNoCheckExpr(Expr *Expr, bool DiscardedValue) {
+    return ActOnFinishFullExpr(
+        Expr, Expr ? Expr->getExprLoc() : SourceLocation(), DiscardedValue,
+        /*IsConstexpr=*/false, /*IsTemplateArgument=*/false,
+        /*PerformsCheckCompletedExpr=*/false);
+  }
   ExprResult ActOnFinishFullExpr(Expr *Expr, SourceLocation CC,
                                  bool DiscardedValue, bool IsConstexpr = false,
-                                 bool IsTemplateArgument = false);
+                                 bool IsTemplateArgument = false,
+                                 bool PerformsCheckCompletedExpr = true);
   StmtResult ActOnFinishFullStmt(Stmt *Stmt);
 
   /// Process the expression contained within a decltype. For such expressions,
