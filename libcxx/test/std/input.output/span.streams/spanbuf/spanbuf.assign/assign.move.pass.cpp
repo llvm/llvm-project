@@ -170,7 +170,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == nullptr);
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
@@ -188,7 +188,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == nullptr);
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
@@ -207,7 +207,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(rhsSpBuf.span().empty());
@@ -227,7 +227,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == nullptr);
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
@@ -240,7 +240,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == nullptr);
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
@@ -266,7 +266,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == arr);
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
@@ -297,7 +297,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == arr);
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
@@ -316,7 +316,7 @@ void test() {
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == arr);
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
@@ -333,7 +333,7 @@ void test() {
       assert(!spBuf.span().empty());
       assert(spBuf.span().size() == 4);
 
-      // After move
+      // Test after move
       assert(rhsSpBuf.span().data() == arr);
       assert(!rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 4);

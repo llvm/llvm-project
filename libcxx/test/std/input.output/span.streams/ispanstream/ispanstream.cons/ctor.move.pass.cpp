@@ -38,7 +38,7 @@ void test() {
   assert(!sp.empty());
   assert(sp.size() == 4);
 
-  // Mode: default (`in` | `out`)
+  // Mode: default (`in`)
   {
     SpStream rhsSpSt{sp};
     assert(rhsSpSt.span().data() == arr);
@@ -50,7 +50,7 @@ void test() {
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
 
-    // After move
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
@@ -67,48 +67,14 @@ void test() {
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
 
-    // After move
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
   }
-  // Mode `out`
-  {
-    SpStream rhsSpSt{sp, std::ios_base::out};
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-
-    SpStream spSt{std::move(rhsSpSt)};
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    // After move
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-  }
-  // Mode: multiple
-  {
-    SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-
-    SpStream spSt{std::move(rhsSpSt)};
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    // After move
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-  }
   // Mode `ate`
   {
-    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
+    SpStream rhsSpSt{sp, std::ios_base::ate};
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
@@ -118,7 +84,24 @@ void test() {
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
 
-    // After move
+    // State after move
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
+  }
+  // Mode: multiple
+  {
+    SpStream rhsSpSt{sp, std::ios_base::ate | std::ios_base::binary};
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
+
+    SpStream spSt{std::move(rhsSpSt)};
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
@@ -135,6 +118,15 @@ int main(int, char**) {
   test<wchar_t>();
   test<wchar_t, constexpr_char_traits<wchar_t>>();
 #endif
+
+#ifndef TEST_HAS_NO_CHAR8_T
+  test<char8_t>();
+  test<char8_t, constexpr_char_traits<char8_t>>();
+#endif
+  test<char16_t>();
+  test<char16_t, constexpr_char_traits<char16_t>>();
+  test<char32_t>();
+  test<char32_t, constexpr_char_traits<char32_t>>();
 
   return 0;
 }
