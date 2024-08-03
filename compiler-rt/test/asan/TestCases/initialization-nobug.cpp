@@ -46,7 +46,8 @@ int main() { return 0; }
 // CHECK: DynInitPoison
 // CHECK: DynInitPoison
 
-// In general case we only need the last of DynInit{Poison,Unpoison} is always
-// Unpoison.
+// In general case entire set of DynInitPoison must be followed by at lest one
+// DynInitUnpoison. In some cases we can limit number of DynInitUnpoison, see
+// initialization-nobug-lld.cpp.
 
 // CHECK: DynInitUnpoison
