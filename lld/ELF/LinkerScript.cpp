@@ -1020,7 +1020,7 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
 }
 
 static OutputSection *findFirstSection(PhdrEntry *load) {
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->ptLoad == load)
       return sec;
   return nullptr;
@@ -1340,7 +1340,7 @@ static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
 // and we'll also remove the PT_PHDR segment.
 void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
-  for (OutputSection *sec : outputSections)
+  for (OutputSection *sec : ctx.outputSections)
     if (sec->flags & SHF_ALLOC)
       min = std::min<uint64_t>(min, sec->addr);
 
@@ -1359,8 +1359,8 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   if ((paged || hasExplicitHeaders) &&
       headerSize <= min - computeBase(min, hasExplicitHeaders)) {
     min = alignDown(min - headerSize, config->maxPageSize);
-    Out::elfHeader->addr = min;
-    Out::programHeaders->addr = min + Out::elfHeader->size;
+    ctx.out.elfHeader->addr = min;
+    ctx.out.programHeaders->addr = min + ctx.out.elfHeader->size;
     return;
   }
 
@@ -1368,8 +1368,8 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   if (hasExplicitHeaders)
     error("could not allocate headers");
 
-  Out::elfHeader->ptLoad = nullptr;
-  Out::programHeaders->ptLoad = nullptr;
+  ctx.out.elfHeader->ptLoad = nullptr;
+  ctx.out.programHeaders->ptLoad = nullptr;
   firstPTLoad->firstSec = findFirstSection(firstPTLoad);
 
   llvm::erase_if(phdrs,
@@ -1397,8 +1397,8 @@ LinkerScript::assignAddresses() {
   } else {
     // Assign addresses to headers right now.
     dot = target->getImageBase();
-    Out::elfHeader->addr = dot;
-    Out::programHeaders->addr = dot + Out::elfHeader->size;
+    ctx.out.elfHeader->addr = dot;
+    ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
     dot += getHeaderSize();
   }
 
@@ -1543,9 +1543,9 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
     PhdrEntry *phdr = make<PhdrEntry>(cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
-      phdr->add(Out::elfHeader);
+      phdr->add(ctx.out.elfHeader);
     if (cmd.hasPhdrs)
-      phdr->add(Out::programHeaders);
+      phdr->add(ctx.out.programHeaders);
 
     if (cmd.lmaExpr) {
       phdr->p_paddr = cmd.lmaExpr().getValue();
@@ -1555,7 +1555,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
   }
 
   // Add output sections to program headers.
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     // Assign headers specified by linker script
     for (size_t id : getPhdrIndices(sec)) {
       ret[id]->add(sec);
@@ -1676,7 +1676,7 @@ static void checkMemoryRegion(const MemoryRegion *region,
 void LinkerScript::checkFinalScriptConditions() const {
   for (StringRef err : recordedErrors)
     errorOrWarn(err);
-  for (const OutputSection *sec : outputSections) {
+  for (const OutputSection *sec : ctx.outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
       checkMemoryRegion(memoryRegion, sec, sec->addr);
     if (const MemoryRegion *lmaRegion = sec->lmaRegion)

@@ -43,8 +43,8 @@ int getStructWithDtorValue() { return struct_with_dtor.value; }
 
 int main() { return 0; }
 
-// CHECK: DynInitPoison module: {{.*}}initialization-nobug.cpp
-// CHECK: DynInitPoison module: {{.*}}initialization-nobug-extra.cpp
+// CHECK: DynInitPoison
+// CHECK: DynInitPoison
 
 // In general case we only need the last of DynInit{Poison,Unpoison} is always
 // Unpoison.

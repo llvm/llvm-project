@@ -39,16 +39,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-uint8_t *Out::bufferStart;
-PhdrEntry *Out::tlsPhdr;
-OutputSection *Out::elfHeader;
-OutputSection *Out::programHeaders;
-OutputSection *Out::preinitArray;
-OutputSection *Out::initArray;
-OutputSection *Out::finiArray;
-
-SmallVector<OutputSection *, 0> elf::outputSections;
-
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
   if (config->emachine != EM_ARM || !(flags & SHF_ARM_PURECODE))
@@ -272,7 +262,7 @@ static void sortByOrder(MutableArrayRef<InputSection *> in,
 uint64_t elf::getHeaderSize() {
   if (config->oFormatBinary)
     return 0;
-  return Out::elfHeader->size + Out::programHeaders->size;
+  return ctx.out.elfHeader->size + ctx.out.programHeaders->size;
 }
 
 void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
