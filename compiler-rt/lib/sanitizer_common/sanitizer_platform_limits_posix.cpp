@@ -213,10 +213,9 @@ namespace __sanitizer {
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
 #endif // SANITIZER_HAS_STATFS64
 
-#if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
+#if SANITIZER_GLIBC || SANITIZER_APPLE
   unsigned struct_fstab_sz = sizeof(struct fstab);
-#endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-        // SANITIZER_APPLE
+#endif  // SANITIZER_GLIBC || SANITIZER_APPLE
 #if !SANITIZER_ANDROID
   unsigned struct_statfs_sz = sizeof(struct statfs);
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
@@ -324,7 +323,7 @@ namespace __sanitizer {
   int shmctl_shm_stat = (int)SHM_STAT;
 #endif
 
-#if !SANITIZER_APPLE && !SANITIZER_FREEBSD
+#if !SANITIZER_APPLE
   unsigned struct_utmp_sz = sizeof(struct utmp);
 #endif
 #if !SANITIZER_ANDROID
@@ -347,8 +346,6 @@ namespace __sanitizer {
 
 #if SANITIZER_LINUX
 unsigned struct_ElfW_Phdr_sz = sizeof(ElfW(Phdr));
-#elif SANITIZER_FREEBSD
-unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 #endif
 
 #if SANITIZER_GLIBC
@@ -987,7 +984,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_PIO_SCRNMAP = PIO_SCRNMAP;
   unsigned IOCTL_SNDCTL_DSP_GETISPACE = SNDCTL_DSP_GETISPACE;
   unsigned IOCTL_SNDCTL_DSP_GETOSPACE = SNDCTL_DSP_GETOSPACE;
-#endif // (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#endif // SANITIZER_LINUX && !SANITIZER_ANDROID
 
   const int si_SEGV_MAPERR = SEGV_MAPERR;
   const int si_SEGV_ACCERR = SEGV_ACCERR;
@@ -1025,7 +1022,7 @@ COMPILER_CHECK(IOC_NR(0x12345678) == _IOC_NR(0x12345678));
 COMPILER_CHECK(IOC_TYPE(0x12345678) == _IOC_TYPE(0x12345678));
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
+#if SANITIZER_LINUX
 // There are more undocumented fields in dl_phdr_info that we are not interested
 // in.
 COMPILER_CHECK(sizeof(__sanitizer_dl_phdr_info) <= sizeof(dl_phdr_info));
@@ -1033,9 +1030,9 @@ CHECK_SIZE_AND_OFFSET(dl_phdr_info, dlpi_addr);
 CHECK_SIZE_AND_OFFSET(dl_phdr_info, dlpi_name);
 CHECK_SIZE_AND_OFFSET(dl_phdr_info, dlpi_phdr);
 CHECK_SIZE_AND_OFFSET(dl_phdr_info, dlpi_phnum);
-#endif // SANITIZER_LINUX || SANITIZER_FREEBSD
+#endif // SANITIZER_LINUX
 
-#if SANITIZER_GLIBC || SANITIZER_FREEBSD
+#if SANITIZER_GLIBC
 CHECK_TYPE_SIZE(glob_t);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_pathc);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_pathv);
@@ -1046,7 +1043,7 @@ CHECK_SIZE_AND_OFFSET(glob_t, gl_readdir);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_opendir);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_lstat);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_stat);
-#endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD
+#endif  // SANITIZER_GLIBC
 
 CHECK_TYPE_SIZE(addrinfo);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_flags);
@@ -1103,8 +1100,6 @@ COMPILER_CHECK(sizeof(__sanitizer_dirent) <= sizeof(dirent));
 CHECK_SIZE_AND_OFFSET(dirent, d_ino);
 #if SANITIZER_APPLE
 CHECK_SIZE_AND_OFFSET(dirent, d_seekoff);
-#elif SANITIZER_FREEBSD
-// There is no 'd_off' field on FreeBSD.
 #else
 CHECK_SIZE_AND_OFFSET(dirent, d_off);
 #endif
@@ -1206,15 +1201,10 @@ CHECK_SIZE_AND_OFFSET(mntent, mnt_passno);
 
 CHECK_TYPE_SIZE(ether_addr);
 
-#if SANITIZER_GLIBC || SANITIZER_FREEBSD
+#if SANITIZER_GLIBC
 CHECK_TYPE_SIZE(ipc_perm);
-# if SANITIZER_FREEBSD
-CHECK_SIZE_AND_OFFSET(ipc_perm, key);
-CHECK_SIZE_AND_OFFSET(ipc_perm, seq);
-# else
 CHECK_SIZE_AND_OFFSET(ipc_perm, __key);
 CHECK_SIZE_AND_OFFSET(ipc_perm, __seq);
-# endif
 CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
@@ -1248,20 +1238,16 @@ CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_next);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_name);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_addr);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_netmask);
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
+#if SANITIZER_LINUX
 // Compare against the union, because we can't reach into the union in a
 // compliant way.
 #ifdef ifa_dstaddr
 #undef ifa_dstaddr
 #endif
-# if SANITIZER_FREEBSD
-CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_dstaddr);
-# else
 COMPILER_CHECK(sizeof(((__sanitizer_ifaddrs *)nullptr)->ifa_dstaddr) ==
                sizeof(((ifaddrs *)nullptr)->ifa_ifu));
 COMPILER_CHECK(offsetof(__sanitizer_ifaddrs, ifa_dstaddr) ==
                offsetof(ifaddrs, ifa_ifu));
-# endif // SANITIZER_FREEBSD
 #else
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_dstaddr);
 #endif // SANITIZER_LINUX
@@ -1352,7 +1338,7 @@ CHECK_SIZE_AND_OFFSET(cookie_io_functions_t, seek);
 CHECK_SIZE_AND_OFFSET(cookie_io_functions_t, close);
 #endif  // SANITIZER_GLIBC
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
+#if SANITIZER_LINUX
 CHECK_TYPE_SIZE(sem_t);
 #endif
 
@@ -1360,4 +1346,4 @@ CHECK_TYPE_SIZE(sem_t);
 COMPILER_CHECK(ARM_VFPREGS_SIZE == ARM_VFPREGS_SIZE_ASAN);
 #endif
 
-#endif // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_APPLE
+#endif // SANITIZER_LINUX ||  SANITIZER_APPLE
