@@ -70,14 +70,10 @@ class DenseMapBase {
   }
 
   /// Return true if the specified key is in the map, false otherwise.
-  bool contains(const_arg_type_t<KeyT> Val) const {
-    return doFind(Val) != nullptr;
-  }
+  bool contains(const KeyT &Key) const { return doFind(Key) != nullptr; }
 
   /// Return 1 if the specified key is in the map, 0 otherwise.
-  size_type count(const_arg_type_t<KeyT> Val) const {
-    return contains(Val) ? 1 : 0;
-  }
+  size_type count(const KeyT &Key) const { return contains(Key) ? 1 : 0; }
 
   value_type *find(const KeyT &Key) { return doFind(Key); }
   const value_type *find(const KeyT &Key) const { return doFind(Key); }
