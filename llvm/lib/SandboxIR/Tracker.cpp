@@ -288,6 +288,18 @@ void MoveInstr::dump() const {
 }
 #endif
 
+void InsertIntoBB::revert() { InsertedI->removeFromParent(); }
+
+InsertIntoBB::InsertIntoBB(Instruction *InsertedI, Tracker &Tracker)
+    : IRChangeBase(Tracker), InsertedI(InsertedI) {}
+
+#ifndef NDEBUG
+void InsertIntoBB::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 void Tracker::track(std::unique_ptr<IRChangeBase> &&Change) {
   assert(State == TrackerState::Record && "The tracker should be tracking!");
   Changes.push_back(std::move(Change));
