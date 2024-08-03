@@ -45,7 +45,7 @@ namespace EvalOrder {
     }
     template <typename T> constexpr T &&b(T &&v) {
       if (!done_a)
-        throw "wrong"; // expected-note 7{{not valid}}
+        throw "wrong"; // expected-note 5{{not valid}}
       done_b = true;
       return (T &&)v;
     }
@@ -95,10 +95,9 @@ namespace EvalOrder {
   constexpr int arr[3] = {};
   SEQ(A(arr)[B(0)]);
   SEQ(A(+arr)[B(0)]);
-  SEQ(A(0)[B(arr)]); // expected-error {{not an integral constant expression}} FIXME \
-                     // expected-note 2{{in call to}}
-  SEQ(A(0)[B(+arr)]); // expected-error {{not an integral constant expression}} FIXME \
-                      // expected-note 2{{in call to}}
+  SEQ(A(0)[B(arr)]);
+  SEQ(A(0)[B(+arr)]);
+
   SEQ(A(ud)[B(0)]);
 
   // Rule 7: a << b

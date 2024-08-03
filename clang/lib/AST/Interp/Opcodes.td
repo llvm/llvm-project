@@ -729,6 +729,11 @@ def Dup : Opcode {
   let HasGroup = 1;
 }
 
+def Flip : Opcode {
+  let Types = [AllTypeClass, AllTypeClass];
+  let HasGroup = 1;
+}
+
 // [] -> []
 def Invalid : Opcode {}
 def Unsupported : Opcode {}
