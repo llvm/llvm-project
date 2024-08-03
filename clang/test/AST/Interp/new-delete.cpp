@@ -551,6 +551,19 @@ namespace FaultyDtorCalledByDelete {
                               // both-note {{in call to 'abc()'}}
 }
 
+namespace DeleteThis {
+  constexpr bool super_secret_double_delete() {
+    struct A {
+      constexpr ~A() { delete this; } // both-note {{destruction of object that is already being destroyed}} \
+                                      // ref-note {{in call to}}
+    };
+    delete new A; // both-note {{in call to}}
+    return true;
+  }
+  static_assert(super_secret_double_delete()); // both-error {{not an integral constant expression}} \
+                                               // both-note {{in call to 'super_secret_double_delete()'}}
+}
+
 
 #else
 /// Make sure we reject this prior to C++20

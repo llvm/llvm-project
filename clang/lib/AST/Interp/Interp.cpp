@@ -836,6 +836,12 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
+  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_destroy);
+    return false;
+  }
+
   // Fields.
   for (const Record::Field &Field : llvm::reverse(R->fields())) {
     const Descriptor *D = Field.Desc;
