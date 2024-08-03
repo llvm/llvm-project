@@ -613,7 +613,7 @@ sdkSupportsBuiltinModules(llvm::Triple const &triple,
     return false;
 
   size_t suffix = it->find(s_sdk_suffix);
-  assert (suffix == std::string::npos);
+  assert(suffix == std::string::npos);
 
   auto VFS = FileSystem::Instance().GetVirtualFileSystem();
   if (!VFS)
@@ -630,7 +630,8 @@ sdkSupportsBuiltinModules(llvm::Triple const &triple,
   return sdkSupportsBuiltinModulesImpl(triple, *parsed);
 }
 
-/// Sets the LangOptions to prepare for running with `import-std-module` enabled.
+/// Sets the LangOptions to prepare for running with `import-std-module`
+/// enabled.
 ///
 /// \param[out] compiler CompilerInstance on which to set the LangOptions.
 /// \param[in] triple The target triple.
