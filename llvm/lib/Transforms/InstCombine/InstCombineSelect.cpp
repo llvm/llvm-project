@@ -1078,6 +1078,62 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   return nullptr;
 }
 
+/// Attempts to fold (AND %A constant) --> %A
+/// if all bits that are zero in the negated constant
+/// are also zero in A's known zero bits.
+static Value *foldAndMaskPattern(Value *V, Value *Cmp, SelectInst &SI,
+                                 InstCombinerImpl &IC, unsigned Depth = 0) {
+
+  Value *A;
+  const APInt *MaskedConstant;
+
+  if (match(V, m_And(m_Value(A), m_APInt(MaskedConstant))) &&
+      isGuaranteedNotToBeUndef(A)) {
+    KnownBits Known = IC.computeKnownBits(A, 0, &SI);
+    IC.computeKnownBitsFromCond(A, Cmp, Known, 0, &SI, false);
+    if ((~(*MaskedConstant)).isSubsetOf(Known.Zero))
+      return A;
+  }
+
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !isSafeToSpeculativelyExecute(I) || Depth >= 2)
+    return nullptr;
+
+  bool Changed = false;
+  for (unsigned i = 0; i < I->getNumOperands(); ++i) {
+    llvm::Value *Operand = I->getOperand(i);
+
+    if (std::any_of(Operand->user_begin(), Operand->user_end(),
+                    [I](const User *User) { return User != I; }))
+      break;
+
+    Value *NewOp = foldAndMaskPattern(Operand, Cmp, SI, IC, Depth + 1);
+    if (NewOp) {
+      IC.replaceOperand(*I, i, NewOp);
+      Changed = true;
+    }
+  }
+
+  return Changed ? I : nullptr;
+}
+
+/// Attmpts to fold expressions in both branches of a select instruction
+/// based on KnownBits implied by the condition
+// static Instruction *foldSelectWithIcmpEqAndPattern(Value *TVal, Value *FVal,
+//                                                    Value *CondVal,
+//                                                    SelectInst &SI,
+//                                                    InstCombinerImpl &IC) {
+//   if (TVal->hasOneUse())
+//     if (Value *newTrueOp = simplifyAndMaskPattern(TVal, CondVal, SI, IC))
+//       return IC.replaceOperand(SI, 1, newTrueOp);
+
+//   if (FVal->hasOneUse())
+//     if (Value *newFalseOp = simplifyAndMaskPattern(FVal, CondVal, SI, IC))
+//       return IC.replaceOperand(SI, 2, newFalseOp);
+
+//   return nullptr;
+// }
+
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
@@ -4109,6 +4165,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       }
     }
   }
+
+  // Attempts to recursively identify and fold (AND A constant) --> A
+  // in the true branch of the select if all bits
+  // that are zero in the negated constant are also zero in A's known zero bits.
+  if (TrueVal->hasOneUse())
+    if (Value *newTrueOp = foldAndMaskPattern(TrueVal, CondVal, SI, *this))
+      return replaceOperand(SI, 1, newTrueOp);
 
   return nullptr;
 }

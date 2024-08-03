@@ -752,9 +752,9 @@ static void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
   computeKnownBitsFromCmp(V, Pred, LHS, RHS, Known, SQ);
 }
 
-static void computeKnownBitsFromCond(const Value *V, Value *Cond,
-                                     KnownBits &Known, unsigned Depth,
-                                     const SimplifyQuery &SQ, bool Invert) {
+void llvm::computeKnownBitsFromCond(const Value *V, Value *Cond,
+                                    KnownBits &Known, unsigned Depth,
+                                    const SimplifyQuery &SQ, bool Invert) {
   Value *A, *B;
   if (Depth < MaxAnalysisRecursionDepth &&
       match(Cond, m_LogicalOp(m_Value(A), m_Value(B)))) {

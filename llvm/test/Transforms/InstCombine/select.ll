@@ -2989,9 +2989,8 @@ define i8 @select_replacement_loop3(i32 noundef %x) {
 
 define i16 @select_replacement_loop4(i16 noundef %p_12) {
 ; CHECK-LABEL: @select_replacement_loop4(
-; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12:%.*]], 1
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ult i16 [[P_12]], 2
-; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP21]], i16 [[AND1]], i16 0
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ult i16 [[P_12:%.*]], 2
+; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP21]], i16 [[P_12]], i16 0
 ; CHECK-NEXT:    ret i16 [[AND3]]
 ;
   %cmp1 = icmp ult i16 %p_12, 2
@@ -4671,8 +4670,7 @@ define i8 @select_knownbits_simplify(i8 noundef %x)  {
 ; CHECK-LABEL: @select_knownbits_simplify(
 ; CHECK-NEXT:    [[X_LO:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X_LO]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -2
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[AND]], i8 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[X]], i8 0
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %x.lo = and i8 %x, 1
@@ -4686,8 +4684,7 @@ define i8 @select_knownbits_simplify_nested(i8 noundef %x)  {
 ; CHECK-LABEL: @select_knownbits_simplify_nested(
 ; CHECK-NEXT:    [[X_LO:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X_LO]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -2
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[AND]], [[AND]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X]], [[X]]
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[MUL]], i8 0
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;

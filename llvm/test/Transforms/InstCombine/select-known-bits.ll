@@ -6,8 +6,7 @@ define i8 @select_icmp_eq_mul_and(i8 noundef %a, i8 %b)  {
 ; CHECK-SAME: i8 noundef [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[DIV:%.*]] = and i8 [[A]], -2
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[A]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i8 [[MUL]], i8 [[B]]
 ; CHECK-NEXT:    ret i8 [[RETVAL]]
 ;
@@ -24,8 +23,7 @@ define i8 @select_icmp_eq_mul_and_inv(i8 noundef %a, i8 %b)  {
 ; CHECK-SAME: i8 noundef [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A]], 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[DIV:%.*]] = and i8 [[A]], -2
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[A]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP_NOT]], i8 [[MUL]], i8 [[B]]
 ; CHECK-NEXT:    ret i8 [[RETVAL]]
 ;
@@ -42,8 +40,7 @@ define i8 @select_icmp_eq_and(i8 noundef %a, i8 %b)  {
 ; CHECK-SAME: i8 noundef [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[DIV:%.*]] = and i8 [[A]], -2
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i8 [[DIV]], i8 [[B]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i8 [[A]], i8 [[B]]
 ; CHECK-NEXT:    ret i8 [[RETVAL]]
 ;
   %1 = and i8 %a, 1
@@ -58,8 +55,7 @@ define i8 @select_icmp_eq_and_inv(i8 noundef %a, i8 %b)  {
 ; CHECK-SAME: i8 noundef [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A]], 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[DIV:%.*]] = and i8 [[A]], -2
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP_NOT]], i8 [[DIV]], i8 [[B]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP_NOT]], i8 [[A]], i8 [[B]]
 ; CHECK-NEXT:    ret i8 [[RETVAL]]
 ;
   %1 = and i8 %a, 1

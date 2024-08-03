@@ -438,6 +438,13 @@ public:
     return llvm::computeKnownBits(V, Depth, SQ.getWithInstruction(CxtI));
   }
 
+  void computeKnownBitsFromCond(const Value *V, Value *Cmp, KnownBits &Known,
+                                unsigned Depth, const Instruction *CxtI,
+                                bool Invert) const {
+    llvm::computeKnownBitsFromCond(V, Cmp, Known, Depth,
+                                   SQ.getWithInstruction(CxtI), Invert);
+  }
+
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
                               unsigned Depth = 0,
                               const Instruction *CxtI = nullptr) {
