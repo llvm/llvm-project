@@ -1,6 +1,10 @@
 // A collection of various initializers which shouldn't trip up initialization
 // order checking.  If successful, this will just return 0.
 
+// FIXME: On MinGW targets, the two DynInitPoison printouts are printed in
+// the wrong order.
+// XFAIL: target={{.*-windows-gnu}}
+
 // RUN: %clangxx_asan -O0 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=3 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInit"
 // RUN: %clangxx_asan -O1 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=3 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInit"
 // RUN: %clangxx_asan -O2 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=3 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInit"
