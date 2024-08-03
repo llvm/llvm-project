@@ -2004,9 +2004,11 @@ void ModuleAddressSanitizer::createInitializerPoisonCalls(
       return C;
     // As optimization, runtime needs to execute callback just after all
     // constructors. We going to set priority to the max allowed value. However,
-    // the default constructor priorily is already max, so as-is we will not be
+    // the default constructor priority is already max, so as-is we will not be
     // able to guaranty desired order. So reduce the priority by one to reserve
     // max value for the constructor in runtime.
+    // Note: It can break user-code that depends on the order between `max` and
+    // `max-1`, or `max-1` and `max-2`.
     StructType *EltTy = cast<StructType>(CS->getType());
     Constant *CSVals[3] = {
         ConstantInt::getSigned(Priority->getType(),
