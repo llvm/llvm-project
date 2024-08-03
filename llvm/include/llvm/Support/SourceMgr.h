@@ -59,6 +59,9 @@ private:
     /// dynamically based on the size of Buffer.
     mutable void *OffsetCache = nullptr;
 
+    // Base Source LineNo and Column where this Buffer starts
+    unsigned BaseLine, BaseCol;
+
     /// Look up a given \p Ptr in the buffer, determining which line it came
     /// from.
     unsigned getLineNumber(const char *Ptr) const;
@@ -143,9 +146,16 @@ public:
   /// the memory buffer.
   unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
                               SMLoc IncludeLoc) {
+    return AddNewSourceBuffer(std::move(F), 0, 0, IncludeLoc);
+  }
+  unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
+                              unsigned Line, unsigned Col,
+                              SMLoc IncludeLoc) {
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
+    NB.BaseLine = Line;
+    NB.BaseCol = Col;
     Buffers.push_back(std::move(NB));
     return Buffers.size();
   }
