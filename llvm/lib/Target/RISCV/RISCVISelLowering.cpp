@@ -1465,8 +1465,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine({ISD::INTRINSIC_VOID, ISD::INTRINSIC_W_CHAIN,
                        ISD::INTRINSIC_WO_CHAIN, ISD::ADD, ISD::SUB, ISD::MUL,
                        ISD::AND, ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT});
-  if (Subtarget.is64Bit())
-    setTargetDAGCombine(ISD::SRA);
+  setTargetDAGCombine(ISD::SRA);
 
   if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM, ISD::FMUL});
@@ -15462,36 +15461,41 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
 
-  if (N->getValueType(0) != MVT::i64 || !Subtarget.is64Bit())
+  EVT VT = N->getValueType(0);
+
+  if (VT != Subtarget.getXLenVT())
     return SDValue();
 
   if (!isa<ConstantSDNode>(N->getOperand(1)))
     return SDValue();
   uint64_t ShAmt = N->getConstantOperandVal(1);
-  if (ShAmt > 32)
-    return SDValue();
 
   SDValue N0 = N->getOperand(0);
 
-  // Combine (sra (sext_inreg (shl X, C1), i32), C2) ->
-  // (sra (shl X, C1+32), C2+32) so it gets selected as SLLI+SRAI instead of
-  // SLLIW+SRAIW. SLLI+SRAI have compressed forms.
-  if (ShAmt < 32 &&
-      N0.getOpcode() == ISD::SIGN_EXTEND_INREG && N0.hasOneUse() &&
-      cast<VTSDNode>(N0.getOperand(1))->getVT() == MVT::i32 &&
-      N0.getOperand(0).getOpcode() == ISD::SHL && N0.getOperand(0).hasOneUse() &&
-      isa<ConstantSDNode>(N0.getOperand(0).getOperand(1))) {
-    uint64_t LShAmt = N0.getOperand(0).getConstantOperandVal(1);
-    if (LShAmt < 32) {
-      SDLoc ShlDL(N0.getOperand(0));
-      SDValue Shl = DAG.getNode(ISD::SHL, ShlDL, MVT::i64,
-                                N0.getOperand(0).getOperand(0),
-                                DAG.getConstant(LShAmt + 32, ShlDL, MVT::i64));
-      SDLoc DL(N);
-      return DAG.getNode(ISD::SRA, DL, MVT::i64, Shl,
-                         DAG.getConstant(ShAmt + 32, DL, MVT::i64));
+  // Combine (sra (sext_inreg (shl X, C1), iX), C2) ->
+  // (sra (shl X, C1+(XLen-iX)), C2+(XLen-iX)) so it gets selected as SLLI+SRAI.
+  if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG && N0.hasOneUse()) {
+    unsigned ExtSize =
+        cast<VTSDNode>(N0.getOperand(1))->getVT().getSizeInBits();
+    if (ShAmt < ExtSize && N0.getOperand(0).getOpcode() == ISD::SHL &&
+        N0.getOperand(0).hasOneUse() &&
+        isa<ConstantSDNode>(N0.getOperand(0).getOperand(1))) {
+      uint64_t LShAmt = N0.getOperand(0).getConstantOperandVal(1);
+      if (LShAmt < ExtSize) {
+        unsigned Size = VT.getSizeInBits();
+        SDLoc ShlDL(N0.getOperand(0));
+        SDValue Shl =
+            DAG.getNode(ISD::SHL, ShlDL, VT, N0.getOperand(0).getOperand(0),
+                        DAG.getConstant(LShAmt + (Size - ExtSize), ShlDL, VT));
+        SDLoc DL(N);
+        return DAG.getNode(ISD::SRA, DL, VT, Shl,
+                           DAG.getConstant(ShAmt + (Size - ExtSize), DL, VT));
+      }
     }
   }
+
+  if (ShAmt > 32 || VT != MVT::i64)
+    return SDValue();
 
   // Combine (sra (shl X, 32), 32 - C) -> (shl (sext_inreg X, i32), C)
   // FIXME: Should this be a generic combine? There's a similar combine on X86.
