@@ -50,8 +50,8 @@ else:
 # `CClass` as parameter type in stub function declaration and you will get what
 # you want.
 
-ANNO_CONVERTIBLE = object()
-ANNO_BASIC = ANNO_CONVERTIBLE
+ANNO_BASIC = object()
+ANNO_CONVERTIBLE = ANNO_BASIC
 ANNO_ARRAY = object()
 ANNO_POINTER = object()
 ANNO_CFUNC = object()
@@ -124,7 +124,7 @@ def with_errcheck(checker: Callable[[_OrigRet, Callable[..., _OrigRet], Tuple[An
     ''' Decorates a stub function with an error checker. '''
     def decorator(wrapped: Callable[_Params, _OrigRet]) -> Callable[_Params, _NewRet]:
         def wrapper(*args: _Params.args, **kwargs: _Params.kwargs) -> _NewRet:
-            return cast(_NewRet, None)  # make type checker happy
+            raise NotImplementedError
 
         # attach original declaration and error checker to wrapper
         setattr(wrapper, '_decl_errcheck_', (wrapped, checker))
@@ -145,7 +145,7 @@ def with_converter(converter: Callable[[int], _NewRet]) -> Callable[[Callable[_P
     ''' Decorates a stub function with a converter, its return type MUST be `r_int`. '''
     def decorator(wrapped: Callable[_Params, r_int]) -> Callable[_Params, _NewRet]:
         def wrapper(*args: _Params.args, **kwargs: _Params.kwargs) -> _NewRet:
-            return cast(_NewRet, None)  # make type checker happy
+            raise NotImplementedError
 
         # attach original declaration and converter to wrapper
         setattr(wrapper, '_decl_converter_', (wrapped, converter))
@@ -177,19 +177,19 @@ def convert_annotation(typ: Any, global_ns: Optional[Dict[str, Any]] = None) -> 
         except ValueError:
             raise ValueError('CArray needs to be annotated with its size')
         ctyp, = typ.__args__[0].__args__
-        return cast(Type[Any], convert_annotation(ctyp, global_ns) * count)
+        return cast(Type[Any], convert_annotation(ctyp, global_ns=global_ns) * count)
     elif ident is ANNO_POINTER:
         assert not detail
         ctyp, = typ.__args__[0].__args__
-        return POINTER(convert_annotation(ctyp, global_ns)) # pyright: ignore
+        return POINTER(convert_annotation(ctyp, global_ns=global_ns)) # pyright: ignore
     elif ident is ANNO_CFUNC:
         if not detail:
             raise ValueError('CFuncPointer needs to be annotated with its signature')
-        return CFUNCTYPE(*(convert_annotation(t, global_ns) for t in detail))
+        return CFUNCTYPE(*(convert_annotation(t, global_ns=global_ns) for t in detail))
     elif ident is ANNO_WINFUNC:
         if not detail:
             raise ValueError('WinFuncPointer needs to be annotated with its signature')
-        return WINFUNCTYPE(*(convert_annotation(t, global_ns) for t in detail))
+        return WINFUNCTYPE(*(convert_annotation(t, global_ns=global_ns) for t in detail))
     elif ident is ANNO_PYOBJ:
         assert not detail
         return py_object
@@ -197,29 +197,39 @@ def convert_annotation(typ: Any, global_ns: Optional[Dict[str, Any]] = None) -> 
         raise ValueError(f'Unexpected annotated type {typ}')
 
 
-def convert_func_decl(decl: Callable[..., Any], errcheck: Any = None, converter: Any = None, global_ns: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def convert_func_decl(decl: Callable[..., Any], global_ns: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     ''' Converts a stub function to ctypes metadata. '''
     if global_ns is None:
         global_ns = globals()
 
     result: Dict[str, Any] = {}
 
-    if hasattr(decl, '_decl_errcheck_'):
-        rdecl, errcheck = getattr(decl, '_decl_errcheck_')
-        return convert_func_decl(rdecl, errcheck, converter, global_ns)
-    
-    if hasattr(decl, '_decl_converter_'):
-        rdecl, converter = getattr(decl, '_decl_converter_')
-        return convert_func_decl(rdecl, errcheck, converter, global_ns)
-    
+    errcheck = None
+    converter = None
+
+    while True:
+        if hasattr(decl, '_decl_errcheck_'):
+            if errcheck is not None:
+                raise ValueError('duplicate errcheck in stub function')
+            decl, errcheck = getattr(decl, '_decl_errcheck_')
+            continue
+
+        if hasattr(decl, '_decl_converter_'):
+            if converter is not None:
+                raise ValueError('duplicate converter in stub function')
+            decl, converter = getattr(decl, '_decl_converter_')
+            continue
+
+        break
+
     sig = signature(decl)
 
     param_annos = [p.annotation for p in sig.parameters.values() if p.name != 'self']
     if all(anno is not Parameter.empty for anno in param_annos):
-        result['argtypes'] = [convert_annotation(anno, global_ns) for anno in param_annos] or None
+        result['argtypes'] = [convert_annotation(anno, global_ns=global_ns) for anno in param_annos] or None
 
     if sig.return_annotation is not Parameter.empty:
-        result['restype'] = convert_annotation(sig.return_annotation, global_ns)
+        result['restype'] = convert_annotation(sig.return_annotation, global_ns=global_ns)
 
     if errcheck is not None: result['errcheck'] = errcheck
     if converter is not None: result['restype'] = converter
@@ -257,12 +267,13 @@ def load_annotated_library(loader: 'Union[CDLL, WinDLL]', decl_cls: Type[_LibDec
     result = decl_cls()
     missing: List[str] = []
 
-    for name, info in generate_metadata(decl_cls, global_ns):
+    for name, info in generate_metadata(decl_cls, global_ns=global_ns):
         try: func = getattr(loader, name)
         except AttributeError:
             stub = getattr(result, name)
             stub._missing_ = True
-            missing.append(name); continue
+            missing.append(name)
+            continue
 
         for attr, infoval in info.items():
             setattr(func, attr, infoval)
