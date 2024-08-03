@@ -389,26 +389,29 @@ template <class _Tp>
 inline constexpr bool enable_borrowed_range<stride_view<_Tp>> = enable_borrowed_range<_Tp>;
 
 namespace views {
-namespace __stride {
+namespace __stride_view {
 struct __fn {
+  // clang-format off
   template <viewable_range _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
-      noexcept(noexcept(/**/ stride_view{std::forward<_Range>(__range), __n}))
-          -> decltype(/*--*/ stride_view{std::forward<_Range>(__range), __n}) {
-    return /*-------------*/ stride_view(std::forward<_Range>(__range), __n);
-  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+  constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
+    noexcept(noexcept(stride_view{std::forward<_Range>(__range), __n}))
+    -> decltype(      stride_view{std::forward<_Range>(__range), __n})
+    { return          stride_view(std::forward<_Range>(__range), __n); }
+  // clang-format on
 
   template <class _Np>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const {
     return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Np>(__n)));
   }
 };
-} // namespace __stride
+} // namespace __stride_view
 
 inline namespace __cpo {
-inline constexpr auto stride = __stride::__fn{};
+inline constexpr auto stride = __stride_view::__fn{};
 } // namespace __cpo
 } // namespace views
+
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23
