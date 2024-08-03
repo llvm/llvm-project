@@ -1,13 +1,7 @@
 // RUN: %clang_cc1 -std=c++1z -verify=ref,both %s -fcxx-exceptions -triple=x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++1z -verify=expected,both %s -fcxx-exceptions -triple=x86_64-linux-gnu -fexperimental-new-constant-interpreter
 
-// ref-no-diagnostics
-
-/// Check that assignment operators evaluate their operands right-to-left.
-/// Copied from test/SemaCXX/constant-expression-cxx1z.cpp
-///
-/// As you can see from the FIXME comments, some of these are not yet working correctly
-/// in the new interpreter.
+// both-no-diagnostics
 namespace EvalOrder {
   template<typename T> struct lvalue {
     T t;
@@ -45,7 +39,7 @@ namespace EvalOrder {
     }
     template <typename T> constexpr T &&b(T &&v) {
       if (!done_a)
-        throw "wrong"; // expected-note 3{{not valid}}
+        throw "wrong";
       done_b = true;
       return (T &&)v;
     }
@@ -79,15 +73,10 @@ namespace EvalOrder {
 
   // Rule 5: b = a, b @= a
   SEQ(B(lvalue<int>().get()) = A(0));
-  SEQ(B(lvalue<UserDefined>().get()) = A(ud)); // expected-error {{not an integral constant expression}} FIXME \
-                                               // expected-note 2{{in call to}}
+  SEQ(B(lvalue<UserDefined>().get()) = A(ud));
   SEQ(B(lvalue<int>().get()) += A(0));
-  SEQ(B(lvalue<UserDefined>().get()) += A(ud)); // expected-error {{not an integral constant expression}} FIXME \
-                                                // expected-note 2{{in call to}}
-
-  SEQ(B(lvalue<NonMember>().get()) += A(nm)); // expected-error {{not an integral constant expression}} FIXME \
-                                              // expected-note 2{{in call to}}
-
+  SEQ(B(lvalue<UserDefined>().get()) += A(ud));
+  SEQ(B(lvalue<NonMember>().get()) += A(nm));
 
   // Rule 6: a[b]
   constexpr int arr[3] = {};
