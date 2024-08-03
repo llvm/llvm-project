@@ -5,9 +5,9 @@ declare void @use.i8(i8)
 declare void @use.i1(i1)
 define i1 @src_tv_eq(i1 %c0, i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_tv_eq(
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[SELX:%.*]], 0
-; CHECK-NEXT:    [[R1:%.*]] = and i1 [[R]], [[C0:%.*]]
-; CHECK-NEXT:    ret i1 [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[C0:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = add nuw i8 %yy, 1
   %sel = select i1 %c0, i8 0, i8 %y
@@ -50,9 +50,9 @@ define i1 @src_tv_eq_fail_tv_nonzero(i1 %c0, i8 %x, i8 %yy) {
 
 define i1 @src_fv_ne(i1 %c0, i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_fv_ne(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[SELX:%.*]], 0
-; CHECK-NEXT:    [[R1:%.*]] = or i1 [[R]], [[C0:%.*]]
-; CHECK-NEXT:    ret i1 [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[C0:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = add nuw i8 %yy, 1
   %sel = select i1 %c0, i8 %y, i8 0
@@ -79,9 +79,9 @@ define i1 @src_fv_ne_fail_maybe_zero(i1 %c0, i8 %x, i8 %yy) {
 define i1 @src_tv_ne(i1 %c0, i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_tv_ne(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C0:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[SELX:%.*]], 0
-; CHECK-NEXT:    [[R1:%.*]] = or i1 [[R]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[R1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = add nuw i8 %yy, 1
   %sel = select i1 %c0, i8 0, i8 %y
@@ -108,9 +108,9 @@ define i1 @src_tv_ne_fail_cmp_nonzero(i1 %c0, i8 %x, i8 %yy) {
 define i1 @src_fv_eq(i1 %c0, i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_fv_eq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C0:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[SELX:%.*]], 0
-; CHECK-NEXT:    [[R1:%.*]] = and i1 [[R]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[R1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = add nuw i8 %yy, 1
   %sel = select i1 %c0, i8 %y, i8 0
@@ -169,10 +169,10 @@ define i1 @src_fv_eq_invert2(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
 ; CHECK-NEXT:    [[CC:%.*]] = or i1 [[C0]], [[C1:%.*]]
 ; CHECK-NEXT:    [[SEL_OTHER:%.*]] = select i1 [[CC]], i8 [[Y]], i8 [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C0]], true
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[SELX:%.*]], 0
-; CHECK-NEXT:    [[R1:%.*]] = and i1 [[R]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SEL_OTHER]])
-; CHECK-NEXT:    ret i1 [[R1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c0 = icmp ugt i8 %a, %b
   %y = add nuw i8 %yy, 1
@@ -185,6 +185,9 @@ define i1 @src_fv_eq_invert2(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
   call void @use.i8(i8 %sel_other)
   ret i1 %r
 }
+
+
+
 
 define i1 @src_fv_eq_invert2_fail_wrong_binop(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_fv_eq_invert2_fail_wrong_binop(
@@ -260,6 +263,7 @@ define i1 @src_fv_eq_invert3(i8 %a, i8 %b, i8 %x, i8 %yy) {
   ret i1 %r
 }
 
+
 define i1 @src_tv_ne_invert(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_tv_ne_invert(
 ; CHECK-NEXT:    [[NOT_C0:%.*]] = icmp ugt i8 [[A:%.*]], [[B:%.*]]
@@ -269,11 +273,11 @@ define i1 @src_tv_ne_invert(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C0]], i8 [[Y]], i8 0
 ; CHECK-NEXT:    [[CC:%.*]] = or i1 [[C0]], [[C1:%.*]]
 ; CHECK-NEXT:    [[SEL_OTHER:%.*]] = select i1 [[CC]], i8 [[Y]], i8 [[B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[SELX:%.*]], 0
-; CHECK-NEXT:    [[R1:%.*]] = or i1 [[R]], [[NOT_C0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[NOT_C0]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SEL]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[SEL_OTHER]])
-; CHECK-NEXT:    ret i1 [[R1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %not_c0 = icmp ugt i8 %a, %b
   call void @use.i1(i1 %not_c0)
