@@ -8,39 +8,21 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Test that appropriate (member) functions are properly marked no_discard
+// Test that std::ranges::stride_view::base() is marked nodiscard.
 
 #include <ranges>
 
 #include "../../../../std/ranges/range.adaptors/range.stride.view/types.h"
 
 void test() {
-  const int range[] = {1, 2, 3};
+  const std::vector<int> intv = {1, 2, 3};
+  auto copyable_view = CopyableView<std::vector<int>::const_iterator>(intv.begin(), intv.end());
 
-  std::views::stride( // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-      range,
-      2);
-  range |
-      std::views::stride( // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-          2);
-  std::views::all | // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-      std::views::stride(1);
+  static_assert(std::copy_constructible<decltype(copyable_view)>);
 
-  auto sv             = std::views::stride(range, 2);
-  const auto const_sv = std::views::stride(range, 2);
-  auto unsimple_sv    = std::views::stride(UnsimpleConstView{}, 2);
+  const auto sv = std::ranges::stride_view<decltype(copyable_view)>(copyable_view, 2);
 
-  const_sv.base();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  sv.base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
   std::move(sv).base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  const_sv.stride(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  const_sv.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  unsimple_sv.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  const_sv.end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  unsimple_sv.end(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  sv.size();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_sv.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

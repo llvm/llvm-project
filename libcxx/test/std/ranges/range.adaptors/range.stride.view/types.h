@@ -226,7 +226,7 @@ template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrap
 using MoveOnlyView = MaybeCopyableAlwaysMoveableView<Iter, Sent, false>;
 static_assert(!std::copyable<MoveOnlyView<cpp17_input_iterator<int*>>>);
 
-template <bool IsSimple, bool IsConst = IsSimple, bool IsCommon = true>
+template <bool IsSimple, bool IsConst = IsSimple, bool IsCommon = true, bool IsSized = false>
 struct MaybeConstCommonSimpleView : std::ranges::view_base {
   int* begin();
   int* begin() const
@@ -246,6 +246,9 @@ struct MaybeConstCommonSimpleView : std::ranges::view_base {
 
   void* end() const
     requires(IsConst && !IsCommon);
+
+  size_t size() const
+    requires(IsSized);
 };
 
 using UnSimpleNoConstCommonView = MaybeConstCommonSimpleView<false, false, true>;
@@ -253,6 +256,7 @@ using UnsimpleConstView         = MaybeConstCommonSimpleView<false, true, true>;
 using UnsimpleUnCommonConstView = MaybeConstCommonSimpleView<false, true, false>;
 using SimpleUnCommonConstView   = MaybeConstCommonSimpleView<true, true, false>;
 using SimpleCommonConstView     = MaybeConstCommonSimpleView<true, true, true>;
+using SimpleNoConstSizedCommonView   = MaybeConstCommonSimpleView<true, false, true, true>;
 
 // Don't move/hold the iterator itself, copy/hold the base
 // of that iterator and reconstruct the iterator on demand.
