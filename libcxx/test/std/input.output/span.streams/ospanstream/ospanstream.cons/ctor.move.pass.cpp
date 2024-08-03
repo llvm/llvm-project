@@ -49,7 +49,7 @@ void test() {
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
-    // After move
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
@@ -66,7 +66,7 @@ void test() {
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
-    // After move
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
@@ -83,7 +83,7 @@ void test() {
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
-    // After move
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
@@ -100,7 +100,7 @@ void test() {
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
-    // After move
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
@@ -117,7 +117,7 @@ void test() {
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
 
-    // After move
+    // Test after move
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
