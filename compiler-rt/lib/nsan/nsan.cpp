@@ -450,6 +450,9 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
     Printf("%s", D.Warning());
     Printf("WARNING: NumericalStabilitySanitizer: NaN detected\n");
     Printf("%s", D.Default());
+    stack.Print();
+    // Checking for NaN values is meaningless when dealing with numbers. 
+    return kResumeFromValue;
   }
 
   // See this article for an interesting discussion of how to compare floats:
