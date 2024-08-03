@@ -6380,7 +6380,7 @@ static offset_t
 CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
                            offset_t initial_file_offset,
                            StreamString &all_image_infos_payload,
-                           const lldb_private::SaveCoreOptions &options) {
+                           lldb_private::SaveCoreOptions &options) {
   Target &target = process_sp->GetTarget();
   ModuleList modules = target.GetImages();
 
@@ -6551,15 +6551,16 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const lldb_private::SaveCoreOptions &options,
+                               lldb_private::SaveCoreOptions &options,
                                Status &error) {
-  auto core_style = options.GetStyle();
-  if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
-    core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
   // The FileSpec and Process are already checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());
   assert(process_sp);
   const FileSpec outfile = options.GetOutputFile().value();
+
+  // MachO defaults to dirty pages
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
+    options.SetStyle(eSaveCoreDirtyOnly);
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();
