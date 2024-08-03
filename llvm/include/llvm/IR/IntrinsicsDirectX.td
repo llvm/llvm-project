@@ -35,26 +35,30 @@ def int_dx_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty]>;
 def int_dx_clamp : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
 def int_dx_uclamp : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>; 
 
-def int_dx_dot2 : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+def int_dx_dot2 :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_dot3 : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_dot3 :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_dot4 : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_dot4 :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_sdot : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_fdot :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
+    [IntrNoMem, Commutative] >;
+def int_dx_sdot :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
-def int_dx_udot : 
-    Intrinsic<[LLVMVectorElementType<0>], 
+    [IntrNoMem, Commutative] >;
+def int_dx_udot :
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, IntrWillReturn, Commutative] >;
+    [IntrNoMem, Commutative] >;
 
 def int_dx_frac  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
 

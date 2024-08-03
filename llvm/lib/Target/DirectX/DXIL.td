@@ -637,7 +637,7 @@ def UMad :  DXILOp<49, tertiary> {
 
 def Dot2 :  DXILOp<54, dot2> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 1";
+            "a[n]*b[n] where n is 0 to 1 inclusive";
   let LLVMIntrinsic = int_dx_dot2;
   let arguments = !listsplat(overloadTy, 4);
   let result = overloadTy;
@@ -648,7 +648,7 @@ def Dot2 :  DXILOp<54, dot2> {
 
 def Dot3 :  DXILOp<55, dot3> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 2";
+            "a[n]*b[n] where n is 0 to 2 inclusive";
   let LLVMIntrinsic = int_dx_dot3;
   let arguments = !listsplat(overloadTy, 6);
   let result = overloadTy;
@@ -659,7 +659,7 @@ def Dot3 :  DXILOp<55, dot3> {
 
 def Dot4 :  DXILOp<56, dot4> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 3";
+            "a[n]*b[n] where n is 0 to 3 inclusive";
   let LLVMIntrinsic = int_dx_dot4;
   let arguments = !listsplat(overloadTy, 8);
   let result = overloadTy;
