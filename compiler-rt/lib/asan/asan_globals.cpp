@@ -73,17 +73,17 @@ static ListOfGlobals &GlobalsByIndicator(uptr odr_indicator)
 static const char *current_dynamic_init_module_name
     SANITIZER_GUARDED_BY(mu_for_globals) = nullptr;
 
-using DynInitGLobalsByModule =
+using DynInitGlobalsByModule =
     DenseMap<const char *, IntrusiveList<DynInitGlobal>>;
 
 // TODO: Add a NoDestroy helper, this patter is very common in sanitizers.
-static DynInitGLobalsByModule &DynInitGlobals()
+static DynInitGlobalsByModule &DynInitGlobals()
     SANITIZER_REQUIRES(mu_for_globals) {
-  static DynInitGLobalsByModule *globals_by_module = nullptr;
+  static DynInitGlobalsByModule *globals_by_module = nullptr;
   if (!globals_by_module) {
-    alignas(alignof(DynInitGLobalsByModule)) static char
-        placeholder[sizeof(DynInitGLobalsByModule)];
-    globals_by_module = new (placeholder) DynInitGLobalsByModule();
+    alignas(alignof(DynInitGlobalsByModule)) static char
+        placeholder[sizeof(DynInitGlobalsByModule)];
+    globals_by_module = new (placeholder) DynInitGlobalsByModule();
   }
 
   return *globals_by_module;
@@ -109,6 +109,31 @@ const uptr kMinimalDistanceFromAnotherGlobal = 64;
 
 static void AddGlobalToList(ListOfGlobals &list, const Global *g) {
   list.push_front(new (GetGlobalLowLevelAllocator()) GlobalListNode{g});
+}
+
+static void UnpoisonDynamicGlobals(IntrusiveList<DynInitGlobal> &dyn_globals,
+                                   bool mark_initialized) {
+  for (auto &dyn_g : dyn_globals) {
+    const Global *g = &dyn_g.g;
+    if (dyn_g.initialized)
+      continue;
+    // Unpoison the whole global.
+    PoisonShadowForGlobal(g, 0);
+    // Poison redzones back.
+    PoisonRedZones(*g);
+    if (mark_initialized)
+      dyn_g.initialized = true;
+  }
+}
+
+static void PoisonDynamicGlobals(
+    const IntrusiveList<DynInitGlobal> &dyn_globals) {
+  for (auto &dyn_g : dyn_globals) {
+    const Global *g = &dyn_g.g;
+    if (dyn_g.initialized)
+      continue;
+    PoisonShadowForGlobal(g, kAsanInitializationOrderMagic);
+  }
 }
 
 static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
@@ -298,31 +323,6 @@ static void UnregisterGlobal(const Global *g)
   if (UseODRIndicator(g) && g->odr_indicator != UINTPTR_MAX) {
     u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
     *odr_indicator = UNREGISTERED;
-  }
-}
-
-static void UnpoisonDynamicGlobals(IntrusiveList<DynInitGlobal> &dyn_globals,
-                                   bool mark_initialized) {
-  for (auto &dyn_g : dyn_globals) {
-    const Global *g = &dyn_g.g;
-    if (dyn_g.initialized)
-      continue;
-    // Unpoison the whole global.
-    PoisonShadowForGlobal(g, 0);
-    // Poison redzones back.
-    PoisonRedZones(*g);
-    if (mark_initialized)
-      dyn_g.initialized = true;
-  }
-}
-
-static void PoisonDynamicGlobals(
-    const IntrusiveList<DynInitGlobal> &dyn_globals) {
-  for (auto &dyn_g : dyn_globals) {
-    const Global *g = &dyn_g.g;
-    if (dyn_g.initialized)
-      continue;
-    PoisonShadowForGlobal(g, kAsanInitializationOrderMagic);
   }
 }
 

@@ -23,6 +23,13 @@
             "implemented": true
           }
         ]
+      },
+      "c++26": {
+        "299900": [
+          {
+            "implemented": true
+          }
+        ]
       }
     },
     "headers": [
