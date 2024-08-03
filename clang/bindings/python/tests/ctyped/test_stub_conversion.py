@@ -18,7 +18,7 @@ from clang.cindex import (CCRStructure, Rewriter, c_interop_string, c_object_p,
 # Functions strictly alphabetical order.
 # This is previous version of ctypes metadata, we check equality to this so
 # that we can ensure `ctyped` doesn't break anything in its conversion.
-FUNCTION_LIST: list[Tuple[Any, ...]] = [
+FUNCTION_LIST: List[Tuple[Any, ...]] = [
     (
         "clang_annotateTokens",
         [TranslationUnit, POINTER(Token), c_uint, POINTER(Cursor)],
@@ -341,7 +341,7 @@ def is_incompatible_diff(diff: Any):
 
 class TestStubConversion(unittest.TestCase):
     def test_equality(self):
-        """Ensure that items registered appear as class attributes."""
+        """Ensure that ctyped does not break anything."""
         old_function_dict: Dict[str, Dict[str, Any]] = {name: old_data_to_dict(val) for name, *val in FUNCTION_LIST}
         new_function_dict = generate_metadata_debug()
 
