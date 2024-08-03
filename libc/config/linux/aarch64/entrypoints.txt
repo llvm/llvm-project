@@ -575,25 +575,27 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
-    libc.src.math.expf16
+    # TODO: aarch64 bug
+    # Please see https://github.com/llvm/llvm-project/pull/100632#issuecomment-2258772681
+    # libc.src.math.expf16
     libc.src.math.f16add
     libc.src.math.f16addf
-    libc.src.math.f16addl
+    # libc.src.math.f16addl
     libc.src.math.f16div
     libc.src.math.f16divf
-    libc.src.math.f16divl
-    libc.src.math.f16fma
+    # libc.src.math.f16divl
+    # libc.src.math.f16fma
     libc.src.math.f16fmaf
-    libc.src.math.f16fmal
+    # libc.src.math.f16fmal
     libc.src.math.f16mul
     libc.src.math.f16mulf
-    libc.src.math.f16mull
+    # libc.src.math.f16mull
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
-    libc.src.math.f16sqrtl
+    # libc.src.math.f16sqrtl
     libc.src.math.f16sub
     libc.src.math.f16subf
-    libc.src.math.f16subl
+    # libc.src.math.f16subl
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
@@ -607,7 +609,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fminimum_magf16
     libc.src.math.fminimum_numf16
     libc.src.math.fminimumf16
-    libc.src.math.fmodf16
+    # libc.src.math.fmodf16
     libc.src.math.frexpf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
@@ -620,12 +622,15 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.logbf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
-    libc.src.math.modff16
+    # libc.src.math.modff16
     libc.src.math.nanf16
     libc.src.math.nearbyintf16
     libc.src.math.nextafterf16
     libc.src.math.nextdownf16
-    libc.src.math.nexttowardf16
+    # Temporarily disable nexttowardf16 on aarch64 because the conversion
+    # between _Float16 and long double will crash clang-11.  This is fixed in
+    # clang-12 and after: https://godbolt.org/z/8ceT9454c
+    # libc.src.math.nexttowardf16
     libc.src.math.nextupf16
     libc.src.math.remainderf16
     libc.src.math.remquof16
@@ -643,17 +648,17 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ufromfpxf16
   )
 
-  if(LIBC_TYPES_HAS_FLOAT128)
-    list(APPEND TARGET_LIBM_ENTRYPOINTS
-      # math.h C23 mixed _Float16 and _Float128 entrypoints
-      libc.src.math.f16addf128
-      libc.src.math.f16divf128
-      libc.src.math.f16fmaf128
-      libc.src.math.f16mulf128
-      libc.src.math.f16sqrtf128
-      libc.src.math.f16subf128
-    )
-  endif()
+  # if(LIBC_TYPES_HAS_FLOAT128)
+  #   list(APPEND TARGET_LIBM_ENTRYPOINTS
+  #     # math.h C23 mixed _Float16 and _Float128 entrypoints
+  #     libc.src.math.f16addf128
+  #     libc.src.math.f16divf128
+  #     libc.src.math.f16fmaf128
+  #     libc.src.math.f16mulf128
+  #     libc.src.math.f16sqrtf128
+  #     libc.src.math.f16subf128
+  #   )
+  # endif()
 endif()
 
 if(LIBC_TYPES_HAS_FLOAT128)
