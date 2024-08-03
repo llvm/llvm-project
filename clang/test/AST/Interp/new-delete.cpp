@@ -551,6 +551,40 @@ namespace FaultyDtorCalledByDelete {
                               // both-note {{in call to 'abc()'}}
 }
 
+namespace DeleteThis {
+  constexpr bool super_secret_double_delete() {
+    struct A {
+      constexpr ~A() { delete this; } // both-note {{destruction of object that is already being destroyed}} \
+                                      // ref-note {{in call to}}
+    };
+    delete new A; // both-note {{in call to}}
+    return true;
+  }
+  static_assert(super_secret_double_delete()); // both-error {{not an integral constant expression}} \
+                                               // both-note {{in call to 'super_secret_double_delete()'}}
+}
+
+/// FIXME: This is currently diagnosed, but should work.
+/// If the destructor for S is _not_ virtual however, it should fail.
+namespace CastedDelete {
+  struct S {
+    constexpr S(int *p) : p(p) {}
+    constexpr virtual ~S() { *p = 1; }
+    int *p;
+  };
+  struct T: S {
+    // implicit destructor defined eagerly because it is constexpr and virtual
+    using S::S;
+  };
+
+  constexpr int vdtor_1() {
+    int a;
+    delete (S*)new T(&a); // expected-note {{delete of pointer to subobject}}
+    return a;
+  }
+  static_assert(vdtor_1() == 1); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{in call to}}
+}
 
 #else
 /// Make sure we reject this prior to C++20
