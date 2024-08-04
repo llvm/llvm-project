@@ -220,7 +220,7 @@ uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
   // mmap2 specifies file offset in 4096-byte units.
   CHECK(IsAligned(offset, 4096));
   return internal_syscall(SYSCALL(mmap2), addr, length, prot, flags, fd,
-                          offset / 4096);
+                          (OFF_T)(offset / 4096));
 #      endif
 }
 #    endif  // !SANITIZER_S390
