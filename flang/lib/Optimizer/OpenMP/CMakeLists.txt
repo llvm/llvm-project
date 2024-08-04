@@ -4,6 +4,7 @@ add_flang_library(FlangOpenMPTransforms
   FunctionFiltering.cpp
   MapInfoFinalization.cpp
   MarkDeclareTarget.cpp
+  LowerWorkshare.cpp
 
   DEPENDS
   FIRDialect
