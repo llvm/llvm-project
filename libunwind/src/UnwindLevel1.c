@@ -184,7 +184,7 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
 extern int __unw_step_stage2(unw_cursor_t *);
 
 #if defined(_LIBUNWIND_USE_GCS)
-// Enable the GCS target feature to permit GCS instructions to be used.
+// Enable the GCS target feature to permit gcspop instructions to be used.
 __attribute__((target("gcs")))
 #endif
 static _Unwind_Reason_Code
@@ -201,9 +201,8 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   unsigned long shadowStackTop = _get_ssp();
 #elif defined(_LIBUNWIND_USE_GCS)
   unsigned long shadowStackTop = 0;
-  if (__chkfeat(_CHKFEAT_GCS)) {
+  if (__chkfeat(_CHKFEAT_GCS))
     shadowStackTop = (unsigned long)__gcspr();
-  }
 #endif
   // Walk each frame until we reach where search phase said to stop.
   while (true) {
@@ -329,7 +328,7 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
 }
 
 #if defined(_LIBUNWIND_USE_GCS)
-// Enable the GCS target feature to permit GCS instructions to be used.
+// Enable the GCS target feature to permit gcspop instructions to be used.
 __attribute__((target("gcs")))
 #endif
 static _Unwind_Reason_Code
