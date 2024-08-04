@@ -1318,10 +1318,11 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
     ++BI;
   }
 
-  // If we have more than 2 ranges (4 endpoints) we have to try to merge
+  // We haven't handled wrap in the previous merge,
+  // if we have at least 2 ranges (4 endpoints) we have to try to merge
   // the last and first ones.
   unsigned Size = EndPoints.size();
-  if (Size > 4) {
+  if (Size > 2) {
     ConstantInt *FB = EndPoints[0];
     ConstantInt *FE = EndPoints[1];
     if (tryMergeRange(EndPoints, FB, FE)) {
