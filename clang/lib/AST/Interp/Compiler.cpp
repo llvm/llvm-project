@@ -3977,7 +3977,19 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  auto Args = llvm::ArrayRef(E->getArgs(), E->getNumArgs());
+  SmallVector<const Expr *, 8> Args(
+      llvm::ArrayRef(E->getArgs(), E->getNumArgs()));
+
+  bool IsAssignmentOperatorCall = false;
+  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
+      OCE && OCE->isAssignmentOp()) {
+    // Just like with regular assignments, we need to special-case assignment
+    // operators here and evaluate the RHS (the second arg) before the LHS (the
+    // first arg. We fix this by using a Flip op later.
+    assert(Args.size() == 2);
+    IsAssignmentOperatorCall = true;
+    std::reverse(Args.begin(), Args.end());
+  }
   // Calling a static operator will still
   // pass the instance, but we don't need it.
   // Discard it here.
@@ -3986,7 +3998,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
         MD && MD->isStatic()) {
       if (!this->discard(E->getArg(0)))
         return false;
-      Args = Args.drop_front();
+      // Drop first arg.
+      Args.erase(Args.begin());
     }
   }
 
@@ -4036,6 +4049,15 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       }
     }
     ++ArgIndex;
+  }
+
+  // Undo the argument reversal we did earlier.
+  if (IsAssignmentOperatorCall) {
+    assert(Args.size() == 2);
+    PrimType Arg1T = classify(Args[0]).value_or(PT_Ptr);
+    PrimType Arg2T = classify(Args[1]).value_or(PT_Ptr);
+    if (!this->emitFlip(Arg2T, Arg1T, E))
+      return false;
   }
 
   if (FuncDecl) {

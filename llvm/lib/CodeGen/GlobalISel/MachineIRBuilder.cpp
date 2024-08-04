@@ -633,7 +633,7 @@ MachineInstrBuilder MachineIRBuilder::buildMergeValues(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   assert(TmpVec.size() > 1);
   return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, TmpVec);
 }
@@ -644,7 +644,7 @@ MachineIRBuilder::buildMergeLikeInstr(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   assert(TmpVec.size() > 1);
   return buildInstr(getOpcodeForMerge(Res, TmpVec), Res, TmpVec);
 }
@@ -672,7 +672,7 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<DstOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<DstOp, 8> TmpVec(Res.begin(), Res.end());
+  SmallVector<DstOp, 8> TmpVec(Res);
   assert(TmpVec.size() > 1);
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
@@ -689,7 +689,7 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<Register> Res,
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<DstOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<DstOp, 8> TmpVec(Res.begin(), Res.end());
+  SmallVector<DstOp, 8> TmpVec(Res);
   assert(TmpVec.size() > 1);
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
@@ -699,7 +699,7 @@ MachineInstrBuilder MachineIRBuilder::buildBuildVector(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
@@ -726,7 +726,7 @@ MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   if (TmpVec[0].getLLTTy(*getMRI()).getSizeInBits() ==
       Res.getLLTTy(*getMRI()).getElementType().getSizeInBits())
     return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
@@ -776,7 +776,7 @@ MachineIRBuilder::buildConcatVectors(const DstOp &Res, ArrayRef<Register> Ops) {
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   return buildInstr(TargetOpcode::G_CONCAT_VECTORS, Res, TmpVec);
 }
 
