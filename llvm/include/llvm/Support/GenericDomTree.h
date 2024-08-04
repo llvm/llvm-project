@@ -261,7 +261,7 @@ protected:
   using DomTreeNodeStorageTy =
       SmallVector<std::unique_ptr<DomTreeNodeBase<NodeT>>>;
   DomTreeNodeStorageTy DomTreeNodes;
-  // For graphs where block don't have numbers, create a numbering here.
+  // For graphs where blocks don't have numbers, create a numbering here.
   DenseMap<const NodeT *, unsigned> NodeNumberMap;
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
@@ -337,6 +337,7 @@ protected:
       return true;
 
     size_t NumNodes = 0;
+    // All node we have must exist and be equal in the other tree
     for (const auto &Node : DomTreeNodes) {
       if (!Node)
         continue;
@@ -345,14 +346,12 @@ protected:
       NumNodes++;
     }
 
+    // If we the other tree has more nodes than we have, they're not equal
     size_t NumOtherNodes = 0;
     for (const auto &OtherNode : Other.DomTreeNodes)
       if (OtherNode)
         NumOtherNodes++;
-    if (NumNodes != NumOtherNodes)
-      return true;
-
-    return false;
+    return NumNodes != NumOtherNodes;
   }
 
 private:
@@ -361,45 +360,37 @@ private:
       decltype(GraphTraits<T *>::getNumber(std::declval<T *>()));
 
   template <class T_ = NodeT>
-  std::enable_if_t<is_detected<has_number_t, T_>::value,
-                   std::optional<unsigned>>
-  getNodeIndex(const NodeT *BB) const {
-    // BB can be nullptr, map nullptr to index 0.
-    assert(BlockNumberEpoch == GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
-           "dominator tree used with outdated block numbers");
-    return BB ? GraphTraits<const NodeT *>::getNumber(BB) + 1 : 0;
-  }
-
-  template <class T_ = NodeT>
-  std::enable_if_t<!is_detected<has_number_t, T_>::value,
-                   std::optional<unsigned>>
-  getNodeIndex(const NodeT *BB) const {
-    if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
-      return It->second;
-    return std::nullopt;
-  }
-
-  template <class T_ = NodeT>
-  std::enable_if_t<is_detected<has_number_t, T_>::value, unsigned>
-  getNodeIndexForInsert(const NodeT *BB) {
-    // getNodeIndex will never fail if nodes have getNumber().
-    unsigned Idx = *getNodeIndex(BB);
-    if (Idx >= DomTreeNodes.size()) {
-      unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent);
-      DomTreeNodes.resize(Max > Idx + 1 ? Max : Idx + 1);
+  std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
+    if constexpr (is_detected<has_number_t, T_>::value) {
+      // BB can be nullptr, map nullptr to index 0.
+      assert(BlockNumberEpoch ==
+                 GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
+             "dominator tree used with outdated block numbers");
+      return BB ? GraphTraits<const NodeT *>::getNumber(BB) + 1 : 0;
+    } else {
+      if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
+        return It->second;
+      return std::nullopt;
     }
-    return Idx;
   }
 
-  template <class T_ = NodeT>
-  std::enable_if_t<!is_detected<has_number_t, T_>::value, unsigned>
-  getNodeIndexForInsert(const NodeT *BB) {
-    // We might already have a number stored for BB.
-    unsigned Idx =
-        NodeNumberMap.try_emplace(BB, DomTreeNodes.size()).first->second;
-    if (Idx >= DomTreeNodes.size())
-      DomTreeNodes.resize(Idx + 1);
-    return Idx;
+  template <class T_ = NodeT> unsigned getNodeIndexForInsert(const NodeT *BB) {
+    if constexpr (is_detected<has_number_t, T_>::value) {
+      // getNodeIndex will never fail if nodes have getNumber().
+      unsigned Idx = *getNodeIndex(BB);
+      if (Idx >= DomTreeNodes.size()) {
+        unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent);
+        DomTreeNodes.resize(Max > Idx + 1 ? Max : Idx + 1);
+      }
+      return Idx;
+    } else {
+      // We might already have a number stored for BB.
+      unsigned Idx =
+          NodeNumberMap.try_emplace(BB, DomTreeNodes.size()).first->second;
+      if (Idx >= DomTreeNodes.size())
+        DomTreeNodes.resize(Idx + 1);
+      return Idx;
+    }
   }
 
 public:
@@ -838,16 +829,10 @@ public:
   }
 
 private:
-  template <class T_ = NodeT>
-  std::enable_if_t<is_detected<has_number_t, T_>::value, void>
-  updateBlockNumberEpoch() {
-    BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
-  }
-
-  template <class T_ = NodeT>
-  std::enable_if_t<!is_detected<has_number_t, T_>::value, void>
-  updateBlockNumberEpoch() {
+  template <class T_ = NodeT> void updateBlockNumberEpoch() {
     // Nothing to do for graphs that don't number their blocks.
+    if constexpr (is_detected<has_number_t, T_>::value)
+      BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
   }
 
 public:
@@ -877,7 +862,7 @@ public:
       if (!Node)
         continue;
       unsigned Idx = *getNodeIndex(Node->getBlock());
-      // getMaxNumber is not necssarily supported
+      // getMaxNumber is not necessarily supported
       if (Idx >= NewVector.size())
         NewVector.resize(Idx + 1);
       NewVector[Idx] = std::move(Node);
