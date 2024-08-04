@@ -97,6 +97,7 @@ void Ctx::reset() {
   bufferStart = nullptr;
   tlsPhdr = nullptr;
   out = OutSections{};
+  outputSections.clear();
 
   sym = ElfSym{};
 
@@ -144,8 +145,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx->e.cleanupCallback = []() {
     elf::ctx.reset();
     symtab = SymbolTable();
-
-    outputSections.clear();
 
     in.reset();
 

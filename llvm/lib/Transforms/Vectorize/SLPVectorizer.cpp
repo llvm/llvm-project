@@ -1569,7 +1569,7 @@ public:
       if (I1 && I2) {
         if (I1->getParent() != I2->getParent())
           return CheckSameEntryOrFail();
-        SmallVector<Value *, 4> Ops(MainAltOps.begin(), MainAltOps.end());
+        SmallVector<Value *, 4> Ops(MainAltOps);
         Ops.push_back(I1);
         Ops.push_back(I2);
         InstructionsState S = getSameOpcode(Ops, TLI);
@@ -5230,7 +5230,7 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
   TE.ReorderIndices.clear();
   // Try to improve gathered nodes with clustered reuses, if possible.
   ArrayRef<int> Slice = ArrayRef(NewMask).slice(0, Sz);
-  SmallVector<unsigned> NewOrder(Slice.begin(), Slice.end());
+  SmallVector<unsigned> NewOrder(Slice);
   inversePermutation(NewOrder, NewMask);
   reorderScalars(TE.Scalars, NewMask);
   // Fill the reuses mask with the identity submasks.
@@ -7910,8 +7910,7 @@ protected:
         }
         break;
       }
-      SmallVector<int> ShuffleMask(SV->getShuffleMask().begin(),
-                                   SV->getShuffleMask().end());
+      SmallVector<int> ShuffleMask(SV->getShuffleMask());
       combineMasks(LocalVF, ShuffleMask, Mask);
       Mask.swap(ShuffleMask);
       if (IsOp2Undef)
@@ -8011,15 +8010,13 @@ protected:
                 isUndefVector(SV2->getOperand(1), UseMask2).all()) {
               Op1 = SV1->getOperand(0);
               Op2 = SV2->getOperand(0);
-              SmallVector<int> ShuffleMask1(SV1->getShuffleMask().begin(),
-                                            SV1->getShuffleMask().end());
+              SmallVector<int> ShuffleMask1(SV1->getShuffleMask());
               int LocalVF = ShuffleMask1.size();
               if (auto *FTy = dyn_cast<FixedVectorType>(Op1->getType()))
                 LocalVF = FTy->getNumElements();
               combineMasks(LocalVF, ShuffleMask1, CombinedMask1);
               CombinedMask1.swap(ShuffleMask1);
-              SmallVector<int> ShuffleMask2(SV2->getShuffleMask().begin(),
-                                            SV2->getShuffleMask().end());
+              SmallVector<int> ShuffleMask2(SV2->getShuffleMask());
               LocalVF = ShuffleMask2.size();
               if (auto *FTy = dyn_cast<FixedVectorType>(Op2->getType()))
                 LocalVF = FTy->getNumElements();
@@ -8056,7 +8053,7 @@ protected:
     if (isa<PoisonValue>(V1))
       return Builder.createPoison(
           cast<VectorType>(V1->getType())->getElementType(), Mask.size());
-    SmallVector<int> NewMask(Mask.begin(), Mask.end());
+    SmallVector<int> NewMask(Mask);
     bool IsIdentity = peekThroughShuffles(V1, NewMask, /*SinglePermute=*/true);
     assert(V1 && "Expected non-null value after looking through shuffles.");
 
@@ -8284,7 +8281,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       return TTI::TCC_Free;
     auto *VecTy = getWidenedType(ScalarTy, VL.size());
     InstructionCost GatherCost = 0;
-    SmallVector<Value *> Gathers(VL.begin(), VL.end());
+    SmallVector<Value *> Gathers(VL);
     // Improve gather cost for gather of loads, if we can group some of the
     // loads into vector loads.
     InstructionsState S = getSameOpcode(VL, *R.TLI);
@@ -8719,7 +8716,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 const PointerUnion<Value *, const TreeEntry *> &P2,
                 ArrayRef<int> Mask) {
     ShuffleCostBuilder Builder(TTI);
-    SmallVector<int> CommonMask(Mask.begin(), Mask.end());
+    SmallVector<int> CommonMask(Mask);
     Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
     unsigned CommonVF = Mask.size();
     InstructionCost ExtraCost = 0;
@@ -18928,10 +18925,10 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
         auto *GEPI = GEPList[I];
         if (!Candidates.count(GEPI))
           continue;
-        auto *SCEVI = SE->getSCEV(GEPList[I]);
+        const SCEV *SCEVI = SE->getSCEV(GEPList[I]);
         for (int J = I + 1; J < E && Candidates.size() > 1; ++J) {
           auto *GEPJ = GEPList[J];
-          auto *SCEVJ = SE->getSCEV(GEPList[J]);
+          const SCEV *SCEVJ = SE->getSCEV(GEPList[J]);
           if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
             Candidates.remove(GEPI);
             Candidates.remove(GEPJ);
