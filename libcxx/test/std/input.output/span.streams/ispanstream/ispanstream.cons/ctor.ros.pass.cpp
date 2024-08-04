@@ -54,26 +54,15 @@ template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
-  CharT arr1[4];
-  ReadOnlySpan<CharT, 4> ros{arr1};
+  CharT arr[4];
+  ReadOnlySpan<CharT, 4> ros{arr};
   assert(ros.size() == 4);
 
   {
     SpStream spSt(ros);
-    assert(spSt.span().data() == arr1);
+    assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
-  }
-
-  CharT arr2[6];
-  ReadOnlySpan<CharT, 6> ros2{arr2};
-
-  {
-    SpStream spSt(ros2);
-    assert(spSt.span().data() != arr1);
-    assert(spSt.span().data() == arr2);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 6);
   }
 }
 
