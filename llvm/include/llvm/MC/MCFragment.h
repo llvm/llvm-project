@@ -513,8 +513,7 @@ public:
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion)
       : MCEncodedFragmentWithFixups<32, 4>(FT_CVDefRange, false),
-        Ranges(Ranges.begin(), Ranges.end()),
-        FixedSizePortion(FixedSizePortion) {}
+        Ranges(Ranges), FixedSizePortion(FixedSizePortion) {}
 
   ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> getRanges() const {
     return Ranges;

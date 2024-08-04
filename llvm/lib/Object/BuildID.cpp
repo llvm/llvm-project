@@ -50,7 +50,7 @@ BuildID llvm::object::parseBuildID(StringRef Str) {
     return {};
   ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
                             Bytes.size());
-  return SmallVector<uint8_t>(BuildID.begin(), BuildID.end());
+  return SmallVector<uint8_t>(BuildID);
 }
 
 BuildIDRef llvm::object::getBuildID(const ObjectFile *Obj) {
