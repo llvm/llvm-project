@@ -655,7 +655,6 @@ typeindex typeinfo
 typeindex version
 typeinfo cstddef
 typeinfo cstdint
-unordered_map cmath
 unordered_map compare
 unordered_map cstddef
 unordered_map cstdint
@@ -667,7 +666,6 @@ unordered_map optional
 unordered_map stdexcept
 unordered_map tuple
 unordered_map version
-unordered_set cmath
 unordered_set compare
 unordered_set cstddef
 unordered_set cstdint
