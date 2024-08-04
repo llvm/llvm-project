@@ -438,7 +438,7 @@ bool SystemZ::relaxOnce(int pass) const {
   // we need to validate the target symbol is in-range and aligned.
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
