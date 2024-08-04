@@ -1506,7 +1506,9 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
   using OBO = OverflowingBinaryOperator;
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap);
+        ConstantRange Res = CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap);
+        EXPECT_TRUE(CR1.shl(CR2).contains(Res));
+        return Res;
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
@@ -1518,7 +1520,8 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
       PreferSmallest, CheckNonWrappedOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.shlWithNoWrap(CR2, OBO::NoSignedWrap);
+        ConstantRange Res = CR1.shlWithNoWrap(CR2, OBO::NoSignedWrap);
+        return Res;
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
