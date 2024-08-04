@@ -807,7 +807,7 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 
   // Otherwise, create TBAA with the new Len
   ArrayRef<MDOperand> MDOperands = MD->operands();
-  SmallVector<Metadata *, 4> NextNodes(MDOperands.begin(), MDOperands.end());
+  SmallVector<Metadata *, 4> NextNodes(MDOperands);
   ConstantInt *PreviousSize = mdconst::extract<ConstantInt>(NextNodes[3]);
 
   // Don't create a new MDNode if it is the same length.
