@@ -307,20 +307,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (H.Handler)
-          H.Handler = MBBMap[cast<const BasicBlock *>(H.Handler)];
+          H.Handler = getMBB(cast<const BasicBlock *>(H.Handler));
       }
     }
     for (CxxUnwindMapEntry &UME : EHInfo.CxxUnwindMap)
       if (UME.Cleanup)
-        UME.Cleanup = MBBMap[cast<const BasicBlock *>(UME.Cleanup)];
-    for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap) {
-      const auto *BB = cast<const BasicBlock *>(UME.Handler);
-      UME.Handler = MBBMap[BB];
-    }
-    for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
-      const auto *BB = cast<const BasicBlock *>(CME.Handler);
-      CME.Handler = MBBMap[BB];
-    }
+        UME.Cleanup = getMBB(cast<const BasicBlock *>(UME.Cleanup));
+    for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap)
+      UME.Handler = getMBB(cast<const BasicBlock *>(UME.Handler));
+    for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap)
+      CME.Handler = getMBB(cast<const BasicBlock *>(CME.Handler));
   } else if (Personality == EHPersonality::Wasm_CXX) {
     WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
     calculateWasmEHInfo(&fn, EHInfo);
@@ -330,16 +326,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (auto &KV : EHInfo.SrcToUnwindDest) {
       const auto *Src = cast<const BasicBlock *>(KV.first);
       const auto *Dest = cast<const BasicBlock *>(KV.second);
-      SrcToUnwindDest[MBBMap[Src]] = MBBMap[Dest];
+      SrcToUnwindDest[getMBB(Src)] = getMBB(Dest);
     }
     EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
     DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
       const auto *Dest = cast<const BasicBlock *>(KV.first);
-      UnwindDestToSrcs[MBBMap[Dest]] = SmallPtrSet<BBOrMBB, 4>();
+      MachineBasicBlock *DestMBB = getMBB(Dest);
+      UnwindDestToSrcs[DestMBB] = SmallPtrSet<BBOrMBB, 4>();
       for (const auto P : KV.second)
-        UnwindDestToSrcs[MBBMap[Dest]].insert(
-            MBBMap[cast<const BasicBlock *>(P)]);
+        UnwindDestToSrcs[DestMBB].insert(getMBB(cast<const BasicBlock *>(P)));
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
