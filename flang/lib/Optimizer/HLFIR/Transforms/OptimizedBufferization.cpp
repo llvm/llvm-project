@@ -20,6 +20,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
@@ -482,7 +483,8 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   // Generate a loop nest looping around the hlfir.elemental shape and clone
   // hlfir.elemental region inside the inner loop
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered());
+      hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered(),
+                         flangomp::shouldUseWorkshareLowering(elemental));
   builder.setInsertionPointToStart(loopNest.body);
   auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
                                         loopNest.oneBasedIndices);
@@ -553,7 +555,8 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                         flangomp::shouldUseWorkshareLowering(assign));
   builder.setInsertionPointToStart(loopNest.body);
   auto arrayElement =
       hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
@@ -648,7 +651,8 @@ llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                         flangomp::shouldUseWorkshareLowering(assign));
   builder.setInsertionPointToStart(loopNest.body);
   auto rhsArrayElement =
       hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
