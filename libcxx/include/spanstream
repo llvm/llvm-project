@@ -270,9 +270,9 @@ public:
   template <ranges::borrowed_range _ROSeq>
     requires(!convertible_to<_ROSeq, std::span<_CharT>>) && convertible_to<_ROSeq, std::span<const _CharT>>
   _LIBCPP_HIDE_FROM_ABI explicit basic_ispanstream(_ROSeq&& __s)
-      : basic_istream<_CharT, _Traits>(std::addressof(__sb_)) {
+      : basic_istream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(basic_spanbuf<_CharT, _Traits>(ios_base::in)) {
     std::span<const _CharT> __sp(std::forward<_ROSeq>(__s));
-    this->span(std::span<_CharT>(std::span<_CharT>(const_cast<_CharT*>(__sp.data()), __sp.size())));
+    this->span(std::span<_CharT>(const_cast<_CharT*>(__sp.data()), __sp.size()));
   }
 
   basic_ispanstream& operator=(const basic_ispanstream&) = delete;
