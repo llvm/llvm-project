@@ -134,7 +134,7 @@
 "`LWG3077 <https://wg21.link/LWG3077>`__","``(push|emplace)_back``\  should invalidate the ``end``\  iterator","Kona","|Nothing To Do|","",""
 "`LWG3087 <https://wg21.link/LWG3087>`__","One final ``&x``\  in |sect|\ [list.ops]","Kona","|Nothing To Do|","",""
 "`LWG3101 <https://wg21.link/LWG3101>`__","``span``\ 's ``Container``\  constructors need another constraint","Kona","|Complete|","",""
-"`LWG3112 <https://wg21.link/LWG3112>`__","``system_error``\  and ``filesystem_error``\  constructors taking a ``string``\  may not be able to meet their postconditions","Kona","","",""
+"`LWG3112 <https://wg21.link/LWG3112>`__","``system_error``\  and ``filesystem_error``\  constructors taking a ``string``\  may not be able to meet their postconditions","Kona","|Nothing To Do|","",""
 "`LWG3119 <https://wg21.link/LWG3119>`__","Program-definedness of closure types","Kona","|Nothing To Do|","",""
 "`LWG3133 <https://wg21.link/LWG3133>`__","Modernizing numeric type requirements","Kona","","",""
 "`LWG3144 <https://wg21.link/LWG3144>`__","``span``\  does not have a ``const_pointer``\  typedef","Kona","|Complete|","",""
