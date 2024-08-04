@@ -21,7 +21,7 @@
 template <typename CharT, std::size_t N = 0>
 class ReadOnlySpan {
 public:
-  explicit ReadOnlySpan(CharT (&arr)[N]) : arr_{arr} {}
+  explicit ReadOnlySpan(CharT (&arr)[N]) : arr_{arr}, size_{N} {}
 
   operator std::span<CharT>() = delete;
 
@@ -30,8 +30,11 @@ public:
   const CharT* begin() { return arr_; }
   const CharT* end() { return arr_ + N; }
 
+  std::size_t size() const { return size_; }
+
 private:
   CharT* arr_;
+  std::size_t size_;
 };
 
 template <typename CharT, std::size_t N>
