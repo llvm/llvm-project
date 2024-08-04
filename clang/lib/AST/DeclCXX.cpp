@@ -561,6 +561,42 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
     data().StructuralIfLiteral = false;
 }
 
+const CXXRecordDecl *CXXRecordDecl::getStandardLayoutBaseWithFields() const {
+  assert(
+      isStandardLayout() &&
+      "getStandardLayoutBaseWithFields called on a non-standard-layout type");
+#ifdef EXPENSIVE_CHECKS
+  {
+    unsigned NumberOfBasesWithFields = 0;
+    if (!field_empty())
+      ++NumberOfBasesWithFields;
+    llvm::SmallPtrSet<const CXXRecordDecl *, 8> UniqueBases;
+    forallBases([&](const CXXRecordDecl *Base) -> bool {
+      if (!Base->field_empty())
+        ++NumberOfBasesWithFields;
+      assert(
+          UniqueBases.insert(Base->getCanonicalDecl()).second &&
+          "Standard layout struct has multiple base classes of the same type");
+      return true;
+    });
+    assert(NumberOfBasesWithFields <= 1 &&
+           "Standard layout struct has fields declared in more than one class");
+  }
+#endif
+  if (!field_empty())
+    return this;
+  const CXXRecordDecl *Result = this;
+  forallBases([&](const CXXRecordDecl *Base) -> bool {
+    if (!Base->field_empty()) {
+      // This is the base where the fields are declared; return early
+      Result = Base;
+      return false;
+    }
+    return true;
+  });
+  return Result;
+}
+
 bool CXXRecordDecl::hasConstexprDestructor() const {
   auto *Dtor = getDestructor();
   return Dtor ? Dtor->isConstexpr() : defaultedDestructorIsConstexpr();
