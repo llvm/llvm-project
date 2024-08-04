@@ -959,10 +959,8 @@ public:
 
 class UnreachableInst final : public Instruction {
   /// Use UnreachableInst::create() instead of calling the constructor.
-  UnreachableInst(llvm::Instruction *I, Context &Ctx)
+  UnreachableInst(llvm::UnreachableInst *I, Context &Ctx)
       : Instruction(ClassID::Unreachable, Opcode::Unreachable, I, Ctx) {}
-  UnreachableInst(ClassID SubclassID, llvm::Instruction *I, Context &Ctx)
-      : Instruction(SubclassID, Opcode::Unreachable, I, Ctx) {}
   friend Context;
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
@@ -976,12 +974,6 @@ public:
   static UnreachableInst *create(BasicBlock *InsertAtEnd, Context &Ctx);
   static bool classof(const Value *From);
   unsigned getNumSuccessors() const { return 0; }
-  BasicBlock *getSuccessor(unsigned idx) const {
-    llvm_unreachable("UnreachableInst has no successors!");
-  }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
-    llvm_unreachable("UnreachableInst has no successors!");
-  }
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }

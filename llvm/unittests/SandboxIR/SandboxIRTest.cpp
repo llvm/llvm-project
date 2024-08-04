@@ -2054,7 +2054,6 @@ define void @foo() {
   auto *UI = cast<sandboxir::UnreachableInst>(&*It++);
 
   EXPECT_TRUE(llvm::isa<sandboxir::UnreachableInst>(UI));
-
   // Check create(InsertBefore)
   sandboxir::UnreachableInst *NewUI =
       sandboxir::UnreachableInst::create(/*InsertBefore=*/Ret, Ctx);
