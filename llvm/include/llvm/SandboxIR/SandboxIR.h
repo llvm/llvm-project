@@ -81,6 +81,8 @@
 //                                      |                    +- CastInst
 //                                      |
 //                                      +- UnaryOperator
+//                                      |
+//                                      +- UnreachableInst
 //
 // Use
 //
@@ -115,6 +117,7 @@ class LoadInst;
 class ReturnInst;
 class StoreInst;
 class User;
+class UnreachableInst;
 class Value;
 class CallBase;
 class CallInst;
@@ -242,6 +245,7 @@ protected:
   friend class GetElementPtrInst; // For getting `Val`.
   friend class CastInst;          // For getting `Val`.
   friend class PHINode;           // For getting `Val`.
+  friend class UnreachableInst;   // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -635,6 +639,7 @@ protected:
   friend class GetElementPtrInst; // For getTopmostLLVMInstruction().
   friend class CastInst;          // For getTopmostLLVMInstruction().
   friend class PHINode;           // For getTopmostLLVMInstruction().
+  friend class UnreachableInst;   // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -946,6 +951,44 @@ public:
 #ifndef NDEBUG
   void verify() const final {
     assert(isa<llvm::StoreInst>(Val) && "Expected StoreInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class UnreachableInst final : public Instruction {
+  /// Use UnreachableInst::create() instead of calling the constructor.
+  UnreachableInst(llvm::Instruction *I, Context &Ctx)
+      : Instruction(ClassID::Unreachable, Opcode::Unreachable, I, Ctx) {}
+  UnreachableInst(ClassID SubclassID, llvm::Instruction *I, Context &Ctx)
+      : Instruction(SubclassID, Opcode::Unreachable, I, Ctx) {}
+  friend Context;
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  static UnreachableInst *create(Instruction *InsertBefore, Context &Ctx);
+  static UnreachableInst *create(BasicBlock *InsertAtEnd, Context &Ctx);
+  static bool classof(const Value *From);
+  unsigned getNumSuccessors() const { return 0; }
+  BasicBlock *getSuccessor(unsigned idx) const {
+    llvm_unreachable("UnreachableInst has no successors!");
+  }
+  void setSuccessor(unsigned idx, BasicBlock *B) {
+    llvm_unreachable("UnreachableInst has no successors!");
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::UnreachableInst>(Val) && "Expected UnreachableInst!");
   }
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
@@ -1732,6 +1775,8 @@ protected:
   friend CastInst; // For createCastInst()
   PHINode *createPHINode(llvm::PHINode *I);
   friend PHINode; // For createPHINode()
+  UnreachableInst *createUnreachableInst(llvm::UnreachableInst *UI);
+  friend UnreachableInst; // For createUnreachableInst()
 
 public:
   Context(LLVMContext &LLVMCtx)
