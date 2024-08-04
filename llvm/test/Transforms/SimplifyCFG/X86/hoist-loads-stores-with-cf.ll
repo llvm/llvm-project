@@ -235,6 +235,30 @@ if.end:
   ret void
 }
 
+;; Not crash when working with opt controlled by simplifycfg-hoist-cond-stores
+define i32 @hoist_cond_stores(i1 %cond, ptr %p) {
+; CHECK-LABEL: @hoist_cond_stores(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i1 false, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND:%.*]], i1 false, i1 false
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr [[P]], i32 8, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    store i1 [[SPEC_STORE_SELECT]], ptr [[P]], align 2
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  store i1 false, ptr %p, align 2
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:                            ; preds = %entry
+  store i32 0, ptr %p, align 8
+  store i1 false, ptr %p, align 2
+  br label %if.false
+
+if.false:                                    ; preds = %if.true, %entry
+  ret i32 0
+}
+
 ;; Both of successor 0 and successor 1 have a single predecessor.
 ;; TODO: Support transform for this case.
 define void @single_predecessor(ptr %p, ptr %q, i32 %a) {

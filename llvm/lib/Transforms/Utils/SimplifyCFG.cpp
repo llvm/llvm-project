@@ -3109,8 +3109,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
     // Don't hoist the instruction if it's unsafe or expensive.
     if (!IsSafeCheapLoadStore && !isSafeToSpeculativelyExecute(&I) &&
-        !(HoistCondStores && (SpeculatedStoreValue = isSafeToSpeculateStore(
-                                  &I, BB, ThenBB, EndBB))))
+        !(HoistCondStores && !SpeculatedStoreValue &&
+          (SpeculatedStoreValue =
+               isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
       return false;
     if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
@@ -3118,7 +3119,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       return false;
 
     // Store the store speculation candidate.
-    if (SpeculatedStoreValue)
+    if (!SpeculatedStore && SpeculatedStoreValue)
       SpeculatedStore = cast<StoreInst>(&I);
 
     // Do not hoist the instruction if any of its operands are defined but not
