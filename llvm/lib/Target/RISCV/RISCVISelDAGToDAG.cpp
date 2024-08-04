@@ -1449,6 +1449,31 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
     }
 
+    // Turn (and (srl x, c2), c1) -> (srli (srai x, c2-c3)) if c1 is a mask with
+    // c3 leading zeros and c2 is larger than c3.
+    if (N0.getOpcode() == ISD::SRA && isa<ConstantSDNode>(N0.getOperand(1)) &&
+        N0.hasOneUse()) {
+      unsigned C2 = N0.getConstantOperandVal(1);
+      unsigned XLen = Subtarget->getXLen();
+      assert((C2 > 0 && C2 < XLen) && "Unexpected shift amount!");
+
+      SDValue X = N0.getOperand(0);
+
+      if (isMask_64(C1)) {
+        unsigned Leading = XLen - llvm::bit_width(C1);
+        if (C2 > Leading) {
+          SDNode *SRAI = CurDAG->getMachineNode(
+              RISCV::SRAI, DL, VT, X,
+              CurDAG->getTargetConstant(C2 - Leading, DL, VT));
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, SDValue(SRAI, 0),
+              CurDAG->getTargetConstant(Leading, DL, VT));
+          ReplaceNode(Node, SRLI);
+          return;
+        }
+      }
+    }
+
     // If C1 masks off the upper bits only (but can't be formed as an
     // ANDI), use an unsigned bitfield extract (e.g., th.extu), if
     // available.
