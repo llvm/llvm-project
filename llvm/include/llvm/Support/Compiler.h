@@ -444,11 +444,6 @@
 # define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE
 #endif
 
-/// \macro LLVM_ADDRESS_SANITIZER_BUILD
-/// Whether LLVM itself is built with AddressSanitizer instrumentation.
-#ifndef LLVM_ADDRESS_SANITIZER_BUILD
-# define LLVM_ADDRESS_SANITIZER_BUILD 0
-#endif
 #if LLVM_ADDRESS_SANITIZER_BUILD
 #if __has_include(<sanitizer/asan_interface.h>)
 # include <sanitizer/asan_interface.h>
