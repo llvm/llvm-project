@@ -1233,7 +1233,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
         // If V is used as the pointer operand of a compatible memory operation,
         // sets the pointer operand to NewV. This replacement does not change
         // the element type, so the resultant load/store is still valid.
-        CurUser->replaceUsesOfWith(V, NewV);
+        U.set(NewV);
         continue;
       }
 
