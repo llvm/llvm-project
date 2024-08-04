@@ -678,59 +678,6 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-void elf::initSymbolAnchors() {
-  SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : ctx.outputSections) {
-    if (!(osec->flags & SHF_EXECINSTR))
-      continue;
-    for (InputSection *sec : getInputSections(*osec, storage)) {
-      sec->relaxAux = make<RelaxAux>();
-      if (sec->relocs().size()) {
-        sec->relaxAux->relocDeltas =
-            std::make_unique<uint32_t[]>(sec->relocs().size());
-        sec->relaxAux->relocTypes =
-            std::make_unique<RelType[]>(sec->relocs().size());
-      }
-    }
-  }
-  // Store anchors (st_value and st_value+st_size) for symbols relative to text
-  // sections.
-  //
-  // For a defined symbol foo, we may have `d->file != file` with --wrap=foo.
-  // We should process foo, as the defining object file's symbol table may not
-  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. To
-  // avoid adding a Defined that is undefined in one object file, use
-  // `!d->scriptDefined` to exclude symbols that are definitely not wrapped.
-  //
-  // `relaxAux->anchors` may contain duplicate symbols, but that is fine.
-  for (InputFile *file : ctx.objectFiles)
-    for (Symbol *sym : file->getSymbols()) {
-      auto *d = dyn_cast<Defined>(sym);
-      if (!d || (d->file != file && !d->scriptDefined))
-        continue;
-      if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
-        if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
-          // If sec is discarded, relaxAux will be nullptr.
-          sec->relaxAux->anchors.push_back({d->value, d, false});
-          sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
-        }
-    }
-  // Sort anchors by offset so that we can find the closest relocation
-  // efficiently. For a zero size symbol, ensure that its start anchor precedes
-  // its end anchor. For two symbols with anchors at the same offset, their
-  // order does not matter.
-  for (OutputSection *osec : ctx.outputSections) {
-    if (!(osec->flags & SHF_EXECINSTR))
-      continue;
-    for (InputSection *sec : getInputSections(*osec, storage)) {
-      llvm::sort(sec->relaxAux->anchors, [](auto &a, auto &b) {
-        return std::make_pair(a.offset, a.end) <
-               std::make_pair(b.offset, b.end);
-      });
-    }
-  }
-}
-
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
