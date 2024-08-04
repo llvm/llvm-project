@@ -46,7 +46,7 @@ EnableBasePointer("x86-use-base-pointer", cl::Hidden, cl::init(true),
           cl::desc("Enable use of a base pointer for complex stack frames"));
 
 static cl::opt<bool>
-    DisableRegAllocHints("x86-disable-regalloc-hints", cl::Hidden,
+    DisableRegAllocNDDHints("x86-disable-regalloc-hints-for-ndd", cl::Hidden,
                          cl::init(false),
                          cl::desc("Disable two address hints for register "
                                   "allocation"));
@@ -1089,43 +1089,43 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
   unsigned ID = RC.getID();
 
-  if (!VRM || DisableRegAllocHints)
-    return BaseImplRetVal;
+  if (ID != X86::TILERegClassID) {
+    if (!VRM || DisableRegAllocNDDHints)
+      return BaseImplRetVal;
 
-  // Add any two address hints after any copy hints.
-  SmallSet<unsigned, 4> TwoAddrHints;
+    // Add any two address hints after any copy hints.
+    SmallSet<unsigned, 4> TwoAddrHints;
 
-  auto tryAddHint = [&](const MachineOperand &VRRegMO,
-                        const MachineOperand &MO) -> void {
-    Register Reg = MO.getReg();
-    Register PhysReg =
-        Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
-    if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
-      TwoAddrHints.insert(PhysReg);
-  };
+    auto tryAddNDDHint = [&](const MachineOperand &MO) -> void {
+      Register Reg = MO.getReg();
+      Register PhysReg =
+          Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+      if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+        TwoAddrHints.insert(PhysReg);
+    };
 
-  for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
-    const MachineInstr &MI = *MO.getParent();
-    if (X86::getNonNDVariant(MI.getOpcode())) {
-      unsigned OpIdx = MI.getOperandNo(&MO);
-      if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-        tryAddHint(MO, MI.getOperand(1));
-        if (MI.isCommutable() && MI.getOperand(2).isReg())
-          tryAddHint(MO, MI.getOperand(2));
-      } else if (OpIdx == 1) {
-        tryAddHint(MO, MI.getOperand(0));
-      } else if (MI.isCommutable() && OpIdx == 2) {
-        tryAddHint(MO, MI.getOperand(0));
+    for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
+      const MachineInstr &MI = *MO.getParent();
+      if (X86::getNonNDVariant(MI.getOpcode())) {
+        unsigned OpIdx = MI.getOperandNo(&MO);
+        if (OpIdx == 0 && MI.getOperand(1).isReg()) {
+          tryAddNDDHint(MI.getOperand(1));
+          if (MI.isCommutable() && MI.getOperand(2).isReg())
+            tryAddNDDHint(MI.getOperand(2));
+        } else if (OpIdx == 1) {
+          tryAddNDDHint(MI.getOperand(0));
+        } else if (MI.isCommutable() && OpIdx == 2) {
+          tryAddNDDHint(MI.getOperand(0));
+        }
       }
     }
-  }
 
-  for (MCPhysReg OrderReg : Order)
-    if (TwoAddrHints.count(OrderReg))
-      Hints.push_back(OrderReg);
+    for (MCPhysReg OrderReg : Order)
+      if (TwoAddrHints.count(OrderReg))
+        Hints.push_back(OrderReg);
 
-  if (ID != X86::TILERegClassID)
     return BaseImplRetVal;
+  }
 
   ShapeT VirtShape = getTileShape(VirtReg, const_cast<VirtRegMap *>(VRM), MRI);
   auto AddHint = [&](MCPhysReg PhysReg) {
@@ -1163,4 +1163,5 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 #undef DEBUG_TYPE
 
   return true;
+
 }
