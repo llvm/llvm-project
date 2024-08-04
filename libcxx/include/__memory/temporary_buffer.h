@@ -34,7 +34,7 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 void return_temporary_buffer(_Tp* __p) _NOEXCEPT {
-  __scoped_temporary_buffer __scoped_buf(__p);
+  __scoped_temporary_buffer<_Tp> __scoped_buf(__p);
   (void)__scoped_buf;
 }
 
