@@ -26,6 +26,12 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* Experimental CREL relocations with explicit addends are now supported using the
+  temporary section type code 0x40000020 (``clang -c -Wa,--crel,--allow-experimental-crel``).
+  LLVM will change the code and break compatibility (Clang and lld of different
+  versions are not guaranteed to cooperate, unlike other features). CREL with
+  implicit addends are not supported.
+  (`#98115 <https://github.com/llvm/llvm-project/pull/98115>`_)
 * ``EI_OSABI`` in the output is now inferred from input object files.
   (`#97144 <https://github.com/llvm/llvm-project/pull/97144>`_)
 * ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
@@ -88,7 +94,7 @@ ELF Improvements
   (`#94099 <https://github.com/llvm/llvm-project/pull/94099>`_)
   Non-alloc orphan sections are now placed at the end.
   (`#94519 <https://github.com/llvm/llvm-project/pull/94519>`_)
-* R_X86_64_REX_GOTPCRELX of the addq form is no longer incorrectly optimized when the address is larger than 0x80000000.
+* ``R_X86_64_REX_GOTPCRELX`` of the addq form is no longer incorrectly optimized when the address is larger than 0x80000000.
 
 Breaking changes
 ----------------
