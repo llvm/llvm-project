@@ -1,12 +1,15 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: llvm-as %S/Inputs/foo.ll -o %t1.o
-# RUN: wasm-ld %t.o %t1.o %p/Inputs/stub.so -o %t.wasm
+# RUN: mkdir -p %t
+# RUN: llvm-as %S/Inputs/foo.ll -o %t/foo.o
+# RUN: rm -f %t/libfoo.a
+# RUN: llvm-ar rcs %t/libfoo.a %t/foo.o
+# RUN: wasm-ld %t.o %t/libfoo.a %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-# The function `bar` is declared in stub.so and depends on `foo`, which happens
-# be in an LTO object.
-# This verifies that stub library dependencies (required exports) can be defined
-# in LTO objects.
+## The function `bar` is declared in stub.so and depends on `foo`, which happens
+## be in an LTO object, in an archive file.
+## This verifies that stub library dependencies (required exports) can be defined
+## in LTO objects.
 .functype bar () -> ()
 
 .globl _start

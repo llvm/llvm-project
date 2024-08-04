@@ -949,6 +949,17 @@ static void processStubLibrariesPreLTO() {
           auto* needed = symtab->find(dep);
           if (needed ) {
             needed->isUsedInRegularObj = true;
+            // Like with handleLibcall we have extract any LTO archive members
+            // that might need to be exported due to stub library symbol being
+            // used.  Without this the LTO object could be extracted during
+            // processStubLibraries, which is too late since LTO has already
+            // beeing performed at that point.
+            if (needed->isLazy() && isa<BitcodeFile>(needed->getFile())) {
+              if (!config->whyExtract.empty())
+                ctx.whyExtractRecords.emplace_back(toString(stub_file),
+                                                   needed->getFile(), *needed);
+              cast<LazySymbol>(needed)->extract();
+            }
           }
         }
       }
