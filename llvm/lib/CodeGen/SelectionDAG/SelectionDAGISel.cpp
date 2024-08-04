@@ -572,7 +572,8 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   SwiftError->setFunction(mf);
-  const Function &Fn = mf.getFunction();
+  Function &Fn = mf.getFunction();
+  Fn.renumberBlocks(); // renumber blocks for dense numbers
 
   bool InstrRef = mf.shouldUseDebugInstrRef();
 
@@ -1643,11 +1644,12 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   }
 
   // Iterate over all basic blocks in the function.
+  FuncInfo->VisitedBBs.assign(Fn.getMaxBlockNumber(), false);
   for (const BasicBlock *LLVMBB : RPOT) {
     if (OptLevel != CodeGenOptLevel::None) {
       bool AllPredsVisited = true;
       for (const BasicBlock *Pred : predecessors(LLVMBB)) {
-        if (!FuncInfo->VisitedBBs.count(Pred)) {
+        if (!FuncInfo->VisitedBBs[Pred->getNumber()]) {
           AllPredsVisited = false;
           break;
         }
@@ -1661,7 +1663,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
           FuncInfo->InvalidatePHILiveOutRegInfo(&PN);
       }
 
-      FuncInfo->VisitedBBs.insert(LLVMBB);
+      FuncInfo->VisitedBBs[LLVMBB->getNumber()] = true;
     }
 
     BasicBlock::const_iterator const Begin =
