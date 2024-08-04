@@ -150,23 +150,7 @@ llvm::ArrayRef<InputSection *>
 getInputSections(const OutputSection &os,
                  SmallVector<InputSection *, 0> &storage);
 
-// All output sections that are handled by the linker specially are
-// globally accessible. Writer initializes them, so don't use them
-// until Writer is initialized.
-struct Out {
-  static uint8_t *bufferStart;
-  static PhdrEntry *tlsPhdr;
-  static OutputSection *elfHeader;
-  static OutputSection *programHeaders;
-  static OutputSection *preinitArray;
-  static OutputSection *initArray;
-  static OutputSection *finiArray;
-};
-
 uint64_t getHeaderSize();
-
-LLVM_LIBRARY_VISIBILITY extern llvm::SmallVector<OutputSection *, 0>
-    outputSections;
 } // namespace lld::elf
 
 #endif

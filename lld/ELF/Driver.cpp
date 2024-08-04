@@ -93,6 +93,14 @@ void elf::errorOrWarn(const Twine &msg) {
 
 void Ctx::reset() {
   driver = LinkerDriver();
+
+  bufferStart = nullptr;
+  tlsPhdr = nullptr;
+  out = OutSections{};
+  outputSections.clear();
+
+  sym = ElfSym{};
+
   memoryBuffers.clear();
   objectFiles.clear();
   sharedFiles.clear();
@@ -137,8 +145,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx->e.cleanupCallback = []() {
     elf::ctx.reset();
     symtab = SymbolTable();
-
-    outputSections.clear();
 
     in.reset();
 
@@ -2934,7 +2940,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!config->relocatable)

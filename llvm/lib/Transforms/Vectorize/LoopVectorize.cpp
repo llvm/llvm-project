@@ -8219,7 +8219,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
     if (CM.isPredicatedInst(I)) {
-      SmallVector<VPValue *> Ops(Operands.begin(), Operands.end());
+      SmallVector<VPValue *> Ops(Operands);
       VPValue *Mask = getBlockInMask(I->getParent());
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));

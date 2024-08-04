@@ -121,9 +121,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // offset between start of function and 'gp' value which by default
     // equal to the start of .got section. In that case we consider these
     // relocations as relative.
-    if (&s == ElfSym::mipsGpDisp)
+    if (&s == ctx.sym.mipsGpDisp)
       return R_MIPS_GOT_GP_PC;
-    if (&s == ElfSym::mipsLocalGp)
+    if (&s == ctx.sym.mipsLocalGp)
       return R_MIPS_GOT_GP;
     [[fallthrough]];
   case R_MIPS_32:
