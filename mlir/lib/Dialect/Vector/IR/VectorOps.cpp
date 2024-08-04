@@ -2371,9 +2371,9 @@ Value BroadcastOp::createOrFoldBroadcastOp(
   return res;
 }
 
-BroadcastableToResult
-mlir::vector::isBroadcastableTo(Type srcType, VectorType dstVectorType,
-                                std::pair<int, int> *mismatchingDims) {
+BroadcastableToResult mlir::vector::isBroadcastableTo(
+    Type srcType, VectorType dstVectorType,
+    std::pair<VectorDim, VectorDim> *mismatchingDims) {
   // Broadcast scalar to vector of the same element type.
   if (srcType.isIntOrIndexOrFloat() && dstVectorType &&
       getElementTypeOrSelf(srcType) == getElementTypeOrSelf(dstVectorType))
@@ -2391,12 +2391,28 @@ mlir::vector::isBroadcastableTo(Type srcType, VectorType dstVectorType,
   // (all leading dimensions are simply duplicated).
   int64_t lead = dstRank - srcRank;
   for (int64_t r = 0; r < srcRank; ++r) {
+    bool mismatch = false;
+
+    // Check fixed-width dims
     int64_t srcDim = srcVectorType.getDimSize(r);
     int64_t dstDim = dstVectorType.getDimSize(lead + r);
-    if (srcDim != 1 && srcDim != dstDim) {
+    if ((srcDim != 1 && srcDim != dstDim))
+      mismatch = true;
+
+    // Check scalable flags
+    bool srcDimScalableFlag = srcVectorType.getScalableDims()[r];
+    bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + r];
+    if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
+        (srcDimScalableFlag && !dstDimScalableFlag))
+      mismatch = true;
+
+    if (mismatch) {
       if (mismatchingDims) {
-        mismatchingDims->first = srcDim;
-        mismatchingDims->second = dstDim;
+        mismatchingDims->first.dim = srcDim;
+        mismatchingDims->first.scalableFlag = srcDimScalableFlag;
+
+        mismatchingDims->second.dim = dstDim;
+        mismatchingDims->second.scalableFlag = dstDimScalableFlag;
       }
       return BroadcastableToResult::DimensionMismatch;
     }
@@ -2406,16 +2422,25 @@ mlir::vector::isBroadcastableTo(Type srcType, VectorType dstVectorType,
 }
 
 LogicalResult BroadcastOp::verify() {
-  std::pair<int, int> mismatchingDims;
+  std::pair<VectorDim, VectorDim> mismatchingDims;
   BroadcastableToResult res = isBroadcastableTo(
       getSourceType(), getResultVectorType(), &mismatchingDims);
   if (res == BroadcastableToResult::Success)
     return success();
   if (res == BroadcastableToResult::SourceRankHigher)
     return emitOpError("source rank higher than destination rank");
-  if (res == BroadcastableToResult::DimensionMismatch)
-    return emitOpError("dimension mismatch (")
-           << mismatchingDims.first << " vs. " << mismatchingDims.second << ")";
+  if (res == BroadcastableToResult::DimensionMismatch) {
+    std::string msg =
+        (Twine("dimension mismatch (") +
+         (mismatchingDims.first.scalableFlag ? "[" : "") +
+         std::to_string(mismatchingDims.first.dim) +
+         (mismatchingDims.first.scalableFlag ? "]" : "") + " vs. " +
+         (mismatchingDims.second.scalableFlag ? "[" : "") +
+         std::to_string(mismatchingDims.second.dim) +
+         (mismatchingDims.second.scalableFlag ? "]" : "") + ")")
+            .str();
+    return emitOpError(msg);
+  }
   if (res == BroadcastableToResult::SourceTypeNotAVector)
     return emitOpError("source type is not a vector");
   llvm_unreachable("unexpected vector.broadcast op error");
