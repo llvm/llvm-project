@@ -4,8 +4,8 @@
 # RUN: llvm-gsymutil --convert %t.dSYM --out-file=%t.default.gSYM
 # RUN: llvm-gsymutil --verify --verbose %t.default.gSYM | FileCheck --check-prefix=CHECK-GSYM-DEFAULT %s
 
-## Verify that we keep merged functions when specyfing --store-merged-function-info
-# RUN: llvm-gsymutil --convert %t.dSYM --out-file=%t.keep.gSYM --store-merged-function-info
+## Verify that we keep merged functions when specyfing --merged-functions
+# RUN: llvm-gsymutil --convert %t.dSYM --out-file=%t.keep.gSYM --merged-functions
 # RUN: llvm-gsymutil --verify --verbose %t.keep.gSYM | FileCheck --check-prefix=CHECK-GSYM-KEEP %s
 
 ## Note: For identical functions, the dSYM / gSYM cannot be counted on to be deterministic.
@@ -30,39 +30,39 @@
 # CHECK-GSYM-KEEP-NEXT: INDEX  DIRECTORY  BASENAME   PATH
 # CHECK-GSYM-KEEP-NEXT: ====== ========== ========== ==============================
 # CHECK-GSYM-KEEP-NEXT: [   0] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}}
-# CHECK-GSYM-KEEP-NEXT: [   1] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp
-# CHECK-GSYM-KEEP-NEXT: [   2] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp
-# CHECK-GSYM-KEEP-NEXT: [   3] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp
+# CHECK-GSYM-KEEP-NEXT: [   1] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp
+# CHECK-GSYM-KEEP-NEXT: [   2] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp
+# CHECK-GSYM-KEEP-NEXT: [   3] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp
 
 # CHECK-GSYM-KEEP:      FunctionInfo @ 0x{{[0-9a-fA-F]+}}: [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_0{{[1-3]}}"
 # CHECK-GSYM-KEEP-NEXT: LineTable:
-# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:5
-# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:7
-# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:9
-# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:8
-# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:11
-# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:10
-# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:6
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:7
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:9
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:8
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:11
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:10
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:6
 # CHECK-GSYM-KEEP-NEXT: ++ Merged FunctionInfos[0]:
 # CHECK-GSYM-KEEP-NEXT:     [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_0{{[1-3]}}"
 # CHECK-GSYM-KEEP-NEXT:     LineTable:
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:5
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:7
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:9
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:8
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:11
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:10
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:6
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:7
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:9
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:8
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:11
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:10
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:6
 # CHECK-GSYM-KEEP-NEXT: ++ Merged FunctionInfos[1]:
 # CHECK-GSYM-KEEP-NEXT:     [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_0{{[1-3]}}"
 # CHECK-GSYM-KEEP-NEXT:     LineTable:
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:5
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:7
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:9
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:8
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:11
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:10
-# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:6
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:7
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:9
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:8
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:11
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:10
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:6
 
 
 

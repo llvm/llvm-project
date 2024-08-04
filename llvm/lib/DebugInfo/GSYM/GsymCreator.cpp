@@ -211,6 +211,11 @@ void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
       // Both have the same range - add the 2nd func as a child of the 1st func
       if (!TopFunc.MergedFunctions)
         TopFunc.MergedFunctions = MergedFunctionsInfo();
+      // Avoid adding duplicate functions to MergedFunctions. Since functions
+      // are already ordered within the Funcs array, we can just check equality
+      // against the last function in the merged array.
+      else if (TopFunc.MergedFunctions->MergedFunctions.back() == MatchFunc)
+        continue;
       TopFunc.MergedFunctions->MergedFunctions.emplace_back(
           std::move(MatchFunc));
     } else

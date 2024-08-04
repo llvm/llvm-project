@@ -16,8 +16,8 @@ def verbose : FF<"verbose", "Enable verbose logging and encoding details">;
 defm convert :
   Eq<"convert",
      "Convert the specified file to the GSYM format.\nSupported files include ELF and mach-o files that will have their debug info (DWARF) and symbol table converted">;
-def store_merged_function_info :
-  FF<"store-merged-function-info", "Store all functions with overlapping address ranges in the GSYM, instead of keeping only one per range (default).">;
+def merged_functions :
+  FF<"merged-functions", "Encode merged function information for functions in debug info that have matching address ranges.\nWithout this option one function per unique address range will be emitted.">;
 defm arch :
   Eq<"arch",
      "Process debug information for the specified CPU architecture only.\nArchitectures may be specified by name or by number.\nThis option can be specified multiple times, once for each desired architecture">;

@@ -95,7 +95,7 @@ static uint64_t SegmentSize;
 static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
-static bool StoreMergedFunctionInfo;
+static bool StoreMergedFunctionInfo = false;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -176,7 +176,7 @@ static void parseArgs(int argc, char **argv) {
   }
 
   LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
-  StoreMergedFunctionInfo = Args.hasArg(OPT_store_merged_function_info);
+  StoreMergedFunctionInfo = Args.hasArg(OPT_merged_functions);
 }
 
 /// @}
