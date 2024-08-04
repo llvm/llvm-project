@@ -148,8 +148,7 @@ static GpuIdBuilderFnType common3DIdBuilderFn(int64_t multiplicity = 1) {
                        rewriter, loc, d0.floorDiv(multiplicity), {scaledIds[0]})
                        .get<Value>();
     // In the 3-D mapping case, unscale the first dimension by the multiplicity.
-    SmallVector<int64_t> forallMappingSizeInOriginalBasis(
-        forallMappingSizes.begin(), forallMappingSizes.end());
+    SmallVector<int64_t> forallMappingSizeInOriginalBasis(forallMappingSizes);
     forallMappingSizeInOriginalBasis[0] *= multiplicity;
     return IdBuilderResult{
         /*mappingIdOps=*/scaledIds,
