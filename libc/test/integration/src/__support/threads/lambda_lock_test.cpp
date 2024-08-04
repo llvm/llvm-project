@@ -20,16 +20,15 @@ void simple_addition() {
         &threads[i], nullptr,
         [](void *arg) -> void * {
           auto *lock = static_cast<LIBC_NAMESPACE::LambdaLock<int> *>(arg);
-          for (int j = 0; j < 1000; ++j) {
+          for (int j = 0; j < 1000; ++j)
             lock->enqueue([j](int &sum) { sum += j; });
-          }
           return nullptr;
         },
         &sum);
   }
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i)
     LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
-  }
+
   ASSERT_EQ(sum.get_unsafe(), 4995000);
 }
 
@@ -42,21 +41,25 @@ void string_concat() {
         &threads[i], nullptr,
         [](void *arg) -> void * {
           auto *lock = static_cast<decltype(shared) *>(arg);
-          for (int j = 0; j < 100; ++j) {
-            for (int c = 0; c < 10; ++c) {
+          for (int j = 0; j < 100; ++j)
+            for (int c = 0; c < 10; ++c)
               lock->enqueue(
                   [c](LIBC_NAMESPACE::cpp::StringStream &data) { data << c; });
-            }
-          }
           return nullptr;
         },
         &shared);
   }
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i)
     LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
-  }
-  int x = shared.get_unsafe().str().size();
-  ASSERT_EQ(x, 10000);
+
+  LIBC_NAMESPACE::cpp::string_view x = shared.get_unsafe().str();
+  ASSERT_EQ(x.size(), 10000);
+  int count[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  for (char c : x)
+    count[c - '0']++;
+
+  for (int i = 0; i < 10; ++i)
+    ASSERT_EQ(count[i], 1000);
 }
 
 TEST_MAIN() {
