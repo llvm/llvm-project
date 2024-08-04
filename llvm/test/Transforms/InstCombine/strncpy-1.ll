@@ -22,9 +22,9 @@ declare i32 @puts(ptr)
 ; CHECK: @null_hello = constant [7 x i8] c"\00hello\00"
 ; CHECK: @a = common global [32 x i8] zeroinitializer, align 1
 ; CHECK: @b = common global [32 x i8] zeroinitializer, align 1
-; CHECK: @str = private unnamed_addr constant [33 x i8] c"hello\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 1
-; CHECK: @str.1 = private unnamed_addr constant [33 x i8] c"hello\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 1
-; CHECK: @str.2 = private unnamed_addr constant [9 x i8] c"hello\00\00\00\00", align 1
+; CHECK: @str = private unnamed_addr constant [32 x i8] c"hello\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 1
+; CHECK: @str.1 = private unnamed_addr constant [32 x i8] c"hello\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 1
+; CHECK: @str.2 = private unnamed_addr constant [8 x i8] c"hello\00\00\00", align 1
 ;.
 define i32 @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
