@@ -352,7 +352,7 @@ struct IndexedAllocationInfo {
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
                         const MemInfoBlock &MB,
                         const MemProfSchema &Schema = getFullSchema())
-      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB, Schema) {}
+      : CallStack(CS), CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(const MemProfSchema &Schema,
