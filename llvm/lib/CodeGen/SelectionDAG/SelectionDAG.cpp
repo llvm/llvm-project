@@ -10032,7 +10032,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   // Copy from an SDUse array into an SDValue array for use with
   // the regular getNode logic.
-  SmallVector<SDValue, 8> NewOps(Ops.begin(), Ops.end());
+  SmallVector<SDValue, 8> NewOps(Ops);
   return getNode(Opcode, DL, VT, NewOps);
 }
 
