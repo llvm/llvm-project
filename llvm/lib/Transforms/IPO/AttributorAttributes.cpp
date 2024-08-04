@@ -1325,20 +1325,20 @@ struct AAPointerInfoImpl
 
         const auto *FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
             QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+        if (FnReachabilityAA) {
+          // Without going backwards in the call tree, can we reach the access
+          // from the least dominating write. Do not allow to pass the
+          // instruction itself either.
+          bool Inserted = ExclusionSet.insert(&I).second;
 
-        // Without going backwards in the call tree, can we reach the access
-        // from the least dominating write. Do not allow to pass the instruction
-        // itself either.
-        bool Inserted = ExclusionSet.insert(&I).second;
+          if (!FnReachabilityAA->instructionCanReach(
+                  A, *LeastDominatingWriteInst,
+                  *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
+            WriteChecked = true;
 
-        if (!FnReachabilityAA ||
-            !FnReachabilityAA->instructionCanReach(
-                A, *LeastDominatingWriteInst,
-                *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
-          WriteChecked = true;
-
-        if (Inserted)
-          ExclusionSet.erase(&I);
+          if (Inserted)
+            ExclusionSet.erase(&I);
+        }
       }
 
       if (ReadChecked && WriteChecked)
