@@ -1449,8 +1449,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
     }
 
-    // Turn (and (sra x, c2), c1) -> (srli (srai x, c2-c3)) if c1 is a mask with
-    // c3 leading zeros and c2 is larger than c3.
+    // Turn (and (sra x, c2), c1) -> (srli (srai x, c2-c3), c3) if c1 is a mask
+    // with c3 leading zeros and c2 is larger than c3.
     if (N0.getOpcode() == ISD::SRA && isa<ConstantSDNode>(N0.getOperand(1)) &&
         N0.hasOneUse()) {
       unsigned C2 = N0.getConstantOperandVal(1);
