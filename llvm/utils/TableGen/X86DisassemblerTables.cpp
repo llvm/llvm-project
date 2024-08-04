@@ -710,7 +710,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
                                            unsigned &i1, unsigned &i2,
                                            unsigned &ModRMTableNum,
                                            ModRMDecision &decision) const {
-  static uint32_t sEntryNumber = 1;
+  static uint64_t sEntryNumber = 1;
   ModRMDecisionType dt = getDecisionType(decision);
 
   if (dt == MODRM_ONEENTRY && decision.instructionIDs[0] == 0) {
@@ -785,9 +785,9 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
     break;
   }
 
-  // We assume that the index can fit into uint16_t.
-  assert(sEntryNumber < 65536U &&
-         "Index into ModRMDecision is too large for uint16_t!");
+  // We assume that the index can fit into uint32_t.
+  assert(sEntryNumber < -1U &&
+         "Index into ModRMDecision is too large for uint32_t!");
   (void)sEntryNumber;
 }
 
