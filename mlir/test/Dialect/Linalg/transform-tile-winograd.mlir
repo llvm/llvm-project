@@ -15,13 +15,13 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func.func @tile_winograd_filter(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<2x3x3x5xf32>, %[[ARG1:.*]]: tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32> {
-// CHECK:  %[[C0:.*]] = arith.constant 0 : index
-// CHECK:  %[[C2:.*]] = arith.constant 2 : index
-// CHECK:  %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:  %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:  %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:  %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C1]]
-// CHECK:    %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK:    %[[C5:.*]] = arith.constant 5 : index
-// CHECK:    %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:    %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_0]] to %[[C5]] step %[[C1_1]]
 // CHECK:      %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[ARG0]][%[[ARG2]], 0, 0, %[[ARG4]]] [1, 3, 3, 1] [1, 1, 1, 1] : tensor<2x3x3x5xf32> to tensor<1x3x3x1xf32>
 // CHECK:      %[[EXTRACTED_SLICE_2:.*]] = tensor.extract_slice %[[ARG1]][0, 0, %[[ARG4]], %[[ARG2]]] [6, 6, 1, 1] [1, 1, 1, 1] : tensor<6x6x5x2xf32> to tensor<6x6x1x1xf32>
@@ -42,16 +42,16 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (2, -d0 + 5)>
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (-d0 + 5, 2)>
 // CHECK-LABEL: func.func @tile_winograd_filter(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<2x3x3x5xf32>, %[[ARG1:.*]]: tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32> {
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
-// CHECK:   %[[C2:.*]] = arith.constant 2 : index
-// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C2_1:.*]] = arith.constant 2 : index
 // CHECK:   %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C1]]
-// CHECK:     %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK:     %[[C5:.*]] = arith.constant 5 : index
-// CHECK:     %[[C2_1:.*]] = arith.constant 2 : index
 // CHECK:     %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_0]] to %[[C5]] step %[[C2_1]]
 // CHECK:       %[[C5_2:.*]] = arith.constant 5 : index
 // CHECK:       %[[S3:.*]] = affine.min #[[$MAP0]](%[[ARG4]])
@@ -76,13 +76,13 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func.func @tile_winograd_filter(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<2x3x1x5xf32>, %[[ARG1:.*]]: tensor<6x1x5x2xf32>) -> tensor<6x1x5x2xf32> {
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
-// CHECK:   %[[C2:.*]] = arith.constant 2 : index
-// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:   %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C1]]
-// CHECK:     %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK:     %[[C5:.*]] = arith.constant 5 : index
-// CHECK:     %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:     %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_0]] to %[[C5]] step %[[C1_1]]
 // CHECK:       %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[ARG0]][%[[ARG2]], 0, 0, %[[ARG4]]] [1, 3, 1, 1] [1, 1, 1, 1] : tensor<2x3x1x5xf32> to tensor<1x3x1x1xf32>
 // CHECK:       %[[EXTRACTED_SLICE_2:.*]] = tensor.extract_slice %[[ARG1]][0, 0, %[[ARG4]], %[[ARG2]]] [6, 1, 1, 1] [1, 1, 1, 1] : tensor<6x1x5x2xf32> to tensor<6x1x1x1xf32>
@@ -107,13 +107,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0 * 4 + 2)>
 // CHECK-LABEL: func.func @tile_winograd_input(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<2x10x10x5xf32>, %[[ARG1:.*]]: tensor<6x6x2x2x2x5xf32>) -> tensor<6x6x2x2x2x5xf32> {
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[C2:.*]] = arith.constant 2 : index
-// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_1:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK: %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C1]]
-// CHECK: %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK: %[[C2_1:.*]] = arith.constant 2 : index
-// CHECK: %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK: %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_0]] to %[[C2_1]] step %[[C1_2]]
 // CHECK:   %[[S3:.*]] = affine.apply #[[$MAP0]](%[[ARG2]])
 // CHECK:   %[[S4:.*]] = affine.apply #[[$MAP0]](%[[ARG4]])
@@ -144,21 +144,21 @@ module attributes {transform.with_named_sequence} {
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0 * 4 + 2)>
 // CHECK-LABEL: func.func @tile_winograd_input(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<2x10x10x5xf32>, %[[ARG1:.*]]: tensor<6x6x2x2x2x5xf32>) -> tensor<6x6x2x2x2x5xf32> {
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[C2:.*]] = arith.constant 2 : index
-// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_3:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_6:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_1:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_4:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C1_2:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C1_5:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C1_7:.*]] = arith.constant 1 : index
 // CHECK: %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C1]]
-// CHECK:   %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK:   %[[C2_1:.*]] = arith.constant 2 : index
-// CHECK:   %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK:   %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_0]] to %[[C2_1]] step %[[C1_2]]
-// CHECK:     %[[C0_3:.*]] = arith.constant 0 : index
-// CHECK:     %[[C2_4:.*]] = arith.constant 2 : index
-// CHECK:     %[[C1_5:.*]] = arith.constant 1 : index
 // CHECK:     %[[S3:.*]] = scf.for %[[ARG6:.*]] = %[[C0_3]] to %[[C2_4]] step %[[C1_5]]
-// CHECK:       %[[C0_6:.*]] = arith.constant 0 : index
-// CHECK:       %[[C5:.*]] = arith.constant 5 : index
-// CHECK:       %[[C1_7:.*]] = arith.constant 1 : index
 // CHECK:       %[[S4:.*]] = scf.for %[[ARG8:.*]] = %[[C0_6]] to %[[C5]] step %[[C1_7]]
 // CHECK:         %[[S5:.*]] = affine.apply #[[$MAP0]](%[[ARG2]])
 // CHECK:         %[[S6:.*]] = affine.apply #[[$MAP0]](%[[ARG4]])
@@ -185,26 +185,26 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (2, -d0 + 5)>
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (-d0 + 5, 2)>
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0 * 4)>
 // CHECK: #[[$MAP2:.+]] = affine_map<(d0) -> (d0 * 4 + 2)>
 // CHECK-LABEL: func.func @tile_winograd_input(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<2x10x10x5xf32>, %[[ARG1:.*]]: tensor<6x6x2x2x2x5xf32>) -> tensor<6x6x2x2x2x5xf32> {
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[C2:.*]] = arith.constant 2 : index
-// CHECK: %[[C2_0:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_4:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_7:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_2:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_5:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG: %[[C2_0:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_3:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_6:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C2_8:.*]] = arith.constant 2 : index
 // CHECK: %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C2_0]]
-// CHECK:   %[[C0_1:.*]] = arith.constant 0 : index
-// CHECK:   %[[C2_2:.*]] = arith.constant 2 : index
-// CHECK:   %[[C2_3:.*]] = arith.constant 2 : index
 // CHECK:   %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_1]] to %[[C2_2]] step %[[C2_3]]
-// CHECK:     %[[C0_4:.*]] = arith.constant 0 : index
-// CHECK:     %[[C2_5:.*]] = arith.constant 2 : index
-// CHECK:     %[[C2_6:.*]] = arith.constant 2 : index
 // CHECK:     %[[S3:.*]] = scf.for %[[ARG6:.*]] = %[[C0_4]] to %[[C2_5]] step %[[C2_6]]
-// CHECK:       %[[C0_7:.*]] = arith.constant 0 : index
-// CHECK:       %[[C5:.*]] = arith.constant 5 : index
-// CHECK:       %[[C2_8:.*]] = arith.constant 2 : index
 // CHECK:       %[[S4:.*]] = scf.for %[[ARG8:.*]] = %[[C0_7]] to %[[C5]] step %[[C2_8]]
 // CHECK:         %[[S5:.*]] = affine.min #[[$MAP0]](%[[ARG8]])
 // CHECK:         %[[S6:.*]] = affine.apply #[[$MAP1]](%[[ARG2]])
@@ -236,21 +236,21 @@ module attributes {transform.with_named_sequence} {
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0 * 4 + 2)>
 // CHECK-LABEL: func.func @tile_winograd_input(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<2x1x10x5xf32>, %[[ARG1:.*]]: tensor<1x6x1x2x2x5xf32>) -> tensor<1x6x1x2x2x5xf32> {
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
-// CHECK:   %[[C1:.*]] = arith.constant 1 : index
-// CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_6:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C2_4:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:   %[[C1_0:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_2:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_5:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_7:.*]] = arith.constant 1 : index
 // CHECK:   %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C1]] step %[[C1_0]]
-// CHECK:     %[[C0_1:.*]] = arith.constant 0 : index
-// CHECK:     %[[C2:.*]] = arith.constant 2 : index
-// CHECK:     %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK:     %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_1]] to %[[C2]] step %[[C1_2]]
-// CHECK:       %[[C0_3:.*]] = arith.constant 0 : index
-// CHECK:       %[[C2_4:.*]] = arith.constant 2 : index
-// CHECK:       %[[C1_5:.*]] = arith.constant 1 : index
 // CHECK:       %[[S3:.*]] = scf.for %[[ARG6:.*]] = %[[C0_3]] to %[[C2_4]] step %[[C1_5]]
-// CHECK:         %[[C0_6:.*]] = arith.constant 0 : index
-// CHECK:         %[[C5:.*]] = arith.constant 5 : index
-// CHECK:         %[[C1_7:.*]] = arith.constant 1 : index
 // CHECK:         %[[S4:.*]] = scf.for %[[ARG8:.*]] = %[[C0_6]] to %[[C5]] step %[[C1_7]]
 // CHECK:           %[[S5:.*]] = affine.apply #[[$MAP0]](%[[ARG2]])
 // CHECK:           %[[S6:.*]] = affine.apply #[[$MAP0]](%[[ARG4]])
@@ -280,13 +280,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (d0 * 4)>
 // CHECK-LABEL: func.func @tile_winograd_output(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<6x6x2x2x2x2xf32>, %[[ARG1:.*]]: tensor<2x8x8x2xf32>) -> tensor<2x8x8x2xf32> {
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
-// CHECK:   %[[C2:.*]] = arith.constant 2 : index
-// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C2_1:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK:   %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C1]]
-// CHECK:     %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK:     %[[C2_1:.*]] = arith.constant 2 : index
-// CHECK:     %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK:     %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_0]] to %[[C2_1]] step %[[C1_2]]
 // CHECK:       %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[ARG0]][0, 0, %[[ARG2]], %[[ARG4]], 0, 0] [6, 6, 1, 1, 2, 2] [1, 1, 1, 1, 1, 1] : tensor<6x6x2x2x2x2xf32> to tensor<6x6x1x1x2x2xf32>
 // CHECK:       %[[S3:.*]] = affine.apply #[[$MAP0]](%[[ARG2]])
@@ -312,27 +312,26 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (2, -d0 + 3)>
-// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (2, -d0 + 5)>
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (-d0 + 3, 2)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (-d0 + 5, 2)>
 // CHECK: #[[$MAP2:.+]] = affine_map<(d0) -> (d0 * 4)>
 // CHECK-LABEL:  func.func @tile_winograd_output(
 // CHECK-SAME:   %[[ARG0:.*]]: tensor<6x6x2x2x3x5xf32>, %[[ARG1:.*]]: tensor<3x8x8x5xf32>) -> tensor<3x8x8x5xf32> {
-// CHECK:    %[[S0:.*]] = tensor.empty() : tensor<3x8x8x5xf32>
-// CHECK:    %[[C0:.*]] = arith.constant 0 : index
-// CHECK:    %[[C2:.*]] = arith.constant 2 : index
-// CHECK:    %[[C2_0:.*]] = arith.constant 2 : index
+// CHECK-DAG:    %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:    %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK-DAG:    %[[C0_4:.*]] = arith.constant 0 : index
+// CHECK-DAG:    %[[C0_6:.*]] = arith.constant 0 : index
+// CHECK-DAG:    %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:    %[[C2_2:.*]] = arith.constant 2 : index
+// CHECK-DAG:    %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:    %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:    %[[C2_0:.*]] = arith.constant 2 : index
+// CHECK-DAG:    %[[C2_3:.*]] = arith.constant 2 : index
+// CHECK-DAG:    %[[C2_5:.*]] = arith.constant 2 : index
+// CHECK-DAG:    %[[C2_7:.*]] = arith.constant 2 : index
 // CHECK:    %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C2_0]]
-// CHECK:      %[[C0_1:.*]] = arith.constant 0 : index
-// CHECK:      %[[C2_2:.*]] = arith.constant 2 : index
-// CHECK:      %[[C2_3:.*]] = arith.constant 2 : index
 // CHECK:      %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_1]] to %[[C2_2]] step %[[C2_3]]
-// CHECK:        %[[C0_4:.*]] = arith.constant 0 : index
-// CHECK:        %[[C3:.*]] = arith.constant 3 : index
-// CHECK:        %[[C2_5:.*]] = arith.constant 2 : index
 // CHECK:        %[[S3:.*]] = scf.for %[[ARG6:.*]] = %[[C0_4]] to %[[C3]] step %[[C2_5]]
-// CHECK:          %[[C0_6:.*]] = arith.constant 0 : index
-// CHECK:          %[[C5:.*]] = arith.constant 5 : index
-// CHECK:          %[[C2_7:.*]] = arith.constant 2 : index
 // CHECK:          %[[S4:.*]] = scf.for %[[ARG8:.*]] = %[[C0_6]] to %[[C5]] step %[[C2_7]]
 // CHECK:            %[[C3_8:.*]] = arith.constant 3 : index
 // CHECK:            %[[S5:.*]] = affine.min #[[$MAP0]](%[[ARG6]])
@@ -365,21 +364,21 @@ module attributes {transform.with_named_sequence} {
 // CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (d0 * 4)>
 // CHECK-LABEL: func.func @tile_winograd_output(
 // CHECK-SAME:  %[[ARG0:.*]]: tensor<6x1x2x1x3x5xf32>, %[[ARG1:.*]]: tensor<3x8x1x5xf32>) -> tensor<3x8x1x5xf32> {
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
-// CHECK:   %[[C2:.*]] = arith.constant 2 : index
-// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C0_5:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C1_1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_2:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_4:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C1_6:.*]] = arith.constant 1 : index
 // CHECK:   %[[S1:.*]] = scf.for %[[ARG2:.*]] = %[[C0]] to %[[C2]] step %[[C1]]
-// CHECK:     %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK:     %[[C1_1:.*]] = arith.constant 1 : index
-// CHECK:     %[[C1_2:.*]] = arith.constant 1 : index
 // CHECK:     %[[S2:.*]] = scf.for %[[ARG4:.*]] = %[[C0_0]] to %[[C1_1]] step %[[C1_2]]
-// CHECK:       %[[C0_3:.*]] = arith.constant 0 : index
-// CHECK:       %[[C3:.*]] = arith.constant 3 : index
-// CHECK:       %[[C1_4:.*]] = arith.constant 1 : index
 // CHECK:       %[[S3:.*]] = scf.for %[[ARG6:.*]] = %[[C0_3]] to %[[C3]] step %[[C1_4]]
-// CHECK:         %[[C0_5:.*]] = arith.constant 0 : index
-// CHECK:         %[[C5:.*]] = arith.constant 5 : index
-// CHECK:         %[[C1_6:.*]] = arith.constant 1 : index
 // CHECK:         %[[S4:.*]] = scf.for %[[ARG8:.*]] = %[[C0_5]] to %[[C5]] step %[[C1_6]]
 // CHECK:           %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[ARG0]][0, 0, %[[ARG2]], %[[ARG4]], %[[ARG6]], %[[ARG8]]] [6, 1, 1, 1, 1, 1] [1, 1, 1, 1, 1, 1] : tensor<6x1x2x1x3x5xf32> to tensor<6x1x1x1x1x1xf32>
 // CHECK:           %[[S5:.*]] = affine.apply #[[$MAP0]](%[[ARG2]])
