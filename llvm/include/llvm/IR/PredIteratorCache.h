@@ -25,52 +25,42 @@ namespace llvm {
 /// predecessor iterator queries.  This is useful for code that repeatedly
 /// wants the predecessor list for the same blocks.
 class PredIteratorCache {
-  /// BlockToPredsMap - Pointer to null-terminated list.
-  mutable DenseMap<BasicBlock *, BasicBlock **> BlockToPredsMap;
-  mutable DenseMap<BasicBlock *, unsigned> BlockToPredCountMap;
+  /// Storage, indexed by block number.
+  SmallVector<ArrayRef<BasicBlock *>> Storage;
+  /// Block number epoch to guard against renumberings.
+  unsigned BlockNumberEpoch;
 
   /// Memory - This is the space that holds cached preds.
   BumpPtrAllocator Memory;
 
-private:
-  /// GetPreds - Get a cached list for the null-terminated predecessor list of
-  /// the specified block.  This can be used in a loop like this:
-  ///   for (BasicBlock **PI = PredCache->GetPreds(BB); *PI; ++PI)
-  ///      use(*PI);
-  /// instead of:
-  /// for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI)
-  BasicBlock **GetPreds(BasicBlock *BB) {
-    BasicBlock **&Entry = BlockToPredsMap[BB];
-    if (Entry)
-      return Entry;
+public:
+  size_t size(BasicBlock *BB) { return get(BB).size(); }
+  ArrayRef<BasicBlock *> get(BasicBlock *BB) {
+#ifndef NDEBUG
+    // In debug builds, verify that no renumbering has occured.
+    if (Storage.empty())
+      BlockNumberEpoch = BB->getParent()->getBlockNumberEpoch();
+    else
+      assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch() &&
+             "Blocks renumbered during lifetime of PredIteratorCache");
+#endif
+
+    if (LLVM_LIKELY(BB->getNumber() < Storage.size()))
+      if (auto Res = Storage[BB->getNumber()]; Res.data())
+        return Res;
+
+    if (BB->getNumber() >= Storage.size())
+      Storage.resize(BB->getParent()->getMaxBlockNumber());
 
     SmallVector<BasicBlock *, 32> PredCache(predecessors(BB));
-    PredCache.push_back(nullptr); // null terminator.
-
-    BlockToPredCountMap[BB] = PredCache.size() - 1;
-
-    Entry = Memory.Allocate<BasicBlock *>(PredCache.size());
-    std::copy(PredCache.begin(), PredCache.end(), Entry);
-    return Entry;
-  }
-
-  unsigned GetNumPreds(BasicBlock *BB) const {
-    auto Result = BlockToPredCountMap.find(BB);
-    if (Result != BlockToPredCountMap.end())
-      return Result->second;
-    return BlockToPredCountMap[BB] = pred_size(BB);
-  }
-
-public:
-  size_t size(BasicBlock *BB) const { return GetNumPreds(BB); }
-  ArrayRef<BasicBlock *> get(BasicBlock *BB) {
-    return ArrayRef(GetPreds(BB), GetNumPreds(BB));
+    BasicBlock **Data = Memory.Allocate<BasicBlock *>(PredCache.size());
+    std::copy(PredCache.begin(), PredCache.end(), Data);
+    return Storage[BB->getNumber()] = ArrayRef(Data, PredCache.size());
   }
 
   /// clear - Remove all information.
   void clear() {
-    BlockToPredsMap.clear();
-    BlockToPredCountMap.clear();
+    Storage.clear();
     Memory.Reset();
   }
 };
