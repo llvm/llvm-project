@@ -179,6 +179,9 @@ Bug Fixes to C++ Support
   with a string literal. (#GH82167)
 - Fix a crash when matching template template parameters with templates which have
   parameters of different class type. (#GH101394)
+- Clang now correctly recognizes the correct context for parameter
+  substitutions in concepts, so it doesn't incorrectly complain of missing
+  module imports in those situations. (#GH60336)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
