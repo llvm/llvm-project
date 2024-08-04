@@ -154,7 +154,7 @@ static void constifyIndexValues(
 /// expected for `getAttributes` in `constifyIndexValues`.
 static SmallVector<int64_t> getConstantSizes(MemRefType memRefTy) {
   ArrayRef<int64_t> sizes = memRefTy.getShape();
-  return SmallVector<int64_t>(sizes.begin(), sizes.end());
+  return SmallVector<int64_t>(sizes);
 }
 
 /// Wrapper around `getStridesAndOffset` that returns only the offset and
