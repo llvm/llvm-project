@@ -43,6 +43,10 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- The type trait builtin ``__is_nullptr`` has been removed, since it has very
+  few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
+  which GCC supports as well.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -173,6 +177,8 @@ Bug Fixes to C++ Support
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
 - Fix a crash when checking the initialzier of an object that was initialized
   with a string literal. (#GH82167)
+- Fix a crash when matching template template parameters with templates which have
+  parameters of different class type. (#GH101394)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1287,7 +1287,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     MaxIter = SE->getZeroExtendExpr(MaxIter, ARTy);
   else if (SE->getTypeSizeInBits(ARTy) < SE->getTypeSizeInBits(MaxIterTy)) {
     const SCEV *MinusOne = SE->getMinusOne(ARTy);
-    auto *MaxAllowedIter = SE->getZeroExtendExpr(MinusOne, MaxIterTy);
+    const SCEV *MaxAllowedIter = SE->getZeroExtendExpr(MinusOne, MaxIterTy);
     if (SE->isKnownPredicateAt(ICmpInst::ICMP_ULE, MaxIter, MaxAllowedIter, BI))
       MaxIter = SE->getTruncateExpr(MaxIter, ARTy);
   }
@@ -1299,7 +1299,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     // So we manually construct umin(a - 1, b - 1).
     SmallVector<const SCEV *, 4> Elements;
     if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxIter)) {
-      for (auto *Op : UMin->operands())
+      for (const SCEV *Op : UMin->operands())
         Elements.push_back(SE->getMinusSCEV(Op, SE->getOne(Op->getType())));
       MaxIter = SE->getUMinFromMismatchedTypes(Elements);
     } else
@@ -1376,15 +1376,15 @@ static bool optimizeLoopExitWithUnknownExitCount(
     for (auto *ICmp : LeafConditions) {
       auto EL = SE->computeExitLimitFromCond(L, ICmp, Inverted,
                                              /*ControlsExit*/ false);
-      auto *ExitMax = EL.SymbolicMaxNotTaken;
+      const SCEV *ExitMax = EL.SymbolicMaxNotTaken;
       if (isa<SCEVCouldNotCompute>(ExitMax))
         continue;
       // They could be of different types (specifically this happens after
       // IV widening).
       auto *WiderType =
           SE->getWiderType(ExitMax->getType(), MaxIter->getType());
-      auto *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
-      auto *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
+      const SCEV *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
+      const SCEV *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
       if (WideExitMax == WideMaxIter)
         ICmpsFailingOnLastIter.insert(ICmp);
     }
