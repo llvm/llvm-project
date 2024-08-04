@@ -129,7 +129,8 @@ public:
         cur_pos = cur_pos + result.parsed_len;
       }
       if (section.min_width < 0) {
-        section.min_width = -section.min_width;
+        section.min_width =
+            (section.min_width == INT_MIN) ? INT_MAX : -section.min_width;
         section.flags = static_cast<FormatFlags>(section.flags |
                                                  FormatFlags::LEFT_JUSTIFIED);
       }

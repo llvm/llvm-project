@@ -764,7 +764,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse41_mpsadbw         : ClangBuiltin<"__builtin_ia32_mpsadbw128">,
       DefaultAttrsIntrinsic<[llvm_v8i16_ty],
-                            [llvm_v16i8_ty, llvm_v16i8_ty,llvm_i8_ty],
+                            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i8_ty],
                             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 }
 
@@ -4975,6 +4975,34 @@ let TargetPrefix = "x86" in {
                              llvm_i32_ty, llvm_i8_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<2>>,
                              ImmArg<ArgIndex<4>>]>;
+}
+
+//===----------------------------------------------------------------------===//
+// AVX10.2 intrinsics
+let TargetPrefix = "x86" in {
+  // VMPSADBW
+  def int_x86_avx10_vmpsadbw_512 :
+      ClangBuiltin<"__builtin_ia32_mpsadbw512">,
+      DefaultAttrsIntrinsic<[llvm_v32i16_ty],
+                            [llvm_v64i8_ty, llvm_v64i8_ty, llvm_i8_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+  // YMM Rounding
+  def int_x86_avx10_vaddpd256 :
+      ClangBuiltin<"__builtin_ia32_vaddpd256_round">,
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty],
+                            [llvm_v4f64_ty, llvm_v4f64_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_x86_avx10_vaddph256 :
+      ClangBuiltin<"__builtin_ia32_vaddph256_round">,
+      DefaultAttrsIntrinsic<[llvm_v16f16_ty],
+                            [llvm_v16f16_ty, llvm_v16f16_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_x86_avx10_vaddps256 :
+      ClangBuiltin<"__builtin_ia32_vaddps256_round">,
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty],
+                            [llvm_v8f32_ty, llvm_v8f32_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1748,7 +1748,7 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
 
   unsigned InpLen = ty(Op.getOperand(0)).getVectorNumElements();
   MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
-  SDValue S = DAG.getConstant(InpLen*BitBytes, dl, MVT::i32);
+  SDValue S = DAG.getConstant(HwLen - InpLen*BitBytes, dl, MVT::i32);
   SDValue Res = getZero(dl, ByteTy, DAG);
   for (unsigned i = 0, e = Prefixes.size(); i != e; ++i) {
     Res = DAG.getNode(HexagonISD::VROR, dl, ByteTy, Res, S);

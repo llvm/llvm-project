@@ -607,6 +607,16 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<ConstCharPtr>]
         >,
         FunctionSpec<
+          "getpid",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+          "getppid",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
           "link",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
@@ -1319,6 +1329,16 @@ def POSIX : StandardSpec<"POSIX"> {
         "pthread_rwlock_timedwrlock",
         RetValSpec<IntType>,
         [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_clockrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ClockIdT>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_clockwrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ClockIdT>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
       >,
       FunctionSpec<
         "pthread_rwlock_rdlock",

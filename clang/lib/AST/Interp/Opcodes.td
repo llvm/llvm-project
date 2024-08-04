@@ -232,6 +232,9 @@ def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
 }
+def InitScope : Opcode {
+  let Args = [ArgUint32];
+}
 
 //===----------------------------------------------------------------------===//
 // Constants
@@ -723,6 +726,11 @@ def Pop : Opcode {
 // [Value] -> [Value, Value]
 def Dup : Opcode {
   let Types = [AllTypeClass];
+  let HasGroup = 1;
+}
+
+def Flip : Opcode {
+  let Types = [AllTypeClass, AllTypeClass];
   let HasGroup = 1;
 }
 

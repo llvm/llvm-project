@@ -13,7 +13,7 @@ end program
 
 ! CHECK-LABEL:   func.func @_QQmain()
 ! [...]
-! CHECK:           omp.parallel {
+! CHECK:           omp.parallel {{.*}} {
 ! [...]
 ! CHECK:             %[[VAL_50:.*]] = arith.constant 2 : i32
 ! CHECK:             %[[VAL_51:.*]] = math.ipowi %{{.*}}, %[[VAL_50]] : i32

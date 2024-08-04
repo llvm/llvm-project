@@ -1246,9 +1246,7 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       SmallVector<Value *> Values(It->Values.location_ops());
       if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
                             It->Values.hasArgList())) {
-        SmallVector<Value *, 4> Vals;
-        for (Value *V : It->Values.location_ops())
-          Vals.push_back(V);
+        SmallVector<Value *, 4> Vals(It->Values.location_ops());
         addDanglingDebugInfo(Vals,
                              FnVarLocs->getDILocalVariable(It->VariableID),
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
@@ -7450,6 +7448,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         break;
       default: llvm_unreachable("unknown trap intrinsic");
       }
+      DAG.addNoMergeSiteInfo(DAG.getRoot().getNode(),
+                             I.hasFnAttr(Attribute::NoMerge));
       return;
     }
     TargetLowering::ArgListTy Args;
@@ -7466,7 +7466,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         DAG.getExternalSymbol(TrapFuncName.data(),
                               TLI.getPointerTy(DAG.getDataLayout())),
         std::move(Args));
-
+    CLI.NoMerge = I.hasFnAttr(Attribute::NoMerge);
     std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
     DAG.setRoot(Result.second);
     return;

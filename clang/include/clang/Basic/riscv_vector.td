@@ -1987,9 +1987,9 @@ let ManualCodegen = [{
         RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvvu"]]>;
     let OverloadedName = "vfcvt_f" in {
       defm :
-        RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvvu"]]>;
+        RVVConvBuiltinSet<"vfcvt_f_x_v", "xfd", [["v", "vIvu"]]>;
       defm :
-        RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUvu"]]>;
+        RVVConvBuiltinSet<"vfcvt_f_xu_v", "xfd", [["v", "vUvu"]]>;
     }
 
     // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
@@ -2011,9 +2011,9 @@ let ManualCodegen = [{
           RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFwu"]]>;
       let OverloadedName = "vfncvt_f" in {
         defm :
-          RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_f_x_w", "xf", [["v", "vIwu"]]>;
         defm :
-          RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUwu"]]>;
+          RVVConvBuiltinSet<"vfncvt_f_xu_w", "xf", [["v", "vUwu"]]>;
       }
       let OverloadedName = "vfncvt_f" in {
         defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vwu"]]>;
@@ -2037,9 +2037,9 @@ let ManualCodegen = [{
       RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvv"]]>;
   let OverloadedName = "vfcvt_f" in {
     defm :
-      RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvv"]]>;
+      RVVConvBuiltinSet<"vfcvt_f_x_v", "xfd", [["v", "vIv"]]>;
     defm :
-      RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUv"]]>;
+      RVVConvBuiltinSet<"vfcvt_f_xu_v", "xfd", [["v", "vUv"]]>;
   }
 
   // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
@@ -2061,9 +2061,9 @@ let ManualCodegen = [{
         RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFw"]]>;
     let OverloadedName = "vfncvt_f" in {
       defm :
-        RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvw"]]>;
+        RVVConvBuiltinSet<"vfncvt_f_x_w", "xf", [["v", "vIw"]]>;
       defm :
-        RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUw"]]>;
+        RVVConvBuiltinSet<"vfncvt_f_xu_w", "xf", [["v", "vUw"]]>;
     }
     let OverloadedName = "vfncvt_f" in {
       defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vw"]]>;
