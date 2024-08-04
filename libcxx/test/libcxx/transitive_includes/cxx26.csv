@@ -23,6 +23,7 @@ any version
 array compare
 array cstddef
 array cstdint
+array cwchar
 array initializer_list
 array limits
 array new
@@ -199,6 +200,8 @@ format typeinfo
 format version
 forward_list compare
 forward_list cstddef
+forward_list cstdint
+forward_list cwchar
 forward_list initializer_list
 forward_list limits
 forward_list new
@@ -312,6 +315,7 @@ list compare
 list cstddef
 list cstdint
 list cstring
+list cwchar
 list initializer_list
 list limits
 list new
@@ -340,6 +344,7 @@ locale version
 map compare
 map cstddef
 map cstdint
+map cwchar
 map initializer_list
 map limits
 map new
@@ -498,6 +503,7 @@ semaphore version
 set compare
 set cstddef
 set cstdint
+set cwchar
 set initializer_list
 set limits
 set new
