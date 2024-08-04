@@ -337,7 +337,7 @@ protected:
       return true;
 
     size_t NumNodes = 0;
-    // All node we have must exist and be equal in the other tree
+    // All nodes we have must exist and be equal in the other tree.
     for (const auto &Node : DomTreeNodes) {
       if (!Node)
         continue;
@@ -346,7 +346,7 @@ protected:
       NumNodes++;
     }
 
-    // If we the other tree has more nodes than we have, they're not equal
+    // If the other tree has more nodes than we have, they're not equal.
     size_t NumOtherNodes = 0;
     for (const auto &OtherNode : Other.DomTreeNodes)
       if (OtherNode)
@@ -359,9 +359,8 @@ private:
   using has_number_t =
       decltype(GraphTraits<T *>::getNumber(std::declval<T *>()));
 
-  template <class T_ = NodeT>
   std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
-    if constexpr (is_detected<has_number_t, T_>::value) {
+    if constexpr (is_detected<has_number_t, NodeT>::value) {
       // BB can be nullptr, map nullptr to index 0.
       assert(BlockNumberEpoch ==
                  GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
@@ -374,8 +373,8 @@ private:
     }
   }
 
-  template <class T_ = NodeT> unsigned getNodeIndexForInsert(const NodeT *BB) {
-    if constexpr (is_detected<has_number_t, T_>::value) {
+  unsigned getNodeIndexForInsert(const NodeT *BB) {
+    if constexpr (is_detected<has_number_t, NodeT>::value) {
       // getNodeIndex will never fail if nodes have getNumber().
       unsigned Idx = *getNodeIndex(BB);
       if (Idx >= DomTreeNodes.size()) {
@@ -829,9 +828,9 @@ public:
   }
 
 private:
-  template <class T_ = NodeT> void updateBlockNumberEpoch() {
+  void updateBlockNumberEpoch() {
     // Nothing to do for graphs that don't number their blocks.
-    if constexpr (is_detected<has_number_t, T_>::value)
+    if constexpr (is_detected<has_number_t, NodeT>::value)
       BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
   }
 
@@ -849,7 +848,7 @@ public:
     DomTreeBuilder::CalculateWithUpdates(*this, Updates);
   }
 
-  /// Update dominator tree after renumbering blocks
+  /// Update dominator tree after renumbering blocks.
   template <class T_ = NodeT>
   std::enable_if_t<is_detected<has_number_t, T_>::value, void>
   updateBlockNumbers() {
