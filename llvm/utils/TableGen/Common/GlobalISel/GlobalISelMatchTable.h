@@ -1373,8 +1373,7 @@ public:
 
   InstructionOpcodeMatcher(unsigned InsnVarID,
                            ArrayRef<const CodeGenInstruction *> I)
-      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID),
-        Insts(I.begin(), I.end()) {
+      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID), Insts(I) {
     assert((Insts.size() == 1 || Insts.size() == 2) &&
            "unexpected number of opcode alternatives");
   }
@@ -1553,7 +1552,7 @@ public:
   MemoryAddressSpacePredicateMatcher(unsigned InsnVarID, unsigned MMOIdx,
                                      ArrayRef<unsigned> AddrSpaces)
       : InstructionPredicateMatcher(IPM_MemoryAddressSpace, InsnVarID),
-        MMOIdx(MMOIdx), AddrSpaces(AddrSpaces.begin(), AddrSpaces.end()) {}
+        MMOIdx(MMOIdx), AddrSpaces(AddrSpaces) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_MemoryAddressSpace;

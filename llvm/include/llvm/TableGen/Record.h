@@ -1686,7 +1686,7 @@ public:
   // Constructs a record.
   explicit Record(Init *N, ArrayRef<SMLoc> locs, RecordKeeper &records,
                   RecordKind Kind = RK_Def)
-      : Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
+      : Name(N), Locs(locs), TrackedRecords(records),
         ID(getNewUID(N->getRecordKeeper())), Kind(Kind) {
     checkName();
   }
