@@ -1725,7 +1725,8 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
   // preferable because it allows the C2 << Y expression to be hoisted out of a
   // loop if Y is invariant and X is not.
   if (Shift->hasOneUse() && C1.isZero() && Cmp.isEquality() &&
-      !Shift->isArithmeticShift() && !isa<Constant>(Shift->getOperand(0))) {
+      !Shift->isArithmeticShift() &&
+      ((!IsShl && C2.isOne()) || !isa<Constant>(Shift->getOperand(0)))) {
     // Compute C2 << Y.
     Value *NewShift =
         IsShl ? Builder.CreateLShr(And->getOperand(1), Shift->getOperand(1))
