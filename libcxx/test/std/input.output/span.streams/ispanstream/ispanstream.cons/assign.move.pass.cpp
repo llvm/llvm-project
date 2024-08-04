@@ -112,6 +112,7 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();
 #endif
+
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
