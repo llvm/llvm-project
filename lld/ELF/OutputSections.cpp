@@ -39,8 +39,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-SmallVector<OutputSection *, 0> elf::outputSections;
-
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
   if (config->emachine != EM_ARM || !(flags & SHF_ARM_PURECODE))

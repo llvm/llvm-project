@@ -507,14 +507,15 @@ public:
     // Build a new AddRec by multiplying the step by StepMultiplier and
     // incrementing the start by Offset * step.
     Type *Ty = Expr->getType();
-    auto *Step = Expr->getStepRecurrence(SE);
+    const SCEV *Step = Expr->getStepRecurrence(SE);
     if (!SE.isLoopInvariant(Step, TheLoop)) {
       CannotAnalyze = true;
       return Expr;
     }
-    auto *NewStep = SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
-    auto *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
-    auto *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
+    const SCEV *NewStep =
+        SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
+    const SCEV *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
+    const SCEV *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
     return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
   }
 
