@@ -113,6 +113,84 @@ RT_API_ATTRS int FormatControl<CONTEXT>::GetIntField(
   return result;
 }
 
+// Xn, TRn, TLn
+template <typename CONTEXT>
+static RT_API_ATTRS bool RelativeTabbing(CONTEXT &context, int n) {
+  ConnectionState &connection{context.GetConnectionState()};
+  if constexpr (std::is_same_v<CONTEXT,
+                    ExternalFormattedIoStatementState<Direction::Input>> ||
+      std::is_same_v<CONTEXT,
+          ExternalFormattedIoStatementState<Direction::Output>>) {
+    if (n != 0 && connection.isUTF8) {
+      const char *p{};
+      if (n > 0) { // Xn or TRn
+        // Skip 'n' multi-byte characters.  If that's more than are in the
+        // current record, that's valid -- the program can position past the
+        // end and then reposition back with Tn or TLn.
+        std::size_t bytesLeft{context.ViewBytesInRecord(p, true)};
+        for (; n > 0 && bytesLeft && p; --n) {
+          std::size_t byteCount{MeasureUTF8Bytes(*p)};
+          if (byteCount > bytesLeft) {
+            break;
+          }
+          context.HandleRelativePosition(byteCount);
+          bytesLeft -= byteCount;
+          // Don't call GotChar(byteCount), these don't count towards SIZE=
+          p += byteCount;
+        }
+      } else { // n < 0: TLn
+        n = -n;
+        if (std::int64_t excess{connection.positionInRecord -
+                connection.recordLength.value_or(connection.positionInRecord)};
+            excess > 0) {
+          // Have tabbed past the end of the record
+          if (excess >= n) {
+            context.HandleRelativePosition(-n);
+            return true;
+          }
+          context.HandleRelativePosition(-excess);
+          n -= excess;
+        }
+        std::size_t bytesLeft{context.ViewBytesInRecord(p, false)};
+        // Go back 'n' multi-byte characters.
+        for (; n > 0 && bytesLeft && p; --n) {
+          std::size_t byteCount{MeasurePreviousUTF8Bytes(p, bytesLeft)};
+          context.HandleRelativePosition(-byteCount);
+          bytesLeft -= byteCount;
+          p -= byteCount;
+        }
+      }
+    }
+  }
+  if (connection.internalIoCharKind > 1) {
+    n *= connection.internalIoCharKind;
+  }
+  context.HandleRelativePosition(n);
+  return true;
+}
+
+// Tn
+template <typename CONTEXT>
+static RT_API_ATTRS bool AbsoluteTabbing(CONTEXT &context, int n) {
+  ConnectionState &connection{context.GetConnectionState()};
+  n = n > 0 ? n - 1 : 0; // convert 1-based position to 0-based offset
+  if constexpr (std::is_same_v<CONTEXT,
+                    ExternalFormattedIoStatementState<Direction::Input>> ||
+      std::is_same_v<CONTEXT,
+          ExternalFormattedIoStatementState<Direction::Output>>) {
+    if (connection.isUTF8) {
+      // Reset to the beginning of the record, then TR(n-1)
+      connection.HandleAbsolutePosition(0);
+      return RelativeTabbing(context, n);
+    }
+  }
+  if (connection.internalIoCharKind > 1) {
+    n *= connection.internalIoCharKind;
+  }
+  context.HandleAbsolutePosition(n);
+  return true;
+}
+
 template <typename CONTEXT>
 static RT_API_ATTRS void HandleControl(
     CONTEXT &context, char ch, char next, int n) {
@@ -169,12 +247,7 @@ static RT_API_ATTRS void HandleControl(
     }
     break;
   case 'X':
-    if (!next) {
-      ConnectionState &connection{context.GetConnectionState()};
-      if (connection.internalIoCharKind > 1) {
-        n *= connection.internalIoCharKind;
-      }
-      context.HandleRelativePosition(n);
+    if (!next && RelativeTabbing(context, n)) {
       return;
     }
     break;
@@ -190,19 +263,13 @@ static RT_API_ATTRS void HandleControl(
     break;
   case 'T': {
     if (!next) { // Tn
-      --n; // convert 1-based to 0-based
-    }
-    ConnectionState &connection{context.GetConnectionState()};
-    if (connection.internalIoCharKind > 1) {
-      n *= connection.internalIoCharKind;
-    }
-    if (!next) { // Tn
-      context.HandleAbsolutePosition(n);
-      return;
-    }
-    if (next == 'L' || next == 'R') { // TLn & TRn
-      context.HandleRelativePosition(next == 'L' ? -n : n);
-      return;
+      if (AbsoluteTabbing(context, n)) {
+        return;
+      }
+    } else if (next == 'R' || next == 'L') { // TRn / TLn
+      if (RelativeTabbing(context, next == 'L' ? -n : n)) {
+        return;
+      }
     }
   } break;
   default:
