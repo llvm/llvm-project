@@ -1498,7 +1498,8 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   }
   case llvm::Instruction::Unreachable: {
     auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
-    It->second = std::unique_ptr<UnreachableInst>(new UnreachableInst(LLVMUnreachable, *this));
+    It->second = std::unique_ptr<UnreachableInst>(
+        new UnreachableInst(LLVMUnreachable, *this));
     return It->second.get();
   }
   default:
