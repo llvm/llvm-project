@@ -975,7 +975,7 @@ public:
   static bool classof(const Value *From);
   unsigned getNumSuccessors() const { return 0; }
   unsigned getUseOperandNo(const Use &Use) const final {
-    return getUseOperandNoDefault(Use);
+    llvm_unreachable("UnreachableInst has no operands!");
   }
   unsigned getNumOfIRInstrs() const final { return 1u; }
 #ifndef NDEBUG

@@ -2053,7 +2053,8 @@ define void @foo() {
   auto *Ret = &*It++;
   auto *UI = cast<sandboxir::UnreachableInst>(&*It++);
 
-  EXPECT_TRUE(llvm::isa<sandboxir::UnreachableInst>(UI));
+  EXPECT_EQ(UI->getNumSuccessors(), 0u);
+  EXPECT_EQ(UI->getNumOfIRInstrs(), 1u);
   // Check create(InsertBefore)
   sandboxir::UnreachableInst *NewUI =
       sandboxir::UnreachableInst::create(/*InsertBefore=*/Ret, Ctx);
