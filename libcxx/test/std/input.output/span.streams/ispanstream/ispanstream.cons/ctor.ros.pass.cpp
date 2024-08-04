@@ -72,6 +72,7 @@ int main(int, char**) {
 #endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
+  
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();
 #endif
