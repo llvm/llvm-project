@@ -1457,8 +1457,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
           : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
   Sema::InstantiatingTemplate Inst(
       S, InstLocBegin,
-      Sema::InstantiatingTemplate::ParameterMappingSubstitution{}, Concept,
-      {InstLocBegin, InstLocEnd});
+      Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+      Atomic.ConstraintDecl, {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
@@ -1632,7 +1632,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
         Kind, std::move(*Sub), FE->getPattern()}};
   }
 
-  return NormalizedConstraint{new (S.Context) AtomicConstraint(S, E)};
+  return NormalizedConstraint{new (S.Context) AtomicConstraint(E, D)};
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(
