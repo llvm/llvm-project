@@ -1496,6 +1496,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Unreachable: {
+    auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
+    It->second = std::unique_ptr<UnreachableInst>(new UnreachableInst(LLVMUnreachable, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
