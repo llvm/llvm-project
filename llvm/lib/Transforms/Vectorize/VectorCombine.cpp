@@ -1406,8 +1406,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     return false;
 
   // Don't introduce poison into div/rem.
-  if (any_of(OldMask, [](int M) { return M == PoisonMaskElem; }) &&
-      B0->isIntDivRem())
+  if (llvm::is_contained(OldMask, PoisonMaskElem) && B0->isIntDivRem())
     return false;
 
   // TODO: Add support for addlike etc.
