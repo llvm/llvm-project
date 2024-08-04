@@ -623,6 +623,25 @@ static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
 }
 
+static Attr *handleAsmDialectAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                  SourceRange Range) {
+  if (!A.checkExactlyNumArgs(S, 1))
+    return nullptr;
+
+  StringRef Name;
+  SourceLocation LiteralLoc;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, Name, &LiteralLoc))
+    return nullptr;
+
+  AsmDialectAttr::Kind Kind;
+  if (Name.empty() || !AsmDialectAttr::ConvertStrToKind(Name, Kind)) {
+    S.Diag(LiteralLoc, diag::warn_attribute_type_not_supported) << A << Name;
+    return nullptr;
+  }
+
+  return ::new (S.Context) AsmDialectAttr(S.Context, A, Kind);
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
@@ -651,6 +670,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   switch (A.getKind()) {
   case ParsedAttr::AT_AlwaysInline:
     return handleAlwaysInlineAttr(S, St, A, Range);
+  case ParsedAttr::AT_AsmDialect:
+    return handleAsmDialectAttr(S, St, A, Range);
   case ParsedAttr::AT_CXXAssume:
     return handleCXXAssumeAttr(S, St, A, Range);
   case ParsedAttr::AT_FallThrough:

@@ -615,6 +615,10 @@ public:
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
 
+  /// Override for the assembly dialect to use when substituting
+  /// parameters (from the [[clang::asm_dialect("kind")]] attribute)
+  AsmDialectAttr::Kind AsmDialect = AsmDialectAttr::Kind::Local;
+
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
