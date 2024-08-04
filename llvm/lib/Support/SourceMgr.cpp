@@ -398,7 +398,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line,
                            ArrayRef<SMFixIt> Hints)
     : SM(&sm), Loc(L), Filename(std::string(FN)), LineNo(Line), ColumnNo(Col),
       Kind(Kind), Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
-      FixIts(Hints.begin(), Hints.end()) {
+      FixIts(Hints) {
   llvm::sort(FixIts);
 }
 

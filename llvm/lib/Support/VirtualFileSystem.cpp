@@ -611,7 +611,7 @@ public:
 
   CombiningDirIterImpl(ArrayRef<directory_iterator> DirIters,
                        std::error_code &EC)
-      : IterList(DirIters.begin(), DirIters.end()) {
+      : IterList(DirIters) {
     EC = incrementImpl(true);
   }
 
