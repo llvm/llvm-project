@@ -3308,28 +3308,33 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     // for vector types in the future.
     assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
     auto *Op0 = I->getOperand(0);
+    Instruction *MaskedLoadStore = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Load
       auto *Ty = I->getType();
       auto *V0 = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1), Op0,
                                           LI->getAlign(), Mask);
       auto *S0 = Builder.CreateBitCast(V0, Ty);
-      V0->copyMetadata(*I);
       I->replaceAllUsesWith(S0);
+      MaskedLoadStore = V0;
     } else {
       // Store
       auto *StoredVal =
           Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
       auto *VStore = Builder.CreateMaskedStore(
           StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
-      VStore->copyMetadata(*I);
-      // FIXME: DIAssignID is not supported for masked store yet.
-      // (Verifier::visitDIAssignIDMetadata)
-      at::deleteAssignmentMarkers(VStore);
-      VStore->eraseMetadataIf([](unsigned MDKind, MDNode *Node) {
-        return Node->getMetadataID() == Metadata::DIAssignIDKind;
-      });
+      MaskedLoadStore = VStore;
     }
+    // Only !annotation, !range, !nonull and !align are kept when hoisting
+    // (see Instruction::dropUBImplyingAttrsAndMetadata).
+    //
+    // !nonull, !align : Not support pointer type, no need to keep.
+    // !range: load type is changed from scalar to vector, no idea how to keep
+    //         it.
+    // !annotation: Not impact semantics, keep it.
+    MaskedLoadStore->copyMetadata(*I);
+    MaskedLoadStore->dropUBImplyingAttrsAndUnknownMetadata(
+        {LLVMContext::MD_annotation});
     I->eraseFromParent();
   }
 

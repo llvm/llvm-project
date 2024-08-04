@@ -278,7 +278,9 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
   // In codegen, we use unreachableblockelim to remove dead blocks b/c it
-  // doesn't really have any well defined semantics for unreachable code.
+  // doesn't really have any well defined semantics for unreachable code
+  // (see UnreachableBlockElim.cpp and LLVM::CodeGen/X86/GC/ocaml-gc-assert.ll
+  // for details).
   //
   // The first character is not capitalized to reduce the code diff FTTB.
   auto removeUnreachableBlocks = [&](Function &F, DomTreeUpdater *DTU = nullptr,

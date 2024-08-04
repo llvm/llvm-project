@@ -203,6 +203,38 @@ if.true:
   ret i32 %res
 }
 
+;; Only annotation metadata is kept.
+define void @metadata(i1 %cond, ptr %p, ptr %q) {
+; CHECK-LABEL: @metadata(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison), !annotation [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP2]] to <1 x i16>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP5]], ptr [[Q]], i32 4, <1 x i1> [[TMP0]]), !annotation [[META0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP6]], ptr [[P]], i32 2, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  br label %if.end
+
+if.true:
+  %0 = load i16, ptr %p, align 2, !range !{i16 0, i16 10}
+  %1 = load i32, ptr %q, align 4, !annotation !1
+  store i16 %0, ptr %q, align 4, !annotation !1
+  store i32 %1, ptr %p, align 2
+  br label %if.false
+
+if.end:
+  ret void
+}
+
 ;; Both of successor 0 and successor 1 have a single predecessor.
 ;; TODO: Support transform for this case.
 define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
@@ -517,7 +549,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ; CHECK-LABEL: @not_likely_to_execute(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.then:
@@ -587,3 +619,4 @@ if.end:
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
 !0 = !{!"branch_weights", i32 1, i32 99}
+!1 = !{ !"auto-init" }
