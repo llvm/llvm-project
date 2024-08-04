@@ -1047,7 +1047,7 @@ AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
 
 AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
                                         ArrayRef<Attribute> Attrs) {
-  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
+  SmallVector<Attribute, 8> SortedAttrs(Attrs);
   llvm::sort(SortedAttrs);
   return getSorted(C, SortedAttrs);
 }
