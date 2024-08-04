@@ -56,7 +56,7 @@ void test() {
   assert(!sp.empty());
   assert(sp.size() == 4);
 
-  // Mode: default (`in` | `out`)
+  // Mode: default (`in`)
   {
     SpStream spSt{sp};
     assert(spSt.span().data() == arr);
@@ -82,41 +82,28 @@ void test() {
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
-  // Mode `out`
-  {
-    SpStream spSt{sp, std::ios_base::out};
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-  }
-  {
-    SpStream spSt{std::as_const(sp), std::ios_base::out};
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-  }
-  // Mode: multiple
-  {
-    SpStream spSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-  }
-  {
-    SpStream spSt{std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-  }
   // Mode `ate`
   {
-    SpStream spSt{sp, std::ios_base::out | std::ios_base::ate};
+    SpStream spSt{sp, std::ios_base::ate};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   {
-    SpStream spSt{std::as_const(sp), std::ios_base::out | std::ios_base::ate};
+    SpStream spSt{std::as_const(sp), std::ios_base::ate};
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+  }
+  // Mode: multiple
+  {
+    SpStream spSt{sp, std::ios_base::ate | std::ios_base::binary};
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+  }
+  {
+    SpStream spSt{std::as_const(sp), std::ios_base::ate | std::ios_base::binary};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
