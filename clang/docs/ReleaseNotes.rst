@@ -1372,6 +1372,9 @@ Crash and bug fixes
 - Fixed a crash when storing through an address that refers to the address of
   a label. (#GH89185)
 
+- Fixed a crash when using ``__builtin_bitcast(type, array)`` as an array
+  subscript. (#GH94496)
+
 - Z3 crosschecking (aka. Z3 refutation) is now bounded, and can't consume
   more total time than the eymbolic execution itself. (#GH97298)
 
