@@ -32,7 +32,9 @@
 /* 18.5.4 */
 #define CFI_VERSION 20240719
 
+#ifndef CFI_MAX_RANK
 #define CFI_MAX_RANK 15
+#endif
 typedef unsigned char CFI_rank_t;
 
 /* This type is probably larger than a default Fortran INTEGER
