@@ -1096,7 +1096,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
   if (ID != X86::TILERegClassID) {
     if (DisableRegAllocNDDHints || !ST.hasNDD() ||
-        !TRI.isGeneralPurposeRegister(&RC))
+        !TRI.isGeneralPurposeRegisterClass(&RC))
       return BaseImplRetVal;
 
     // Add any two address hints after any copy hints.

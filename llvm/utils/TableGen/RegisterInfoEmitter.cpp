@@ -1149,7 +1149,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS,
      << "  ArrayRef<const uint32_t *> getRegMasks() const override;\n"
      << "  bool isGeneralPurposeRegister(const MachineFunction &, "
      << "MCRegister) const override;\n"
-     << "  bool isGeneralPurposeRegister(const TargetRegisterClass *RC)"
+     << "  bool isGeneralPurposeRegisterClass(const TargetRegisterClass *RC)"
      << " const override;\n"
      << "  bool isFixedRegister(const MachineFunction &, "
      << "MCRegister) const override;\n"
@@ -1742,7 +1742,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "}\n\n";
 
   OS << "bool " << ClassName << "::\n"
-     << "isGeneralPurposeRegister(const TargetRegisterClass *RC)"
+     << "isGeneralPurposeRegisterClass(const TargetRegisterClass *RC)"
      << " const {\n"
      << "  return\n";
   for (const CodeGenRegisterCategory &Category : RegCategories)

@@ -48,7 +48,7 @@ static bool isMask(const TargetRegisterClass *RC,
 
 static RegDomain getDomain(const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) {
-  if (TRI->isGeneralPurposeRegister(RC))
+  if (TRI->isGeneralPurposeRegisterClass(RC))
     return GPRDomain;
   if (isMask(RC, TRI))
     return MaskDomain;
@@ -790,7 +790,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     // GPR only current source domain supported.
-    if (!MRI->getTargetRegisterInfo()->isGeneralPurposeRegister(
+    if (!MRI->getTargetRegisterInfo()->isGeneralPurposeRegisterClass(
             MRI->getRegClass(Reg)))
       continue;
 

@@ -631,7 +631,8 @@ public:
   }
 
   /// Returns true if TargetRegisterClass is a general purpose register.
-  virtual bool isGeneralPurposeRegister(const TargetRegisterClass *RC) const {
+  virtual bool
+  isGeneralPurposeRegisterClass(const TargetRegisterClass *RC) const {
     return false;
   }
 
