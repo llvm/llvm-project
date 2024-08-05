@@ -17008,10 +17008,10 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     if (!isa<ConstantExpr>(E))
       E = Result ? ConstantExpr::Create(Context, E, APValue(*Result))
                  : ConstantExpr::Create(Context, E);
-    
+
     if (Notes.empty())
       return E;
-    
+
     // If our only note is the usual "invalid subexpression" note, just point
     // the caret at its location rather than producing an essentially
     // redundant note.
@@ -17020,7 +17020,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
       DiagLoc = Notes[0].first;
       Notes.clear();
     }
-    
+
     if (getLangOpts().CPlusPlus) {
       if (!Diagnoser.Suppress) {
         Diagnoser.diagnoseNotICE(*this, DiagLoc) << E->getSourceRange();
@@ -17033,7 +17033,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     Diagnoser.diagnoseFold(*this, DiagLoc) << E->getSourceRange();
     for (const PartialDiagnosticAt &Note : Notes)
       Diag(Note.first, Note.second);
-    
+
     return E;
   }
 
