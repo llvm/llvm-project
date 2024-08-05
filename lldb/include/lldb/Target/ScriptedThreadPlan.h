@@ -1,5 +1,4 @@
-//===-- ThreadPlanPython.h --------------------------------------------*- C++
-//-*-===//
+//===-- ScriptedThreadPlan.h ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_THREADPLANPYTHON_H
-#define LLDB_TARGET_THREADPLANPYTHON_H
+#ifndef LLDB_TARGET_SCRIPTEDTHREADPLAN_H
+#define LLDB_TARGET_SCRIPTEDTHREADPLAN_H
 
 #include <string>
 
@@ -27,13 +26,10 @@
 
 namespace lldb_private {
 
-//  ThreadPlanPython:
-//
-
-class ThreadPlanPython : public ThreadPlan {
+class ScriptedThreadPlan : public ThreadPlan {
 public:
-  ThreadPlanPython(Thread &thread, const char *class_name,
-                   const StructuredDataImpl &args_data);
+  ScriptedThreadPlan(Thread &thread, const char *class_name,
+                     const StructuredDataImpl &args_data);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
 
@@ -52,15 +48,14 @@ public:
   void DidPush() override;
 
   bool IsPlanStale() override;
-  
-  bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
 
+  bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
 
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;
-  
+
   ScriptInterpreter *GetScriptInterpreter();
 
 private:
@@ -73,10 +68,10 @@ private:
   bool m_stop_others;
   lldb::ScriptedThreadPlanInterfaceSP m_interface;
 
-  ThreadPlanPython(const ThreadPlanPython &) = delete;
-  const ThreadPlanPython &operator=(const ThreadPlanPython &) = delete;
+  ScriptedThreadPlan(const ScriptedThreadPlan &) = delete;
+  const ScriptedThreadPlan &operator=(const ScriptedThreadPlan &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_THREADPLANPYTHON_H
+#endif // LLDB_TARGET_SCRIPTEDTHREADPLAN_H
