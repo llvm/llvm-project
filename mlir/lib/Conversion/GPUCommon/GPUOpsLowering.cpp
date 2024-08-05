@@ -26,6 +26,9 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
 
   SmallVector<LLVM::GlobalOp, 3> workgroupBuffers;
   if (encodeWorkgroupAttributionsAsArguments) {
+    // Append an `llvm.ptr` argument to the function signature to encode
+    // workgroup attributions.
+
     ArrayRef<BlockArgument> workgroupAttributions =
         gpuFuncOp.getWorkgroupAttributions();
     size_t numAttributions = workgroupAttributions.size();
@@ -177,6 +180,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     unsigned numProperArguments = gpuFuncOp.getNumArguments();
 
     if (encodeWorkgroupAttributionsAsArguments) {
+      // Build a MemRefDescriptor with each of the arguments added above.
+
       unsigned numAttributions = gpuFuncOp.getNumWorkgroupAttributions();
       assert(numProperArguments >= numAttributions &&
              "Expecting attributions to be encoded as arguments already");
