@@ -187,25 +187,10 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
   auto *VTy = cast<VectorType>(II.getType());
 
   IRBuilder<> Builder(&II);
-
-  // Extend VL from i32 to XLen if needed.
-  if (ST->is64Bit())
-    VL = Builder.CreateZExt(VL, Builder.getInt64Ty());
-
   Type *STy = VTy->getElementType();
   Value *Val = Builder.CreateLoad(STy, BasePtr);
-  const auto &TLI = *ST->getTargetLowering();
-  Value *Res;
-
-  // TODO: Also support fixed/illegal vector types to splat with evl = vl.
-  if (isa<ScalableVectorType>(VTy) && TLI.isTypeLegal(EVT::getEVT(VTy))) {
-    unsigned VMVOp = STy->isFloatingPointTy() ? Intrinsic::riscv_vfmv_v_f
-                                              : Intrinsic::riscv_vmv_v_x;
-    Res = Builder.CreateIntrinsic(VMVOp, {VTy, VL->getType()},
-                                  {PoisonValue::get(VTy), Val, VL});
-  } else {
-    Res = Builder.CreateVectorSplat(VTy->getElementCount(), Val);
-  }
+  Value *Res = Builder.CreateIntrinsic(Intrinsic::experimental_vp_splat, {VTy},
+                                       {Val, II.getOperand(2), VL});
 
   II.replaceAllUsesWith(Res);
   II.eraseFromParent();
