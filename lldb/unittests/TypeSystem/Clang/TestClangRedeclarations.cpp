@@ -48,7 +48,7 @@ TEST_F(TestClangRedeclarations, RedeclareCppClass) {
   OptionalClangModuleID module_id(1);
   CompilerType class_type = m_ast->CreateRecordType(
       m_ast->GetTranslationUnitDecl(), module_id, lldb::eAccessNone, "A",
-      llvm::to_underlying(TagTypeKind::TTK_Class), lldb::eLanguageTypeC_plus_plus);
+      llvm::to_underlying(TagTypeKind::Class), lldb::eLanguageTypeC_plus_plus);
   auto *record = llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(class_type));
 
   m_ast->CreateRedeclaration(class_type);
@@ -109,11 +109,11 @@ TEST_F(TestClangRedeclarations, RedeclareCppTemplateClass) {
 
   ClassTemplateDecl *template_decl = m_ast->CreateClassTemplateDecl(
       m_ast->GetTranslationUnitDecl(), module_id, lldb::eAccessNone, "A",
-      llvm::to_underlying(TagTypeKind::TTK_Struct), *args);
+      llvm::to_underlying(TagTypeKind::Struct), *args);
   ClassTemplateSpecializationDecl *fwd_decl =
       m_ast->CreateClassTemplateSpecializationDecl(
           m_ast->GetTranslationUnitDecl(), module_id, template_decl,
-          llvm::to_underlying(TagTypeKind::TTK_Struct), *args);
+          llvm::to_underlying(TagTypeKind::Struct), *args);
   CompilerType spec_type =
       m_ast->CreateClassTemplateSpecializationType(fwd_decl);
 
@@ -250,7 +250,7 @@ TEST_F(TestClangRedeclarations, NestedDecls) {
   // Create a class.
   CompilerType context_class = m_ast->CreateRecordType(
       m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(),
-      lldb::eAccessNone, "A", llvm::to_underlying(TagTypeKind::TTK_Class),
+      lldb::eAccessNone, "A", llvm::to_underlying(TagTypeKind::Class),
       lldb::eLanguageTypeC_plus_plus);
   auto *fwd_decl =
       llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(context_class));
@@ -270,7 +270,7 @@ TEST_F(TestClangRedeclarations, NestedDecls) {
   // DeclContext.
   CompilerType nested_class = m_ast->CreateRecordType(
       fwd_decl, OptionalClangModuleID(), lldb::eAccessPublic, "A",
-      llvm::to_underlying(TagTypeKind::TTK_Class), lldb::eLanguageTypeC_plus_plus);
+      llvm::to_underlying(TagTypeKind::Class), lldb::eLanguageTypeC_plus_plus);
   EXPECT_EQ(ClangUtil::GetAsTagDecl(nested_class)->getDeclContext(), def);
 
   CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
@@ -293,12 +293,12 @@ TEST_F(TestClangRedeclarations, NestedDecls) {
   // is the definition.
   ClassTemplateDecl *template_decl = m_ast->CreateClassTemplateDecl(
       fwd_decl, OptionalClangModuleID(), lldb::eAccessPublic, "A",
-      llvm::to_underlying(TagTypeKind::TTK_Struct), args);
+      llvm::to_underlying(TagTypeKind::Struct), args);
   EXPECT_EQ(template_decl->getDeclContext(), def);
   ClassTemplateSpecializationDecl *template_spec_decl =
       m_ast->CreateClassTemplateSpecializationDecl(
           fwd_decl, OptionalClangModuleID(), template_decl,
-          llvm::to_underlying(TagTypeKind::TTK_Struct), args);
+          llvm::to_underlying(TagTypeKind::Struct), args);
   EXPECT_EQ(template_spec_decl->getDeclContext(), def);
 }
 
@@ -308,7 +308,7 @@ TEST_F(TestClangRedeclarations, MetadataRedeclaration) {
   // Create a class with the test metadata.
   CompilerType class_with_metadata = m_ast->CreateRecordType(
       m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(),
-      lldb::eAccessPublic, "A", llvm::to_underlying(TagTypeKind::TTK_Class),
+      lldb::eAccessPublic, "A", llvm::to_underlying(TagTypeKind::Class),
       lldb::eLanguageTypeC_plus_plus);
   auto *record =
       llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(class_with_metadata));
