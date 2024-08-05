@@ -738,6 +738,14 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         ILE->updateInit(SemaRef.Context, Init, Filler);
       return;
     }
+
+    if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>()) {
+      SemaRef.Diag(ILE->getExprLoc(), diag::warn_field_requires_explicit_init)
+          << Field;
+      SemaRef.Diag(Field->getLocation(), diag::note_entity_declared_at)
+          << Field;
+    }
+
     // C++1y [dcl.init.aggr]p7:
     //   If there are fewer initializer-clauses in the list than there are
     //   members in the aggregate, then each member not explicitly initialized
@@ -4563,6 +4571,13 @@ static void TryConstructorInitialization(Sema &S,
 
   CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
   if (Result != OR_Deleted) {
+    if (!IsListInit && Kind.getKind() == InitializationKind::IK_Default &&
+        DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
+        DestRecordDecl->hasUninitializedExplicitInitFields()) {
+      S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
+          << "in class";
+    }
+
     // C++11 [dcl.init]p6:
     //   If a program calls for the default initialization of an object
     //   of a const-qualified type T, T shall be a class type with a
