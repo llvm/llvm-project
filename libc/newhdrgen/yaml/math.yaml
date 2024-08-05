@@ -2153,3 +2153,42 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT128
+  - name: lgamma
+    standards: 
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
+  - name: lgammaf
+    standards: 
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
+  - name: lgammal
+    standards: 
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+  - name: lgamma_r
+    standards: 
+      - gnu
+    return_type: double
+    arguments:
+      - type: double
+      - type: int *
+  - name: lgammaf_r
+    standards: 
+      - gnu
+    return_type: float
+    arguments:
+      - type: float
+      - type: int *
+  - name: lgammal_r
+    standards: 
+      - gnu
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: int *
