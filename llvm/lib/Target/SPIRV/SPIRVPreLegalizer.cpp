@@ -287,7 +287,7 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       if (SpvType)
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       if (!MRI.getRegClassOrNull(Reg))
-        MRI.setRegClass(Reg, &SPIRV::IDRegClass);
+        MRI.setRegClass(Reg, &SPIRV::iIDRegClass);
     }
   }
   return SpvType;
@@ -337,7 +337,7 @@ static const TargetRegisterClass *getRegClass(SPIRVType *SpvType,
     return &SPIRV::vIDRegClass;
   }
   }
-  return &SPIRV::IDRegClass;
+  return &SPIRV::iIDRegClass;
 }
 
 static std::pair<Register, unsigned>
@@ -631,7 +631,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     if (!AsmTargetReg.isValid()) {
       // define vendor specific assembly target or dialect
       AsmTargetReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-      MRI.setRegClass(AsmTargetReg, &SPIRV::IDRegClass);
+      MRI.setRegClass(AsmTargetReg, &SPIRV::iIDRegClass);
       auto AsmTargetMIB =
           MIRBuilder.buildInstr(SPIRV::OpAsmTargetINTEL).addDef(AsmTargetReg);
       addStringImm(ST.getTargetTripleAsStr(), AsmTargetMIB);
@@ -651,7 +651,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 
     // define vendor specific assembly instructions string
     Register AsmReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-    MRI.setRegClass(AsmReg, &SPIRV::IDRegClass);
+    MRI.setRegClass(AsmReg, &SPIRV::iIDRegClass);
     auto AsmMIB = MIRBuilder.buildInstr(SPIRV::OpAsmINTEL)
                       .addDef(AsmReg)
                       .addUse(GR->getSPIRVTypeID(RetType))
@@ -694,7 +694,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     }
     if (!DefReg.isValid()) {
       DefReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-      MRI.setRegClass(DefReg, &SPIRV::IDRegClass);
+      MRI.setRegClass(DefReg, &SPIRV::iIDRegClass);
       SPIRVType *VoidType = GR->getOrCreateSPIRVType(
           Type::getVoidTy(MF.getFunction().getContext()), MIRBuilder);
       GR->assignSPIRVTypeToVReg(VoidType, DefReg, MF);
