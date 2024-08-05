@@ -63,7 +63,7 @@ protected:
         TM->getTargetFeatureString(),
         TM->getTargetTriple().isArch64Bit() ? "lp64" : "ilp32", 0, 0, *TM);
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, 42, *MMI);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 42);
   }
 };
 

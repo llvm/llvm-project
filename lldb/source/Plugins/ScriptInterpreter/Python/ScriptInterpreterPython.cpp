@@ -18,7 +18,6 @@
 #include "Interfaces/ScriptedPlatformPythonInterface/ScriptedPlatformPythonInterface.h"
 #include "Interfaces/ScriptedProcessPythonInterface/ScriptedProcessPythonInterface.h"
 #include "Interfaces/ScriptedThreadPlanPythonInterface/ScriptedThreadPlanPythonInterface.h"
-#include "Interfaces/ScriptedThreadPythonInterface.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"

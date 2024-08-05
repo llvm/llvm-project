@@ -596,18 +596,24 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  if (GPUArch.empty()) {
+  if (GPUArch.empty() && !C.getDriver().isUsingLTO()) {
     C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
         << getToolChain().getArchName() << getShortName();
     return;
   }
 
-  CmdArgs.push_back("-arch");
-  CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  if (!GPUArch.empty()) {
+    CmdArgs.push_back("-arch");
+    CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  }
 
   if (Args.hasArg(options::OPT_ptxas_path_EQ))
     CmdArgs.push_back(Args.MakeArgString(
         "--pxtas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
+
+  if (Args.hasArg(options::OPT_cuda_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        "--cuda-path=" + Args.getLastArgValue(options::OPT_cuda_path_EQ)));
 
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
@@ -620,6 +626,15 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (C.getDriver().isUsingLTO())
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
                   C.getDriver().getLTOMode() == LTOK_Thin);
+
+  // Forward the PTX features if the nvlink-wrapper needs it.
+  std::vector<StringRef> Features;
+  getNVPTXTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
+                         Features);
+  for (StringRef Feature : Features)
+    CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
+
+  addGPULibraries(getToolChain(), Args, CmdArgs);
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =

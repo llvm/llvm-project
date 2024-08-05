@@ -1318,7 +1318,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (!LangOpts.MathErrno)
     Builder.defineMacro("__NO_MATH_ERRNO__");
 
-  if (LangOpts.FastMath || LangOpts.FiniteMathOnly)
+  if (LangOpts.FastMath || (LangOpts.NoHonorInfs && LangOpts.NoHonorNaNs))
     Builder.defineMacro("__FINITE_MATH_ONLY__", "1");
   else
     Builder.defineMacro("__FINITE_MATH_ONLY__", "0");

@@ -8,7 +8,6 @@
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -18,12 +17,15 @@
 // clang-format off
 // LLDB Python header must be included first
 #include "../../lldb-python.h"
-//clang-format on
 
 #include "../../SWIGPythonBridge.h"
 #include "../../ScriptInterpreterPythonImpl.h"
 #include "../ScriptedThreadPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
+
+// Included in this position to prevent redefinition of pid_t on Windows.
+#include "lldb/Target/Process.h"
+//clang-format off
 
 #include <optional>
 
@@ -32,7 +34,7 @@ using namespace lldb_private;
 using namespace lldb_private::python;
 using Locker = ScriptInterpreterPythonImpl::Locker;
 
-LLDB_PLUGIN_DEFINE(ScriptedProcessPythonInterface)
+LLDB_PLUGIN_DEFINE_ADV(ScriptedProcessPythonInterface, ScriptInterpreterPythonScriptedProcessPythonInterface)
 
 ScriptedProcessPythonInterface::ScriptedProcessPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)

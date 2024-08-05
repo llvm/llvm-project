@@ -697,6 +697,19 @@ enum {
 #include "ELFRelocs/SystemZ.def"
 };
 
+// SPARC Specific e_flags
+enum : unsigned {
+  EF_SPARC_EXT_MASK = 0xffff00,
+  EF_SPARC_32PLUS = 0x000100,
+  EF_SPARC_SUN_US1 = 0x000200,
+  EF_SPARC_HAL_R1 = 0x000400,
+  EF_SPARC_SUN_US3 = 0x000800,
+  EF_SPARCV9_MM = 0x3,
+  EF_SPARCV9_TSO = 0x0,
+  EF_SPARCV9_PSO = 0x1,
+  EF_SPARCV9_RMO = 0x2,
+};
+
 // ELF Relocation type for Sparc.
 enum {
 #include "ELFRelocs/Sparc.def"

@@ -466,9 +466,20 @@ private:
 // segfaults in the program. Unregister the rseq region so that we can safely
 // unmap it later
 #ifdef GLIBC_INITS_RSEQ
+    unsigned int RseqStructSize = __rseq_size;
+
+    // Glibc v2.40 (the change is also expected to be backported to v2.35)
+    // changes the definition of __rseq_size to be the usable area of the struct
+    // rather than the actual size of the struct. v2.35 uses only 20 bytes of
+    // the 32 byte struct. For now, it should be safe to assume that if the
+    // usable size is less than 32, the actual size of the struct will be 32
+    // bytes given alignment requirements.
+    if (__rseq_size < 32)
+      RseqStructSize = 32;
+
     long RseqDisableOutput =
         syscall(SYS_rseq, (intptr_t)__builtin_thread_pointer() + __rseq_offset,
-                __rseq_size, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
+                RseqStructSize, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
     if (RseqDisableOutput != 0)
       exit(ChildProcessExitCodeE::RSeqDisableFailed);
 #endif // GLIBC_INITS_RSEQ

@@ -29,7 +29,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   STORE(ra, buf->__pc);
   STORE(s0, buf->__regs[0]);

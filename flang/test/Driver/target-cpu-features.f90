@@ -29,10 +29,10 @@
 ! RUN: %flang --target=riscv64-linux-gnu -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-RV64
 
-! RUN: %flang --target=amdgcn-amd-amdhsa -mcpu=gfx908 -c %s -### 2>&1 \
+! RUN: %flang --target=amdgcn-amd-amdhsa -mcpu=gfx908 -nogpulib -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU
 
-! RUN: %flang --target=r600-unknown-unknown -mcpu=cayman -c %s -### 2>&1 \
+! RUN: %flang --target=r600-unknown-unknown -mcpu=cayman -nogpulib -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU-R600
 
 ! CHECK-A57: "-fc1" "-triple" "aarch64-unknown-linux-gnu"

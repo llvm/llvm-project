@@ -22,7 +22,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
   foreach(dep IN LISTS unchecked_list)
     if (NOT TARGET ${dep})
       # Skip tests with undefined dependencies.
-      list(APPEND skipped_list ${dep})
+      # Compiler-RT targets are added only if they are enabled. However, such targets may not be defined
+      # at the time of the libc build. We should skip checking such targets.
+      if (NOT ${dep} MATCHES "^RTScudo.*|^RTGwp.*")
+        list(APPEND skipped_list ${dep})
+      endif()
       continue()
     endif()
     get_target_property(aliased_target ${dep} "ALIASED_TARGET")
@@ -474,6 +478,8 @@ function(add_integration_test test_name)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
+      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
+      "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
@@ -651,13 +657,14 @@ function(add_libc_hermetic test_name)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-asdfasdfasdf"
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
+      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
+      "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)

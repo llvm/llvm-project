@@ -188,6 +188,11 @@ if __name__ == "__main__":
             "llvm/utils/lit/lit/__init__.py",
             LitProcessor(args),
         ),
+        # mlgo-utils configuration
+        (
+            "llvm/utils/mlgo-utils/mlgo/__init__.py",
+            LitProcessor(args),
+        ),
         # GN build system
         (
             "llvm/utils/gn/secondary/llvm/version.gni",

@@ -21413,7 +21413,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   }
 
   // Turn 'store undef, Ptr' -> nothing.
-  if (Value.isUndef() && ST->isUnindexed())
+  if (Value.isUndef() && ST->isUnindexed() && !ST->isVolatile())
     return Chain;
 
   // Try to infer better alignment information than the store already has.
@@ -25241,7 +25241,7 @@ static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
   if (!VT.isInteger() || IsBigEndian)
     return SDValue();
 
-  SmallVector<int, 16> Mask(SVN->getMask().begin(), SVN->getMask().end());
+  SmallVector<int, 16> Mask(SVN->getMask());
   auto ForEachDecomposedIndice = [NumElts, &Mask](auto Fn) {
     for (int &Indice : Mask) {
       if (Indice < 0)
@@ -25444,8 +25444,7 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
       if (!MinNonUndefIdx)
         return DAG.getUNDEF(VT); // All undef - result is undef.
       assert(*MinNonUndefIdx < NumElts && "Expected valid element index.");
-      SmallVector<int, 8> SplatMask(Shuf->getMask().begin(),
-                                    Shuf->getMask().end());
+      SmallVector<int, 8> SplatMask(Shuf->getMask());
       for (int &Idx : SplatMask) {
         if (Idx < 0)
           continue; // Passthrough sentinel indices.
