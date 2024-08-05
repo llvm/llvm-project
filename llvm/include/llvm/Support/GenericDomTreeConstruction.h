@@ -137,12 +137,12 @@ struct SemiNCAInfo {
     // immediate dominator.
     NodePtr IDom = getIDom(BB);
 
-    assert(IDom || DT.DomTreeNodes[nullptr]);
+    assert(IDom || DT.getNode(nullptr));
     TreeNodePtr IDomNode = getNodeForBlock(IDom, DT);
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
-    return DT.createChild(BB, IDomNode);
+    return DT.createNode(BB, IDomNode);
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -585,8 +585,8 @@ struct SemiNCAInfo {
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
     // Loop over all of the discovered blocks in the function...
     for (NodePtr W : llvm::drop_begin(NumToNode)) {
-      // Don't replace this with 'count', the insertion side effect is important
-      if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
+      if (DT.getNode(W))
+        continue; // Already calculated the node before
 
       NodePtr ImmDom = getIDom(W);
 
@@ -595,7 +595,7 @@ struct SemiNCAInfo {
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
-      DT.createChild(W, IDomNode);
+      DT.createNode(W, IDomNode);
     }
   }
 
@@ -644,7 +644,7 @@ struct SemiNCAInfo {
 
       // The unreachable node becomes a new root -- a tree node for it.
       TreeNodePtr VirtualRoot = DT.getNode(nullptr);
-      FromTN = DT.createChild(From, VirtualRoot);
+      FromTN = DT.createNode(From, VirtualRoot);
       DT.Roots.push_back(From);
     }
 
@@ -1078,10 +1078,9 @@ struct SemiNCAInfo {
     // before deleting their parent.
     for (unsigned i = LastDFSNum; i > 0; --i) {
       const NodePtr N = SNCA.NumToNode[i];
-      const TreeNodePtr TN = DT.getNode(N);
-      LLVM_DEBUG(dbgs() << "Erasing node " << BlockNamePrinter(TN) << "\n");
-
-      EraseNode(DT, TN);
+      LLVM_DEBUG(dbgs() << "Erasing node " << BlockNamePrinter(DT.getNode(N))
+                        << "\n");
+      DT.eraseNode(N);
     }
 
     // The affected subtree start at the To node -- there's no extra work to do.
@@ -1107,22 +1106,6 @@ struct SemiNCAInfo {
     // Rebuild the remaining part of affected subtree.
     SNCA.runSemiNCA();
     SNCA.reattachExistingSubtree(DT, PrevIDom);
-  }
-
-  // Removes leaf tree nodes from the dominator tree.
-  static void EraseNode(DomTreeT &DT, const TreeNodePtr TN) {
-    assert(TN);
-    assert(TN->getNumChildren() == 0 && "Not a tree leaf");
-
-    const TreeNodePtr IDom = TN->getIDom();
-    assert(IDom);
-
-    auto ChIt = llvm::find(IDom->Children, TN);
-    assert(ChIt != IDom->Children.end());
-    std::swap(*ChIt, IDom->Children.back());
-    IDom->Children.pop_back();
-
-    DT.DomTreeNodes.erase(TN->getBlock());
   }
 
   //~~

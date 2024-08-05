@@ -108,6 +108,9 @@ struct {
 
 #if defined(__linux__)
 
+// The RISC-V hwprobe interface is documented here:
+// <https://docs.kernel.org/arch/riscv/hwprobe.html>.
+
 static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
                                 long arg4, long arg5) {
   register long a7 __asm__("a7") = number;

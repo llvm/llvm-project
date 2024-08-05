@@ -174,6 +174,17 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept { return __res_; }
 
+  friend bool operator==(const polymorphic_allocator& __lhs, const polymorphic_allocator& __rhs) noexcept {
+    return *__lhs.resource() == *__rhs.resource();
+  }
+
+#  if _LIBCPP_STD_VER <= 17
+  // This overload is not specified, it was added due to LWG3683.
+  friend bool operator!=(const polymorphic_allocator& __lhs, const polymorphic_allocator& __rhs) noexcept {
+    return *__lhs.resource() != *__rhs.resource();
+  }
+#  endif
+
 private:
   template <class... _Args, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&...>

@@ -44,8 +44,7 @@ __count_if_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
   return __counter;
 }
 
-namespace __count_if {
-struct __fn {
+struct __count_if {
   template <input_iterator _Iter,
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
@@ -63,10 +62,9 @@ struct __fn {
     return ranges::__count_if_impl(ranges::begin(__r), ranges::end(__r), __pred, __proj);
   }
 };
-} // namespace __count_if
 
 inline namespace __cpo {
-inline constexpr auto count_if = __count_if::__fn{};
+inline constexpr auto count_if = __count_if{};
 } // namespace __cpo
 } // namespace ranges
 

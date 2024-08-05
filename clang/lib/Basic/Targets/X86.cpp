@@ -304,6 +304,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX10_1 = true;
     } else if (Feature == "+avx10.1-512") {
       HasAVX10_1_512 = true;
+    } else if (Feature == "+avx10.2-256") {
+      HasAVX10_2 = true;
+    } else if (Feature == "+avx10.2-512") {
+      HasAVX10_2_512 = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -824,6 +828,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX10_1__");
   if (HasAVX10_1_512)
     Builder.defineMacro("__AVX10_1_512__");
+  if (HasAVX10_2)
+    Builder.defineMacro("__AVX10_2__");
+  if (HasAVX10_2_512)
+    Builder.defineMacro("__AVX10_2_512__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -1056,6 +1064,8 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx", true)
       .Case("avx10.1-256", true)
       .Case("avx10.1-512", true)
+      .Case("avx10.2-256", true)
+      .Case("avx10.2-512", true)
       .Case("avx2", true)
       .Case("avx512f", true)
       .Case("avx512cd", true)
@@ -1171,6 +1181,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1-256", HasAVX10_1)
       .Case("avx10.1-512", HasAVX10_1_512)
+      .Case("avx10.2-256", HasAVX10_2)
+      .Case("avx10.2-512", HasAVX10_2_512)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)

@@ -2155,11 +2155,20 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
   return false;
 }
 
-ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
-                                   Status *error_ptr) {
+ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
+                                   bool notify, Status *error_ptr) {
   ModuleSP module_sp;
 
   Status error;
+
+  // Apply any remappings specified in target.object-map:
+  ModuleSpec module_spec(orig_module_spec);
+  PathMappingList &obj_mapping = GetObjectPathMap();
+  if (std::optional<FileSpec> remapped_obj_file =
+          obj_mapping.RemapPath(orig_module_spec.GetFileSpec().GetPath(),
+                                true /* only_if_exists */)) {
+    module_spec.GetFileSpec().SetPath(remapped_obj_file->GetPath());
+  }
 
   // First see if we already have this module in our module list.  If we do,
   // then we're done, we don't need to consult the shared modules list.  But
@@ -4453,6 +4462,14 @@ bool TargetProperties::GetSkipPrologue() const {
 
 PathMappingList &TargetProperties::GetSourcePathMap() const {
   const uint32_t idx = ePropertySourceMap;
+  OptionValuePathMappings *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValuePathMappings(idx);
+  assert(option_value);
+  return option_value->GetCurrentValue();
+}
+
+PathMappingList &TargetProperties::GetObjectPathMap() const {
+  const uint32_t idx = ePropertyObjectMap;
   OptionValuePathMappings *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValuePathMappings(idx);
   assert(option_value);

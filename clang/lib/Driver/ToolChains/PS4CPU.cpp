@@ -177,7 +177,9 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (StringRef Threads = getLTOParallelism(Args, D); !Threads.empty())
     AddLTOFlag(Twine("-threads=") + Threads);
 
-  CmdArgs.push_back(Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
+  if (*LTOArgs)
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
@@ -265,6 +267,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (UseJMC)
     AddLTOFlag("-enable-jmc-instrument");
+
+  if (Args.hasFlag(options::OPT_fstack_size_section,
+                   options::OPT_fno_stack_size_section, false))
+    AddLTOFlag("-stack-size-section");
 
   if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
     AddLTOFlag(Twine("-crash-diagnostics-dir=") + A->getValue());

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # ===- Generate headers for libc functions  -------------------*- python -*--==#
 #
@@ -251,8 +251,6 @@ def main(
     else:
         with open(output_file_path, "w") as f:
             f.write(header_str)
-
-    print(f"Generated header file: {output_file_path}")
 
 
 if __name__ == "__main__":

@@ -360,9 +360,7 @@ public:
                             formatted_raw_ostream &OS) override;
 };
 } // namespace
-// The actual implementation of the lazy analysis and update.  Note that the
-// inheritance from LazyValueInfoCache is intended to be temporary while
-// splitting the code and then transitioning to a has-a relationship.
+// The actual implementation of the lazy analysis and update.
 class LazyValueInfoImpl {
 
   /// Cached results from previous queries

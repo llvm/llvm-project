@@ -59,7 +59,6 @@ class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
 class MachineJumpTableInfo;
-class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
@@ -260,7 +259,6 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
-  MachineModuleInfo &MMI;
 
   // RegInfo - Information about each register in use in the function.
   MachineRegisterInfo *RegInfo;
@@ -395,15 +393,15 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
 
   /// \}
 
-  /// Clear all the members of this MachineFunction, but the ones used
-  /// to initialize again the MachineFunction.
-  /// More specifically, this deallocates all the dynamically allocated
-  /// objects and get rid of all the XXXInfo data structure, but keep
-  /// unchanged the references to Fn, Target, MMI, and FunctionNumber.
+  /// Clear all the members of this MachineFunction, but the ones used to
+  /// initialize again the MachineFunction.  More specifically, this deallocates
+  /// all the dynamically allocated objects and get rids of all the XXXInfo data
+  /// structure, but keeps unchanged the references to Fn, Target, and
+  /// FunctionNumber.
   void clear();
   /// Allocate and initialize the different members.
   /// In particular, the XXXInfo data structure.
-  /// \pre Fn, Target, MMI, and FunctionNumber are properly set.
+  /// \pre Fn, Target, and FunctionNumber are properly set.
   void init();
 
 public:
@@ -632,8 +630,8 @@ public:
   const static unsigned int DebugOperandMemNumber;
 
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
-                  const TargetSubtargetInfo &STI, unsigned FunctionNum,
-                  MachineModuleInfo &MMI);
+                  const TargetSubtargetInfo &STI, MCContext &Ctx,
+                  unsigned FunctionNum);
   MachineFunction(const MachineFunction &) = delete;
   MachineFunction &operator=(const MachineFunction &) = delete;
   ~MachineFunction();
@@ -665,7 +663,6 @@ public:
 
   GISelChangeObserver *getObserver() const { return Observer; }
 
-  MachineModuleInfo &getMMI() const { return MMI; }
   MCContext &getContext() const { return Ctx; }
 
   /// Returns the Section this function belongs to.

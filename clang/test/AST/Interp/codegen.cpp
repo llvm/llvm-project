@@ -31,3 +31,16 @@ namespace BaseClassOffsets {
   // CHECK: @_ZN16BaseClassOffsets1bE = global ptr getelementptr (i8, ptr @_ZN16BaseClassOffsets1cE, i64 4), align 8
   B* b = &c;
 }
+
+namespace reinterpretcast {
+  const unsigned int n = 1234;
+  extern const int &s = reinterpret_cast<const int&>(n);
+  // CHECK: @_ZN15reinterpretcastL1nE = internal constant i32 1234, align 4
+  // CHECK: @_ZN15reinterpretcast1sE = constant ptr @_ZN15reinterpretcastL1nE, align 8
+
+  void *f1(unsigned long l) {
+    return reinterpret_cast<void *>(l);
+  }
+  // CHECK: define {{.*}} ptr @_ZN15reinterpretcast2f1Em
+  // CHECK: inttoptr
+}
