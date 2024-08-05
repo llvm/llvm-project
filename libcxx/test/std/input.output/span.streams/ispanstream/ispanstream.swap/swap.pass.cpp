@@ -36,7 +36,7 @@ void test() {
   assert(!sp.empty());
   assert(sp.size() == 4);
 
-  // Mode: default (`in` | `out`)
+  // Mode: default (`in`)
   {
     SpStream rhsSpSt{sp};
     assert(rhsSpSt.span().data() == arr);
@@ -76,51 +76,29 @@ void test() {
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
-  // Mode `out`
+  // Mode: `ate`
   {
-    SpStream rhsSpSt{sp, std::ios_base::out};
+    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
     assert(rhsSpSt.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
 
-    SpStream spSt{std::span<CharT>{}};
+    SpStream spSt(std::span<CharT>{});
     assert(spSt.span().data() == nullptr);
-    // Mode `out` counts read characters
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.swap(rhsSpSt);
     assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
     assert(rhsSpSt.span().data() == nullptr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode: multiple
   {
-    SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-
-    SpStream spSt{std::span<CharT>{}};
-    assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    spSt.swap(rhsSpSt);
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-    assert(rhsSpSt.span().data() == nullptr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-  }
-  // Mode: `ate`
-  {
-    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
+    SpStream rhsSpSt{sp, std::ios_base::ate | std::ios_base::binary};
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
@@ -144,12 +122,22 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();
 #endif
+
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
   test<wchar_t, constexpr_char_traits<wchar_t>>();
 #endif
+
+#ifndef TEST_HAS_NO_CHAR8_T
+  test<char8_t>();
+  test<char8_t, constexpr_char_traits<char8_t>>();
+#endif
+  test<char16_t>();
+  test<char16_t, constexpr_char_traits<char16_t>>();
+  test<char32_t>();
+  test<char32_t, constexpr_char_traits<char32_t>>();
 
   return 0;
 }
