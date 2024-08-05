@@ -8,8 +8,8 @@
 
 #include <mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h>
 
+namespace mlir {
 namespace {
-using namespace mlir;
 
 //===----------------------------------------------------------------------===//
 // Constants
@@ -48,7 +48,6 @@ storageClassToOCLAddressSpace(spirv::StorageClass storageClass) {
 }
 } // namespace
 
-namespace mlir {
 unsigned storageClassToAddressSpace(spirv::ClientAPI clientAPI,
                                     spirv::StorageClass storageClass) {
   switch (clientAPI) {

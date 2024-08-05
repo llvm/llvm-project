@@ -67,7 +67,10 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
         kernelCallingConvention(options.kernelCallingConvention),
         nonKernelCallingConvention(options.nonKernelCallingConvention),
         encodeWorkgroupAttributionsAsArguments(
-            options.encodeWorkgroupAttributionsAsArguments) {}
+            options.encodeWorkgroupAttributionsAsArguments),
+        defaultLayout(options.encodeWorkgroupAttributionsAsArguments
+                          ? std::optional<DataLayout>(DataLayout())
+                          : std::optional<DataLayout>()) {}
 
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
@@ -92,6 +95,12 @@ private:
   /// Whether to encode workgroup attributions as additional arguments instead
   /// of a global variable.
   bool encodeWorkgroupAttributionsAsArguments;
+
+  /// Default layout to use in absence of the corresponding analysis.
+  /// This will only be initialized if
+  /// encodeWorkgroupAttributionsAsArguments=true, as it will remain unused
+  /// otherwise.
+  std::optional<DataLayout> defaultLayout;
 };
 
 /// The lowering of gpu.printf to a call to HIP hostcalls
