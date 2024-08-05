@@ -2584,7 +2584,6 @@ StmtResult Parser::ParseOpenMPInformationalDirective(
          "Unexpected directive category");
 
   bool HasAssociatedStatement = true;
-  Association Assoc = getDirectiveAssociation(DKind);
 
   SmallVector<OMPClause *, 5> Clauses;
   llvm::SmallBitVector SeenClauses(llvm::omp::Clause_enumSize + 1);
