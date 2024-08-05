@@ -1086,6 +1086,8 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
 
   unsigned ID = RC.getID();
 
@@ -1093,7 +1095,8 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
     return BaseImplRetVal;
 
   if (ID != X86::TILERegClassID) {
-    if (DisableRegAllocNDDHints)
+    if (DisableRegAllocNDDHints || !ST.hasNDD() ||
+        !TRI.isGeneralPurposeRegister(&RC))
       return BaseImplRetVal;
 
     // Add any two address hints after any copy hints.
