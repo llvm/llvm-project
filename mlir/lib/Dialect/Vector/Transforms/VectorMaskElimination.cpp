@@ -17,7 +17,9 @@ using namespace mlir;
 using namespace mlir::vector;
 namespace {
 
-/// If `value` is a constant multiple of `vector.vscale` return the multiplier.
+/// If `value` is a constant multiple of `vector.vscale` (e.g. `%cst *
+/// vector.vscale`), return the multiplier (`%cst`). Otherwise, return
+/// `std::nullopt`.
 std::optional<int64_t> getConstantVscaleMultiplier(Value value) {
   if (value.getDefiningOp<vector::VectorScaleOp>())
     return 1;
@@ -78,17 +80,16 @@ LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
     if (failed(dimLowerBoundSize))
       return failure();
     if (dimLowerBoundSize->scalable) {
-      // If the lower bound is scalable and < the mask dim size then this dim is
-      // not all-true.
+      // 1. The lower bound, LB, is scalable. If LB is < the mask dim size then
+      // this dim is not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
         return failure();
     } else {
-      // If the lower bound is a constant:
+      // 2. The lower bound, LB, is a constant.
       // - If the mask dim size is scalable then this dim is not all-true.
       if (maskTypeDimScalableFlags[i])
         return failure();
-      // - If the lower bound is < the _fixed-size_ mask dim size then this dim
-      // is not all-true.
+      // - If LB < the _fixed-size_ mask dim size then this dim is not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
         return failure();
     }
@@ -97,8 +98,8 @@ LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
   // Replace createMaskOp with an all-true constant. This should result in the
   // mask being removed in most cases (as xfer ops + vector.mask have folds to
   // remove all-true masks).
-  auto allTrue = rewriter.create<arith::ConstantOp>(
-      createMaskOp.getLoc(), maskType, DenseElementsAttr::get(maskType, true));
+  auto allTrue = rewriter.create<vector::ConstantMaskOp>(
+      createMaskOp.getLoc(), maskType, ConstantMaskKind::AllTrue);
   rewriter.replaceAllUsesWith(createMaskOp, allTrue);
   return success();
 }

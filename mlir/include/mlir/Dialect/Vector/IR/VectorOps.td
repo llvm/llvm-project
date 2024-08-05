@@ -2362,6 +2362,11 @@ def Vector_ConstantMaskOp :
     ```
   }];
 
+  let builders = [
+    // Build with mixed static/dynamic operands.
+    OpBuilder<(ins "VectorType":$type, "ConstantMaskKind":$kind)>
+  ];
+
   let extraClassDeclaration = [{
     /// Return the result type of this op.
     VectorType getVectorType() {

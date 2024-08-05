@@ -56,6 +56,9 @@ namespace detail {
 struct BitmaskEnumStorage;
 } // namespace detail
 
+/// Predefined constant_mask kinds.
+enum class ConstantMaskKind { AllFalse = 0, AllTrue };
+
 /// Default callback to build a region with a 'vector.yield' terminator with no
 /// arguments.
 void buildTerminatedBody(OpBuilder &builder, Location loc);

@@ -5749,6 +5749,16 @@ void vector::TransposeOp::getCanonicalizationPatterns(
 // ConstantMaskOp
 //===----------------------------------------------------------------------===//
 
+void ConstantMaskOp::build(OpBuilder &builder, OperationState &result,
+                           VectorType type, ConstantMaskKind kind) {
+  assert(kind == ConstantMaskKind::AllTrue ||
+         kind == ConstantMaskKind::AllFalse);
+  build(builder, result, type,
+        kind == ConstantMaskKind::AllTrue
+            ? type.getShape()
+            : SmallVector<int64_t>(type.getRank(), 0));
+}
+
 LogicalResult ConstantMaskOp::verify() {
   auto resultType = llvm::cast<VectorType>(getResult().getType());
   // Check the corner case of 0-D vectors first.

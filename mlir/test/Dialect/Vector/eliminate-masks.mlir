@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks  | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks --split-input-file | FileCheck %s
 
 // This tests a general pattern the vectorizer tends to emit.
 
 // CHECK-LABEL: @eliminate_redundant_masks_through_insert_and_extracts
-// CHECK: %[[ALL_TRUE_MASK:.*]] = arith.constant dense<true> : vector<[4]xi1>
+// CHECK: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [4] : vector<[4]xi1>
 // CHECK: vector.transfer_read {{.*}} %[[ALL_TRUE_MASK]]
 // CHECK: vector.transfer_write {{.*}} %[[ALL_TRUE_MASK]]
 func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor<1x1000xf32>) {
@@ -40,7 +40,7 @@ func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor
 // -----
 
 // CHECK-LABEL: @negative_extract_slice_size_shrink
-// CHECK-NOT: arith.constant dense<true> : vector<[4]xi1>
+// CHECK-NOT: vector.constant_mask
 // CHECK: %[[MASK:.*]] = vector.create_mask
 // CHECK: "test.some_use"(%[[MASK]]) : (vector<[4]xi1>) -> ()
 func.func @negative_extract_slice_size_shrink(%tensor: tensor<1000xf32>) {
@@ -67,8 +67,25 @@ func.func @negative_extract_slice_size_shrink(%tensor: tensor<1000xf32>) {
 
 // -----
 
+// CHECK-LABEL: @trivially_all_true_case
+// CHECK: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [2, 4] : vector<2x[4]xi1>
+// CHECK: "test.some_use"(%[[ALL_TRUE_MASK]]) : (vector<2x[4]xi1>) -> ()
+func.func @trivially_all_true_case(%tensor: tensor<2x?xf32>)
+{
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %vscale = vector.vscale
+  %c4_vscale = arith.muli %vscale, %c4 : index
+  // Is found to be all true _without_ value bounds analysis.
+  %mask = vector.create_mask %c2, %c4_vscale : vector<2x[4]xi1>
+  "test.some_use"(%mask) : (vector<2x[4]xi1>) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @negative_constant_dim_not_all_true
-// CHECK-NOT: arith.constant dense<true> : vector<2x[4]xi1>
+// CHECK-NOT: vector.constant_mask
 // CHECK: %[[MASK:.*]] = vector.create_mask
 // CHECK: "test.some_use"(%[[MASK]]) : (vector<2x[4]xi1>) -> ()
 func.func @negative_constant_dim_not_all_true()
@@ -87,7 +104,7 @@ func.func @negative_constant_dim_not_all_true()
 // -----
 
 // CHECK-LABEL: @negative_constant_vscale_multiple_not_all_true
-// CHECK-NOT: arith.constant dense<true> : vector<2x[4]xi1>
+// CHECK-NOT: vector.constant_mask
 // CHECK: %[[MASK:.*]] = vector.create_mask
 // CHECK: "test.some_use"(%[[MASK]]) : (vector<2x[4]xi1>) -> ()
 func.func @negative_constant_vscale_multiple_not_all_true() {
@@ -105,7 +122,7 @@ func.func @negative_constant_vscale_multiple_not_all_true() {
 // -----
 
 // CHECK-LABEL: @negative_value_bounds_fixed_dim_not_all_true
-// CHECK-NOT: arith.constant dense<true> : vector<3x[4]xi1>
+// CHECK-NOT: vector.constant_mask
 // CHECK: %[[MASK:.*]] = vector.create_mask
 // CHECK: "test.some_use"(%[[MASK]]) : (vector<3x[4]xi1>) -> ()
 func.func @negative_value_bounds_fixed_dim_not_all_true(%tensor: tensor<2x?xf32>)
@@ -114,7 +131,7 @@ func.func @negative_value_bounds_fixed_dim_not_all_true(%tensor: tensor<2x?xf32>
   %c4 = arith.constant 4 : index
   %vscale = vector.vscale
   %c4_vscale = arith.muli %vscale, %c4 : index
-  // This is _very_ simple but since tensor.dim is not a constant value bounds
+  // This is _very_ simple, but since tensor.dim is not a constant, value bounds
   // will be used to resolve it.
   %dim = tensor.dim %tensor, %c0 : tensor<2x?xf32>
   %mask = vector.create_mask %dim, %c4_vscale : vector<3x[4]xi1>
@@ -125,7 +142,7 @@ func.func @negative_value_bounds_fixed_dim_not_all_true(%tensor: tensor<2x?xf32>
 // -----
 
 // CHECK-LABEL: @negative_value_bounds_scalable_dim_not_all_true
-// CHECK-NOT: arith.constant dense<true> : vector<3x[4]xi1>
+// CHECK-NOT: vector.constant_mask
 // CHECK: %[[MASK:.*]] = vector.create_mask
 // CHECK: "test.some_use"(%[[MASK]]) : (vector<3x[4]xi1>) -> ()
 func.func @negative_value_bounds_scalable_dim_not_all_true(%tensor: tensor<2x100xf32>) {
