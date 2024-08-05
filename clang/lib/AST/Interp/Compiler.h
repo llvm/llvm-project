@@ -389,9 +389,6 @@ protected:
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;
 
-  /// Flag indicating if we're initializing a global variable.
-  bool GlobalDecl = false;
-
   /// Type of the expression returned by the function.
   std::optional<PrimType> ReturnType;
 
