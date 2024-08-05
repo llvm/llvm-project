@@ -228,7 +228,7 @@ X86 Support
 
 - Support ISA of ``AVX10.2``.
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
-    ``*_(mask(z)))_minmax_s[s|d|h]``.
+  ``*_(mask(z)))_minmax_s[s|d|h]``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
