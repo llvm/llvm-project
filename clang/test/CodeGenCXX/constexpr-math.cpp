@@ -3,9 +3,14 @@
 // RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -std=c++23 \
 // RUN: -emit-llvm -o - %s | FileCheck %s
 
+// RUN: %clang_cc1 -emit-llvm -triple powerpc64-unknown-unknown \
+// RUN: -DFLOAT128 -target-feature +float128 -std=c++23 %s -o - \
+// RUN: | FileCheck -check-prefix=FLOAT128 %s
+
 #define NAN (__builtin_nanf(""))
 #define INFINITY (__builtin_inff())
 
+#if !defined(FLOAT128)
 // CHECK-LABEL: define dso_local noundef i32 @_Z4funcv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -34,9 +39,7 @@
 // CHECK-NEXT:    [[FREXP6:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[FREXP7:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[FREXP8:%.*]] = alloca x86_fp80, align 16
-// CHECK-NEXT:    [[FREXP9:%.*]] = alloca float, align 4
-// CHECK-NEXT:    [[FREXP10:%.*]] = alloca x86_fp80, align 16
-// CHECK-NEXT:    store i32 0, ptr [[I]], align 4
+// CHECK-NEXT:    [[FREXP9:%.*]] = alloca half, align 2
 // CHECK-NEXT:    store double 1.300000e+00, ptr [[MIN1]], align 8
 // CHECK-NEXT:    store double -0.000000e+00, ptr [[MIN2]], align 8
 // CHECK-NEXT:    store double -0.000000e+00, ptr [[MIN3]], align 8
@@ -61,8 +64,7 @@
 // CHECK-NEXT:    store float 0x7FF0000000000000, ptr [[FREXP6]], align 4
 // CHECK-NEXT:    store float 0xFFF0000000000000, ptr [[FREXP7]], align 4
 // CHECK-NEXT:    store x86_fp80 0xK3FFE81A9FBE76C8B4396, ptr [[FREXP8]], align 16
-// CHECK-NEXT:    store float 8.750000e-01, ptr [[FREXP9]], align 4
-// CHECK-NEXT:    store x86_fp80 0xK3FFEEAC7AE147AE14800, ptr [[FREXP10]], align 16
+// CHECK-NEXT:    store half 0xH3B00, ptr [[FREXP9]], align 2
 // CHECK-NEXT:    ret i32 0
 //
 int func()
@@ -80,7 +82,7 @@ int func()
   constexpr long double min8 = __builtin_fminl(123.456L, 789.012L);
 
   // fmax
-  constexpr double max1 =  __builtin_fmax(15.24, 1.3);
+  constexpr double max1 = __builtin_fmax(15.24, 1.3);
   constexpr double max2 = __builtin_fmax(-0.0, +0.0);
   constexpr double max3 = __builtin_fmax(+0.0, -0.0);
   constexpr float max4 = __builtin_fmaxf(NAN, -1);
@@ -90,17 +92,31 @@ int func()
   constexpr long double max8 = __builtin_fmaxl(123.456L, 789.012L);
 
   // frexp
-  constexpr double frexp1 = __builtin_frexp(123.45, &i);
-  constexpr double frexp2 = __builtin_frexp(0.0, &i);
-  constexpr double frexp3 = __builtin_frexp(-0.0, &i);
-  constexpr float frexp4 = __builtin_frexpf(NAN, &i);
-  constexpr float frexp5 = __builtin_frexpf(-NAN, &i);
-  constexpr float frexp6 = __builtin_frexpf(+INFINITY, &i);
-  constexpr float frexp7 = __builtin_frexpf(-INFINITY, &i);
-  constexpr long double frexp8 = __builtin_frexpl(259.328L, &i);
-  constexpr float frexp9 = __builtin_frexpf16(3.5, &i);
-  constexpr long double frexp10 = __builtin_frexpf128(234.78, &i);
+  constexpr double frexp1 = __builtin_frexp(123.45, (int [1]){});
+  constexpr double frexp2 = __builtin_frexp(0.0, (int [1]){});
+  constexpr double frexp3 = __builtin_frexp(-0.0, (int [1]){});
+  constexpr float frexp4 = __builtin_frexpf(NAN, (int [1]){});
+  constexpr float frexp5 = __builtin_frexpf(-NAN, (int [1]){});
+  constexpr float frexp6 = __builtin_frexpf(+INFINITY, (int [1]){});
+  constexpr float frexp7 = __builtin_frexpf(-INFINITY, (int [1]){});
+  constexpr __fp16 frexp9 = __builtin_frexpf16(3.5, (int [1]){});
+  constexpr long double frexp8 = __builtin_frexpl(259.328L, (int [1]){});
 
   return 0;
 }
+#elif FLOAT128
+// FLOAT128-LABEL: define dso_local noundef signext i32 @_Z9func_f128v(
+// FLOAT128-SAME: ) #[[ATTR0:[0-9]+]] {
+// FLOAT128-NEXT:  entry:
+// FLOAT128-NEXT:    [[I:%.*]] = alloca i32, align 4
+// FLOAT128-NEXT:    [[FREXP10:%.*]] = alloca fp128, align 16
+// FLOAT128-NEXT:    store fp128 0xL90000000000000003FFED58F5C28F5C2, ptr [[FREXP10]], align 16
+// FLOAT128-NEXT:    ret i32 0
+//
+int func_f128() {
+  int i;
+  constexpr __float128 frexp10 = __builtin_frexpf128(234.78, (int [1]){}); // expected-error {{__float128 is not supported on this target}}
 
+  return 0;
+}
+#endif

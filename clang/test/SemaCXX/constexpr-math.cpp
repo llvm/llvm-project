@@ -83,25 +83,29 @@ int main() {
   // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
 
   // frexp
-  static_assert(is_same_val<CALL_BUILTIN(frexp, 123.45, &i), 123.45/128>);
+  static_assert(is_same_val<CALL_BUILTIN(frexp, 123.45, (int [1]){}), 123.45/128>);
   // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
-  static_assert(is_same_val<CALL_BUILTIN(frexp, 0.0, &i), 0.0>);
+  static_assert(is_same_val<CALL_BUILTIN(frexp, 0.0, (int [1]){}), 0.0>);
   // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
-  static_assert(is_same_val<CALL_BUILTIN(frexp, -0.0, &i), -0.0>);
+  static_assert(is_same_val<CALL_BUILTIN(frexp, -0.0, (int [1]){}), -0.0>);
   // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
-  static_assert(is_same_val<CALL_BUILTIN(frexpf, NAN, &i), NAN>);
+  static_assert(is_same_val<CALL_BUILTIN(frexpf, NAN, (int [1]){}), NAN>);
   // nan-not-constant-error@-1 {{non-type template argument is not a constant expression}}
   // nan-not-constant-note@-2 {{floating point arithmetic produces a NaN}}
   // cplusplus20andless-error@-3 {{non-type template argument is not a constant expression}}
-  static_assert(is_same_val<CALL_BUILTIN(frexpf, -NAN, &i), -NAN>);
+  static_assert(is_same_val<CALL_BUILTIN(frexpf, -NAN, (int [1]){}), -NAN>);
   // nan-not-constant-error@-1 {{non-type template argument is not a constant expression}}
   // nan-not-constant-note@-2 {{floating point arithmetic produces a NaN}}
   // cplusplus20andless-error@-3 {{non-type template argument is not a constant expression}}
-  static_assert(is_same_val<CALL_BUILTIN(frexpf, INFINITY, &i), INFINITY>);
+  static_assert(is_same_val<CALL_BUILTIN(frexpf, INFINITY, (int [1]){}), INFINITY>);
   // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
-  static_assert(is_same_val<CALL_BUILTIN(frexpf, -INFINITY, &i), -INFINITY>);
+  static_assert(is_same_val<CALL_BUILTIN(frexpf, -INFINITY, (int [1]){}), -INFINITY>);
   // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
-  static_assert(is_same_val<CALL_BUILTIN(frexpl, 123.45L, &i), 123.45L/128>);
+  static_assert(is_same_val<CALL_BUILTIN(frexpl, 123.45L, (int [1]){}), 123.45L/128>);
+  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
+  static_assert(is_same_val<CALL_BUILTIN(frexpl, 259.328L, (int [1]){}), 259.328L/512>);
+  // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
+  static_assert(is_same_val<CALL_BUILTIN(frexp, 3.5, (int [1]){}), 3.5/4>);
   // cplusplus20andless-error@-1 {{non-type template argument is not a constant expression}}
 
   return 0;

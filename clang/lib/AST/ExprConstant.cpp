@@ -14718,8 +14718,6 @@ public:
     return true;
   }
 
-  void StoreExponent(LValue Pointer, int exp);
-
   bool VisitCallExpr(const CallExpr *E);
 
   bool VisitUnaryOperator(const UnaryOperator *E);
@@ -14788,19 +14786,6 @@ static bool isInFrexpResultRange(const llvm::APFloat &x) {
           AbsX.compare(one) == llvm::APFloat::cmpLessThan);
 }
 
-void FloatExprEvaluator::StoreExponent(LValue Pointer, int exp) {
-  const APValue::LValueBase Base = Pointer.getLValueBase();
-  auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
-  if (auto *VarD = dyn_cast<VarDecl>(VD)) {
-    clang::IntegerLiteral *IL =
-        clang::IntegerLiteral::Create(Info.Ctx, llvm::APSInt(32, exp),
-                                      Info.Ctx.IntTy, clang::SourceLocation());
-    VarD->setInit(IL);
-  } else {
-    llvm_unreachable("expecting a VarDecl for an exponent");
-  }
-}
-
 bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -14832,7 +14817,10 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     assert((Result.isZero() || Result.isNaN() || Result.isInfinity() ||
             isInFrexpResultRange(Result)) &&
            "The value is not in the expected range for frexp.");
-    StoreExponent(Pointer, FrexpExp);
+    APValue ExpVal{Result};
+    if (!handleAssignment(Info, E, Pointer,
+                          E->getArg(1)->getType()->getPointeeType(), ExpVal))
+      return false;
     return true;
   }
 

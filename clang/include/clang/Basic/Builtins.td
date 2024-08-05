@@ -253,7 +253,7 @@ def FmodF16F128 : F16F128MathTemplate, Builtin {
 
 def FrexpF16F128 : F16F128MathTemplate, Builtin {
   let Spellings = ["__builtin_frexp"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, ConstexprSince];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstexprSince];
   let Prototype = "T(T, int*)";
   let BuiltinPrefixedAliasIsConstexpr = 1;
   let UnprefixedOnlyConstexprSince = "lang_cxx23";
@@ -3496,7 +3496,7 @@ def Fmod : FPMathTemplate, LibBuiltin<"math.h"> {
 
 def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["frexp"];
-  let Attributes = [NoThrow, Const, ConstexprSince];
+  let Attributes = [NoThrow, ConstexprSince];
   let Prototype = "T(T, int*)";
   let AddBuiltinPrefixedAlias = 1;
   let BuiltinPrefixedAliasIsConstexpr = 1;
