@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/threads/lambda_lock.h"
 #include "src/pthread/pthread_create.h"
@@ -32,7 +33,7 @@ void simple_addition() {
   ASSERT_EQ(sum.get_unsafe(), 4995000);
 }
 
-void string_concat() {
+template <size_t LIMIT> void string_concat() {
   static char buffer[10001];
   LIBC_NAMESPACE::LambdaLock<LIBC_NAMESPACE::cpp::StringStream> shared{buffer};
   pthread_t threads[10];
@@ -44,7 +45,8 @@ void string_concat() {
           for (int j = 0; j < 100; ++j)
             for (int c = 0; c < 10; ++c)
               lock->enqueue(
-                  [c](LIBC_NAMESPACE::cpp::StringStream &data) { data << c; });
+                  [c](LIBC_NAMESPACE::cpp::StringStream &data) { data << c; },
+                  LIMIT);
           return nullptr;
         },
         &shared);
@@ -64,6 +66,10 @@ void string_concat() {
 
 TEST_MAIN() {
   simple_addition();
-  string_concat();
+  string_concat<0>();
+  string_concat<1>();
+  string_concat<2>();
+  string_concat<17>();
+  string_concat<LIBC_NAMESPACE::cpp::numeric_limits<size_t>::max()>();
   return 0;
 }

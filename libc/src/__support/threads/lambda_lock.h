@@ -232,42 +232,45 @@ public:
         node->status.notify_one();
     };
     size_t remaining = combining_limit;
-    while (remaining != 0) {
+    while (true) {
       // Execute the lambda function.
       current->lambda(*current);
       RawLambdaLockHeader *next = current->next.load(cpp::MemoryOrder::ACQUIRE);
-      // Break the loop if there is no next node.
-      if (!next)
-        break;
-      // Wake up the current node if it is sleeping.
-      wakeup(current, RawLambdaLockHeader::DONE);
-      current = next;
-      remaining--;
-    }
 
-    // We are here either because the combining limit is reached or the last
-    // attempt to get the next node failed.
+      if (remaining > 0 && next != nullptr) {
+        // Wake up the current node if it is sleeping.
+        wakeup(current, RawLambdaLockHeader::DONE);
+        current = next;
+        remaining--;
+        continue;
+      }
 
-    // Try close current waiting queue.
-    RawLambdaLockHeader *expected = current;
-    if (tail.compare_exchange_strong(expected, nullptr,
-                                     cpp::MemoryOrder::ACQ_REL,
-                                     cpp::MemoryOrder::RELAXED)) {
-      // The queue is closed. We are good to go, before which we need to
-      // wake up the last node if it is sleeping.
+      // We are here either because the combining limit is reached or the last
+      // attempt to get the next node failed. Invariant: current node is
+      // executed.
+
+      // Try close current waiting queue.
+      RawLambdaLockHeader *expected = current;
+      if (tail.compare_exchange_strong(expected, nullptr,
+                                       cpp::MemoryOrder::ACQ_REL,
+                                       cpp::MemoryOrder::RELAXED)) {
+        // The queue is closed. We are good to go, before which we need to
+        // wake up the last node if it is sleeping.
+        wakeup(current, RawLambdaLockHeader::DONE);
+        return;
+      }
+
+      // We failed to close the queue, handover the combiner role to the next
+      // one in queue.
+      token.hand_over();
+      while (!current->next.load(cpp::MemoryOrder::RELAXED))
+        sleep_briefly();
+      RawLambdaLockHeader *combiner =
+          current->next.load(cpp::MemoryOrder::ACQUIRE);
+      wakeup(combiner, RawLambdaLockHeader::COMBINING);
       wakeup(current, RawLambdaLockHeader::DONE);
       return;
     }
-
-    // We failed to close the queue, handover the combiner role to the next one
-    // in queue.
-    token.hand_over();
-    while (!current->next.load(cpp::MemoryOrder::RELAXED))
-      sleep_briefly();
-    RawLambdaLockHeader *combiner =
-        current->next.load(cpp::MemoryOrder::ACQUIRE);
-    wakeup(combiner, RawLambdaLockHeader::COMBINING);
-    wakeup(current, RawLambdaLockHeader::DONE);
   }
 };
 

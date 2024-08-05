@@ -37,4 +37,5 @@ add_integration_test(
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
     libc.src.__support.CPP.stringstream
+    libc.src.__support.CPP.limits
 )
