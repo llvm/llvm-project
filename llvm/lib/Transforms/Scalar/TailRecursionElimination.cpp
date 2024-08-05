@@ -243,8 +243,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
           isa<PseudoProbeInst>(&I))
         continue;
 
-      // Bail out intrinsic stackrestore call because it can modify unescaped
-      // allocas.
+      // Bail out for intrinsic stackrestore call because it can modify
+      // unescaped allocas.
       if (auto *II = dyn_cast<IntrinsicInst>(CI))
         if (II->getIntrinsicID() == Intrinsic::stackrestore)
           continue;
