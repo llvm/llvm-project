@@ -5436,6 +5436,22 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "  int y = 0;\n"
                "}",
                style);
+  verifyFormat("#ifndef PREDICTORS_HPP_\n"
+               "#define PREDICTORS_HPP_\n"
+               "int compute_prior(int column) {\n"
+               "#if defined(SPECIAL_PATH)\n"
+               "  return top[column];\n"
+               "#else\n"
+               "  // division-by-multiplication\n"
+               "  #ifdef PEDANTIC\n"
+               "  return prior(top[column]);\n",
+               "  #else\n"
+               "  return fast_prior(top[column]);\n"
+               "  #endif\n"
+               "#endif\n"
+               "}\n"
+               "#endif // PREDICTORS_HPP_"
+               style);
 
   style.IndentPPDirectives = FormatStyle::PPDIS_None;
   verifyFormat("#ifdef foo\n"
