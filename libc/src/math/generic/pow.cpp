@@ -223,7 +223,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
   // So if |y| > 1075 / log2(1 - 2^-53), and x is finite:
   //   |y * log2(x)| = 0 or > 1075.
   // Hence x^y will either overflow or underflow if x is not zero.
-  if (LIBC_UNLIKELY(y_mant == 0 || y_a > 0x43d74910d52d3052 ||
+  if (LIBC_UNLIKELY(y_mant == 0 || y_a > 0x43d7'4910'd52d'3052 ||
                     x_u == FPBits::one().uintval() ||
                     x_u >= FPBits::inf().uintval() ||
                     x_u < FPBits::min_normal().uintval())) {
@@ -240,6 +240,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
       return y_sign ? (1.0 / (x * x)) : (x * x);
     }
 
+    // |y| > 1075 / log2(1 - 2^-53).
     if (y_a > 0x43d7'4910'd52d'3052) {
       if (y_a >= 0x7ff0'0000'0000'0000) {
         // y is inf or nan
@@ -268,16 +269,16 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
           return FPBits::inf().get_val();
         }
         // pow (|x| < 1, -inf) = +inf
-        // pow (|x| < 1, +inf) = 0.0f
-        // pow (|x| > 1, -inf) = 0.0f
+        // pow (|x| < 1, +inf) = 0.0
+        // pow (|x| > 1, -inf) = 0.0
         // pow (|x| > 1, +inf) = +inf
         return ((x_a < FPBits::one().uintval()) == y_sign)
                    ? FPBits::inf().get_val()
                    : 0.0;
       }
-      // x^y will be overflow / underflow in double precision.  Set y to a
+      // x^y will overflow / underflow in double precision.  Set y to a
       // large enough exponent but not too large, so that the computations
-      // won't be overflow in double precision.
+      // won't overflow in double precision.
       y = y_sign ? -0x1.0p100 : 0x1.0p100;
     }
 
@@ -305,7 +306,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
     if (x_a == FPBits::inf().uintval()) {
       bool out_is_neg = x_sign && is_odd_integer(y);
       if (y_sign)
-        return out_is_neg ? -0.0f : 0.0f;
+        return out_is_neg ? -0.0 : 0.0;
       return FPBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();
     }
 
@@ -327,7 +328,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
         x = -x;
         if (is_odd_integer(y))
           // sign = -1.0;
-          sign = 0x8000'0000'0000'0000ULL;
+          sign = 0x8000'0000'0000'0000;
       } else {
         // pow( negative, non-integer ) = NaN
         fputil::set_errno_if_required(EDOM);
@@ -349,7 +350,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
   unsigned idx_x = static_cast<unsigned>(x_mant >> (FPBits::FRACTION_LEN - 7));
   // Add the hidden bit to the mantissa.
   // 1 <= m_x < 2
-  FPBits m_x = FPBits(x_mant | 0x3FF0'0000'0000'0000);
+  FPBits m_x = FPBits(x_mant | 0x3ff0'0000'0000'0000);
 
   // Reduced argument for log2(m_x):
   //   dx = r * m_x - 1.
@@ -362,7 +363,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   dx = fputil::multiply_add(RD[idx_x], m_x.get_val(), -1.0); // Exact
 #else
-  double c = FPBits(m_x.uintval() & 0x3FFF'E000'0000'0000).get_val();
+  double c = FPBits(m_x.uintval() & 0x3fff'e000'0000'0000).get_val();
   dx = fputil::multiply_add(RD[idx_x], m_x.get_val() - c, CD[idx_x]); // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
