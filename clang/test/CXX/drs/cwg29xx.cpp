@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
 
-namespace cwg2917 { // cwg2917: 20 2024-07-30
+namespace cwg2917 { // cwg2917: 20 open 2024-07-30
 template <typename>
 class Foo;
 
