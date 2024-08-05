@@ -140,7 +140,7 @@ public:
   llvm::Error getCommand(llvm::StringSaver &Saver, StringRef &WorkingDirectory,
                          SmallVectorImpl<const char *> &Args);
 
-  llvm::Error putScanResultFailed(StringRef Reason);
+  llvm::Error putScanResultFailed(StringRef Reason, StringRef DiagnosticOutput);
   llvm::Error putScanResultSuccess(StringRef RootID,
                                    ArrayRef<const char *> Args,
                                    StringRef DiagnosticOutput);
