@@ -149,6 +149,8 @@ Improvements to Clang's diagnostics
 
 - -Wdangling-assignment-gsl is enabled by default.
 - Clang now does a better job preserving the template arguments as written when specializing concepts.
+- Clang now always preserves the template arguments as written used
+  to specialize template type aliases.
 
 Improvements to Clang's time-trace
 ----------------------------------
