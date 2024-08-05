@@ -17363,8 +17363,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
   // FIXME: This works for now; revisit once we support packs in NNSs.
   if (EllipsisLoc.isValid())
-      Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
-          << SourceRange(FriendLoc, NameLoc);
+    Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
+        << SourceRange(FriendLoc, NameLoc);
 
   if (TemplateParameterList *TemplateParams =
           MatchTemplateParametersToScopeSpecifier(
@@ -17374,7 +17374,6 @@ DeclResult Sema::ActOnTemplatedFriendTag(
       // This is a declaration of a class template.
       if (Invalid)
         return true;
-
 
       return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
                                 Name, NameLoc, Attr, TemplateParams, AS_public,

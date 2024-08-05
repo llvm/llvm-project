@@ -2012,8 +2012,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       Tok.isOneOf(tok::comma, tok::ellipsis))
     TUK = TagUseKind::Friend;
   else if (isDefiningTypeSpecifierContext(DSC, getLangOpts().CPlusPlus) ==
-          AllowDefiningTypeSpec::No ||
-      (getLangOpts().OpenMP && OpenMPDirectiveParsing))
+               AllowDefiningTypeSpec::No ||
+           (getLangOpts().OpenMP && OpenMPDirectiveParsing))
     TUK = TagUseKind::Reference;
   else if (Tok.is(tok::l_brace) ||
            (DSC != DeclSpecContext::DSC_association &&
