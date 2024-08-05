@@ -75,7 +75,7 @@ inline std::string get_temp_file_name() {
   // can simply generate a good guess in the temporary folder and create it.
   constexpr char chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   char Name[]            = "/tmp/libcxx.XXXXXX";
-  for (int i = 0; i < sizeof(Name); ++i)
+  for (std::size_t i = 0; i < sizeof(Name); ++i)
     if (Name[i] == 'X')
       Name[i] = chars[rand() % strlen(chars)];
   FILE* file = fopen(filename, "w");
