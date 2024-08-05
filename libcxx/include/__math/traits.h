@@ -69,49 +69,30 @@ _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI boo
 
 // isinf
 
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && numeric_limits<_A1>::has_infinity, int> = 0>
 _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1 __x) _NOEXCEPT {
   return __builtin_isinf((typename __promote<_A1>::type)__x);
 }
 
-template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && !numeric_limits<_A1>::has_infinity, int> = 0>
 _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1) _NOEXCEPT {
   return false;
 }
 
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(float __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-// When libc++ is layered on top of glibc on Linux, glibc's `math.h` is included. When compiling with
-// `-std=c++03`, this header brings the function declaration of `isinf(double)` with return type of
-// `int` into scope. This differs from the C99 standard as only a macro of the form `#define isinf(arg)`
-// is expected. Therefore, libc++ needs to respect the presense of this `double` overload with return type
-// `int` and cannot redefine it with return type `bool` like it is supposed to be, as it will conflict with
-// the declaration already in scope. For `-std=c++11` and beyond this issue is fixed, as glibc guards the
-// `double` overload of `isinf` by preprocessor macros.
-//
-// When libc++ is layered on top of Bionic's libc, `math.h` exposes a function prototype for `isnan(double)`
-// with return type `int`. This function prototype in Bionic's libc is not guarded by any preprocessor macros
-// and will therefore conflict.
-//
-// `_LIBCPP_PREFERRED_OVERLOAD` specifies that a given overload is a better match than an otherwise equally good
-// function declaration. This is implemented in modern versions of Clang via `__attribute__((__enable_if__))`, and
-// not elsewhere. See https://github.com/llvm/llvm-project/commit/5fd17ab1b093f6b59aabb27f6c2c2278e65c2707 for
-// details. We use `_LIBCPP_PREFERRED_OVERLOAD` to define overloads in the global namespace that displace the
-// overloads provided by the C libraries mentioned above.
-#if ((defined(_LIBCPP_CXX03_LANG) && defined(__GLIBC__)) || defined(__BIONIC__)) && defined(_LIBCPP_PREFERRED_OVERLOAD)
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    isinf(double __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+isinf(double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
+#endif
 
 // isnan
 
@@ -125,39 +106,20 @@ _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan
   return false;
 }
 
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(float __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
-_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-// When libc++ is layered on top of glibc on Linux, glibc's `math.h` is included. When compiling with
-// `-std=c++03`, this header brings the function declaration of `isnan(double)` with return type of
-// `int` into scope. This differs from the C99 standard as only a macro of the form `#define isnan(arg)`
-// is expected. Therefore, libc++ needs to respect the presense of this `double` overload with return type
-// `int` and cannot redefine it with return type `bool` like it is supposed to be, as it will conflict with
-// the declaration already in scope. For `-std=c++11` and beyond this issue is fixed, as glibc guards the
-// `double` overload of `isnan` by preprocessor macros.
-//
-// When libc++ is layered on top of Bionic's libc, `math.h` exposes a function prototype for `isnan(double)`
-// with return type `int`. This function prototype in Bionic's libc is not guarded by any preprocessor macros
-// and will therefore conflict.
-//
-// `_LIBCPP_PREFERRED_OVERLOAD` specifies that a given overload is a better match than an otherwise equally good
-// function declaration. This is implemented in modern versions of Clang via `__attribute__((__enable_if__))`, and
-// not elsewhere. See https://github.com/llvm/llvm-project/commit/5fd17ab1b093f6b59aabb27f6c2c2278e65c2707 for
-// details. We use `_LIBCPP_PREFERRED_OVERLOAD` to define overloads in the global namespace that displace the
-// overloads provided by the C libraries mentioned above.
-#if ((defined(_LIBCPP_CXX03_LANG) && defined(__GLIBC__)) || defined(__BIONIC__)) && defined(_LIBCPP_PREFERRED_OVERLOAD)
-_LIBCPP_PREFERRED_OVERLOAD
-#endif
-    bool
-    isnan(double __x) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+isnan(double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
 _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
+#endif
 
 // isnormal
 
