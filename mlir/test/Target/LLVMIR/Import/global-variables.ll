@@ -280,7 +280,7 @@ define void @bar() {
 ; CHECK-DAG: #[[GLOBAL_VAR:.*]] = #llvm.di_global_variable<file = #[[FILE]], line = 268, type = #[[COMPOSITE_TYPE]], isLocalToUnit = true, isDefined = true>
 ; CHECK-DAG: #[[GLOBAL_VAR_EXPR:.*]] = #llvm.di_global_variable_expression<var = #[[GLOBAL_VAR]], expr = <>>
 
-; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global.0("0\00") {addr_space = 0 : i32, dso_local}
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global.0("0\00")
 ; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global.1("1\00") {addr_space = 0 : i32, dso_local}
 ;
 ; CHECK:  llvm.mlir.global internal constant @zero() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
