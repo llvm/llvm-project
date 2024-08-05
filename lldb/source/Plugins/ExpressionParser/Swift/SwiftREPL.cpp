@@ -395,8 +395,8 @@ lldb::offset_t SwiftREPL::GetDesiredIndentation(const StringList &lines,
           // this as a cast statement
           bool outdent = false;
           if (line.empty())
-            outdent = !identifier.equals("case");
-          else if (identifier.equals("case")) {
+            outdent = (identifier != "case");
+          else if (identifier == "case") {
             outdent = true;
           } else {
             line = line.rtrim(); // Skip trailing spaces

@@ -124,13 +124,13 @@ void SwiftASTManipulatorBase::DoInitialization() {
         }
       }
       // Not in an extension.
-      if (FD->getNameStr().equals("$__lldb_trampoline"))
+      if (FD->getNameStr() == "$__lldb_trampoline")
         trampoline_decl = FD;
-      else if (FD->getNameStr().equals("$__lldb_expr"))
+      else if (FD->getNameStr() == "$__lldb_expr")
         entrypoint_decl = FD;
-      else if (FD->getNameStr().equals("$__lldb_sink"))
+      else if (FD->getNameStr() == "$__lldb_sink")
         sink_decl = FD;
-      else if (FD->getNameStr().equals("$__lldb_user_expr"))
+      else if (FD->getNameStr() == "$__lldb_user_expr")
         user_expr_decl = FD;
       return Action::SkipChildren();
     }
