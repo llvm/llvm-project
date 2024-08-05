@@ -24,3 +24,4 @@ class TestSwiftFModuleFlags(TestBase):
 #       CHECK-NOT: -fno-implicit-modules
 #       CHECK-NOT: -fno-implicit-module-maps
 #       CHECK: -DMARKER2
+#       CHECK: PCM validation is

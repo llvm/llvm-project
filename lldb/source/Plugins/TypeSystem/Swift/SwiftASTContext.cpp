@@ -57,7 +57,9 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
 
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -9225,6 +9227,38 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   if (cu_imports.size() == 0)
     return true;
 
+  // Set PCM validation. This is not a great place to do this, but it
+  // needs to happen after ClangImporter was created and
+  // m_has_explicit_modules has been initialized.
+  {
+    // Read the setting.
+    AutoBool validate_pcm_setting = AutoBool::Auto;
+    TargetSP target_sp = GetTargetWP().lock();
+    if (target_sp)
+      validate_pcm_setting = target_sp->GetSwiftPCMValidation();
+
+    // If the setting is explicit, honor it.
+    bool validate_pcm = validate_pcm_setting != AutoBool::False;
+    if (validate_pcm_setting == AutoBool::Auto) {
+      // Disable validation for explicit modules.
+      validate_pcm = m_has_explicit_modules ? false : true;
+      // Enable validation in asserts builds.
+#ifndef NDEBUG
+      validate_pcm = true;
+#endif
+    }
+    
+    auto &pp_opts = m_clangimporter->getClangPreprocessor()
+      .getPreprocessorOpts();
+    pp_opts.DisablePCHOrModuleValidation =
+        validate_pcm ? clang::DisableValidationForModuleKind::None
+                     : clang::DisableValidationForModuleKind::All;
+    pp_opts.ModulesCheckRelocated = validate_pcm;
+
+    LOG_PRINTF(GetLog(LLDBLog::Types), "PCM validation is %s",
+               validate_pcm ? "disabled" : "enabled");
+  }
+  
   LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
   
   std::string category = "Importing Swift module dependencies for ";
