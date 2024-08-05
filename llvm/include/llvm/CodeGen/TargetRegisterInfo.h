@@ -630,7 +630,7 @@ public:
     return false;
   }
 
-  /// Returns true if TargetRegisterClass is a general purpose register.
+  /// Returns true if RC is a class/subclass of general purpose register.
   virtual bool
   isGeneralPurposeRegisterClass(const TargetRegisterClass *RC) const {
     return false;
