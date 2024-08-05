@@ -1094,6 +1094,7 @@ Experimental extensions
     zvkgs                0.7
     smctr                1.0
     ssctr                1.0
+    svukte               0.3
 
 Supported Profiles
     rva20s64
