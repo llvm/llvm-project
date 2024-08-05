@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
@@ -6160,5 +6161,25 @@ bool LoongArchTargetLowering::shouldExtendTypeInLibCall(EVT Type) const {
   if (Subtarget.isSoftFPABI() && (Type.isFloatingPoint() && !Type.isVector() &&
                                   Type.getSizeInBits() < Subtarget.getGRLen()))
     return false;
+  return true;
+}
+
+// memcpy, and other memory intrinsics, typically tries to use wider load/store
+// if the source/dest is aligned and the copy size is large enough. We therefore
+// want to align such objects passed to memory intrinsics.
+bool LoongArchTargetLowering::shouldAlignPointerArgs(CallInst *CI,
+                                                     unsigned &MinSize,
+                                                     Align &PrefAlign) const {
+  if (!isa<MemIntrinsic>(CI))
+    return false;
+
+  if (Subtarget.is64Bit()) {
+    MinSize = 8;
+    PrefAlign = Align(8);
+  } else {
+    MinSize = 4;
+    PrefAlign = Align(4);
+  }
+
   return true;
 }

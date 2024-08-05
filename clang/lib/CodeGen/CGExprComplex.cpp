@@ -649,7 +649,6 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
 
 ComplexPairTy ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
                                                  QualType PromotionType) {
-  E->hasStoredFPFeatures();
   QualType promotionTy =
       PromotionType.isNull()
           ? getPromotionType(E->getStoredFPFeaturesOrDefault(),

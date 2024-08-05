@@ -246,8 +246,8 @@ define <9 x i32> @multiply_2x3(<6 x i32> %a, <6 x i32> %b) {
 ; CHECK-NEXT:    ret <9 x i32> [[TMP65]]
 ;
 entry:
-  %c = call <9 x i32> @llvm.matrix.multiply.v6i32.v6i32.v6i32(<6 x i32> %a, <6 x i32> %b, i32 3, i32 2, i32 3)
+  %c = call <9 x i32> @llvm.matrix.multiply.v9i32.v6i32.v6i32(<6 x i32> %a, <6 x i32> %b, i32 3, i32 2, i32 3)
   ret <9 x i32> %c
 }
 
-declare <9 x i32> @llvm.matrix.multiply.v6i32.v6i32.v6i32(<6 x i32>, <6 x i32>, i32, i32, i32)
+declare <9 x i32> @llvm.matrix.multiply.v9i32.v6i32.v6i32(<6 x i32>, <6 x i32>, i32, i32, i32)

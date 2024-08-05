@@ -1,7 +1,8 @@
 ; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; This test is expected to fail with the following error
-; CHECK: LLVM ERROR: Invalid Overload Type
+; CHECK: in function round_double
+; CHECK-SAME: Cannot create Round operation: Invalid overload type
 
 define noundef double @round_double(double noundef %a) #0 {
 entry:

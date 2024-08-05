@@ -442,6 +442,69 @@ define i32 @foo(i32 %arg) {
   EXPECT_EQ(It, BB->end());
 }
 
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, InsertIntoBB) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Ret = &*It++;
+  // Detach `Add0` before we save.
+  Add0->removeFromParent();
+
+  // Check insertBefore(Instruction *) with tracking enabled.
+  Ctx.save();
+  Add0->insertBefore(Ret);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Check insertAfter(Instruction *) with tracking enabled.
+  Ctx.save();
+  Add0->insertAfter(Ret);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Check insertInto(BasicBlock *, BasicBlock::iterator) with tracking enabled.
+  Ctx.save();
+  Add0->insertInto(BB, Ret->getIterator());
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // To make sure we don't leak memory insert `Add0` back into the BB before the
+  // end of the test.
+  Add0->insertBefore(Ret);
+}
+
 TEST_F(TrackerTest, CallBaseSetters) {
   parseIR(C, R"IR(
 declare void @bar1(i8)
@@ -583,4 +646,160 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(CallBr->getIndirectDest(0), OtherBB);
   Ctx.revert();
   EXPECT_EQ(CallBr->getIndirectDest(0), OrigIndirectDest);
+}
+
+TEST_F(TrackerTest, PHINodeSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1, i8 %arg2) {
+bb0:
+  br label %bb2
+
+bb1:
+  %phi = phi i8 [ %arg0, %bb0 ], [ %arg1, %bb1 ]
+  br label %bb1
+
+bb2:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  unsigned ArgIdx = 0;
+  auto *Arg0 = F.getArg(ArgIdx++);
+  auto *Arg1 = F.getArg(ArgIdx++);
+  auto *Arg2 = F.getArg(ArgIdx++);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto *PHI = cast<sandboxir::PHINode>(&*BB1->begin());
+
+  // Check setIncomingValue().
+  Ctx.save();
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  PHI->setIncomingValue(0, Arg2);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg2);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check setIncomingBlock().
+  Ctx.save();
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  PHI->setIncomingBlock(0, BB2);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB2);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check addIncoming().
+  Ctx.save();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  PHI->addIncoming(Arg1, BB2);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 3u);
+  EXPECT_EQ(PHI->getIncomingBlock(2), BB2);
+  EXPECT_EQ(PHI->getIncomingValue(2), Arg1);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue(1).
+  Ctx.save();
+  PHI->removeIncomingValue(1);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue(0).
+  Ctx.save();
+  PHI->removeIncomingValue(0u);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg1);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue() remove all.
+  Ctx.save();
+  PHI->removeIncomingValue(0u);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg1);
+  PHI->removeIncomingValue(0u);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 0u);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue(BasicBlock *).
+  Ctx.save();
+  PHI->removeIncomingValue(BB1);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+}
+
+TEST_F(TrackerTest, SetVolatile) {
+  parseIR(C, R"IR(
+define void @foo(ptr %arg0, i8 %val) {
+  %ld = load i8, ptr %arg0, align 64
+  store i8 %val, ptr %arg0, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Load = cast<sandboxir::LoadInst>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+
+  EXPECT_FALSE(Load->isVolatile());
+  Ctx.save();
+  Load->setVolatile(true);
+  EXPECT_TRUE(Load->isVolatile());
+  Ctx.revert();
+  EXPECT_FALSE(Load->isVolatile());
+
+  EXPECT_FALSE(Store->isVolatile());
+  Ctx.save();
+  Store->setVolatile(true);
+  EXPECT_TRUE(Store->isVolatile());
+  Ctx.revert();
+  EXPECT_FALSE(Store->isVolatile());
 }

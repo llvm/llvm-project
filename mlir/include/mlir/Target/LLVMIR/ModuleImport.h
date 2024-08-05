@@ -53,7 +53,9 @@ public:
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
   /// and builds the dispatch tables. Returns failure if multiple dialect
   /// interfaces translate the same LLVM IR intrinsic.
-  LogicalResult initializeImportInterface() { return iface.initializeImport(); }
+  LogicalResult initializeImportInterface() {
+    return iface.initializeImport(llvmModule->getContext());
+  }
 
   /// Converts all functions of the LLVM module to MLIR functions.
   LogicalResult convertFunctions();

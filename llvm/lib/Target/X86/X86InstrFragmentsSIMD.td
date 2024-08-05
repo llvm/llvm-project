@@ -74,11 +74,11 @@ def X86psadbw  : SDNode<"X86ISD::PSADBW",
                                       SDTCVecEltisVT<1, i8>,
                                       SDTCisSameSizeAs<0,1>,
                                       SDTCisSameAs<1,2>]>, [SDNPCommutative]>;
-def X86dbpsadbw : SDNode<"X86ISD::DBPSADBW",
-                  SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i16>,
-                                       SDTCVecEltisVT<1, i8>,
-                                       SDTCisSameSizeAs<0,1>,
-                                       SDTCisSameAs<1,2>, SDTCisVT<3, i8>]>>;
+def SDTX86PSADBW : SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i16>,
+                                        SDTCVecEltisVT<1, i8>,
+                                        SDTCisSameSizeAs<0,1>,
+                                        SDTCisSameAs<1,2>, SDTCisVT<3, i8>]>;
+def X86dbpsadbw : SDNode<"X86ISD::DBPSADBW", SDTX86PSADBW>;
 def X86andnp   : SDNode<"X86ISD::ANDNP",
                  SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                       SDTCisSameAs<0,2>]>>;
@@ -772,6 +772,16 @@ def X86vfproundRnd: SDNode<"X86ISD::VFPROUND_RND",
                                              SDTCisOpSmallerThanOp<0, 1>,
                                              SDTCisVT<2, i32>]>>;
 
+def X86vminmax : SDNode<"X86ISD::VMINMAX", SDTypeProfile<1, 3, [SDTCisSameAs<0,1>,
+                                           SDTCisSameAs<0,2>, SDTCisInt<3>]>>;
+def X86vminmaxSae : SDNode<"X86ISD::VMINMAX_SAE", SDTypeProfile<1, 3, [SDTCisSameAs<0,1>,
+                                            SDTCisSameAs<0,2>, SDTCisInt<3>]>>;
+
+def X86vminmaxs : SDNode<"X86ISD::VMINMAXS", SDTypeProfile<1, 3, [SDTCisSameAs<0,1>,
+                                             SDTCisSameAs<0,2>, SDTCisInt<3>]>>;
+def X86vminmaxsSae : SDNode<"X86ISD::VMINMAXS_SAE", SDTypeProfile<1, 3, [SDTCisSameAs<0,1>,
+                                                    SDTCisSameAs<0,2>, SDTCisInt<3>]>>;
+
 // cvt fp to bfloat16
 def X86cvtne2ps2bf16 : SDNode<"X86ISD::CVTNE2PS2BF16",
                        SDTypeProfile<1, 2, [SDTCVecEltisVT<0, bf16>,
@@ -808,6 +818,8 @@ def X86vpdpbsud  : SDNode<"X86ISD::VPDPBSUD",  SDTVnni>;
 def X86vpdpbsuds : SDNode<"X86ISD::VPDPBSUDS", SDTVnni>;
 def X86vpdpbuud  : SDNode<"X86ISD::VPDPBUUD",  SDTVnni>;
 def X86vpdpbuuds : SDNode<"X86ISD::VPDPBUUDS", SDTVnni>;
+
+def X86Vmpsadbw : SDNode<"X86ISD::MPSADBW", SDTX86PSADBW>;
 
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments

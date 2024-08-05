@@ -439,10 +439,10 @@ CommandObjectDisassemble::GetRangesForSelectedMode(
 
 void CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
-  Target *target = &GetTarget();
+  Target &target = GetTarget();
 
   if (!m_options.arch.IsValid())
-    m_options.arch = target->GetArchitecture();
+    m_options.arch = target.GetArchitecture();
 
   if (!m_options.arch.IsValid()) {
     result.AppendError(
@@ -535,7 +535,7 @@ void CommandObjectDisassemble::DoExecute(Args &command,
       } else {
         result.AppendErrorWithFormat(
             "Failed to disassemble memory at 0x%8.8" PRIx64 ".\n",
-            cur_range.GetBaseAddress().GetLoadAddress(target));
+            cur_range.GetBaseAddress().GetLoadAddress(&target));
       }
     }
     if (print_sc_header)

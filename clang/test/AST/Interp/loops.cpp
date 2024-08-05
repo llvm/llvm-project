@@ -324,3 +324,31 @@ namespace RangeForLoop {
                                                // ref-note {{semicolon on a separate line}}
   }
 }
+
+namespace Scopes {
+  constexpr int foo() {
+    int n = 0;
+    {
+      int m = 12;
+    for (int i = 0;i < 10;++i) {
+
+      {
+        int a  = 10;
+        {
+          int b = 20;
+          {
+            int c = 30;
+            continue;
+          }
+        }
+      }
+    }
+    ++m;
+    n = m;
+    }
+
+    ++n;
+    return n;
+  }
+  static_assert(foo() == 14, "");
+}

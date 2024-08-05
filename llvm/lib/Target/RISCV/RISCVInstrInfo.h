@@ -288,6 +288,8 @@ public:
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
 
+  unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
+
   unsigned getUndefInitOpcode(unsigned RegClassID) const override {
     switch (RegClassID) {
     case RISCV::VRRegClassID:
@@ -383,7 +385,6 @@ struct RISCVMaskedPseudoInfo {
   uint16_t MaskedPseudo;
   uint16_t UnmaskedPseudo;
   uint8_t MaskOpIdx;
-  uint8_t ActiveElementsAffectResult : 1;
 };
 #define GET_RISCVMaskedPseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"

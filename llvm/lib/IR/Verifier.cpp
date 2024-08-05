@@ -6229,10 +6229,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
-    Check(llvm::any_of(CBR->getIndirectDests(),
-                       [LandingPadBB](const BasicBlock *IndDest) {
-                         return IndDest == LandingPadBB;
-                       }),
+    Check(llvm::is_contained(CBR->getIndirectDests(), LandingPadBB),
           "Intrinsic's corresponding callbr must have intrinsic's parent basic "
           "block in indirect destination list",
           &Call);

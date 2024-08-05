@@ -3310,9 +3310,9 @@ public:
   const FieldDecl *FindCountedByField(const FieldDecl *FD);
 
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
-                                      const FieldDecl *FAMDecl,
-                                      const FieldDecl *CountDecl);
+  llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -4850,9 +4850,10 @@ public:
   void EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest, const LValue &Src,
                             ExprValueKind SrcKind);
 
-  /// Build all the stores needed to initialize an aggregate at Dest with the
-  /// value Val.
-  void EmitAggregateStore(llvm::Value *Val, Address Dest, bool DestIsVolatile);
+  /// Create a store to \arg DstPtr from \arg Src, truncating the stored value
+  /// to at most \arg DstSize bytes.
+  void CreateCoercedStore(llvm::Value *Src, Address Dst, llvm::TypeSize DstSize,
+                          bool DstIsVolatile);
 
   /// EmitExtendGCLifetime - Given a pointer to an Objective-C object,
   /// make sure it survives garbage collection until this point.
