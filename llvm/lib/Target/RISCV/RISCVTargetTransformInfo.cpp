@@ -51,6 +51,11 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     [[fallthrough]];
   case Intrinsic::riscv_vle:
   case Intrinsic::riscv_vse: {
+    // Intrinsic interface:
+    // riscv_vle(merge, ptr, vl)
+    // riscv_vle_mask(merge, ptr, mask, vl, policy)
+    // riscv_vse(val, ptr, vl)
+    // riscv_vse_mask(val, ptr, mask, vl, policy)
     bool IsWrite = II->getType()->isVoidTy();
     Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
     const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
@@ -73,6 +78,11 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     [[fallthrough]];
   case Intrinsic::riscv_vlse:
   case Intrinsic::riscv_vsse: {
+    // Intrinsic interface:
+    // riscv_vlse(merge, ptr, stride, vl)
+    // riscv_vlse_mask(merge, ptr, stride, mask, vl, policy)
+    // riscv_vsse(val, ptr, stride, vl)
+    // riscv_vsse_mask(val, ptr, stride, mask, vl, policy)
     bool IsWrite = II->getType()->isVoidTy();
     Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
     const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
@@ -84,7 +94,8 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     Value *Stride = II->getArgOperand(PtrOperandNo + 1);
     // Use the pointer alignment as the element alignment if the stride is a
     // multiple of the pointer alignment. Otherwise, the element alignment
-    // should be Align(1).
+    // should be the greatest of common divisor of pointer alignment and stride.
+    // For simplicity, just consider unalignment for elements.
     unsigned PointerAlign = Alignment.valueOrOne().value();
     if (!isa<ConstantInt>(Stride) ||
         cast<ConstantInt>(Stride)->getZExtValue() % PointerAlign != 0)
