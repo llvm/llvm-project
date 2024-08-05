@@ -24,6 +24,9 @@ void __attribute__((target_clones("default", "arch=rv64g"))) fullArchString() {}
 // expected-warning@+1 {{unsupported 'arch=+zicsr' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("default", "arch=+zicsr"))) UnsupportBitMaskExt() {}
 
+// expected-warning@+1 {{unsupported 'arch=+c;priority=NotADigit' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
+void __attribute__((target_clones("default", "arch=+c;priority=NotADigit"))) UnsupportPriority() {}
+
 
 void lambda() {
   // expected-error@+1 {{attribute 'target_clones' multiversioned functions do not yet support lambdas}}

@@ -87,11 +87,22 @@ void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
 
   Out << '.';
 
-  SmallVector<StringRef, 8> Features;
-  AttrStr.consume_front("arch=");
-  AttrStr.split(Features, ",");
+  SmallVector<StringRef, 8> Attrs;
+  AttrStr.split(Attrs, ";");
 
-  llvm::sort(Features, [](const StringRef LHS, const StringRef RHS) {
+  // Drop Priority syntax.
+  StringRef ArchStr;
+  for (auto &Attr : Attrs) {
+    if (Attr.starts_with("arch="))
+      ArchStr = Attr;
+  }
+
+  // Extract features string.s
+  SmallVector<StringRef, 8> Features;
+  ArchStr.consume_front("arch=");
+  ArchStr.split(Features, ",");
+
+  llvm::stable_sort(Features, [](const StringRef LHS, const StringRef RHS) {
     return LHS.compare(RHS) < 0;
   });
 
