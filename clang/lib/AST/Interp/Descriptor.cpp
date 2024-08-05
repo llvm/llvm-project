@@ -225,12 +225,21 @@ static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
 
 static void moveRecord(Block *B, const std::byte *Src, std::byte *Dst,
                        const Descriptor *D) {
-  for (const auto &F : D->ElemRecord->fields()) {
-    auto FieldOff = F.Offset;
-    auto *FieldDesc = F.Desc;
+  assert(D);
+  assert(D->ElemRecord);
 
-    if (auto Fn = FieldDesc->MoveFn)
-      Fn(B, Src + FieldOff, Dst + FieldOff, FieldDesc);
+  // FIXME: There might be cases where we need to move over the (v)bases as
+  // well.
+  for (const auto &F : D->ElemRecord->fields()) {
+    auto FieldOffset = F.Offset;
+    const auto *SrcDesc =
+        reinterpret_cast<const InlineDescriptor *>(Src + FieldOffset) - 1;
+    auto *DestDesc =
+        reinterpret_cast<InlineDescriptor *>(Dst + FieldOffset) - 1;
+    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
+
+    if (auto Fn = F.Desc->MoveFn)
+      Fn(B, Src + FieldOffset, Dst + FieldOffset, F.Desc);
   }
 }
 

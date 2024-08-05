@@ -54,3 +54,13 @@ namespace reinterpretcast {
   // CHECK: define {{.*}} ptr @_ZN15reinterpretcast2f1Em
   // CHECK: inttoptr
 }
+
+namespace Bitfield {
+  struct S { int a : 5; ~S(); };
+  // CHECK: alloca
+  // CHECK: call {{.*}}memset
+  // CHECK: store i32 {{.*}}, ptr @_ZGRN8Bitfield1rE_
+  // CHECK: call void @_ZN8Bitfield1SD1
+  // CHECK: store ptr @_ZGRN8Bitfield1rE_, ptr @_ZN8Bitfield1rE, align 8
+  int &&r = S().a;
+}
