@@ -58,7 +58,7 @@ template <class = void> void f() {
   }(2, 'b');
 
 #if 0
-  // https://github.com/llvm/llvm-project/issues/18873
+  // FIXME: https://github.com/llvm/llvm-project/issues/18873
   [](auto ...x) { // #1
     ([&](auto ...y) {  // #2
       ([x, y] { }(), ...); // #3
