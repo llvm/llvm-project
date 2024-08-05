@@ -890,6 +890,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
     globalExpressionAttr =
         debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
 
+  // Workaround to support LLVM's nameless globals. MLIR, in contrast to LLVM,
+  // always requires a symbol name.
   std::string globalName = globalVar->getName().str();
   if (globalName.empty()) {
     globalName = getNamelessGlobalPrefix().str() +
@@ -898,7 +900,7 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   }
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
-      convertLinkageFromLLVM(globalVar->getLinkage()), globalName.c_str(),
+      convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
