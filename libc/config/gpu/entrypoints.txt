@@ -349,6 +349,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanhf
     libc.src.math.tgamma
     libc.src.math.tgammaf
+    libc.src.math.lgamma
+    libc.src.math.lgamma_r
     libc.src.math.trunc
     libc.src.math.truncf
 )
