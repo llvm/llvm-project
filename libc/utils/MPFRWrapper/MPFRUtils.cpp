@@ -1278,9 +1278,9 @@ template bool compare_ternary_operation_one_output(Operation,
                                                    double, double,
                                                    RoundingMode);
 template bool compare_ternary_operation_one_output(
-    Operation, const TernaryInput<long double> &, double, double, RoundingMode);
-template bool compare_ternary_operation_one_output(
     Operation, const TernaryInput<long double> &, float, double, RoundingMode);
+template bool compare_ternary_operation_one_output(
+    Operation, const TernaryInput<long double> &, double, double, RoundingMode);
 template bool
 compare_ternary_operation_one_output(Operation,
                                      const TernaryInput<long double> &,
