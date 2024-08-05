@@ -342,6 +342,66 @@ public:
   }
 };
 
+/// Class that represents a list of directive kinds (parallel, target, etc.)
+/// as used in \c absent, \c contains clauses.
+template <class T> class OMPDirectiveListClause : public OMPClause {
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+protected:
+  /// Number of directive kinds listed in the clause
+  unsigned NumKinds;
+
+public:
+  /// Build a clause with \a NumKinds directive kinds.
+  ///
+  /// \param K The clause kind.
+  /// \param StartLoc Starting location of the clause (the clause keyword).
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPDirectiveListClause(OpenMPClauseKind K, SourceLocation StartLoc,
+                         SourceLocation LParenLoc, SourceLocation EndLoc,
+                         unsigned NumKinds)
+      : OMPClause(K, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        NumKinds(NumKinds) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  MutableArrayRef<OpenMPDirectiveKind> getDirectiveKinds() {
+    return MutableArrayRef<OpenMPDirectiveKind>(
+        static_cast<T *>(this)
+            ->template getTrailingObjects<OpenMPDirectiveKind>(),
+        NumKinds);
+  }
+
+  void setDirectiveKinds(ArrayRef<OpenMPDirectiveKind> DK) {
+    assert(
+        DK.size() == NumKinds &&
+        "Number of directive kinds is not the same as the preallocated buffer");
+    std::copy(DK.begin(), DK.end(),
+              static_cast<T *>(this)
+                  ->template getTrailingObjects<OpenMPDirectiveKind>());
+  }
+
+  SourceLocation getLParenLoc() { return LParenLoc; }
+
+  void setLParenLoc(SourceLocation S) { LParenLoc = S; }
+};
+
 /// This represents 'allocator' clause in the '#pragma omp ...'
 /// directive.
 ///
@@ -2011,6 +2071,184 @@ public:
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_mergeable;
   }
+};
+
+/// This represents the 'absent' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume absent(<directive-name list>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has an 'absent' clause.
+class OMPAbsentClause final
+    : public OMPDirectiveListClause<OMPAbsentClause>,
+      private llvm::TrailingObjects<OMPAbsentClause, OpenMPDirectiveKind> {
+  friend OMPDirectiveListClause;
+  friend TrailingObjects;
+
+  /// Build 'absent' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPAbsentClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc, unsigned NumKinds)
+      : OMPDirectiveListClause<OMPAbsentClause>(
+            llvm::omp::OMPC_absent, StartLoc, LParenLoc, EndLoc, NumKinds) {}
+
+  /// Build an empty clause.
+  OMPAbsentClause(unsigned NumKinds)
+      : OMPDirectiveListClause<OMPAbsentClause>(
+            llvm::omp::OMPC_absent, SourceLocation(), SourceLocation(),
+            SourceLocation(), NumKinds) {}
+
+public:
+  static OMPAbsentClause *Create(const ASTContext &C,
+                                 ArrayRef<OpenMPDirectiveKind> DKVec,
+                                 SourceLocation Loc, SourceLocation LLoc,
+                                 SourceLocation RLoc);
+
+  static OMPAbsentClause *CreateEmpty(const ASTContext &C, unsigned NumKinds);
+
+  static bool classof(const OMPClause *C) {
+    return C->getClauseKind() == llvm::omp::OMPC_absent;
+  }
+};
+
+/// This represents the 'contains' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume contains(<directive-name list>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'contains' clause.
+class OMPContainsClause final
+    : public OMPDirectiveListClause<OMPContainsClause>,
+      private llvm::TrailingObjects<OMPContainsClause, OpenMPDirectiveKind> {
+  friend OMPDirectiveListClause;
+  friend TrailingObjects;
+
+  /// Build 'contains' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPContainsClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc, unsigned NumKinds)
+      : OMPDirectiveListClause<OMPContainsClause>(
+            llvm::omp::OMPC_contains, StartLoc, LParenLoc, EndLoc, NumKinds) {}
+
+  /// Build an empty clause.
+  OMPContainsClause(unsigned NumKinds)
+      : OMPDirectiveListClause<OMPContainsClause>(
+            llvm::omp::OMPC_contains, SourceLocation(), SourceLocation(),
+            SourceLocation(), NumKinds) {}
+
+public:
+  static OMPContainsClause *Create(const ASTContext &C,
+                                   ArrayRef<OpenMPDirectiveKind> DKVec,
+                                   SourceLocation Loc, SourceLocation LLoc,
+                                   SourceLocation RLoc);
+
+  static OMPContainsClause *CreateEmpty(const ASTContext &C, unsigned NumKinds);
+
+  static bool classof(const OMPClause *C) {
+    return C->getClauseKind() == llvm::omp::OMPC_contains;
+  }
+};
+
+/// This represents the 'holds' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume holds(<expr>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'holds' clause.
+class OMPHoldsClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_holds, OMPClause> {
+  friend class OMPClauseReader;
+
+public:
+  /// Build 'holds' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPHoldsClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc)
+      : OMPOneStmtClause(E, StartLoc, LParenLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPHoldsClause() : OMPOneStmtClause() {}
+
+  Expr *getExpr() const { return getStmtAs<Expr>(); }
+  void setExpr(Expr *E) { setStmt(E); }
+};
+
+/// This represents the 'no_openmp' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_openmp
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp' clause.
+class OMPNoOpenMPClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp> {
+public:
+  /// Build 'no_openmp' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPClause() : OMPNoChildClause() {}
+};
+
+/// This represents the 'no_openmp_routines' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_openmp_routines
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp_routines'
+/// clause.
+class OMPNoOpenMPRoutinesClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp_routines> {
+public:
+  /// Build 'no_openmp_routines' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPRoutinesClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPRoutinesClause() : OMPNoChildClause() {}
+};
+
+/// This represents the 'no_parallelism' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_parallelism
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_parallelism'
+/// clause.
+class OMPNoParallelismClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_parallelism> {
+public:
+  /// Build 'no_parallelism' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoParallelismClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoParallelismClause() : OMPNoChildClause() {}
 };
 
 /// This represents 'read' clause in the '#pragma omp atomic' directive.
