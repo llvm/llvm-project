@@ -82,6 +82,7 @@ ConfigWrapper elf::config;
 Ctx elf::ctx;
 
 static void setConfigs(opt::InputArgList &args);
+static void setConfigsPostParse();
 static void readConfigs(opt::InputArgList &args);
 
 void elf::errorOrWarn(const Twine &msg) {
@@ -1886,6 +1887,14 @@ static void setConfigs(opt::InputArgList &args) {
   }
 }
 
+// Initialise config options which depend on information previously parsed from
+// input files, such as Arm build attributes.
+static void setConfigsPostParse() {
+  // Currently, Thumb PLTs require Thumb2, and are only used for targets which
+  // do not have the ARM ISA.
+  config->armThumbPLTs = config->armHasThumb2ISA && !config->armHasArmISA;
+}
+
 static bool isFormatBinary(StringRef s) {
   if (s == "binary")
     return true;
@@ -2897,6 +2906,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
+  setConfigsPostParse();
+
   parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
     initSectionsAndLocalSyms(file, /*ignoreComdats=*/false);
   });
