@@ -874,10 +874,10 @@ public:
   /// \see Thread:Resume()
   /// \see Thread:Step()
   /// \see Thread:Suspend()
-  Status Resume();
+  Status Resume(lldb::RunDirection direction = lldb::eRunForward);
 
   /// Resume a process, and wait for it to stop.
-  Status ResumeSynchronous(Stream *stream);
+  Status ResumeSynchronous(Stream *stream, lldb::RunDirection direction = lldb::eRunForward);
 
   /// Halts a running process.
   ///
@@ -1129,10 +1129,15 @@ public:
   /// \see Thread:Resume()
   /// \see Thread:Step()
   /// \see Thread:Suspend()
-  virtual Status DoResume() {
+  virtual Status DoResume(lldb::RunDirection direction) {
     Status error;
-    error.SetErrorStringWithFormatv(
-        "error: {0} does not support resuming processes", GetPluginName());
+    if (direction == lldb::RunDirection::eRunForward) {
+      error.SetErrorStringWithFormatv(
+          "error: {0} does not support resuming processes", GetPluginName());
+    } else {
+      error.SetErrorStringWithFormatv(
+          "error: {0} does not support reverse execution of processes", GetPluginName());
+    }
     return error;
   }
 
@@ -2367,6 +2372,8 @@ public:
 
   bool IsRunning() const;
 
+  lldb::RunDirection GetLastRunDirection() { return m_last_run_direction; }
+
   DynamicCheckerFunctions *GetDynamicCheckers() {
     return m_dynamic_checkers_up.get();
   }
@@ -2874,7 +2881,7 @@ protected:
   ///
   /// \return
   ///     An Status object describing the success or failure of the resume.
-  Status PrivateResume();
+  Status PrivateResume(lldb::RunDirection direction = lldb::eRunForward);
 
   // Called internally
   void CompleteAttach();
@@ -3152,6 +3159,7 @@ protected:
                            // m_currently_handling_do_on_removals are true,
                            // Resume will only request a resume, using this
                            // flag to check.
+  lldb::RunDirection m_last_run_direction;
 
   /// This is set at the beginning of Process::Finalize() to stop functions
   /// from looking up or creating things during or after a finalize call.
