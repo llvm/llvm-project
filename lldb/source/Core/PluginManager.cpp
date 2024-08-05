@@ -702,7 +702,7 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               lldb_private::SaveCoreOptions &options) {
+                               const lldb_private::SaveCoreOptions &options) {
   Status error;
   if (!options.GetOutputFile()) {
     error.SetErrorString("No output file specified");
