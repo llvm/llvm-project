@@ -281,12 +281,13 @@ define void @bar() {
 ; CHECK-DAG: #[[GLOBAL_VAR_EXPR:.*]] = #llvm.di_global_variable_expression<var = #[[GLOBAL_VAR]], expr = <>>
 
 ; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global.0("0\00")
-; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global.1("1\00") {addr_space = 0 : i32, dso_local}
+; We skip over @mlir.llvm.nameless_global.1 and 2 because they exist
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global.3("1\00")
 ;
 ; CHECK:  llvm.mlir.global internal constant @zero() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
 ; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global.0 : !llvm.ptr
 ; CHECK:  llvm.mlir.global internal constant @one() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
-; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global.1 : !llvm.ptr
+; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global.3 : !llvm.ptr
 
 ; CHECK: llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr = #[[GLOBAL_VAR_EXPR]]}
 
@@ -294,6 +295,9 @@ define void @bar() {
 @1 = private unnamed_addr constant [2 x i8] c"1\00"
 @zero = internal constant ptr @0
 @one = internal constant ptr @1
+
+@"mlir.llvm.nameless_global.1" = external constant [10 x i8], !dbg !0
+declare void @"mlir.llvm.nameless_global.2"()
 
 @.str.1 = external constant [10 x i8], !dbg !0
 

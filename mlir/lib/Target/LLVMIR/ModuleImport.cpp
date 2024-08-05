@@ -894,8 +894,11 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // always requires a symbol name.
   std::string globalName = globalVar->getName().str();
   if (globalName.empty()) {
-    globalName = getNamelessGlobalPrefix().str() +
-                 std::to_string(namelessGlobals.size());
+    // Make sure the symbol name does not clash with an existing symbol.
+    do {
+      globalName =
+          getNamelessGlobalPrefix().str() + std::to_string(namelessGlobalId++);
+    } while (llvmModule->getNamedValue(globalName));
     namelessGlobals[globalVar] = FlatSymbolRefAttr::get(context, globalName);
   }
   GlobalOp globalOp = builder.create<GlobalOp>(
