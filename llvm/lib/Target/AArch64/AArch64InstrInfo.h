@@ -583,6 +583,10 @@ private:
   std::optional<unsigned>
   canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
                       MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
+
+  /// verifyInstruction - Perform target specific instruction verification.
+  bool verifyInstruction(const MachineInstr &MI,
+                         StringRef &ErrInfo) const override;
 };
 
 struct UsedNZCV {
