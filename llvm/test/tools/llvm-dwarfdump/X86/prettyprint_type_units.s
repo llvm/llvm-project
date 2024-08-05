@@ -9,8 +9,8 @@
 # struct S {};
 # S<t1, t2, t1> s;
 #
-# To various scenarios, the test uses a mixture of DWARF v4 and v5 type units,
-# and of llvm and gcc styles of referring to them.
+# To cover various scenarios, the test uses a mixture of DWARF v4 and v5 type
+# units, and of llvm and gcc styles of referring to them.
 
 
 # CHECK:      DW_TAG_variable
@@ -218,8 +218,8 @@
         .byte   7                               # Abbrev [7] 0x48:0x5 DW_TAG_template_type_parameter
         .long   .Lt1_decl-.Ltu_begin2           # DW_AT_type
         .byte   7                               # Abbrev [7] 0x4d:0x5 DW_TAG_template_type_parameter
-        # Simulate DWARF emitted by GCC where the signature is directly in the type attribute.
         .long   .Lt2_decl-.Ltu_begin2           # DW_AT_type
+        # Simulate DWARF emitted by GCC where the signature is directly in the type attribute.
         .byte   12                              # Abbrev [12] DW_TAG_template_type_parameter
         .quad   t1_sig                          # DW_AT_type
         .byte   0                               # End Of Children Mark
