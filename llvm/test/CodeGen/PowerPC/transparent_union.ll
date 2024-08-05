@@ -11,7 +11,7 @@
 %union.tu_s = type { i16 }
 %union.tu_us = type { i16 }
 %union.tu_l = type { i64 }
-%union.etest = type { i32 }
+%union.etest = type { i8 }
 
 define void @ftest0(i8 noundef zeroext %uc.coerce) {
 ; CHECK-LABEL: ftest0:
@@ -67,26 +67,14 @@ entry:
   ret void
 }
 
-define dso_local void @ftest4(i32 %a.coerce) {
+define dso_local void @ftest4(i8 noundef zeroext %a.coerce) #0 {
 ; CHECK-LABEL: ftest4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stw 3, -4(1)
+; CHECK-NEXT:    stb 3, -1(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = alloca %union.etest, align 4
+  %a = alloca %union.etest, align 1
   %coerce.dive = getelementptr inbounds %union.etest, ptr %a, i32 0, i32 0
-  store i32 %a.coerce, ptr %coerce.dive, align 4
-  ret void
-}
-
-define dso_local void @test5(i32 noundef zeroext %a.coerce) {
-; CHECK-LABEL: test5:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stw 3, -4(1)
-; CHECK-NEXT:    blr
-entry:
-  %a = alloca %union.etest, align 4
-  %coerce.dive = getelementptr inbounds %union.etest, ptr %a, i32 0, i32 0
-  store i32 %a.coerce, ptr %coerce.dive, align 4
+  store i8 %a.coerce, ptr %coerce.dive, align 1
   ret void
 }
