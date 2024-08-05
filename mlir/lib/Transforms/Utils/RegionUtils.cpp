@@ -679,12 +679,15 @@ static bool ableToUpdatePredOperands(Block *block) {
   return true;
 }
 
-/// Prunes the redundant list of arguments. E.g., if we are passing an argument
-/// list like [x, y, z, x] this would return [x, y, z] and it would update the
-/// `block` (to whom the argument are passed to) accordingly.
+/// Prunes the redundant list of new arguments. E.g., if we are passing an
+/// argument list like [x, y, z, x] this would return [x, y, z] and it would
+/// update the `block` (to whom the argument are passed to) accordingly. The new
+/// arguments are passed as arguments at the back of the block, hence we need to
+/// know how many `numOldArguments` were before, in order to correctly replace
+/// the new arguments in the block
 static SmallVector<SmallVector<Value, 8>, 2> pruneRedundantArguments(
     const SmallVector<SmallVector<Value, 8>, 2> &newArguments,
-    RewriterBase &rewriter, Block *block) {
+    RewriterBase &rewriter, unsigned numOldArguments, Block *block) {
 
   SmallVector<SmallVector<Value, 8>, 2> newArgumentsPruned(
       newArguments.size(), SmallVector<Value, 8>());
@@ -751,10 +754,11 @@ static SmallVector<SmallVector<Value, 8>, 2> pruneRedundantArguments(
   SmallVector<unsigned> toErase;
   for (auto [idx, arg] : llvm::enumerate(block->getArguments())) {
     if (idxToReplacement.contains(idx)) {
-      Value oldArg = block->getArgument(idx);
-      Value newArg = block->getArgument(idxToReplacement[idx]);
+      Value oldArg = block->getArgument(numOldArguments + idx);
+      Value newArg =
+          block->getArgument(numOldArguments + idxToReplacement[idx]);
       rewriter.replaceAllUsesWith(oldArg, newArg);
-      toErase.push_back(idx);
+      toErase.push_back(numOldArguments + idx);
     }
   }
 
@@ -793,6 +797,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
         1 + blocksToMerge.size(),
         SmallVector<Value, 8>(operandsToMerge.size()));
     unsigned curOpIndex = 0;
+    unsigned numOldArguments = leaderBlock->getNumArguments();
     for (const auto &it : llvm::enumerate(operandsToMerge)) {
       unsigned nextOpOffset = it.value().first - curOpIndex;
       curOpIndex = it.value().first;
@@ -814,7 +819,8 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
     }
 
     // Prune redundant arguments and update the leader block argument list
-    newArguments = pruneRedundantArguments(newArguments, rewriter, leaderBlock);
+    newArguments = pruneRedundantArguments(newArguments, rewriter,
+                                           numOldArguments, leaderBlock);
 
     // Update the predecessors for each of the blocks.
     auto updatePredecessors = [&](Block *block, unsigned clusterIndex) {
