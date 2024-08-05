@@ -38,7 +38,9 @@
 #  else
 #    define _LIBCPP_GLIBC_PREREQ(a, b) 0
 #  endif // defined(__GLIBC_PREREQ)
-#endif   // defined(__linux__)
+#elif defined(__AMDGPU__) || defined(__NVPTX__)
+#  include <features.h>
+#endif
 
 #ifndef __BYTE_ORDER__
 #  error                                                                                                               \
