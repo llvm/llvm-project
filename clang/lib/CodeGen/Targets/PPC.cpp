@@ -343,6 +343,8 @@ public:
       : DefaultABIInfo(CGT), IsSoftFloatABI(SoftFloatABI),
         IsRetSmallStructInRegABI(RetSmallStructInRegABI) {}
 
+  bool isPromotableTypeForABI(QualType Ty) const;
+
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
 
@@ -401,11 +403,30 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   return CharUnits::fromQuantity(4);
 }
 
+// Return true if the ABI requires Ty to be passed sign- or zero-
+// extended to 32 bits.
+bool
+PPC32_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
+  // Treat an enum type as its underlying type.
+  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+    Ty = EnumTy->getDecl()->getIntegerType();
+
+  // Promotable integer types are required to be promoted by the ABI.
+  if (isPromotableIntegerTypeForABI(Ty))
+    return true;
+
+  if (const auto *EIT = Ty->getAs<BitIntType>())
+    if (EIT->getNumBits() < 32)
+      return true;
+
+  return false;
+}
+
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
   bool IsTransparentUnion;
   Ty = useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
 
-  if (IsTransparentUnion && isPromotableIntegerTypeForABI(Ty))
+  if (IsTransparentUnion && isPromotableTypeForABI(Ty))
     return (ABIArgInfo::getExtend(
         Ty,
         llvm::IntegerType::get(getVMContext(), getContext().getTypeSize(Ty))));
