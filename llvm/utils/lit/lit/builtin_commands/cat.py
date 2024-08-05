@@ -8,9 +8,12 @@ except ImportError:
     from io import StringIO
 
 
+# This dataclass defines all currently supported options for cat
 @dataclass
 class Options:
+    # Options: -e. True if newlines should be displayed with a '$'
     show_ends: bool
+    # Options: -v, -e. True if text should be converted to ^ and M- notation
     show_nonprinting: bool
 
 
@@ -21,11 +24,10 @@ def convertTextNotation(data, options):
 
 
     for intval in data:
-        if options.show_ends:
-            if intval == 10:
-                newdata.write("$")
-                newdata.write(chr(intval))
-                continue
+        if options.show_ends and intval == 10:
+            newdata.write("$")
+            newdata.write(chr(intval))
+            continue
         if options.show_nonprinting:
             if intval == 9 or intval == 10:
                 newdata.write(chr(intval))
