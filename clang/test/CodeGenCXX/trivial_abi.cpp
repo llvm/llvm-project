@@ -262,6 +262,26 @@ void testExceptionLarge() {
   calleeExceptionLarge(Large(), Large());
 }
 
+// CHECK: define void @_ZN7GH930401gEPNS_1SE
+// CHECK: [[CALL:%.*]] = call i64 @_ZN7GH930401fEv
+// CHECK-NEXT: [[TRUNC:%.*]] = trunc i64 [[CALL]] to i56
+// CHECK-NEXT: store i56 [[TRUNC]]
+// CHECK-NEXT: ret void
+void* operator new(unsigned long, void*);
+namespace GH93040 {
+struct [[clang::trivial_abi]] S {
+  char a;
+  int x;
+  __attribute((aligned(2))) char y;
+  S();
+} __attribute((packed));
+S f();
+void g(S* s) { new(s) S(f()); }
+struct S2 { [[no_unique_address]] S s; char c;};
+static_assert(sizeof(S) == 8 && sizeof(S2) == 8, "");
+}
+
+
 // PR42961
 
 // CHECK: define{{.*}} @"_ZN3$_08__invokeEv"()
