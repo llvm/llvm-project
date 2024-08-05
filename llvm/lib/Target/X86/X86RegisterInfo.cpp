@@ -1089,8 +1089,11 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
   unsigned ID = RC.getID();
 
+  if (!VRM)
+      return BaseImplRetVal;
+
   if (ID != X86::TILERegClassID) {
-    if (!VRM || DisableRegAllocNDDHints)
+    if (DisableRegAllocNDDHints)
       return BaseImplRetVal;
 
     // Add any two address hints after any copy hints.
@@ -1108,7 +1111,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
     // physic register as Op1 (or Op2 if it's commutable).
     for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
       const MachineInstr &MI = *MO.getParent();
-      if (X86::getNonNDVariant(MI.getOpcode()) == 0)
+      if (!X86::getNonNDVariant(MI.getOpcode()))
         continue;
       unsigned OpIdx = MI.getOperandNo(&MO);
       if (OpIdx == 0) {
