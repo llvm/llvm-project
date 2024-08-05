@@ -344,6 +344,7 @@ public:
         IsRetSmallStructInRegABI(RetSmallStructInRegABI) {}
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!getCXXABI().classifyReturnType(FI))
@@ -398,6 +399,18 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   if (AlignTy)
     return CharUnits::fromQuantity(AlignTy->isVectorType() ? 16 : 4);
   return CharUnits::fromQuantity(4);
+}
+
+ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
+  bool IsTransparentUnion;
+  Ty = useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
+
+  if (IsTransparentUnion && isPromotableIntegerTypeForABI(Ty))
+    return (ABIArgInfo::getExtend(
+        Ty,
+        llvm::IntegerType::get(getVMContext(), getContext().getTypeSize(Ty))));
+
+  return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
