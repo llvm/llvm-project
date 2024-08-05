@@ -5309,7 +5309,7 @@ public:
       llvm::SmallVector<StringRef, 8> Features;
 
       Conds(StringRef Arch, ArrayRef<StringRef> Feats)
-          : Architecture(Arch), Features(Feats.begin(), Feats.end()) {}
+          : Architecture(Arch), Features(Feats) {}
     } Conditions;
 
     MultiVersionResolverOption(llvm::Function *F, StringRef Arch,
