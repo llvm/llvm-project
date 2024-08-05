@@ -2610,7 +2610,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
 
       // We write out exported module macros for PCH as well.
       auto Leafs = PP.getLeafModuleMacros(Name);
-      SmallVector<ModuleMacro *, 8> Worklist(Leafs.begin(), Leafs.end());
+      SmallVector<ModuleMacro *, 8> Worklist(Leafs);
       llvm::DenseMap<ModuleMacro *, unsigned> Visits;
       while (!Worklist.empty()) {
         auto *Macro = Worklist.pop_back_val();
