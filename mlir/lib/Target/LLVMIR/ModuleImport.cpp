@@ -891,7 +891,7 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
         debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
 
   std::string globalName = globalVar->getName().str();
-  if (globalName == "") {
+  if (globalName.empty()) {
     globalName = getNamelessGlobalPrefix().str() +
                  std::to_string(namelessGlobals.size());
     namelessGlobals[globalVar] = FlatSymbolRefAttr::get(context, globalName);
