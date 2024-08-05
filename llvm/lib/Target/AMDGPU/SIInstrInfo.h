@@ -1325,6 +1325,12 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
+  /// Check whether this is a bundle formed with v_load/store_idx
+  /// surrounding a core v_mem/alu instruction, return that core
+  /// instruction if true. In case it is just a v_load_idx bundled
+  /// with v_store_idx, return the v_store_idx as the core.
+  static MachineInstr *bundleWithGPRIndexing(MachineInstr &MI);
+
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 

@@ -8914,6 +8914,33 @@ Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return Register();
 }
 
+MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
+  if (!MI.isBundle())
+    return nullptr;
+
+  MachineInstr *CoreMI = nullptr;
+  MachineBasicBlock::instr_iterator I = MI.getIterator();
+  MachineBasicBlock::instr_iterator E = MI.getParent()->instr_end();
+  int Cnt = 0;
+  while (++I != E && I->isInsideBundle()) {
+    assert(!I->isBundle() && "No nested bundle!");
+    if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
+      if (!CoreMI) {
+        CoreMI = &*I;
+      }
+      Cnt++;
+    } else if (I->getOpcode() == AMDGPU::V_LOAD_IDX) {
+      assert(!CoreMI);
+      Cnt++;
+    } else if (!CoreMI) {
+      CoreMI = &*I;
+    } else {
+      return nullptr;
+    }
+  }
+  return Cnt ? CoreMI : nullptr;
+}
+
 unsigned SIInstrInfo::getInstBundleSize(const MachineInstr &MI) const {
   unsigned Size = 0;
   MachineBasicBlock::const_instr_iterator I = MI.getIterator();
