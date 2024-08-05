@@ -8,7 +8,6 @@
 
 #include "GPUOpsLowering.h"
 
-#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
@@ -19,22 +18,6 @@
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
-
-namespace {
-constexpr int64_t sizeQueryFailure = 0;
-
-static int64_t getAttributionSize(BlockArgument attribution,
-                                  const LLVMTypeConverter &converter,
-                                  const DataLayout &layout) {
-  auto attributionType = cast<MemRefType>(attribution.getType());
-  int64_t numElements = attributionType.getNumElements();
-  Type elementType = converter.convertType(attributionType.getElementType());
-  if (!elementType)
-    return sizeQueryFailure;
-  int64_t elementTypeSize = layout.getTypeSize(elementType);
-  return numElements * elementTypeSize;
-}
-} // namespace
 
 LogicalResult
 GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
@@ -60,24 +43,21 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     std::array attrs{
         rewriter.getNamedAttr(LLVM::LLVMDialect::getNoAliasAttrName(),
                               rewriter.getUnitAttr()),
-        rewriter.getNamedAttr(
-            LLVM::LLVMDialect::getWorkgroupAttribSizeAttrName(),
-            rewriter.getUnitAttr()),
+        rewriter.getNamedAttr(LLVM::LLVMDialect::getWorkgroupAttribAttrName(),
+                              rewriter.getUnitAttr()),
     };
     SmallVector<DictionaryAttr> argAttrs;
-    assert(defaultLayout && "Expecting defaultLayout to be intialized");
-    const DataLayout *layout = &*defaultLayout;
-    if (const DataLayoutAnalysis *analysis =
-            getTypeConverter()->getDataLayoutAnalysis()) {
-      layout = &analysis->getAbove(gpuFuncOp);
-    }
     for (BlockArgument attribution : workgroupAttributions) {
-      int64_t dataSize =
-          getAttributionSize(attribution, *getTypeConverter(), *layout);
-      // Check for special failure value
-      if (dataSize == sizeQueryFailure)
+      auto attributionType = cast<MemRefType>(attribution.getType());
+      IntegerAttr numElements =
+          rewriter.getI64IntegerAttr(attributionType.getNumElements());
+      Type llvmElementType =
+          getTypeConverter()->convertType(attributionType.getElementType());
+      if (!llvmElementType)
         return failure();
-      attrs.back().setValue(rewriter.getI64IntegerAttr(dataSize));
+      TypeAttr type = TypeAttr::get(llvmElementType);
+      attrs.back().setValue(
+          rewriter.getAttr<LLVM::WorkgroupAttribAttr>(numElements, type));
       argAttrs.push_back(rewriter.getDictionaryAttr(attrs));
     }
 
@@ -335,7 +315,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       copyPointerAttribute(LLVM::LLVMDialect::getDereferenceableAttrName());
       copyPointerAttribute(
           LLVM::LLVMDialect::getDereferenceableOrNullAttrName());
-      copyPointerAttribute(LLVM::LLVMDialect::getWorkgroupAttribSizeAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getWorkgroupAttribAttrName());
     }
   }
   rewriter.eraseOp(gpuFuncOp);

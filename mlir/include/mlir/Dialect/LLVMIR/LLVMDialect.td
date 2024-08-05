@@ -58,9 +58,9 @@ def LLVM_Dialect : Dialect {
     /// effect when lowering to the LLVMDialect.
     static StringRef getReadnoneAttrName() { return "llvm.readnone"; }
 
-    /// Name of the helper attribute to keep GPU workgroup attribution size
-    /// information when converting from GPU to LLVM.
-    static StringRef getWorkgroupAttribSizeAttrName() { return "llvm.mlir.workgroup_attrib_size"; }
+    /// Name of the helper attribute to keep GPU workgroup attribution size and
+    /// type information when converting from GPU to LLVM.
+    static StringRef getWorkgroupAttribAttrName() { return "llvm.mlir.workgroup_attrib"; }
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.

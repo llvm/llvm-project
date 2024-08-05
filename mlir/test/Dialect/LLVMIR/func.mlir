@@ -472,3 +472,10 @@ llvm.func @reqd_work_group_size_hint() attributes {reqd_work_group_size = array<
 // CHECK: @intel_reqd_sub_group_size_hint()
 // CHECK-SAME: intel_reqd_sub_group_size = 32 : i32
 llvm.func @intel_reqd_sub_group_size_hint() attributes {llvm.intel_reqd_sub_group_size = 32 : i32}
+
+// -----
+
+// CHECK: @workgroup_attrib
+// CHECK-SAME: llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<512 : i64, i32>
+// CHECK-SAME: llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<128 : i64, !llvm.struct<(i32, i64, f32)>
+llvm.func @workgroup_attrib(%arg0: !llvm.ptr {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<512 : i64, i32>}, %arg1: !llvm.ptr {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<128 : i64, !llvm.struct<(i32, i64, f32)>>})

@@ -1104,4 +1104,23 @@ def TailCallKindAttr : LLVM_Attr<"TailCallKind", "tailcallkind"> {
   let assemblyFormat = "`<` $tailCallKind `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// WorkgroupAttribAttr
+//===----------------------------------------------------------------------===//
+
+def WorkgroupAttribAttr
+    : LLVM_Attr<"WorkgroupAttrib", "mlir.workgroup_attrib"> {
+  let summary = "GPU workgroup attribution information";
+  let description = [{
+    GPU workgroup attributions are `gpu.func` arguments encoding memory
+    allocations in the workgroup address space. These might be encoded as
+    `llvm.ptr` arguments in our dialect, missing type and size information.
+    This attribute can be use to keep this information when converting from
+    GPU to LLVM dialect.
+  }];
+  let parameters = (ins "IntegerAttr":$num_elements,
+                        "TypeAttr":$element_type);
+  let assemblyFormat = "`<` $num_elements `,` $element_type`>`";
+}
+
 #endif // LLVMIR_ATTRDEFS
