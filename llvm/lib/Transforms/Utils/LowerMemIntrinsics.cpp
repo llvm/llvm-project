@@ -865,8 +865,8 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
 template <typename T>
 static bool canOverlap(MemTransferBase<T> *Memcpy, ScalarEvolution *SE) {
   if (SE) {
-    auto *SrcSCEV = SE->getSCEV(Memcpy->getRawSource());
-    auto *DestSCEV = SE->getSCEV(Memcpy->getRawDest());
+    const SCEV *SrcSCEV = SE->getSCEV(Memcpy->getRawSource());
+    const SCEV *DestSCEV = SE->getSCEV(Memcpy->getRawDest());
     if (SE->isKnownPredicateAt(CmpInst::ICMP_NE, SrcSCEV, DestSCEV, Memcpy))
       return false;
   }

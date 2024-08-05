@@ -754,6 +754,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Ld));
   auto *VLd = cast<sandboxir::LoadInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  bool OrigVolatileValue;
 
   // Check isVolatile()
   EXPECT_FALSE(Ld->isVolatile());
@@ -768,6 +769,11 @@ define void @foo(ptr %arg0, ptr %arg1) {
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
                                   /*InsertBefore=*/Ret, Ctx, "NewLd");
   EXPECT_FALSE(NewLd->isVolatile());
+  OrigVolatileValue = NewLd->isVolatile();
+  NewLd->setVolatile(true);
+  EXPECT_TRUE(NewLd->isVolatile());
+  NewLd->setVolatile(OrigVolatileValue);
+  EXPECT_FALSE(NewLd->isVolatile());
   EXPECT_EQ(NewLd->getType(), Ld->getType());
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
   EXPECT_EQ(NewLd->getAlign(), 8);
@@ -778,6 +784,11 @@ define void @foo(ptr %arg0, ptr %arg1) {
                                   /*InsertBefore=*/Ret,
                                   /*IsVolatile=*/true, Ctx, "NewVLd");
 
+  EXPECT_TRUE(NewVLd->isVolatile());
+  OrigVolatileValue = NewVLd->isVolatile();
+  NewVLd->setVolatile(false);
+  EXPECT_FALSE(NewVLd->isVolatile());
+  NewVLd->setVolatile(OrigVolatileValue);
   EXPECT_TRUE(NewVLd->isVolatile());
   EXPECT_EQ(NewVLd->getName(), "NewVLd");
   // Check create(InsertAtEnd)
@@ -823,6 +834,7 @@ define void @foo(i8 %val, ptr %ptr) {
   auto *St = cast<sandboxir::StoreInst>(&*It++);
   auto *VSt = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  bool OrigVolatileValue;
 
   // Check that the StoreInst has been created correctly.
   EXPECT_FALSE(St->isVolatile());
@@ -837,6 +849,11 @@ define void @foo(i8 %val, ptr %ptr) {
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertBefore=*/Ret, Ctx);
   EXPECT_FALSE(NewSt->isVolatile());
+  OrigVolatileValue = NewSt->isVolatile();
+  NewSt->setVolatile(true);
+  EXPECT_TRUE(NewSt->isVolatile());
+  NewSt->setVolatile(OrigVolatileValue);
+  EXPECT_FALSE(NewSt->isVolatile());
   EXPECT_EQ(NewSt->getType(), St->getType());
   EXPECT_EQ(NewSt->getValueOperand(), Val);
   EXPECT_EQ(NewSt->getPointerOperand(), Ptr);
@@ -847,6 +864,11 @@ define void @foo(i8 %val, ptr %ptr) {
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertBefore=*/Ret,
                                    /*IsVolatile=*/true, Ctx);
+  EXPECT_TRUE(NewVSt->isVolatile());
+  OrigVolatileValue = NewVSt->isVolatile();
+  NewVSt->setVolatile(false);
+  EXPECT_FALSE(NewVSt->isVolatile());
+  NewVSt->setVolatile(OrigVolatileValue);
   EXPECT_TRUE(NewVSt->isVolatile());
   EXPECT_EQ(NewVSt->getType(), VSt->getType());
   EXPECT_EQ(NewVSt->getValueOperand(), Val);

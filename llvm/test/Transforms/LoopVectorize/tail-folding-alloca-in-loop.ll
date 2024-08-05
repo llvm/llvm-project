@@ -53,7 +53,7 @@ define i32 @test(ptr %vf1, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 204
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[FOR_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label %[[exit:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 204, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
@@ -64,8 +64,8 @@ define i32 @test(ptr %vf1, i64 %n) {
 ; CHECK-NEXT:    store ptr [[TMP18]], ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], 200
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[FOR_END_LOOPEXIT]]:
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[exit]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[exit]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -78,9 +78,9 @@ for.body:
   store ptr %0, ptr %arrayidx, align 8
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv, 200
-  br i1 %exitcond.not, label %for.end.loopexit, label %for.body
+  br i1 %exitcond.not, label %exit, label %for.body
 
-for.end.loopexit:
+exit:
   ret i32 0
 }
 ;.

@@ -252,7 +252,15 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 #define zva_val  x5
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sc_memset)
-        dup     v0.16B, valw
+#ifdef __ARM_FEATURE_SVE
+        mov     z0.b, valw
+#else
+        bfi valw, valw, #8, #8
+        bfi valw, valw, #16, #16
+        bfi val, val, #32, #32
+        fmov d0, val
+        fmov v0.d[1], val
+#endif
         add     dstend2, dstin, count
 
         cmp     count, 96
