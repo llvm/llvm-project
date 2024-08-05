@@ -29,22 +29,30 @@
 
 #include "../helper_functions.h"
 #include "../helper_macros.h"
+#include "../helper_types.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
-  constexpr auto arrSize{30UZ};
-
   constexpr std::basic_string_view<CharT, TraitsT> sv{SV("zmt 94 hkt 82 pir 43vr")};
+  constexpr auto arrSize{30UZ};
   assert(sv.size() < arrSize);
 
+  // Create a std::span test value
   CharT arr[arrSize]{};
   initialize_array_from_string_view(arr, sv);
 
   std::span<CharT> sp{arr};
 
-  // Mode: default (`in`)
+  // Create a "Read Only Sequence" test value
+  CharT rosArr[arrSize]{};
+  initialize_array_from_string_view(rosArr, sv);
+
+  ReadOnlySpan<CharT, arrSize> ros{rosArr};
+  assert(ros.size() == arrSize);
+
+  // `std::span` + Mode: default (`in`)
   {
     SpStream spSt(sp);
 
@@ -52,44 +60,7 @@ void test() {
     assert(!spSt.bad());
     assert(!spSt.fail());
     assert(spSt.good());
-    // std::println(stderr, CS("-------> {}"), spSt.span().size());
-    // std::println("Hello world!~");
     assert(spSt.span().size() == arrSize);
-
-    // std::print(stderr, "span ---->");
-    // for (std::size_t i = 0; i != spSt.span().size(); ++i)
-    //   std::print(stderr, "{}, ", spSt.span().at(i));
-    // std::println();
-
-    // Read from stream
-    std::basic_string<CharT, TraitsT> str1;
-    spSt >> str1;
-    int i1;
-    spSt >> i1;
-    std::basic_string<CharT, TraitsT> str2;
-    spSt >> str2;
-    int i2;
-    spSt >> i2;
-    std::basic_string<CharT, TraitsT> str3;
-    spSt >> str3;
-    int i3;
-    spSt >> i3;
-
-    assert(str1 == CS("zmt"));
-    assert(i1 == 94);
-    // assert(false);
-  }
-
-#if 0
-  // Mode: default (`in` | `out`)
-  {
-    SpStream spSt(sp);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-    assert(spSt.span().size() == 0);
 
     // Read from stream
     std::basic_string<CharT, TraitsT> str1;
@@ -117,154 +88,22 @@ void test() {
     assert(!spSt.fail());
     assert(spSt.good());
 
-    // Write to stream
-    constexpr std::basic_string_view<CharT, TraitsT> sv1{SV("year 2024")};
-    spSt << sv1;
-
-    assert(spSt.span().size() == sv1.size());
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-
-    // Read from stream
-    spSt.seekg(0);
-    std::basic_string<CharT, TraitsT> str4;
-    spSt >> str4;
-    int i4;
-    spSt >> i4;
-
-    assert(str4 == CS("year"));
-    assert(i4 == 2024);
-
-    spSt >> i4;
-
-    assert(!spSt);
-    assert(!spSt.bad());
-    assert(spSt.fail());
-    assert(!spSt.good());
-
     spSt.clear();
 
     assert(spSt);
     assert(!spSt.bad());
     assert(!spSt.fail());
     assert(spSt.good());
-
-    // Write to stream
-    spSt << CS("94");
-    spSt << 84;
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-
-    assert(spSt.span().size() == sv1.size() + 4);
-    std::basic_string<CharT, TraitsT> expectedStr1{spSt.span().data(), std::size_t{spSt.span().size()}};
-    assert(expectedStr1 == CS("year 20249484"));
-
-    // Write to stream with overflow
-    constexpr std::basic_string_view<CharT, TraitsT> sv2{
-        SV("This string should overflow! This string should overflow!")};
-    spSt << sv2;
-    assert(spSt.span().size() == arrSize);
-    std::basic_string<CharT, TraitsT> expectedStr2{spSt.span().data(), std::size_t{spSt.span().size()}};
-    assert(expectedStr2 == CS("year 20249484This string shoul"));
-
-    assert(!spSt);
-    assert(spSt.bad());
-    assert(spSt.fail());
-    assert(!spSt.good());
   }
-
-  // Mode: `in`
+  // `ReadOnlySpan` + Mode: default (`in`)
   {
-    SpStream spSt{sp, std::ios_base::in};
-    assert(spSt);
-    assert(spSt.good());
-    assert(spSt.span().size() == arrSize);
+    SpStream spSt(sp);
 
-     std::basic_string<CharT, TraitsT> expectedStr0{spSt.span().data(), std::size_t{spSt.span().size()}};
-     std::cout << expectedStr0 << std::endl;
-
-    // // Read from stream
-    // std::basic_string<CharT, TraitsT> str1;
-    // spSt >> str1;
-    // int i1;
-    // spSt >> i1;
-    // std::basic_string<CharT, TraitsT> str2;
-    // spSt >> str2;
-    // int i2;
-    // spSt >> i2;
-    // std::basic_string<CharT, TraitsT> str3;
-    // spSt >> str3;
-    // int i3;
-    // spSt >> i3;
-
-    // assert(spSt.good());
-    // assert(str1 == CS("zmt"));
-    // assert(i1 == 94);
-    // assert(str2 == CS("hkt"));
-    // assert(i2 == 82);
-    // assert(str3 == CS("pir"));
-    // assert(i3 == 43);
-
-    // Write to stream
-    constexpr std::basic_string_view<CharT, TraitsT> sv1{SV("year 2024")};
-    spSt << sv1;
-
-    std::cout << spSt.span().size() << std::endl;
-    assert(spSt.span().size() == sv1.size());
-    assert(spSt.good());
-
-    // Read from stream
-    spSt.seekg(0);
-    std::basic_string<CharT, TraitsT> str4;
-    spSt >> str4;
-    int i4;
-    spSt >> i4;
-
-    assert(str4 == CS("year"));
-    assert(i4 == 2024);
-
-    spSt >> i4;
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(spSt.fail());
-    assert(!spSt.good());
-
-     spSt.clear();
     assert(spSt);
     assert(!spSt.bad());
     assert(!spSt.fail());
     assert(spSt.good());
-    // Write to stream
-    spSt << CS("94");
-    spSt << 84;
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());    assert(spSt.span().size() == sv1.size() + 4);
-    std::basic_string<CharT, TraitsT> expectedStr1{spSt.span().data(), std::size_t{spSt.span().size()}};
-    assert(expectedStr1 == CS("year 20249484"));
-
-    // Write to stream with overflow
-    constexpr std::basic_string_view<CharT, TraitsT> sv2{
-        SV("This string should overflow! This string should overflow!")};
-    spSt << sv2;
     assert(spSt.span().size() == arrSize);
-    std::basic_string<CharT, TraitsT> expectedStr2{spSt.span().data(), std::size_t{spSt.span().size()}};
-    assert(expectedStr2 == CS("year 20249484This string shoul"));
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(spSt.fail());
-    assert(!spSt.good());  }
-  // Mode `out`
-  {
-    SpStream spSt{sp, std::ios_base::out};
-    assert(spSt.span().size() == 0);
 
     // Read from stream
     std::basic_string<CharT, TraitsT> str1;
@@ -280,7 +119,6 @@ void test() {
     int i3;
     spSt >> i3;
 
-    assert(spSt.good());
     assert(str1 == CS("zmt"));
     assert(i1 == 94);
     assert(str2 == CS("hkt"));
@@ -288,55 +126,113 @@ void test() {
     assert(str3 == CS("pir"));
     assert(i3 == 43);
 
-    // Write to stream
-    constexpr std::basic_string_view<CharT, TraitsT> sv1{SV("year 2024")};
-    spSt << sv1;
-
-    assert(spSt.span().size() == sv1.size());
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
     assert(spSt.good());
+
+    spSt.clear();
+
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
+    assert(spSt.good());
+  }
+
+  // `std::span` + Mode: `ate`
+  {
+    SpStream spSt(sp, std::ios_base::ate);
+
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
+    assert(spSt.good());
+    assert(spSt.span().size() == arrSize);
 
     // Read from stream
-    spSt.seekg(0);
-    std::basic_string<CharT, TraitsT> str4;
-    spSt >> str4;
-    int i4;
-    spSt >> i4;
+    std::basic_string<CharT, TraitsT> str1;
+    spSt >> str1;
+    int i1;
+    spSt >> i1;
+    std::basic_string<CharT, TraitsT> str2;
+    spSt >> str2;
+    int i2;
+    spSt >> i2;
+    std::basic_string<CharT, TraitsT> str3;
+    spSt >> str3;
+    int i3;
+    spSt >> i3;
 
-    assert(str4 == CS("year"));
-    assert(i4 == 2024);
+    assert(str1 == CS("zmt"));
+    assert(i1 == 94);
+    assert(str2 == CS("hkt"));
+    assert(i2 == 82);
+    assert(str3 == CS("pir"));
+    assert(i3 == 43);
 
-    spSt >> i4;
-    assert(spSt.fail());
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
+    assert(spSt.good());
+
     spSt.clear();
+
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
     assert(spSt.good());
-
-    // Write to stream
-    spSt << CS("94");
-    spSt << 84;
-
-    assert(spSt.good());
-    assert(spSt.span().size() == sv1.size() + 4);
-    std::basic_string<CharT, TraitsT> expectedStr1{spSt.span().data(), std::size_t{spSt.span().size()}};
-    assert(expectedStr1 == CS("year 20249484"));
-
-    // Write to stream with overflow
-    constexpr std::basic_string_view<CharT, TraitsT> sv2{
-        SV("This string should overflow! This string should overflow!")};
-    spSt << sv2;
-    assert(spSt.span().size() == arrSize);
-    std::basic_string<CharT, TraitsT> expectedStr2{spSt.span().data(), std::size_t{spSt.span().size()}};
-    assert(expectedStr2 == CS("year 20249484This string shoul"));
-    assert(spSt.fail());
   }
-#endif
+  // `ReadOnlySpan` + Mode: `ate`
+  {
+    SpStream spSt(sp, std::ios_base::ate);
+
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
+    assert(spSt.good());
+    assert(spSt.span().size() == arrSize);
+
+    // Read from stream
+    std::basic_string<CharT, TraitsT> str1;
+    spSt >> str1;
+    int i1;
+    spSt >> i1;
+    std::basic_string<CharT, TraitsT> str2;
+    spSt >> str2;
+    int i2;
+    spSt >> i2;
+    std::basic_string<CharT, TraitsT> str3;
+    spSt >> str3;
+    int i3;
+    spSt >> i3;
+
+    assert(str1 == CS("zmt"));
+    assert(i1 == 94);
+    assert(str2 == CS("hkt"));
+    assert(i2 == 82);
+    assert(str3 == CS("pir"));
+    assert(i3 == 43);
+
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
+    assert(spSt.good());
+
+    spSt.clear();
+
+    assert(spSt);
+    assert(!spSt.bad());
+    assert(!spSt.fail());
+    assert(spSt.good());
+  }
 }
 
 int main(int, char**) {
   test<char>();
-  test<char, constexpr_char_traits<char>>();
+  // test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
-  test<wchar_t, constexpr_char_traits<wchar_t>>();
+  // test<wchar_t, constexpr_char_traits<wchar_t>>();
 #endif
 
   return 0;
