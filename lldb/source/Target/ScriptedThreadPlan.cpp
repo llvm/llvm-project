@@ -1,4 +1,4 @@
-//===-- ThreadPlanPython.cpp ----------------------------------------------===//
+//===-- ScriptedThreadPlan.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,10 +14,10 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
-#include "lldb/Target/ThreadPlanPython.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -25,11 +25,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// ThreadPlanPython
-
-ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name,
-                                   const StructuredDataImpl &args_data)
-    : ThreadPlan(ThreadPlan::eKindPython, "Python based Thread Plan", thread,
+ScriptedThreadPlan::ScriptedThreadPlan(Thread &thread, const char *class_name,
+                                       const StructuredDataImpl &args_data)
+    : ThreadPlan(ThreadPlan::eKindPython, "Script based Thread Plan", thread,
                  eVoteNoOpinion, eVoteNoOpinion),
       m_class_name(class_name), m_args_data(args_data), m_did_push(false),
       m_stop_others(false) {
@@ -38,7 +36,7 @@ ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name,
     SetPlanComplete(false);
     // FIXME: error handling
     // error.SetErrorStringWithFormat(
-    //     "ThreadPlanPython::%s () - ERROR: %s", __FUNCTION__,
+    //     "ScriptedThreadPlan::%s () - ERROR: %s", __FUNCTION__,
     //     "Couldn't get script interpreter");
     return;
   }
@@ -48,7 +46,7 @@ ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name,
     SetPlanComplete(false);
     // FIXME: error handling
     // error.SetErrorStringWithFormat(
-    //     "ThreadPlanPython::%s () - ERROR: %s", __FUNCTION__,
+    //     "ScriptedThreadPlan::%s () - ERROR: %s", __FUNCTION__,
     //     "Script interpreter couldn't create Scripted Thread Plan Interface");
     return;
   }
@@ -58,26 +56,26 @@ ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name,
   SetPrivate(false);
 }
 
-bool ThreadPlanPython::ValidatePlan(Stream *error) {
+bool ScriptedThreadPlan::ValidatePlan(Stream *error) {
   if (!m_did_push)
     return true;
 
   if (!m_implementation_sp) {
     if (error)
       error->Printf("Error constructing Python ThreadPlan: %s",
-          m_error_str.empty() ? "<unknown error>"
-                                : m_error_str.c_str());
+                    m_error_str.empty() ? "<unknown error>"
+                                        : m_error_str.c_str());
     return false;
   }
 
   return true;
 }
 
-ScriptInterpreter *ThreadPlanPython::GetScriptInterpreter() {
+ScriptInterpreter *ScriptedThreadPlan::GetScriptInterpreter() {
   return m_process.GetTarget().GetDebugger().GetScriptInterpreter();
 }
 
-void ThreadPlanPython::DidPush() {
+void ScriptedThreadPlan::DidPush() {
   // We set up the script side in DidPush, so that it can push other plans in
   // the constructor, and doesn't have to care about the details of DidPush.
   m_did_push = true;
@@ -92,10 +90,10 @@ void ThreadPlanPython::DidPush() {
   }
 }
 
-bool ThreadPlanPython::ShouldStop(Event *event_ptr) {
+bool ScriptedThreadPlan::ShouldStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-            m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Scripted Thread Plan: %s )",
+            LLVM_PRETTY_FUNCTION, m_class_name.c_str());
 
   bool should_stop = true;
   if (m_implementation_sp) {
@@ -110,10 +108,10 @@ bool ThreadPlanPython::ShouldStop(Event *event_ptr) {
   return should_stop;
 }
 
-bool ThreadPlanPython::IsPlanStale() {
+bool ScriptedThreadPlan::IsPlanStale() {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-            m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Scripted Thread Plan: %s )",
+            LLVM_PRETTY_FUNCTION, m_class_name.c_str());
 
   bool is_stale = true;
   if (m_implementation_sp) {
@@ -128,10 +126,10 @@ bool ThreadPlanPython::IsPlanStale() {
   return is_stale;
 }
 
-bool ThreadPlanPython::DoPlanExplainsStop(Event *event_ptr) {
+bool ScriptedThreadPlan::DoPlanExplainsStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-            m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Scripted Thread Plan: %s )",
+            LLVM_PRETTY_FUNCTION, m_class_name.c_str());
 
   bool explains_stop = true;
   if (m_implementation_sp) {
@@ -147,10 +145,10 @@ bool ThreadPlanPython::DoPlanExplainsStop(Event *event_ptr) {
   return explains_stop;
 }
 
-bool ThreadPlanPython::MischiefManaged() {
+bool ScriptedThreadPlan::MischiefManaged() {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-            m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Scripted Thread Plan: %s )",
+            LLVM_PRETTY_FUNCTION, m_class_name.c_str());
   bool mischief_managed = true;
   if (m_implementation_sp) {
     // I don't really need mischief_managed, since it's simpler to just call
@@ -165,20 +163,21 @@ bool ThreadPlanPython::MischiefManaged() {
   return mischief_managed;
 }
 
-lldb::StateType ThreadPlanPython::GetPlanRunState() {
+lldb::StateType ScriptedThreadPlan::GetPlanRunState() {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-            m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Scripted Thread Plan: %s )",
+            LLVM_PRETTY_FUNCTION, m_class_name.c_str());
   lldb::StateType run_state = eStateRunning;
   if (m_implementation_sp)
     run_state = m_interface->GetRunState();
   return run_state;
 }
 
-void ThreadPlanPython::GetDescription(Stream *s, lldb::DescriptionLevel level) {
+void ScriptedThreadPlan::GetDescription(Stream *s,
+                                        lldb::DescriptionLevel level) {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-            m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Scripted Thread Plan: %s )",
+            LLVM_PRETTY_FUNCTION, m_class_name.c_str());
   if (m_implementation_sp) {
     ScriptInterpreter *script_interp = GetScriptInterpreter();
     if (script_interp) {
@@ -187,8 +186,8 @@ void ThreadPlanPython::GetDescription(Stream *s, lldb::DescriptionLevel level) {
       if (err) {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(err),
                        "Can't call ScriptedThreadPlan::GetStopDescription.");
-        s->Printf("Python thread plan implemented by class %s.",
-            m_class_name.c_str());
+        s->Printf("Scripted thread plan implemented by class %s.",
+                  m_class_name.c_str());
       } else
         s->PutCString(
             reinterpret_cast<StreamString *>(stream.get())->GetData());
@@ -198,21 +197,21 @@ void ThreadPlanPython::GetDescription(Stream *s, lldb::DescriptionLevel level) {
   // It's an error not to have a description, so if we get here, we should
   // add something.
   if (m_stop_description.Empty())
-    s->Printf("Python thread plan implemented by class %s.",
+    s->Printf("Scripted thread plan implemented by class %s.",
               m_class_name.c_str());
   s->PutCString(m_stop_description.GetData());
 }
 
 // The ones below are not currently exported to Python.
-bool ThreadPlanPython::WillStop() {
+bool ScriptedThreadPlan::WillStop() {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-            m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Scripted Thread Plan: %s )",
+            LLVM_PRETTY_FUNCTION, m_class_name.c_str());
   return true;
 }
 
-bool ThreadPlanPython::DoWillResume(lldb::StateType resume_state, 
-                                  bool current_plan) {
+bool ScriptedThreadPlan::DoWillResume(lldb::StateType resume_state,
+                                      bool current_plan) {
   m_stop_description.Clear();
-  return true;                                  
+  return true;
 }
