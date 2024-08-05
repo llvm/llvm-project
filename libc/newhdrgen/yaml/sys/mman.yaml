@@ -80,7 +80,7 @@ functions:
       - type: size_t
   - name: mlockall
     standards:
-      -POSIX
+      - POSIX
     return_type: int
     arguments:
       - type: int
