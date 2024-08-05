@@ -2403,7 +2403,7 @@ BroadcastableToResult mlir::vector::isBroadcastableTo(
     bool srcDimScalableFlag = srcVectorType.getScalableDims()[r];
     bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + r];
     if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
-        (srcDimScalableFlag && !dstDimScalableFlag))
+        (srcDimScalableFlag != dstDimScalableFlag))
       mismatch = true;
 
     if (mismatch) {
