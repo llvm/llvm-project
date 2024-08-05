@@ -112,4 +112,3 @@ functions:
     return_type: int
     arguments:
       - type: const char *
-     
