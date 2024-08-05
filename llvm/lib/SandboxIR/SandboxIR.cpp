@@ -1157,14 +1157,19 @@ void PHINode::replaceIncomingBlockWith (const BasicBlock *Old, BasicBlock *New) 
     if (getIncomingBlock(Idx) == Old)
       setIncomingBlock(Idx, New);
 }
-void PHINode::removeIncomingValueIf(function_ref< bool(unsigned)> Predicate,
-                                    bool DeletePHIIfEmpty) {
+void PHINode::removeIncomingValueIf(function_ref< bool(unsigned)> Predicate) {
   // Avoid duplicate tracking by going through this->removeIncomingValue here at
   // the expense of some performance. Copy PHI::removeIncomingValueIf more
   // directly if performance becomes an issue.
-  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
-    if (Predicate(Idx))
-      removeIncomingValue(Idx, DeletePHIIfEmpty);
+  unsigned Idx = 0;
+  unsigned LastIdx = getNumIncomingValues();
+  while (Idx < LastIdx) {
+    if (Predicate(Idx)) {
+      removeIncomingValue(Idx);
+      --LastIdx;
+    } else
+      ++Idx;
+  }
 }
 
 static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {

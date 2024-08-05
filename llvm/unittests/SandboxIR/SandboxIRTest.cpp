@@ -1876,10 +1876,11 @@ bb1:
   br label %bb2
 
 bb2:
-  %phi = phi i32 [ %arg, %bb1 ], [ 0, %bb2 ]
+  %phi = phi i32 [ %arg, %bb1 ], [ 0, %bb2 ], [ 1, %bb3]
   br label %bb2
 
 bb3:
+  br label %bb2
   ret void
 }
 )IR");
@@ -1981,12 +1982,12 @@ bb3:
   PHI->replaceIncomingBlockWith(OrigBB, NewBB);
   EXPECT_EQ(PHI->getIncomingBlock(0), NewBB);
   // Check replaceIncomingValueIf
-  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 3u);
   PHI->removeIncomingValueIf([&](unsigned Idx) {
-    return PHI->getIncomingBlock(Idx) == BB2;
+    return PHI->getIncomingBlock(Idx) == NewBB;
   });
   EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
-  EXPECT_EQ(PHI->getIncomingBlock(0), BB1);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB3);
   // Check create().
   auto *NewPHI = cast<sandboxir::PHINode>(
       sandboxir::PHINode::create(PHI->getType(), 0, Br, Ctx, "NewPHI"));
