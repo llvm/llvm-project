@@ -1389,7 +1389,7 @@ public:
 
         bool IsUnary = isa<UndefValue>(Operands[1]);
         NumSubElts = VecSrcTy->getElementCount().getKnownMinValue();
-        SmallVector<int, 16> AdjustMask(Mask.begin(), Mask.end());
+        SmallVector<int, 16> AdjustMask(Mask);
 
         // Widening shuffle - widening the source(s) to the new length
         // (treated as free - see above), and then perform the adjusted

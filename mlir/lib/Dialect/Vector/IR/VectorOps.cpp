@@ -3684,7 +3684,7 @@ public:
     SmallVector<int64_t, 4> offsets(sliceRank, 0);
     copy(getI64SubArray(extractStridedSliceOp.getOffsets()), offsets.begin());
 
-    SmallVector<int64_t, 4> sizes(sourceShape.begin(), sourceShape.end());
+    SmallVector<int64_t, 4> sizes(sourceShape);
     copy(getI64SubArray(extractStridedSliceOp.getSizes()), sizes.begin());
 
     // Calculate the slice elements by enumerating all slice positions and
@@ -5576,8 +5576,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
 
 static SmallVector<int64_t, 8> extractShape(MemRefType memRefType) {
   auto vectorType = llvm::dyn_cast<VectorType>(memRefType.getElementType());
-  SmallVector<int64_t, 8> res(memRefType.getShape().begin(),
-                              memRefType.getShape().end());
+  SmallVector<int64_t, 8> res(memRefType.getShape());
   if (vectorType)
     res.append(vectorType.getShape().begin(), vectorType.getShape().end());
   return res;

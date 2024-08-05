@@ -574,7 +574,7 @@ protected:
       // The PostViewCFG is created with updates reversed (equivalent to changes
       // made to the CFG), so the PreViewCFG needs all the updates reverse
       // applied.
-      SmallVector<UpdateType> AllUpdates(Updates.begin(), Updates.end());
+      SmallVector<UpdateType> AllUpdates(Updates);
       append_range(AllUpdates, PostViewUpdates);
       GraphDiff<NodePtr, IsPostDom> PreViewCFG(AllUpdates,
                                                /*ReverseApplyUpdates=*/true);
