@@ -585,7 +585,8 @@ private:
   void RecomputeNeedsHandleIdentifier() {
     NeedsHandleIdentifier = isPoisoned() || hasMacroDefinition() ||
                             isExtensionToken() || isFutureCompatKeyword() ||
-                            isOutOfDate() || isModulesImport();
+                            isOutOfDate() || isModulesImport() ||
+                            isModulesDeclaration();
   }
 };
 

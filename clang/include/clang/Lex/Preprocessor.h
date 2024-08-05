@@ -109,6 +109,77 @@ public:
   }
 };
 
+/// Represents module or partition name token sequance.
+///
+///     module-name:
+///           module-name-qualifier[opt] identifier
+///
+///     partition-name: [C++20]
+///           : module-name-qualifier[opt] identifier
+///
+///     module-name-qualifier
+///           module-name-qualifier[opt] identifier .
+///
+/// This class can only be created by the preprocessor and guarantees that the
+/// two source array being contiguous in memory and only contains 3 kind of
+/// tokens (identifier, '.' and ':'). And only available when the preprocessor
+/// returns annot_module_name token.
+///
+/// For exmaple:
+///
+/// export module m.n:c.d
+///
+/// The module name array has 3 tokens ['m', '.', 'n'].
+/// The partition name array has 4 tokens [':', 'c', '.', 'd'].
+///
+/// When import a partition in a named module fragment (Eg. import :part1;),
+/// the module name array will be empty, and the partition name array has 2
+/// tokens.
+///
+/// When we meet a private-module-fragment (Eg. module :private;), preprocessor
+/// will not return a annot_module_name token, but will return 2 separate tokens
+/// [':', 'kw_private'].
+
+class ModuleNameInfo {
+  friend class Preprocessor;
+  ArrayRef<Token> ModuleName;
+  ArrayRef<Token> PartitionName;
+
+  ModuleNameInfo(ArrayRef<Token> AnnotToks, std::optional<unsigned> ColonIndex);
+
+public:
+  /// Return the contiguous token array.
+  ArrayRef<Token> getTokens() const {
+    if (ModuleName.empty())
+      return PartitionName;
+    if (PartitionName.empty())
+      return ModuleName;
+    return ArrayRef(ModuleName.begin(), PartitionName.end());
+  }
+  bool hasModuleName() const { return !ModuleName.empty(); }
+  bool hasPartitionName() const { return !PartitionName.empty(); }
+  ArrayRef<Token> getModuleName() const { return ModuleName; }
+  ArrayRef<Token> getPartitionName() const { return PartitionName; }
+  Token getColonToken() const {
+    assert(hasPartitionName() && "Do not have a partition name");
+    return getPartitionName().front();
+  }
+
+  /// Under the standard C++ Modules, the dot is just part of the module name,
+  /// and not a real hierarchy separator. Flatten such module names now.
+  std::string getFlatName() const;
+
+  /// Build a module id path from the contiguous token array, both include
+  /// module name and partition name.
+  void getModuleIdPath(
+      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) const;
+
+  /// Build a module id path from \param ModuleName.
+  static void getModuleIdPath(
+      ArrayRef<Token> ModuleName,
+      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path);
+};
+
 /// Context in which macro name is used.
 enum MacroUse {
   // other than #define or #undef
@@ -337,6 +408,9 @@ private:
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
+  /// Whether the last token we lexed was an 'export' keyword.
+  std::optional<Token> LastTokenWasExportKeyword = std::nullopt;
+
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
   public:
@@ -540,24 +614,12 @@ private:
         reset();
     }
 
-    void handleIdentifier(IdentifierInfo *Identifier) {
-      if (isModuleCandidate() && Identifier)
-        Name += Identifier->getName().str();
-      else if (!isNamedModule())
-        reset();
-    }
-
-    void handleColon() {
-      if (isModuleCandidate())
-        Name += ":";
-      else if (!isNamedModule())
-        reset();
-    }
-
-    void handlePeriod() {
-      if (isModuleCandidate())
-        Name += ".";
-      else if (!isNamedModule())
+    void handleModuleName(Token ModuleName) {
+      assert(ModuleName.is(tok::annot_module_name) && "Expect a module name");
+      if (isModuleCandidate()) {
+        Name = ModuleName.getAnnotationValueAs<ModuleNameInfo *>()
+                   ->getFlatName();
+      } else if (!isNamedModule())
         reset();
     }
 
@@ -2328,6 +2390,8 @@ public:
   /// token stream.
   bool HandleEndOfTokenLexer(Token &Result);
 
+  bool HandleModuleContextualKeyword(Token &Result);
+
   /// Callback invoked when the lexer sees a # token at the start of a
   /// line.
   ///
@@ -3098,78 +3162,6 @@ struct EmbedAnnotationData {
 
 /// Registry of pragma handlers added by plugins
 using PragmaHandlerRegistry = llvm::Registry<PragmaHandler>;
-
-/// Represents module or partition name token sequance.
-///
-///     module-name:
-///           module-name-qualifier[opt] identifier
-///
-///     partition-name: [C++20]
-///           : module-name-qualifier[opt] identifier
-///
-///     module-name-qualifier
-///           module-name-qualifier[opt] identifier .
-///
-/// This class can only be created by the preprocessor and guarantees that the
-/// two source array being contiguous in memory and only contains 3 kind of
-/// tokens (identifier, '.' and ':'). And only available when the preprocessor
-/// returns annot_module_name token.
-///
-/// For exmaple:
-///
-/// export module m.n:c.d
-///
-/// The module name array has 3 tokens ['m', '.', 'n'].
-/// The partition name array has 4 tokens [':', 'c', '.', 'd'].
-///
-/// When import a partition in a named module fragment (Eg. import :part1;),
-/// the module name array will be empty, and the partition name array has 2
-/// tokens.
-///
-/// When we meet a private-module-fragment (Eg. module :private;), preprocessor
-/// will not return a annot_module_name token, but will return 2 separate tokens
-/// [':', 'kw_private'].
-
-class ModuleNameInfo {
-  friend class Preprocessor;
-  ArrayRef<Token> ModuleName;
-  ArrayRef<Token> PartitionName;
-
-  ModuleNameInfo(ArrayRef<Token> AnnotToks, std::optional<unsigned> ColonIndex);
-
-public:
-  /// Return the contiguous token array.
-  ArrayRef<Token> getTokens() const {
-    if (ModuleName.empty())
-      return PartitionName;
-    if (PartitionName.empty())
-      return ModuleName;
-    return ArrayRef(ModuleName.begin(), PartitionName.end());
-  }
-  bool hasModuleName() const { return !ModuleName.empty(); }
-  bool hasPartitionName() const { return !PartitionName.empty(); }
-  ArrayRef<Token> getModuleName() const { return ModuleName; }
-  ArrayRef<Token> getPartitionName() const { return PartitionName; }
-  Token getColonToken() const {
-    assert(hasPartitionName() && "Do not have a partition name");
-    return getPartitionName().front();
-  }
-
-  /// Under the standard C++ Modules, the dot is just part of the module name,
-  /// and not a real hierarchy separator. Flatten such module names now.
-  std::string getFlatName() const;
-
-  /// Build a module id path from the contiguous token array, both include
-  /// module name and partition name.
-  void getModuleIdPath(
-      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) const;
-
-  /// Build a module id path from \param ModuleName.
-  static void getModuleIdPath(
-      ArrayRef<Token> ModuleName,
-      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path);
-};
-
 } // namespace clang
 
 #endif // LLVM_CLANG_LEX_PREPROCESSOR_H

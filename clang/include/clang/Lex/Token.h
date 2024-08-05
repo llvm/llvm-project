@@ -292,6 +292,10 @@ public:
   /// Return the ObjC keyword kind.
   tok::ObjCKeywordKind getObjCKeywordID() const;
 
+  /// Return true if we have an C++20 Modules contextual keyword(export, import
+  /// or module).
+  bool isModuleContextualKeyword() const;
+
   bool isSimpleTypeSpecifier(const LangOptions &LangOpts) const;
 
   /// Return true if this token has trigraphs or escaped newlines in it.

@@ -863,12 +863,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     CurLexerCallback = CLK_LexAfterModuleImport;
   }
 
-  if ((II.isModulesDeclaration() || Identifier.is(tok::kw_module)) &&
-      !InMacroArgs && !DisableMacroExpansion &&
-      (getLangOpts().CPlusPlusModules || getLangOpts().DebuggerSupport) &&
-      CurLexerCallback != CLK_CachingLexer) {
-    CurLexerCallback = CLK_LexAfterModuleDecl;
-  }
   return true;
 }
 
@@ -926,55 +920,22 @@ void Preprocessor::Lex(Token &Result) {
       StdCXXImportSeqState.handleExport();
       ModuleDeclState.handleExport();
       break;
-    case tok::annot_module_name: {
-      auto *Info = static_cast<ModuleNameInfo *>(Result.getAnnotationValue());
-      for (const auto &Tok : Info->getTokens()) {
-        switch (Tok.getKind()) {
-        case tok::identifier:
-          ModuleDeclState.handleIdentifier(Tok.getIdentifierInfo());
-          break;
-        case tok::period:
-          ModuleDeclState.handlePeriod();
-          break;
-        case tok::colon:
-          ModuleDeclState.handleColon();
-          break;
-        default:
-          llvm_unreachable("Unexpected token in module name");
-        }
-      }
-      if (ModuleDeclState.isModuleCandidate())
-        break;
-      TrackGMFState.handleMisc();
-      StdCXXImportSeqState.handleMisc();
-      ModuleDeclState.handleMisc();
+    case tok::kw_module:
+      TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
+      ModuleDeclState.handleModule();
       break;
-    }
-    case tok::identifier:
-      // Check "import" and "module" when there is no open bracket. The two
-      // identifiers are not meaningful with open brackets.
+    case tok::kw_import:
       if (StdCXXImportSeqState.atTopLevel()) {
-        if (Result.getIdentifierInfo()->isModulesImport()) {
-          TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
-          StdCXXImportSeqState.handleImport();
-          if (StdCXXImportSeqState.afterImportSeq()) {
-            ModuleImportLoc = Result.getLocation();
-            NamedModuleImportPath.clear();
-            IsAtImport = false;
-            CurLexerCallback = CLK_LexAfterModuleImport;
-          }
-          break;
-        }
-        if (Result.getIdentifierInfo()->isModulesDeclaration()) {
-          TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
-          ModuleDeclState.handleModule();
-          CurLexerCallback = CLK_LexAfterModuleDecl;
-          break;
-        }
+        TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
+        StdCXXImportSeqState.handleImport();
       }
-      if (ModuleDeclState.isModuleCandidate())
-        break;
-      [[fallthrough]];
+      ModuleImportLoc = Result.getLocation();
+      NamedModuleImportPath.clear();
+      IsAtImport = false;
+      break;
+    case tok::annot_module_name:
+      ModuleDeclState.handleModuleName(Result);
+      break;
     default:
       TrackGMFState.handleMisc();
       StdCXXImportSeqState.handleMisc();
@@ -989,6 +950,8 @@ void Preprocessor::Lex(Token &Result) {
   }
 
   LastTokenWasAt = Result.is(tok::at);
+  if (Result.isNot(tok::kw_export))
+    LastTokenWasExportKeyword.reset();
   --LexLevel;
 
   if ((LexLevel == 0 || PreprocessToken) &&
@@ -1010,6 +973,63 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
     if (Tokens != nullptr)
       Tokens->push_back(Tok);
   }
+}
+
+/// P1857R3: Modules Dependency Discovery
+///
+/// At the start of phase 4 an import or module token is treated as starting a
+/// directive and are converted to their respective keywords iff:
+///   • After skipping horizontal whitespace are
+///     • at the start of a logical line, or
+///     • preceded by an 'export' at the start of the logical line.
+///   • Are followed by an identifier pp token (before macro expansion), or
+///     • <, ", or : (but not ::) pp tokens for 'import', or
+///     • ; for 'module'
+/// Otherwise the token is treated as an identifier.
+bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
+  if (!getLangOpts().CPlusPlusModules || !Result.isModuleContextualKeyword() ||
+      InMacroArgs || DisableMacroExpansion ||
+      CurLexerCallback == CLK_CachingLexer)
+    return false;
+
+  if (Result.is(tok::kw_export)) {
+    LastTokenWasExportKeyword = Result;
+    return false;
+  }
+
+  if (LastTokenWasExportKeyword) {
+    if (!LastTokenWasExportKeyword->isAtStartOfLine())
+      return false;
+    // [cpp.pre]/1.4
+    // export                  // not a preprocessing directive
+    // import foo;             // preprocessing directive (ill-formed at phase
+    // 7)
+    if (Result.isAtStartOfLine())
+      return false;
+  } else if (!Result.isAtStartOfLine())
+    return false;
+
+  // Peek next token.
+  auto NextTok = peekNextPPToken().value_or(Token{});
+  if (Result.getIdentifierInfo()->isModulesImport() &&
+      NextTok.isOneOf(tok::raw_identifier, tok::less, tok::string_literal,
+                      tok::colon)) {
+    Result.setKind(tok::kw_import);
+    ModuleImportLoc = Result.getLocation();
+    IsAtImport = false;
+    CurLexerCallback = CLK_LexAfterModuleImport;
+    return true;
+  }
+  if (Result.getIdentifierInfo()->isModulesDeclaration() &&
+      NextTok.isOneOf(tok::raw_identifier, tok::colon, tok::semi)) {
+    Result.setKind(tok::kw_module);
+    NamedModuleImportPath.clear();
+    CurLexerCallback = CLK_LexAfterModuleDecl;
+    return true;
+  }
+
+  // Ok, it's an identifier.
+  return false;
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if

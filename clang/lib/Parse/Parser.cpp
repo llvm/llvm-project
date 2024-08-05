@@ -642,6 +642,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 
   case tok::kw_export:
     switch (NextToken().getKind()) {
+    case tok::kw_import:
+      goto import_decl;
     case tok::kw_module:
       goto module_decl;
 
@@ -652,14 +654,14 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     // Recognize context-sensitive C++20 'export module' and 'export import'
     // declarations.
     case tok::identifier: {
-      IdentifierInfo *II = NextToken().getIdentifierInfo();
-      if ((II == Ident_module || II == Ident_import) &&
-          GetLookAheadToken(2).isNot(tok::coloncolon)) {
-        if (II == Ident_module)
-          goto module_decl;
-        else
-          goto import_decl;
-      }
+      // IdentifierInfo *II = NextToken().getIdentifierInfo();
+      // if ((II == Ident_module || II == Ident_import) &&
+      //     GetLookAheadToken(2).isNot(tok::coloncolon)) {
+      //   if (II == Ident_module)
+      //     goto module_decl;
+      //   else
+      //     goto import_decl;
+      // }
       break;
     }
 
@@ -736,14 +738,14 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     //   A token sequence beginning with 'export[opt] module' or
     //   'export[opt] import' and not immediately followed by '::'
     //   is never interpreted as the declaration of a top-level-declaration.
-    if ((Tok.getIdentifierInfo() == Ident_module ||
-         Tok.getIdentifierInfo() == Ident_import) &&
-        NextToken().isNot(tok::coloncolon)) {
-      if (Tok.getIdentifierInfo() == Ident_module)
-        goto module_decl;
-      else
-        goto import_decl;
-    }
+    // if ((Tok.getIdentifierInfo() == Ident_module ||
+    //      Tok.getIdentifierInfo() == Ident_import) &&
+    //     NextToken().isNot(tok::coloncolon)) {
+    //   if (Tok.getIdentifierInfo() == Ident_module)
+    //     goto module_decl;
+    //   else
+    //     goto import_decl;
+    // }
     break;
 
   default:

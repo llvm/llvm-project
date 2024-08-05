@@ -74,6 +74,17 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
 }
 
+/// Return true if we have an C++20 Modules contextual keyword(export, import
+/// or module).
+bool Token::isModuleContextualKeyword() const {
+  if (is(tok::kw_export))
+    return true;
+  if (isNot(tok::identifier))
+    return false;
+  const auto *II = getIdentifierInfo();
+  return II->isModulesImport() || II->isModulesDeclaration();
+}
+
 /// Determine whether the token kind starts a simple-type-specifier.
 bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   switch (getKind()) {
@@ -2001,6 +2012,13 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
     }
     BufferPtr = CurPtr;
     return true;
+  }
+
+  if (Result.isModuleContextualKeyword()) {
+    Result.setFlagValue(Token::StartOfLine,
+                        IsCurrentLexingTokAtPhysicalStartOfLine);
+    if (PP->HandleModuleContextualKeyword(Result))
+      return true;
   }
 
   // Finally, now that we know we have an identifier, pass this off to the
@@ -4556,6 +4574,12 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
+      if (Result.isModuleContextualKeyword()) {
+        // Result.setFlagValue(Token::StartOfLine,
+        //                     IsCurrentLexingTokAtPhysicalStartOfLine);
+        if (PP->HandleModuleContextualKeyword(Result))
+          return true;
+      }
       if (II->isHandleIdentifierCase())
         return PP->HandleIdentifier(Result);
     }
