@@ -878,6 +878,15 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
     KMP_SYSFAIL("pthread_create", status);
   }
 
+#ifdef _GNU_SOURCE
+ #if ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+  // Rename worker threads for improved debuggability
+  if (!KMP_UBER_GTID(gtid)) {
+    pthread_setname_np(handle, "openmp_worker");
+  }
+ #endif
+#endif
+
   th->th.th_info.ds.ds_thread = handle;
 
 #ifdef KMP_THREAD_ATTR
