@@ -317,7 +317,7 @@ template <typename T> void sortAndUnique(std::vector<T> &Vec) {
 // storage across calls).
 class GLRReduce {
   const ParseParams &Params;
-  const Language& Lang;
+  const Language &Lang;
   // There are two interacting complications:
   // 1.  Performing one reduce can unlock new reduces on the newly-created head.
   // 2a. The ambiguous ForestNodes must be complete (have all sequence nodes).
@@ -390,7 +390,7 @@ class GLRReduce {
   struct PushSpec {
     // The last node popped before pushing. Its parent is the reduction base(s).
     // (Base is more fundamental, but this is cheaper to store).
-    const GSS::Node* LastPop = nullptr;
+    const GSS::Node *LastPop = nullptr;
     Sequence *Seq = nullptr;
   };
   KeyedQueue<Family, PushSpec> Sequences; // FIXME: rename => PendingPushes?
@@ -402,6 +402,7 @@ class GLRReduce {
   SymbolID Lookahead;
 
   Sequence TempSequence;
+
 public:
   GLRReduce(const ParseParams &Params, const Language &Lang)
       : Params(Params), Lang(Lang) {}
@@ -603,7 +604,8 @@ ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
                      const Language &Lang) {
   GLRReduce Reduce(Params, Lang);
   assert(isNonterminal(StartSymbol) && "Start symbol must be a nonterminal");
-  llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Params.Code);
+  llvm::ArrayRef<ForestNode> Terminals =
+      Params.Forest.createTerminals(Params.Code);
   auto &GSS = Params.GSStack;
 
   StateID StartState = Lang.Table.getStartState(StartSymbol);
@@ -628,9 +630,10 @@ ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
   };
   // Each iteration fully processes a single token.
   for (unsigned I = 0; I < Terminals.size();) {
-    LLVM_DEBUG(llvm::dbgs() << llvm::formatv(
-                   "Next token {0} (id={1})\n",
-                  Lang.G.symbolName(Terminals[I].symbol()), Terminals[I].symbol()));
+    LLVM_DEBUG(llvm::dbgs()
+               << llvm::formatv("Next token {0} (id={1})\n",
+                                Lang.G.symbolName(Terminals[I].symbol()),
+                                Terminals[I].symbol()));
     // Consume the token.
     glrShift(Heads, Terminals[I], Params, Lang, NextHeads);
 
@@ -749,8 +752,8 @@ unsigned GSS::gc(std::vector<const Node *> &&Queue) {
   while (!Queue.empty()) {
     Node *N = const_cast<Node *>(Queue.back()); // Safe: we created these nodes.
     Queue.pop_back();
-    if (N->GCParity != GCParity) { // Not seen yet
-      N->GCParity = GCParity;      // Mark as seen
+    if (N->GCParity != GCParity) {       // Not seen yet
+      N->GCParity = GCParity;            // Mark as seen
       for (const Node *P : N->parents()) // And walk parents
         Queue.push_back(P);
     }

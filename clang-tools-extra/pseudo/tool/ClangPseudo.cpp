@@ -43,13 +43,14 @@ static opt<bool> PrintSource("print-source", desc("Print token stream"));
 static opt<bool> PrintTokens("print-tokens", desc("Print detailed token info"));
 static opt<bool>
     PrintDirectiveTree("print-directive-tree",
-                      desc("Print directive structure of source code"));
+                       desc("Print directive structure of source code"));
 static opt<bool>
     StripDirectives("strip-directives",
                     desc("Strip directives and select conditional sections"));
 static opt<bool> Disambiguate("disambiguate",
                               desc("Choose best tree from parse forest"));
-static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
+static opt<bool> PrintStatistics("print-statistics",
+                                 desc("Print GLR parser statistics"));
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
 static opt<bool> ForestAbbrev("forest-abbrev", desc("Abbreviate parse forest"),
                               init(true));
@@ -63,8 +64,8 @@ static std::string readOrDie(llvm::StringRef Path) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       llvm::MemoryBuffer::getFile(Path);
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Error: can't read file '" << Path
-                 << "': " << EC.message() << "\n";
+    llvm::errs() << "Error: can't read file '" << Path << "': " << EC.message()
+                 << "\n";
     ::exit(1);
   }
   return Text.get()->getBuffer().str();
