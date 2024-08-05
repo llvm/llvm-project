@@ -70,9 +70,23 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
   test_sfinae<nasty_char, nasty_char_traits>();
 #endif
+
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
-  
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test_sfinae<wchar_t>();
+  test_sfinae<wchar_t, constexpr_char_traits<wchar_t>>();
+#endif
+
+#ifndef TEST_HAS_NO_CHAR8_T
+  test_sfinae<char8_t>();
+  test_sfinae<char8_t, constexpr_char_traits<char8_t>>();
+#endif
+  test_sfinae<char16_t>();
+  test_sfinae<char16_t, constexpr_char_traits<char16_t>>();
+  test_sfinae<char32_t>();
+  test_sfinae<char32_t, constexpr_char_traits<char32_t>>();
+
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();
 #endif
