@@ -2236,6 +2236,14 @@ public:
     return 3;
   }
 
+  /// Return true if the target prefers to tail merge only basic blocks that
+  /// do not have successors. This is beneficial for targets where jumps
+  /// are costly.
+  virtual bool
+  shouldTailMergeOnlyBBsWithoutSucc(const MachineFunction &MF) const {
+    return false;
+  }
+
   /// Returns the callee operand from the given \p MI.
   virtual const MachineOperand &getCalleeOperand(const MachineInstr &MI) const {
     return MI.getOperand(0);

@@ -1035,6 +1035,9 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
   if (MergePotentials.size() >= 2)
     MadeChange |= TryTailMergeBlocks(nullptr, nullptr, MinCommonTailLength);
 
+  if (TII->shouldTailMergeOnlyBBsWithoutSucc(MF))
+    return MadeChange;
+
   // Look at blocks (IBB) with multiple predecessors (PBB).
   // We change each predecessor to a canonical form, by
   // (1) temporarily removing any unconditional branch from the predecessor
