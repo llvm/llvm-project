@@ -418,10 +418,13 @@ public:
     return nullptr;
   }
 
+  // Set the Branch Protection Attributes of the Function accordingly to the
+  // BPI. Might remove attributes if contradicts with the pass request.
   static void
   setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                   llvm::Function &F);
 
+  // Add the Branch Protection Attributes of the FuncAttrs.
   static void
   setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                   llvm::AttrBuilder &FuncAttrs);

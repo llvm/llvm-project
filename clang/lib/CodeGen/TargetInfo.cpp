@@ -209,9 +209,28 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
 
 void TargetCodeGenInfo::setBranchProtectionFnAttributes(
     const TargetInfo::BranchProtectionInfo &BPI, llvm::Function &F) {
-  llvm::AttrBuilder FuncAttrs(F.getContext());
-  setBranchProtectionFnAttributes(BPI, FuncAttrs);
-  F.addFnAttrs(FuncAttrs);
+  if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+    F.addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
+    F.addFnAttr("sign-return-address-key", BPI.getSignKeyStr());
+  } else {
+    if (F.hasFnAttribute("sign-return-address"))
+      F.removeFnAttr("sign-return-address");
+    if (F.hasFnAttribute("sign-return-address-key"))
+      F.removeFnAttr("sign-return-address-key");
+  }
+
+  auto AddRemoveAttributeAsSet = [&](bool Set, const StringRef &ModAttr) {
+    if (Set)
+      F.addFnAttr(ModAttr);
+    else if (F.hasFnAttribute(ModAttr))
+      F.removeFnAttr(ModAttr);
+  };
+
+  AddRemoveAttributeAsSet(BPI.BranchTargetEnforcement,
+                          "branch-target-enforcement");
+  AddRemoveAttributeAsSet(BPI.BranchProtectionPAuthLR,
+                          "branch-protection-pauth-lr");
+  AddRemoveAttributeAsSet(BPI.GuardedControlStack, "guarded-control-stack");
 }
 
 void TargetCodeGenInfo::setBranchProtectionFnAttributes(
