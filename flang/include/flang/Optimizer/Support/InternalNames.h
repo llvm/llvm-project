@@ -56,9 +56,8 @@ struct NameUniquer {
     DeconstructedName(llvm::ArrayRef<std::string> modules,
                       llvm::ArrayRef<std::string> procs, std::int64_t blockId,
                       llvm::StringRef name, llvm::ArrayRef<std::int64_t> kinds)
-        : modules{modules.begin(), modules.end()}, procs{procs.begin(),
-                                                         procs.end()},
-          blockId{blockId}, name{name}, kinds{kinds.begin(), kinds.end()} {}
+        : modules{modules}, procs{procs}, blockId{blockId}, name{name},
+          kinds{kinds} {}
 
     llvm::SmallVector<std::string> modules;
     llvm::SmallVector<std::string> procs;

@@ -23,8 +23,6 @@ target_link_libraries(ClangReplInterpreterTests PUBLIC
   clangFrontend
   clangSema
   LLVMTestingSupport
-
-  EXPORT_SYMBOLS
   )
 
 # Exceptions on Windows are not yet supported.

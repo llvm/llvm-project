@@ -1158,6 +1158,21 @@ bool Pop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// [Value1, Value2] -> [Value2, Value1]
+template <PrimType TopName, PrimType BottomName>
+bool Flip(InterpState &S, CodePtr OpPC) {
+  using TopT = typename PrimConv<TopName>::T;
+  using BottomT = typename PrimConv<BottomName>::T;
+
+  const auto &Top = S.Stk.pop<TopT>();
+  const auto &Bottom = S.Stk.pop<BottomT>();
+
+  S.Stk.push<TopT>(Top);
+  S.Stk.push<BottomT>(Bottom);
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Const
 //===----------------------------------------------------------------------===//
@@ -2012,6 +2027,11 @@ inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
+  S.Current->initScope(I);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Cast, CastFP
 //===----------------------------------------------------------------------===//
@@ -2767,13 +2787,16 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 
 /// Same here, but only for casts.
-inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
+inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
+                        bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
   // FIXME: Support diagnosing other invalid cast kinds.
-  if (Kind == CastKind::Reinterpret)
-    S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
+  if (Kind == CastKind::Reinterpret) {
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
+    return !Fatal;
+  }
   return false;
 }
 

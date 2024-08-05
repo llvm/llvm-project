@@ -6,7 +6,7 @@ enums: []
 objects: []
 functions:
   - name: memcpy
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
@@ -14,7 +14,7 @@ functions:
       - type: const void *__restrict
       - type: size_t
   - name: memmove
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
@@ -22,7 +22,7 @@ functions:
       - type: const void *
       - type: size_t
   - name: memcmp
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -30,7 +30,7 @@ functions:
       - type: const void *
       - type: size_t
   - name: memchr
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
@@ -38,7 +38,7 @@ functions:
       - type: int
       - type: size_t
   - name: memset
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
@@ -46,7 +46,7 @@ functions:
       - type: int
       - type: size_t
   - name: memset_explicit
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
@@ -54,14 +54,14 @@ functions:
       - type: int
       - type: size_t
   - name: strcpy
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: char *__restrict
       - type: const char *__restrict
   - name: strncpy
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
@@ -69,14 +69,14 @@ functions:
       - type: const char *__restrict
       - type: size_t
   - name: strcat
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: char *__restrict
       - type: const char *__restrict
   - name: strncat
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
@@ -84,21 +84,21 @@ functions:
       - type: const char *
       - type: size_t
   - name: strcmp
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: strcoll
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: strncmp
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -106,7 +106,7 @@ functions:
       - type: const char *
       - type: size_t
   - name: strxfrm
-    standards: 
+    standards:
       - stdc
     return_type: size_t
     arguments:
@@ -114,14 +114,14 @@ functions:
       - type: const char *__restrict
       - type: size_t
   - name: strchr
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const char *
       - type: int
   - name: strcspn
-    standards: 
+    standards:
       - stdc
     return_type: size_t
     arguments:
@@ -132,61 +132,61 @@ functions:
     arguments:
       - type: const char *
   - name: strndup
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const char *
       - type: size_t
   - name: strpbrk
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const char *
       - type: const char *
   - name: strrchr
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const char *
       - type: int
   - name: strspn
-    standards: 
+    standards:
       - stdc
     return_type: size_t
     arguments:
       - type: const char *
       - type: const char *
   - name: strstr
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const char *
       - type: const char *
   - name: strtok
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: char *__restrict
       - type: const char *__restrict
   - name: strerror
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: int
   - name: strlen
-    standards: 
+    standards:
       - stdc
     return_type: size_t
     arguments:
       - type: const char *
   - name: memccpy
-    standards: 
+    standards:
       - POSIX
     return_type: void *
     arguments:
@@ -195,7 +195,7 @@ functions:
       - type: int
       - type: size_t
   - name: mempcpy
-    standards: 
+    standards:
       - POSIX
     return_type: void *
     arguments:
@@ -203,14 +203,14 @@ functions:
       - type: const void *__restrict
       - type: size_t
   - name: stpcpy
-    standards: 
+    standards:
       - POSIX
     return_type: char *
     arguments:
       - type: char *__restrict
       - type: const char *__restrict
   - name: stpncpy
-    standards: 
+    standards:
       - POSIX
     return_type: char *
     arguments:
@@ -218,14 +218,14 @@ functions:
       - type: const char *__restrict
       - type: size_t
   - name: strnlen
-    standards: 
+    standards:
       - POSIX
     return_type: size_t
     arguments:
       - type: const char *
       - type: size_t
   - name: strtok_r
-    standards: 
+    standards:
       - POSIX
     return_type: char *
     arguments:
@@ -233,13 +233,13 @@ functions:
       - type: const char *__restrict
       - type: char ** __restrict
   - name: strsignal
-    standards: 
+    standards:
       - POSIX
     return_type: char *
     arguments:
       - type: int
   - name: memmem
-    standards: 
+    standards:
       - GNUExtensions
     return_type: void *
     arguments:
@@ -248,7 +248,7 @@ functions:
       - type: const void *
       - type: size_t
   - name: memrchr
-    standards: 
+    standards:
       - GNUExtensions
     return_type: void *
     arguments:
@@ -256,7 +256,7 @@ functions:
       - type: int
       - type: size_t
   - name: strerror_r
-    standards: 
+    standards:
       - GNUExtensions
     return_type: char *
     arguments:
@@ -264,21 +264,21 @@ functions:
       - type: char *
       - type: size_t
   - name: strcasestr
-    standards: 
+    standards:
       - GNUExtensions
     return_type: char *
     arguments:
       - type: const char *
       - type: const char *
   - name: strchrnul
-    standards: 
+    standards:
       - GNUExtensions
     return_type: char *
     arguments:
       - type: const char *
       - type: int
   - name: strlcat
-    standards: 
+    standards:
       - BSDExtensions
     return_type: size_t
     arguments:
@@ -286,7 +286,7 @@ functions:
       - type: const char *__restrict
       - type: size_t
   - name: strlcpy
-    standards: 
+    standards:
       - BSDExtensions
     return_type: size_t
     arguments:
@@ -294,7 +294,7 @@ functions:
       - type: const char *__restrict
       - type: size_t
   - name: strsep
-    standards: 
+    standards:
       - BSDExtensions
     return_type: char *
     arguments:

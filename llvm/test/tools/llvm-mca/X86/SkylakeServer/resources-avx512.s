@@ -298,6 +298,9 @@ vdivps            %zmm16, %zmm17, %zmm19 {z}{k1}
 vdivps            (%rax), %zmm17, %zmm19 {z}{k1}
 vdivps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
+{evex} vextractps $1, %xmm0, %rcx
+{evex} vextractps $1, %xmm0, (%rax)
+
 vfmadd132pd       %zmm16, %zmm17, %zmm19
 vfmadd132pd       (%rax), %zmm17, %zmm19
 vfmadd132pd       (%rax){1to8}, %zmm17, %zmm19
@@ -1334,6 +1337,8 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  3      18    10.00                       vdivps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  4      25    10.00   *                   vdivps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  4      25    10.00   *                   vdivps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      3     1.00                        {evex}	vextractps	$1, %xmm0, %ecx
+# CHECK-NEXT:  3      2     1.00           *            {evex}	vextractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      4     0.50                        vfmadd132pd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax){1to8}, %zmm17, %zmm19
@@ -2029,7 +2034,7 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     612.00 339.67 99.67  332.83 332.83 16.00  643.67 2.00   5.33
+# CHECK-NEXT:  -     612.00 340.67 99.67  333.17 333.17 17.00  645.67 2.00   5.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -2292,6 +2297,8 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -     10.00  2.00    -      -      -      -     1.00    -      -     vdivps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -     10.00  2.00    -     0.50   0.50    -     1.00    -      -     vdivps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -     10.00  2.00    -     0.50   0.50    -     1.00    -      -     vdivps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -     {evex}	vextractps	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33   {evex}	vextractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -     vfmadd132pd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfmadd132pd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfmadd132pd	(%rax){1to8}, %zmm17, %zmm19

@@ -1742,8 +1742,8 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
               int64_t Offset, bool OffsetIsScalable, LocationSize Width)
-        : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
-          Width(Width), OffsetIsScalable(OffsetIsScalable) {}
+        : SU(SU), BaseOps(BaseOps), Offset(Offset), Width(Width),
+          OffsetIsScalable(OffsetIsScalable) {}
 
     static bool Compare(const MachineOperand *const &A,
                         const MachineOperand *const &B) {

@@ -8738,7 +8738,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   if (!NewVD->hasLocalStorage() && T->isSizelessType() &&
-      !T.isWebAssemblyReferenceType()) {
+      !T.isWebAssemblyReferenceType() && !T->isHLSLSpecificType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;
     NewVD->setInvalidDecl();
     return;
@@ -12840,7 +12840,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     InitializationKind Kind = InitializationKind::CreateForInit(
         VDecl->getLocation(), DirectInit, Init);
     // FIXME: Initialization should not be taking a mutable list of inits.
-    SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
+    SmallVector<Expr *, 8> InitsCopy(DeduceInits);
     return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
                                                        InitsCopy);
   }
@@ -18336,8 +18336,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   QualType EltTy = Context.getBaseElementType(T);
   if (!EltTy->isDependentType() && !EltTy->containsErrors()) {
-    if (RequireCompleteSizedType(Loc, EltTy,
-                                 diag::err_field_incomplete_or_sizeless)) {
+    bool isIncomplete =
+        LangOpts.HLSL // HLSL allows sizeless builtin types
+            ? RequireCompleteType(Loc, EltTy, diag::err_incomplete_type)
+            : RequireCompleteSizedType(Loc, EltTy,
+                                       diag::err_field_incomplete_or_sizeless);
+    if (isIncomplete) {
       // Fields of incomplete type force their record to be invalid.
       Record->setInvalidDecl();
       InvalidDecl = true;
@@ -18952,9 +18956,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // elsewhere, after synthesized ivars are known.
       }
     } else if (!FDTy->isDependentType() &&
-               RequireCompleteSizedType(
-                   FD->getLocation(), FD->getType(),
-                   diag::err_field_incomplete_or_sizeless)) {
+               (LangOpts.HLSL // HLSL allows sizeless builtin types
+                    ? RequireCompleteType(FD->getLocation(), FD->getType(),
+                                          diag::err_incomplete_type)
+                    : RequireCompleteSizedType(
+                          FD->getLocation(), FD->getType(),
+                          diag::err_field_incomplete_or_sizeless))) {
       // Incomplete type
       FD->setInvalidDecl();
       EnclosingDecl->setInvalidDecl();
