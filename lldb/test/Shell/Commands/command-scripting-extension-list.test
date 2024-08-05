@@ -1,7 +1,7 @@
 # REQUIRES: python
 # RUN: %lldb -s %s -o exit | FileCheck %s
 
-scripting template list
+scripting extension list
 # CHECK:Available scripted extension templates:
 
 # CHECK:  Name: OperatingSystemPythonInterface
@@ -38,5 +38,5 @@ scripting template list
 # CHECK-NEXT:  API Usages: SBThread.StepUsingScriptedThreadPlan
 # CHECK-NEXT:  Command Interpreter Usages: thread step-scripted -C <script-name> [-k key -v value ...]
 
-scripting template list -l lua
+scripting extension list -l lua
 # CHECK: Available scripted extension templates: None
