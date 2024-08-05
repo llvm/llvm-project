@@ -1087,6 +1087,7 @@ void JSONNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *ASD) {
 void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   if (const TypeSourceInfo *T = FD->getFriendType())
     JOS.attribute("type", createQualType(T->getType()));
+  attributeOnlyIfTrue("variadic", FD->isVariadic());
 }
 
 void JSONNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
