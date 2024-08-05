@@ -9,7 +9,9 @@
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
 
 #include "../SPIRVCommon/Pattern.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -1366,4 +1368,40 @@ struct ConvertArithToSPIRVPass
 
 std::unique_ptr<OperationPass<>> mlir::arith::createConvertArithToSPIRVPass() {
   return std::make_unique<ConvertArithToSPIRVPass>();
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToSPIRVPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert arith to SPIR-V.
+struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
+  using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<spirv::SPIRVDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToSPIRVConversionPatterns(
+      ConversionTarget &target, SPIRVTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
+    arith::populateArithToSPIRVPatterns(typeConverter, patterns);
+
+    // Use UnrealizedConversionCast as the bridge so that we don't need to pull
+    // in patterns for other dialects.
+    target.addLegalOp<UnrealizedConversionCastOp>();
+
+    // Fail hard when there are any remaining 'arith' ops.
+    target.addIllegalDialect<arith::ArithDialect>();
+  }
+};
+} // namespace
+
+void mlir::arith::registerConvertArithToSPIRVInterface(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+    dialect->addInterfaces<ToSPIRVDialectInterface>();
+  });
 }

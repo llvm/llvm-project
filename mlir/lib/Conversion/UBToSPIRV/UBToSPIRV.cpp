@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/UBToSPIRV/UBToSPIRV.h"
 
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
@@ -81,4 +82,31 @@ struct UBToSPIRVConversionPass final
 void mlir::ub::populateUBToSPIRVConversionPatterns(
     SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<PoisonOpLowering>(converter, patterns.getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToSPIRVPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert ub to SPIR-V.
+struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
+  using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<spirv::SPIRVDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToSPIRVConversionPatterns(
+      ConversionTarget &target, SPIRVTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::ub::registerConvertUBToSPIRVInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, ub::UBDialect *dialect) {
+    dialect->addInterfaces<ToSPIRVDialectInterface>();
+  });
 }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -36,4 +37,5 @@ void mlir::math::MathDialect::initialize() {
       >();
   addInterfaces<MathInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, MathDialect>();
+  declarePromisedInterface<ConvertToSPIRVPatternInterface, MathDialect>();
 }

@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -43,6 +44,7 @@ void FuncDialect::initialize() {
       >();
   declarePromisedInterface<DialectInlinerInterface, FuncDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, FuncDialect>();
+  declarePromisedInterface<ConvertToSPIRVPatternInterface, FuncDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, CallOp,
                             FuncOp, ReturnOp>();
 }

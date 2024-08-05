@@ -32,6 +32,9 @@ void populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 void populateVectorReductionToSPIRVDotProductPatterns(
     RewritePatternSet &patterns);
 
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `vector`
+/// dialect.
+void registerConvertVectorToSPIRVInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H

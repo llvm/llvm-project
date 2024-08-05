@@ -12,7 +12,7 @@
 #include <memory>
 
 namespace mlir {
-
+class DialectRegistry;
 class SPIRVTypeConverter;
 class RewritePatternSet;
 class Pass;
@@ -23,6 +23,10 @@ class Pass;
 namespace ub {
 void populateUBToSPIRVConversionPatterns(SPIRVTypeConverter &converter,
                                          RewritePatternSet &patterns);
+
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `ub`
+/// dialect.
+void registerConvertUBToSPIRVInterface(DialectRegistry &registry);
 } // namespace ub
 } // namespace mlir
 

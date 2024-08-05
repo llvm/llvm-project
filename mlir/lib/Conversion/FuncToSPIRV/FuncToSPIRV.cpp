@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "../SPIRVCommon/Pattern.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -92,4 +93,32 @@ void mlir::populateFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   MLIRContext *context = patterns.getContext();
 
   patterns.add<ReturnOpPattern, CallOpPattern>(typeConverter, context);
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToSPIRVPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert func to SPIR-V.
+struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
+  using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<spirv::SPIRVDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToSPIRVConversionPatterns(
+      ConversionTarget &target, SPIRVTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateFuncToSPIRVPatterns(typeConverter, patterns);
+    populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertFuncToSPIRVInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
+    dialect->addInterfaces<ToSPIRVDialectInterface>();
+  });
 }

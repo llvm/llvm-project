@@ -23,6 +23,9 @@ class SPIRVTypeConverter;
 void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns);
 
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `math`
+/// dialect.
+void registerConvertMathToSPIRVInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOSPIRV_MATHTOSPIRV_H

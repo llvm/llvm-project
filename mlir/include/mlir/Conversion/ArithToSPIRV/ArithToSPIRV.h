@@ -26,6 +26,10 @@ void populateArithToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                   RewritePatternSet &patterns);
 
 std::unique_ptr<OperationPass<>> createConvertArithToSPIRVPass();
+
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `arith`
+/// dialect.
+void registerConvertArithToSPIRVInterface(DialectRegistry &registry);
 } // namespace arith
 } // namespace mlir
 

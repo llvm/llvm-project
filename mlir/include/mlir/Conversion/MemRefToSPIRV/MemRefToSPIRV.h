@@ -70,6 +70,9 @@ void convertMemRefTypesAndAttrs(
 void populateMemRefToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns);
 
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `memref`
+/// dialect.
+void registerConvertMemRefToSPIRVInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MEMREFTOSPIRV_MEMREFTOSPIRV_H

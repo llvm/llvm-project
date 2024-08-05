@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
@@ -47,6 +48,7 @@ void UBDialect::initialize() {
       >();
   addInterfaces<UBInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, UBDialect>();
+  declarePromisedInterface<ConvertToSPIRVPatternInterface, UBDialect>();
 }
 
 Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,

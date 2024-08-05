@@ -11,12 +11,19 @@
 
 #include <memory>
 
+#include "mlir/Pass/Pass.h"
+
 namespace mlir {
 class Pass;
+class DialectRegistry;
 
 #define GEN_PASS_DECL_CONVERTTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 
+/// Register the extension that will load dependent dialects for SPIR-V
+/// conversion. This is useful to implement a pass similar to
+/// "convert-to-spirv".
+void registerConvertToSPIRVDependentDialectLoading(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_CONVERTTOSPIRV_CONVERTTOSPIRVPASS_H

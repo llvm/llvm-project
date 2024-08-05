@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "../SPIRVCommon/Pattern.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -449,3 +451,34 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 }
 
 } // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// ConvertToSPIRVPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert math to SPIR-V.
+struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
+  using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<spirv::SPIRVDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToSPIRVConversionPatterns(
+      ConversionTarget &target, SPIRVTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+
+    // Use UnrealizedConversionCast as the bridge so that we don't need to pull
+    // in patterns for other dialects.
+    target.addLegalOp<UnrealizedConversionCastOp>();
+    populateMathToSPIRVPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertMathToSPIRVInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, math::MathDialect *dialect) {
+    dialect->addInterfaces<ToSPIRVDialectInterface>();
+  });
+}

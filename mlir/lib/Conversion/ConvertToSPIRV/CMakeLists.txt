@@ -1,5 +1,6 @@
 set(LLVM_OPTIONAL_SOURCES
   ConvertToSPIRVPass.cpp
+  ToSPIRVInterface.cpp
 )
 
 add_mlir_conversion_library(MLIRConvertToSPIRVPass
@@ -12,10 +13,6 @@ add_mlir_conversion_library(MLIRConvertToSPIRVPass
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithToSPIRV
-  MLIRArithTransforms
-  MLIRFuncToSPIRV
-  MLIRIndexToSPIRV
   MLIRIR
   MLIRPass
   MLIRRewrite
@@ -24,10 +21,15 @@ add_mlir_conversion_library(MLIRConvertToSPIRVPass
   MLIRSPIRVDialect
   MLIRSPIRVTransforms
   MLIRSupport
-  MLIRTransforms
   MLIRTransformUtils
-  MLIRUBToSPIRV
-  MLIRVectorDialect
-  MLIRVectorToSPIRV
-  MLIRVectorTransforms
   )
+
+add_mlir_conversion_library(MLIRConvertToSPIRVInterface
+  ToSPIRVInterface.cpp
+
+  DEPENDS
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRSupport
+)

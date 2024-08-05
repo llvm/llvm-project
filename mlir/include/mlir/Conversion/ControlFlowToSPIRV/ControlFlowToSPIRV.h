@@ -14,6 +14,7 @@
 #define MLIR_CONVERSION_CONTROLFLOWTOSPIRV_CONTROLFLOWTOSPIRV_H
 
 namespace mlir {
+class DialectRegistry;
 class RewritePatternSet;
 class SPIRVTypeConverter;
 
@@ -22,6 +23,10 @@ namespace cf {
 /// ops to SPIR-V ops.
 void populateControlFlowToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                         RewritePatternSet &patterns);
+
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `cf`
+/// dialect.
+void registerConvertControlFlowToSPIRVInterface(DialectRegistry &registry);
 } // namespace cf
 } // namespace mlir
 

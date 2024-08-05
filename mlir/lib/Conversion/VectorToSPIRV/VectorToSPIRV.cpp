@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -976,4 +977,34 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
     RewritePatternSet &patterns) {
   patterns.add<VectorReductionToIntDotProd>(patterns.getContext());
+}
+//===----------------------------------------------------------------------===//
+// ConvertToSPIRVPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert vector to SPIR-V.
+struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
+  using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<spirv::SPIRVDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToSPIRVConversionPatterns(
+      ConversionTarget &target, SPIRVTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    // Use UnrealizedConversionCast as the bridge so that we don't need to pull
+    // in patterns for other dialects.
+    target.addLegalOp<UnrealizedConversionCastOp>();
+
+    populateVectorToSPIRVPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertVectorToSPIRVInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+    dialect->addInterfaces<ToSPIRVDialectInterface>();
+  });
 }

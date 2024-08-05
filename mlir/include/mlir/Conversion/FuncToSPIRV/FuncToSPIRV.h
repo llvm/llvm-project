@@ -24,6 +24,9 @@ class SPIRVTypeConverter;
 void populateFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns);
 
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `func`
+/// dialect.
+void registerConvertFuncToSPIRVInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_FUNCTOSPIRV_FUNCTOSPIRV_H

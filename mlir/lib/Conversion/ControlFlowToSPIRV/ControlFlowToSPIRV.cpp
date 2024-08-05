@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "../SPIRVCommon/Pattern.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -113,4 +114,33 @@ void mlir::cf::populateControlFlowToSPIRVPatterns(
   MLIRContext *context = patterns.getContext();
 
   patterns.add<BranchOpPattern, CondBranchOpPattern>(typeConverter, context);
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToSPIRVPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert cf to SPIR-V.
+struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
+  using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<spirv::SPIRVDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToSPIRVConversionPatterns(
+      ConversionTarget &target, SPIRVTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    // TODO: We should also take care of block argument type conversion.
+    cf::populateControlFlowToSPIRVPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::cf::registerConvertControlFlowToSPIRVInterface(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, cf::ControlFlowDialect *dialect) {
+    dialect->addInterfaces<ToSPIRVDialectInterface>();
+  });
 }

@@ -24,6 +24,10 @@ namespace index {
 void populateIndexToSPIRVPatterns(SPIRVTypeConverter &converter,
                                   RewritePatternSet &patterns);
 std::unique_ptr<OperationPass<>> createConvertIndexToSPIRVPass();
+
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `index`
+/// dialect.
+void registerConvertIndexToSPIRVInterface(DialectRegistry &registry);
 } // namespace index
 } // namespace mlir
 

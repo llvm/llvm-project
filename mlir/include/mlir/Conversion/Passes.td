@@ -45,6 +45,8 @@ def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
     "vector::VectorDialect",
   ];
   let options = [
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "Test conversion patterns of only the specified dialects">,
     Option<"runSignatureConversion", "run-signature-conversion", "bool",
     /*default=*/"true",
     "Run function signature conversion to convert vector types">,
