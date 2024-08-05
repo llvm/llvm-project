@@ -401,6 +401,13 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
     II->setCalledFunction(NewDecl);
     return true;
   }
+  case Intrinsic::prefetch: {
+    Function *NewDecl =
+        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {NewV->getType()});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return true;
+  }
   default: {
     Value *Rewrite = TTI->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
     if (!Rewrite)
@@ -423,6 +430,7 @@ void InferAddressSpacesImpl::collectRewritableIntrinsicOperands(
                                                  PostorderStack, Visited);
     break;
   case Intrinsic::masked_gather:
+  case Intrinsic::prefetch:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
