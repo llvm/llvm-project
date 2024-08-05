@@ -362,17 +362,6 @@ static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
   return From.isSafeToMove(SawStore);
 }
 
-static std::optional<bool>
-lookupActiveElementsAffectsResult(const MachineInstr &MI) {
-  const RISCV::RISCVMaskedPseudoInfo *Info =
-      RISCV::lookupMaskedIntrinsicByUnmasked(MI.getOpcode());
-  if (!Info)
-    Info = RISCV::getMaskedPseudoInfo(MI.getOpcode());
-  if (!Info)
-    return std::nullopt;
-  return Info->ActiveElementsAffectResult;
-}
-
 static unsigned getSEWLMULRatio(const MachineInstr &MI) {
   RISCVII::VLMUL LMUL = RISCVII::getLMul(MI.getDesc().TSFlags);
   unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
@@ -434,10 +423,10 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   bool VLChanged = !MinVL->isIdenticalTo(SrcVL);
   bool RaisesFPExceptions = MI.getDesc().mayRaiseFPException() &&
                             !MI.getFlag(MachineInstr::MIFlag::NoFPExcept);
-  auto ActiveElementsAffectResult = lookupActiveElementsAffectsResult(*Src);
-  if (!ActiveElementsAffectResult)
-    return false;
-  if (VLChanged && (*ActiveElementsAffectResult || RaisesFPExceptions))
+  bool ActiveElementsAffectResult = RISCVII::activeElementsAffectResult(
+      TII->get(RISCV::getRVVMCOpcode(Src->getOpcode())).TSFlags);
+
+  if (VLChanged && (ActiveElementsAffectResult || RaisesFPExceptions))
     return false;
 
   if (!isSafeToMove(*Src, MI))
