@@ -242,6 +242,7 @@ bool WindowScheduler::initialize() {
     LLVM_DEBUG(dbgs() << "There are too few MIs in the window region!\n");
     return false;
   }
+  reanalyzeLiveIntervals();
   return true;
 }
 
@@ -641,6 +642,20 @@ void WindowScheduler::expand() {
                              ModuloScheduleExpander::InstrChangesTy());
   MSE.expand();
   MSE.cleanup();
+}
+
+void WindowScheduler::reanalyzeLiveIntervals() {
+  auto SlotIndex = Context->LIS->getSlotIndexes();
+  // Check if the SlotIndex infomation is missing.
+  for (auto &MBB : *MF)
+    for (auto &MI : MBB)
+      if (!SlotIndex->hasIndex(MI)) {
+        // The slot index and live intervals of MF have been corrupted and need
+        // to be reanalyzed.
+        SlotIndex->reanalyze(*MF);
+        Context->LIS->reanalyze(*MF);
+        return;
+      }
 }
 
 void WindowScheduler::updateLiveIntervals() {
