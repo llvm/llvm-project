@@ -34,11 +34,11 @@ public:
     EXPECT_EQ(1, func(&res, T(0x42.1p+0)));
     EXPECT_EQ(1, func(&res, T(-0x42.1p+0)));
 
-    FPBits default_snan_payload_bits = FPBits::one();
-    default_snan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 1 +
-                                                  FPBits::EXP_BIAS);
-    T default_snan_payload = default_snan_payload_bits.get_val();
-    EXPECT_EQ(1, func(&res, default_snan_payload));
+    FPBits nan_payload_bits = FPBits::one();
+    nan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 1 +
+                                         FPBits::EXP_BIAS);
+    T nan_payload = nan_payload_bits.get_val();
+    EXPECT_EQ(1, func(&res, nan_payload));
   }
 
   void testValidPayloads(SetPayloadFunc func) {
@@ -64,13 +64,13 @@ public:
 
     // The following code is creating a NaN manually to prevent a conversion
     // from BigInt to long double.
-    FPBits default_snan_payload_bits = FPBits::one();
-    default_snan_payload_bits.set_biased_exponent(FPBits::SIG_LEN - 2 +
-                                                  FPBits::EXP_BIAS);
-    default_snan_payload_bits.set_mantissa(FPBits::SIG_MASK - 3);
-    T default_snan_payload = default_snan_payload_bits.get_val();
+    FPBits nan_payload_bits = FPBits::one();
+    nan_payload_bits.set_biased_exponent(FPBits::SIG_LEN - 2 +
+                                         FPBits::EXP_BIAS);
+    nan_payload_bits.set_mantissa(FPBits::SIG_MASK - 3);
+    T nan_payload = nan_payload_bits.get_val();
 
-    EXPECT_EQ(0, func(&res, default_snan_payload));
+    EXPECT_EQ(0, func(&res, nan_payload));
     EXPECT_TRUE(FPBits(res).is_quiet_nan());
     EXPECT_EQ(
         FPBits::quiet_nan(Sign::POS, FPBits::FRACTION_MASK >> 1).uintval(),
