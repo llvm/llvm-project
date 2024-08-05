@@ -66,7 +66,6 @@ void test() {
     assert(!spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 4);
   }
-
 }
 
 int main(int, char**) {
