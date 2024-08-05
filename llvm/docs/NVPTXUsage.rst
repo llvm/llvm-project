@@ -287,6 +287,62 @@ The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence us
 
 The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
 
+Arithmetic Intrinsics
+---------------------
+
+'``llvm.nvvm.idp2a``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp2a(i32 %a, i1 immarg %a.unsigned, i32 %b, i1 immarg %b.unsigned, i1 immarg %is.hi, i32 %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp2a``' intrinsic performs a 2-element vector dot product
+followed by addition. It corresponds directly to the ``dp2a`` PTX instruction.
+
+Semantics:
+""""""""""
+
+The 32-bit value in ``%a`` is broken into 2 16-bit values which are either sign
+or zero extended, depending on the value of ``%a.unsigned``, to 32 bits. Two
+bytes are selected from ``%b``, if ``%is.hi`` is true, the most significant
+bytes are selected, otherwise the least significant bytes are selected. These
+bytes are each sign or zero extended, depending on ``%b.unsigned``. The dot
+product of these 2-element vectors is added to ``%c`` to produce the return.
+
+
+'``llvm.nvvm.idp4a``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp4a(i32 %a, i1 immarg %a.unsigned, i32 %b, i1 immarg %b.unsigned, i32 %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp4a``' intrinsic performs a 4-element vector dot product
+followed by addition. It corresponds directly to the ``dp4a`` PTX instruction.
+
+Semantics:
+""""""""""
+
+Each of the 4 bytes in both ``%a`` and ``%b`` are extended to 32-bit integers
+forming 2 ``<4 x i32>``. zero-extension is used if ``%a.unsigned`` or
+``%b.unsigned`` is true respectively. The dot product of these 4-element vectors
+is added to ``%c`` to produce the return.
+
+
+
 Other Intrinsics
 ----------------
 

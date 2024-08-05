@@ -1053,6 +1053,18 @@ let TargetPrefix = "nvvm" in {
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
 //
+// Dot Product
+//
+  def int_nvvm_idp4a :
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
+          [llvm_i32_ty, llvm_i1_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+          [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
+  def int_nvvm_idp2a :
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
+        [llvm_i32_ty, llvm_i1_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty, llvm_i32_ty],
+        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
+
+//
 // Convert
 //
 
