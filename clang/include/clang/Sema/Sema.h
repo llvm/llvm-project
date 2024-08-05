@@ -15086,10 +15086,8 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(
-      FieldDecl *FD, Expr *E,
-      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls, bool CountInBytes,
-      bool OrNull);
+  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
+                                 bool OrNull);
 
   ///@}
 };
