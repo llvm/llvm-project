@@ -180,7 +180,8 @@ private:
     }
 
     std::string paletteSymName = "g_intel_amx_palette_";
-    uint8ArrayToHex(paletteSymName, paletteAsArray, paletteArraySize);
+    uint8ArrayToHex(paletteSymName, paletteAsArray, 2);
+    uint8ArrayToHex(paletteSymName, paletteAsArray + 16, 48);
 
     ModuleOp module = getOperation()->template getParentOfType<ModuleOp>();
     if (auto global = module.lookupSymbol<LLVM::GlobalOp>(paletteSymName))
@@ -239,8 +240,9 @@ public:
     // 3. Insert tile config/release according to tile scopes.
     OpBuilder builder(getOperation());
     for (auto &scope : scopeAna.getTileScopes()) {
-      LLVM_DEBUG(llvm::dbgs() << ">>> Processing tile scope: "
-                              << *scope.seg.begin() << "\n");
+      LLVM_DEBUG(llvm::dbgs()
+                 << ">>> Processing tile scope: " << *scope.seg.begin()
+                 << " ;;; " << *scope.seg.end() << "\n");
       assert(!scope.pi.overflow && "Expecting legal AMX palette info");
       auto paletteGlobal = getOrCreateGlobalPalette(scope.pi);
       assert(paletteGlobal && "Failed to create global palette");

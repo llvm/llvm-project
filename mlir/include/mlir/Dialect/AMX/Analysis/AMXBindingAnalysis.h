@@ -84,7 +84,7 @@ private:
 
   bool isValidAnalysis;
   // Storing parallel Ops that would break tile context & scope.
-  DenseSet<Operation *> parallelOps;
+  DenseSet<Operation *> breakOps;
   // Storing needed palette info for each concerned Op.
   DenseMap<Operation *, PaletteInfo> neededPalette;
   // Storing the usage scope for each concerned tile Op.
@@ -93,10 +93,8 @@ private:
   // Storing final tile scope results for injecting tilecfg/tilerelease.
   SmallVector<TileScope, 10> tileScopes;
 
-  void addParallelOp(Operation *op) { parallelOps.insert(op); }
-  bool isParallelOp(Operation *op) {
-    return parallelOps.find(op) != parallelOps.end();
-  }
+  void addBreakOp(Operation *op) { breakOps.insert(op); }
+  bool isBreakOp(Operation *op) { return breakOps.find(op) != breakOps.end(); }
 
   void setTileUsage(Operation *op, BlockSeg seg) {
     tileUsage.insert({op, std::move(seg)});

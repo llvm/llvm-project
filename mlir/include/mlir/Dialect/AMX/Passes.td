@@ -19,7 +19,7 @@ def EnableAMXTileBinding
     by propagating specified binding information 
     and automatically configuring harware context
   }];
-  let dependentDialects = ["func::FuncDialect"];
+  let dependentDialects = ["func::FuncDialect", "amx::AMXDialect", "LLVM::LLVMDialect"];
 }
 
 #endif // MLIR_DIALECT_AMX_PASSES_TD

@@ -212,13 +212,14 @@ TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
   isValidAnalysis = true;
   // 0. First walk to mark parallel Ops.
   func->walk<WalkOrder::PostOrder>([=](Operation *op) {
-    if (!isParallelOp(op))
+    if (isBreakOp(op))
       return;
 
-    if (llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op)) {
+    if (llvm::isa<func::CallOp>(op) || llvm::isa<func::ReturnOp>(op) ||
+        llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op)) {
       while (op != root) {
-        addParallelOp(op);
-        LLVM_DEBUG(llvm::dbgs() << ">>>>> add parallel op: " << op << "\n");
+        addBreakOp(op);
+        LLVM_DEBUG(llvm::dbgs() << ">>>>> add break op: " << *op << "\n");
         op = op->getParentOp();
       }
     }
@@ -233,15 +234,25 @@ TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
       return;
     if (!isTileOp(op))
       return;
-    Operation *lastUser = nullptr;
-    for (auto user : op->getUsers())
-      lastUser = user;
-    while (lastUser && op->getBlock() != lastUser->getBlock()) {
-      lastUser = lastUser->getParentOp();
-      if (!lastUser)
-        isValidAnalysis = false;
+    if (llvm::isa<TileStoreOp>(op)) {
+      LLVM_DEBUG(llvm::dbgs() << ">>>>> setTileUsage: " << *op << " ;;; " << *op
+                              << " ;;; " << *op << "\n");
+      setTileUsage(op, BlockSeg(Block::iterator(op), Block::iterator(op)));
+
+    } else {
+      Operation *lastUser = nullptr;
+      for (auto user : op->getUsers())
+        lastUser = user;
+      while (lastUser && op->getBlock() != lastUser->getBlock()) {
+        lastUser = lastUser->getParentOp();
+        if (!lastUser)
+          isValidAnalysis = false;
+      }
+      LLVM_DEBUG(llvm::dbgs() << ">>>>> setTileUsage: " << *op << " ;;; " << *op
+                              << " ;;; " << *lastUser << "\n");
+      setTileUsage(op,
+                   BlockSeg(Block::iterator(op), Block::iterator(lastUser)));
     }
-    setTileUsage(op, BlockSeg(Block::iterator(op), Block::iterator(lastUser)));
   });
   if (!isValidAnalysis)
     return;
@@ -410,7 +421,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
   auto currBegin = seg.begin();
   for (auto probe = seg.begin(); probe != seg.end(); probe++) {
     Operation *op = &(*probe);
-    if (isParallelOp(op)) {
+    if (isBreakOp(op)) {
       blockSegs.push_back(BlockSeg(currBegin, probe));
       paraOps.push_back(op);
       currBegin = probe;
@@ -448,19 +459,19 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
       nextIterIfMerge = currIter;
       nextIterIfMerge++;
     } else if (isTileOp(currOp)) {
-      auto iter = tileUsage.find(currOp);
-      if (iter == tileUsage.end()) {
+      auto usageIter = tileUsage.find(currOp);
+      if (usageIter == tileUsage.end()) {
         isValidAnalysis = false;
         return;
       }
-      pi = getPalette(iter->second);
+      pi = getPalette(usageIter->second);
       if (pi && pi->overflow) {
         // This means the binding info in tile Ops exceeds the hardware
         // capability.
         isValidAnalysis = false;
         return;
       }
-      nextIterIfMerge = iter->second.end();
+      nextIterIfMerge = usageIter->second.end();
       nextIterIfMerge++;
     }
     if (!pi) {
