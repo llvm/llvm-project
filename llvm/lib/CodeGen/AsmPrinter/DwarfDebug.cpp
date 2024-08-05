@@ -1292,8 +1292,8 @@ void DwarfDebug::finalizeModuleInfo() {
       SkCU->addString(SkCU->getUnitDie(), attrDWOName, DWOName);
       // Emit a unique identifier for this CU. Include the DWO file name in the
       // hash to avoid the case where two (almost) empty compile units have the
-      // same file. This can happen if link-time optimization removes nearly all
-      // (unused) code from a CU.
+      // same contents. This can happen if link-time optimization removes nearly
+      // all (unused) code from a CU.
       uint64_t ID =
           DIEHash(Asm, &TheCU).computeCUSignature(DWOName, TheCU.getUnitDie());
       if (getDwarfVersion() >= 5) {
