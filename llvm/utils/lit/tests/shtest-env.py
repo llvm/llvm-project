@@ -36,7 +36,15 @@
 # CHECK: PASS: shtest-env :: env-args-none.txt ({{[^)]*}})
 # CHECK: env | {{.*}}
 # CHECK: # executed command: env
-# CHECK-NOT: {{^[^#]}} | {{.*}}
+# CHECK: env FOO=2 BAR=1 | {{.*}}
+# CHECK: # executed command: env FOO=2 BAR=1
+# CHECK: env -u FOO -u BAR | {{.*}}
+# CHECK: # executed command: env -u FOO -u BAR
+# CHECK: env -u FOO BAR=1 -u BAR FOO=2 | {{.*}}
+# CHECK: # executed command: env -u FOO BAR=1 -u BAR FOO=2
+# CHECK: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4 | {{.*}}
+# CHECK: # executed command: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4
+# CHECK-NOT: {{^[^#]}}
 # CHECK: --
 
 # CHECK: FAIL: shtest-env :: env-calls-cd.txt ({{[^)]*}})
