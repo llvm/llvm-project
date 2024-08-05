@@ -81,8 +81,7 @@ struct Symbolizer {
   amd_comgr_status_t symbolize(uint64_t Address, bool IsCode, void *UserData);
 
 private:
-  // llvm symbolizer with default options
-  LLVMSymbolizer SymbolizerImpl;
+  std::unique_ptr<LLVMSymbolizer> SymbolizerImpl;
   std::unique_ptr<ObjectFile> CodeObject;
   PrintSymbolCallback PrintSymbol;
 };

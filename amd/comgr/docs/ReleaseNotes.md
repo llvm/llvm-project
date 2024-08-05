@@ -74,6 +74,9 @@ OpenCL applications that leveraged AMDGPUSimplifyLibCalls optimizations would
 need to re-link bitcodes separately to avoid errors at runtime.
 - Correctly set directory to object file path when forwarding -save-temps for
 HIP compilations with AMD\_COMGR\_SAVE\_TEMPS set
+- Added new ['--skip-line-zero'](https://github.com/llvm/llvm-project/pull/82240)
+LLVM option by default in comgr-symbolizer to support symbolization of instructions
+having no source correspondence in the debug information.
 
 New APIs
 --------

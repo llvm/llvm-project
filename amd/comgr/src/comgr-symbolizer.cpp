@@ -47,6 +47,13 @@
 
 using namespace COMGR;
 
+// llvm symbolizer with default options
+static LLVMSymbolizer::Options getDefaultOptions() {
+  LLVMSymbolizer::Options Opt;
+  Opt.SkipLineZero = true;
+  return Opt;
+}
+
 static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
   llvm::symbolize::PrinterConfig Config;
   Config.Pretty = true;
@@ -69,7 +76,9 @@ static llvm::symbolize::ErrorHandler symbolize_error_handler(
 
 Symbolizer::Symbolizer(std::unique_ptr<ObjectFile> &&CodeObject,
                        PrintSymbolCallback PrintSymbol)
-    : CodeObject(std::move(CodeObject)), PrintSymbol(PrintSymbol) {}
+    : CodeObject(std::move(CodeObject)), PrintSymbol(PrintSymbol) {
+  SymbolizerImpl = std::make_unique<LLVMSymbolizer>(getDefaultOptions());
+}
 Symbolizer::~Symbolizer() = default;
 
 amd_comgr_status_t
@@ -103,14 +112,14 @@ amd_comgr_status_t Symbolizer::symbolize(uint64_t Address, bool IsCode,
   llvm::raw_string_ostream OS(Result);
   llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
   llvm::symbolize::Request Request{"", Address, ""};
-  auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(OS, symbolize_error_handler(OS), Config);
-
+  auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(
+      OS, symbolize_error_handler(OS), Config);
   if (IsCode) {
-    auto ResOrErr = SymbolizerImpl.symbolizeInlinedCode(
+    auto ResOrErr = SymbolizerImpl->symbolizeInlinedCode(
         *CodeObject, {Address, llvm::object::SectionedAddress::UndefSection});
     Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
   } else { // data
-    auto ResOrErr = SymbolizerImpl.symbolizeData(
+    auto ResOrErr = SymbolizerImpl->symbolizeData(
         *CodeObject, {Address, llvm::object::SectionedAddress::UndefSection});
     Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DIGlobal());
   }

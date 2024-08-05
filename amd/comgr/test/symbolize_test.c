@@ -39,6 +39,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CHECK(ptr, ...)                                                        \
+  do {                                                                         \
+    if ((ptr) == NULL) {                                                       \
+      fprintf(stderr, "Error: ");                                              \
+      fprintf(stderr, __VA_ARGS__);                                            \
+      fprintf(stderr, " at %s:%d\n", __FILE__, __LINE__);                      \
+      exit(EXIT_FAILURE);                                                      \
+    }                                                                          \
+  } while (0)
+
 typedef struct container {
   char *data;
   int sz;
@@ -56,32 +66,44 @@ void collect_symbolized_string(const char *input, void *data) {
 void test_symbolized_string(container_t *symbol_container) {
 
   char *symbol_str = symbol_container->data;
-  char* space_pos = strchr(symbol_str, ' ');
-  if (space_pos == NULL) {
-    printf("Expected spaces in %s\n", symbol_str);
-    exit(0);
-  }
+  CHECK(symbol_str, "Failed, symbol_str is NULL.\n");
+
+  char *space_pos = strchr(symbol_str, ' ');
+  CHECK(space_pos, "Expected spaces in %s\n", symbol_str);
+
+  char *line_col_pos = strchr(symbol_str, ':');
+  CHECK(line_col_pos, "Expected line:column information in %s\n", symbol_str);
+
+  char *newline_pos = strchr(symbol_str, '\n');
+  CHECK(newline_pos, "Expected '\\n' in %s", symbol_str);
 
   size_t func_name_size = space_pos - symbol_str;
-  char *func_name = (char*) malloc(sizeof(char) * (func_name_size + 1));
-
-  if (!symbol_str) {
-    printf("Failed, symbol_str NULL\n");
-    exit(0);
-  }
+  char *func_name = (char *)malloc(sizeof(char) * (func_name_size + 1));
 
   strncpy(func_name, symbol_str, func_name_size);
   func_name[func_name_size] = '\0';
 
-  if (strcmp(func_name, "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")) {
+  size_t line_col_size = newline_pos - line_col_pos;
+  char *line_col = (char *)malloc(sizeof(char) * (line_col_size));
+
+  strncpy(line_col, line_col_pos + 1, line_col_size);
+  line_col[line_col_size - 1] = '\0';
+
+  if (strcmp(func_name,
+             "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz") &&
+      strcmp(line_col, "46:7 (approximate)")) {
     printf("mismatch:\n");
-    printf("expected symbolized function name: bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\n");
-    printf("actual symbolized function name: %s\n", func_name);
+    printf("expected symbolized function name: "
+           "'bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'\n");
+    printf("actual symbolized function name: '%s'\n", func_name);
+    printf("expected symbolized line:column output: '46:7 (approximate)'\n");
+    printf("actual symbolized line:column output: '%s'\n", line_col);
     exit(0);
   }
 
   printf("symbolized string is %s", symbol_str);
   free(func_name);
+  free(line_col);
   free(symbol_str);
 
   return;
@@ -96,7 +118,7 @@ int main(int argc, char *argv[]) {
   container_t user_data;
 
   // Read input file
-  Size = setBuf(TEST_OBJ_DIR "/shared-debug.so", &Buf);
+  Size = setBuf(TEST_OBJ_DIR "/symbolize-debug.so", &Buf);
 
   // Create data object
   {
@@ -105,7 +127,7 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_create_data");
     Status = amd_comgr_set_data(DataIn, Size, Buf);
     checkError(Status, "amd_comgr_set_data");
-    Status = amd_comgr_set_data_name(DataIn, "shared-debug.so");
+    Status = amd_comgr_set_data_name(DataIn, "symbolize-debug.so");
     checkError(Status, "amd_comgr_set_data_name");
   }
 
@@ -117,8 +139,9 @@ int main(int argc, char *argv[]) {
                                               &symbolizer);
     checkError(Status, "amd_comgr_create_symbolizer_info");
     // Use this command to get valid address
-    // llvm-objdump --triple=amdgcn-amd-amdhsa -l --mcpu=gfx900 --disassemble --source shared.so
-    int address = 5896;
+    // llvm-objdump --triple=amdgcn-amd-amdhsa -l --mcpu=gfx900 --disassemble
+    // --source symbolize-debug.so
+    uint64_t address = 0x128;
     Status = amd_comgr_symbolize(symbolizer, address, 1, (void *)&user_data);
     checkError(Status, "amd_comgr_symbolize");
 
