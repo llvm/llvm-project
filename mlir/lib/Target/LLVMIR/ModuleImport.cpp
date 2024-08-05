@@ -1075,7 +1075,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     Type type = convertType(globalVar->getType());
     StringRef globalName = globalVar->getName();
     FlatSymbolRefAttr symbolRef;
-    if (globalName == "")
+    if (globalName.empty())
       symbolRef = namelessGlobals[globalVar];
     else
       symbolRef = FlatSymbolRefAttr::get(context, globalName);
