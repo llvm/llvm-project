@@ -28,6 +28,9 @@ def SDT_XtensaSelectCC            : SDTypeProfile<1, 5,
 def SDT_XtensaSRC                 : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
                                                          SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
 
+def SDT_XtensaEXTUI               : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
+                                                         SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
+
 //===----------------------------------------------------------------------===//
 // Node definitions
 //===----------------------------------------------------------------------===//
@@ -54,3 +57,5 @@ def Xtensa_select_cc: SDNode<"XtensaISD::SELECT_CC", SDT_XtensaSelectCC,
 def Xtensa_srcl: SDNode<"XtensaISD::SRCL", SDT_XtensaSRC>;
 
 def Xtensa_srcr: SDNode<"XtensaISD::SRCR", SDT_XtensaSRC>;
+
+def Xtensa_extui: SDNode<"XtensaISD::EXTUI", SDT_XtensaEXTUI>;

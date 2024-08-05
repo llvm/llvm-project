@@ -120,7 +120,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
   setOperationAction(ISD::ROTL, MVT::i32, Expand);
   setOperationAction(ISD::ROTR, MVT::i32, Expand);
-  setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i32, Custom);
   setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::CTLZ, MVT::i32, Expand);
   setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
@@ -655,11 +655,13 @@ SDValue XtensaTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
   SDValue TargetJT = DAG.getTargetJumpTable(JT->getIndex(), MVT::i32);
   const DataLayout &TD = DAG.getDataLayout();
   EVT PtrVT = Table.getValueType();
+  unsigned EntrySize = MJTI->getEntrySize(TD);
 
   assert((MJTI->getEntrySize(TD) == 4) && "Unsupported jump-table entry size");
 
-  Index = DAG.getNode(ISD::SHL, DL, Index.getValueType(), Index,
-                      DAG.getConstant(2, DL, Index.getValueType()));
+  Index = DAG.getNode(
+      ISD::SHL, DL, Index.getValueType(), Index,
+      DAG.getConstant(Log2_32(EntrySize), DL, Index.getValueType()));
 
   SDValue Addr = DAG.getNode(ISD::ADD, DL, Index.getValueType(), Index, Table);
   SDValue LD =
@@ -696,29 +698,13 @@ SDValue XtensaTargetLowering::LowerConstantPool(SDValue Op,
                                                 SelectionDAG &DAG) const {
   EVT PtrVT = Op.getValueType();
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
-  auto C = const_cast<Constant *>(CP->getConstVal());
-  auto T = CP->getType();
   SDValue Result;
 
-  // Do not use constant pool for aggregate or vector constant types,
-  // in such cases create global variable, for example to store tabel
-  // when we lower CTTZ operation.
-  if (T->isAggregateType()) {
-    MachineFunction &MF = DAG.getMachineFunction();
-    auto AFI = MF.getInfo<XtensaFunctionInfo>();
-    auto M = const_cast<Module *>(MF.getFunction().getParent());
-    auto GV = new GlobalVariable(
-        *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
-        Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
-            Twine(MF.getFunctionNumber()) + "_" + Twine(AFI->createLabelUId()));
-    Result = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
+  if (!CP->isMachineConstantPoolEntry()) {
+    Result = DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlign(),
+                                       CP->getOffset());
   } else {
-    if (!CP->isMachineConstantPoolEntry()) {
-      Result = DAG.getTargetConstantPool(CP->getConstVal(), PtrVT,
-                                         CP->getAlign(), CP->getOffset());
-    } else {
-      report_fatal_error("This constantpool type is not supported yet");
-    }
+    report_fatal_error("This constantpool type is not supported yet");
   }
 
   return getAddrPCRel(Result, DAG);
@@ -854,21 +840,74 @@ SDValue XtensaTargetLowering::LowerShiftRightParts(SDValue Op,
   return DAG.getMergeValues(Ops, DL);
 }
 
+SDValue XtensaTargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op->getValueType(0);
+  SDValue Val = Op.getOperand(0);
+  SDLoc DL(Op);
+
+  if (VT != MVT::i32)
+    return SDValue();
+
+  // CTPOP expansion:
+  // Val = (Val - (Val >> 1)) & 0x55555555
+  // Val = ((Val >> 2) & 0x33333333) + (Val & 0x33333333)
+  // Val = ((Val >> 4) + Val) & 0x0f0f0f0f
+  // Val = (Val >> 8) + Val
+  // Val = (extract bits [16, 20] from Val) + Val
+  // Val = extract bits [0, 5] from Val
+
+  SDValue Mask = DAG.getConstant(0x55555555, DL, VT);
+  SDValue Shift =
+      DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(1, DL, VT));
+  SDValue ShiftAndMask = DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+  Val = DAG.getNode(ISD::SUB, DL, VT, Val, ShiftAndMask);
+
+  Mask = DAG.getConstant(0x33333333, DL, VT);
+  Shift = DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(2, DL, VT));
+  SDValue ValAndMask = DAG.getNode(ISD::AND, DL, VT, Val, Mask);
+  ShiftAndMask = DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+  Val = DAG.getNode(ISD::ADD, DL, VT, ValAndMask, ShiftAndMask);
+
+  Mask = DAG.getConstant(0x0f0f0f0f, DL, VT);
+  Shift = DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(4, DL, VT));
+  Val = DAG.getNode(ISD::ADD, DL, VT, Val, Shift);
+  Val = DAG.getNode(ISD::AND, DL, VT, Val, Mask);
+
+  Shift = DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(8, DL, VT));
+  Val = DAG.getNode(ISD::ADD, DL, VT, Val, Shift);
+
+  Shift = DAG.getNode(XtensaISD::EXTUI, DL, VT, Val,
+                      DAG.getConstant(16, DL, VT), DAG.getConstant(5, DL, VT));
+  Val = DAG.getNode(ISD::ADD, DL, VT, Val, Shift);
+
+  return DAG.getNode(XtensaISD::EXTUI, DL, VT, Val, DAG.getConstant(0, DL, VT),
+                     DAG.getConstant(6, DL, VT));
+}
+
 bool XtensaTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                                   SDValue C) const {
-  if (!VT.isScalarInteger())
+  APInt Imm;
+  unsigned EltSizeInBits;
+
+  if (ISD::isConstantSplatVector(C.getNode(), Imm)) {
+    EltSizeInBits = VT.getScalarSizeInBits();
+  } else if (VT.isScalarInteger()) {
+    EltSizeInBits = VT.getSizeInBits();
+    if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode()))
+      Imm = ConstNode->getAPIntValue();
+    else
+      return false;
+  } else {
     return false;
+  }
 
   // Omit if data size exceeds.
-  if (VT.getSizeInBits() > 32)
+  if (EltSizeInBits > 32)
     return false;
 
-  if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
-    const APInt &Imm = ConstNode->getAPIntValue();
-    // Convert MULT to LSL.
-    if (Imm.isPowerOf2() && Imm.isIntN(5))
-      return true;
-  }
+  // Convert MULT to LSL.
+  if (Imm.isPowerOf2() && Imm.isIntN(5))
+    return true;
 
   return false;
 }
@@ -886,6 +925,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerBlockAddress(Op, DAG);
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
+  case ISD::CTPOP:
+    return LowerCTPOP(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(Op, DAG);
   case ISD::SELECT_CC:
@@ -913,6 +954,8 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::BR_JT";
   case XtensaISD::CALL:
     return "XtensaISD::CALL";
+  case XtensaISD::EXTUI:
+    return "XtensaISD::EXTUI";
   case XtensaISD::PCREL_WRAPPER:
     return "XtensaISD::PCREL_WRAPPER";
   case XtensaISD::RET:

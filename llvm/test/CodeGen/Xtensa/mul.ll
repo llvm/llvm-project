@@ -658,3 +658,14 @@ define signext i32 @mul_imm_16384(i32 %a) nounwind {
   %1 = mul i32 %a, 16384
   ret i32 %1
 }
+
+define <4 x i32> @mul_vec_splat_constant(<4 x i32> %a) {
+; XTENSA-LABEL: mul_vec_splat_constant:
+; XTENSA:         slli a2, a2, 2
+; XTENSA-NEXT:    slli a3, a3, 2
+; XTENSA-NEXT:    slli a4, a4, 2
+; XTENSA-NEXT:    slli a5, a5, 2
+; XTENSA-NEXT:    ret
+  %mul = mul <4 x i32> %a, <i32 4, i32 4, i32 4, i32 4>
+  ret <4 x i32> %mul
+}
