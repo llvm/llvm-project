@@ -32,6 +32,16 @@ namespace BaseClassOffsets {
   B* b = &c;
 }
 
+namespace ExprBase {
+  struct A { int n; };
+  struct B { int n; };
+  struct C : A, B {};
+
+  extern const int &&t = ((B&&)C{}).n;
+  // CHECK: @_ZGRN8ExprBase1tE_ = internal global {{.*}} zeroinitializer,
+  // CHECK: @_ZN8ExprBase1tE = constant ptr {{.*}} @_ZGRN8ExprBase1tE_, {{.*}} 8
+}
+
 namespace reinterpretcast {
   const unsigned int n = 1234;
   extern const int &s = reinterpret_cast<const int&>(n);
