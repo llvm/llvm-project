@@ -88,11 +88,11 @@ def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
 
     ```mlir
     // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.ptr<i32>
+    %0 = emitc.apply "&"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
 
     // Generic form of the same operation.
     %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (i32) -> !emitc.ptr<i32>
+        : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
 
     ```
   }];
@@ -846,6 +846,16 @@ def EmitC_LoadOp : EmitC_Op<"load", [
     This operation loads the content of a modifiable lvalue into an SSA value. 
     Modifications of the lvalue executed after the load are not observable on 
     the produced value.
+
+    Example:
+
+    ```mlir
+    %1 = emitc.load %0 : !emitc.lvalue<i32>
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = v1;
+    ```
   }];
 
   let arguments = (ins 
@@ -937,7 +947,7 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
 
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
-        : (!emitc.opaque<"mystruct">) -> i32
+        : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
     ```
   }];
 
@@ -958,7 +968,8 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
 
     ```mlir
     %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
-        : (!emitc.ptr<!emitc.opaque<"mystruct">>) -> i32
+        : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
+        -> !emitc.lvalue<i32>
     ```
   }];
 
@@ -1050,21 +1061,21 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
 
     // Variable emitted as `int32_t* = NULL;`
     %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">} 
-      : () -> !emitc.ptr<!emitc.opaque<"int32_t">>
+      : () -> !emitc.lvalue<!emitc.ptr<!emitc.opaque<"int32_t">>>
     ```
 
     Since folding is not supported, it can be used with pointers.
     As an example, it is valid to create pointers to `variable` operations
     by using `apply` operations and pass these to a `call` operation.
     ```mlir
-    %0 = "emitc.variable"() {value = 0 : i32} : () -> i32
-    %1 = "emitc.variable"() {value = 0 : i32} : () -> i32
-    %2 = emitc.apply "&"(%0) : (i32) -> !emitc.ptr<i32>
-    %3 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
+    %0 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
+    %1 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
+    %2 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
     emitc.call_opaque "write"(%2, %3)
       : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
     ```
@@ -1138,6 +1149,7 @@ def EmitC_GetGlobalOp : EmitC_Op<"get_global",
 
      ```mlir
      %x = emitc.get_global @foo : !emitc.array<2xf32>
+     %y = emitc.get_global @bar : !emitc.lvalue<i32>
      ```
   }];
 
@@ -1192,11 +1204,11 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
     %1 = emitc.call_opaque "foo"() : () -> (i32)
 
     // Assign emitted as `... = ...;`
-    "emitc.assign"(%0, %1) : (i32, i32) -> ()
+    "emitc.assign"(%0, %1) : (!emitc.lvalue<i32>, i32) -> ()
     ```
   }];
 
@@ -1298,8 +1310,10 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
     ```mlir
     %i = index.constant 1
     %j = index.constant 7
-    %0 = emitc.subscript %arg0[%i, %j] : !emitc.array<4x8xf32>, index, index
-    %1 = emitc.subscript %arg1[%i] : !emitc.ptr<i32>, index
+    %0 = emitc.subscript %arg0[%i, %j] : (!emitc.array<4x8xf32>, index, index)
+           -> !emitc.lvalue<f32>
+    %1 = emitc.subscript %arg1[%i] : (!emitc.ptr<i32>, index)
+           -> !emitc.lvalue<i32>
     ```
   }];
   let arguments = (ins Arg<AnyTypeOf<[
@@ -1371,7 +1385,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
       emitc.yield
     }
     default {
-      %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+      %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
       emitc.call_opaque "func2" (%3) : (f32) -> ()
     }
     ```
