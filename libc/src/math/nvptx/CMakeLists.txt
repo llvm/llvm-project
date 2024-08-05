@@ -398,18 +398,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  pow
-  SRCS
-    pow.cpp
-  HDRS
-    ../pow.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
   powi
   SRCS
     powi.cpp
