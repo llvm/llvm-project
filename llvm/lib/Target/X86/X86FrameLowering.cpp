@@ -4348,10 +4348,9 @@ void X86FrameLowering::restoreFPBPUsingSP(MachineFunction &MF,
   }
 }
 
-void X86FrameLowering::saveAndRestoreFPBPUsingSP(MachineFunction &MF,
-                                        MachineBasicBlock::iterator BeforeMI,
-                                        MachineBasicBlock::iterator AfterMI,
-                                        bool SpillFP, bool SpillBP) const {
+void X86FrameLowering::saveAndRestoreFPBPUsingSP(
+    MachineFunction &MF, MachineBasicBlock::iterator BeforeMI,
+    MachineBasicBlock::iterator AfterMI, bool SpillFP, bool SpillBP) const {
   assert(SpillFP || SpillBP);
 
   Register FP, BP;

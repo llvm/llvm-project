@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 using namespace llvm;
 
@@ -236,7 +237,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         // the same BB, so it will not impact outgoing CFA.
         ++RememberState;
         if (RememberState != 1)
-          report_fatal_error(
+          MF->getContext().reportError(SMLoc(),
               "Support for cfi_remember_state not implemented! Value of CFA "
               "may be incorrect!\n");
 #endif
@@ -246,7 +247,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
 #ifndef NDEBUG
         --RememberState;
         if (RememberState != 0)
-          report_fatal_error(
+          MF->getContext().reportError(SMLoc(),
               "Support for cfi_restore_state not implemented! Value of CFA may "
               "be incorrect!\n");
 #endif
@@ -276,7 +277,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
 
 #ifndef NDEBUG
   if (RememberState != 0)
-    report_fatal_error(
+    MF->getContext().reportError(SMLoc(),
         "Support for cfi_remember_state not implemented! Value of CFA "
         "may be incorrect!\n");
 #endif
