@@ -276,9 +276,8 @@ define i64 @sraiw_andi(i32 signext %0, i32 signext %1) nounwind {
 ; RV64-LABEL: sraiw_andi:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srai a0, a0, 2
-; RV64-NEXT:    srli a0, a0, 61
+; RV64-NEXT:    sraiw a0, a0, 31
+; RV64-NEXT:    andi a0, a0, 7
 ; RV64-NEXT:    ret
 entry:
   %3 = add i32 %0, %1
