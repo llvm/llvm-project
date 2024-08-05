@@ -665,6 +665,8 @@ public:
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.
   static bool hasSameArray(const Pointer &A, const Pointer &B);
+  /// Checks if both given pointers point to the same block.
+  static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

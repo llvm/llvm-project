@@ -689,7 +689,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
   if (!isScalarType(elementType))
     return {};
 
-  SmallVector<int64_t> shape(arrayShape.begin(), arrayShape.end());
+  SmallVector<int64_t> shape(arrayShape);
   shape.push_back(numElements.getKnownMinValue());
   return VectorType::get(shape, elementType);
 }
