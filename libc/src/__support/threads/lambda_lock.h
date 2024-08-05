@@ -19,6 +19,89 @@
 #include "src/__support/threads/sleep.h"
 #include "src/__support/threads/spin_lock.h"
 
+// This file contains an implementation of a flat combining lock based on MCS
+// queue.
+//
+// What is an MCS queue?
+// =====================
+// An MCS queue is a queue-based lock that is designed to be cache-friendly.
+// Each thread only spin on its local node, with minimal traffic across threads.
+// The thread-local node is not nessarily a node inside TLS storage. Rather, the
+// node can be allocated on stack. It is assumed that, during the lifespan of
+// the node, the thread is waiting in its locking routine, thus the stack space
+// is always valid.
+//
+// --------        ----------------------      ----------------------
+// | Tail |        |  Thread 1 (Stack)  |      |  Thread 2 (Stack)  |
+// --------        ----------------------      ----------------------
+//    |            |  ----------------  | next |                    |
+//    *-------------> |    Node N    | <---*   |     ..........     |
+//                 |  ----------------  |  |   |   ---------------  | next
+//                 |     ..........     |  *------ |  Node N-1   | <---- ....
+//                 |                    |      |   ---------------  |
+//                 ----------------------      ----------------------
+//
+// The queue is processed in a FIFO manner. When submitting a task to the lock
+// queue, the thread swaps its own node with the global tail pointer to register
+// itself to the queue. The thread then waits until its own turn. This is
+// usually signaled by the previous node in the queue. Once the thread receives
+// the signal, it executes the task and then signals the next node in the queue.
+//
+// What is a flat combining lock?
+// ==============================
+// Normally, a Mutex maintains the exclusivity using a lock word. Threads
+// polls/parks on that lock word until it finds an opportunity to acquire the
+// lock by a successful posting to the lock word. Then the thread go ahead to do
+// its task on the shared data. In heavy contention, however, the shared data is
+// bouncing among threads, causing a lot of extra traffic.
+// Flat combining is a technique to resolve such problem. The general idea is
+// that when a thread acquires the lock and finished its critical section, its
+// cache has the "ownership" of the shared data. Instead of passing such
+// ownership to the next thread, the current thread can continue to execute the
+// the crtitical section on behalf of the next thread and signal the next thread
+// once the task is done.
+//
+// How to achieve flat combining with MCS queue?
+// =============================================
+// We can use the queue itself specifies the job waiting to be done by adding
+// additional fields to the node such as a function pointer to the critical
+// section. When a thread acquires the lock on the head of the queue, it begins
+// to follow the pointers among the nodes and execute their critical sections.
+// The exclusivity is garanteed by the fact that the combiner thread always
+// holds a global lock. Such lock is passed to the next combiner if needed.
+// Instead of let each individual thread to propagate the finishing signal, the
+// combiner just notify each waiting thread onces their critical section is
+// executed.
+//
+// Pros and Cons
+// =============
+// Pros:
+// - Flat-combing to reduce coherence traffic.
+// - Threads are served in FIFO order.
+// Cons:
+// - Access to thread-local data needs to be carefully managed (e.g. by passing
+// pointers to the desired TLS slot if needed).
+// - The combiner thread may execute mutiple critical sections in a row. One may
+// want limit the combination sometimes.
+// - Stack corruption may corrupt the whole waiting queue. Thread cancellation
+// should not be allowed during flat combining.
+//
+// Why does it matter?
+// ===================
+// Its pros certainly matter. Flat-combining is new synchronization paradigm.
+// Many systems actually want to introduce such mechanism but hindered by
+// existing codebase and many works are done to progressive migration. [1] shows
+// that flat combining can significantly improve the performance inside Linux
+// kernel. SnMalloc recently introduced flat combining to speed up its
+// initialization process [2]. As llvm-libc is still relatively new, we have
+// opportunities to embrace flat-combining from the beginning rather migrating
+// to it later on.
+//
+// [1]: Ship your Critical Section, Not Your Data: Enabling Transparent
+// Delegation with TCLOCKS (OSDI '23)
+// https://www.usenix.org/conference/osdi23/presentation/gupta)
+// [2]: SnMalloc: Implement MCS Combining lock
+// https://github.com/microsoft/snmalloc/commit/6af38acd94d401313b7237bb7c2df5e662e135cf
 namespace LIBC_NAMESPACE_DECL {
 // On stack lock node header for MCS-based flat combining lock.
 class RawLambdaLockHeader {
