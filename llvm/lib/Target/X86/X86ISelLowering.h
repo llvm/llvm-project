@@ -602,6 +602,11 @@ namespace llvm {
     VPDPWUUD,
     VPDPWUUDS,
 
+    VMINMAX,
+    VMINMAX_SAE,
+    VMINMAXS,
+    VMINMAXS_SAE,
+
     MPSADBW,
 
     // Compress and expand.

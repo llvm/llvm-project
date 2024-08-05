@@ -1011,25 +1011,22 @@ static bool isSimplePointerUseValidToReplace(const TargetTransformInfo &TTI,
                                              Use &U, unsigned AddrSpace) {
   User *Inst = U.getUser();
   unsigned OpNo = U.getOperandNo();
-  bool VolatileIsAllowed = false;
-  if (auto *I = dyn_cast<Instruction>(Inst))
-    VolatileIsAllowed = TTI.hasVolatileVariant(I, AddrSpace);
 
   if (auto *LI = dyn_cast<LoadInst>(Inst))
     return OpNo == LoadInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !LI->isVolatile());
+           (!LI->isVolatile() || TTI.hasVolatileVariant(LI, AddrSpace));
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
     return OpNo == StoreInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !SI->isVolatile());
+           (!SI->isVolatile() || TTI.hasVolatileVariant(SI, AddrSpace));
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
     return OpNo == AtomicRMWInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !RMW->isVolatile());
+           (!RMW->isVolatile() || TTI.hasVolatileVariant(RMW, AddrSpace));
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
     return OpNo == AtomicCmpXchgInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !CmpX->isVolatile());
+           (!CmpX->isVolatile() || TTI.hasVolatileVariant(CmpX, AddrSpace));
 
   return false;
 }

@@ -932,7 +932,7 @@ class EmitMergeInputChainsMatcher : public Matcher {
 
 public:
   EmitMergeInputChainsMatcher(ArrayRef<unsigned> nodes)
-      : Matcher(EmitMergeInputChains), ChainNodes(nodes.begin(), nodes.end()) {}
+      : Matcher(EmitMergeInputChains), ChainNodes(nodes) {}
 
   unsigned getNumNodes() const { return ChainNodes.size(); }
 
@@ -1022,10 +1022,10 @@ public:
                         ArrayRef<unsigned> operands, bool hasChain,
                         bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
                         int numfixedarityoperands, bool isMorphNodeTo)
-      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi),
-        VTs(vts.begin(), vts.end()), Operands(operands.begin(), operands.end()),
-        HasChain(hasChain), HasInGlue(hasInGlue), HasOutGlue(hasOutGlue),
-        HasMemRefs(hasmemrefs), NumFixedArityOperands(numfixedarityoperands) {}
+      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi), VTs(vts),
+        Operands(operands), HasChain(hasChain), HasInGlue(hasInGlue),
+        HasOutGlue(hasOutGlue), HasMemRefs(hasmemrefs),
+        NumFixedArityOperands(numfixedarityoperands) {}
 
   const CodeGenInstruction &getInstruction() const { return CGI; }
 
@@ -1110,8 +1110,7 @@ class CompleteMatchMatcher : public Matcher {
 public:
   CompleteMatchMatcher(ArrayRef<unsigned> results,
                        const PatternToMatch &pattern)
-      : Matcher(CompleteMatch), Results(results.begin(), results.end()),
-        Pattern(pattern) {}
+      : Matcher(CompleteMatch), Results(results), Pattern(pattern) {}
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getResult(unsigned R) const { return Results[R]; }
