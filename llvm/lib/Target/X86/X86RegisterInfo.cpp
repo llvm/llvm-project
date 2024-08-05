@@ -1104,19 +1104,21 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
         TwoAddrHints.insert(PhysReg);
     };
 
+    // NDD instructions is compressible when Op0 is allocated to the same
+    // physic register as Op1 (or Op2 is it's commutable).
     for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
       const MachineInstr &MI = *MO.getParent();
-      if (X86::getNonNDVariant(MI.getOpcode())) {
-        unsigned OpIdx = MI.getOperandNo(&MO);
-        if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-          TryAddNDDHint(MI.getOperand(1));
-          if (MI.isCommutable() && MI.getOperand(2).isReg())
-            TryAddNDDHint(MI.getOperand(2));
-        } else if (OpIdx == 1) {
-          TryAddNDDHint(MI.getOperand(0));
-        } else if (MI.isCommutable() && OpIdx == 2) {
-          TryAddNDDHint(MI.getOperand(0));
-        }
+      if (X86::getNonNDVariant(MI.getOpcode()) == 0)
+        continue;
+      unsigned OpIdx = MI.getOperandNo(&MO);
+      if (OpIdx == 0 && MI.getOperand(1).isReg()) {
+        TryAddNDDHint(MI.getOperand(1));
+        if (MI.isCommutable() && MI.getOperand(2).isReg())
+          TryAddNDDHint(MI.getOperand(2));
+      } else if (OpIdx == 1) {
+        TryAddNDDHint(MI.getOperand(0));
+      } else if (MI.isCommutable() && OpIdx == 2) {
+        TryAddNDDHint(MI.getOperand(0));
       }
     }
 
