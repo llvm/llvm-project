@@ -750,7 +750,8 @@ void StoreInst::dump() const {
 UnreachableInst *UnreachableInst::create(Instruction *InsertBefore,
                                          Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(LLVMBefore);
   llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
   return Ctx.createUnreachableInst(NewUI);
 }
