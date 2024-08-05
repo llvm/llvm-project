@@ -1476,7 +1476,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
             Decls.push_back(FD);
           }
 
-          auto FPD = FriendPackDecl::Create(SemaRef.Context, Owner, D, Decls);
+          auto *FPD = FriendPackDecl::Create(SemaRef.Context, Owner, D, Decls);
           FPD->setAccess(AS_public);
           Owner->addDecl(FPD);
           return FPD;

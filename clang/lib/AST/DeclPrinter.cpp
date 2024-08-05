@@ -499,7 +499,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
       // now before this loop if there are no subsequent friends) will be
       // skipped by the '++D' of the outer loop.
       for (DeclContext::decl_iterator It; It = std::next(D), It != DEnd; ++D) {
-        auto NextFriend = dyn_cast<FriendDecl>(*It);
+        auto *NextFriend = dyn_cast<FriendDecl>(*It);
         if (!NextFriend || NextFriend->getFriendLoc() != FriendLoc)
           break;
         VisitFriendDecl(NextFriend, false);
