@@ -426,7 +426,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (CE->getType()->isAtomicType()) {
       if (!this->discard(SubExpr))
         return false;
-      return this->emitInvalidCast(CastKind::Reinterpret, CE);
+      return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, CE);
     }
 
     if (DiscardResult)
@@ -2465,10 +2465,13 @@ bool Compiler<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
-  if (!this->discard(E->getSubExpr()))
+  const Expr *SubExpr = E->getSubExpr();
+
+  bool TypesMatch = classify(E) == classify(SubExpr);
+  if (!this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/!TypesMatch, E))
     return false;
 
-  return this->emitInvalidCast(CastKind::Reinterpret, E);
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>
