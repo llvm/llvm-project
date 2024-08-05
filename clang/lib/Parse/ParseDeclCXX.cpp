@@ -2004,7 +2004,14 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
   TagUseKind TUK;
-  if (isDefiningTypeSpecifierContext(DSC, getLangOpts().CPlusPlus) ==
+
+  // C++26 [class.mem.general]p10: If a name-declaration matches the
+  // syntactic requirements of friend-type-declaration, it is a
+  // friend-type-declaration.
+  if (getLangOpts().CPlusPlus && DS.isFriendSpecifiedFirst() &&
+      Tok.isOneOf(tok::comma, tok::ellipsis))
+    TUK = TagUseKind::Friend;
+  else if (isDefiningTypeSpecifierContext(DSC, getLangOpts().CPlusPlus) ==
           AllowDefiningTypeSpec::No ||
       (getLangOpts().OpenMP && OpenMPDirectiveParsing))
     TUK = TagUseKind::Reference;
@@ -2238,9 +2245,28 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                             diag::err_keyword_not_allowed,
                             /*DiagnoseEmptyAttrs=*/true);
 
+    // Consume '...' first so we error on the ',' after it if there is one.
+    SourceLocation EllipsisLoc;
+    TryConsumeToken(tok::ellipsis, EllipsisLoc);
+
+    // CWG 2917: In a template-declaration whose declaration is a
+    // friend-type-declaration, the friend-type-specifier-list shall
+    // consist of exactly one friend-type-specifier.
+    //
+    // Essentially, the following is obviously nonsense, so disallow it:
+    //
+    //   template <typename>
+    //   friend class S, int;
+    //
+    if (Tok.is(tok::comma)) {
+      Diag(Tok.getLocation(),
+           diag::err_friend_template_decl_multiple_specifiers);
+      SkipUntil(tok::semi, StopBeforeMatch);
+    }
+
     TagOrTempResult = Actions.ActOnTemplatedFriendTag(
         getCurScope(), DS.getFriendSpecLoc(), TagType, StartLoc, SS, Name,
-        NameLoc, attrs,
+        NameLoc, EllipsisLoc, attrs,
         MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0] : nullptr,
                                TemplateParams ? TemplateParams->size() : 0));
   } else {
@@ -3063,10 +3089,6 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   // Handle C++26's variadic friend declarations. These don't even have
   // declarators, so we get them out of the way early here.
-  //
-  // C++26 [class.mem.general]p10: If a name-declaration matches the
-  // syntactic requirements of friend-type-declaration, it is a
-  // friend-type-declaration.
   if (DS.isFriendSpecifiedFirst() && Tok.isOneOf(tok::comma, tok::ellipsis)) {
     SourceLocation FriendLoc = DS.getFriendSpecLoc();
     SmallVector<Decl *> Decls;
@@ -3083,13 +3105,12 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
     auto ParsedFriendDecl = [&](ParsingDeclSpec &DeclSpec) {
       bool Variadic = Tok.is(tok::ellipsis);
       RecordDecl *AnonRecord = nullptr;
-
       Decl *D = Actions.ParsedFreeStandingDeclSpec(
           getCurScope(), AS, DeclSpec, DeclAttrs, TemplateParams, false,
           AnonRecord, Variadic ? Tok.getLocation() : SourceLocation());
       DeclSpec.complete(D);
       if (!D) {
-        SkipUntil(tok::semi);
+        SkipUntil(tok::semi, tok::r_brace);
         return true;
       }
 
@@ -3105,24 +3126,6 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
     if (ParsedFriendDecl(DS))
       return nullptr;
-
-    // TODO: It seems like this case is already being caught somewhere else,
-    // so maybe we don't need this check here at all?
-    /*// CWG 2917: In a template-declaration whose declaration is a
-    // friend-type-declaration, the friend-type-specifier-list shall
-    // consist of exactly one friend-type-specifier.
-    //
-    // Essentially, the following is obviously nonsense, so disallow it:
-    //
-    //   template <typename>
-    //   friend class S, int;
-    if (!TemplateParams.empty() && Tok.is(tok::comma)) {
-      Diag(Decls.front()->getLocation(),
-           diag::err_friend_template_decl_multiple_specifiers)
-          << Decls.front()->getSourceRange();
-      SkipUntil(tok::semi);
-      return nullptr;
-    }*/
 
     if (Tok.is(tok::comma))
       DiagnoseCompat();

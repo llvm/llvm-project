@@ -17354,11 +17354,17 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
 DeclResult Sema::ActOnTemplatedFriendTag(
     Scope *S, SourceLocation FriendLoc, unsigned TagSpec, SourceLocation TagLoc,
     CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
-    const ParsedAttributesView &Attr, MultiTemplateParamsArg TempParamLists) {
+    SourceLocation EllipsisLoc, const ParsedAttributesView &Attr,
+    MultiTemplateParamsArg TempParamLists) {
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
 
   bool IsMemberSpecialization = false;
   bool Invalid = false;
+
+  // FIXME: This works for now; revisit once we support packs in NNSs.
+  if (EllipsisLoc.isValid())
+      Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
+          << SourceRange(FriendLoc, NameLoc);
 
   if (TemplateParameterList *TemplateParams =
           MatchTemplateParametersToScopeSpecifier(
@@ -17368,6 +17374,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
       // This is a declaration of a class template.
       if (Invalid)
         return true;
+
 
       return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
                                 Name, NameLoc, Attr, TemplateParams, AS_public,
@@ -17437,7 +17444,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
     FriendDecl *Friend =
         FriendDecl::Create(Context, CurContext, NameLoc, TSI, FriendLoc,
-                           /*EllipsisLoc=*/SourceLocation(), TempParamLists);
+                           EllipsisLoc, TempParamLists);
     Friend->setAccess(AS_public);
     CurContext->addDecl(Friend);
     return Friend;
@@ -17462,7 +17469,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
   FriendDecl *Friend =
       FriendDecl::Create(Context, CurContext, NameLoc, TSI, FriendLoc,
-                         /*EllipsisLoc=*/SourceLocation(), TempParamLists);
+                         EllipsisLoc, TempParamLists);
   Friend->setAccess(AS_public);
   Friend->setUnsupportedFriend(true);
   CurContext->addDecl(Friend);

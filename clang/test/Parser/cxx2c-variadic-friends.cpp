@@ -12,15 +12,13 @@ struct Errors {
   friend int, int;
   friend int, long, char;
 
-  // We simply ignore the '...' here.
+  // We simply diagnose and ignore the '...' here.
   friend float...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
 
   friend short..., unsigned, unsigned short...; // expected-error 2 {{pack expansion does not contain any unexpanded parameter packs}}
 
-  // FIXME: This is a pretty bad diagnostic.
   template <typename>
-  friend struct TS, int; // expected-error {{cannot be referenced with the 'struct' specifier}}
-                         // expected-note@#template {{declared here}}
+  friend struct TS, int; // expected-error {{a friend declaration that befriends a template must contain exactly one type-specifier}}
 
   double friend; // expected-error {{'friend' must appear first in a non-function declaration}}
   double friend, double; // expected-error {{expected member name or ';' after declaration specifiers}}
@@ -28,6 +26,9 @@ struct Errors {
 
 template <typename>
 struct C { template<class T> class Nested; };
+
+template <typename, typename>
+struct D { template<class T> class Nested; };
 
 template<class... Ts> // expected-note {{template parameter is declared here}}
 struct VS {
@@ -46,15 +47,25 @@ struct VS {
   friend class Us...; // expected-error {{declaration of 'Us' shadows template parameter}}
                       // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
 
-  // FIXME: Ill-formed.
   template<class U>
-  friend class C<Ts>::template Nested<U>...;
+  friend class C<Ts>::template Nested<U>...; // expected-error {{cannot specialize a dependent template}}
 
-  // FIXME: Ill-formed.
   template<class... Us>
-  friend class C<Ts...>::template Nested<Us>...;
+  friend class C<Ts...>::template Nested<Us>...; // expected-error {{cannot specialize a dependent template}}
 
-  // FIXME: Ill-formed.
+  // FIXME: Should be valid, but we currently can’t handle packs in NNSs.
+  template<class ...T>
+  friend class TS<Ts>::Nested...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+                                  // expected-warning@-1 {{dependent nested name specifier 'TS<Ts>::' for friend template declaration is not supported; ignoring this friend declaration}}
+
+  // FIXME: This I legitimately have no idea what to do with. I *think* it might
+  // be well-formed by the same logic as the previous one?
+  template<class T>
+  friend class D<T, Ts>::Nested...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+                                    // expected-warning@-1 {{dependent nested name specifier 'D<T, Ts>::' for friend class declaration is not supported; turning off access control for 'VS'}}
+
+  // FIXME: Ill-formed... probably?
   template<class... Us>
-  friend class C<Us>::Nested...;
+  friend class C<Us>::Nested...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+                                 // expected-warning@-1 {{dependent nested name specifier 'C<Us>::' for friend class declaration is not supported; turning off access control for 'VS'}}
 };
