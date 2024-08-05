@@ -556,3 +556,297 @@ define <8 x float> @test_int_x86_maskz_vminmaxps256(<8 x float> %A, <8 x float> 
   %ret = call <8 x float> @llvm.x86.avx10.mask.vminmaxps256.round(<8 x float> %A, <8 x float> %B, i32 127, <8 x float> zeroinitializer, i8 %C, i32 4)
   ret <8 x float> %ret
 }
+
+define <2 x double>@test_int_x86_vminmaxsd(<2 x double> %A, <2 x double> %B) nounwind {
+; X64-LABEL: test_int_x86_vminmaxsd:
+; X64:       # %bb.0:
+; X64-NEXT:    vminmaxsd $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x08,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_vminmaxsd:
+; X86:       # %bb.0:
+; X86-NEXT:    vminmaxsd $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x08,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> undef, i8 -1, i32 4)
+  ret <2 x double> %ret
+}
+
+define <2 x double>@test_int_x86_mask_vminmaxsd(<2 x double> %A, <2 x double> %B, <2 x double> %C, i8 %D) nounwind {
+; X64-LABEL: test_int_x86_mask_vminmaxsd:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsd $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x53,0xd1,0x7f]
+; X64-NEXT:    vmovapd %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_mask_vminmaxsd:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsd $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x53,0xd1,0x7f]
+; X86-NEXT:    vmovapd %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> %C, i8 %D, i32 4)
+  ret <2 x double> %ret
+}
+
+define <2 x double>@test_int_x86_maskz_vminmaxsd(<2 x double> %A, <2 x double> %B, i8 %C) nounwind {
+; X64-LABEL: test_int_x86_maskz_vminmaxsd:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsd $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_maskz_vminmaxsd:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsd $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> zeroinitializer, i8 %C, i32 4)
+  ret <2 x double> %ret
+}
+
+define <2 x double>@test_int_x86_vminmaxsd_round(<2 x double> %A, <2 x double> %B) nounwind {
+; X64-LABEL: test_int_x86_vminmaxsd_round:
+; X64:       # %bb.0:
+; X64-NEXT:    vminmaxsd $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_vminmaxsd_round:
+; X86:       # %bb.0:
+; X86-NEXT:    vminmaxsd $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> undef, i8 -1, i32 8)
+  ret <2 x double> %ret
+}
+
+define <2 x double>@test_int_x86_mask_vminmaxsd_round(<2 x double> %A, <2 x double> %B, <2 x double> %C, i8 %D) nounwind {
+; X64-LABEL: test_int_x86_mask_vminmaxsd_round:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsd $127, {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x19,0x53,0xd1,0x7f]
+; X64-NEXT:    vmovapd %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_mask_vminmaxsd_round:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsd $127, {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x19,0x53,0xd1,0x7f]
+; X86-NEXT:    vmovapd %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> %C, i8 %D, i32 8)
+  ret <2 x double> %ret
+}
+
+define <2 x double>@test_int_x86_maskz_vminmaxsd_round(<2 x double> %A, <2 x double> %B, i8 %C) nounwind {
+; X64-LABEL: test_int_x86_maskz_vminmaxsd_round:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsd $127, {sae}, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x99,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_maskz_vminmaxsd_round:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsd $127, {sae}, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x99,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> zeroinitializer, i8 %C, i32 8)
+  ret <2 x double> %ret
+}
+
+declare<2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 %C, <2 x double> %D, i8 %E, i32 %F)
+
+define <8 x half>@test_int_x86_vminmaxsh(<8 x half> %A, <8 x half> %B) nounwind {
+; X64-LABEL: test_int_x86_vminmaxsh:
+; X64:       # %bb.0:
+; X64-NEXT:    vminmaxsh $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7c,0x08,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_vminmaxsh:
+; X86:       # %bb.0:
+; X86-NEXT:    vminmaxsh $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7c,0x08,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> undef, i8 -1, i32 4)
+  ret <8 x half> %ret
+}
+
+define <8 x half>@test_int_x86_mask_vminmaxsh(<8 x half> %A, <8 x half> %B, <8 x half> %C, i8 %D) nounwind {
+; X64-LABEL: test_int_x86_mask_vminmaxsh:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsh $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7c,0x09,0x53,0xd1,0x7f]
+; X64-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_mask_vminmaxsh:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsh $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7c,0x09,0x53,0xd1,0x7f]
+; X86-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> %C, i8 %D, i32 4)
+  ret <8 x half> %ret
+}
+
+define <8 x half>@test_int_x86_maskz_vminmaxsh(<8 x half> %A, <8 x half> %B, i8 %C) nounwind {
+; X64-LABEL: test_int_x86_maskz_vminmaxsh:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsh $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7c,0x89,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_maskz_vminmaxsh:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsh $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7c,0x89,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> zeroinitializer, i8 %C, i32 4)
+  ret <8 x half> %ret
+}
+
+define <8 x half>@test_int_x86_vminmaxsh_round(<8 x half> %A, <8 x half> %B) nounwind {
+; X64-LABEL: test_int_x86_vminmaxsh_round:
+; X64:       # %bb.0:
+; X64-NEXT:    vminmaxsh $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7c,0x18,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_vminmaxsh_round:
+; X86:       # %bb.0:
+; X86-NEXT:    vminmaxsh $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7c,0x18,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> undef, i8 -1, i32 8)
+  ret <8 x half> %ret
+}
+
+define <8 x half>@test_int_x86_mask_vminmaxsh_round(<8 x half> %A, <8 x half> %B, <8 x half> %C, i8 %D) nounwind {
+; X64-LABEL: test_int_x86_mask_vminmaxsh_round:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsh $127, {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7c,0x19,0x53,0xd1,0x7f]
+; X64-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_mask_vminmaxsh_round:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsh $127, {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7c,0x19,0x53,0xd1,0x7f]
+; X86-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> %C, i8 %D, i32 8)
+  ret <8 x half> %ret
+}
+
+define <8 x half>@test_int_x86_maskz_vminmaxsh_round(<8 x half> %A, <8 x half> %B, i8 %C) nounwind {
+; X64-LABEL: test_int_x86_maskz_vminmaxsh_round:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxsh $127, {sae}, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7c,0x99,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_maskz_vminmaxsh_round:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxsh $127, {sae}, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7c,0x99,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> zeroinitializer, i8 %C, i32 8)
+  ret <8 x half> %ret
+}
+
+declare<8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 %C, <8 x half> %D, i8 %E, i32 %F)
+
+define <4 x float>@test_int_x86_vminmaxss(<4 x float> %A, <4 x float> %B) nounwind {
+; X64-LABEL: test_int_x86_vminmaxss:
+; X64:       # %bb.0:
+; X64-NEXT:    vminmaxss $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7d,0x08,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_vminmaxss:
+; X86:       # %bb.0:
+; X86-NEXT:    vminmaxss $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7d,0x08,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> undef, i8 -1, i32 4)
+  ret <4 x float> %ret
+}
+
+define <4 x float>@test_int_x86_mask_vminmaxss(<4 x float> %A, <4 x float> %B, <4 x float> %C, i8 %D) nounwind {
+; X64-LABEL: test_int_x86_mask_vminmaxss:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxss $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x53,0xd1,0x7f]
+; X64-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_mask_vminmaxss:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxss $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x53,0xd1,0x7f]
+; X86-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> %C, i8 %D, i32 4)
+  ret <4 x float> %ret
+}
+
+define <4 x float>@test_int_x86_maskz_vminmaxss(<4 x float> %A, <4 x float> %B, i8 %C) nounwind {
+; X64-LABEL: test_int_x86_maskz_vminmaxss:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxss $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7d,0x89,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_maskz_vminmaxss:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxss $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7d,0x89,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> zeroinitializer, i8 %C, i32 4)
+  ret <4 x float> %ret
+}
+
+define <4 x float>@test_int_x86_vminmaxss_round(<4 x float> %A, <4 x float> %B) nounwind {
+; X64-LABEL: test_int_x86_vminmaxss_round:
+; X64:       # %bb.0:
+; X64-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7d,0x18,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_vminmaxss_round:
+; X86:       # %bb.0:
+; X86-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7d,0x18,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> undef, i8 -1, i32 8)
+  ret <4 x float> %ret
+}
+
+define <4 x float>@test_int_x86_mask_vminmaxss_round(<4 x float> %A, <4 x float> %B, <4 x float> %C, i8 %D) nounwind {
+; X64-LABEL: test_int_x86_mask_vminmaxss_round:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7d,0x19,0x53,0xd1,0x7f]
+; X64-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_mask_vminmaxss_round:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7d,0x19,0x53,0xd1,0x7f]
+; X86-NEXT:    vmovaps %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> %C, i8 %D, i32 8)
+  ret <4 x float> %ret
+}
+
+define <4 x float>@test_int_x86_maskz_vminmaxss_round(<4 x float> %A, <4 x float> %B, i8 %C) nounwind {
+; X64-LABEL: test_int_x86_maskz_vminmaxss_round:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7d,0x99,0x53,0xc1,0x7f]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_maskz_vminmaxss_round:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7d,0x99,0x53,0xc1,0x7f]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> zeroinitializer, i8 %C, i32 8)
+  ret <4 x float> %ret
+}
+
+declare<4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 %C, <4 x float> %D, i8 %E, i32 %F)

@@ -93,7 +93,7 @@ multiclass avx10_minmax_packed<string OpStr, AVX512VLVectorVTInfo VTI, SDNode Op
 
 multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
                                 SDNode OpNodeSAE> {
-  let ExeDomain = _.ExeDomain, Predicates = [HasAVX10_2_512] in {
+  let ExeDomain = _.ExeDomain, Predicates = [HasAVX10_2] in {
     let mayRaiseFPException = 1 in {
       defm rri : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
                                (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
