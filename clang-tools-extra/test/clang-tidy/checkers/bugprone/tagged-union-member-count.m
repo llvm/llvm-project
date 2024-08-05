@@ -55,6 +55,21 @@ struct maybeTaggedUnion3 { // No warnings expected.
   };
 };
 
+// No warnings expected, because LastATag is just an alias
+struct TaggedUnionWithAliasedEnumConstant {
+  enum {
+    ATag1,
+    ATag2,
+    ATag3,
+    LastATag = ATag3,
+  } Tag;
+  union {
+    float F;
+    int *Ints;
+    char Key[8];
+  } Data;
+};
+
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithPredefinedTagAndPredefinedUnion {
   enum Tags3 Tag;

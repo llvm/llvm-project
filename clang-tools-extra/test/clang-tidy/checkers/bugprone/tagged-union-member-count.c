@@ -1,43 +1,43 @@
-// RUN: %check_clang_tidy -std=c89-or-later %s bugprone-tagged-union-member-count %t
+// RUN: %check_clang_tidy %s bugprone-tagged-union-member-count %t
 
 typedef enum Tags3 {
   tags3_1,
   tags3_2,
   tags3_3,
-} tags3;
+} Tags3;
 
 typedef enum Tags4 {
   tags4_1,
   tags4_2,
   tags4_3,
   tags4_4,
-} tags4;
+} Tags4;
 
-typedef union union3 {
+typedef union Union3 {
   short *Shorts;
   int *Ints;
   float *Floats;
-} union3;
+} Union3;
 
-typedef union union4 {
+typedef union Union4 {
   short *Shorts;
   double *Doubles;
   int *Ints;
   float *Floats;
-} union4;
+} Union4;
 
 // It is not obvious which enum is the tag for the union.
 struct maybeTaggedUnion1 { // No warnings expected.
   enum Tags3 TagA;
   enum Tags4 TagB;
-  union union4 Data;
+  union Union4 Data;
 };
 
 // It is not obvious which union does the tag belong to.
 struct maybeTaggedUnion2 { // No warnings expected.
   enum Tags3 Tag;
-  union union3 DataB;
-  union union3 DataA;
+  union Union3 DataB;
+  union Union3 DataA;
 };
 
 // It is not obvious which union does the tag belong to.
@@ -55,16 +55,31 @@ struct maybeTaggedUnion3 { // No warnings expected.
   };
 };
 
+// No warnings expected, because LastATag is just an alias
+struct TaggedUnionWithAliasedEnumConstant {
+  enum {
+    ATag1,
+    ATag2,
+    ATag3,
+    LastATag = ATag3,
+  } Tag;
+  union {
+    float F;
+    int *Ints;
+    char Key[8];
+  } Data;
+};
+
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithPredefinedTagAndPredefinedUnion {
   enum Tags3 Tag;
-  union union4 Data;
+    union Union4 Data;
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithPredefinedTagAndInlineUnion {
   enum Tags3 Tag;
-  union {
+    union {
     int *Ints;
     char Characters[13];
     struct {
@@ -72,7 +87,7 @@ struct TaggedUnionStructWithPredefinedTagAndInlineUnion {
       double Im;
     } Complex;
     long L;
-  } Data;
+    } Data;
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
@@ -82,7 +97,7 @@ struct TaggedUnionStructWithInlineTagAndPredefinedUnion {
     TaggedUnion7tag2,
     TaggedUnion7tag3,
   } Tag;
-  union union4 Data;
+  union Union4 Data;
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
@@ -113,13 +128,22 @@ struct TaggedUnionStructNesting {
     // CHECK-MESSAGES: :[[@LINE+1]]:12: warning: tagged union has more data members (4) than tags (3)
     struct innerdecl { 
       enum Tags3 Tag;
-      union union4 Data;
+      union Union4 Data;
     } Inner; 
   } Data;
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionStructWithTypedefedTagAndTypedefedUnion { 
-  tags3 Tag;
-  union4 Data;
-}; 
+  Tags3 Tag;
+  Union4 Data;
+};
+
+#define DECLARE_TAGGED_UNION_STRUCT(Tag, Union, Name)\
+struct Name {\
+  Tag Kind;\
+  Union Data;\
+}
+
+// CHECK-MESSAGES: :[[@LINE+1]]:44: warning: tagged union has more data members (4) than tags (3)
+DECLARE_TAGGED_UNION_STRUCT(Tags3, Union4, TaggedUnionStructFromMacro);

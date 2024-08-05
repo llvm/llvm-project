@@ -295,3 +295,16 @@ class Name {\
 
 // CHECK-MESSAGES: :[[@LINE+1]]:43: warning: tagged union has more data members (4) than tags (3)
 DECLARE_TAGGED_UNION_CLASS(Tags3, Union4, TaggedUnionClassFromMacro);
+
+// Lambdas implicitly compile down to an unnamed CXXRecordDecl and if they have captures,
+// then those become unnamed fields.
+void DoNotMatchLambdas() {
+    enum {
+		A
+	} e;
+    union {
+		long A;
+		char B;
+	} u;
+    auto L = [e, u] () {};
+}

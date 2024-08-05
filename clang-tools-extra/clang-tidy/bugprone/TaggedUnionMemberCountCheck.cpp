@@ -16,39 +16,74 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-const char StrictModeOptionName[] = "StrictMode";
-const char EnableCountingEnumHeuristicOptionName[] =
+static constexpr llvm::StringLiteral StrictModeOptionName = "StrictMode";
+static constexpr llvm::StringLiteral EnableCountingEnumHeuristicOptionName =
     "EnableCountingEnumHeuristic";
-const char CountingEnumPrefixesOptionName[] = "CountingEnumPrefixes";
-const char CountingEnumSuffixesOptionName[] = "CountingEnumSuffixes";
+static constexpr llvm::StringLiteral CountingEnumPrefixesOptionName =
+    "CountingEnumPrefixes";
+static constexpr llvm::StringLiteral CountingEnumSuffixesOptionName =
+    "CountingEnumSuffixes";
+
+static constexpr bool StrictModeOptionDefaultValue = false;
+static constexpr bool EnableCountingEnumHeuristicOptionDefaultValue = true;
+static constexpr llvm::StringLiteral CountingEnumPrefixesOptionDefaultValue =
+    "";
+static constexpr llvm::StringLiteral CountingEnumSuffixesOptionDefaultValue =
+    "count";
+
+static constexpr llvm::StringLiteral RootMatchBindName = "root";
+static constexpr llvm::StringLiteral UnionMatchBindName = "union";
+static constexpr llvm::StringLiteral TagMatchBindName = "tags";
+
+namespace {
+AST_MATCHER(FieldDecl, isUnion) {
+  const Type *T = Node.getType().getCanonicalType().getTypePtr();
+  assert(T);
+  return T->isUnionType();
+}
+
+AST_MATCHER(FieldDecl, isEnum) {
+  const Type *T = Node.getType().getCanonicalType().getTypePtr();
+  assert(T);
+  return T->isEnumeralType();
+}
+
+AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsGT,
+               ast_matchers::internal::Matcher<FieldDecl>, InnerMatcher,
+               unsigned, N) {
+  unsigned matchCount = 0;
+  for (const auto field : Node.fields()) {
+    if (InnerMatcher.matches(*field, Finder, Builder)) {
+      matchCount += 1;
+    }
+  }
+  return matchCount > N;
+}
+}; // namespace
 
 TaggedUnionMemberCountCheck::TaggedUnionMemberCountCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.get(StrictModeOptionName, false)),
+      StrictMode(
+          Options.get(StrictModeOptionName, StrictModeOptionDefaultValue)),
       EnableCountingEnumHeuristic(
-          Options.get(EnableCountingEnumHeuristicOptionName, true)),
-      RawCountingEnumPrefixes(Options.get(CountingEnumPrefixesOptionName, "")),
-      RawCountingEnumSuffixes(
-          Options.get(CountingEnumSuffixesOptionName, "count")),
-      ParsedCountingEnumPrefixes(
-          utils::options::parseStringList(RawCountingEnumPrefixes)),
-      ParsedCountingEnumSuffixes(
-          utils::options::parseStringList(RawCountingEnumSuffixes)),
-      CountingEnumPrefixesSet(
-          Options.get(CountingEnumPrefixesOptionName).has_value()),
-      CountingEnumSuffixesSet(
-          Options.get(CountingEnumSuffixesOptionName).has_value()),
-      CountingEnumConstantDecl(nullptr) {
+          Options.get(EnableCountingEnumHeuristicOptionName,
+                      EnableCountingEnumHeuristicOptionDefaultValue)),
+      CountingEnumPrefixes(utils::options::parseStringList(
+          Options.get(CountingEnumPrefixesOptionName,
+                      CountingEnumPrefixesOptionDefaultValue))),
+      CountingEnumSuffixes(utils::options::parseStringList(
+          Options.get(CountingEnumSuffixesOptionName,
+                      CountingEnumSuffixesOptionDefaultValue))) {
   if (!EnableCountingEnumHeuristic) {
-    if (CountingEnumPrefixesSet)
+    if (Options.get(CountingEnumPrefixesOptionName).has_value())
       configurationDiag("%0: Counting enum heuristic is disabled but "
-                        "CountingEnumPrefixes is set")
-          << Name;
-    if (CountingEnumSuffixesSet)
+                        "%1 is set")
+          << Name << CountingEnumPrefixesOptionName;
+    if (Options.get(CountingEnumSuffixesOptionName).has_value())
       configurationDiag("%0: Counting enum heuristic is disabled but "
-                        "CountingEnumSuffixes is set")
-          << Name;
+                        "%1 is set")
+          << Name << CountingEnumSuffixesOptionName;
   }
 }
 
@@ -57,39 +92,30 @@ void TaggedUnionMemberCountCheck::storeOptions(
   Options.store(Opts, StrictModeOptionName, StrictMode);
   Options.store(Opts, EnableCountingEnumHeuristicOptionName,
                 EnableCountingEnumHeuristic);
-  Options.store(Opts, CountingEnumPrefixesOptionName, RawCountingEnumPrefixes);
-  Options.store(Opts, CountingEnumSuffixesOptionName, RawCountingEnumSuffixes);
+  Options.store(Opts, CountingEnumPrefixesOptionName,
+                utils::options::serializeStringList(CountingEnumPrefixes));
+  Options.store(Opts, CountingEnumSuffixesOptionName,
+                utils::options::serializeStringList(CountingEnumSuffixes));
 }
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
+
+  static const auto hasMultipleUnionsOrEnums = anyOf(
+      fieldCountOfKindIsGT(isUnion(), 1), fieldCountOfKindIsGT(isEnum(), 1));
+
   Finder->addMatcher(
-      recordDecl(
-          anyOf(isStruct(), isClass()),
-          has(fieldDecl(hasType(qualType(hasCanonicalType(recordType()))))
-                  .bind("union")),
-          has(fieldDecl(hasType(qualType(hasCanonicalType(enumType()))))
-                  .bind("tags")))
-          .bind("root"),
+      recordDecl(anyOf(isStruct(), isClass()),
+                 unless(anyOf(isImplicit(), hasMultipleUnionsOrEnums)),
+                 has(fieldDecl(isUnion()).bind(UnionMatchBindName)),
+                 has(fieldDecl(isEnum()).bind(TagMatchBindName)))
+          .bind(RootMatchBindName),
       this);
 }
 
-static bool isUnion(const FieldDecl *R) {
-  return R->getType().getCanonicalType().getTypePtr()->isUnionType();
-}
-
-static bool isEnum(const FieldDecl *R) {
-  return R->getType().getCanonicalType().getTypePtr()->isEnumeralType();
-}
-
-static bool hasMultipleUnionsOrEnums(const RecordDecl *Rec) {
-  return llvm::count_if(Rec->fields(), isUnion) > 1 ||
-         llvm::count_if(Rec->fields(), isEnum) > 1;
-}
-
 static bool signEquals(const llvm::APSInt &A, const llvm::APSInt &B) {
-  return (A.isNegative() && B.isNegative()) ||
-         (A.isStrictlyPositive() && B.isStrictlyPositive()) ||
-         (A.isZero() && B.isZero());
+  return (A.isNegative() == B.isNegative()) &&
+         (A.isStrictlyPositive() == B.isStrictlyPositive()) &&
+         (A.isZero() == B.isZero());
 }
 
 static bool greaterBySign(const llvm::APSInt &A, const llvm::APSInt &B) {
@@ -98,22 +124,21 @@ static bool greaterBySign(const llvm::APSInt &A, const llvm::APSInt &B) {
 }
 
 bool TaggedUnionMemberCountCheck::isCountingEnumLikeName(
-    StringRef Name) const noexcept {
-  if (llvm::any_of(ParsedCountingEnumPrefixes,
-                   [&Name](const StringRef &Prefix) -> bool {
-                     return Name.starts_with_insensitive(Prefix);
-                   }))
+    StringRef Name) const {
+  if (llvm::any_of(CountingEnumPrefixes, [Name](StringRef Prefix) -> bool {
+        return Name.starts_with_insensitive(Prefix);
+      }))
     return true;
-  if (llvm::any_of(ParsedCountingEnumSuffixes,
-                   [&Name](const StringRef &Suffix) -> bool {
-                     return Name.ends_with_insensitive(Suffix);
-                   }))
+  if (llvm::any_of(CountingEnumSuffixes, [Name](StringRef Suffix) -> bool {
+        return Name.ends_with_insensitive(Suffix);
+      }))
     return true;
   return false;
 }
 
-size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
-    const EnumDecl *Ed) noexcept {
+std::size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
+    const EnumDecl *ED,
+    const EnumConstantDecl *&OutCountingEnumConstantDecl) {
   bool FoundMax = false;
   llvm::APSInt MaxTagValue;
   llvm::SmallSet<llvm::APSInt, 32> EnumValues;
@@ -132,11 +157,11 @@ size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
   // 3. The value of the counting enum constant is the largest out of every enum
   //    constant.
   // The 'ce' prefix is a shorthand for 'counting enum'.
-  size_t CeCount = 0;
+  std::size_t CeCount = 0;
   bool CeIsLast = false;
   llvm::APSInt CeValue = llvm::APSInt::get(0);
 
-  for (const auto &Enumerator : Ed->enumerators()) {
+  for (const auto &Enumerator : ED->enumerators()) {
     const llvm::APSInt Val = Enumerator->getInitVal();
     EnumValues.insert(Val);
     if (FoundMax) {
@@ -153,18 +178,18 @@ size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
         CeIsLast = true;
         CeValue = Val;
         CeCount += 1;
-        CountingEnumConstantDecl = Enumerator;
+        OutCountingEnumConstantDecl = Enumerator;
       } else {
         CeIsLast = false;
       }
     }
   }
 
-  size_t ValidValuesCount = EnumValues.size();
+  std::size_t ValidValuesCount = EnumValues.size();
   if (CeCount == 1 && CeIsLast && CeValue == MaxTagValue) {
     ValidValuesCount -= 1;
   } else {
-    CountingEnumConstantDecl = nullptr;
+    OutCountingEnumConstantDecl = nullptr;
   }
 
   return ValidValuesCount;
@@ -172,42 +197,38 @@ size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
 
 void TaggedUnionMemberCountCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *Root = Result.Nodes.getNodeAs<RecordDecl>("root");
-  const auto *UnionField = Result.Nodes.getNodeAs<FieldDecl>("union");
-  const auto *TagField = Result.Nodes.getNodeAs<FieldDecl>("tags");
-
-  // The matcher can only narrow down the type to recordType()
-  if (!isUnion(UnionField))
-    return;
-
-  if (hasMultipleUnionsOrEnums(Root))
-    return;
+  const auto *Root = Result.Nodes.getNodeAs<RecordDecl>(RootMatchBindName);
+  const auto *UnionField =
+      Result.Nodes.getNodeAs<FieldDecl>(UnionMatchBindName);
+  const auto *TagField = Result.Nodes.getNodeAs<FieldDecl>(TagMatchBindName);
+  assert(Root && UnionField && TagField);
 
   const auto *UnionDef =
       UnionField->getType().getCanonicalType().getTypePtr()->getAsRecordDecl();
-  const auto *EnumDef = llvm::dyn_cast_or_null<EnumDecl>(
+  const auto *EnumDef = llvm::dyn_cast<EnumDecl>(
       TagField->getType().getCanonicalType().getTypePtr()->getAsTagDecl());
+  assert(UnionDef && EnumDef && "Declarations missing!");
 
-  if (EnumDef) {
-    const size_t UnionMemberCount = llvm::range_size(UnionDef->fields());
-    const size_t TagCount = getNumberOfValidEnumValues(EnumDef);
+  const EnumConstantDecl *CountingEnumConstantDecl = nullptr;
+  const std::size_t UnionMemberCount = llvm::range_size(UnionDef->fields());
+  const std::size_t TagCount =
+      getNumberOfValidEnumValues(EnumDef, CountingEnumConstantDecl);
 
-    if (UnionMemberCount > TagCount) {
-      diag(Root->getLocation(),
-           "tagged union has more data members (%0) than tags (%1)!")
-          << UnionMemberCount << TagCount;
-    } else if (StrictMode && UnionMemberCount < TagCount) {
-      diag(Root->getLocation(),
-           "tagged union has fewer data members (%0) than tags (%1)!")
-          << UnionMemberCount << TagCount;
-    }
+  if (UnionMemberCount > TagCount) {
+    diag(Root->getLocation(),
+         "tagged union has more data members (%0) than tags (%1)!")
+        << UnionMemberCount << TagCount;
+  } else if (StrictMode && UnionMemberCount < TagCount) {
+    diag(Root->getLocation(),
+         "tagged union has fewer data members (%0) than tags (%1)!")
+        << UnionMemberCount << TagCount;
+  }
 
-    if (CountingEnumConstantDecl) {
-      diag(CountingEnumConstantDecl->getLocation(),
-           "assuming that this constant is just an auxiliary value and not "
-           "used for indicating a valid union data member",
-           DiagnosticIDs::Note);
-    }
+  if (CountingEnumConstantDecl) {
+    diag(CountingEnumConstantDecl->getLocation(),
+         "assuming that this constant is just an auxiliary value and not "
+         "used for indicating a valid union data member",
+         DiagnosticIDs::Note);
   }
 }
 

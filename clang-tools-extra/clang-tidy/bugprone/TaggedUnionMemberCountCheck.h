@@ -28,16 +28,13 @@ public:
 private:
   const bool StrictMode;
   const bool EnableCountingEnumHeuristic;
-  const StringRef RawCountingEnumPrefixes;
-  const StringRef RawCountingEnumSuffixes;
-  std::vector<StringRef> ParsedCountingEnumPrefixes;
-  std::vector<StringRef> ParsedCountingEnumSuffixes;
-  const bool CountingEnumPrefixesSet;
-  const bool CountingEnumSuffixesSet;
-  EnumConstantDecl *CountingEnumConstantDecl;
+  const std::vector<StringRef> CountingEnumPrefixes;
+  const std::vector<StringRef> CountingEnumSuffixes;
 
-  size_t getNumberOfValidEnumValues(const EnumDecl *Ed) noexcept;
-  bool isCountingEnumLikeName(StringRef Name) const noexcept;
+  std::size_t getNumberOfValidEnumValues(
+      const EnumDecl *ED,
+      const EnumConstantDecl *&OutCountingEnumConstantDecl);
+  bool isCountingEnumLikeName(StringRef Name) const;
 };
 
 } // namespace clang::tidy::bugprone

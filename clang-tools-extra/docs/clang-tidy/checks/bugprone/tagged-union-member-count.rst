@@ -1,6 +1,5 @@
 .. title:: clang-tidy - bugprone-tagged-union-member-count
 
-==================================
 bugprone-tagged-union-member-count
 ==================================
 
@@ -11,8 +10,7 @@ A struct or a class is considered to be a tagged union if it has
 exactly one union data member and exactly one enum data member and
 any number of other data members that are neither unions or enums.
 
-Example
-=======
+Example:
 
 .. code-block:: c++
 
@@ -30,13 +28,25 @@ Example
     } Data;
   };
 
-Counting enum constant heuristic
-================================
+How enum constants are counted
+------------------------------
 
-Sometimes the last enum constant in an enum is used to keep track of how many
-enum constants have been declared. For an illustration:
+The main complicating factor when counting the number of enum constants is that
+some of them might be auxiliary values that purposely don't have a corresponding union
+data member and are used for something else. For example the last enum constant
+sometimes explicitly "points to" the last declared valid enum constant or
+tracks how many enum constants have been declared.
+
+For an illsutration:
 
 .. code-block:: c++
+
+  enum TagWithLast {
+    Tag1 = 0,
+    Tag2 = 1,
+    Tag3 = 2,
+    LastTag = 2
+  };
 
   enum TagWithCounter {
     Tag1, // is 0
@@ -45,22 +55,47 @@ enum constants have been declared. For an illustration:
     TagCount, // is 3
   };
 
-When an enum like this is used as the tag for a tagged union then the last
-"counting" enum constant will intentionally not have a corresponding union
-data member.
+The check counts the number of distinct values among the enum constants and not the enum
+constants themselves. This way enum constants that are essentially just aliases of other
+enum constants are not included in the final count.
 
-This usage pattern is detected heuristically and the check
-does not include the counter enum constant in the final tag count.
-If the heuristic can be applied to multiple enum constants, then the check will
-just count the enum constants normally and not modify the final count.
+Counting enum constants are detected using the following heuristic. The counting enum
+constant has to be the last enum constant to be declared. It's value must be the largest
+out of every enum constant. It's name must start with a prefix or must end with a suffix
+from :option:`CountingEnumPrefixes/Suffixes`. If the heuristic can be applied to multiple
+enum constants, then the enum count is not modified, otherwise when only one counting 
+enum constant is found, then the final count is decreased by one. When the final count is decremented
+based on this heuristic, a diagnostic note is emitted, that shows which enum constant 
+matched the criteria.
 
-This heuristic can be disabled entirely (:option:`EnableCountingEnumHeuristic`) or
+The heuristic can be disabled entirely (:option:`EnableCountingEnumHeuristic`) or
 configured to follow your naming convention (:option:`CountingEnumPrefixes/Suffixes`).
 The strings specified in (:option:`CountingEnumPrefixes/Suffixes`) are matched
 case insensitively.
 
+Example counts:
+
+.. code-block:: c++
+
+  // Enum count is 3, because the value 2 is counted only once
+  enum TagWithLast {
+    Tag1 = 0,
+    Tag2 = 1,
+    Tag3 = 2,
+    LastTag = 2
+  };
+
+  // Enum count is 3, because TagCount is heuristically excluded
+  enum TagWithCounter {
+    Tag1, // is 0
+    Tag2, // is 1
+    Tag3, // is 2
+    TagCount, // is 3
+  };
+
+
 Options
-=======
+-------
 
 .. option:: EnableCountingEnumHeuristic
 
@@ -84,14 +119,14 @@ When :option:`EnableCountingEnumHeuristic` is false:
 
   struct TaggedUnion {
     TagWithCounter Kind;
-    union Data {
+    union {
       int A;
       long B;
       char *Str;
       float F;
-    };
+    } Data;
   };
- 
+
 When :option:`EnableCountingEnumHeuristic` is true:
 
 .. code-block:: c++
@@ -105,12 +140,12 @@ When :option:`EnableCountingEnumHeuristic` is true:
 
   struct TaggedUnion { // warning: tagged union has more data members (4) than tags (3)
     TagWithCounter Kind;
-    union Data {
+    union {
       int A;
       long B;
       char *Str;
       float F;
-    };
+    } Data;
   };
 
 .. option:: CountingEnumPrefixes/Suffixes
@@ -138,12 +173,12 @@ is "count;size":
 
   struct TaggedUnionCount { // warning: tagged union has more data members (4) than tags (3)
     TagWithCounterCount Kind;
-    union Data {
+    union {
       int A;
       long B;
       char *Str;
       float F;
-    };
+    } Data;
   };
 
   enum TagWithCounterSize {
@@ -155,12 +190,12 @@ is "count;size":
 
   struct TaggedUnionSize { // warning: tagged union has more data members (4) than tags (3)
     TagWithCounterSize Kind;
-    union Data {
+    union {
       int A;
       long B;
       char *Str;
       float F;
-    };
+    } Data;
   };
 
 When :option:`EnableCountingEnumHeuristic` is true and CountingEnumPrefixes is "maxsize;last_"
@@ -176,12 +211,12 @@ When :option:`EnableCountingEnumHeuristic` is true and CountingEnumPrefixes is "
 
   struct TaggedUnionLast { // warning: tagged union has more data members (4) than tags (3)
     TagWithCounterLast tag;
-    union Data {
+    union {
       int I;
       short S;
       char *C;
       float F;
-    };
+    } Data;
   };
 
   enum TagWithCounterMaxSize {
@@ -193,12 +228,12 @@ When :option:`EnableCountingEnumHeuristic` is true and CountingEnumPrefixes is "
 
   struct TaggedUnionMaxSize { // warning: tagged union has more data members (4) than tags (3)
     TagWithCounterMaxSize tag;
-    union Data {
+    union {
       int I;
       short S;
       char *C;
       float F;
-    };
+    } Data;
   };
 
 .. option:: StrictMode
@@ -221,7 +256,7 @@ When :option:`StrictMode` is false:
       union {
         int I;
         float F;
-      };
+      } Data;
     };
 
 When :option:`StrictMode` is true:
@@ -237,5 +272,5 @@ When :option:`StrictMode` is true:
       union {
         int I;
         float F;
-      };
+      } Data;
     };
