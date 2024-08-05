@@ -2430,8 +2430,6 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
-    libc.src.errno.errno
-    libc.hdr.fenv_macros
     libc.src.math.dsubl
 )
 
