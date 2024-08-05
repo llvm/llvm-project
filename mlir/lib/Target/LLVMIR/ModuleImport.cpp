@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/ModuleImport.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
@@ -71,6 +72,11 @@ static std::string diagMD(const llvm::Metadata *node,
 /// Returns the name of the global_ctors global variables.
 static constexpr StringRef getGlobalCtorsVarName() {
   return "llvm.global_ctors";
+}
+
+/// Prefix used for symbols of nameless llvm globals.
+static constexpr StringRef getNamelessGlobalPrefix() {
+  return "mlir.llvm.nameless_global.";
 }
 
 /// Returns the name of the global_dtors global variables.
@@ -884,9 +890,15 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
     globalExpressionAttr =
         debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
 
+  std::string globalName = globalVar->getName().str();
+  if (globalName == "") {
+    globalName = getNamelessGlobalPrefix().str() +
+                 std::to_string(namelessGlobals.size());
+    namelessGlobals[globalVar] = FlatSymbolRefAttr::get(context, globalName);
+  }
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
-      convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
+      convertLinkageFromLLVM(globalVar->getLinkage()), globalName.c_str(),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
@@ -1061,7 +1073,12 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert global variable accesses.
   if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
     Type type = convertType(globalVar->getType());
-    auto symbolRef = FlatSymbolRefAttr::get(context, globalVar->getName());
+    StringRef globalName = globalVar->getName();
+    FlatSymbolRefAttr symbolRef;
+    if (globalName == "")
+      symbolRef = namelessGlobals[globalVar];
+    else
+      symbolRef = FlatSymbolRefAttr::get(context, globalName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 

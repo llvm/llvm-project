@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
+#include "llvm/IR/GlobalVariable.h"
 
 namespace llvm {
 class BasicBlock;
@@ -367,6 +368,8 @@ private:
   ModuleOp mlirModule;
   /// The LLVM module being imported.
   std::unique_ptr<llvm::Module> llvmModule;
+  /// Nameless globals
+  DenseMap<llvm::GlobalVariable *, FlatSymbolRefAttr> namelessGlobals;
 
   /// A dialect interface collection used for dispatching the import to specific
   /// dialects.
