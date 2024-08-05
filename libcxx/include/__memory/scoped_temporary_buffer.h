@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__memory/allocator.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <cstddef>
 #include <new>
 
