@@ -175,7 +175,6 @@ using At = tomp::clause::AtT<TypeTy, IdTy, ExprTy>;
 using Bind = tomp::clause::BindT<TypeTy, IdTy, ExprTy>;
 using Capture = tomp::clause::CaptureT<TypeTy, IdTy, ExprTy>;
 using Collapse = tomp::clause::CollapseT<TypeTy, IdTy, ExprTy>;
-using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Compare = tomp::clause::CompareT<TypeTy, IdTy, ExprTy>;
 using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Copyin = tomp::clause::CopyinT<TypeTy, IdTy, ExprTy>;
