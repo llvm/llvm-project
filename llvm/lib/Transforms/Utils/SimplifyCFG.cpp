@@ -3326,16 +3326,21 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
           StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
       MaskedLoadStore = VStore;
     }
-    // Only !annotation, !range, !nonull and !align are kept when hoisting
-    // (see Instruction::dropUBImplyingAttrsAndMetadata).
+    // For non-debug metadata, only !annotation, !range, !nonull and !align are
+    // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
     //
     // !nonull, !align : Not support pointer type, no need to keep.
     // !range: load type is changed from scalar to vector, no idea how to keep
     //         it.
     // !annotation: Not impact semantics, keep it.
+    I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
+    // FIXME: DIAssignID is not supported for masked store yet.
+    // (Verifier::visitDIAssignIDMetadata)
+    at::deleteAssignmentMarkers(I);
+    I->eraseMetadataIf([](unsigned MDKind, MDNode *Node) {
+      return Node->getMetadataID() == Metadata::DIAssignIDKind;
+    });
     MaskedLoadStore->copyMetadata(*I);
-    MaskedLoadStore->dropUBImplyingAttrsAndUnknownMetadata(
-        {LLVMContext::MD_annotation});
     I->eraseFromParent();
   }
 

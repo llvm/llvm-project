@@ -204,16 +204,16 @@ if.true:
 }
 
 ;; Only annotation metadata is kept.
-define void @metadata(i1 %cond, ptr %p, ptr %q) {
-; CHECK-LABEL: @metadata(
+define void @nondebug_metadata(i1 %cond, ptr %p, ptr %q) {
+; CHECK-LABEL: @nondebug_metadata(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison), !annotation [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison), !annotation [[META5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP2]] to <1 x i16>
-; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP5]], ptr [[Q]], i32 4, <1 x i1> [[TMP0]]), !annotation [[META0]]
+; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP5]], ptr [[Q]], i32 4, <1 x i1> [[TMP0]]), !annotation [[META5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
 ; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP6]], ptr [[P]], i32 2, <1 x i1> [[TMP0]])
 ; CHECK-NEXT:    ret void
@@ -222,17 +222,35 @@ entry:
   br i1 %cond, label %if.true, label %if.false
 
 if.false:
-  br label %if.end
+  ret void
 
 if.true:
   %0 = load i16, ptr %p, align 2, !range !{i16 0, i16 10}
-  %1 = load i32, ptr %q, align 4, !annotation !1
-  store i16 %0, ptr %q, align 4, !annotation !1
-  store i32 %1, ptr %p, align 2, !DIAssignID !2
+  %1 = load i32, ptr %q, align 4, !annotation !11
+  store i16 %0, ptr %q, align 4, !annotation !11
+  store i32 %1, ptr %p, align 2
+  br label %if.false
+}
+
+define i16 @debug_metadata_diassign(i1 %cond, i16 %a, ptr %p) {
+; CHECK-LABEL: @debug_metadata_diassign(
+; CHECK-NEXT:  bb0:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> <i16 7>, ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i16 3, i16 2
+; CHECK-NEXT:    ret i16 [[SPEC_SELECT]]
+;
+bb0:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  store i16 7, ptr %p, align 4, !DIAssignID !9
   br label %if.false
 
-if.end:
-  ret void
+if.false:
+  %ret = phi i16 [ 2, %bb0 ], [ 3, %if.true ]
+  call void @llvm.dbg.assign(metadata i16 %ret, metadata !8, metadata !DIExpression(), metadata !9, metadata ptr %p, metadata !DIExpression()), !dbg !7
+  ret i16 %ret
 }
 
 ;; Not crash when working with opt controlled by simplifycfg-hoist-cond-stores
@@ -573,7 +591,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ; CHECK-LABEL: @not_likely_to_execute(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF6:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.then:
@@ -583,7 +601,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ;
 entry:
   %tobool = icmp ne i32 %a, 0
-  br i1 %tobool, label %if.then, label %if.end, !prof !0
+  br i1 %tobool, label %if.then, label %if.end, !prof !10
 
 if.end:
   ret void
@@ -642,6 +660,19 @@ if.end:
 
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
-!0 = !{!"branch_weights", i32 1, i32 99}
-!1 = !{ !"auto-init" }
-!2 = distinct !DIAssignID()
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2, !3}
+!llvm.ident = !{!4}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "clang")
+!1 = !DIFile(filename: "foo.c", directory: "/tmp")
+!2 = !{i32 2, !"Dwarf Version", i32 4}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{!"clang"}
+!5 = !DIBasicType(name: "int", size: 16, encoding: DW_ATE_signed)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, unit: !0)
+!7 = !DILocation(line: 5, column: 7, scope: !6)
+!8 = !DILocalVariable(name: "a", scope: !6, line: 6, type: !5)
+!9 = distinct !DIAssignID()
+!10 = !{!"branch_weights", i32 1, i32 99}
+!11 = !{ !"auto-init" }
