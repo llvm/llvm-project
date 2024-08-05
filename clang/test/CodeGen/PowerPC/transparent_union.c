@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -O2 -target-cpu pwr7 \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux -O2 -target-cpu pwr7 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -O2 -target-cpu pwr7 \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux -O2 -target-cpu pwr7 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN: %clang_cc1 -triple powerpc-unknown-linux -O2 -target-cpu pwr7 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix -O2 -target-cpu pwr7 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-AIX-32
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
 
 typedef union tu_c {
 	char a;
@@ -47,8 +49,8 @@ void ftest2(tu_us_t uc) { }
 // CHECK-64-NEXT:  [[ENTRY:.*:]]
 // CHECK-64-NEXT:    ret void
 //
-// CHECK-AIX-32-LABEL: define void @ftest3(
-// CHECK-AIX-32-SAME: i32 [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-AIX-32-NEXT:  [[ENTRY:.*:]]
-// CHECK-AIX-32-NEXT:    ret void
+// CHECK-32-LABEL: define{{.*}} void @ftest3(
+// CHECK-32-SAME: i32 [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-32-NEXT:  [[ENTRY:.*:]]
+// CHECK-32-NEXT:    ret void
 void ftest3(tu_l_t uc) { }
