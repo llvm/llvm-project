@@ -456,10 +456,10 @@ define i32 @zext_or_masked_bit_test_uses(i32 %a, i32 %b, i32 %x) {
 
 define i16 @zext_masked_bit_zero_to_smaller_bitwidth(i32 %a, i32 %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_smaller_bitwidth(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[CMP]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = and i16 [[TMP3]], 1
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %shl = shl i32 1, %b
@@ -471,10 +471,10 @@ define i16 @zext_masked_bit_zero_to_smaller_bitwidth(i32 %a, i32 %b) {
 
 define <4 x i16> @zext_masked_bit_zero_to_smaller_bitwidth_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_smaller_bitwidth_v4i32(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[SHL]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[AND]], zeroinitializer
-; CHECK-NEXT:    [[Z:%.*]] = zext <4 x i1> [[CMP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[Z:%.*]] = and <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
 ; CHECK-NEXT:    ret <4 x i16> [[Z]]
 ;
   %shl = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %b
@@ -504,10 +504,9 @@ define i16 @zext_masked_bit_zero_to_smaller_bitwidth_multi_use_shl(i32 %a, i32 %
 
 define i16 @zext_masked_bit_nonzero_to_smaller_bitwidth(i32 %a, i32 %b) {
 ; CHECK-LABEL: @zext_masked_bit_nonzero_to_smaller_bitwidth(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[CMP]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = and i16 [[TMP2]], 1
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %shl = shl i32 1, %b
@@ -520,9 +519,9 @@ define i16 @zext_masked_bit_nonzero_to_smaller_bitwidth(i32 %a, i32 %b) {
 define i16 @zext_masked_bit_nonzero_to_smaller_bitwidth_multi_use_shl(i32 %a, i32 %b) {
 ; CHECK-LABEL: @zext_masked_bit_nonzero_to_smaller_bitwidth_multi_use_shl(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[CMP]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = and i16 [[TMP2]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[SHL]])
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
@@ -536,10 +535,10 @@ define i16 @zext_masked_bit_nonzero_to_smaller_bitwidth_multi_use_shl(i32 %a, i3
 
 define i64 @zext_masked_bit_zero_to_larger_bitwidth(i32 %a, i32 %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_larger_bitwidth(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[TMP3]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %shl = shl i32 1, %b
@@ -551,10 +550,10 @@ define i64 @zext_masked_bit_zero_to_larger_bitwidth(i32 %a, i32 %b) {
 
 define <4 x i64> @zext_masked_bit_zero_to_larger_bitwidth_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_larger_bitwidth_v4i32(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[SHL]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[AND]], zeroinitializer
-; CHECK-NEXT:    [[Z:%.*]] = zext <4 x i1> [[CMP]] to <4 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg <4 x i32> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[Z]]
 ;
   %shl = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %b
