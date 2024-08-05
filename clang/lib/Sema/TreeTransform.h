@@ -4030,7 +4030,6 @@ public:
 
   ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                LambdaScopeInfo *LSI) {
-    // Default arguments might still contain unexpanded packs that would expand later.
     for (ParmVarDecl *PVD : LSI->CallOperator->parameters()) {
       if (Expr *Init = PVD->getInit())
         LSI->ContainsUnexpandedParameterPack |=
