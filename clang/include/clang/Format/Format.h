@@ -2249,9 +2249,9 @@ struct FormatStyle {
     ///    ddddd +
     ///    eeeeeeeeeeeeeeee;
     /// \endcode
-    BBO_BreakAll,
+    BBO_OnePerLine,
 
-    /// Binary operations of a particular precedence that go beyond the column
+    /// Binary operations of a particular precedence that exceed the column
     /// limit will have one line each.
     /// \code
     ///    aaa +
@@ -2259,7 +2259,7 @@ struct FormatStyle {
     ///    ddddd +
     ///    eeeeeeeeeeeeeeee;
     /// \endcode
-    BBO_BreakRespectPrecedence
+    BBO_RespectPrecedence
   };
 
   /// The break constructor initializers style to use.

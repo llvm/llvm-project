@@ -3164,7 +3164,7 @@ public:
       parse(Precedence + 1);
 
       int CurrentPrecedence = getCurrentPrecedence();
-      if (Style.BreakBinaryOperations == FormatStyle::BBO_BreakAll &&
+      if (Style.BreakBinaryOperations == FormatStyle::BBO_OnePerLine &&
           CurrentPrecedence > prec::Conditional &&
           CurrentPrecedence < prec::PointerToMember) {
         // When BreakBinaryOperations is set to BreakAll,

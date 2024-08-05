@@ -405,10 +405,10 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BOS_All);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_Never;
-  CHECK_PARSE("BreakBinaryOperations: BreakAll", BreakBinaryOperations,
-              FormatStyle::BBO_BreakAll);
-  CHECK_PARSE("BreakBinaryOperations: BreakRespectPrecedence",
-              BreakBinaryOperations, FormatStyle::BBO_BreakRespectPrecedence);
+  CHECK_PARSE("BreakBinaryOperations: OnePerLine", BreakBinaryOperations,
+              FormatStyle::BBO_OnePerLine);
+  CHECK_PARSE("BreakBinaryOperations: RespectPrecedence", BreakBinaryOperations,
+              FormatStyle::BBO_RespectPrecedence);
   CHECK_PARSE("BreakBinaryOperations: Never", BreakBinaryOperations,
               FormatStyle::BBO_Never);
 

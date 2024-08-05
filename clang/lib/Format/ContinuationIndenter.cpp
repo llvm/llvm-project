@@ -150,8 +150,7 @@ static bool startsNextParameter(const FormatToken &Current,
 // Returns \c true if \c Token in an alignable binary operator
 static bool isAlignableBinaryOperator(const FormatToken &Token) {
   // No need to align binary operators that only have two operands.
-  bool HasTwoOperands = Token.OperatorIndex == 0 && !Token.NextOperator &&
-                        Token.isNot(TT_ConditionalExpr);
+  bool HasTwoOperands = Token.OperatorIndex == 0 && !Token.NextOperator;
   return Token.is(TT_BinaryOperator) && !HasTwoOperands &&
          Token.getPrecedence() > prec::Conditional &&
          Token.getPrecedence() < prec::PointerToMember;
@@ -168,10 +167,9 @@ static bool startsNextOperand(const FormatToken &Current) {
 static bool mustBreakBinaryOperation(const FormatToken &Current,
                                      const FormatStyle &Style) {
   return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
-         ((isAlignableBinaryOperator(Current) &&
-           Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None) ||
-          (startsNextOperand(Current) &&
-           Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None));
+         (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
+              ? startsNextOperand
+              : isAlignableBinaryOperator)(Current);
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,

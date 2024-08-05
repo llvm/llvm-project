@@ -27632,6 +27632,8 @@ TEST_F(FormatTest, SpaceBetweenKeywordAndLiteral) {
 
 TEST_F(FormatTest, BreakBinaryOperations) {
   auto Style = getLLVMStyleWithColumns(60);
+  EXPECT_EQ(Style.BreakBinaryOperations, FormatStyle::BBO_Never);
+
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
                "}",
@@ -27664,7 +27666,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
+  Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
 
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -27712,7 +27714,6 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                Style);
 
   // Ensure mixed precedence operations are handled properly
-  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1 +\n"
@@ -27743,7 +27744,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "         operand6->member;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_BreakRespectPrecedence;
+  Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1 +\n"
@@ -27768,7 +27769,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  byte_buffer[3] << 24;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
+  Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
 
   // Logical operations
@@ -27809,7 +27810,6 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                Style);
 
   // Ensure mixed precedence operations are handled properly
-  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1\n"
@@ -27843,7 +27843,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  << 24;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_BreakRespectPrecedence;
+  Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1\n"

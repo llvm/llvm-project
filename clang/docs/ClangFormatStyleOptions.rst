@@ -3315,7 +3315,7 @@ the configuration (without a prefix: ``Auto``).
        aaa + bbbb * ccccc - ddddd +
        eeeeeeeeeeeeeeee;
 
-  * ``BBO_BreakAll`` (in configuration: ``BreakAll``)
+  * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
     Binary operations will either be all on the same line, or each operation
     will have one line each.
 
@@ -3327,8 +3327,8 @@ the configuration (without a prefix: ``Auto``).
        ddddd +
        eeeeeeeeeeeeeeee;
 
-  * ``BBO_BreakRespectPrecedence`` (in configuration: ``BreakRespectPrecedence``)
-    Binary operations of a particular precedence that go beyond the column
+  * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+    Binary operations of a particular precedence that exceed the column
     limit will have one line each.
 
     .. code-block:: c++

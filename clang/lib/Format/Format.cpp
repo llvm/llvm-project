@@ -249,9 +249,8 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBinaryOperationsStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::BreakBinaryOperationsStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::BBO_Never);
-    IO.enumCase(Value, "BreakAll", FormatStyle::BBO_BreakAll);
-    IO.enumCase(Value, "BreakRespectPrecedence",
-                FormatStyle::BBO_BreakRespectPrecedence);
+    IO.enumCase(Value, "OnePerLine", FormatStyle::BBO_OnePerLine);
+    IO.enumCase(Value, "RespectPrecedence", FormatStyle::BBO_RespectPrecedence);
   }
 };
 
