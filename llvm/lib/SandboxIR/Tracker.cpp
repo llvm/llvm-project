@@ -300,6 +300,15 @@ void InsertIntoBB::dump() const {
 }
 #endif
 
+void CreateAndInsertInst::revert() { NewI->eraseFromParent(); }
+
+#ifndef NDEBUG
+void CreateAndInsertInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 void Tracker::track(std::unique_ptr<IRChangeBase> &&Change) {
   assert(State == TrackerState::Record && "The tracker should be tracking!");
   Changes.push_back(std::move(Change));
