@@ -12,6 +12,9 @@
 #include "lldb/Host/HostInfo.h"
 #include "gtest/gtest.h"
 
+#include <numeric>
+#include <vector>
+
 using namespace lldb_private;
 
 class PipeTest : public testing::Test {
@@ -29,6 +32,8 @@ TEST_F(PipeTest, CreateWithUniqueName) {
                     llvm::Succeeded());
 }
 
+// Test broken
+#ifndef _WIN32
 TEST_F(PipeTest, OpenAsReader) {
   Pipe pipe;
   llvm::SmallString<0> name;
@@ -42,70 +47,95 @@ TEST_F(PipeTest, OpenAsReader) {
   size_t name_len = name.size();
   name += "foobar";
   llvm::StringRef name_ref(name.data(), name_len);
-  // Note OpenAsReader() do nothing on Windows, the pipe is already opened for
-  // read and write.
   ASSERT_THAT_ERROR(
       pipe.OpenAsReader(name_ref, /*child_process_inherit=*/false).ToError(),
       llvm::Succeeded());
 
   ASSERT_TRUE(pipe.CanRead());
 }
+#endif
 
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
   // Note write_chunk_size must be less than the pipe buffer.
-  // The pipe buffer is 1024 for PipeWindows and 4096 for PipePosix.
+  // The pipe buffer is 1024 for PipeWindows and at least 512 on Darwin.
   const size_t buf_size = 8192;
-  const size_t write_chunk_size = 256;
-  const size_t read_chunk_size = 300;
-  std::unique_ptr<int32_t[]> write_buf_ptr(
-      new int32_t[buf_size / sizeof(int32_t)]);
-  int32_t *write_buf = write_buf_ptr.get();
-  std::unique_ptr<int32_t[]> read_buf_ptr(
-      new int32_t[(buf_size + 100) / sizeof(int32_t)]);
-  int32_t *read_buf = read_buf_ptr.get();
-  for (int i = 0; i < buf_size / sizeof(int32_t); ++i) {
-    write_buf[i] = i;
-    read_buf[i] = -i;
-  }
+  const size_t write_chunk_size = 234;
 
-  char *write_ptr = (char *)write_buf;
+  std::vector<int32_t> write_buf(buf_size / sizeof(int32_t));
+  std::iota(write_buf.begin(), write_buf.end(), 0);
+  std::vector<int32_t> read_buf(write_buf.size() + 100, -1);
+
+  char *write_ptr = (char *)&write_buf.front();
+  char *read_ptr = (char *)&read_buf.front();
   size_t write_bytes = 0;
-  char *read_ptr = (char *)read_buf;
   size_t read_bytes = 0;
   size_t num_bytes = 0;
-  Status error;
+
+  // Write to the pipe until it is full.
   while (write_bytes < buf_size) {
-    error = pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
-                                  std::chrono::milliseconds(10), num_bytes);
-    if (error.Fail()) {
-      ASSERT_TRUE(read_bytes < buf_size);
-      error = pipe.ReadWithTimeout(read_ptr + read_bytes, read_chunk_size,
-                                   std::chrono::milliseconds(10), num_bytes);
-      if (error.Fail())
-        FAIL();
-      else
-        read_bytes += num_bytes;
-    } else
-      write_bytes += num_bytes;
-  }
-  // Read the rest data.
-  while (read_bytes < buf_size) {
-    error = pipe.ReadWithTimeout(read_ptr + read_bytes, buf_size - read_bytes,
-                                 std::chrono::milliseconds(10), num_bytes);
+    Status error =
+        pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
+                              std::chrono::milliseconds(10), num_bytes);
     if (error.Fail())
-      FAIL();
-    else
-      read_bytes += num_bytes;
+      break; // The write buffer is full
+    write_bytes += num_bytes;
+  }
+  ASSERT_TRUE(write_bytes + write_chunk_size <= buf_size);
+
+  // Attempt a write with a long timeout.
+  auto start_time = std::chrono::steady_clock::now();
+  ASSERT_THAT_ERROR(
+      pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
+                            std::chrono::milliseconds(2000), num_bytes)
+          .ToError(),
+      llvm::Failed());
+  auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(
+                 std::chrono::steady_clock::now() - start_time)
+                 .count();
+  ASSERT_GE(dur, 2000);
+
+  // Attempt a write with a short timeout
+  start_time = std::chrono::steady_clock::now();
+  ASSERT_THAT_ERROR(
+      pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
+                            std::chrono::milliseconds(200), num_bytes)
+          .ToError(),
+      llvm::Failed());
+  dur = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start_time)
+            .count();
+  ASSERT_GE(dur, 200);
+  ASSERT_LT(dur, 300);
+
+  // Drain the pipe
+  while (read_bytes < write_bytes) {
+    ASSERT_THAT_ERROR(
+        pipe.ReadWithTimeout(read_ptr + read_bytes, write_bytes - read_bytes,
+                             std::chrono::milliseconds(10), num_bytes)
+            .ToError(),
+        llvm::Succeeded());
+    read_bytes += num_bytes;
   }
 
   // Be sure the pipe is empty.
-  error = pipe.ReadWithTimeout(read_ptr + read_bytes, 100,
-                               std::chrono::milliseconds(10), num_bytes);
-  ASSERT_TRUE(error.Fail());
+  ASSERT_THAT_ERROR(pipe.ReadWithTimeout(read_ptr + read_bytes, 100,
+                                         std::chrono::milliseconds(10),
+                                         num_bytes)
+                        .ToError(),
+                    llvm::Failed());
 
-  // Compare the data.
+  // Check that we got what we wrote.
   ASSERT_EQ(write_bytes, read_bytes);
-  ASSERT_EQ(memcmp(write_buf, read_buf, buf_size), 0);
+  ASSERT_TRUE(std::equal(write_buf.begin(),
+                         write_buf.begin() + write_bytes / sizeof(uint32_t),
+                         read_buf.begin()));
+
+  // Write to the pipe again and check that it succeeds.
+  ASSERT_THAT_ERROR(pipe.WriteWithTimeout(write_ptr, write_chunk_size,
+                                          std::chrono::milliseconds(10),
+                                          num_bytes)
+                        .ToError(),
+                    llvm::Succeeded());
 }

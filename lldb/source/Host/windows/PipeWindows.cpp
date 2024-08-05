@@ -98,11 +98,10 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   DWORD read_mode = FILE_FLAG_OVERLAPPED;
   m_read =
       ::CreateNamedPipeA(pipe_path.c_str(), PIPE_ACCESS_INBOUND | read_mode,
-                         PIPE_TYPE_BYTE | PIPE_WAIT, 1,
-                         1024, // Out buffer size
-                         1024, // In buffer size
-                         0,    // Default timeout in ms, 0 means 50ms
-                         &sa);
+                         PIPE_TYPE_BYTE | PIPE_WAIT, /*nMaxInstances=*/1,
+                         /*nOutBufferSize=*/1024,
+                         /*nInBufferSize=*/1024,
+                         /*nDefaultTimeOut=*/0, &sa);
   if (INVALID_HANDLE_VALUE == m_read)
     return Status(::GetLastError(), eErrorTypeWin32);
   m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
