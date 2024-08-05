@@ -41,6 +41,22 @@ namespace scudo {
 template <class T, bool LinkWithPtr = isPointer<decltype(T::Next)>::value>
 class LinkOp {
 public:
+  LinkOp() = default;
+  LinkOp(UNUSED T *BaseT) {}
+  void init(UNUSED T *LinkBase) {}
+  T *getBase() const { return nullptr; }
+
+  T *getNext(T *X) const { return X->Next; }
+  void setNext(T *X, T *Next) const { X->Next = Next; }
+
+  T *getPrev(T *X) const { return X->Prev; }
+  void setPrev(T *X, T *Prev) const { X->Prev = Prev; }
+
+  T *getEndOfListVal() const { return nullptr; }
+};
+
+template <class T> class LinkOp<T, /*LinkWithPtr=*/false> {
+public:
   using LinkTy = decltype(T::Next);
 
   LinkOp() = default;
@@ -83,22 +99,6 @@ public:
 
 protected:
   T *Base = nullptr;
-};
-
-template <class T> class LinkOp<T, /*LinkWithPtr=*/true> {
-public:
-  LinkOp() = default;
-  LinkOp(UNUSED T *BaseT) {}
-  void init(UNUSED T *LinkBase) {}
-  T *getBase() const { return nullptr; }
-
-  T *getNext(T *X) const { return X->Next; }
-  void setNext(T *X, T *Next) const { X->Next = Next; }
-
-  T *getPrev(T *X) const { return X->Prev; }
-  void setPrev(T *X, T *Prev) const { X->Prev = Prev; }
-
-  T *getEndOfListVal() const { return nullptr; }
 };
 
 template <class T> class IteratorBase : public LinkOp<T> {
