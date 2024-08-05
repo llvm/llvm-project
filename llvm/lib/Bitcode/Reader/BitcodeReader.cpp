@@ -2109,8 +2109,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ReadOnly;
   case bitc::ATTR_KIND_RETURNED:
     return Attribute::Returned;
-  case bitc::ATTR_KIND_NONBLOCKING:
-    return Attribute::NonBlocking;
   case bitc::ATTR_KIND_RETURNS_TWICE:
     return Attribute::ReturnsTwice;
   case bitc::ATTR_KIND_S_EXT:
@@ -2143,6 +2141,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeMemory;
   case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
     return Attribute::SanitizeNumericalStability;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME:
+    return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:

@@ -506,7 +506,7 @@ define void @f86() nosanitize_bounds
 }
 
 ; CHECK: define void @f92() #53
-define void @f92() nonblocking
+define void @f92() sanitize_realtime
 {
         ret void;
 }
@@ -605,7 +605,7 @@ define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
 ; CHECK: attributes #50 = { disable_sanitizer_instrumentation }
 ; CHECK: attributes #51 = { uwtable(sync) }
 ; CHECK: attributes #52 = { nosanitize_bounds }
-; CHECK: attributes #53 = { nonblocking }
+; CHECK: attributes #53 = { sanitize_realtime }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }

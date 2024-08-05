@@ -239,9 +239,6 @@ def ReadNone : EnumAttr<"readnone", [ParamAttr]>;
 /// Function only reads from memory.
 def ReadOnly : EnumAttr<"readonly", [ParamAttr]>;
 
-/// Function is marked to be non-blocking
-def NonBlocking : EnumAttr<"nonblocking", [FnAttr]>;
-
 /// Return value is always equal to this argument.
 def Returned : EnumAttr<"returned", [ParamAttr]>;
 
@@ -299,6 +296,9 @@ def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
 
 /// NumericalStabilitySanitizer is on.
 def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAttr]>;
+
+/// RealtimeSanitizer is on.
+def SanitizeRealtime : EnumAttr<"sanitize_realtime", [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.
 ///
@@ -388,6 +388,7 @@ def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

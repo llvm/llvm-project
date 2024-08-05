@@ -946,7 +946,6 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoUnwind:
       case Attribute::NoSanitizeBounds:
       case Attribute::NoSanitizeCoverage:
-      case Attribute::NonBlocking:
       case Attribute::NullPointerIsValid:
       case Attribute::OptimizeForDebugging:
       case Attribute::OptForFuzzing:
@@ -960,6 +959,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::SanitizeThread:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
+      case Attribute::SanitizeRealtime:
       case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:
