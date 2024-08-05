@@ -2456,8 +2456,6 @@ add_fp_unittest(
   HDRS
     DivTest.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
     libc.src.math.fdivl
 )
 
