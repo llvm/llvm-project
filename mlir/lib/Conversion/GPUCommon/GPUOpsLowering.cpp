@@ -46,8 +46,9 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     std::array attrs{
         rewriter.getNamedAttr(LLVM::LLVMDialect::getNoAliasAttrName(),
                               rewriter.getUnitAttr()),
-        rewriter.getNamedAttr(LLVM::LLVMDialect::getWorkgroupAttribAttrName(),
-                              rewriter.getUnitAttr()),
+        rewriter.getNamedAttr(
+            getDialect().getWorkgroupAttribAttrHelper().getName(),
+            rewriter.getUnitAttr()),
     };
     SmallVector<DictionaryAttr> argAttrs;
     for (BlockArgument attribution : workgroupAttributions) {
@@ -320,7 +321,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       copyPointerAttribute(LLVM::LLVMDialect::getDereferenceableAttrName());
       copyPointerAttribute(
           LLVM::LLVMDialect::getDereferenceableOrNullAttrName());
-      copyPointerAttribute(LLVM::LLVMDialect::getWorkgroupAttribAttrName());
+      copyPointerAttribute(
+          LLVM::LLVMDialect::WorkgroupAttribAttrHelper::getNameStr());
     }
   }
   rewriter.eraseOp(gpuFuncOp);

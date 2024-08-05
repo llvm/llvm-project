@@ -454,8 +454,8 @@ gpu.module @kernels {
 
 // CHECK-LABEL:        llvm.func spir_kernelcc @kernel_with_workgoup_attribs(
 // CHECK-SAME:             %[[VAL_27:.*]]: f32, %[[VAL_28:.*]]: i16,
-// CHECK-SAME:             %[[VAL_29:.*]]: !llvm.ptr<3> {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<32 : i64, f32>, llvm.noalias},
-// CHECK-SAME:             %[[VAL_30:.*]]: !llvm.ptr<3> {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i16>, llvm.noalias}) attributes {gpu.kernel} {
+// CHECK-SAME:             %[[VAL_29:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<32 : i64, f32>},
+// CHECK-SAME:             %[[VAL_30:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i16>}) attributes {gpu.kernel} {
 
 // MemRef descriptor built from new argument
 
@@ -482,8 +482,8 @@ gpu.module @kernels {
 // arguments and a llvm.alloca are present.
 
 // CHECK-LABEL:        llvm.func spir_kernelcc @kernel_with_both_attribs(
-// CHECK-64-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i64, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<8 : i64, f32>, llvm.noalias}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i64>, llvm.noalias}) attributes {gpu.kernel} {
-// CHECK-32-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i32, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<8 : i64, f32>, llvm.noalias}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.mlir.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i32>, llvm.noalias}) attributes {gpu.kernel} {
+// CHECK-64-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i64, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<8 : i64, f32>}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i64>}) attributes {gpu.kernel} {
+// CHECK-32-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i32, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<8 : i64, f32>}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i32>}) attributes {gpu.kernel} {
 
 // CHECK:                %[[VAL_79:.*]] = llvm.mlir.constant(32 : i64) : i64
 // CHECK:                %[[VAL_80:.*]] = llvm.alloca %[[VAL_79]] x i32 : (i64) -> !llvm.ptr

@@ -21,6 +21,11 @@ def LLVM_Dialect : Dialect {
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
 
+  let discardableAttrs = (ins
+    /// Attribute encoding size and type of GPU workgroup attributions.
+    "WorkgroupAttribAttr":$workgroup_attrib
+  );
+
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
@@ -57,10 +62,6 @@ def LLVM_Dialect : Dialect {
     /// Name of the attribute that will cause the creation of a readnone memory
     /// effect when lowering to the LLVMDialect.
     static StringRef getReadnoneAttrName() { return "llvm.readnone"; }
-
-    /// Name of the helper attribute to keep GPU workgroup attribution size and
-    /// type information when converting from GPU to LLVM.
-    static StringRef getWorkgroupAttribAttrName() { return "llvm.mlir.workgroup_attrib"; }
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.
