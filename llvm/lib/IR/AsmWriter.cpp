@@ -2123,9 +2123,9 @@ static void writeDIEnumerator(raw_ostream &Out, const DIEnumerator *N,
 }
 
 static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
-                             AsmWriterContext &) {
+                             AsmWriterContext &WriterCtx) {
   Out << "!DIBasicType(";
-  MDFieldPrinter Printer(Out);
+  MDFieldPrinter Printer(Out, WriterCtx);
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
@@ -2134,6 +2134,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printDIFlags("flags", N->getFlags());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2229,6 +2230,7 @@ static void writeDISubroutineType(raw_ostream &Out, const DISubroutineType *N,
   Printer.printDwarfEnum("cc", N->getCC(), dwarf::ConventionString);
   Printer.printMetadata("types", N->getRawTypeArray(),
                         /* ShouldSkipNull */ false);
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
