@@ -167,7 +167,9 @@ public:
   }
 
   void do_fractions_test(RoundToIntegerFunc func, int mode) {
-    constexpr F FRACTIONS[] = {0.5, -0.5, 0.115, -0.115, 0.715, -0.715};
+    constexpr F FRACTIONS[] = {
+        F(0.5), F(-0.5), F(0.115), F(-0.115), F(0.715), F(-0.715),
+    };
     for (F x : FRACTIONS) {
       long mpfr_long_result;
       bool erangeflag;

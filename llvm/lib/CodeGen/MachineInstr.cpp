@@ -1293,7 +1293,7 @@ void MachineInstr::substituteRegister(Register FromReg, Register ToReg,
 /// isSafeToMove - Return true if it is safe to move this instruction. If
 /// SawStore is set to true, it means that there is a store (or call) between
 /// the instruction's location and its intended destination.
-bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
+bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Ignore stuff that we obviously can't move.
   //
   // Treat volatile loads as stores. This is not strictly necessary for
@@ -2216,7 +2216,7 @@ void MachineInstr::emitError(StringRef Msg) const {
 
   if (const MachineBasicBlock *MBB = getParent())
     if (const MachineFunction *MF = MBB->getParent())
-      return MF->getMMI().getModule()->getContext().emitError(LocCookie, Msg);
+      return MF->getFunction().getContext().emitError(LocCookie, Msg);
   report_fatal_error(Msg);
 }
 

@@ -1551,21 +1551,12 @@ define <vscale x 8 x i64> @vwadd_wx_splat_zext(<vscale x 8 x i64> %va, i32 %b) {
 }
 
 define <vscale x 8 x i64> @vwadd_vx_splat_sext(<vscale x 8 x i32> %va, i32 %b) {
-; RV32-LABEL: vwadd_vx_splat_sext:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV32-NEXT:    vmv.v.x v16, a0
-; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vwadd.wv v16, v16, v8
-; RV32-NEXT:    vmv8r.v v8, v16
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwadd_vx_splat_sext:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; RV64-NEXT:    vwadd.vx v16, v8, a0
-; RV64-NEXT:    vmv8r.v v8, v16
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwadd_vx_splat_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vwadd.vx v16, v8, a0
+; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    ret
   %sb = sext i32 %b to i64
   %head = insertelement <vscale x 8 x i64> poison, i64 %sb, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer

@@ -20,8 +20,6 @@ llvm.func @return_fp128() -> f128
 llvm.func @return_x86_fp80() -> f80
 // CHECK: declare ppc_fp128 @return_ppc_fp128()
 llvm.func @return_ppc_fp128() -> !llvm.ppc_fp128
-// CHECK: declare x86_mmx @return_x86_mmx()
-llvm.func @return_x86_mmx() -> !llvm.x86_mmx
 
 //
 // Functions.

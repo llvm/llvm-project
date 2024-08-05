@@ -46,7 +46,7 @@ static SmallVector<DynamicAPInt, 8> subtractExprs(ArrayRef<DynamicAPInt> vecA,
   SmallVector<DynamicAPInt, 8> result;
   result.reserve(vecA.size());
   for (unsigned i = 0, e = vecA.size(); i < e; ++i)
-    result.push_back(vecA[i] - vecB[i]);
+    result.emplace_back(vecA[i] - vecB[i]);
   return result;
 }
 
@@ -78,7 +78,7 @@ MultiAffineFunction::valueAt(ArrayRef<DynamicAPInt> point) const {
   // function of; we have computed one possible set of values and use them here.
   pointHomogenous.reserve(pointHomogenous.size() + divValues.size());
   for (const std::optional<DynamicAPInt> &divVal : divValues)
-    pointHomogenous.push_back(*divVal);
+    pointHomogenous.emplace_back(*divVal);
   // The matrix `output` has an affine expression in the ith row, corresponding
   // to the expression for the ith value in the output vector. The last column
   // of the matrix contains the constant term. Let v be the input point with
@@ -295,7 +295,7 @@ void PWMAFunction::addPiece(const Piece &piece) {
   assert(piece.isConsistent() && "Piece should be consistent");
   assert(piece.domain.intersect(getDomain()).isIntegerEmpty() &&
          "Piece should be disjoint from the function");
-  pieces.push_back(piece);
+  pieces.emplace_back(piece);
 }
 
 void PWMAFunction::print(raw_ostream &os) const {

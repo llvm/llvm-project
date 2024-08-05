@@ -1,6 +1,6 @@
 ## Tests blocks matching by called function names in inferStaleProfile.
 
-# REQUIRES: system-linux
+# REQUIRES: system-linux, asserts
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib

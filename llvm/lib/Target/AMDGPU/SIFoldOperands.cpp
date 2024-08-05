@@ -1361,7 +1361,9 @@ bool SIFoldOperands::tryFoldZeroHighBits(MachineInstr &MI) const {
     return false;
 
   Register Dst = MI.getOperand(0).getReg();
-  MRI->replaceRegWith(Dst, SrcDef->getOperand(0).getReg());
+  MRI->replaceRegWith(Dst, Src1);
+  if (!MI.getOperand(2).isKill())
+    MRI->clearKillFlags(Src1);
   MI.eraseFromParent();
   return true;
 }
@@ -1579,7 +1581,18 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
 
   // Clamp is applied after omod, so it is OK if omod is set.
   DefClamp->setImm(1);
-  MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
+
+  Register DefReg = Def->getOperand(0).getReg();
+  Register MIDstReg = MI.getOperand(0).getReg();
+  if (TRI->isSGPRReg(*MRI, DefReg)) {
+    // Pseudo scalar instructions have a SGPR for dst and clamp is a v_max*
+    // instruction with a VGPR dst.
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
+            MIDstReg)
+        .addReg(DefReg);
+  } else {
+    MRI->replaceRegWith(MIDstReg, DefReg);
+  }
   MI.eraseFromParent();
 
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
@@ -1770,8 +1783,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   if (!getRegSeqInit(Defs, Reg, MCOI::OPERAND_REGISTER))
     return false;
 
-  for (auto &Def : Defs) {
-    const auto *Op = Def.first;
+  for (auto &[Op, SubIdx] : Defs) {
     if (!Op->isReg())
       return false;
     if (TRI->isAGPR(*MRI, Op->getReg()))
@@ -1809,8 +1821,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   auto RS = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                     TII->get(AMDGPU::REG_SEQUENCE), Dst);
 
-  for (unsigned I = 0; I < Defs.size(); ++I) {
-    MachineOperand *Def = Defs[I].first;
+  for (auto &[Def, SubIdx] : Defs) {
     Def->setIsKill(false);
     if (TRI->isAGPR(*MRI, Def->getReg())) {
       RS.add(*Def);
@@ -1819,7 +1830,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
       SubDef->getOperand(1).setIsKill(false);
       RS.addReg(SubDef->getOperand(1).getReg(), 0, Def->getSubReg());
     }
-    RS.addImm(Defs[I].second);
+    RS.addImm(SubIdx);
   }
 
   Op->setReg(Dst);

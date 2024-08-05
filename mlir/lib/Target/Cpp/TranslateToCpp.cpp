@@ -183,6 +183,12 @@ struct CppEmitter {
   // Returns the textual representation of a subscript operation.
   std::string getSubscriptName(emitc::SubscriptOp op);
 
+  // Returns the textual representation of a member (of object) operation.
+  std::string createMemberAccess(emitc::MemberOp op);
+
+  // Returns the textual representation of a member of pointer operation.
+  std::string createMemberAccess(emitc::MemberOfPtrOp op);
+
   /// Return the existing or a new label of a Block.
   StringRef getOrCreateName(Block &block);
 
@@ -278,8 +284,8 @@ private:
 
 /// Determine whether expression \p op should be emitted in a deferred way.
 static bool hasDeferredEmission(Operation *op) {
-  return isa_and_nonnull<emitc::GetGlobalOp, emitc::LiteralOp,
-                         emitc::SubscriptOp>(op);
+  return isa_and_nonnull<emitc::GetGlobalOp, emitc::LiteralOp, emitc::MemberOp,
+                         emitc::MemberOfPtrOp, emitc::SubscriptOp>(op);
 }
 
 /// Determine whether expression \p expressionOp should be emitted inline, i.e.
@@ -1125,6 +1131,22 @@ std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
   return out;
 }
 
+std::string CppEmitter::createMemberAccess(emitc::MemberOp op) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << getOrCreateName(op.getOperand());
+  ss << "." << op.getMember();
+  return out;
+}
+
+std::string CppEmitter::createMemberAccess(emitc::MemberOfPtrOp op) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << getOrCreateName(op.getOperand());
+  ss << "->" << op.getMember();
+  return out;
+}
+
 void CppEmitter::cacheDeferredOpResult(Value value, StringRef str) {
   if (!valueMapper.count(value))
     valueMapper.insert(value, str.str());
@@ -1499,6 +1521,14 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           })
           .Case<emitc::LiteralOp>([&](auto op) {
             cacheDeferredOpResult(op.getResult(), op.getValue());
+            return success();
+          })
+          .Case<emitc::MemberOp>([&](auto op) {
+            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
+            return success();
+          })
+          .Case<emitc::MemberOfPtrOp>([&](auto op) {
+            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
             return success();
           })
           .Case<emitc::SubscriptOp>([&](auto op) {

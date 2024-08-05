@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
+
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -47,6 +49,11 @@ void transform::ApplySCFStructuralConversionPatternsOp::
                                   ConversionTarget &conversionTarget) {
   scf::populateSCFStructuralTypeConversionTarget(typeConverter,
                                                  conversionTarget);
+}
+
+void transform::ApplySCFToControlFlowPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  populateSCFToControlFlowConversionPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -261,8 +268,10 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
-  std::optional<int64_t> ubConstant = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> lbConstant = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubConstant =
+      getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant =
+      getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {

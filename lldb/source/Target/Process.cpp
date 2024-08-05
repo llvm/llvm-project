@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -63,6 +64,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Target/VerboseTrapFrameRecognizer.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -475,7 +477,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
-      m_can_jit(eCanJITDontKnow) {
+      m_can_jit(eCanJITDontKnow),
+      m_crash_info_dict_sp(new StructuredData::Dictionary()) {
   CheckInWithManager();
 
   Log *log = GetLog(LLDBLog::Object);
@@ -522,7 +525,11 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   if (!value_sp->OptionWasSet() && platform_cache_line_size != 0)
     value_sp->SetValueAs(platform_cache_line_size);
 
+  // FIXME: Frame recognizer registration should not be done in Target.
+  // We should have a plugin do the registration instead, for example, a
+  // common C LanguageRuntime plugin.
   RegisterAssertFrameRecognizer(this);
+  RegisterVerboseTrapFrameRecognizer(*this);
 }
 
 Process::~Process() {
@@ -2545,6 +2552,14 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
   ModuleSP module_sp(new Module(file_spec, ArchSpec()));
   if (module_sp) {
     Status error;
+    std::unique_ptr<Progress> progress_up;
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
+    if (IsLiveDebugSession())
+      progress_up = std::make_unique<Progress>(
+          "Reading binary from memory", file_spec.GetFilename().GetString());
+
     ObjectFile *objfile = module_sp->GetMemoryObjectFile(
         shared_from_this(), header_addr, error, size_to_read);
     if (objfile)
@@ -3249,6 +3264,10 @@ Status Process::PrivateResume() {
   // If signals handing status changed we might want to update our signal
   // filters before resuming.
   UpdateAutomaticSignalFiltering();
+  // Clear any crash info we accumulated for this stop, but don't do so if we
+  // are running functions; we don't want to wipe out the real stop's info.
+  if (!GetModID().IsLastResumeForUserExpression())
+    ResetExtendedCrashInfoDict();
 
   Status error(WillResume());
   // Tell the process it is about to resume before the thread list
@@ -4236,7 +4255,22 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
   return still_should_stop;
 }
 
+bool Process::ProcessEventData::ForwardEventToPendingListeners(
+    Event *event_ptr) {
+  // STDIO and the other async event notifications should always be forwarded.
+  if (event_ptr->GetType() != Process::eBroadcastBitStateChanged)
+    return true;
+
+  // For state changed events, if the update state is zero, we are handling
+  // this on the private state thread.  We should wait for the public event.
+  return m_update_state == 1;
+}
+
 void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
+  // We only have work to do for state changed events:
+  if (event_ptr->GetType() != Process::eBroadcastBitStateChanged)
+    return;
+
   ProcessSP process_sp(m_process_wp.lock());
 
   if (!process_sp)
@@ -6503,8 +6537,9 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
 }
 
 static void SaveOffRegionsWithStackPointers(
-    Process &process, const MemoryRegionInfos &regions,
-    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+    Process &process, const SaveCoreOptions &core_options,
+    const MemoryRegionInfos &regions, Process::CoreFileMemoryRanges &ranges,
+    std::set<addr_t> &stack_ends) {
   const bool try_dirty_pages = true;
 
   // Before we take any dump, we want to save off the used portions of the
@@ -6526,10 +6561,16 @@ static void SaveOffRegionsWithStackPointers(
     if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
       const size_t stack_head = (sp - red_zone);
       const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
+      // Even if the SaveCoreOption doesn't want us to save the stack
+      // we still need to populate the stack_ends set so it doesn't get saved
+      // off in other calls
       sp_region.GetRange().SetRangeBase(stack_head);
       sp_region.GetRange().SetByteSize(stack_size);
       stack_ends.insert(sp_region.GetRange().GetRangeEnd());
-      AddRegion(sp_region, try_dirty_pages, ranges);
+      // This will return true if the threadlist the user specified is empty,
+      // or contains the thread id from thread_sp.
+      if (core_options.ShouldThreadBeSaved(thread_sp->GetID()))
+        AddRegion(sp_region, try_dirty_pages, ranges);
     }
   }
 }
@@ -6598,10 +6639,11 @@ static void GetCoreFileSaveRangesStackOnly(
   }
 }
 
-Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
                                             CoreFileMemoryRanges &ranges) {
   lldb_private::MemoryRegionInfos regions;
   Status err = GetMemoryRegions(regions);
+  SaveCoreStyle core_style = options.GetStyle();
   if (err.Fail())
     return err;
   if (regions.empty())
@@ -6611,7 +6653,7 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
                   "eSaveCoreUnspecified");
 
   std::set<addr_t> stack_ends;
-  SaveOffRegionsWithStackPointers(*this, regions, ranges, stack_ends);
+  SaveOffRegionsWithStackPointers(*this, options, regions, ranges, stack_ends);
 
   switch (core_style) {
   case eSaveCoreUnspecified:
@@ -6637,6 +6679,18 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
     return Status("no valid address ranges found for core style");
 
   return Status(); // Success!
+}
+
+std::vector<ThreadSP>
+Process::CalculateCoreFileThreadList(const SaveCoreOptions &core_options) {
+  std::vector<ThreadSP> thread_list;
+  for (const lldb::ThreadSP &thread_sp : m_thread_list.Threads()) {
+    if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
+      thread_list.push_back(thread_sp);
+    }
+  }
+
+  return thread_list;
 }
 
 void Process::SetAddressableBitMasks(AddressableBits bit_masks) {

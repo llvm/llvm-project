@@ -47,6 +47,19 @@
 
 #include <stdlib.h>
 
+#if !defined(LLVM_XXH_USE_NEON)
+#if (defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)) &&      \
+    !defined(__ARM_BIG_ENDIAN)
+#define LLVM_XXH_USE_NEON 1
+#else
+#define LLVM_XXH_USE_NEON 0
+#endif
+#endif
+
+#if LLVM_XXH_USE_NEON
+#include <arm_neon.h>
+#endif
+
 using namespace llvm;
 using namespace support;
 
@@ -323,6 +336,144 @@ static uint64_t XXH3_len_129to240_64b(const uint8_t *input, size_t len,
   return XXH3_avalanche(acc);
 }
 
+#if LLVM_XXH_USE_NEON
+
+#define XXH3_accumulate_512 XXH3_accumulate_512_neon
+#define XXH3_scrambleAcc XXH3_scrambleAcc_neon
+
+// NEON implementation based on commit a57f6cce2698049863af8c25787084ae0489d849
+// (July 2024), with the following removed:
+// - workaround for suboptimal codegen on older GCC
+// - compiler barriers against instruction reordering
+// - WebAssembly SIMD support
+// - configurable split between NEON and scalar lanes (benchmarking shows no
+//   penalty when fully doing SIMD on the Apple M1)
+
+#if defined(__GNUC__) || defined(__clang__)
+#define XXH_ALIASING __attribute__((__may_alias__))
+#else
+#define XXH_ALIASING /* nothing */
+#endif
+
+typedef uint64x2_t xxh_aliasing_uint64x2_t XXH_ALIASING;
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64x2_t XXH_vld1q_u64(void const *ptr) {
+  return vreinterpretq_u64_u8(vld1q_u8((uint8_t const *)ptr));
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+static void XXH3_accumulate_512_neon(uint64_t *acc, const uint8_t *input,
+                                     const uint8_t *secret) {
+  xxh_aliasing_uint64x2_t *const xacc = (xxh_aliasing_uint64x2_t *)acc;
+
+#ifdef __clang__
+#pragma clang loop unroll(full)
+#endif
+  for (size_t i = 0; i < XXH_ACC_NB / 2; i += 2) {
+    /* data_vec = input[i]; */
+    uint64x2_t data_vec_1 = XXH_vld1q_u64(input + (i * 16));
+    uint64x2_t data_vec_2 = XXH_vld1q_u64(input + ((i + 1) * 16));
+
+    /* key_vec  = secret[i];  */
+    uint64x2_t key_vec_1 = XXH_vld1q_u64(secret + (i * 16));
+    uint64x2_t key_vec_2 = XXH_vld1q_u64(secret + ((i + 1) * 16));
+
+    /* data_swap = swap(data_vec) */
+    uint64x2_t data_swap_1 = vextq_u64(data_vec_1, data_vec_1, 1);
+    uint64x2_t data_swap_2 = vextq_u64(data_vec_2, data_vec_2, 1);
+
+    /* data_key = data_vec ^ key_vec; */
+    uint64x2_t data_key_1 = veorq_u64(data_vec_1, key_vec_1);
+    uint64x2_t data_key_2 = veorq_u64(data_vec_2, key_vec_2);
+
+    /*
+     * If we reinterpret the 64x2 vectors as 32x4 vectors, we can use a
+     * de-interleave operation for 4 lanes in 1 step with `vuzpq_u32` to
+     * get one vector with the low 32 bits of each lane, and one vector
+     * with the high 32 bits of each lane.
+     *
+     * The intrinsic returns a double vector because the original ARMv7-a
+     * instruction modified both arguments in place. AArch64 and SIMD128 emit
+     * two instructions from this intrinsic.
+     *
+     *  [ dk11L | dk11H | dk12L | dk12H ] -> [ dk11L | dk12L | dk21L | dk22L ]
+     *  [ dk21L | dk21H | dk22L | dk22H ] -> [ dk11H | dk12H | dk21H | dk22H ]
+     */
+    uint32x4x2_t unzipped = vuzpq_u32(vreinterpretq_u32_u64(data_key_1),
+                                      vreinterpretq_u32_u64(data_key_2));
+
+    /* data_key_lo = data_key & 0xFFFFFFFF */
+    uint32x4_t data_key_lo = unzipped.val[0];
+    /* data_key_hi = data_key >> 32 */
+    uint32x4_t data_key_hi = unzipped.val[1];
+
+    /*
+     * Then, we can split the vectors horizontally and multiply which, as for
+     * most widening intrinsics, have a variant that works on both high half
+     * vectors for free on AArch64. A similar instruction is available on
+     * SIMD128.
+     *
+     * sum = data_swap + (u64x2) data_key_lo * (u64x2) data_key_hi
+     */
+    uint64x2_t sum_1 = vmlal_u32(data_swap_1, vget_low_u32(data_key_lo),
+                                 vget_low_u32(data_key_hi));
+    uint64x2_t sum_2 = vmlal_u32(data_swap_2, vget_high_u32(data_key_lo),
+                                 vget_high_u32(data_key_hi));
+
+    /* xacc[i] = acc_vec + sum; */
+    xacc[i] = vaddq_u64(xacc[i], sum_1);
+    xacc[i + 1] = vaddq_u64(xacc[i + 1], sum_2);
+  }
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+static void XXH3_scrambleAcc_neon(uint64_t *acc, const uint8_t *secret) {
+  xxh_aliasing_uint64x2_t *const xacc = (xxh_aliasing_uint64x2_t *)acc;
+
+  /* { prime32_1, prime32_1 } */
+  uint32x2_t const kPrimeLo = vdup_n_u32(PRIME32_1);
+  /* { 0, prime32_1, 0, prime32_1 } */
+  uint32x4_t const kPrimeHi =
+      vreinterpretq_u32_u64(vdupq_n_u64((uint64_t)PRIME32_1 << 32));
+
+  for (size_t i = 0; i < XXH_ACC_NB / 2; ++i) {
+    /* xacc[i] ^= (xacc[i] >> 47); */
+    uint64x2_t acc_vec = XXH_vld1q_u64(acc + (2 * i));
+    uint64x2_t shifted = vshrq_n_u64(acc_vec, 47);
+    uint64x2_t data_vec = veorq_u64(acc_vec, shifted);
+
+    /* xacc[i] ^= secret[i]; */
+    uint64x2_t key_vec = XXH_vld1q_u64(secret + (i * 16));
+    uint64x2_t data_key = veorq_u64(data_vec, key_vec);
+
+    /*
+     * xacc[i] *= XXH_PRIME32_1
+     *
+     * Expanded version with portable NEON intrinsics
+     *
+     *    lo(x) * lo(y) + (hi(x) * lo(y) << 32)
+     *
+     * prod_hi = hi(data_key) * lo(prime) << 32
+     *
+     * Since we only need 32 bits of this multiply a trick can be used,
+     * reinterpreting the vector as a uint32x4_t and multiplying by
+     * { 0, prime, 0, prime } to cancel out the unwanted bits and avoid the
+     * shift.
+     */
+    uint32x4_t prod_hi = vmulq_u32(vreinterpretq_u32_u64(data_key), kPrimeHi);
+
+    /* Extract low bits for vmlal_u32  */
+    uint32x2_t data_key_lo = vmovn_u64(data_key);
+
+    /* xacc[i] = prod_hi + lo(data_key) * XXH_PRIME32_1; */
+    xacc[i] = vmlal_u32(vreinterpretq_u64_u32(prod_hi), data_key_lo, kPrimeLo);
+  }
+}
+#else
+
+#define XXH3_accumulate_512 XXH3_accumulate_512_scalar
+#define XXH3_scrambleAcc XXH3_scrambleAcc_scalar
+
 LLVM_ATTRIBUTE_ALWAYS_INLINE
 static void XXH3_accumulate_512_scalar(uint64_t *acc, const uint8_t *input,
                                        const uint8_t *secret) {
@@ -335,18 +486,21 @@ static void XXH3_accumulate_512_scalar(uint64_t *acc, const uint8_t *input,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
-static void XXH3_accumulate_scalar(uint64_t *acc, const uint8_t *input,
-                                   const uint8_t *secret, size_t nbStripes) {
-  for (size_t n = 0; n < nbStripes; ++n)
-    XXH3_accumulate_512_scalar(acc, input + n * XXH_STRIPE_LEN,
-                               secret + n * XXH_SECRET_CONSUME_RATE);
-}
-
-static void XXH3_scrambleAcc(uint64_t *acc, const uint8_t *secret) {
+static void XXH3_scrambleAcc_scalar(uint64_t *acc, const uint8_t *secret) {
   for (size_t i = 0; i < XXH_ACC_NB; ++i) {
     acc[i] ^= acc[i] >> 47;
     acc[i] ^= endian::read64le(secret + 8 * i);
     acc[i] *= PRIME32_1;
+  }
+}
+#endif
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+static void XXH3_accumulate(uint64_t *acc, const uint8_t *input,
+                            const uint8_t *secret, size_t nbStripes) {
+  for (size_t n = 0; n < nbStripes; ++n) {
+    XXH3_accumulate_512(acc, input + n * XXH_STRIPE_LEN,
+                        secret + n * XXH_SECRET_CONSUME_RATE);
   }
 }
 
@@ -375,21 +529,20 @@ static uint64_t XXH3_hashLong_64b(const uint8_t *input, size_t len,
       PRIME64_4, PRIME32_2, PRIME64_5, PRIME32_1,
   };
   for (size_t n = 0; n < nb_blocks; ++n) {
-    XXH3_accumulate_scalar(acc, input + n * block_len, secret,
-                           nbStripesPerBlock);
+    XXH3_accumulate(acc, input + n * block_len, secret, nbStripesPerBlock);
     XXH3_scrambleAcc(acc, secret + secretSize - XXH_STRIPE_LEN);
   }
 
   /* last partial block */
   const size_t nbStripes = (len - 1 - (block_len * nb_blocks)) / XXH_STRIPE_LEN;
   assert(nbStripes <= secretSize / XXH_SECRET_CONSUME_RATE);
-  XXH3_accumulate_scalar(acc, input + nb_blocks * block_len, secret, nbStripes);
+  XXH3_accumulate(acc, input + nb_blocks * block_len, secret, nbStripes);
 
   /* last stripe */
   constexpr size_t XXH_SECRET_LASTACC_START = 7;
-  XXH3_accumulate_512_scalar(acc, input + len - XXH_STRIPE_LEN,
-                             secret + secretSize - XXH_STRIPE_LEN -
-                                 XXH_SECRET_LASTACC_START);
+  XXH3_accumulate_512(acc, input + len - XXH_STRIPE_LEN,
+                      secret + secretSize - XXH_STRIPE_LEN -
+                          XXH_SECRET_LASTACC_START);
 
   /* converge into final hash */
   constexpr size_t XXH_SECRET_MERGEACCS_START = 11;
@@ -840,21 +993,20 @@ XXH3_hashLong_128b(const uint8_t *input, size_t len, const uint8_t *secret,
   };
 
   for (size_t n = 0; n < nb_blocks; ++n) {
-    XXH3_accumulate_scalar(acc, input + n * block_len, secret,
-                           nbStripesPerBlock);
+    XXH3_accumulate(acc, input + n * block_len, secret, nbStripesPerBlock);
     XXH3_scrambleAcc(acc, secret + secretSize - XXH_STRIPE_LEN);
   }
 
   /* last partial block */
   const size_t nbStripes = (len - 1 - (block_len * nb_blocks)) / XXH_STRIPE_LEN;
   assert(nbStripes <= secretSize / XXH_SECRET_CONSUME_RATE);
-  XXH3_accumulate_scalar(acc, input + nb_blocks * block_len, secret, nbStripes);
+  XXH3_accumulate(acc, input + nb_blocks * block_len, secret, nbStripes);
 
   /* last stripe */
   constexpr size_t XXH_SECRET_LASTACC_START = 7;
-  XXH3_accumulate_512_scalar(acc, input + len - XXH_STRIPE_LEN,
-                             secret + secretSize - XXH_STRIPE_LEN -
-                                 XXH_SECRET_LASTACC_START);
+  XXH3_accumulate_512(acc, input + len - XXH_STRIPE_LEN,
+                      secret + secretSize - XXH_STRIPE_LEN -
+                          XXH_SECRET_LASTACC_START);
 
   /* converge into final hash */
   static_assert(sizeof(acc) == 64);

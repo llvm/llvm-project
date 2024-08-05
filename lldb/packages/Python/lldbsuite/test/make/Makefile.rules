@@ -47,31 +47,6 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 .DEFAULT_GOAL := all
 
 #----------------------------------------------------------------------
-# If OS is not defined, use 'uname -s' to determine the OS name.
-#
-# GNUWin32 uname gives "windows32" or "server version windows32" while
-# some versions of MSYS uname return "MSYS_NT*", but most environments
-# standardize on "Windows_NT", so we'll make it consistent here.
-# When running tests from Visual Studio, the environment variable isn't
-# inherited all the way down to the process spawned for make.
-#----------------------------------------------------------------------
-ifeq "$(HOST_OS)" ""
-  HOST_OS := $(shell uname -s)
-endif
-
-ifneq (,$(findstring windows32,$(HOST_OS)))
-	HOST_OS := Windows_NT
-endif
-
-ifneq (,$(findstring MSYS_NT,$(HOST_OS)))
-	HOST_OS := Windows_NT
-endif
-
-ifeq "$(OS)" ""
-	OS := $(HOST_OS)
-endif
-
-#----------------------------------------------------------------------
 # If OS is Windows, force SHELL to be cmd
 #
 # Some versions of make on Windows will search for other shells such as
@@ -80,8 +55,10 @@ endif
 # Also reset BUILDDIR value because "pwd" returns cygwin or msys path
 # which needs to be converted to windows path.
 #----------------------------------------------------------------------
-ifeq "$(OS)" "Windows_NT"
-	SHELL = $(WINDIR)\system32\cmd.exe
+ifeq "$(HOST_OS)" "Windows_NT"
+	# MinGW make gets $(windir) variable if launched from cmd.exe
+	# and $(WINDIR) if launched from MSYS2.
+	SHELL := $(or $(windir),$(WINDIR),C:\WINDOWS)\system32\cmd.exe
 	BUILDDIR := $(shell echo %cd%)
 endif
 
@@ -212,12 +189,6 @@ else
 
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug
-	endif
-
-	ifeq "$(MAKE_DWP)" "YES"
-		MAKE_DWO := YES
-		DWP_NAME = $(EXE).dwp
-		DYLIB_DWP_NAME = $(DYLIB_NAME).dwp
 	endif
 endif
 
@@ -367,17 +338,6 @@ ifneq "$(OS)" "Darwin"
 
 	OBJCOPY ?= $(call replace_cc_with,objcopy)
 	ARCHIVER ?= $(call replace_cc_with,ar)
-	# Look for llvm-dwp or gnu dwp
-	DWP ?= $(call replace_cc_with,llvm-dwp)
-	ifeq ($(wildcard $(DWP)),)
-		DWP = $(call replace_cc_with,dwp)
-		ifeq ($(wildcard $(DWP)),)
-			DWP = $(shell command -v llvm-dwp 2> /dev/null)
-			ifeq ($(wildcard $(DWP)),)
-				DWP = $(shell command -v dwp 2> /dev/null)
-			endif
-		endif
-	endif
 	override AR = $(ARCHIVER)
 endif
 
@@ -548,10 +508,6 @@ ifneq "$(CXX)" ""
 	endif
 endif
 
-ifeq "$(GEN_GNU_BUILD_ID)" "YES"
-	LDFLAGS += -Wl,--build-id
-endif
-
 #----------------------------------------------------------------------
 # DYLIB_ONLY variable can be used to skip the building of a.out.
 # See the sections below regarding dSYM file as well as the building of
@@ -590,17 +546,10 @@ else
 endif
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
-	cp "$(EXE)" "$(EXE).unstripped"
-endif
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
 endif
-ifeq "$(MAKE_DWP)" "YES"
-	$(DWP) -o "$(DWP_NAME)" $(DWOS)
 endif
-endif
-
 
 #----------------------------------------------------------------------
 # Make the dylib
@@ -642,14 +591,8 @@ endif
 else
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
-	cp "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).unstripped"
-endif
 	$(OBJCOPY) --only-keep-debug "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).debug"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"
-endif
-ifeq "$(MAKE_DWP)" "YES"
-	$(DWP) -o $(DYLIB_DWP_FILE) $(DYLIB_DWOS)
 endif
 endif
 

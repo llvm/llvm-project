@@ -589,7 +589,6 @@ body: |
     ; CHECK-LABEL: name: coalesce_shrink_removed_vsetvlis_uses
     ; CHECK: liveins: $x10, $v8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %avl1:gprnox0 = ADDI $x0, 1
     ; CHECK-NEXT: %avl2:gprnox0 = ADDI $x0, 2
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLI %avl2, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %x:gpr = COPY $x10

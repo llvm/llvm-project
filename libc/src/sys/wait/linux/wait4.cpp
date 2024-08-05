@@ -9,10 +9,11 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 
+#include "src/__support/macros/config.h"
 #include "src/sys/wait/wait4.h"
 #include "src/sys/wait/wait4Impl.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, wait4,
                    (pid_t pid, int *wait_status, int options,
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(pid_t, wait4,
   return result.value();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

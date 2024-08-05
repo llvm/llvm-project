@@ -8,7 +8,7 @@
 define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GFX6-NOHSA-LABEL: constant_load_f64:
 ; GFX6-NOHSA:       ; %bb.0:
-; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GFX6-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NOHSA-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; GFX6-NOHSA-NEXT:    s_mov_b32 s3, 0xf000
@@ -21,7 +21,7 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
 ;
 ; GFX7-HSA-LABEL: constant_load_f64:
 ; GFX7-HSA:       ; %bb.0:
-; GFX7-HSA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX7-HSA-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GFX7-HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-HSA-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v0, s0
@@ -34,7 +34,7 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
 ;
 ; GFX8-NOHSA-LABEL: constant_load_f64:
 ; GFX8-NOHSA:       ; %bb.0:
-; GFX8-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOHSA-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v0, s0
@@ -47,7 +47,7 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
 ;
 ; GFX12-LABEL: constant_load_f64:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
@@ -68,7 +68,7 @@ attributes #0 = { nounwind }
 define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocapture readonly %weights, ptr addrspace(1) noalias nocapture %out_ptr) {
 ; GFX6-NOHSA-LABEL: constant_load_2v4f64:
 ; GFX6-NOHSA:       ; %bb.0: ; %entry
-; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
+; GFX6-NOHSA-NEXT:    s_load_dwordx4 s[16:19], s[2:3], 0x9
 ; GFX6-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NOHSA-NEXT:    s_load_dwordx2 s[24:25], s[18:19], 0x0
 ; GFX6-NOHSA-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
@@ -92,7 +92,7 @@ define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocaptu
 ;
 ; GFX7-HSA-LABEL: constant_load_2v4f64:
 ; GFX7-HSA:       ; %bb.0: ; %entry
-; GFX7-HSA-NEXT:    s_load_dwordx4 s[16:19], s[4:5], 0x0
+; GFX7-HSA-NEXT:    s_load_dwordx4 s[16:19], s[6:7], 0x0
 ; GFX7-HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-HSA-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; GFX7-HSA-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
@@ -114,7 +114,7 @@ define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocaptu
 ;
 ; GFX8-NOHSA-LABEL: constant_load_2v4f64:
 ; GFX8-NOHSA:       ; %bb.0: ; %entry
-; GFX8-NOHSA-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x24
+; GFX8-NOHSA-NEXT:    s_load_dwordx4 s[16:19], s[2:3], 0x24
 ; GFX8-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOHSA-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; GFX8-NOHSA-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
@@ -136,7 +136,7 @@ define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocaptu
 ;
 ; GFX12-LABEL: constant_load_2v4f64:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_load_b128 s[16:19], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b128 s[16:19], s[2:3], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b64 s[20:21], s[18:19], 0x0

@@ -113,7 +113,11 @@ public:
   // nevertheless it appears in the Clang CFG, so we don't exclude it here.
   bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
   bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *) { return true; }
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) {
+    if (TIE->isPotentiallyEvaluated())
+      return RecursiveASTVisitor<Derived>::TraverseCXXTypeidExpr(TIE);
+    return true;
+  }
   bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
     return true;
   }

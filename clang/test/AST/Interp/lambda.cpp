@@ -280,3 +280,9 @@ namespace InvalidCapture {
     } ();
   }
 }
+
+constexpr int fn() {
+  int Capture = 42;
+  return [=]() constexpr { return Capture; }();
+}
+static_assert(fn() == 42, "");

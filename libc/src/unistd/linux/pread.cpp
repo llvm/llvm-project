@@ -10,12 +10,13 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h" // for MSAN_UNPOISON
 #include "src/errno/libc_errno.h"
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, pread,
                    (int fd, void *buf, size_t count, off_t offset)) {
@@ -44,4 +45,4 @@ LLVM_LIBC_FUNCTION(ssize_t, pread,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

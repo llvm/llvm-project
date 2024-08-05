@@ -53,7 +53,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -4519,11 +4519,10 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   // argument, as they will be allocated a stack slot below the CFA (Canonical
   // Frame Address, the stack pointer at entry to the function).
   unsigned ArgRegBegin = ARM::R4;
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (const CCValAssign &VA : ArgLocs) {
     if (CCInfo.getInRegsParamsProcessed() >= CCInfo.getInRegsParamsCount())
       break;
 
-    CCValAssign &VA = ArgLocs[i];
     unsigned Index = VA.getValNo();
     ISD::ArgFlagsTy Flags = Ins[Index].Flags;
     if (!Flags.isByVal())

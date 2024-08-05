@@ -2182,6 +2182,8 @@ public:
   VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
+  void VisitOMPReverseDirective(const OMPReverseDirective *D);
+  void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
   void VisitOMPForDirective(const OMPForDirective *D);
   void VisitOMPForSimdDirective(const OMPForSimdDirective *D);
   void VisitOMPSectionsDirective(const OMPSectionsDirective *D);
@@ -2198,6 +2200,7 @@ public:
   void VisitOMPTaskyieldDirective(const OMPTaskyieldDirective *D);
   void VisitOMPBarrierDirective(const OMPBarrierDirective *D);
   void VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *D);
+  void VisitOMPAssumeDirective(const OMPAssumeDirective *D);
   void VisitOMPErrorDirective(const OMPErrorDirective *D);
   void VisitOMPTaskgroupDirective(const OMPTaskgroupDirective *D);
   void
@@ -2423,6 +2426,20 @@ void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
 
 void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
 
+void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
+
+void OMPClauseEnqueue::VisitOMPHoldsClause(const OMPHoldsClause *) {}
+
+void OMPClauseEnqueue::VisitOMPContainsClause(const OMPContainsClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoOpenMPRoutinesClause(
+    const OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoParallelismClause(
+    const OMPNoParallelismClause *) {}
+
 void OMPClauseEnqueue::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseEnqueue::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
@@ -2524,7 +2541,7 @@ void OMPClauseEnqueue::VisitOMPHintClause(const OMPHintClause *C) {
 }
 
 template <typename T> void OMPClauseEnqueue::VisitOMPClauseList(T *Node) {
-  for (const auto *I : Node->varlists()) {
+  for (const auto *I : Node->varlist()) {
     Visitor->AddStmt(I);
   }
 }
@@ -2744,7 +2761,7 @@ void OMPClauseEnqueue::VisitOMPUsesAllocatorsClause(
 }
 void OMPClauseEnqueue::VisitOMPAffinityClause(const OMPAffinityClause *C) {
   Visitor->AddStmt(C->getModifier());
-  for (const Expr *E : C->varlists())
+  for (const Expr *E : C->varlist())
     Visitor->AddStmt(E);
 }
 void OMPClauseEnqueue::VisitOMPBindClause(const OMPBindClause *C) {}
@@ -3228,6 +3245,15 @@ void EnqueueVisitor::VisitOMPUnrollDirective(const OMPUnrollDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
+void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPInterchangeDirective(
+    const OMPInterchangeDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
 void EnqueueVisitor::VisitOMPForDirective(const OMPForDirective *D) {
   VisitOMPLoopDirective(D);
 }
@@ -3296,6 +3322,10 @@ void EnqueueVisitor::VisitOMPBarrierDirective(const OMPBarrierDirective *D) {
 }
 
 void EnqueueVisitor::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPAssumeDirective(const OMPAssumeDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
@@ -5225,6 +5255,11 @@ CXString clang_getCursorSpelling(CXCursor C) {
       return cxstring::createDup(OS.str());
     }
 
+    if (C.kind == CXCursor_BinaryOperator ||
+        C.kind == CXCursor_CompoundAssignOperator) {
+      return clang_Cursor_getBinaryOpcodeStr(clang_Cursor_getBinaryOpcode(C));
+    }
+
     const Decl *D = getDeclFromExpr(getCursorExpr(C));
     if (D)
       return getDeclSpelling(D);
@@ -6092,6 +6127,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPTileDirective");
   case CXCursor_OMPUnrollDirective:
     return cxstring::createRef("OMPUnrollDirective");
+  case CXCursor_OMPReverseDirective:
+    return cxstring::createRef("OMPReverseDirective");
+  case CXCursor_OMPInterchangeDirective:
+    return cxstring::createRef("OMPInterchangeDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:
@@ -6126,6 +6165,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPBarrierDirective");
   case CXCursor_OMPTaskwaitDirective:
     return cxstring::createRef("OMPTaskwaitDirective");
+  case CXCursor_OMPAssumeDirective:
+    return cxstring::createRef("OMPAssumeDirective");
   case CXCursor_OMPErrorDirective:
     return cxstring::createRef("OMPErrorDirective");
   case CXCursor_OMPTaskgroupDirective:
@@ -8953,6 +8994,35 @@ unsigned clang_Cursor_isExternalSymbol(CXCursor C, CXString *language,
     return 1;
   }
   return 0;
+}
+
+enum CX_BinaryOperatorKind clang_Cursor_getBinaryOpcode(CXCursor C) {
+  if (C.kind != CXCursor_BinaryOperator &&
+      C.kind != CXCursor_CompoundAssignOperator) {
+    return CX_BO_Invalid;
+  }
+
+  const Expr *D = getCursorExpr(C);
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(D)) {
+    switch (BinOp->getOpcode()) {
+#define BINARY_OPERATION(Name, Spelling)                                       \
+  case BO_##Name:                                                              \
+    return CX_BO_##Name;
+#include "clang/AST/OperationKinds.def"
+    }
+  }
+
+  return CX_BO_Invalid;
+}
+
+CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
+  if (Op > CX_BO_LAST)
+    return cxstring::createEmpty();
+
+  return cxstring::createDup(
+      // BinaryOperator::getOpcodeStr has no case for CX_BO_Invalid,
+      // so subtract 1
+      BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(Op - 1)));
 }
 
 CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {

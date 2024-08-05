@@ -1146,7 +1146,7 @@ enum CompactUnwindEncodings {
 /// instructions. If the CFI instructions describe a frame that cannot be
 /// encoded in compact unwind, the method returns UNWIND_ARM_MODE_DWARF which
 /// tells the runtime to fallback and unwind using dwarf.
-uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
+uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
   // Only armv7k uses CFI based unwinding.

@@ -25,7 +25,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -3439,6 +3439,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::FP_TO_UINT_SAT:
     Results.push_back(TLI.expandFP_TO_INT_SAT(Node, DAG));
     break;
+  case ISD::LROUND:
+  case ISD::LLROUND: {
+    SDValue Arg = Node->getOperand(0);
+    EVT ArgVT = Arg.getValueType();
+    EVT ResVT = Node->getValueType(0);
+    SDLoc dl(Node);
+    SDValue RoundNode = DAG.getNode(ISD::FROUND, dl, ArgVT, Arg);
+    Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
+    break;
+  }
   case ISD::VAARG:
     Results.push_back(DAG.expandVAArg(Node));
     Results.push_back(Results[0].getValue(1));
@@ -4326,6 +4336,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // targets where it is not needed.
     Results.push_back(Node->getOperand(0));
     break;
+  case ISD::LRINT:
+  case ISD::LLRINT: {
+    SDValue Arg = Node->getOperand(0);
+    EVT ArgVT = Arg.getValueType();
+    EVT ResVT = Node->getValueType(0);
+    SDLoc dl(Node);
+    SDValue RoundNode = DAG.getNode(ISD::FRINT, dl, ArgVT, Arg);
+    Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
+    break;
+  }
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:
@@ -5608,10 +5628,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     MVT MidVT = getPromotedVectorElementType(TLI, EltVT, NewEltVT);
 
     SmallVector<SDValue, 8> NewOps;
-    for (unsigned I = 0, E = Node->getNumOperands(); I != E; ++I) {
-      SDValue Op = Node->getOperand(I);
+    for (const SDValue &Op : Node->op_values())
       NewOps.push_back(DAG.getNode(ISD::BITCAST, SDLoc(Op), MidVT, Op));
-    }
 
     SDLoc SL(Node);
     SDValue Concat =

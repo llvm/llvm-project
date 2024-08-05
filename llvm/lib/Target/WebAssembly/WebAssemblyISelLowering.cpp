@@ -1123,10 +1123,11 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
-      Chain = DAG.getMemcpy(
-          Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getNonZeroByValAlign(),
-          /*isVolatile*/ false, /*AlwaysInline=*/false,
-          /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
+      Chain = DAG.getMemcpy(Chain, DL, FINode, OutVal, SizeNode,
+                            Out.Flags.getNonZeroByValAlign(),
+                            /*isVolatile*/ false, /*AlwaysInline=*/false,
+                            /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                            MachinePointerInfo());
       OutVal = FINode;
     }
     // Count the number of fixed args *after* legalization.
@@ -2274,8 +2275,15 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return IsConstant(Lane);
     };
   } else {
-    // Use a splat (which might be selected as a load splat)
-    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    size_t DestLaneSize = VecT.getVectorElementType().getFixedSizeInBits();
+    if (NumSplatLanes == 1 && (DestLaneSize == 32 || DestLaneSize == 64)) {
+      // Could be selected to load_zero.
+      assert(SplatValue == Op->getOperand(0));
+      Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecT, SplatValue);
+    } else {
+      // Use a splat (which might be selected as a load splat)
+      Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    }
     IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };

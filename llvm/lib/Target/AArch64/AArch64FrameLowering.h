@@ -41,6 +41,8 @@ public:
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                           int FI) const override;
   StackOffset resolveFrameIndexReference(const MachineFunction &MF, int FI,
                                          Register &FrameReg, bool PreferFP,
                                          bool ForSimm) const;
@@ -155,6 +157,10 @@ private:
                           int64_t RealignmentPadding, StackOffset AllocSize,
                           bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
                           StackOffset InitialOffset, bool FollowupAllocs) const;
+  /// Make a determination whether a Hazard slot is used and create it if
+  /// needed.
+  void determineStackHazardSlot(MachineFunction &MF,
+                                BitVector &SavedRegs) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero,

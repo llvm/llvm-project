@@ -384,4 +384,55 @@ for.exit:
   ret void
 }
 
+;; Here are two writes that should be `16 * vscale * vscale` apart, so MUL VL
+;; addressing cannot be used to offset the second write, as for example,
+;; `#4, mul vl` would only be an offset of `16 * vscale` (dropping a vscale).
+define void @vscale_squared_offset(ptr %alloc) #0 {
+; COMMON-LABEL: vscale_squared_offset:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    rdvl x9, #1
+; COMMON-NEXT:    fmov z0.s, #4.00000000
+; COMMON-NEXT:    mov x8, xzr
+; COMMON-NEXT:    lsr x9, x9, #4
+; COMMON-NEXT:    fmov z1.s, #8.00000000
+; COMMON-NEXT:    cntw x10
+; COMMON-NEXT:    ptrue p0.s, vl1
+; COMMON-NEXT:    umull x9, w9, w9
+; COMMON-NEXT:    lsl x9, x9, #6
+; COMMON-NEXT:    cmp x8, x10
+; COMMON-NEXT:    b.ge .LBB6_2
+; COMMON-NEXT:  .LBB6_1: // %for.body
+; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    add x11, x0, x9
+; COMMON-NEXT:    st1w { z0.s }, p0, [x0]
+; COMMON-NEXT:    add x8, x8, #1
+; COMMON-NEXT:    st1w { z1.s }, p0, [x11]
+; COMMON-NEXT:    addvl x0, x0, #1
+; COMMON-NEXT:    cmp x8, x10
+; COMMON-NEXT:    b.lt .LBB6_1
+; COMMON-NEXT:  .LBB6_2: // %for.exit
+; COMMON-NEXT:    ret
+entry:
+  %vscale = call i64 @llvm.vscale.i64()
+  %c4_vscale = mul i64 %vscale, 4
+  br label %for.check
+for.check:
+  %i = phi i64 [ %next_i, %for.body ], [ 0, %entry ]
+  %is_lt = icmp slt i64 %i, %c4_vscale
+  br i1 %is_lt, label %for.body, label %for.exit
+for.body:
+  %mask = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i64(i64 0, i64 1)
+  %upper_offset = mul i64 %i, %c4_vscale
+  %upper_ptr = getelementptr float, ptr %alloc, i64 %upper_offset
+  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 4.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr %upper_ptr, i32 4, <vscale x 4 x i1> %mask)
+  %lower_i = add i64 %i, %c4_vscale
+  %lower_offset = mul i64 %lower_i, %c4_vscale
+  %lower_ptr = getelementptr float, ptr %alloc, i64 %lower_offset
+  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 8.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr %lower_ptr, i32 4, <vscale x 4 x i1> %mask)
+  %next_i = add i64 %i, 1
+  br label %for.check
+for.exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }

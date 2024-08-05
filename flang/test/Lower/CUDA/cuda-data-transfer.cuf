@@ -133,7 +133,7 @@ subroutine sub4()
   integer, parameter :: n = 10
   real, device :: adev(n)
   real :: ahost(n)
-  real :: b
+  real, managed :: b
   integer :: i
 
   adev = ahost
@@ -265,3 +265,12 @@ end subroutine
 ! CHECK: %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %14#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: cuf.data_transfer
 ! CHECK: fir.freemem %[[TEMP]] : !fir.heap<!fir.array<?xi32>>
+
+subroutine sub14()
+  logical(4), device :: log(10)
+  log = .true.
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub14()
+! CHECK: %[[TRUE:.*]] = arith.constant true
+! CHECK: cuf.data_transfer %[[TRUE]] to %{{.*}}#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.array<10x!fir.logical<4>>>

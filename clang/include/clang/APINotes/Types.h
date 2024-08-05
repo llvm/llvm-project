@@ -263,13 +263,6 @@ public:
     SwiftObjCMembers = Value.value_or(false);
   }
 
-  /// Strip off any information within the class information structure that is
-  /// module-local, such as 'audited' flags.
-  void stripModuleLocalInfo() {
-    HasDefaultNullability = false;
-    DefaultNullability = 0;
-  }
-
   friend bool operator==(const ContextInfo &, const ContextInfo &);
 
   ContextInfo &operator|=(const ContextInfo &RHS) {
@@ -663,6 +656,12 @@ public:
   GlobalFunctionInfo() {}
 };
 
+/// Describes API notes data for a C++ method.
+class CXXMethodInfo : public FunctionInfo {
+public:
+  CXXMethodInfo() {}
+};
+
 /// Describes API notes data for an enumerator.
 class EnumConstantInfo : public CommonEntityInfo {
 public:
@@ -796,6 +795,7 @@ enum class ContextKind : uint8_t {
   ObjCClass = 0,
   ObjCProtocol = 1,
   Namespace = 2,
+  Tag = 3,
 };
 
 struct Context {

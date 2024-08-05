@@ -1001,3 +1001,62 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-standard Intrinsics: RENAME
+`RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
+
+This intrinsic is provided in both subroutine and function form; however, only one form can be used in any given program unit.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL RENAME(SRC, DST[, STATUS])`
+- **Arguments:**
+- **Return value** status code (0: success, non-zero for errors)
+
+| Argument | Description                       |
+|----------|-----------------------------------|
+| `SRC`    | Source path                       |
+| `DST`    | Destination path                  |
+| `STATUS` | Status code (for subroutine form) |
+
+The status code returned by both the subroutine and function form corresponds to the value of `errno` if the invocation of `rename(2)` was not successful.
+
+#### Example
+
+Function form:
+```
+program rename_func
+    implicit none
+    integer :: status
+    status = rename('src', 'dst')
+    print *, 'status:', status
+    status = rename('dst', 'src')
+    print *, 'status:', status
+end program rename_func
+```
+
+Subroutine form:
+```
+program rename_proc
+    implicit none
+    integer :: status
+    call rename('src', 'dst', status)
+    print *, 'status:', status
+    call rename('dst', 'src')
+end program rename_proc
+```
+
+### Non-standard Intrinsics: SECOND
+This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
+function form.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL SECOND(TIME)` or `TIME = SECOND()`
+- **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
+                          seconds is written
+- **RETURN value:** same as TIME argument

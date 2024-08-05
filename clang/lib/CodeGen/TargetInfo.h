@@ -334,6 +334,10 @@ public:
                                                  llvm::AtomicOrdering Ordering,
                                                  llvm::LLVMContext &Ctx) const;
 
+  /// Allow the target to apply other metadata to an atomic instruction
+  virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                                       llvm::AtomicRMWInst &RMW) const {}
+
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
   public:
@@ -437,6 +441,7 @@ enum class AArch64ABIKind {
   DarwinPCS,
   Win64,
   AAPCSSoft,
+  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>

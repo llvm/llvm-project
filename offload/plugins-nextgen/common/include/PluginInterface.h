@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "ExclusiveAccess.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -380,6 +381,73 @@ protected:
 
   /// If the kernel is a bare kernel.
   bool IsBareKernel = false;
+};
+
+/// Information about an allocation, when it has been allocated, and when/if it
+/// has been deallocated, for error reporting purposes.
+struct AllocationTraceInfoTy {
+
+  /// The stack trace of the allocation itself.
+  std::string AllocationTrace;
+
+  /// The stack trace of the deallocation, or empty.
+  std::string DeallocationTrace;
+
+  /// The allocated device pointer.
+  void *DevicePtr = nullptr;
+
+  /// The corresponding host pointer (can be null).
+  void *HostPtr = nullptr;
+
+  /// The size of the allocation.
+  uint64_t Size = 0;
+
+  /// The kind of the allocation.
+  TargetAllocTy Kind = TargetAllocTy::TARGET_ALLOC_DEFAULT;
+
+  /// Information about the last allocation at this address, if any.
+  AllocationTraceInfoTy *LastAllocationInfo = nullptr;
+
+  /// Lock to keep accesses race free.
+  std::mutex Lock;
+};
+
+/// Information about an allocation, when it has been allocated, and when/if it
+/// has been deallocated, for error reporting purposes.
+struct KernelTraceInfoTy {
+
+  /// The launched kernel.
+  GenericKernelTy *Kernel;
+
+  /// The stack trace of the launch itself.
+  std::string LaunchTrace;
+
+  /// The async info the kernel was launched in.
+  __tgt_async_info *AsyncInfo;
+};
+
+struct KernelTraceInfoRecordTy {
+  KernelTraceInfoRecordTy() { KTIs.fill({}); }
+
+  /// Return the (maximal) record size.
+  auto size() const { return KTIs.size(); }
+
+  /// Create a new kernel trace info and add it into the record.
+  void emplace(GenericKernelTy *Kernel, const std::string &&StackTrace,
+               __tgt_async_info *AsyncInfo) {
+    KTIs[Idx] = {Kernel, std::move(StackTrace), AsyncInfo};
+    Idx = (Idx + 1) % size();
+  }
+
+  /// Return the \p I'th last kernel trace info.
+  auto getKernelTraceInfo(int32_t I) const {
+    // Note that kernel trace infos "grow forward", so lookup is backwards.
+    return KTIs[(Idx - I - 1 + size()) % size()];
+  }
+
+private:
+  std::array<KernelTraceInfoTy, 8> KTIs;
+  unsigned Idx = 0;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
@@ -866,6 +934,18 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
 
+  /// Map to record when allocations have been performed, and when they have
+  /// been deallocated, both for error reporting purposes.
+  ProtectedObj<DenseMap<void *, AllocationTraceInfoTy *>> AllocationTraces;
+
+  /// Map to record kernel have been launchedl, for error reporting purposes.
+  ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
+
+  /// Environment variable to determine if stack traces for kernel launches are
+  /// tracked.
+  UInt32Envar OMPX_TrackNumKernelLaunches =
+      UInt32Envar("OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES", 0);
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -915,6 +995,11 @@ protected:
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
   UInt32Envar OMPX_InitialNumEvents;
+
+  /// Environment variable to determine if stack traces for allocations and
+  /// deallocations are tracked.
+  BoolEnvar OMPX_TrackAllocationTraces =
+      BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.

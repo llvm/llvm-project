@@ -547,6 +547,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<VoidType>]
         >,
         FunctionSpec<
+          "gettid",
+          RetValSpec<PidT>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
           "getuid",
           RetValSpec<UidT>,
           [ArgSpec<VoidType>]
@@ -1324,6 +1329,16 @@ def POSIX : StandardSpec<"POSIX"> {
         "pthread_rwlock_timedwrlock",
         RetValSpec<IntType>,
         [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_clockrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ClockIdT>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_clockwrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ClockIdT>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
       >,
       FunctionSpec<
         "pthread_rwlock_rdlock",

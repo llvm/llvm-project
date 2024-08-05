@@ -10,11 +10,12 @@
 #define LLVM_LIBC_SRC_STDIO_REMOVE_H
 
 #include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int remove(const char *path);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_REMOVE_H

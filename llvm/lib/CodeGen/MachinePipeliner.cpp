@@ -528,8 +528,16 @@ bool MachinePipeliner::useSwingModuloScheduler() {
 }
 
 bool MachinePipeliner::useWindowScheduler(bool Changed) {
-  // WindowScheduler does not work when it is off or when SwingModuloScheduler
-  // is successfully scheduled.
+  // WindowScheduler does not work for following cases:
+  // 1. when it is off.
+  // 2. when SwingModuloScheduler is successfully scheduled.
+  // 3. when pragma II is enabled.
+  if (II_setByPragma) {
+    LLVM_DEBUG(dbgs() << "Window scheduling is disabled when "
+                         "llvm.loop.pipeline.initiationinterval is set.\n");
+    return false;
+  }
+
   return WindowSchedulingOption == WindowSchedulingFlag::WS_Force ||
          (WindowSchedulingOption == WindowSchedulingFlag::WS_On && !Changed);
 }
@@ -999,8 +1007,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
         RemoveDeps.push_back(PI);
       }
     }
-    for (int i = 0, e = RemoveDeps.size(); i != e; ++i)
-      I.removePred(RemoveDeps[i]);
+    for (const SDep &D : RemoveDeps)
+      I.removePred(D);
   }
 }
 
@@ -1041,18 +1049,18 @@ void SwingSchedulerDAG::changeDependences() {
     for (const SDep &P : I.Preds)
       if (P.getSUnit() == DefSU)
         Deps.push_back(P);
-    for (int i = 0, e = Deps.size(); i != e; i++) {
-      Topo.RemovePred(&I, Deps[i].getSUnit());
-      I.removePred(Deps[i]);
+    for (const SDep &D : Deps) {
+      Topo.RemovePred(&I, D.getSUnit());
+      I.removePred(D);
     }
     // Remove the chain dependence between the instructions.
     Deps.clear();
     for (auto &P : LastSU->Preds)
       if (P.getSUnit() == &I && P.getKind() == SDep::Order)
         Deps.push_back(P);
-    for (int i = 0, e = Deps.size(); i != e; i++) {
-      Topo.RemovePred(LastSU, Deps[i].getSUnit());
-      LastSU->removePred(Deps[i]);
+    for (const SDep &D : Deps) {
+      Topo.RemovePred(LastSU, D.getSUnit());
+      LastSU->removePred(D);
     }
 
     // Add a dependence between the new instruction and the instruction
