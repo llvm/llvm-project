@@ -14,14 +14,12 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::freelist_heap;
+using LIBC_NAMESPACE::FreeListHeapBuffer;
 
 TEST(LlvmLibcFreeListMalloc, MallocStats) {
   constexpr size_t kAllocSize = 256;
   constexpr size_t kCallocNum = 4;
   constexpr size_t kCallocSize = 64;
-
-  freelist_heap->reset_heap_stats(); // Do this because other tests might've
-                                     // called the same global allocator.
 
   void *ptr1 = LIBC_NAMESPACE::malloc(kAllocSize);
 

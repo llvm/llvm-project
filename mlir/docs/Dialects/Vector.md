@@ -73,12 +73,13 @@ following top-down rewrites and conversions:
 
 ### LLVM level
 
-On CPU, the `n-D` `vector` type currently lowers to `!llvm<array<vector>>`. More
-concretely, `vector<4x8x128xf32>` lowers to `!llvm<[4 x [ 8 x [ 128 x float
-]]]>`. There are tradeoffs involved related to how one can access subvectors and
-how one uses `llvm.extractelement`, `llvm.insertelement` and
-`llvm.shufflevector`. A [deeper dive section](#DeeperDive) discusses the current
-lowering choices and tradeoffs.
+On CPU, the `n-D` `vector` type currently lowers to `!llvm<array<vector>>`.
+More concretely, `vector<4x8x128xf32>` lowers to `!llvm<[4 x [ 8 x [ 128 x
+float ]]]>`. There are tradeoffs involved related to how one can access
+subvectors and how one uses `llvm.extractelement`, `llvm.insertelement` and
+`llvm.shufflevector`. The section on [LLVM Lowering
+Tradeoffs](#llvm-lowering-tradeoffs) offers a deeper dive into the current
+design choices and tradeoffs.
 
 ### Hardware Vector Ops
 

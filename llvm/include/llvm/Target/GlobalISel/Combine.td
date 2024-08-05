@@ -128,6 +128,16 @@ class GITypeOf<string opName> : GISpecialType {
   string OpName = opName;
 }
 
+// The type of an operand that can match a variable amount of operands.
+// This type contains a minimum and maximum number of operands to match.
+// The minimum must be 1 or more, as we cannot have an operand representing
+// zero operands, and the max can be zero (which means "unlimited") or a value
+// greater than the minimum.
+class GIVariadic<int min = 1, int max = 0> : GISpecialType {
+  int MinArgs = min;
+  int MaxArgs = max;
+}
+
 //===----------------------------------------------------------------------===//
 // Pattern Builtins
 //===----------------------------------------------------------------------===//
@@ -1771,10 +1781,25 @@ def truncate_of_zext : truncate_of_opcode<G_ZEXT>;
 def truncate_of_sext : truncate_of_opcode<G_SEXT>;
 def truncate_of_anyext : truncate_of_opcode<G_ANYEXT>;
 
+// Push cast through select.
+class select_of_opcode<Instruction castOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_SELECT $select, $cond, $true, $false):$Select,
+         (castOpcode $root, $select):$Cast,
+         [{ return Helper.matchCastOfSelect(*${Cast}, *${Select}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
+
+def select_of_zext : select_of_opcode<G_ZEXT>;
+def select_of_anyext : select_of_opcode<G_ANYEXT>;
+def select_of_truncate : select_of_opcode<G_TRUNC>;
+
 def cast_combines: GICombineGroup<[
   truncate_of_zext,
   truncate_of_sext,
-  truncate_of_anyext
+  truncate_of_anyext,
+  select_of_zext,
+  select_of_anyext,
+  select_of_truncate
 ]>;
 
 

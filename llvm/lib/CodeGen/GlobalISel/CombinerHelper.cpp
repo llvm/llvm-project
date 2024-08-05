@@ -68,6 +68,16 @@ const TargetLowering &CombinerHelper::getTargetLowering() const {
   return *Builder.getMF().getSubtarget().getTargetLowering();
 }
 
+const MachineFunction &CombinerHelper::getMachineFunction() const {
+  return Builder.getMF();
+}
+
+const DataLayout &CombinerHelper::getDataLayout() const {
+  return getMachineFunction().getDataLayout();
+}
+
+LLVMContext &CombinerHelper::getContext() const { return Builder.getContext(); }
+
 /// \returns The little endian in-memory byte position of byte \p I in a
 /// \p ByteWidth bytes wide type.
 ///

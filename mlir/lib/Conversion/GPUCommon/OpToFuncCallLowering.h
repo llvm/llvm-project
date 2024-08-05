@@ -9,6 +9,7 @@
 #define MLIR_CONVERSION_GPUCOMMON_OPTOFUNCCALLLOWERING_H_
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"

@@ -825,7 +825,6 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   if (auto *CCE = dyn_cast<CXXConstructExpr>(Init)) {
     if (CCE->getConstructor()->isCopyOrMoveConstructor()) {
       if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(CCE->getArg(0))) {
-        // assert(false && "hit temporary copy path");
         Expr *Arg = MTE->getSubExpr();
         Path.push_back({IndirectLocalPathEntry::TemporaryCopy, Arg,
                         CCE->getConstructor()});

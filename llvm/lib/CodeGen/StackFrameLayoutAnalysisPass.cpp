@@ -51,6 +51,8 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
 
   enum SlotType {
     Spill,          // a Spill slot
+    Fixed,          // a Fixed slot (e.g. arguments passed on the stack)
+    VariableSized,  // a variable sized object
     StackProtector, // Stack Protector slot
     Variable,       // a slot used to store a local data (could be a tmp)
     Invalid         // It's an error for a slot to have this type
@@ -72,17 +74,30 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
       Scalable = MFI.getStackID(Idx) == TargetStackID::ScalableVector;
       if (MFI.isSpillSlotObjectIndex(Idx))
         SlotTy = SlotType::Spill;
-      else if (Idx == MFI.getStackProtectorIndex())
+      else if (MFI.isFixedObjectIndex(Idx))
+        SlotTy = SlotType::Fixed;
+      else if (MFI.isVariableSizedObjectIndex(Idx))
+        SlotTy = SlotType::VariableSized;
+      else if (MFI.hasStackProtectorIndex() &&
+               Idx == MFI.getStackProtectorIndex())
         SlotTy = SlotType::StackProtector;
       else
         SlotTy = SlotType::Variable;
     }
 
+    bool isVarSize() const { return SlotTy == SlotType::VariableSized; }
+
     // We use this to sort in reverse order, so that the layout is displayed
-    // correctly.
+    // correctly. Variable sized slots are sorted to the end of the list, as
+    // offsets are currently incorrect for these but they reside at the end of
+    // the stack frame. The Slot index is used to ensure deterministic order
+    // when offsets are equal.
     bool operator<(const SlotData &Rhs) const {
-      return (Offset.getFixed() + Offset.getScalable()) >
-             (Rhs.Offset.getFixed() + Rhs.Offset.getScalable());
+      return std::make_tuple(!isVarSize(),
+                             Offset.getFixed() + Offset.getScalable(), Slot) >
+             std::make_tuple(!Rhs.isVarSize(),
+                             Rhs.Offset.getFixed() + Rhs.Offset.getScalable(),
+                             Rhs.Slot);
     }
   };
 
@@ -121,6 +136,10 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
     switch (Ty) {
     case SlotType::Spill:
       return "Spill";
+    case SlotType::Fixed:
+      return "Fixed";
+    case SlotType::VariableSized:
+      return "VariableSized";
     case SlotType::StackProtector:
       return "Protector";
     case SlotType::Variable:

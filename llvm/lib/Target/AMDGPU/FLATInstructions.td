@@ -104,6 +104,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let VALU                 = ps.VALU;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   // encoding fields
   bits<8> vaddr;
@@ -169,6 +170,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let VALU                 = ps.VALU;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   bits<7> saddr;
   bits<8> vdst;

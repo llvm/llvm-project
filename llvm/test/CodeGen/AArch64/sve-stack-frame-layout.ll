@@ -147,10 +147,11 @@ entry:
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-8], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-24], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Variable, Align: 1, Size: 0
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32-16 x vscale], Type: Variable, Align: 16, Size: vscale x 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-40-16 x vscale], Type: Variable, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: VariableSized, Align: 1, Size: 0
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: VariableSized, Align: 1, Size: 0
 
 define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: csr_d8_allocnxv4i32i32f64_vla:
@@ -172,7 +173,10 @@ define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    add x8, x8, #15
 ; CHECK-NEXT:    and x8, x8, #0x7fffffff0
-; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    sub x8, x10, x8
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
@@ -181,8 +185,9 @@ define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_
 ; CHECK-NEXT:    str wzr, [x8]
 ; CHECK-NEXT:    sub x8, x29, #8
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    str d0, [x19, #8]
+; CHECK-NEXT:    str wzr, [x9]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x8, #-1, mul vl]
+; CHECK-NEXT:    str d0, [x19, #8]
 ; CHECK-NEXT:    sub sp, x29, #8
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x19, [sp, #24] // 8-byte Folded Reload
@@ -191,18 +196,20 @@ define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_
 entry:
   %a = alloca <vscale x 4 x i32>
   %0 = zext i32 %i to i64
-  %b = alloca i32, i64 %0
+  %vla0 = alloca i32, i64 %0
+  %vla1 = alloca i32, i64 %0
   %c = alloca double
   tail call void asm sideeffect "", "~{d8}"() #1
   store <vscale x 4 x i32> zeroinitializer, ptr %a
-  store i32 zeroinitializer, ptr %b
+  store i32 zeroinitializer, ptr %vla0
+  store i32 zeroinitializer, ptr %vla1
   store double %d, ptr %c
   ret i32 0
 }
 
 ; CHECK-FRAMELAYOUT-LABEL: Function: csr_d8_allocnxv4i32i32f64_stackargsi32f64
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP+8], Type: Variable, Align: 8, Size: 4
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP+0], Type: Protector, Align: 16, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP+8], Type: Fixed, Align: 8, Size: 4
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP+0], Type: Fixed, Align: 16, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-8], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16-16 x vscale], Type: Variable, Align: 16, Size: vscale x 16
@@ -289,7 +296,7 @@ entry:
 }
 
 ; CHECK-FRAMELAYOUT-LABEL: Function: svecc_z8_allocnxv4i32i32f64_stackargsi32_fp
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP+0], Type: Protector, Align: 16, Size: 4
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP+0], Type: Fixed, Align: 16, Size: 4
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-8], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16-16 x vscale], Type: Spill, Align: 16, Size: vscale x 16
@@ -514,7 +521,7 @@ declare ptr @memset(ptr, i32, i32)
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-104], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-112], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-128], Type: Variable, Align: 16, Size: 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-128], Type: Variable, Align: 16, Size: 0
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-128], Type: VariableSized, Align: 16, Size: 0
 
 define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "target-features"="+sme" {
 ; CHECK-LABEL: vastate:

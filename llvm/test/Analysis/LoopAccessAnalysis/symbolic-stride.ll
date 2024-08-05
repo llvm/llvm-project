@@ -276,9 +276,9 @@ define void @single_stride_used_for_trip_count(ptr noalias %A, ptr noalias %B, i
 ; CHECK-LABEL: 'single_stride_used_for_trip_count'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %load = load i32, ptr %gep.A, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep.A.next, align 4
 ; CHECK-EMPTY:

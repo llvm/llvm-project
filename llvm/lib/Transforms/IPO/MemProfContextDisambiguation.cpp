@@ -2109,7 +2109,7 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(
     Instruction *Call, const Function *Func, const Function *CallerFunc,
     std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain) {
   auto *CB = dyn_cast<CallBase>(Call);
-  if (!CB->getCalledOperand())
+  if (!CB->getCalledOperand() || CB->isIndirectCall())
     return false;
   auto *CalleeVal = CB->getCalledOperand()->stripPointerCasts();
   auto *CalleeFunc = dyn_cast<Function>(CalleeVal);
