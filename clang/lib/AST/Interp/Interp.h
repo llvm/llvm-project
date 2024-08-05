@@ -2787,13 +2787,16 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 
 /// Same here, but only for casts.
-inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
+inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
+                        bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
   // FIXME: Support diagnosing other invalid cast kinds.
-  if (Kind == CastKind::Reinterpret)
-    S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
+  if (Kind == CastKind::Reinterpret) {
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
+    return !Fatal;
+  }
   return false;
 }
 

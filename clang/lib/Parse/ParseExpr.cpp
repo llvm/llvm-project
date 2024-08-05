@@ -802,7 +802,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_assignable);
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_constructible);
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_destructible);
-    REVERTIBLE_TYPE_TRAIT(__is_nullptr);
     REVERTIBLE_TYPE_TRAIT(__is_object);
     REVERTIBLE_TYPE_TRAIT(__is_pod);
     REVERTIBLE_TYPE_TRAIT(__is_pointer);
