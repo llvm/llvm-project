@@ -397,8 +397,8 @@ public:
   bool IsControllingPlan() { return m_is_controlling_plan; }
 
   // Returns true if this plan is a leaf plan, meaning the plan will be popped
-  // during each stop and re-pushed before resuming to stay at the top of the
-  // stack.
+  // during each stop if it does not explain the stop and re-pushed before
+  // resuming to stay at the top of the stack.
   virtual bool IsLeafPlan() { return false; }
 
   bool SetIsControllingPlan(bool value) {

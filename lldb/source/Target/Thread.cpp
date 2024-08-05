@@ -827,7 +827,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
       // Leaf plan that does not explain the stop should be popped.
       // The plan should be push itself later again before resuming to stay
       // as leaf.
-      if (current_plan->IsLeafPlan() && current_plan->MischiefManaged())
+      if (current_plan->IsLeafPlan())
         PopPlan();
 
       // If the current plan doesn't explain the stop, then find one that does
