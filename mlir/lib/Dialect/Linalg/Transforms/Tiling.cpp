@@ -53,7 +53,7 @@ mlir::linalg::makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
   // Apply `map` to get shape sizes in loop order.
   SmallVector<OpFoldResult> shapeSizes =
       makeComposedFoldedMultiResultAffineApply(b, loc, map, allShapeSizes);
-  SmallVector<OpFoldResult> tileSizes(allTileSizes.begin(), allTileSizes.end());
+  SmallVector<OpFoldResult> tileSizes(allTileSizes);
 
   // Traverse the tile sizes, which are in loop order, erase zeros everywhere.
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
