@@ -111,9 +111,13 @@ void Prescanner::Statement() {
     skipLeadingAmpersand_ |= !inFixedForm_;
     return;
   case LineClassification::Kind::PreprocessorDirective:
+    preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
+    afterPreprocessingDirective_ = true;
+    // Don't set skipLeadingAmpersand_
+    return;
   case LineClassification::Kind::DefinitionDirective:
     preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
-    // Don't set afterPreprocessingDirective_
+    // Don't set afterPreprocessingDirective_ or skipLeadingAmpersand_
     return;
   case LineClassification::Kind::CompilerDirective: {
     directiveSentinel_ = line.sentinel;
@@ -189,11 +193,19 @@ void Prescanner::Statement() {
       // a comment marker or directive sentinel.  If so, disable line
       // continuation, so that NextToken() won't consume anything from
       // following lines.
-      if (IsLegalIdentifierStart(*at_) && NextToken(tokens) &&
-          tokens.SizeInTokens() > 0) {
-        if (CharBlock id{tokens.TokenAt(0)}; preprocessor_.IsNameDefined(id) &&
+      if (IsLegalIdentifierStart(*at_)) {
+        // TODO: Only bother with these cases when any keyword macro has
+        // been defined with replacement text that could begin a comment
+        // or directive sentinel.
+        const char *p{at_};
+        while (IsLegalInIdentifier(*++p)) {
+        }
+        CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+        if (preprocessor_.IsNameDefined(id) &&
             !preprocessor_.IsFunctionLikeDefinition(id)) {
-          if (auto replaced{preprocessor_.MacroReplacement(tokens, *this)}) {
+          TokenSequence toks;
+          toks.Put(id, GetProvenance(at_));
+          if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
             auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
             disableSourceContinuation_ =
                 newLineClass.kind != LineClassification::Kind::Source;

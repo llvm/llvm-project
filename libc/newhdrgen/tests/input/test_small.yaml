@@ -54,4 +54,13 @@ functions:
     standards: 
       - stdc
     guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: func_f
+    return_type: _Float16
+    arguments:
+      - type: int
+      - type: double
+      - type: float
+    standards: 
+      - stdc
+
 

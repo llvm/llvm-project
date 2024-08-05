@@ -84,6 +84,11 @@ public:
   Expr alignExpr;
   Expr lmaExpr;
   Expr subalignExpr;
+
+  // Used by non-alloc SHT_CREL to hold the header and content byte stream.
+  uint64_t crelHeader = 0;
+  SmallVector<char, 0> crelBody;
+
   SmallVector<SectionCommand *, 0> commands;
   SmallVector<StringRef, 0> phdrs;
   std::optional<std::array<uint8_t, 4>> filler;
@@ -106,6 +111,7 @@ public:
   // DATA_RELRO_END.
   bool relro = false;
 
+  template <bool is64> void finalizeNonAllocCrel();
   void finalize();
   template <class ELFT>
   void writeTo(uint8_t *buf, llvm::parallel::TaskGroup &tg);
@@ -144,23 +150,7 @@ llvm::ArrayRef<InputSection *>
 getInputSections(const OutputSection &os,
                  SmallVector<InputSection *, 0> &storage);
 
-// All output sections that are handled by the linker specially are
-// globally accessible. Writer initializes them, so don't use them
-// until Writer is initialized.
-struct Out {
-  static uint8_t *bufferStart;
-  static PhdrEntry *tlsPhdr;
-  static OutputSection *elfHeader;
-  static OutputSection *programHeaders;
-  static OutputSection *preinitArray;
-  static OutputSection *initArray;
-  static OutputSection *finiArray;
-};
-
 uint64_t getHeaderSize();
-
-LLVM_LIBRARY_VISIBILITY extern llvm::SmallVector<OutputSection *, 0>
-    outputSections;
 } // namespace lld::elf
 
 #endif

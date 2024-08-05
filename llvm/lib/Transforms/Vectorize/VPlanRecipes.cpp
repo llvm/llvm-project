@@ -283,12 +283,12 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
 }
 
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
-  if (auto *UI = getInstructionForCost(this))
-    if (Ctx.skipCostComputation(UI, VF.isVector()))
-      return 0;
+  auto *UI = getInstructionForCost(this);
+  if (UI && Ctx.skipCostComputation(UI, VF.isVector()))
+    return 0;
 
   InstructionCost RecipeCost = computeCost(VF, Ctx);
-  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+  if (UI && ForceTargetInstructionCost.getNumOccurrences() > 0 &&
       RecipeCost.isValid())
     RecipeCost = InstructionCost(ForceTargetInstructionCost);
 
@@ -2034,6 +2034,373 @@ void VPWidenStoreEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
+}
+#endif
+
+static Value *createBitOrPointerCast(IRBuilderBase &Builder, Value *V,
+                                     VectorType *DstVTy, const DataLayout &DL) {
+  // Verify that V is a vector type with same number of elements as DstVTy.
+  auto VF = DstVTy->getElementCount();
+  auto *SrcVecTy = cast<VectorType>(V->getType());
+  assert(VF == SrcVecTy->getElementCount() && "Vector dimensions do not match");
+  Type *SrcElemTy = SrcVecTy->getElementType();
+  Type *DstElemTy = DstVTy->getElementType();
+  assert((DL.getTypeSizeInBits(SrcElemTy) == DL.getTypeSizeInBits(DstElemTy)) &&
+         "Vector elements must have same size");
+
+  // Do a direct cast if element types are castable.
+  if (CastInst::isBitOrNoopPointerCastable(SrcElemTy, DstElemTy, DL)) {
+    return Builder.CreateBitOrPointerCast(V, DstVTy);
+  }
+  // V cannot be directly casted to desired vector type.
+  // May happen when V is a floating point vector but DstVTy is a vector of
+  // pointers or vice-versa. Handle this using a two-step bitcast using an
+  // intermediate Integer type for the bitcast i.e. Ptr <-> Int <-> Float.
+  assert((DstElemTy->isPointerTy() != SrcElemTy->isPointerTy()) &&
+         "Only one type should be a pointer type");
+  assert((DstElemTy->isFloatingPointTy() != SrcElemTy->isFloatingPointTy()) &&
+         "Only one type should be a floating point type");
+  Type *IntTy =
+      IntegerType::getIntNTy(V->getContext(), DL.getTypeSizeInBits(SrcElemTy));
+  auto *VecIntTy = VectorType::get(IntTy, VF);
+  Value *CastVal = Builder.CreateBitOrPointerCast(V, VecIntTy);
+  return Builder.CreateBitOrPointerCast(CastVal, DstVTy);
+}
+
+/// Return a vector containing interleaved elements from multiple
+/// smaller input vectors.
+static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
+                                const Twine &Name) {
+  unsigned Factor = Vals.size();
+  assert(Factor > 1 && "Tried to interleave invalid number of vectors");
+
+  VectorType *VecTy = cast<VectorType>(Vals[0]->getType());
+#ifndef NDEBUG
+  for (Value *Val : Vals)
+    assert(Val->getType() == VecTy && "Tried to interleave mismatched types");
+#endif
+
+  // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
+  // must use intrinsics to interleave.
+  if (VecTy->isScalableTy()) {
+    VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
+    return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
+                                   Vals,
+                                   /*FMFSource=*/nullptr, Name);
+  }
+
+  // Fixed length. Start by concatenating all vectors into a wide vector.
+  Value *WideVec = concatenateVectors(Builder, Vals);
+
+  // Interleave the elements into the wide vector.
+  const unsigned NumElts = VecTy->getElementCount().getFixedValue();
+  return Builder.CreateShuffleVector(
+      WideVec, createInterleaveMask(NumElts, Factor), Name);
+}
+
+// Try to vectorize the interleave group that \p Instr belongs to.
+//
+// E.g. Translate following interleaved load group (factor = 3):
+//   for (i = 0; i < N; i+=3) {
+//     R = Pic[i];             // Member of index 0
+//     G = Pic[i+1];           // Member of index 1
+//     B = Pic[i+2];           // Member of index 2
+//     ... // do something to R, G, B
+//   }
+// To:
+//   %wide.vec = load <12 x i32>                       ; Read 4 tuples of R,G,B
+//   %R.vec = shuffle %wide.vec, poison, <0, 3, 6, 9>   ; R elements
+//   %G.vec = shuffle %wide.vec, poison, <1, 4, 7, 10>  ; G elements
+//   %B.vec = shuffle %wide.vec, poison, <2, 5, 8, 11>  ; B elements
+//
+// Or translate following interleaved store group (factor = 3):
+//   for (i = 0; i < N; i+=3) {
+//     ... do something to R, G, B
+//     Pic[i]   = R;           // Member of index 0
+//     Pic[i+1] = G;           // Member of index 1
+//     Pic[i+2] = B;           // Member of index 2
+//   }
+// To:
+//   %R_G.vec = shuffle %R.vec, %G.vec, <0, 1, 2, ..., 7>
+//   %B_U.vec = shuffle %B.vec, poison, <0, 1, 2, 3, u, u, u, u>
+//   %interleaved.vec = shuffle %R_G.vec, %B_U.vec,
+//        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
+//   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
+void VPInterleaveRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "Interleave group being replicated.");
+  const InterleaveGroup<Instruction> *Group = IG;
+  Instruction *Instr = Group->getInsertPos();
+
+  // Prepare for the vector type of the interleaved load/store.
+  Type *ScalarTy = getLoadStoreType(Instr);
+  unsigned InterleaveFactor = Group->getFactor();
+  auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
+
+  // Prepare for the new pointers.
+  SmallVector<Value *, 2> AddrParts;
+  unsigned Index = Group->getIndex(Instr);
+
+  // TODO: extend the masked interleaved-group support to reversed access.
+  VPValue *BlockInMask = getMask();
+  assert((!BlockInMask || !Group->isReverse()) &&
+         "Reversed masked interleave-group not supported.");
+
+  Value *Idx;
+  // If the group is reverse, adjust the index to refer to the last vector lane
+  // instead of the first. We adjust the index from the first vector lane,
+  // rather than directly getting the pointer for lane VF - 1, because the
+  // pointer operand of the interleaved access is supposed to be uniform. For
+  // uniform instructions, we're only required to generate a value for the
+  // first vector lane in each unroll iteration.
+  if (Group->isReverse()) {
+    Value *RuntimeVF =
+        getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
+    Idx = State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
+    Idx = State.Builder.CreateMul(Idx,
+                                  State.Builder.getInt32(Group->getFactor()));
+    Idx = State.Builder.CreateAdd(Idx, State.Builder.getInt32(Index));
+    Idx = State.Builder.CreateNeg(Idx);
+  } else
+    Idx = State.Builder.getInt32(-Index);
+
+  VPValue *Addr = getAddr();
+  for (unsigned Part = 0; Part < State.UF; Part++) {
+    Value *AddrPart = State.get(Addr, VPIteration(Part, 0));
+    if (auto *I = dyn_cast<Instruction>(AddrPart))
+      State.setDebugLocFrom(I->getDebugLoc());
+
+    // Notice current instruction could be any index. Need to adjust the address
+    // to the member of index 0.
+    //
+    // E.g.  a = A[i+1];     // Member of index 1 (Current instruction)
+    //       b = A[i];       // Member of index 0
+    // Current pointer is pointed to A[i+1], adjust it to A[i].
+    //
+    // E.g.  A[i+1] = a;     // Member of index 1
+    //       A[i]   = b;     // Member of index 0
+    //       A[i+2] = c;     // Member of index 2 (Current instruction)
+    // Current pointer is pointed to A[i+2], adjust it to A[i].
+
+    bool InBounds = false;
+    if (auto *gep = dyn_cast<GetElementPtrInst>(AddrPart->stripPointerCasts()))
+      InBounds = gep->isInBounds();
+    AddrPart = State.Builder.CreateGEP(ScalarTy, AddrPart, Idx, "", InBounds);
+    AddrParts.push_back(AddrPart);
+  }
+
+  State.setDebugLocFrom(Instr->getDebugLoc());
+  Value *PoisonVec = PoisonValue::get(VecTy);
+
+  auto CreateGroupMask = [&BlockInMask, &State, &InterleaveFactor](
+                             unsigned Part, Value *MaskForGaps) -> Value * {
+    if (State.VF.isScalable()) {
+      assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
+      assert(InterleaveFactor == 2 &&
+             "Unsupported deinterleave factor for scalable vectors");
+      auto *BlockInMaskPart = State.get(BlockInMask, Part);
+      SmallVector<Value *, 2> Ops = {BlockInMaskPart, BlockInMaskPart};
+      auto *MaskTy = VectorType::get(State.Builder.getInt1Ty(),
+                                     State.VF.getKnownMinValue() * 2, true);
+      return State.Builder.CreateIntrinsic(
+          MaskTy, Intrinsic::vector_interleave2, Ops,
+          /*FMFSource=*/nullptr, "interleaved.mask");
+    }
+
+    if (!BlockInMask)
+      return MaskForGaps;
+
+    Value *BlockInMaskPart = State.get(BlockInMask, Part);
+    Value *ShuffledMask = State.Builder.CreateShuffleVector(
+        BlockInMaskPart,
+        createReplicatedMask(InterleaveFactor, State.VF.getKnownMinValue()),
+        "interleaved.mask");
+    return MaskForGaps ? State.Builder.CreateBinOp(Instruction::And,
+                                                   ShuffledMask, MaskForGaps)
+                       : ShuffledMask;
+  };
+
+  const DataLayout &DL = Instr->getDataLayout();
+  // Vectorize the interleaved load group.
+  if (isa<LoadInst>(Instr)) {
+    Value *MaskForGaps = nullptr;
+    if (NeedsMaskForGaps) {
+      MaskForGaps = createBitMaskForGaps(State.Builder,
+                                         State.VF.getKnownMinValue(), *Group);
+      assert(MaskForGaps && "Mask for Gaps is required but it is null");
+    }
+
+    // For each unroll part, create a wide load for the group.
+    SmallVector<Value *, 2> NewLoads;
+    for (unsigned Part = 0; Part < State.UF; Part++) {
+      Instruction *NewLoad;
+      if (BlockInMask || MaskForGaps) {
+        Value *GroupMask = CreateGroupMask(Part, MaskForGaps);
+        NewLoad = State.Builder.CreateMaskedLoad(VecTy, AddrParts[Part],
+                                                 Group->getAlign(), GroupMask,
+                                                 PoisonVec, "wide.masked.vec");
+      } else
+        NewLoad = State.Builder.CreateAlignedLoad(
+            VecTy, AddrParts[Part], Group->getAlign(), "wide.vec");
+      Group->addMetadata(NewLoad);
+      NewLoads.push_back(NewLoad);
+    }
+
+    ArrayRef<VPValue *> VPDefs = definedValues();
+    const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
+    if (VecTy->isScalableTy()) {
+      assert(InterleaveFactor == 2 &&
+             "Unsupported deinterleave factor for scalable vectors");
+
+      for (unsigned Part = 0; Part < State.UF; ++Part) {
+        // Scalable vectors cannot use arbitrary shufflevectors (only splats),
+        // so must use intrinsics to deinterleave.
+        Value *DI = State.Builder.CreateIntrinsic(
+            Intrinsic::vector_deinterleave2, VecTy, NewLoads[Part],
+            /*FMFSource=*/nullptr, "strided.vec");
+        unsigned J = 0;
+        for (unsigned I = 0; I < InterleaveFactor; ++I) {
+          Instruction *Member = Group->getMember(I);
+
+          if (!Member)
+            continue;
+
+          Value *StridedVec = State.Builder.CreateExtractValue(DI, I);
+          // If this member has different type, cast the result type.
+          if (Member->getType() != ScalarTy) {
+            VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+            StridedVec =
+                createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+          }
+
+          if (Group->isReverse())
+            StridedVec =
+                State.Builder.CreateVectorReverse(StridedVec, "reverse");
+
+          State.set(VPDefs[J], StridedVec, Part);
+          ++J;
+        }
+      }
+
+      return;
+    }
+
+    // For each member in the group, shuffle out the appropriate data from the
+    // wide loads.
+    unsigned J = 0;
+    for (unsigned I = 0; I < InterleaveFactor; ++I) {
+      Instruction *Member = Group->getMember(I);
+
+      // Skip the gaps in the group.
+      if (!Member)
+        continue;
+
+      auto StrideMask =
+          createStrideMask(I, InterleaveFactor, State.VF.getKnownMinValue());
+      for (unsigned Part = 0; Part < State.UF; Part++) {
+        Value *StridedVec = State.Builder.CreateShuffleVector(
+            NewLoads[Part], StrideMask, "strided.vec");
+
+        // If this member has different type, cast the result type.
+        if (Member->getType() != ScalarTy) {
+          assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+          VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+          StridedVec =
+              createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+        }
+
+        if (Group->isReverse())
+          StridedVec = State.Builder.CreateVectorReverse(StridedVec, "reverse");
+
+        State.set(VPDefs[J], StridedVec, Part);
+      }
+      ++J;
+    }
+    return;
+  }
+
+  // The sub vector type for current instruction.
+  auto *SubVT = VectorType::get(ScalarTy, State.VF);
+
+  // Vectorize the interleaved store group.
+  Value *MaskForGaps =
+      createBitMaskForGaps(State.Builder, State.VF.getKnownMinValue(), *Group);
+  assert((!MaskForGaps || !State.VF.isScalable()) &&
+         "masking gaps for scalable vectors is not yet supported.");
+  ArrayRef<VPValue *> StoredValues = getStoredValues();
+  for (unsigned Part = 0; Part < State.UF; Part++) {
+    // Collect the stored vector from each member.
+    SmallVector<Value *, 4> StoredVecs;
+    unsigned StoredIdx = 0;
+    for (unsigned i = 0; i < InterleaveFactor; i++) {
+      assert((Group->getMember(i) || MaskForGaps) &&
+             "Fail to get a member from an interleaved store group");
+      Instruction *Member = Group->getMember(i);
+
+      // Skip the gaps in the group.
+      if (!Member) {
+        Value *Undef = PoisonValue::get(SubVT);
+        StoredVecs.push_back(Undef);
+        continue;
+      }
+
+      Value *StoredVec = State.get(StoredValues[StoredIdx], Part);
+      ++StoredIdx;
+
+      if (Group->isReverse())
+        StoredVec = State.Builder.CreateVectorReverse(StoredVec, "reverse");
+
+      // If this member has different type, cast it to a unified type.
+
+      if (StoredVec->getType() != SubVT)
+        StoredVec = createBitOrPointerCast(State.Builder, StoredVec, SubVT, DL);
+
+      StoredVecs.push_back(StoredVec);
+    }
+
+    // Interleave all the smaller vectors into one wider vector.
+    Value *IVec =
+        interleaveVectors(State.Builder, StoredVecs, "interleaved.vec");
+    Instruction *NewStoreInstr;
+    if (BlockInMask || MaskForGaps) {
+      Value *GroupMask = CreateGroupMask(Part, MaskForGaps);
+      NewStoreInstr = State.Builder.CreateMaskedStore(
+          IVec, AddrParts[Part], Group->getAlign(), GroupMask);
+    } else
+      NewStoreInstr = State.Builder.CreateAlignedStore(IVec, AddrParts[Part],
+                                                       Group->getAlign());
+
+    Group->addMetadata(NewStoreInstr);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent << "INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
+  IG->getInsertPos()->printAsOperand(O, false);
+  O << ", ";
+  getAddr()->printAsOperand(O, SlotTracker);
+  VPValue *Mask = getMask();
+  if (Mask) {
+    O << ", ";
+    Mask->printAsOperand(O, SlotTracker);
+  }
+
+  unsigned OpIdx = 0;
+  for (unsigned i = 0; i < IG->getFactor(); ++i) {
+    if (!IG->getMember(i))
+      continue;
+    if (getNumStoreOperands() > 0) {
+      O << "\n" << Indent << "  store ";
+      getOperand(1 + OpIdx)->printAsOperand(O, SlotTracker);
+      O << " to index " << i;
+    } else {
+      O << "\n" << Indent << "  ";
+      getVPValue(OpIdx)->printAsOperand(O, SlotTracker);
+      O << " = load from index " << i;
+    }
+    ++OpIdx;
+  }
 }
 #endif
 

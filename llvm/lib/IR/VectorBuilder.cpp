@@ -60,60 +60,13 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
 }
 
-Value *VectorBuilder::createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
+Value *VectorBuilder::createSimpleTargetReduction(Intrinsic::ID RdxID,
+                                                  Type *ValTy,
                                                   ArrayRef<Value *> InstOpArray,
                                                   const Twine &Name) {
-  Intrinsic::ID VPID;
-  switch (Kind) {
-  case RecurKind::Add:
-    VPID = Intrinsic::vp_reduce_add;
-    break;
-  case RecurKind::Mul:
-    VPID = Intrinsic::vp_reduce_mul;
-    break;
-  case RecurKind::And:
-    VPID = Intrinsic::vp_reduce_and;
-    break;
-  case RecurKind::Or:
-    VPID = Intrinsic::vp_reduce_or;
-    break;
-  case RecurKind::Xor:
-    VPID = Intrinsic::vp_reduce_xor;
-    break;
-  case RecurKind::FMulAdd:
-  case RecurKind::FAdd:
-    VPID = Intrinsic::vp_reduce_fadd;
-    break;
-  case RecurKind::FMul:
-    VPID = Intrinsic::vp_reduce_fmul;
-    break;
-  case RecurKind::SMax:
-    VPID = Intrinsic::vp_reduce_smax;
-    break;
-  case RecurKind::SMin:
-    VPID = Intrinsic::vp_reduce_smin;
-    break;
-  case RecurKind::UMax:
-    VPID = Intrinsic::vp_reduce_umax;
-    break;
-  case RecurKind::UMin:
-    VPID = Intrinsic::vp_reduce_umin;
-    break;
-  case RecurKind::FMax:
-    VPID = Intrinsic::vp_reduce_fmax;
-    break;
-  case RecurKind::FMin:
-    VPID = Intrinsic::vp_reduce_fmin;
-    break;
-  case RecurKind::FMaximum:
-    VPID = Intrinsic::vp_reduce_fmaximum;
-    break;
-  case RecurKind::FMinimum:
-    VPID = Intrinsic::vp_reduce_fminimum;
-    break;
-  default:
-    llvm_unreachable("No VPIntrinsic for this reduction");
-  }
+  auto VPID = VPIntrinsic::getForIntrinsic(RdxID);
+  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
+         "No VPIntrinsic for this reduction");
   return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
 }
 

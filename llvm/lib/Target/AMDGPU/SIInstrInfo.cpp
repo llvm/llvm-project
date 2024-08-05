@@ -472,6 +472,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     Offset = 0;
     // Get appropriate operand, and compute width accordingly.
     DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
+    if (DataOpIdx == -1)
+      return false; // no return sampler
     Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
@@ -1381,13 +1383,13 @@ unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
     // Assume hi bits are unneeded. Only _e64 true16 instructions are legal
     // before RA.
     return RI.isSGPRClass(DstRC) ? AMDGPU::COPY : AMDGPU::V_MOV_B16_t16_e64;
-  } else if (RI.getRegSizeInBits(*DstRC) == 32) {
-    return RI.isSGPRClass(DstRC) ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
-  } else if (RI.getRegSizeInBits(*DstRC) == 64 && RI.isSGPRClass(DstRC)) {
-    return AMDGPU::S_MOV_B64;
-  } else if (RI.getRegSizeInBits(*DstRC) == 64 && !RI.isSGPRClass(DstRC)) {
-    return  AMDGPU::V_MOV_B64_PSEUDO;
   }
+  if (RI.getRegSizeInBits(*DstRC) == 32)
+    return RI.isSGPRClass(DstRC) ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
+  if (RI.getRegSizeInBits(*DstRC) == 64 && RI.isSGPRClass(DstRC))
+    return AMDGPU::S_MOV_B64;
+  if (RI.getRegSizeInBits(*DstRC) == 64 && !RI.isSGPRClass(DstRC))
+    return AMDGPU::V_MOV_B64_PSEUDO;
   return AMDGPU::COPY;
 }
 
@@ -4546,13 +4548,11 @@ bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
 
   // SGPRs use the constant bus
   if (MO.isImplicit()) {
-    return MO.getReg() == AMDGPU::M0 ||
-           MO.getReg() == AMDGPU::VCC ||
+    return MO.getReg() == AMDGPU::M0 || MO.getReg() == AMDGPU::VCC ||
            MO.getReg() == AMDGPU::VCC_LO;
-  } else {
-    return AMDGPU::SReg_32RegClass.contains(MO.getReg()) ||
-           AMDGPU::SReg_64RegClass.contains(MO.getReg());
   }
+  return AMDGPU::SReg_32RegClass.contains(MO.getReg()) ||
+         AMDGPU::SReg_64RegClass.contains(MO.getReg());
 }
 
 static Register findImplicitSGPRRead(const MachineInstr &MI) {
@@ -4597,6 +4597,10 @@ static bool shouldReadExec(const MachineInstr &MI) {
     return false;
 
   return true;
+}
+
+static bool isRegOrFI(const MachineOperand &MO) {
+  return MO.isReg() || MO.isFI();
 }
 
 static bool isSubRegOf(const SIRegisterInfo &TRI,
@@ -4859,8 +4863,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo =
             "Dst register should be tied to implicit use of preserved register";
         return false;
-      } else if (TiedMO.getReg().isPhysical() &&
-                 Dst.getReg() != TiedMO.getReg()) {
+      }
+      if (TiedMO.getReg().isPhysical() && Dst.getReg() != TiedMO.getReg()) {
         ErrInfo = "Dst register should use same physical register as preserved";
         return false;
       }
@@ -4933,7 +4937,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
             ++ConstantBusCount;
             SGPRsUsed.push_back(SGPRUsed);
           }
-        } else {
+        } else if (!MO.isFI()) { // Treat FI like a register.
           if (!UsesLiteral) {
             ++ConstantBusCount;
             UsesLiteral = true;
@@ -5026,7 +5030,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MachineOperand &Src0 = MI.getOperand(Src0Idx);
     const MachineOperand &Src1 = MI.getOperand(Src1Idx);
 
-    if (!Src0.isReg() && !Src1.isReg() &&
+    if (!isRegOrFI(Src0) && !isRegOrFI(Src1) &&
         !isInlineConstant(Src0, Desc.operands()[Src0Idx]) &&
         !isInlineConstant(Src1, Desc.operands()[Src1Idx]) &&
         !Src0.isIdenticalTo(Src1)) {
@@ -5232,7 +5236,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                   "row_newbroadcast/row_share is not supported before "
                   "GFX90A/GFX10";
         return false;
-      } else if (DC > DppCtrl::ROW_NEWBCAST_LAST || !ST.hasGFX90AInsts()) {
+      }
+      if (DC > DppCtrl::ROW_NEWBCAST_LAST || !ST.hasGFX90AInsts()) {
         ErrInfo = "Invalid dpp_ctrl value: "
                   "row_share and row_xmask are not supported before GFX10";
         return false;
@@ -6687,7 +6692,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       MI.getOpcode() == AMDGPU::S_QUADMASK_B32 ||
       MI.getOpcode() == AMDGPU::S_QUADMASK_B64 ||
       MI.getOpcode() == AMDGPU::S_WQM_B32 ||
-      MI.getOpcode() == AMDGPU::S_WQM_B64) {
+      MI.getOpcode() == AMDGPU::S_WQM_B64 ||
+      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U32 ||
+      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U64) {
     MachineOperand &Src = MI.getOperand(1);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
@@ -9513,7 +9520,8 @@ MachineInstr *SIInstrInfo::foldMemoryOperandImpl(
       if (RC->hasSuperClassEq(&AMDGPU::SReg_32RegClass)) {
         MRI.constrainRegClass(VirtReg, &AMDGPU::SReg_32_XM0_XEXECRegClass);
         return nullptr;
-      } else if (RC->hasSuperClassEq(&AMDGPU::SReg_64RegClass)) {
+      }
+      if (RC->hasSuperClassEq(&AMDGPU::SReg_64RegClass)) {
         MRI.constrainRegClass(VirtReg, &AMDGPU::SReg_64_XEXECRegClass);
         return nullptr;
       }

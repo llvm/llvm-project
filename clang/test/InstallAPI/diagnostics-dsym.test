@@ -19,8 +19,8 @@
 ; RUN: --verify-mode=Pedantic 2>&1 | FileCheck %s
 
 ; CHECK: violations found for arm64 
-; CHECK: foo.c:5:0: error: no declaration found for exported symbol 'bar' in dynamic library
-; CHECK: foo.c:1:0: error: no declaration found for exported symbol 'foo' in dynamic library
+; CHECK-DAG: foo.c:5:0: error: no declaration found for exported symbol 'bar' in dynamic library
+; CHECK-DAG: foo.c:1:0: error: no declaration found for exported symbol 'foo' in dynamic library
 
 ;--- foo.c
 int foo(void) {

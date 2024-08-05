@@ -24,3 +24,33 @@ define <4 x i1> @vector_reverse_fpclass2(<4 x double> nofpclass(nzero) %x) {
   ret <4 x i1> %cmp
 }
 
+define i1 @vector_reverse_fpclass_demanded(<4 x double> %vec, double nofpclass(nzero nan) %x) {
+; CHECK-LABEL: @vector_reverse_fpclass_demanded(
+; CHECK-NEXT:    ret i1 true
+;
+
+  %x.abs = call double @llvm.fabs.f64(double %x)
+  %vec.x = insertelement <4 x double> %vec, double %x.abs, i64 1
+  %rev = call <4 x double> @llvm.vector.reverse(<4 x double> %vec.x)
+  %ele = extractelement <4 x double> %rev, i64 2
+  %cmp = fcmp oge double %ele, 0.0
+  ret i1 %cmp
+}
+
+define i1 @vector_reverse_fpclass_demanded_fail(<4 x double> %vec, double nofpclass(nzero nan) %x) {
+; CHECK-LABEL: @vector_reverse_fpclass_demanded_fail(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[VEC_X:%.*]] = insertelement <4 x double> [[VEC:%.*]], double [[X_ABS]], i64 1
+; CHECK-NEXT:    [[REV:%.*]] = call <4 x double> @llvm.vector.reverse.v4f64(<4 x double> [[VEC_X]])
+; CHECK-NEXT:    [[ELE:%.*]] = extractelement <4 x double> [[REV]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[ELE]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+
+  %x.abs = call double @llvm.fabs.f64(double %x)
+  %vec.x = insertelement <4 x double> %vec, double %x.abs, i64 1
+  %rev = call <4 x double> @llvm.vector.reverse(<4 x double> %vec.x)
+  %ele = extractelement <4 x double> %rev, i64 1
+  %cmp = fcmp oge double %ele, 0.0
+  ret i1 %cmp
+}

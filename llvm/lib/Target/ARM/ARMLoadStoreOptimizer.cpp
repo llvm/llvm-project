@@ -2579,8 +2579,8 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
           Bases.push_back(Base);
           return;
         }
-        for (unsigned i = 0, e = BI->second.size(); i != e; ++i) {
-          if (Offset == getMemoryOpOffset(*BI->second[i])) {
+        for (const MachineInstr *MI : BI->second) {
+          if (Offset == getMemoryOpOffset(*MI)) {
             StopHere = true;
             break;
           }

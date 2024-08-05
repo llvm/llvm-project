@@ -56,7 +56,7 @@ class Boolean final {
   APSInt toAPSInt(unsigned NumBits) const {
     return APSInt(toAPSInt().zextOrTrunc(NumBits), true);
   }
-  APValue toAPValue() const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
   Boolean toUnsigned() const { return *this; }
 

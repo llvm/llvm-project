@@ -224,13 +224,11 @@ const SUnit *GCNILPScheduler::pickBest(const SUnit *left, const SUnit *right)
       return result > 0 ? right : left;
     return left;
   }
-  else {
-    if (left->getHeight() != right->getHeight())
-      return (left->getHeight() > right->getHeight()) ? right : left;
+  if (left->getHeight() != right->getHeight())
+    return (left->getHeight() > right->getHeight()) ? right : left;
 
-    if (left->getDepth() != right->getDepth())
-      return (left->getDepth() < right->getDepth()) ? right : left;
-  }
+  if (left->getDepth() != right->getDepth())
+    return (left->getDepth() < right->getDepth()) ? right : left;
 
   assert(left->NodeQueueId && right->NodeQueueId &&
         "NodeQueueId cannot be zero");

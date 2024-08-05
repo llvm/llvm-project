@@ -190,8 +190,8 @@ public:
                               const llvm::Twine &Name = "") {
     if (!Addr.hasOffset())
       return Address(CreateAddrSpaceCast(Addr.getBasePointer(), Ty, Name),
-                     ElementTy, Addr.getAlignment(), nullptr,
-                     Addr.isKnownNonNull());
+                     ElementTy, Addr.getAlignment(), Addr.getPointerAuthInfo(),
+                     /*Offset=*/nullptr, Addr.isKnownNonNull());
     // Eagerly force a raw address if these is an offset.
     return RawAddress(
         CreateAddrSpaceCast(Addr.emitRawPointer(*getCGF()), Ty, Name),

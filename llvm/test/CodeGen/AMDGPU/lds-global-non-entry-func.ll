@@ -98,8 +98,8 @@ define void @func_use_lds_global() {
   ret void
 }
 
-; ERR: warning: <unknown>:0:0: in function func_use_lds_global_constexpr_cast void (): local memory global used by non-kernel function
-define void @func_use_lds_global_constexpr_cast() {
+; ERR: warning: <unknown>:0:0: in function func_use_lds_global_constexpr_cast void (ptr addrspace(1)): local memory global used by non-kernel function
+define void @func_use_lds_global_constexpr_cast(ptr addrspace(1) %out) {
 ; GFX8-SDAG-LABEL: func_use_lds_global_constexpr_cast:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -153,7 +153,7 @@ define void @func_use_lds_global_constexpr_cast() {
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; GISEL-NEXT:  .LBB1_2:
 ; GISEL-NEXT:    s_endpgm
-  store volatile i32 ptrtoint (ptr addrspace(3) @lds to i32), ptr addrspace(1) poison, align 4
+  store i32 ptrtoint (ptr addrspace(3) @lds to i32), ptr addrspace(1) %out, align 4
   ret void
 }
 

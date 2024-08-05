@@ -2,6 +2,31 @@
 
 // CHECK-FIXES: #include <utility>
 
+namespace std {
+template <typename>
+struct remove_reference;
+
+template <typename _Tp>
+struct remove_reference {
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+struct remove_reference<_Tp &> {
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+struct remove_reference<_Tp &&> {
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
+  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
+}
+} // namespace std
+
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {
     return *this;
@@ -356,4 +381,13 @@ struct NegativeUsingConstructor : public PositiveConstructor {
 void fun() {
   ExpensiveToCopyType E;
   NegativeUsingConstructor S(E);
+}
+
+struct B {
+  static void bar(ExpensiveMovableType a, ExpensiveMovableType b);
+};
+
+template <typename T>
+void NegativeCallWithDependentAndNondependentArgs(ExpensiveMovableType a, T b) {
+    B::bar(std::move(a), b);
 }

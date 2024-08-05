@@ -22,7 +22,6 @@ class RISCVELFStreamer : public MCELFStreamer {
 
   enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
 
-  int64_t MappingSymbolCounter = 0;
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS = EMS_None;
 

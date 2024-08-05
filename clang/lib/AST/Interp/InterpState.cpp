@@ -69,13 +69,15 @@ void InterpState::deallocate(Block *B) {
     char *Memory =
         reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
+    std::memset(D->B.rawData(), 0, D->B.getSize());
 
     // Move data and metadata from the old block to the new (dead)block.
-    if (Desc->MoveFn) {
+    if (B->IsInitialized && Desc->MoveFn) {
       Desc->MoveFn(B, B->data(), D->data(), Desc);
       if (Desc->getMetadataSize() > 0)
         std::memcpy(D->rawData(), B->rawData(), Desc->getMetadataSize());
     }
+    D->B.IsInitialized = B->IsInitialized;
 
     // We moved the contents over to the DeadBlock.
     B->IsInitialized = false;

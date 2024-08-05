@@ -188,6 +188,9 @@ public:
   /// SelectionDAGISel::PrepareEHLandingPad().
   unsigned ExceptionPointerVirtReg, ExceptionSelectorVirtReg;
 
+  /// The current call site index being processed, if any. 0 if none.
+  unsigned CurCallSite = 0;
+
   /// Collection of dbg.declare instructions handled after argument
   /// lowering and before ISel proper.
   SmallPtrSet<const DbgDeclareInst *, 8> PreprocessedDbgDeclares;
@@ -207,6 +210,10 @@ public:
   /// exported from its block.
   bool isExportedInst(const Value *V) const {
     return ValueMap.count(V);
+  }
+
+  MachineBasicBlock *getMBB(const BasicBlock *BB) const {
+    return MBBMap.lookup(BB);
   }
 
   Register CreateReg(MVT VT, bool isDivergent = false);
@@ -280,6 +287,12 @@ public:
 
   Register getCatchPadExceptionPointerVReg(const Value *CPI,
                                            const TargetRegisterClass *RC);
+
+  /// Set the call site currently being processed.
+  void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
+
+  /// Get the call site currently being processed, if any. Return zero if none.
+  unsigned getCurrentCallSite() { return CurCallSite; }
 
 private:
   /// LiveOutRegInfo - Information about live out vregs.

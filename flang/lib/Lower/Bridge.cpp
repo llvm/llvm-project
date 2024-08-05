@@ -939,24 +939,59 @@ public:
     return mlir::UnknownLoc::get(&getMLIRContext());
   }
 
+  static mlir::Location genLocation(Fortran::parser::SourcePosition pos,
+                                    mlir::MLIRContext &ctx) {
+    llvm::SmallString<256> path(*pos.path);
+    llvm::sys::fs::make_absolute(path);
+    llvm::sys::path::remove_dots(path);
+    return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
+  }
+
   /// Generate a `Location` from the `CharBlock`.
   mlir::Location
   genLocation(const Fortran::parser::CharBlock &block) override final {
+    mlir::Location mainLocation = genUnknownLocation();
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
       if (std::optional<Fortran::parser::ProvenanceRange> provenance =
               cooked->GetProvenanceRange(block)) {
         if (std::optional<Fortran::parser::SourcePosition> filePos =
-                cooked->allSources().GetSourcePosition(provenance->start())) {
-          llvm::SmallString<256> filePath(*filePos->path);
-          llvm::sys::fs::make_absolute(filePath);
-          llvm::sys::path::remove_dots(filePath);
-          return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
-                                           filePos->line, filePos->column);
+                cooked->allSources().GetSourcePosition(provenance->start()))
+          mainLocation = genLocation(*filePos, getMLIRContext());
+
+        llvm::SmallVector<mlir::Location> locs;
+        locs.push_back(mainLocation);
+
+        llvm::SmallVector<fir::LocationKindAttr> locAttrs;
+        locAttrs.push_back(fir::LocationKindAttr::get(&getMLIRContext(),
+                                                      fir::LocationKind::Base));
+
+        // Gather include location information if any.
+        Fortran::parser::ProvenanceRange *prov = &*provenance;
+        while (prov) {
+          if (std::optional<Fortran::parser::ProvenanceRange> include =
+                  cooked->allSources().GetInclusionInfo(*prov)) {
+            if (std::optional<Fortran::parser::SourcePosition> incPos =
+                    cooked->allSources().GetSourcePosition(include->start())) {
+              locs.push_back(genLocation(*incPos, getMLIRContext()));
+              locAttrs.push_back(fir::LocationKindAttr::get(
+                  &getMLIRContext(), fir::LocationKind::Inclusion));
+            }
+            prov = &*include;
+          } else {
+            prov = nullptr;
+          }
+        }
+        if (locs.size() > 1) {
+          assert(locs.size() == locAttrs.size() &&
+                 "expect as many attributes as locations");
+          return mlir::FusedLocWith<fir::LocationKindArrayAttr>::get(
+              &getMLIRContext(), locs,
+              fir::LocationKindArrayAttr::get(&getMLIRContext(), locAttrs));
         }
       }
     }
-    return genUnknownLocation();
+    return mainLocation;
   }
 
   const Fortran::semantics::Scope &getCurrentScope() override final {
@@ -4230,9 +4265,13 @@ private:
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::HostDevice);
       if (!rhs.isVariable()) {
+        mlir::Value base = rhs;
+        if (auto convertOp =
+                mlir::dyn_cast<fir::ConvertOp>(rhs.getDefiningOp()))
+          base = convertOp.getValue();
         // Special case if the rhs is a constant.
-        if (matchPattern(rhs.getDefiningOp(), mlir::m_Constant())) {
-          builder.create<cuf::DataTransferOp>(loc, rhs, lhsVal,
+        if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
+          builder.create<cuf::DataTransferOp>(loc, base, lhsVal,
                                               transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(

@@ -4314,3 +4314,66 @@ define void @uitofp() {
 
   ret void
 }
+
+define void @oddvec_sizes() {
+; CHECK-LABEL: 'oddvec_sizes'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %1 = sext <3 x i8> undef to <3 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %2 = sext <7 x i8> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %3 = sext <15 x i8> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %4 = zext <3 x i8> undef to <3 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %5 = zext <7 x i8> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %6 = zext <15 x i8> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %7 = trunc <3 x i32> undef to <3 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %8 = trunc <7 x i32> undef to <7 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %9 = trunc <15 x i32> undef to <15 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %10 = bitcast <3 x i32> undef to <3 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %11 = bitcast <7 x i32> undef to <7 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %12 = bitcast <15 x i32> undef to <15 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %13 = sitofp <3 x i32> undef to <3 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %14 = sitofp <7 x i32> undef to <7 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %15 = sitofp <15 x i32> undef to <15 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %16 = uitofp <3 x i32> undef to <3 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %17 = uitofp <7 x i32> undef to <7 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %18 = uitofp <15 x i32> undef to <15 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = fptosi <3 x float> undef to <3 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = fptosi <7 x float> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = fptosi <15 x float> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = fptoui <3 x float> undef to <3 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = fptoui <7 x float> undef to <7 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = fptoui <15 x float> undef to <15 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  sext <3 x i8> undef to <3 x i16>
+  sext <7 x i8> undef to <7 x i32>
+  sext <15 x i8> undef to <15 x i32>
+
+  zext <3 x i8> undef to <3 x i16>
+  zext <7 x i8> undef to <7 x i32>
+  zext <15 x i8> undef to <15 x i32>
+
+  trunc <3 x i32> undef to <3 x i8>
+  trunc <7 x i32> undef to <7 x i8>
+  trunc <15 x i32> undef to <15 x i8>
+
+  bitcast <3 x i32> undef to <3 x float>
+  bitcast <7 x i32> undef to <7 x float>
+  bitcast <15 x i32> undef to <15 x float>
+
+  sitofp <3 x i32> undef to <3 x float>
+  sitofp <7 x i32> undef to <7 x float>
+  sitofp <15 x i32> undef to <15 x float>
+
+  uitofp <3 x i32> undef to <3 x float>
+  uitofp <7 x i32> undef to <7 x float>
+  uitofp <15 x i32> undef to <15 x float>
+
+  fptosi <3 x float> undef to <3 x i32>
+  fptosi <7 x float> undef to <7 x i32>
+  fptosi <15 x float> undef to <15 x i32>
+
+  fptoui <3 x float> undef to <3 x i32>
+  fptoui <7 x float> undef to <7 x i32>
+  fptoui <15 x float> undef to <15 x i32>
+
+  ret void
+}

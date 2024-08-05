@@ -13,11 +13,11 @@ define void @test() {
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX25:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x i64> [ [[TMP0]], [[ENTRY]] ], [ [[TMP1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <8 x i64> [[TMP6]], <i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i64> [[TMP1]], <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP7]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP1]])
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP8]], 2
-; CHECK-NEXT:    [[OP_RDX33:%.*]] = add i64 [[TMP10]], [[TMP9]]
-; CHECK-NEXT:    [[OP_RDX25]] = add i64 [[OP_RDX33]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
+; CHECK-NEXT:    [[OP_RDX16:%.*]] = add i64 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[OP_RDX25]] = add i64 [[OP_RDX16]], [[TMP3]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

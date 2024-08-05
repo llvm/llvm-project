@@ -1110,6 +1110,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_GATHER:
     SplitVecRes_Gather(cast<MemSDNode>(N), Lo, Hi, /*SplitSETCC*/ true);
     break;
+  case ISD::VECTOR_COMPRESS:
+    SplitVecRes_VECTOR_COMPRESS(N, Lo, Hi);
+    break;
   case ISD::SETCC:
   case ISD::VP_SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
@@ -2399,6 +2402,17 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Ch);
+}
+
+void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
+                                                   SDValue &Hi) {
+  // This is not "trivial", as there is a dependency between the two subvectors.
+  // Depending on the number of 1s in the mask, the elements from the Hi vector
+  // need to be moved to the Lo vector. So we just perform this as one "big"
+  // operation and then extract the Lo and Hi vectors from that. This gets rid
+  // of VECTOR_COMPRESS and all other operands can be legalized later.
+  SDValue Compressed = TLI.expandVECTOR_COMPRESS(N, DAG);
+  std::tie(Lo, Hi) = DAG.SplitVector(Compressed, SDLoc(N));
 }
 
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
@@ -4333,6 +4347,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     Res = WidenVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N));
     break;
+  case ISD::VECTOR_COMPRESS:
+    Res = WidenVecRes_VECTOR_COMPRESS(N);
+    break;
   case ISD::MLOAD:
     Res = WidenVecRes_MLOAD(cast<MaskedLoadSDNode>(N));
     break;
@@ -5757,6 +5774,23 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   return Res;
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_COMPRESS(SDNode *N) {
+  SDValue Vec = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
+  EVT WideVecVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), Vec.getValueType());
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                    Mask.getValueType().getVectorElementType(),
+                                    WideVecVT.getVectorNumElements());
+
+  SDValue WideVec = ModifyToType(Vec, WideVecVT);
+  SDValue WideMask = ModifyToType(Mask, WideMaskVT, /*FillWithZeroes=*/true);
+  SDValue WidePassthru = ModifyToType(Passthru, WideVecVT);
+  return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), WideVecVT, WideVec,
+                     WideMask, WidePassthru);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
@@ -7265,14 +7299,14 @@ static std::optional<EVT> findMemType(SelectionDAG &DAG,
   unsigned WidenEltWidth = WidenEltVT.getSizeInBits();
   unsigned AlignInBits = Align*8;
 
-  // If we have one element to load/store, return it.
   EVT RetVT = WidenEltVT;
-  if (!Scalable && Width == WidenEltWidth)
-    return RetVT;
-
   // Don't bother looking for an integer type if the vector is scalable, skip
   // to vector types.
   if (!Scalable) {
+    // If we have one element to load/store, return it.
+    if (Width == WidenEltWidth)
+      return RetVT;
+
     // See if there is larger legal integer than the element type to load/store.
     for (EVT MemVT : reverse(MVT::integer_valuetypes())) {
       unsigned MemVTWidth = MemVT.getSizeInBits();
