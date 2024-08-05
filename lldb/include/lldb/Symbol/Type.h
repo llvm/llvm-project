@@ -264,6 +264,7 @@ public:
   bool GetExactMatch() const { return (m_options & e_exact_match) != 0; }
 
   bool GetIgnoreModules() const { return (m_options & e_ignore_modules) != 0; }
+  void SetIgnoreModules() { m_options &= ~e_ignore_modules; }
 
   /// The \a m_context can be used in two ways: normal types searching with
   /// the context containing a stanadard declaration context for a type, or
