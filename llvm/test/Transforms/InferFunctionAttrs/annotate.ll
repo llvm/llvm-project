@@ -717,6 +717,15 @@ declare float @modff(float, ptr)
 ; CHECK: declare x86_fp80 @modfl(x86_fp80, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @modfl(x86_fp80, ptr)
 
+; CHECK: declare double @nan(ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
+declare double @nan(ptr)
+
+; CHECK: declare float @nanf(ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare float @nanf(ptr)
+
+; CHECK: declare x86_fp80 @nanl(ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare x86_fp80 @nanl(ptr)
+
 ; CHECK: declare double @nearbyint(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @nearbyint(double)
 
@@ -956,7 +965,7 @@ declare ptr @strncpy(ptr, ptr, i64)
 ; CHECK: declare noalias ptr @strndup(ptr nocapture readonly, i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
 declare ptr @strndup(ptr, i64)
 
-; CHECK: declare i64 @strnlen(ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
+; CHECK: declare i64 @strnlen(ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare i64 @strnlen(ptr, i64)
 
 ; CHECK: declare ptr @strpbrk(ptr, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]

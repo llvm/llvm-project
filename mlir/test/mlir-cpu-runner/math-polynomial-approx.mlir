@@ -493,6 +493,10 @@ func.func @asin() {
   %cst3 = arith.constant -0.25 : f32
   call @asin_f32(%cst3) : (f32) -> ()
 
+  // CHECK: -1.1197
+  %cst4 = arith.constant -0.90 : f32
+  call @asin_f32(%cst4) : (f32) -> ()
+
   // CHECK: 0.25268, 0.384397, 0.597406
   %vec_x = arith.constant dense<[0.25, 0.375, 0.5625]> : vector<3xf32>
   call @asin_3xf32(%vec_x) : (vector<3xf32>) -> ()

@@ -147,10 +147,18 @@ using MutexDescriptor =
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
-      MemberMutexDescriptor({/*MatchAs=*/CDM::CXXMethod,
-                             /*QualifiedName=*/{"std", "mutex", "lock"},
-                             /*RequiredArgs=*/0},
-                            {CDM::CXXMethod, {"std", "mutex", "unlock"}, 0}),
+      // NOTE: There are standard library implementations where some methods
+      // of `std::mutex` are inherited from an implementation detail base
+      // class, and those aren't matched by the name specification {"std",
+      // "mutex", "lock"}.
+      // As a workaround here we omit the class name and only require the
+      // presence of the name parts "std" and "lock"/"unlock".
+      // TODO: Ensure that CallDescription understands inherited methods.
+      MemberMutexDescriptor(
+          {/*MatchAs=*/CDM::CXXMethod,
+           /*QualifiedName=*/{"std", /*"mutex",*/ "lock"},
+           /*RequiredArgs=*/0},
+          {CDM::CXXMethod, {"std", /*"mutex",*/ "unlock"}, 0}),
       FirstArgMutexDescriptor({CDM::CLibrary, {"pthread_mutex_lock"}, 1},
                               {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
       FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_lock"}, 1},

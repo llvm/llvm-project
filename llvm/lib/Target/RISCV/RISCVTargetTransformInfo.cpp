@@ -280,7 +280,7 @@ bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  return ST->hasStdExtZbb() || ST->hasVendorXCVbitmanip()
+  return ST->hasStdExtZbb() || (ST->hasVendorXCVbitmanip() && !ST->is64Bit())
              ? TTI::PSK_FastHardware
              : TTI::PSK_Software;
 }

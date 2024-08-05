@@ -211,8 +211,7 @@ RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
 
   FoldingSet<RecordRecTy> &ThePool = RKImpl.RecordTypePool;
 
-  SmallVector<Record *, 4> Classes(UnsortedClasses.begin(),
-                                   UnsortedClasses.end());
+  SmallVector<Record *, 4> Classes(UnsortedClasses);
   llvm::sort(Classes, [](Record *LHS, Record *RHS) {
     return LHS->getNameInitAsString() < RHS->getNameInitAsString();
   });

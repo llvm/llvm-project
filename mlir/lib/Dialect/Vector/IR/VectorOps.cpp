@@ -2464,11 +2464,6 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ShuffleOp
 //===----------------------------------------------------------------------===//
 
-void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
-                      Value v2, ArrayRef<int64_t> mask) {
-  build(builder, result, v1, v2, getVectorSubscriptAttr(builder, mask));
-}
-
 LogicalResult ShuffleOp::verify() {
   VectorType resultType = getResultVectorType();
   VectorType v1Type = getV1VectorType();
@@ -2491,8 +2486,8 @@ LogicalResult ShuffleOp::verify() {
       return emitOpError("dimension mismatch");
   }
   // Verify mask length.
-  auto maskAttr = getMask().getValue();
-  int64_t maskLength = maskAttr.size();
+  ArrayRef<int64_t> mask = getMask();
+  int64_t maskLength = mask.size();
   if (maskLength <= 0)
     return emitOpError("invalid mask length");
   if (maskLength != resultType.getDimSize(0))
@@ -2500,10 +2495,9 @@ LogicalResult ShuffleOp::verify() {
   // Verify all indices.
   int64_t indexSize = (v1Type.getRank() == 0 ? 1 : v1Type.getDimSize(0)) +
                       (v2Type.getRank() == 0 ? 1 : v2Type.getDimSize(0));
-  for (const auto &en : llvm::enumerate(maskAttr)) {
-    auto attr = llvm::dyn_cast<IntegerAttr>(en.value());
-    if (!attr || attr.getInt() < 0 || attr.getInt() >= indexSize)
-      return emitOpError("mask index #") << (en.index() + 1) << " out of range";
+  for (auto [idx, maskPos] : llvm::enumerate(mask)) {
+    if (maskPos < 0 || maskPos >= indexSize)
+      return emitOpError("mask index #") << (idx + 1) << " out of range";
   }
   return success();
 }
@@ -2527,13 +2521,12 @@ ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
   return success();
 }
 
-static bool isStepIndexArray(ArrayAttr idxArr, uint64_t begin, size_t width) {
-  uint64_t expected = begin;
-  return idxArr.size() == width &&
-         llvm::all_of(idxArr.getAsValueRange<IntegerAttr>(),
-                      [&expected](auto attr) {
-                        return attr.getZExtValue() == expected++;
-                      });
+template <typename T>
+static bool isStepIndexArray(ArrayRef<T> idxArr, uint64_t begin, size_t width) {
+  T expected = begin;
+  return idxArr.size() == width && llvm::all_of(idxArr, [&expected](T value) {
+           return value == expected++;
+         });
 }
 
 OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
@@ -2568,8 +2561,7 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
   SmallVector<Attribute> results;
   auto lhsElements = llvm::cast<DenseElementsAttr>(lhs).getValues<Attribute>();
   auto rhsElements = llvm::cast<DenseElementsAttr>(rhs).getValues<Attribute>();
-  for (const auto &index : this->getMask().getAsValueRange<IntegerAttr>()) {
-    int64_t i = index.getZExtValue();
+  for (int64_t i : this->getMask()) {
     if (i >= lhsSize) {
       results.push_back(rhsElements[i - lhsSize]);
     } else {
@@ -2590,13 +2582,13 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
   LogicalResult matchAndRewrite(ShuffleOp shuffleOp,
                                 PatternRewriter &rewriter) const override {
     VectorType v1VectorType = shuffleOp.getV1VectorType();
-    ArrayAttr mask = shuffleOp.getMask();
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
     if (v1VectorType.getRank() > 0)
       return failure();
     if (mask.size() != 1)
       return failure();
     VectorType resType = VectorType::Builder(v1VectorType).setShape({1});
-    if (llvm::cast<IntegerAttr>(mask[0]).getInt() == 0)
+    if (mask[0] == 0)
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shuffleOp, resType,
                                                        shuffleOp.getV1());
     else
@@ -2651,11 +2643,11 @@ public:
           op, "ShuffleOp types don't match an interleave");
     }
 
-    ArrayAttr shuffleMask = op.getMask();
+    ArrayRef<int64_t> shuffleMask = op.getMask();
     int64_t resultVectorSize = resultType.getNumElements();
     for (int i = 0, e = resultVectorSize / 2; i < e; ++i) {
-      int64_t maskValueA = cast<IntegerAttr>(shuffleMask[i * 2]).getInt();
-      int64_t maskValueB = cast<IntegerAttr>(shuffleMask[(i * 2) + 1]).getInt();
+      int64_t maskValueA = shuffleMask[i * 2];
+      int64_t maskValueB = shuffleMask[(i * 2) + 1];
       if (maskValueA != i || maskValueB != (resultVectorSize / 2) + i)
         return rewriter.notifyMatchFailure(op,
                                            "ShuffleOp mask not interleaving");
@@ -3336,68 +3328,6 @@ Type OuterProductOp::getExpectedMaskType() {
 }
 
 //===----------------------------------------------------------------------===//
-// ReshapeOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult ReshapeOp::verify() {
-  // Verify that rank(numInputs/outputs) + numFixedVec dim matches vec rank.
-  auto inputVectorType = getInputVectorType();
-  auto outputVectorType = getOutputVectorType();
-  int64_t inputShapeRank = getNumInputShapeSizes();
-  int64_t outputShapeRank = getNumOutputShapeSizes();
-  SmallVector<int64_t, 4> fixedVectorSizes;
-  getFixedVectorSizes(fixedVectorSizes);
-  int64_t numFixedVectorSizes = fixedVectorSizes.size();
-
-  if (inputVectorType.getRank() != inputShapeRank + numFixedVectorSizes)
-    return emitError("invalid input shape for vector type ") << inputVectorType;
-
-  if (outputVectorType.getRank() != outputShapeRank + numFixedVectorSizes)
-    return emitError("invalid output shape for vector type ")
-           << outputVectorType;
-
-  // Verify that the 'fixedVectorSizes' match an input/output vector shape
-  // suffix.
-  unsigned inputVectorRank = inputVectorType.getRank();
-  for (unsigned i = 0; i < numFixedVectorSizes; ++i) {
-    unsigned index = inputVectorRank - numFixedVectorSizes - i;
-    if (fixedVectorSizes[i] != inputVectorType.getShape()[index])
-      return emitError("fixed vector size must match input vector for dim ")
-             << i;
-  }
-
-  unsigned outputVectorRank = outputVectorType.getRank();
-  for (unsigned i = 0; i < numFixedVectorSizes; ++i) {
-    unsigned index = outputVectorRank - numFixedVectorSizes - i;
-    if (fixedVectorSizes[i] != outputVectorType.getShape()[index])
-      return emitError("fixed vector size must match output vector for dim ")
-             << i;
-  }
-
-  // If all shape operands are produced by constant ops, verify that product
-  // of dimensions for input/output shape match.
-  auto isDefByConstant = [](Value operand) {
-    return getConstantIntValue(operand).has_value();
-  };
-  if (llvm::all_of(getInputShape(), isDefByConstant) &&
-      llvm::all_of(getOutputShape(), isDefByConstant)) {
-    int64_t numInputElements = 1;
-    for (auto operand : getInputShape())
-      numInputElements *= getConstantIntValue(operand).value();
-    int64_t numOutputElements = 1;
-    for (auto operand : getOutputShape())
-      numOutputElements *= getConstantIntValue(operand).value();
-    if (numInputElements != numOutputElements)
-      return emitError("product of input and output shape sizes must match");
-  }
-  return success();
-}
-
-void ReshapeOp::getFixedVectorSizes(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(getFixedVectorSizes(), results);
-}
-
-//===----------------------------------------------------------------------===//
 // ExtractStridedSliceOp
 //===----------------------------------------------------------------------===//
 
@@ -3692,7 +3622,7 @@ public:
     SmallVector<int64_t, 4> offsets(sliceRank, 0);
     copy(getI64SubArray(extractStridedSliceOp.getOffsets()), offsets.begin());
 
-    SmallVector<int64_t, 4> sizes(sourceShape.begin(), sourceShape.end());
+    SmallVector<int64_t, 4> sizes(sourceShape);
     copy(getI64SubArray(extractStridedSliceOp.getSizes()), sizes.begin());
 
     // Calculate the slice elements by enumerating all slice positions and
@@ -5584,8 +5514,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
 
 static SmallVector<int64_t, 8> extractShape(MemRefType memRefType) {
   auto vectorType = llvm::dyn_cast<VectorType>(memRefType.getElementType());
-  SmallVector<int64_t, 8> res(memRefType.getShape().begin(),
-                              memRefType.getShape().end());
+  SmallVector<int64_t, 8> res(memRefType.getShape());
   if (vectorType)
     res.append(vectorType.getShape().begin(), vectorType.getShape().end());
   return res;

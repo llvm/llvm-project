@@ -3428,6 +3428,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'u' << type_name.size() << type_name;                               \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    type_name = #Name;                                                         \
+    Out << 'u' << type_name.size() << type_name;                               \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   }
 }
 
@@ -6484,7 +6490,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
 
   case APValue::LValue: {
     // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/47.
-    assert((T->isPointerType() || T->isReferenceType()) &&
+    assert((T->isPointerOrReferenceType()) &&
            "unexpected type for LValue template arg");
 
     if (V.isNullPointer()) {

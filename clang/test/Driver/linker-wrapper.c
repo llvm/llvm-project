@@ -129,14 +129,14 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
 // RUN:   --linker-path=/usr/bin/ld --device-linker=foo=bar --device-linker=a \
-// RUN:   --device-linker=nvptx64-nvidia-cuda=b \
+// RUN:   --device-linker=nvptx64-nvidia-cuda=b --device-compiler=foo\
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LINKER-ARGS
 
-// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}foo=bar{{.*}}a
-// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}foo=bar{{.*}}a b
+// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}-Xlinker foo=bar{{.*}}-Xlinker a{{.*}}foo
+// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}-Xlinker foo=bar{{.*}}-Xlinker a -Xlinker b{{.*}}foo
 
-// RUN: not clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -ldummy \
-// RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b \
+// RUN: not clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   -ldummy --linker-path=/usr/bin/ld \
 // RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=MISSING-LIBRARY
 
 // MISSING-LIBRARY: error: unable to find library -ldummy

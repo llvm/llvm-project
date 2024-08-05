@@ -35,3 +35,5 @@ target_link_libraries(FlangRuntimeTests
   PRIVATE
   FortranRuntime
 )
+
+add_subdirectory(CUDA)

@@ -1653,7 +1653,7 @@ func.func @embox0(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:         %[[I64_ELEM_SIZE:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[DESC:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 // CHECK:         %[[DESC0:.*]] = llvm.insertvalue %[[I64_ELEM_SIZE]], %[[DESC]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[CFI_VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[CFI_VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[DESC1:.*]] = llvm.insertvalue %[[CFI_VERSION]], %[[DESC0]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -1785,11 +1785,10 @@ func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
 // CHECK-NO-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() {addr_space = 0 : i32} : i8
 // CHECK-LABEL: llvm.func @embox1
 // CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(42 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
+// CHECK:         %{{.*}} = llvm.insertvalue %[[VERSION]], %{{.*}}[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)> 
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I8]], %{{.*}}[4] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
-// CHECK:         %[[F18ADDENDUM:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:         %[[F18ADDENDUM_I8:.*]] = llvm.trunc %[[F18ADDENDUM]] : i32 to i8
-// CHECK:         %{{.*}} = llvm.insertvalue %[[F18ADDENDUM_I8]], %{{.*}}[6] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
 // CHECK:         %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TDESC]], %{{.*}}[7] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
 
@@ -1879,7 +1878,7 @@ func.func @xembox0(%arg0: !fir.ref<!fir.array<?xi32>>) {
 // CHECK:         %[[ELEM_LEN_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[BOX0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[BOX1:.*]] = llvm.insertvalue %[[ELEM_LEN_I64]], %[[BOX0]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
-// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[BOX2:.*]] = llvm.insertvalue %[[VERSION]], %[[BOX1]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -1981,7 +1980,7 @@ func.func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 // CHECK:         %[[ELEM_LEN_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[BOX0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[BOX1:.*]] = llvm.insertvalue %[[ELEM_LEN_I64]], %[[BOX0]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
-// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[BOX2:.*]] = llvm.insertvalue %[[VERSION]], %[[BOX1]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -2065,7 +2064,7 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // CHECK:         %[[ELEM_LEN_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[BOX0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[BOX1:.*]] = llvm.insertvalue %[[ELEM_LEN_I64]], %[[BOX0]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
-// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[BOX2:.*]] = llvm.insertvalue %[[VERSION]], %[[BOX1]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -2368,7 +2367,7 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 //CHECK:    %[[ELEM_SIZE_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 //CHECK:    %[[RBOX:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 //CHECK:    %[[RBOX_TMP1:.*]] = llvm.insertvalue %[[ELEM_SIZE_I64]], %[[RBOX]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-//CHECK:    %[[CFI_VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+//CHECK:    %[[CFI_VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 //CHECK:    %[[RBOX_TMP2:.*]] = llvm.insertvalue %[[CFI_VERSION]], %[[RBOX_TMP1]][2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 //CHECK:    %[[RANK:.*]] = llvm.mlir.constant(1 : i32) : i32
 //CHECK:    %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8

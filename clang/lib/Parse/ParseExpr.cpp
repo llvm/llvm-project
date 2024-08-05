@@ -802,7 +802,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_assignable);
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_constructible);
     REVERTIBLE_TYPE_TRAIT(__is_nothrow_destructible);
-    REVERTIBLE_TYPE_TRAIT(__is_nullptr);
     REVERTIBLE_TYPE_TRAIT(__is_object);
     REVERTIBLE_TYPE_TRAIT(__is_pod);
     REVERTIBLE_TYPE_TRAIT(__is_pointer);
@@ -1645,6 +1644,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw__Sat:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
   {
     if (!getLangOpts().CPlusPlus) {
       Diag(Tok, diag::err_expected_expression);
@@ -2479,7 +2480,19 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
       return ExprError();
     }
 
-    Operand = ParseCastExpression(UnaryExprOnly);
+    // If we're parsing a chain that consists of keywords that could be
+    // followed by a non-parenthesized expression, BalancedDelimiterTracker
+    // is not going to help when the nesting is too deep. In this corner case
+    // we continue to parse with sufficient stack space to avoid crashing.
+    if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
+                      tok::kw_alignof, tok::kw__Alignof) &&
+        Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
+                    tok::kw_alignof, tok::kw__Alignof))
+      Actions.runWithSufficientStackSpace(Tok.getLocation(), [&] {
+        Operand = ParseCastExpression(UnaryExprOnly);
+      });
+    else
+      Operand = ParseCastExpression(UnaryExprOnly);
   } else {
     // If it starts with a '(', we know that it is either a parenthesized
     // type-name, or it is a unary-expression that starts with a compound

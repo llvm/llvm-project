@@ -1,7 +1,8 @@
-; RUN: not opt -S -dxil-op-lower %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation dot3 does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload
+; CHECK: in function dot_double3
+; CHECK-SAME: Cannot create Dot3 operation: Invalid overload type
 
 define noundef double @dot_double3(<3 x double> noundef %a, <3 x double> noundef %b) {
 entry:

@@ -547,6 +547,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<VoidType>]
         >,
         FunctionSpec<
+          "gettid",
+          RetValSpec<PidT>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
           "getuid",
           RetValSpec<UidT>,
           [ArgSpec<VoidType>]
