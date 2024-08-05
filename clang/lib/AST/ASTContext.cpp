@@ -3283,7 +3283,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     return;
 
   case Type::Builtin: {
-    const auto *BTy = T->getAs<BuiltinType>();
+    const auto *BTy = T->castAs<BuiltinType>();
     switch (BTy->getKind()) {
 #define SIGNED_TYPE(Id, SingletonId)                                           \
   case BuiltinType::Id:                                                        \
@@ -3366,7 +3366,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     llvm_unreachable("should never get here");
   }
   case Type::Record: {
-    const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
+    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
     const IdentifierInfo *II = RD->getIdentifier();
 
     // In C++, an immediate typedef of an anonymous struct or union
@@ -5588,11 +5588,19 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     // of a real template argument.
     // FIXME: It would be more faithful to model this as something like an
     // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
-    if (T->isRecordType())
+    ExprValueKind VK;
+    if (T->isRecordType()) {
+      // C++ [temp.param]p8: An id-expression naming a non-type
+      // template-parameter of class type T denotes a static storage duration
+      // object of type const T.
       T.addConst();
-    Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*RefersToEnclosingVariableOrCapture*/ false, T,
-        Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
+      VK = VK_LValue;
+    } else {
+      VK = Expr::getValueKindForType(NTTP->getType());
+    }
+    Expr *E = new (*this)
+        DeclRefExpr(*this, NTTP, /*RefersToEnclosingVariableOrCapture=*/false,
+                    T, VK, NTTP->getLocation());
 
     if (NTTP->isParameterPack())
       E = new (*this)

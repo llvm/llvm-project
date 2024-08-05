@@ -81,12 +81,12 @@ TEST_F(LlvmLibcCosTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
 
       double result = LIBC_NAMESPACE::cos(x);
       ++total;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++tested;

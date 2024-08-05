@@ -103,6 +103,8 @@ using std::atomic_fetch_sub                            // see below
 using std::atomic_fetch_sub_explicit                   // see below
 using std::atomic_fetch_or                             // see below
 using std::atomic_fetch_or_explicit                    // see below
+using std::atomic_fetch_xor                            // see below
+using std::atomic_fetch_xor_explicit                   // see below
 using std::atomic_fetch_and                            // see below
 using std::atomic_fetch_and_explicit                   // see below
 using std::atomic_flag_test_and_set                    // see below
@@ -204,6 +206,8 @@ using std::atomic_fetch_add_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_and _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_and_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_or _LIBCPP_USING_IF_EXISTS;
+using std::atomic_fetch_xor_explicit _LIBCPP_USING_IF_EXISTS;
+using std::atomic_fetch_xor _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_or_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_sub _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_sub_explicit _LIBCPP_USING_IF_EXISTS;

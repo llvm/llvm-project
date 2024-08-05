@@ -34,21 +34,21 @@
 #
 # CHECK: << Total TLI yes SDK no:  8
 # CHECK: >> Total TLI no  SDK yes: 0
-# CHECK: == Total TLI yes SDK yes: 242
+# CHECK: == Total TLI yes SDK yes: 248
 #
 # WRONG_DETAIL: << TLI yes SDK no : '_ZdaPv' aka operator delete[](void*)
 # WRONG_DETAIL: >> TLI no  SDK yes: '_ZdaPvj' aka operator delete[](void*, unsigned int)
 # WRONG_DETAIL-COUNT-8: << TLI yes SDK no : {{.*}}__hot_cold_t
 # WRONG_SUMMARY: << Total TLI yes SDK no:  9{{$}}
 # WRONG_SUMMARY: >> Total TLI no  SDK yes: 1{{$}}
-# WRONG_SUMMARY: == Total TLI yes SDK yes: 241
+# WRONG_SUMMARY: == Total TLI yes SDK yes: 247
 #
 ## The -COUNT suffix doesn't care if there are too many matches, so check
 ## the exact count first; the two directives should add up to that.
 ## Yes, this means additions to TLI will fail this test, but the argument
 ## to -COUNT can't be an expression.
-# AVAIL: TLI knows 483 symbols, 250 available
-# AVAIL-COUNT-250: {{^}} available
+# AVAIL: TLI knows 489 symbols, 256 available
+# AVAIL-COUNT-256: {{^}} available
 # AVAIL-NOT:       {{^}} available
 # UNAVAIL-COUNT-233: not available
 # UNAVAIL-NOT:       not available
@@ -264,6 +264,18 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            atexit
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            abort
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            exit
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            _Exit
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
@@ -688,6 +700,18 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            modfl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nan
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nanf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nanl
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL

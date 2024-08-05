@@ -212,6 +212,10 @@ public:
     return ValueMap.count(V);
   }
 
+  MachineBasicBlock *getMBB(const BasicBlock *BB) const {
+    return MBBMap.lookup(BB);
+  }
+
   Register CreateReg(MVT VT, bool isDivergent = false);
 
   Register CreateRegs(const Value *V);

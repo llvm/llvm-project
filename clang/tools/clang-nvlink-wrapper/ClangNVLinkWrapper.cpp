@@ -302,6 +302,9 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
       findProgram(Args, "ptxas", {CudaPath + "/bin", GivenPath});
   if (!PTXAsPath)
     return PTXAsPath.takeError();
+  if (!Args.hasArg(OPT_arch))
+    return createStringError(
+        "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
   auto TempFileOrErr = createTempFile(
       Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "cubin");
@@ -693,6 +696,10 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
       findProgram(Args, "nvlink", {CudaPath + "/bin"});
   if (!NVLinkPath)
     return NVLinkPath.takeError();
+
+  if (!Args.hasArg(OPT_arch))
+    return createStringError(
+        "must pass in an explicit nvptx64 gpu architecture to 'nvlink'");
 
   ArgStringList NewLinkerArgs;
   for (const opt::Arg *Arg : Args) {

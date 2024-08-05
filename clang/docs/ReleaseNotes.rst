@@ -43,6 +43,10 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- The type trait builtin ``__is_nullptr`` has been removed, since it has very
+  few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
+  which GCC supports as well.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -54,6 +58,11 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Parts of the interface returning string results will now return
+  the empty string `""` when no result is available, instead of `None`.
+- Calling a property on the `CompletionChunk` or `CompletionString` class
+  statically now leads to an error, instead of returning a `CachedProperty` object
+  that is used internally. Properties are only available on instances.
 
 What's New in Clang |release|?
 ==============================
@@ -116,24 +125,32 @@ Attribute Changes in Clang
 
 - Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
 
+- The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
+  that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
 - Some template related diagnostics have been improved.
 
   .. code-block:: c++
-    
+
      void foo() { template <typename> int i; } // error: templates can only be declared in namespace or class scope
 
      struct S {
       template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
      };
 
+- Clang now has improved diagnostics for functions with explicit 'this' parameters. Fixes #GH97878
+
 - Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
 
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
 
 - -Wdangling-assignment-gsl is enabled by default.
+- Clang now does a better job preserving the template arguments as written when specializing concepts.
+- Clang now always preserves the template arguments as written used
+  to specialize template type aliases.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -146,6 +163,7 @@ Bug Fixes in This Version
 
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
+- Fixed a failed assertion when checking required literal types in C context. (#GH101304).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -158,6 +176,16 @@ Bug Fixes to C++ Support
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
+- Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
+- Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
+- Fix a crash when checking the initialzier of an object that was initialized
+  with a string literal. (#GH82167)
+- Fix a crash when matching template template parameters with templates which have
+  parameters of different class type. (#GH101394)
+- Clang now correctly recognizes the correct context for parameter
+  substitutions in concepts, so it doesn't incorrectly complain of missing
+  module imports in those situations. (#GH60336)
+- Fix init-capture packs having a size of one before being instantiated. (#GH63677)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -170,6 +198,9 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
   can be found as ordinary identifiers in struct/union definition. (#GH31295)
+
+- Fixed a crash caused by long chains of ``sizeof`` and other similar operators
+  that can be followed by a non-parenthesized expression. (#GH45061)
 
 OpenACC Specific Changes
 ------------------------
@@ -198,6 +229,10 @@ X86 Support
   removed. Any uses of these removed functions should migrate to the
   functions defined by the ``*mmintrin.h`` headers. A mapping can be
   found in the file ``clang/www/builtins.py``.
+
+- Support ISA of ``AVX10.2``.
+  * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
+  ``*_(mask(z)))_minmax_s[s|d|h]``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -244,6 +279,9 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
+  inline namespaces with an enclosing namespace of the same name.
+
 clang-format
 ------------
 
@@ -267,6 +305,10 @@ Crash and bug fixes
 Improvements
 ^^^^^^^^^^^^
 
+- Improved the handling of the ``ownership_returns`` attribute. Now, Clang reports an
+  error if the attribute is attached to a function that returns a non-pointer value.
+  Fixes (#GH99501)
+
 Moved checkers
 ^^^^^^^^^^^^^^
 
@@ -277,9 +319,15 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
 
 OpenMP Support
 --------------
+- Added support for 'omp assume' directive.
+
+Improvements
+^^^^^^^^^^^^
+- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
 
 Additional Information
 ======================

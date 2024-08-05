@@ -177,7 +177,9 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (StringRef Threads = getLTOParallelism(Args, D); !Threads.empty())
     AddLTOFlag(Twine("-threads=") + Threads);
 
-  CmdArgs.push_back(Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
+  if (*LTOArgs)
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");

@@ -74,7 +74,8 @@ template <typename T> struct FPTest : public Test {
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();
-  static constexpr T max_normal = FPBits::max_normal().get_val();
+  static constexpr T max_normal = FPBits::max_normal(Sign::POS).get_val();
+  static constexpr T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();
   static constexpr T min_denormal = FPBits::min_subnormal().get_val();
   static constexpr T max_denormal = FPBits::max_subnormal().get_val();
 

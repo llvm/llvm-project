@@ -20,10 +20,10 @@ define dso_local signext i32 @local_large() #0 {
 ; CHECK-LABEL: local_large:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(b)
-; CHECK-NEXT:    addi.d $t8, $zero, %pc_lo12(b)
-; CHECK-NEXT:    lu32i.d $t8, %pc64_lo20(b)
-; CHECK-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(b)
-; CHECK-NEXT:    add.d $a0, $t8, $a0
+; CHECK-NEXT:    addi.d $a1, $zero, %pc_lo12(b)
+; CHECK-NEXT:    lu32i.d $a1, %pc64_lo20(b)
+; CHECK-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(b)
+; CHECK-NEXT:    add.d $a0, $a1, $a0
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
   %1 = load i32, ptr @b, align 4
