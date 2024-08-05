@@ -739,7 +739,7 @@ def Invalid : Opcode {}
 def Unsupported : Opcode {}
 def Error : Opcode {}
 def InvalidCast : Opcode {
-  let Args = [ArgCastKind];
+  let Args = [ArgCastKind, ArgBool];
 }
 
 def InvalidDeclRef : Opcode {

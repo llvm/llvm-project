@@ -6507,11 +6507,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     VarsWithInheritedDSA = DSAChecker.getVarsWithInheritedDSA();
 
     SmallVector<Expr *, 4> ImplicitFirstprivates(
-        DSAChecker.getImplicitFirstprivate().begin(),
-        DSAChecker.getImplicitFirstprivate().end());
-    SmallVector<Expr *, 4> ImplicitPrivates(
-        DSAChecker.getImplicitPrivate().begin(),
-        DSAChecker.getImplicitPrivate().end());
+        DSAChecker.getImplicitFirstprivate());
+    SmallVector<Expr *, 4> ImplicitPrivates(DSAChecker.getImplicitPrivate());
     const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
     SmallVector<Expr *, 4> ImplicitMaps[DefaultmapKindNum][OMPC_MAP_delete];
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
@@ -22187,8 +22184,7 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareMapperDirective(
   }
   // Build expressions for implicit maps of data members with 'default'
   // mappers.
-  SmallVector<OMPClause *, 4> ClausesWithImplicit(Clauses.begin(),
-                                                  Clauses.end());
+  SmallVector<OMPClause *, 4> ClausesWithImplicit(Clauses);
   if (getLangOpts().OpenMP >= 50)
     processImplicitMapsWithDefaultMappers(SemaRef, DSAStack,
                                           ClausesWithImplicit);
