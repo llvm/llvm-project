@@ -2691,7 +2691,7 @@ auto HexagonVectorCombine::joinVectorElements(IRBuilderBase &Builder,
   // joins, the shuffles will hopefully be folded into a perfect shuffle.
   // The output will need to be sign-extended to a type with element width
   // being a power-of-2 anyways.
-  SmallVector<Value *> Inputs(Values.begin(), Values.end());
+  SmallVector<Value *> Inputs(Values);
 
   unsigned ToWidth = ToType->getScalarSizeInBits();
   unsigned Width = Inputs.front()->getType()->getScalarSizeInBits();

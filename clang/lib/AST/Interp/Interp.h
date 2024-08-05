@@ -1158,6 +1158,21 @@ bool Pop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// [Value1, Value2] -> [Value2, Value1]
+template <PrimType TopName, PrimType BottomName>
+bool Flip(InterpState &S, CodePtr OpPC) {
+  using TopT = typename PrimConv<TopName>::T;
+  using BottomT = typename PrimConv<BottomName>::T;
+
+  const auto &Top = S.Stk.pop<TopT>();
+  const auto &Bottom = S.Stk.pop<BottomT>();
+
+  S.Stk.push<TopT>(Top);
+  S.Stk.push<BottomT>(Bottom);
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Const
 //===----------------------------------------------------------------------===//
@@ -2009,6 +2024,11 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
 
 inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
   S.Current->destroy(I);
+  return true;
+}
+
+inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
+  S.Current->initScope(I);
   return true;
 }
 
