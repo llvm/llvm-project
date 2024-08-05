@@ -96,6 +96,9 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
 
           FunctionSpec<"powi", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"powif", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
+
+          GuardedFunctionSpec<"remainderf128", RetValSpec<Float128Type, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+          
       ]
   >;
 
