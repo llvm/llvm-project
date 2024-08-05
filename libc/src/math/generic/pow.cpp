@@ -8,12 +8,15 @@
 
 #include "src/math/pow.h"
 #include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for pow(x, 1/2) = sqrt(x)
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -240,20 +243,23 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
     if (y_a > 0x43d7'4910'd52d'3052) {
       if (y_a >= 0x7ff0'0000'0000'0000) {
         // y is inf or nan
-        if (y_mant != 0)
+        if (y_mant != 0) {
           // y is NaN
           // pow(1, NaN) = 1
           // pow(x, NaN) = NaN
           return (x_u == FPBits::one().uintval()) ? 1.0 : y;
+        }
 
         // Now y is +-Inf
-        if (x_abs.is_nan())
+        if (x_abs.is_nan()) {
           // pow(NaN, +-Inf) = NaN
           return x;
+        }
 
-        if (x_a == 0x3ff0'0000'0000'0000)
+        if (x_a == 0x3ff0'0000'0000'0000) {
           // pow(+-1, +-Inf) = 1.0
           return 1.0;
+        }
 
         if (x_a == 0 && y_sign) {
           // pow(+-0, -Inf) = +inf and raise FE_DIVBYZERO
@@ -277,14 +283,15 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
 
     // y is finite and non-zero.
 
-    if (x_u == FPBits::one().uintval())
+    if (x_u == FPBits::one().uintval()) {
       // pow(1, y) = 1
       return 1.0;
+    }
 
     // TODO: Speed things up with pow(2, y) = exp2(y) and pow(10, y) = exp10(y).
 
     if (x_a == 0) {
-      const bool out_is_neg = x_sign && is_odd_integer(y);
+      bool out_is_neg = x_sign && is_odd_integer(y);
       if (y_sign) {
         // pow(0, negative number) = inf
         fputil::set_errno_if_required(EDOM);
@@ -296,7 +303,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
     }
 
     if (x_a == FPBits::inf().uintval()) {
-      const bool out_is_neg = x_sign && is_odd_integer(y);
+      bool out_is_neg = x_sign && is_odd_integer(y);
       if (y_sign)
         return out_is_neg ? -0.0f : 0.0f;
       return FPBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();

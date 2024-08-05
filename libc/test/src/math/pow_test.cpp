@@ -1,4 +1,4 @@
-//===-- Unittests for pow ------------------------------------------------===//
+//===-- Unittests for pow -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/math_macros.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/pow.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -51,7 +49,7 @@ TEST_F(LlvmLibcPowTest, InFloatRange) {
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
-    double mx, my, mr = 0.0;
+    double mx = 0.0, my = 0.0, mr = 0.0;
     double tol = 1.5;
 
     for (uint64_t i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {
