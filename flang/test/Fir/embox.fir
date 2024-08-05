@@ -103,3 +103,27 @@ func.func @fir_dev_issue_1416(%arg0: !fir.ref<!fir.array<40x?xf32>>, %low: index
     fir.call @do_something(%3) : (!fir.box<!fir.array<?xf32>>) -> ()
     return
 }
+
+// CHECK-LABEL: define void @_QPtest_allocator1()
+func.func @_QPtest_allocator1() {
+  %c20 = arith.constant 20 : index
+  %0 = fir.alloca !fir.array<20xi32> {bindc_name = "x", uniq_name = "_QFtest_sliceEx"}
+  %1 = fir.shape %c20 : (index) -> !fir.shape<1>
+  %3 = fir.embox %0(%1) {allocator_idx = 1 : i32} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  fir.call @_QPtest_callee(%3) : (!fir.box<!fir.array<?xi32>>) -> ()
+  return
+}
+
+// %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 9, i8 0, i8 2, [1 x [3 x i64]] [[3 x i64] [i64 1, i64 20, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64)]] }
+
+// CHECK-LABEL: define void @_QPtest_allocator2()
+func.func @_QPtest_allocator2() {
+  %c20 = arith.constant 20 : index
+  %0 = fir.alloca !fir.array<20xi32> {bindc_name = "x", uniq_name = "_QFtest_sliceEx"}
+  %1 = fir.shape %c20 : (index) -> !fir.shape<1>
+  %3 = fir.embox %0(%1) {allocator_idx = 3 : i32} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  fir.call @_QPtest_callee(%3) : (!fir.box<!fir.array<?xi32>>) -> ()
+  return
+}
+
+// CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 9, i8 0, i8 6

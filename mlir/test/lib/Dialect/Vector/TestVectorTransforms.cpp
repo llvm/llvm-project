@@ -96,15 +96,14 @@ private:
           return std::nullopt;
         dstVec = vecType;
       }
-      return SmallVector<int64_t>(dstVec.getShape().begin(),
-                                  dstVec.getShape().end());
+      return SmallVector<int64_t>(dstVec.getShape());
     }
     if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
       auto insert = writeOp.getVector().getDefiningOp<InsertStridedSliceOp>();
       if (!insert)
         return std::nullopt;
       ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();
-      return SmallVector<int64_t>(shape.begin(), shape.end());
+      return SmallVector<int64_t>(shape);
     }
     return std::nullopt;
   }

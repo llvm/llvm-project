@@ -1384,6 +1384,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
+  if (LangOpts.HLSL) {
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
+  }
+
   if (Target.hasAArch64SVETypes() ||
       (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
@@ -2242,6 +2248,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = ALIGN;                                                             \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      Width = 0;
+      Align = 8;
+      break;
     }
     break;
   case Type::ObjCObjectPointer:
@@ -3355,6 +3366,10 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case BuiltinType::Id:                                                        \
     return;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    return;
+#include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
     case BuiltinType::AMDGPUBufferRsrc:
@@ -5588,11 +5603,19 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     // of a real template argument.
     // FIXME: It would be more faithful to model this as something like an
     // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
-    if (T->isRecordType())
+    ExprValueKind VK;
+    if (T->isRecordType()) {
+      // C++ [temp.param]p8: An id-expression naming a non-type
+      // template-parameter of class type T denotes a static storage duration
+      // object of type const T.
       T.addConst();
-    Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*RefersToEnclosingVariableOrCapture*/ false, T,
-        Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
+      VK = VK_LValue;
+    } else {
+      VK = Expr::getValueKindForType(NTTP->getType());
+    }
+    Expr *E = new (*this)
+        DeclRefExpr(*this, NTTP, /*RefersToEnclosingVariableOrCapture=*/false,
+                    T, VK, NTTP->getLocation());
 
     if (NTTP->isParameterPack())
       E = new (*this)
@@ -8544,6 +8567,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 #define BUILTIN_TYPE(KIND, ID)
 #define PLACEHOLDER_TYPE(KIND, ID) \
     case BuiltinType::KIND:

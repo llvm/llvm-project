@@ -245,8 +245,9 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
   return CUDA_SUCCESS;
 }
 
-int load(int argc, char **argv, char **envp, void *image, size_t size,
-         const LaunchParameters &params, bool print_resource_usage) {
+int load(int argc, const char **argv, const char **envp, void *image,
+         size_t size, const LaunchParameters &params,
+         bool print_resource_usage) {
   if (CUresult err = cuInit(0))
     handle_error(err);
   // Obtain the first device found on the system.

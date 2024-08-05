@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "allocator-registry.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "terminator.h"
 
 namespace Fortran::runtime {

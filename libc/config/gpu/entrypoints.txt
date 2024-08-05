@@ -187,6 +187,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sprintf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
+    libc.src.stdio.asprintf
+    libc.src.stdio.vasprintf
     libc.src.stdio.sscanf
     libc.src.stdio.vsscanf
     libc.src.stdio.feof

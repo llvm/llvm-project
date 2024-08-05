@@ -32,15 +32,27 @@
 //                                      |                   |
 //                                      |                   +- BitCastInst
 //                                      |                   |
+//                                      |                   +- FPExtInst
+//                                      |                   |
 //                                      |                   +- FPToSIInst
 //                                      |                   |
 //                                      |                   +- FPToUIInst
+//                                      |                   |
+//                                      |                   +- FPTruncInst
 //                                      |                   |
 //                                      |                   +- IntToPtrInst
 //                                      |                   |
 //                                      |                   +- PtrToIntInst
 //                                      |                   |
+//                                      |                   +- SExtInst
+//                                      |                   |
 //                                      |                   +- SIToFPInst
+//                                      |                   |
+//                                      |                   +- TruncInst
+//                                      |                   |
+//                                      |                   +- UIToFPInst
+//                                      |                   |
+//                                      |                   +- ZExtInst
 //                                      |
 //                                      +- CallBase -----------+- CallBrInst
 //                                      |                      |
@@ -51,8 +63,6 @@
 //                                      +- GetElementPtrInst
 //                                      |
 //                                      +- InsertElementInst
-//                                      |
-//                                      +- LoadInst
 //                                      |
 //                                      +- OpaqueInst
 //                                      |
@@ -65,6 +75,10 @@
 //                                      +- ShuffleVectorInst
 //                                      |
 //                                      +- StoreInst
+//                                      |
+//                                      +- UnaryInstruction -+- LoadInst
+//                                      |                    |
+//                                      |                    +- CastInst
 //                                      |
 //                                      +- UnaryOperator
 //
@@ -96,6 +110,7 @@ class Function;
 class Instruction;
 class SelectInst;
 class BranchInst;
+class UnaryInstruction;
 class LoadInst;
 class ReturnInst;
 class StoreInst;
@@ -824,10 +839,26 @@ public:
 #endif
 };
 
-class LoadInst final : public Instruction {
+/// An abstract class, parent of unary instructions.
+class UnaryInstruction : public Instruction {
+protected:
+  UnaryInstruction(ClassID ID, Opcode Opc, llvm::Instruction *LLVMI,
+                   Context &Ctx)
+      : Instruction(ID, Opc, LLVMI, Ctx) {}
+
+public:
+  static bool classof(const Instruction *I) {
+    return isa<LoadInst>(I) || isa<CastInst>(I);
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+class LoadInst final : public UnaryInstruction {
   /// Use LoadInst::create() instead of calling the constructor.
   LoadInst(llvm::LoadInst *LI, Context &Ctx)
-      : Instruction(ClassID::Load, Opcode::Load, LI, Ctx) {}
+      : UnaryInstruction(ClassID::Load, Opcode::Load, LI, Ctx) {}
   friend Context; // for LoadInst()
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
@@ -839,7 +870,8 @@ class LoadInst final : public Instruction {
 public:
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }
-
+  /// Specify whether this is a volatile load or not.
+  void setVolatile(bool V);
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
@@ -888,6 +920,8 @@ class StoreInst final : public Instruction {
 public:
   /// Return true if this is a store from a volatile memory location.
   bool isVolatile() const { return cast<llvm::StoreInst>(Val)->isVolatile(); }
+  /// Specify whether this is a volatile store or not.
+  void setVolatile(bool V);
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
@@ -1359,7 +1393,7 @@ public:
 #endif
 };
 
-class CastInst : public Instruction {
+class CastInst : public UnaryInstruction {
   static Opcode getCastOpcode(llvm::Instruction::CastOps CastOp) {
     switch (CastOp) {
     case llvm::Instruction::ZExt:
@@ -1396,9 +1430,9 @@ class CastInst : public Instruction {
   /// Use Context::createCastInst(). Don't call the
   /// constructor directly.
   CastInst(llvm::CastInst *CI, Context &Ctx)
-      : Instruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI, Ctx) {}
+      : UnaryInstruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI,
+                         Ctx) {}
   friend Context; // for SBCastInstruction()
-  friend class PtrToInt; // For constructor.
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
   }
@@ -1458,6 +1492,12 @@ public:
   }
 };
 
+class TruncInst final : public CastInstImpl<Instruction::Opcode::Trunc> {};
+class ZExtInst final : public CastInstImpl<Instruction::Opcode::ZExt> {};
+class SExtInst final : public CastInstImpl<Instruction::Opcode::SExt> {};
+class FPTruncInst final : public CastInstImpl<Instruction::Opcode::FPTrunc> {};
+class FPExtInst final : public CastInstImpl<Instruction::Opcode::FPExt> {};
+class UIToFPInst final : public CastInstImpl<Instruction::Opcode::UIToFP> {};
 class SIToFPInst final : public CastInstImpl<Instruction::Opcode::SIToFP> {};
 class FPToUIInst final : public CastInstImpl<Instruction::Opcode::FPToUI> {};
 class FPToSIInst final : public CastInstImpl<Instruction::Opcode::FPToSI> {};

@@ -334,8 +334,9 @@ static hsa_status_t hsa_memcpy(void *dst, hsa_agent_t dst_agent,
   return HSA_STATUS_SUCCESS;
 }
 
-int load(int argc, char **argv, char **envp, void *image, size_t size,
-         const LaunchParameters &params, bool print_resource_usage) {
+int load(int argc, const char **argv, const char **envp, void *image,
+         size_t size, const LaunchParameters &params,
+         bool print_resource_usage) {
   // Initialize the HSA runtime used to communicate with the device.
   if (hsa_status_t err = hsa_init())
     handle_error(err);
