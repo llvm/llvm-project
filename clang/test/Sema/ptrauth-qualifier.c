@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s
 
-#include <ptrauth.h>
-
 #if __has_feature(ptrauth_qualifier)
 #warning __ptrauth qualifier enabled!
 // expected-warning@-1 {{__ptrauth qualifier enabled!}}
@@ -33,6 +31,9 @@ int * __ptrauth(VALID_DATA_KEY, -1) invalid8; // expected-error{{address discrim
 int * __ptrauth(VALID_DATA_KEY, 1, -1) invalid9; // expected-error{{extra discriminator for __ptrauth must be between 0 and 65535; value is -1}}
 int * __ptrauth(VALID_DATA_KEY, 1, 100000) invalid10; // expected-error{{extra discriminator for __ptrauth must be between 0 and 65535; value is 100000}}
 int * __ptrauth(VALID_DATA_KEY, 1, nonConstantGlobal) invalid12; // expected-error{{argument to __ptrauth must be an integer constant expression}}
+int * __ptrauth(VALID_DATA_KEY, nonConstantGlobal, 1000) invalid13; // expected-error{{argument to __ptrauth must be an integer constant expression}}
+int * __ptrauth(nonConstantGlobal, 1, 1000) invalid14; // expected-error{{expression is not an integer constant expression}}
+int * __ptrauth(VALID_DATA_KEY, 1, 1000, 12) invalid15; // expected-error{{qualifier must take between 1 and 3 arguments}}
 
 int * __ptrauth(VALID_DATA_KEY) valid0;
 int * __ptrauth(VALID_DATA_KEY) *valid1;

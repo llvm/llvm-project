@@ -19,13 +19,13 @@ struct A {
 struct A *createA(void);
 
 void f() {
-  __block struct A *__ptrauth(1, 1, 1236) ptr = createA();
+  __block struct A *__ptrauth(0, 1, 1236) ptr = createA();
   ^{
     (void)ptr->value;
   }();
 }
 // CHECK: !DIDerivedType(tag: DW_TAG_LLVM_ptrauth_type,
-// CHECK-SAME:           ptrAuthKey: 1,
+// CHECK-NOT:            ptrAuthKey
 // CHECK-SAME:           ptrAuthIsAddressDiscriminated: true,
 // CHECK-SAME:           ptrAuthExtraDiscriminator: 1236,
 // CHECK-SAME:           ptrAuthIsaPointer: false,

@@ -1468,8 +1468,8 @@ public:
   }
 
   bool hasAddressDiscriminatedPointerAuth() const {
-    if (PointerAuthQualifier ptrauth = getPointerAuth())
-      return ptrauth.isAddressDiscriminated();
+    if (PointerAuthQualifier PtrAuth = getPointerAuth())
+      return PtrAuth.isAddressDiscriminated();
     return false;
   }
 

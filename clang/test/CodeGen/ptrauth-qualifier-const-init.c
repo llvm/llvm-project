@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck %s
 
-#include <ptrauth.h>
-
 // Constant initializers for data pointers.
 extern int external_int;
 

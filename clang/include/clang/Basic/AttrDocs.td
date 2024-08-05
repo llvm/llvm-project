@@ -1781,8 +1781,8 @@ Valid key names for the target are defined in ``<ptrauth.h>``.
 The second argument to ``__ptrauth`` is a flag (0 or 1) specifying whether
 the object should use address discrimination.
 
-The third argument to ``__ptrauth`` is a small non-negative integer
-which allows additional discrimination between objects.
+The third argument to ``__ptrauth`` is a 16-bit non-negative integer which
+allows additional discrimination between objects.
   }];
 }
 

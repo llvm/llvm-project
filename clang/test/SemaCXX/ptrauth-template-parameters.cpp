@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64e-apple-ios -fsyntax-only -verify -fptrauth-intrinsics -std=c++20 %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics -std=c++11 %s
 
 template <typename T> struct G {
   T __ptrauth(0,0,1234) test;

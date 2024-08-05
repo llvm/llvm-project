@@ -8230,24 +8230,24 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
 /// Handle the __ptrauth qualifier.
 static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
-                                   const ParsedAttr &attr, Sema &S) {
-  auto AttributeName = attr.getAttrName()->getName();
-  if (attr.getNumArgs() < 1 || attr.getNumArgs() > 3) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count)
+                                   const ParsedAttr &Attr, Sema &S) {
+  auto AttributeName = Attr.getAttrName()->getName();
+  if (Attr.getNumArgs() < 1 || Attr.getNumArgs() > 3) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count)
         << AttributeName;
-    attr.setInvalid();
+    Attr.setInvalid();
     return;
   }
 
-  Expr *KeyArg = attr.getArgAsExpr(0);
+  Expr *KeyArg = Attr.getArgAsExpr(0);
   Expr *IsAddressDiscriminatedArg =
-      attr.getNumArgs() >= 2 ? attr.getArgAsExpr(1) : nullptr;
+      Attr.getNumArgs() >= 2 ? Attr.getArgAsExpr(1) : nullptr;
   Expr *ExtraDiscriminatorArg =
-      attr.getNumArgs() >= 3 ? attr.getArgAsExpr(2) : nullptr;
+      Attr.getNumArgs() >= 3 ? Attr.getArgAsExpr(2) : nullptr;
 
   unsigned Key;
   if (S.checkConstantPointerAuthKey(KeyArg, Key)) {
-    attr.setInvalid();
+    Attr.setInvalid();
     return;
   }
   assert(Key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
@@ -8261,26 +8261,26 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
       ExtraDiscriminatorArg, Sema::PADAK_ExtraDiscPtrAuth, ExtraDiscriminator);
 
   if (IsInvalid) {
-    attr.setInvalid();
+    Attr.setInvalid();
     return;
   }
 
   if (!T->isSignableType() && !T->isDependentType()) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << T;
-    attr.setInvalid();
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << T;
+    Attr.setInvalid();
     return;
   }
 
   if (T.getPointerAuth()) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
-        << T << attr.getAttrName()->getName();
-    attr.setInvalid();
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
+        << T << Attr.getAttrName()->getName();
+    Attr.setInvalid();
     return;
   }
 
   if (!S.getLangOpts().PointerAuthIntrinsics) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_disabled) << attr.getRange();
-    attr.setInvalid();
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_disabled) << Attr.getRange();
+    Attr.setInvalid();
     return;
   }
 

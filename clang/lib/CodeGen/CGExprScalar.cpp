@@ -2203,15 +2203,14 @@ static bool isDeclRefKnownNonNull(CodeGenFunction &CGF, const ValueDecl *D) {
 static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
   E = E->IgnoreParens();
 
-  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_Deref) {
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
       return CGF.isPointerKnownNonNull(UO->getSubExpr());
-    }
-  }
 
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
     return isDeclRefKnownNonNull(CGF, DRE->getDecl());
-  } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
+
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
     if (isa<FieldDecl>(ME->getMemberDecl()))
       return true;
     return isDeclRefKnownNonNull(CGF, ME->getMemberDecl());
@@ -2230,18 +2229,14 @@ bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
   if (isa<CXXThisExpr>(E))
     return true;
 
-  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_AddrOf) {
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_AddrOf)
       return isLValueKnownNonNull(*this, UO->getSubExpr());
-    }
-  }
 
-  if (auto *CE = dyn_cast<CastExpr>(E)) {
+  if (const auto *CE = dyn_cast<CastExpr>(E))
     if (CE->getCastKind() == CK_FunctionToPointerDecay ||
-        CE->getCastKind() == CK_ArrayToPointerDecay) {
+        CE->getCastKind() == CK_ArrayToPointerDecay)
       return isLValueKnownNonNull(*this, CE->getSubExpr());
-    }
-  }
 
   // Maybe honor __nonnull?
 

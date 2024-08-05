@@ -198,11 +198,10 @@ emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &LV,
                             SourceLocation Loc) {
   auto *Value = CGF.EmitLoadOfScalar(LV, Loc);
   CGPointerAuthInfo AuthInfo;
-  if (PointerAuthQualifier PtrAuth = LV.getQuals().getPointerAuth()) {
+  if (PointerAuthQualifier PtrAuth = LV.getQuals().getPointerAuth())
     AuthInfo = CGF.EmitPointerAuthInfo(PtrAuth, LV.getAddress());
-  } else {
+  else
     AuthInfo = getPointerAuthInfoForType(CGF.CGM, LV.getType());
-  }
   return {Value, AuthInfo};
 }
 
@@ -213,12 +212,12 @@ CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
   assert(E->getType()->isSignableType());
 
   E = E->IgnoreParens();
-  if (auto *Load = dyn_cast<ImplicitCastExpr>(E)) {
+  if (const auto *Load = dyn_cast<ImplicitCastExpr>(E)) {
     if (Load->getCastKind() == CK_LValueToRValue) {
       E = Load->getSubExpr()->IgnoreParens();
 
       // We're semantically required to not emit loads of certain DREs naively.
-      if (auto *RefExpr = dyn_cast<DeclRefExpr>(const_cast<Expr *>(E))) {
+      if (const auto *RefExpr = dyn_cast<DeclRefExpr>(E)) {
         if (auto Result = tryEmitAsConstant(RefExpr)) {
           // Fold away a use of an intermediate variable.
           if (!Result.isReference())
