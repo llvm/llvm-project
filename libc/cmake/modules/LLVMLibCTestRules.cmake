@@ -22,7 +22,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
   foreach(dep IN LISTS unchecked_list)
     if (NOT TARGET ${dep})
       # Skip tests with undefined dependencies.
-      list(APPEND skipped_list ${dep})
+      # Compiler-RT targets are added only if they are enabled. However, such targets may not be defined
+      # at the time of the libc build. We should skip checking such targets.
+      if (NOT ${dep} MATCHES "^RTScudo.*|^RTGwp.*")
+        list(APPEND skipped_list ${dep})
+      endif()
       continue()
     endif()
     get_target_property(aliased_target ${dep} "ALIASED_TARGET")

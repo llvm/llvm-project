@@ -32,7 +32,7 @@ class raw_ostream;
 class CodeExpander {
   StringRef Code;
   const CodeExpansions &Expansions;
-  const ArrayRef<SMLoc> &Loc;
+  ArrayRef<SMLoc> Loc;
   bool ShowExpansions;
   StringRef Indent;
 

@@ -199,3 +199,58 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 os.unlink(core_sb_dirty)
             if os.path.isfile(core_sb_full):
                 os.unlink(core_sb_full)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_linux_mini_dump_thread_options(self):
+        """Test that we can save a Linux mini dump
+        with a subset of threads"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        thread_subset_dmp = self.getBuildArtifact("core.thread.subset.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            thread_to_include = process.GetThreadAtIndex(0)
+            options = lldb.SBSaveCoreOptions()
+            thread_subset_spec = lldb.SBFileSpec(thread_subset_dmp)
+            options.AddThread(thread_to_include)
+            options.SetOutputFile(thread_subset_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreStackOnly)
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+
+            core_target = self.dbg.CreateTarget(None)
+            core_process = core_target.LoadCore(thread_subset_dmp)
+
+            self.assertTrue(core_process, PROCESS_IS_VALID)
+            self.assertEqual(core_process.GetNumThreads(), 1)
+            saved_thread = core_process.GetThreadAtIndex(0)
+            expected_thread = process.GetThreadAtIndex(0)
+            self.assertEqual(expected_thread.GetThreadID(), saved_thread.GetThreadID())
+            expected_sp = expected_thread.GetFrameAtIndex(0).GetSP()
+            saved_sp = saved_thread.GetFrameAtIndex(0).GetSP()
+            self.assertEqual(expected_sp, saved_sp)
+            expected_region = lldb.SBMemoryRegionInfo()
+            saved_region = lldb.SBMemoryRegionInfo()
+            error = core_process.GetMemoryRegionInfo(saved_sp, saved_region)
+            self.assertTrue(error.Success(), error.GetCString())
+            error = process.GetMemoryRegionInfo(expected_sp, expected_region)
+            self.assertTrue(error.Success(), error.GetCString())
+            self.assertEqual(
+                expected_region.GetRegionBase(), saved_region.GetRegionBase()
+            )
+            self.assertEqual(
+                expected_region.GetRegionEnd(), saved_region.GetRegionEnd()
+            )
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(thread_subset_dmp):
+                os.unlink(thread_subset_dmp)

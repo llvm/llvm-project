@@ -75,7 +75,7 @@ bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
 const IdentifierInfo* QualType::getBaseTypeIdentifier() const {
   const Type* ty = getTypePtr();
   NamedDecl *ND = nullptr;
-  if (ty->isPointerType() || ty->isReferenceType())
+  if (ty->isPointerOrReferenceType())
     return ty->getPointeeType().getBaseTypeIdentifier();
   else if (ty->isRecordType())
     ND = ty->castAs<RecordType>()->getDecl();

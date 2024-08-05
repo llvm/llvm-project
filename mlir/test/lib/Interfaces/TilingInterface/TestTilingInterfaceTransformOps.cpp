@@ -234,11 +234,7 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
     scf::SCFTilingOptions tilingOptions;
     tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
     if (mapping) {
-      auto mappingAttrs =
-          llvm::map_to_vector(mapping.value(), [](Attribute attr) {
-            return cast<DeviceMappingAttrInterface>(attr);
-          });
-      tilingOptions.setMapping(mappingAttrs);
+      tilingOptions.setMapping(mapping.value().getValue());
     }
     tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
 

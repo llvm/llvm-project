@@ -364,7 +364,7 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                            : SourceMgr::DiagKind::DK_Warning,
           "code should be clang-formatted [-Wclang-format-violations]");
 
-      Diag.print(nullptr, llvm::errs(), (ShowColors && !NoShowColors));
+      Diag.print(nullptr, llvm::errs(), ShowColors && !NoShowColors);
       if (ErrorLimit && ++Errors >= ErrorLimit)
         break;
     }

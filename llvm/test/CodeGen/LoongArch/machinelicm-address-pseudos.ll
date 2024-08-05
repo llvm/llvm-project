@@ -41,12 +41,12 @@ define void @test_la_pcrel(i32 signext %n) {
 ;
 ; LA64LARGE-LABEL: test_la_pcrel:
 ; LA64LARGE:       # %bb.0: # %entry
-; LA64LARGE-NEXT:    move $a1, $zero
 ; LA64LARGE-NEXT:    pcalau12i $a2, %pc_hi20(l)
-; LA64LARGE-NEXT:    addi.d $t8, $zero, %pc_lo12(l)
-; LA64LARGE-NEXT:    lu32i.d $t8, %pc64_lo20(l)
-; LA64LARGE-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(l)
-; LA64LARGE-NEXT:    add.d $a2, $t8, $a2
+; LA64LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(l)
+; LA64LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(l)
+; LA64LARGE-NEXT:    lu52i.d $a3, $a1, %pc64_hi12(l)
+; LA64LARGE-NEXT:    move $a1, $zero
+; LA64LARGE-NEXT:    add.d $a2, $a3, $a2
 ; LA64LARGE-NEXT:    .p2align 4, , 16
 ; LA64LARGE-NEXT:  .LBB0_1: # %loop
 ; LA64LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -103,10 +103,10 @@ define void @test_la_got(i32 signext %n) {
 ; LA64LARGE-LABEL: test_la_got:
 ; LA64LARGE:       # %bb.0: # %entry
 ; LA64LARGE-NEXT:    pcalau12i $a1, %got_pc_hi20(g)
-; LA64LARGE-NEXT:    addi.d $t8, $zero, %got_pc_lo12(g)
-; LA64LARGE-NEXT:    lu32i.d $t8, %got64_pc_lo20(g)
-; LA64LARGE-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(g)
-; LA64LARGE-NEXT:    ldx.d $a1, $t8, $a1
+; LA64LARGE-NEXT:    addi.d $a2, $zero, %got_pc_lo12(g)
+; LA64LARGE-NEXT:    lu32i.d $a2, %got64_pc_lo20(g)
+; LA64LARGE-NEXT:    lu52i.d $a2, $a2, %got64_pc_hi12(g)
+; LA64LARGE-NEXT:    ldx.d $a1, $a2, $a1
 ; LA64LARGE-NEXT:    move $a2, $zero
 ; LA64LARGE-NEXT:    .p2align 4, , 16
 ; LA64LARGE-NEXT:  .LBB1_1: # %loop
@@ -165,10 +165,10 @@ define void @test_la_tls_ie(i32 signext %n) {
 ; LA64LARGE-LABEL: test_la_tls_ie:
 ; LA64LARGE:       # %bb.0: # %entry
 ; LA64LARGE-NEXT:    pcalau12i $a1, %ie_pc_hi20(ie)
-; LA64LARGE-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
-; LA64LARGE-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ie)
-; LA64LARGE-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ie)
-; LA64LARGE-NEXT:    ldx.d $a1, $t8, $a1
+; LA64LARGE-NEXT:    addi.d $a2, $zero, %ie_pc_lo12(ie)
+; LA64LARGE-NEXT:    lu32i.d $a2, %ie64_pc_lo20(ie)
+; LA64LARGE-NEXT:    lu52i.d $a2, $a2, %ie64_pc_hi12(ie)
+; LA64LARGE-NEXT:    ldx.d $a1, $a2, $a1
 ; LA64LARGE-NEXT:    move $a2, $zero
 ; LA64LARGE-NEXT:    .p2align 4, , 16
 ; LA64LARGE-NEXT:  .LBB2_1: # %loop
@@ -272,21 +272,21 @@ define void @test_la_tls_ld(i32 signext %n) {
 ; LA64LARGE-NEXT:    .cfi_offset 23, -24
 ; LA64LARGE-NEXT:    .cfi_offset 24, -32
 ; LA64LARGE-NEXT:    move $fp, $a0
+; LA64LARGE-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
+; LA64LARGE-NEXT:    addi.d $a1, $zero, %got_pc_lo12(ld)
+; LA64LARGE-NEXT:    lu32i.d $a1, %got64_pc_lo20(ld)
+; LA64LARGE-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(ld)
 ; LA64LARGE-NEXT:    move $s1, $zero
-; LA64LARGE-NEXT:    pcalau12i $s0, %ld_pc_hi20(ld)
-; LA64LARGE-NEXT:    addi.d $t8, $zero, %got_pc_lo12(ld)
-; LA64LARGE-NEXT:    lu32i.d $t8, %got64_pc_lo20(ld)
-; LA64LARGE-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(ld)
-; LA64LARGE-NEXT:    add.d $s0, $t8, $s0
+; LA64LARGE-NEXT:    add.d $s0, $a1, $a0
 ; LA64LARGE-NEXT:    .p2align 4, , 16
 ; LA64LARGE-NEXT:  .LBB3_1: # %loop
 ; LA64LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64LARGE-NEXT:    move $a0, $s0
-; LA64LARGE-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LA64LARGE-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGE-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LA64LARGE-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LA64LARGE-NEXT:    add.d $ra, $t8, $ra
+; LA64LARGE-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
+; LA64LARGE-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
+; LA64LARGE-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
+; LA64LARGE-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
+; LA64LARGE-NEXT:    add.d $ra, $ra, $a1
 ; LA64LARGE-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGE-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGE-NEXT:    addi.w $s1, $s1, 1
@@ -438,21 +438,21 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; LA64LARGE-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; LA64LARGE-NEXT:    st.d $s1, $sp, 0 # 8-byte Folded Spill
 ; LA64LARGE-NEXT:    move $fp, $a0
+; LA64LARGE-NEXT:    pcalau12i $a0, %gd_pc_hi20(gd)
+; LA64LARGE-NEXT:    addi.d $a1, $zero, %got_pc_lo12(gd)
+; LA64LARGE-NEXT:    lu32i.d $a1, %got64_pc_lo20(gd)
+; LA64LARGE-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(gd)
 ; LA64LARGE-NEXT:    move $s1, $zero
-; LA64LARGE-NEXT:    pcalau12i $s0, %gd_pc_hi20(gd)
-; LA64LARGE-NEXT:    addi.d $t8, $zero, %got_pc_lo12(gd)
-; LA64LARGE-NEXT:    lu32i.d $t8, %got64_pc_lo20(gd)
-; LA64LARGE-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(gd)
-; LA64LARGE-NEXT:    add.d $s0, $t8, $s0
+; LA64LARGE-NEXT:    add.d $s0, $a1, $a0
 ; LA64LARGE-NEXT:    .p2align 4, , 16
 ; LA64LARGE-NEXT:  .LBB5_1: # %loop
 ; LA64LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64LARGE-NEXT:    move $a0, $s0
-; LA64LARGE-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LA64LARGE-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGE-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LA64LARGE-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LA64LARGE-NEXT:    add.d $ra, $t8, $ra
+; LA64LARGE-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
+; LA64LARGE-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
+; LA64LARGE-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
+; LA64LARGE-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
+; LA64LARGE-NEXT:    add.d $ra, $ra, $a1
 ; LA64LARGE-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGE-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGE-NEXT:    addi.w $s1, $s1, 1

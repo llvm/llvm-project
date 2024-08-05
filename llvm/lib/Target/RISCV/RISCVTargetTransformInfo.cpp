@@ -280,7 +280,7 @@ bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  return ST->hasStdExtZbb() || ST->hasVendorXCVbitmanip()
+  return ST->hasStdExtZbb() || (ST->hasVendorXCVbitmanip() && !ST->is64Bit())
              ? TTI::PSK_FastHardware
              : TTI::PSK_Software;
 }
@@ -1100,30 +1100,33 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   }
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    // For fp vector to mask, we use:
+    // vfncvt.rtz.x.f.w v9, v8
+    // vand.vi v8, v9, 1
+    // vmsne.vi v0, v8, 0
+    if (Dst->getScalarSizeInBits() == 1)
+      return 3;
+
+    if (std::abs(PowDiff) <= 1)
+      return 1;
+
+    // Counts of narrow/widen instructions.
+    return std::abs(PowDiff);
+
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    if (Src->getScalarSizeInBits() == 1 || Dst->getScalarSizeInBits() == 1) {
-      // The cost of convert from or to mask vector is different from other
-      // cases. We could not use PowDiff to calculate it.
-      // For mask vector to fp, we should use the following instructions:
-      // vmv.v.i v8, 0
-      // vmerge.vim v8, v8, -1, v0
-      // vfcvt.f.x.v v8, v8
-
-      // And for fp vector to mask, we use:
-      // vfncvt.rtz.x.f.w v9, v8
-      // vand.vi v8, v9, 1
-      // vmsne.vi v0, v8, 0
+    // For mask vector to fp, we should use the following instructions:
+    // vmv.v.i v8, 0
+    // vmerge.vim v8, v8, -1, v0
+    // vfcvt.f.x.v v8, v8
+    if (Src->getScalarSizeInBits() == 1)
       return 3;
-    }
+
     if (std::abs(PowDiff) <= 1)
       return 1;
     // Backend could lower (v[sz]ext i8 to double) to vfcvt(v[sz]ext.f8 i8),
     // so it only need two conversion.
-    if (Src->isIntOrIntVectorTy())
-      return 2;
-    // Counts of narrow/widen instructions.
-    return std::abs(PowDiff);
+    return 2;
   }
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }

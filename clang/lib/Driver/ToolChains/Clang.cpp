@@ -7789,17 +7789,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_mno_amdgpu_ieee);
   }
 
-  // For all the host OpenMP offloading compile jobs we need to pass the targets
-  // information using -fopenmp-targets= option.
-  if (JA.isHostOffloading(Action::OFK_OpenMP)) {
-    SmallString<128> Targets("-fopenmp-targets=");
-
-    SmallVector<std::string, 4> Triples;
-    auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
-    std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
-                   [](auto TC) { return TC.second->getTripleString(); });
-    CmdArgs.push_back(Args.MakeArgString(Targets + llvm::join(Triples, ",")));
-  }
+  addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
 
   bool VirtualFunctionElimination =
       Args.hasFlag(options::OPT_fvirtual_function_elimination,
@@ -9155,7 +9145,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // If we disable the GPU C library support it needs to be forwarded to the
   // link job.
   if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
-    CmdArgs.push_back("--device-linker=-nolibc");
+    CmdArgs.push_back("--device-compiler=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

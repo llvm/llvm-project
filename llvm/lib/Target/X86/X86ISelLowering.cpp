@@ -2475,8 +2475,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
     // clang-format off
    for (ISD::NodeType Op :
-         {ISD::FCEIL,  ISD::STRICT_FCEIL,
+         {ISD::FACOS,  ISD::STRICT_FACOS,
+          ISD::FASIN,  ISD::STRICT_FASIN,
+          ISD::FATAN,  ISD::STRICT_FATAN,
+          ISD::FCEIL,  ISD::STRICT_FCEIL,
           ISD::FCOS,   ISD::STRICT_FCOS,
+          ISD::FCOSH,  ISD::STRICT_FCOSH,
           ISD::FEXP,   ISD::STRICT_FEXP,
           ISD::FFLOOR, ISD::STRICT_FFLOOR,
           ISD::FREM,   ISD::STRICT_FREM,
@@ -2484,7 +2488,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FLOG10, ISD::STRICT_FLOG10,
           ISD::FPOW,   ISD::STRICT_FPOW,
           ISD::FSIN,   ISD::STRICT_FSIN,
-          ISD::FTAN,   ISD::STRICT_FTAN})
+          ISD::FSINH,  ISD::STRICT_FSINH,
+          ISD::FTAN,   ISD::STRICT_FTAN,
+          ISD::FTANH,  ISD::STRICT_FTANH})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
@@ -4289,7 +4295,7 @@ static SDValue getAVX512Node(unsigned Opcode, const SDLoc &DL, MVT VT,
     DstVT = MVT::getVectorVT(SVT, 512 / SVT.getSizeInBits());
 
   // Canonicalize src operands.
-  SmallVector<SDValue> SrcOps(Ops.begin(), Ops.end());
+  SmallVector<SDValue> SrcOps(Ops);
   for (SDValue &Op : SrcOps) {
     MVT OpVT = Op.getSimpleValueType();
     // Just pass through scalar operands.
@@ -34027,6 +34033,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTNEPS2BF16)
   NODE_NAME_CASE(MCVTNEPS2BF16)
   NODE_NAME_CASE(DPBF16PS)
+  NODE_NAME_CASE(MPSADBW)
   NODE_NAME_CASE(LWPINS)
   NODE_NAME_CASE(MGATHER)
   NODE_NAME_CASE(MSCATTER)
@@ -39291,7 +39298,7 @@ static SDValue combineX86ShuffleChainWithExtract(
   // Attempt to peek through inputs and adjust mask when we extract from an
   // upper subvector.
   int AdjustedMasks = 0;
-  SmallVector<SDValue, 4> WideInputs(Inputs.begin(), Inputs.end());
+  SmallVector<SDValue, 4> WideInputs(Inputs);
   for (unsigned I = 0; I != NumInputs; ++I) {
     SDValue &Input = WideInputs[I];
     Input = peekThroughBitcasts(Input);
@@ -39976,8 +39983,7 @@ static SDValue combineX86ShufflesRecursively(
   HasVariableMask |= IsOpVariableMask;
 
   // Update the list of shuffle nodes that have been combined so far.
-  SmallVector<const SDNode *, 16> CombinedNodes(SrcNodes.begin(),
-                                                SrcNodes.end());
+  SmallVector<const SDNode *, 16> CombinedNodes(SrcNodes);
   CombinedNodes.push_back(Op.getNode());
 
   // See if we can recurse into each shuffle source op (if it's a target

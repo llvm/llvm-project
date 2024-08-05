@@ -2246,6 +2246,10 @@ private:
   friend constexpr basic_string operator+ <>(const basic_string&, type_identity_t<__self_view>);
   friend constexpr basic_string operator+ <>(type_identity_t<__self_view>, const basic_string&);
 #endif
+
+  template <class _CharT2, class _Traits2, class _Allocator2>
+  friend inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+  operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
 };
 
 // These declarations must appear before any functions are implicitly used
@@ -3855,16 +3859,18 @@ operator==(const _CharT* __lhs, const basic_string<_CharT, _Traits, _Allocator>&
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs) _NOEXCEPT {
-#if _LIBCPP_STD_VER >= 20
-  return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
-#else
-  typedef basic_string<_CharT, _Traits, _Allocator> _String;
   _LIBCPP_ASSERT_NON_NULL(__rhs != nullptr, "operator==(basic_string, char*): received nullptr");
+
+  using _String = basic_string<_CharT, _Traits, _Allocator>;
+
   size_t __rhs_len = _Traits::length(__rhs);
+  if (__builtin_constant_p(__rhs_len) && !_String::__fits_in_sso(__rhs_len)) {
+    if (!__lhs.__is_long())
+      return false;
+  }
   if (__rhs_len != __lhs.size())
     return false;
   return __lhs.compare(0, _String::npos, __rhs, __rhs_len) == 0;
-#endif
 }
 
 #if _LIBCPP_STD_VER >= 20

@@ -8,6 +8,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf.h"
+#include "src/stdlib/srand.h"
 #include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -136,8 +137,10 @@ void print_header() {
 void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
 
-  if (id == 0)
+  if (id == 0) {
     print_header();
+    LIBC_NAMESPACE::srand(gpu::processor_clock());
+  }
 
   gpu::sync_threads();
 
