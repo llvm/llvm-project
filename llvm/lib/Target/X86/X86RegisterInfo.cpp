@@ -1096,7 +1096,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
     // Add any two address hints after any copy hints.
     SmallSet<unsigned, 4> TwoAddrHints;
 
-    auto tryAddNDDHint = [&](const MachineOperand &MO) -> void {
+    auto TryAddNDDHint = [&](const MachineOperand &MO) {
       Register Reg = MO.getReg();
       Register PhysReg =
           Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
@@ -1109,13 +1109,13 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       if (X86::getNonNDVariant(MI.getOpcode())) {
         unsigned OpIdx = MI.getOperandNo(&MO);
         if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-          tryAddNDDHint(MI.getOperand(1));
+          TryAddNDDHint(MI.getOperand(1));
           if (MI.isCommutable() && MI.getOperand(2).isReg())
-            tryAddNDDHint(MI.getOperand(2));
+            TryAddNDDHint(MI.getOperand(2));
         } else if (OpIdx == 1) {
-          tryAddNDDHint(MI.getOperand(0));
+          TryAddNDDHint(MI.getOperand(0));
         } else if (MI.isCommutable() && OpIdx == 2) {
-          tryAddNDDHint(MI.getOperand(0));
+          TryAddNDDHint(MI.getOperand(0));
         }
       }
     }
