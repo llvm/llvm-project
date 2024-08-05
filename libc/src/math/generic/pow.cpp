@@ -220,7 +220,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
 
   // The double precision number that is closest to 1 is (1 - 2^-53), which has
   //   log2(1 - 2^-53) ~ -1.715...p-53.
-  // So if |y| > 1075 / log2(1 - 2^-53), and x is finite:
+  // So if |y| > |1075 / log2(1 - 2^-53)|, and x is finite:
   //   |y * log2(x)| = 0 or > 1075.
   // Hence x^y will either overflow or underflow if x is not zero.
   if (LIBC_UNLIKELY(y_mant == 0 || y_a > 0x43d7'4910'd52d'3052 ||
@@ -240,7 +240,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
       return y_sign ? (1.0 / (x * x)) : (x * x);
     }
 
-    // |y| > 1075 / log2(1 - 2^-53).
+    // |y| > |1075 / log2(1 - 2^-53)|.
     if (y_a > 0x43d7'4910'd52d'3052) {
       if (y_a >= 0x7ff0'0000'0000'0000) {
         // y is inf or nan
