@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -164,6 +165,9 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
+  DenseMap<unsigned, int64_t> AddrSpaceToSentinelValueMap;
+  bool sentinelValueDefined = false;
+
   /// Attempts to set the alignment of the given type. Returns an error
   /// description on failure.
   Error setAlignment(AlignTypeEnum AlignType, Align ABIAlign, Align PrefAlign,
@@ -219,6 +223,8 @@ public:
     StructAlignment = DL.StructAlignment;
     Pointers = DL.Pointers;
     NonIntegralAddressSpaces = DL.NonIntegralAddressSpaces;
+    AddrSpaceToSentinelValueMap = DL.AddrSpaceToSentinelValueMap;
+    sentinelValueDefined = DL.isSentinelValueDefined();
     return *this;
   }
 
@@ -298,6 +304,19 @@ public:
   bool hasMicrosoftFastStdCallMangling() const {
     return ManglingMode == MM_WinCOFFX86;
   }
+
+  int64_t getSentinelPointerValue(unsigned AddrSpace) const {
+    auto It = AddrSpaceToSentinelValueMap.find(AddrSpace);
+    if (It == AddrSpaceToSentinelValueMap.end())
+      return 0;
+    return It->second;
+  }
+
+  void setSentinelPointerValue(unsigned AddrSpace, int64_t Value) {
+    AddrSpaceToSentinelValueMap[AddrSpace] = Value;
+  }
+
+  bool isSentinelValueDefined() const { return sentinelValueDefined; }
 
   /// Returns true if symbols with leading question marks should not receive IR
   /// mangling. True for Windows mangling modes.
