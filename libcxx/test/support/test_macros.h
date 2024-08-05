@@ -305,7 +305,7 @@ inline Tp& DoNotOptimize(Tp& value) {
   // The `m` and `r` output constraint is invalid in the AMDGPU backend as well
   // as i8 / i1 arguments, so we just capture the pointer instead.
 #  if defined(__AMDGPU__)
-  Tp *tmp = &value;
+  Tp* tmp = &value;
   asm volatile("" : "+v"(tmp) : : "memory");
 #  elif defined(__clang__)
   asm volatile("" : "+r,m"(value) : : "memory");
