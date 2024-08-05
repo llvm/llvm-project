@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o %t -filetype=obj
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o %t -filetype=obj -experimental-debug-variable-locations=true
 ; RUN: llvm-dwarfdump --debug-info %t | FileCheck %s
 
 %struct.struct_t = type { i8 }
