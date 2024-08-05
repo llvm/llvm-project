@@ -3744,8 +3744,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const RegisterBank *SrcBank = getRegBank(SrcReg, MRI, *TRI);
     assert(SrcBank && "src bank should have been assigned already");
 
-    // For COPY between a physical reg and an s1, set dst bank to VCCRegBank
-    // so that the copy is allowed.
+    // For COPY between a physical reg and an s1, there is no type associated so
+    // we need to take the virtual register's type as a hint on how to interpret
+    // s1 values.
     if (!SrcReg.isVirtual() && !DstBank &&
         MRI.getType(DstReg) == LLT::scalar(1))
       DstBank = &AMDGPU::VCCRegBank;
