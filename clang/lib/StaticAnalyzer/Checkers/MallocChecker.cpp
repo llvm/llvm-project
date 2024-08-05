@@ -796,13 +796,23 @@ protected:
   /// done syntactically, because we are trying to argue about alternative
   /// paths of execution, and as a consequence we don't have path-sensitive
   /// information.
-  bool doesFnIntendToHandleOwnership(const FunctionDecl *Callee,
+  bool doesFnIntendToHandleOwnership(const Decl *Callee,
                                      ASTContext &ACtx) final {
+    const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
+
+    // Given that the stack frame was entered, the body should always be
+    // theoretically obtainable. In case of body farms, the synthesized body
+    // is not attached to declaration, thus triggering the '!FD->hasBody()'
+    // branch. That said, would a synthesized body ever intend to handle
+    // ownership? As of today they don't. And if they did, how would we
+    // put notes inside it, given that it doesn't match any source locations?
+    if (!FD || !FD->hasBody())
+      return false;
     using namespace clang::ast_matchers;
 
     auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
                                             callExpr().bind("call")))),
-                         Callee->getBody(), ACtx);
+                         *FD->getBody(), ACtx);
     for (BoundNodes Match : Matches) {
       if (Match.getNodeAs<CXXDeleteExpr>("delete"))
         return true;
