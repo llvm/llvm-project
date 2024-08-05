@@ -484,5 +484,9 @@ if __name__ == "__main__":
         outfile = sys.stdout
     for k, v in list(symbol_defs.items()):
         template = get_template_name(k, args.mangling)
+        # On AIX, "template" functions starting with "_" are actually function
+        # descriptors which are data symbols. Export these data symbols.
+        if template and platform.system() == "AIX" and k.startswith("_"):
+            template = None
         if v == 1 and (not template or template in template_instantiation_refs):
             print(k, file=outfile)
