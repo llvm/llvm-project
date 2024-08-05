@@ -110,6 +110,23 @@ class TestStructuredDataAPI(TestBase):
         self.assertTrue(my_random_class)
         self.assertEqual(my_random_class.payload, MyRandomClass.payload)
 
+        example_arr = [1, 2.3, "4", {"5": False}]
+        arr_str = json.dumps(example_arr)
+        s.Clear()
+        s.Print(arr_str)
+        example = lldb.SBStructuredData()
+
+        # Check SetFromJSON API for dictionaries, integers, floating point
+        # values, strings and arrays
+        error = example.SetFromJSON(s)
+        if not error.Success():
+            self.fail("FAILED:   " + error.GetCString())
+
+        s.Clear()
+        self.assertSuccess(example.GetAsJSON(s))
+        sb_data = json.loads(s.GetData())
+        self.assertEqual(sb_data, example_arr)
+
     def invalid_struct_test(self, example):
         invalid_struct = lldb.SBStructuredData()
         invalid_struct = example.GetValueForKey("invalid_key")
