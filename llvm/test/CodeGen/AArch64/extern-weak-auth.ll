@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=0 -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=1 -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=1              -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=0         -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=1         -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=1 -global-isel-abort=1 -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
 
 ;; Note: for FastISel, we fall back to SelectionDAG
 
@@ -12,10 +12,10 @@ define ptr @foo() {
 ; otherwise a litpool entry.
   ret ptr @var
 
-; CHECK: adrp x[[ADDRHI:[0-9]+]], :got_auth:var
-; CHECK: add x[[ADDRHI]], x[[ADDRHI]], :got_auth_lo12:var
-; CHECK: ldr x0, [x[[ADDRHI]]]
-; CHECK: autia x0, x[[ADDRHI]]
+; CHECK:      adrp x[[ADDRHI:[0-9]+]], :got_auth:var
+; CHECK-NEXT: add x[[ADDRHI]], x[[ADDRHI]], :got_auth_lo12:var
+; CHECK-NEXT: ldr x0, [x[[ADDRHI]]]
+; CHECK-NEXT: autia x0, x[[ADDRHI]]
 }
 
 @arr_var = extern_weak global [10 x i32]
@@ -23,11 +23,11 @@ define ptr @foo() {
 define ptr @bar() {
   %addr = getelementptr [10 x i32], ptr @arr_var, i32 0, i32 5
 
-; CHECK: adrp x[[ADDRHI:[0-9]+]], :got_auth:arr_var
-; CHECK: add x[[ADDRHI]], x[[ADDRHI]], :got_auth_lo12:arr_var
-; CHECK: ldr [[BASE:x[0-9]+]], [x[[ADDRHI]]]
-; CHECK: autda [[BASE]], x[[ADDRHI]]
-; CHECK: add x0, [[BASE]], #20
+; CHECK:      adrp x[[ADDRHI:[0-9]+]], :got_auth:arr_var
+; CHECK-NEXT: add x[[ADDRHI]], x[[ADDRHI]], :got_auth_lo12:arr_var
+; CHECK-NEXT: ldr [[BASE:x[0-9]+]], [x[[ADDRHI]]]
+; CHECK-NEXT: autda [[BASE]], x[[ADDRHI]]
+; CHECK-NEXT: add x0, [[BASE]], #20
   ret ptr %addr
 }
 
