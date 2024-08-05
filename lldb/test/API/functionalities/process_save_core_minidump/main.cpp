@@ -19,9 +19,6 @@ size_t h() {
 int main() {
   std::thread t1(f);
 
-  char *heap_pointer = new char[10];
-  uint64_t heap_addr = *heap_pointer;
-  std::cout << "Heap address is " << heap_addr << "\n";
   size_t x = h();
 
   t1.join();
