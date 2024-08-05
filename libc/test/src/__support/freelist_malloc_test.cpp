@@ -22,7 +22,7 @@ TEST(LlvmLibcFreeListMalloc, Malloc) {
   constexpr size_t kCallocNum = 4;
   constexpr size_t kCallocSize = 64;
 
-  typedef FreeListHeap<>::BlockType Block;
+  typedef FreeListHeap::BlockType Block;
 
   void *ptr1 = LIBC_NAMESPACE::malloc(kAllocSize);
   auto *block = Block::from_usable_space(ptr1);

@@ -174,16 +174,32 @@ public:
     return inner_size - sizeof(prev_) + BLOCK_OVERHEAD;
   }
 
-  /// @returns The number of usable bytes inside the block.
+  /// @returns The number of usable bytes inside the block were it to be
+  /// allocated.
   size_t inner_size() const {
     if (!next())
       return 0;
     return inner_size(outer_size());
   }
 
+  /// @returns The number of usable bytes inside a block with the given outer
+  /// size were it to be allocated.
   static size_t inner_size(size_t outer_size) {
     // The usable region includes the prev_ field of the next block.
-    return outer_size - BLOCK_OVERHEAD + sizeof(prev_);
+    return inner_size_free(outer_size) + sizeof(prev_);
+  }
+
+  /// @returns The number of usable bytes inside the block if it remains free.
+  size_t inner_size_free() const {
+    if (!next())
+      return 0;
+    return inner_size_free(outer_size());
+  }
+
+  /// @returns The number of usable bytes inside a block with the given outer
+  /// size if it remains free.
+  static size_t inner_size_free(size_t outer_size) {
+    return outer_size - BLOCK_OVERHEAD;
   }
 
   /// @returns A pointer to the usable space inside this block.

@@ -1,0 +1,253 @@
+//===-- Interface for freetrie
+//--------------------------------------------===//freetrie.h
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
+#define LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
+
+#include "freelist.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+/// A trie of free lists.
+
+class FreeTrie {
+public:
+  /// A trie node that is also a free list. The subtrie contains a continous
+  /// SizeRange of free lists. The lower and upper subtrie's contain the lower
+  /// and upper half of the subtries range. There is no direct relationship
+  /// between the size of this node's free list and the contents of the lower
+  /// and upper subtries.
+  class Node : public FreeList::Node {
+    /// Return an abitrary leaf in the subtrie.
+    Node &leaf();
+
+    /// The child subtrie covering the lower half of this subtrie's size range.
+    Node *lower;
+    /// The child subtrie covering the upper half of this subtrie's size range.
+    Node *upper;
+    /// The parent subtrie or nullptr if this is the root.
+    Node *parent;
+
+    friend class FreeTrie;
+  };
+
+  /// Power-of-two range of sizes covered by a subtrie.
+  struct SizeRange {
+    size_t min;
+    size_t width;
+
+    constexpr SizeRange(size_t min, size_t width) : min(min), width(width) {
+      LIBC_ASSERT(!(width & (width - 1)) && "width must be a power of two");
+    }
+
+    /// @returns The lower half of the size range.
+    SizeRange lower() const { return {min, width / 2}; }
+
+    /// @returns The lower half of the size range.
+    SizeRange upper() const { return {min + width / 2, width / 2}; }
+
+    /// @returns The largest size in this range.
+    size_t max() const { return min + (width - 1); }
+
+    /// @returns Whether the range contains the given size.
+    bool contains(size_t size) const {
+      return min <= size && size < min + width;
+    }
+  };
+
+  constexpr FreeTrie() : FreeTrie(SizeRange{0, 0}) {}
+  constexpr FreeTrie(SizeRange range) : range(range) {}
+
+  /// Sets the range of possible block sizes. This can only be called when the
+  /// trie is empty.
+  void set_range(FreeTrie::SizeRange range) {
+    LIBC_ASSERT(empty() && "cannot change the range of a preexisting trie");
+    this->range = range;
+  }
+
+  /// @returns Whether the trie contains any blocks.
+  bool empty() const { return !root; }
+
+  /// Push a block to the trie.
+  void push(Block<> *block);
+
+  /// Remove a node from this trie node's free list.
+  void remove(Node *node);
+
+  /// @returns A smallest node that can allocate the given size; otherwise
+  /// nullptr.
+  Node *find_best_fit(size_t size);
+
+private:
+  /// Replaces references to one node with another (or nullptr) in all adjacent
+  /// parent and child nodes.
+  void replace_node(Node *node, Node *new_node);
+
+  Node *root = nullptr;
+  SizeRange range;
+};
+
+LIBC_INLINE void FreeTrie::push(Block<> *block) {
+  LIBC_ASSERT(block->inner_size_free() >= sizeof(Node) &&
+              "block too small to accomodate free trie node");
+  size_t size = block->inner_size();
+  LIBC_ASSERT(range.contains(size) && "requested size out of trie range");
+
+  // Find the position in the tree to push to.
+  Node **cur = &root;
+  Node *parent = nullptr;
+  SizeRange cur_range = range;
+  while (*cur && (*cur)->size() != size) {
+    LIBC_ASSERT(cur_range.contains(size) && "requested size out of trie range");
+    parent = *cur;
+    if (size <= cur_range.lower().max()) {
+      cur = &(*cur)->lower;
+      cur_range = cur_range.lower();
+    } else {
+      cur = &(*cur)->upper;
+      cur_range = cur_range.upper();
+    }
+  }
+
+  Node *node = new (block->usable_space()) Node;
+  node->lower = node->upper = nullptr;
+  node->parent = parent;
+  FreeList list = *cur;
+  list.push(node);
+  *cur = static_cast<Node *>(list.begin());
+}
+
+LIBC_INLINE void FreeTrie::remove(Node *node) {
+  LIBC_ASSERT(!empty() && "cannot remove from empty trie");
+  FreeList list = node;
+  list.pop();
+  Node *new_node = static_cast<Node *>(list.begin());
+  if (!new_node) {
+    // The freelist is empty. Replace the subtrie root with an arbitrary leaf.
+    // This is legal because there is no relationship between the size of the
+    // root and its children.
+    Node *leaf = &node->leaf();
+    if (leaf == node) {
+      // If the root is a leaf, then removing it empties the subtrie.
+      replace_node(node, nullptr);
+      return;
+    }
+
+    replace_node(leaf, nullptr);
+    new_node = leaf;
+  }
+
+  // Copy the trie links to the new head.
+  new_node->lower = node->lower;
+  new_node->upper = node->upper;
+  new_node->parent = node->parent;
+  replace_node(node, new_node);
+  return;
+}
+
+LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
+  if (empty() || range.max() < size)
+    return nullptr;
+
+  Node *cur = root;
+  SizeRange cur_range = range;
+  Node *best_fit = nullptr;
+  Node *deferred_upper_trie = nullptr;
+  FreeTrie::SizeRange deferred_upper_range{0, 0};
+
+  // Inductively assume all better fits than the current best are in the
+  // current subtrie.
+  while (true) {
+    LIBC_ASSERT(cur_range.contains(cur->size()) &&
+                "trie node size out of range");
+    LIBC_ASSERT(cur_range.max() >= size &&
+                "range could not fit requested size");
+
+    // If the current node is an exact fit, it is a best fit.
+    if (cur->size() == size)
+      return cur;
+
+    if (cur->size() > size && (!best_fit || cur->size() < best_fit->size())) {
+      // The current node is a better fit.
+      best_fit = cur;
+      LIBC_ASSERT(
+          !deferred_upper_trie ||
+          deferred_upper_range.min > cur->size() &&
+              "deferred upper subtrie should be outclassed by new best fit");
+      deferred_upper_trie = nullptr;
+    }
+
+    // Determine which subtries might contain better fits.
+    bool lower_impossible = !cur->lower || cur_range.lower().max() < size;
+    bool upper_impossible =
+        !cur->upper || (best_fit && cur_range.upper().min >= best_fit->size());
+
+    if (lower_impossible && upper_impossible) {
+      if (!deferred_upper_trie)
+        return best_fit;
+      // Scan the deferred upper subtrie and consider whether any element within
+      // provides a better fit.
+      //
+      // This can only ever be reached once. In a deferred upper subtrie, every
+      // node fits, so the scan can always summarily ignore an upper suptrie
+      // rather than deferring it.
+      cur = deferred_upper_trie;
+      cur_range = deferred_upper_range;
+      deferred_upper_trie = nullptr;
+      continue;
+    }
+
+    if (lower_impossible) {
+      cur = cur->upper;
+      cur_range = cur_range.upper();
+    } else if (upper_impossible) {
+      cur = cur->lower;
+      cur_range = cur_range.lower();
+    } else {
+      // Both subtries might contain a better fit. Any fit in the lower subtrie
+      // is better than the any fit in the upper subtrie, so scan the lower
+      // subtrie and return to the upper one if necessary.
+      LIBC_ASSERT(!deferred_upper_trie ||
+                  cur_range.upper().max() < deferred_upper_range.min &&
+                      "old deferred upper subtrie should be outclassed by new");
+      deferred_upper_trie = cur->upper;
+      deferred_upper_range = cur_range.upper();
+      cur = cur->lower;
+      cur_range = cur_range.lower();
+    }
+  }
+}
+
+LIBC_INLINE void FreeTrie::replace_node(Node *node, Node *new_node) {
+  if (node->parent) {
+    Node *&parent_child =
+        node->parent->lower == node ? node->parent->lower : node->parent->upper;
+    LIBC_ASSERT(parent_child == node &&
+                "no reference to child node found in parent");
+    parent_child = new_node;
+  } else {
+    LIBC_ASSERT(root == node && "non-root node had no parent");
+    root = new_node;
+  }
+  if (node->lower)
+    node->lower->parent = new_node;
+  if (node->upper)
+    node->upper->parent = new_node;
+}
+
+LIBC_INLINE FreeTrie::Node &FreeTrie::Node::leaf() {
+  Node *cur = this;
+  while (cur->lower || cur->upper)
+    cur = cur->lower ? cur->lower : cur->upper;
+  return *cur;
+}
+
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_FREETRIE_H

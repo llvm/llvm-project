@@ -202,6 +202,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.aligned_alloc
     libc.src.stdlib.calloc
     libc.src.stdlib.free
+    libc.src.stdlib.freelist_malloc
     libc.src.stdlib.malloc
     libc.src.stdlib.realloc
 
