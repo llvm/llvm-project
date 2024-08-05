@@ -37,6 +37,8 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
