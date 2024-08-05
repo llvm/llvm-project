@@ -20,14 +20,14 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-set(ENABLE_EXPORTS ON)
-
 add_llvm_tool(llvm-jitlink
   llvm-jitlink.cpp
   llvm-jitlink-coff.cpp
   llvm-jitlink-elf.cpp
   llvm-jitlink-macho.cpp
   llvm-jitlink-statistics.cpp
+
+  EXPORT_SYMBOLS
   )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Haiku")
@@ -37,5 +37,3 @@ endif()
 if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
   target_link_libraries(llvm-jitlink PRIVATE socket)
 endif()
-
-export_executable_symbols(llvm-jitlink)
