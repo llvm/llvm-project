@@ -41,11 +41,13 @@ void test() {
   {
     SpStream rhsSpSt{sp};
     assert(rhsSpSt.span().data() == arr);
+    // Mode `out` counts read characters
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
     SpStream spSt = std::move(rhsSpSt);
     assert(spSt.span().data() == arr);
+    // Mode `out` counts read characters
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
