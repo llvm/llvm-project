@@ -929,89 +929,10 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         Fortran::common::LanguageFeature::CUDA);
   }
 
-  // -fopenmp and -fopenacc
+  // -fopenacc
   if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::OpenACC);
-  }
-  if (args.hasArg(clang::driver::options::OPT_fopenmp)) {
-    // By default OpenMP is set to 1.1 version
-    res.getLangOpts().OpenMPVersion = 11;
-    res.getFrontendOpts().features.Enable(
-        Fortran::common::LanguageFeature::OpenMP);
-    if (int Version = getLastArgIntValue(
-            args, clang::driver::options::OPT_fopenmp_version_EQ,
-            res.getLangOpts().OpenMPVersion, diags)) {
-      res.getLangOpts().OpenMPVersion = Version;
-    }
-    if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
-      res.getLangOpts().OpenMPForceUSM = 1;
-    }
-    if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
-      res.getLangOpts().OpenMPIsTargetDevice = 1;
-
-      // Get OpenMP host file path if any and report if a non existent file is
-      // found
-      if (auto *arg = args.getLastArg(
-              clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
-        res.getLangOpts().OMPHostIRFile = arg->getValue();
-        if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
-          diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
-              << res.getLangOpts().OMPHostIRFile;
-      }
-
-      if (args.hasFlag(
-              clang::driver::options::OPT_fopenmp_assume_teams_oversubscription,
-              clang::driver::options::
-                  OPT_fno_openmp_assume_teams_oversubscription,
-              /*Default=*/false))
-        res.getLangOpts().OpenMPTeamSubscription = true;
-
-      if (args.hasArg(
-              clang::driver::options::OPT_fopenmp_assume_no_thread_state))
-        res.getLangOpts().OpenMPNoThreadState = 1;
-
-      if (args.hasArg(
-              clang::driver::options::OPT_fopenmp_assume_no_nested_parallelism))
-        res.getLangOpts().OpenMPNoNestedParallelism = 1;
-
-      if (args.hasFlag(clang::driver::options::
-                           OPT_fopenmp_assume_threads_oversubscription,
-                       clang::driver::options::
-                           OPT_fno_openmp_assume_threads_oversubscription,
-                       /*Default=*/false))
-        res.getLangOpts().OpenMPThreadSubscription = true;
-
-      if ((args.hasArg(clang::driver::options::OPT_fopenmp_target_debug) ||
-           args.hasArg(clang::driver::options::OPT_fopenmp_target_debug_EQ))) {
-        res.getLangOpts().OpenMPTargetDebug = getLastArgIntValue(
-            args, clang::driver::options::OPT_fopenmp_target_debug_EQ,
-            res.getLangOpts().OpenMPTargetDebug, diags);
-
-        if (!res.getLangOpts().OpenMPTargetDebug &&
-            args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
-          res.getLangOpts().OpenMPTargetDebug = 1;
-      }
-      if (args.hasArg(clang::driver::options::OPT_nogpulib))
-        res.getLangOpts().NoGPULib = 1;
-    }
-
-    switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
-    case llvm::Triple::nvptx:
-    case llvm::Triple::nvptx64:
-    case llvm::Triple::amdgcn:
-      if (!res.getLangOpts().OpenMPIsTargetDevice) {
-        const unsigned diagID = diags.getCustomDiagID(
-            clang::DiagnosticsEngine::Error,
-            "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
-        diags.Report(diagID);
-      }
-      res.getLangOpts().OpenMPIsGPU = 1;
-      break;
-    default:
-      res.getLangOpts().OpenMPIsGPU = 0;
-      break;
-    }
   }
 
   // -pedantic
@@ -1037,6 +958,130 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                 "Only -std=f2018 is allowed currently.");
       diags.Report(diagID);
+    }
+  }
+  return diags.getNumErrors() == numErrorsBefore;
+}
+
+/// Parses all OpenMP related arguments if the -fopenmp option is present,
+/// populating the \c res object accordingly. Returns false if new errors are
+/// generated.
+static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
+                            clang::DiagnosticsEngine &diags) {
+  if (!args.hasArg(clang::driver::options::OPT_fopenmp))
+    return true;
+
+  unsigned numErrorsBefore = diags.getNumErrors();
+  llvm::Triple t(res.getTargetOpts().triple);
+
+  // By default OpenMP is set to 1.1 version
+  res.getLangOpts().OpenMPVersion = 11;
+  res.getFrontendOpts().features.Enable(
+      Fortran::common::LanguageFeature::OpenMP);
+  if (int Version = getLastArgIntValue(
+          args, clang::driver::options::OPT_fopenmp_version_EQ,
+          res.getLangOpts().OpenMPVersion, diags)) {
+    res.getLangOpts().OpenMPVersion = Version;
+  }
+  if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
+    res.getLangOpts().OpenMPForceUSM = 1;
+  }
+  if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
+    res.getLangOpts().OpenMPIsTargetDevice = 1;
+
+    // Get OpenMP host file path if any and report if a non existent file is
+    // found
+    if (auto *arg = args.getLastArg(
+            clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
+      res.getLangOpts().OMPHostIRFile = arg->getValue();
+      if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
+        diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+            << res.getLangOpts().OMPHostIRFile;
+    }
+
+    if (args.hasFlag(
+            clang::driver::options::OPT_fopenmp_assume_teams_oversubscription,
+            clang::driver::options::
+                OPT_fno_openmp_assume_teams_oversubscription,
+            /*Default=*/false))
+      res.getLangOpts().OpenMPTeamSubscription = true;
+
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_assume_no_thread_state))
+      res.getLangOpts().OpenMPNoThreadState = 1;
+
+    if (args.hasArg(
+            clang::driver::options::OPT_fopenmp_assume_no_nested_parallelism))
+      res.getLangOpts().OpenMPNoNestedParallelism = 1;
+
+    if (args.hasFlag(
+            clang::driver::options::OPT_fopenmp_assume_threads_oversubscription,
+            clang::driver::options::
+                OPT_fno_openmp_assume_threads_oversubscription,
+            /*Default=*/false))
+      res.getLangOpts().OpenMPThreadSubscription = true;
+
+    if ((args.hasArg(clang::driver::options::OPT_fopenmp_target_debug) ||
+         args.hasArg(clang::driver::options::OPT_fopenmp_target_debug_EQ))) {
+      res.getLangOpts().OpenMPTargetDebug = getLastArgIntValue(
+          args, clang::driver::options::OPT_fopenmp_target_debug_EQ,
+          res.getLangOpts().OpenMPTargetDebug, diags);
+
+      if (!res.getLangOpts().OpenMPTargetDebug &&
+          args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
+        res.getLangOpts().OpenMPTargetDebug = 1;
+    }
+    if (args.hasArg(clang::driver::options::OPT_nogpulib))
+      res.getLangOpts().NoGPULib = 1;
+  }
+
+  switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+  case llvm::Triple::amdgcn:
+    if (!res.getLangOpts().OpenMPIsTargetDevice) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+      diags.Report(diagID);
+    }
+    res.getLangOpts().OpenMPIsGPU = 1;
+    break;
+  default:
+    res.getLangOpts().OpenMPIsGPU = 0;
+    break;
+  }
+
+  // Get the OpenMP target triples if any.
+  if (auto *arg =
+          args.getLastArg(clang::driver::options::OPT_fopenmp_targets_EQ)) {
+    enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
+    auto getArchPtrSize = [](const llvm::Triple &triple) {
+      if (triple.isArch16Bit())
+        return Arch16Bit;
+      if (triple.isArch32Bit())
+        return Arch32Bit;
+      assert(triple.isArch64Bit() && "Expected 64-bit architecture");
+      return Arch64Bit;
+    };
+
+    for (unsigned i = 0; i < arg->getNumValues(); ++i) {
+      llvm::Triple tt(arg->getValue(i));
+
+      if (tt.getArch() == llvm::Triple::UnknownArch ||
+          !(tt.getArch() == llvm::Triple::aarch64 || tt.isPPC() ||
+            tt.getArch() == llvm::Triple::systemz ||
+            tt.getArch() == llvm::Triple::nvptx ||
+            tt.getArch() == llvm::Triple::nvptx64 ||
+            tt.getArch() == llvm::Triple::amdgcn ||
+            tt.getArch() == llvm::Triple::x86 ||
+            tt.getArch() == llvm::Triple::x86_64))
+        diags.Report(clang::diag::err_drv_invalid_omp_target)
+            << arg->getValue(i);
+      else if (getArchPtrSize(t) != getArchPtrSize(tt))
+        diags.Report(clang::diag::err_drv_incompatible_omp_arch)
+            << arg->getValue(i) << t.str();
+      else
+        res.getLangOpts().OMPTargetTriples.push_back(tt);
     }
   }
   return diags.getNumErrors() == numErrorsBefore;
@@ -1277,6 +1322,7 @@ bool CompilerInvocation::createFromArgs(
   success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(invoc, args, diags);
   success &= parseDialectArgs(invoc, args, diags);
+  success &= parseOpenMPArgs(invoc, args, diags);
   success &= parseDiagArgs(invoc, args, diags);
 
   // Collect LLVM (-mllvm) and MLIR (-mmlir) options.

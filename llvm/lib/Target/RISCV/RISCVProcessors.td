@@ -21,6 +21,9 @@ class RISCVTuneInfo {
   bits<32> MaxPrefetchIterationsAhead = -1;
 
   bits<32> MinimumJumpTableEntries = 5;
+
+  // Tail duplication threshold at -O3.
+  bits<32> TailDupAggressiveThreshold = 6;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -29,7 +32,7 @@ def RISCVTuneInfoTable : GenericTable {
   let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
                 "CacheLineSize", "PrefetchDistance",
                 "MinPrefetchStride", "MaxPrefetchIterationsAhead",
-                "MinimumJumpTableEntries"];
+                "MinimumJumpTableEntries", "TailDupAggressiveThreshold"];
 }
 
 def getRISCVTuneInfo : SearchIndex {

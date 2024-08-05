@@ -23,14 +23,10 @@
 struct A {};
 struct B {};
 
-namespace std {
-
 template <>
-struct hash<B> {
+struct std::hash<B> {
   std::size_t operator()(B const&) noexcept(false) { return 0; }
 };
-
-}
 
 int main(int, char**)
 {

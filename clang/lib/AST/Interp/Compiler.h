@@ -202,7 +202,6 @@ public:
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
-  bool visitLoopBody(const Stmt *S);
   bool visitDeclStmt(const DeclStmt *DS);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
@@ -452,11 +451,15 @@ public:
     }
 
     // Use the parent scope.
-    addExtended(Local);
+    if (this->Parent)
+      this->Parent->addLocal(Local);
+    else
+      this->addLocal(Local);
   }
 
   virtual void emitDestruction() {}
-  virtual bool emitDestructors() { return true; }
+  virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
+  virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
   VariableScope *getParent() const { return Parent; }
 
 protected:
@@ -483,16 +486,21 @@ public:
   }
 
   /// Overriden to support explicit destruction.
-  void emitDestruction() override { destroyLocals(); }
+  void emitDestruction() override {
+    if (!Idx)
+      return;
+
+    this->emitDestructors();
+    this->Ctx->emitDestroy(*Idx, SourceInfo{});
+  }
 
   /// Explicit destruction of local variables.
-  bool destroyLocals() {
+  bool destroyLocals(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
 
-    bool Success = this->emitDestructors();
-    this->Ctx->emitDestroy(*Idx, SourceInfo{});
-    removeStoredOpaqueValues();
+    bool Success = this->emitDestructors(E);
+    this->Ctx->emitDestroy(*Idx, E);
     this->Idx = std::nullopt;
     return Success;
   }
@@ -501,25 +509,26 @@ public:
     if (!Idx) {
       Idx = this->Ctx->Descriptors.size();
       this->Ctx->Descriptors.emplace_back();
+      this->Ctx->emitInitScope(*Idx, {});
     }
 
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
-  bool emitDestructors() override {
+  bool emitDestructors(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        if (!this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{}))
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;
 
         if (!this->Ctx->emitDestruction(Local.Desc))
           return false;
 
-        if (!this->Ctx->emitPopPtr(SourceInfo{}))
+        if (!this->Ctx->emitPopPtr(E))
           return false;
         removeIfStoredOpaqueValue(Local);
       }
@@ -547,19 +556,6 @@ public:
 
   /// Index of the scope in the chain.
   std::optional<unsigned> Idx;
-};
-
-/// Emits the destructors of the variables of \param OtherScope
-/// when this scope is destroyed. Does not create a Scope in the bytecode at
-/// all, this is just a RAII object to emit destructors.
-template <class Emitter> class DestructorScope final {
-public:
-  DestructorScope(LocalScope<Emitter> &OtherScope) : OtherScope(OtherScope) {}
-
-  ~DestructorScope() { OtherScope.emitDestructors(); }
-
-private:
-  LocalScope<Emitter> &OtherScope;
 };
 
 /// Scope for storage declared in a compound statement.

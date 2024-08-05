@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -67,6 +68,17 @@ typeIsLegalBoolVec(unsigned TypeIdx, std::initializer_list<LLT> BoolVecTys,
   return all(typeInSet(TypeIdx, BoolVecTys), P);
 }
 
+static LegalityPredicate typeIsLegalPtrVec(unsigned TypeIdx,
+                                           std::initializer_list<LLT> PtrVecTys,
+                                           const RISCVSubtarget &ST) {
+  LegalityPredicate P = [=, &ST](const LegalityQuery &Query) {
+    return ST.hasVInstructions() &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 1 ||
+            ST.getELen() == 64);
+  };
+  return all(typeInSet(TypeIdx, PtrVecTys), P);
+}
+
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     : STI(ST), XLen(STI.getXLen()), sXLen(LLT::scalar(XLen)) {
   const LLT sDoubleXLen = LLT::scalar(2 * XLen);
@@ -111,6 +123,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT nxv4s64 = LLT::scalable_vector(4, s64);
   const LLT nxv8s64 = LLT::scalable_vector(8, s64);
 
+  const LLT nxv1p0 = LLT::scalable_vector(1, p0);
+  const LLT nxv2p0 = LLT::scalable_vector(2, p0);
+  const LLT nxv4p0 = LLT::scalable_vector(4, p0);
+  const LLT nxv8p0 = LLT::scalable_vector(8, p0);
+
   using namespace TargetOpcode;
 
   auto BoolVecTys = {nxv1s1, nxv2s1, nxv4s1, nxv8s1, nxv16s1, nxv32s1, nxv64s1};
@@ -119,6 +136,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                         nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
                         nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
                         nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
+
+  auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
@@ -266,6 +285,23 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                      {s32, p0, s16, 16},
                                      {s32, p0, s32, 32},
                                      {p0, p0, sXLen, XLen}});
+  if (ST.hasVInstructions())
+    LoadStoreActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
+                                               {nxv4s8, p0, nxv4s8, 8},
+                                               {nxv8s8, p0, nxv8s8, 8},
+                                               {nxv16s8, p0, nxv16s8, 8},
+                                               {nxv32s8, p0, nxv32s8, 8},
+                                               {nxv64s8, p0, nxv64s8, 8},
+                                               {nxv2s16, p0, nxv2s16, 16},
+                                               {nxv4s16, p0, nxv4s16, 16},
+                                               {nxv8s16, p0, nxv8s16, 16},
+                                               {nxv16s16, p0, nxv16s16, 16},
+                                               {nxv32s16, p0, nxv32s16, 16},
+                                               {nxv2s32, p0, nxv2s32, 32},
+                                               {nxv4s32, p0, nxv4s32, 32},
+                                               {nxv8s32, p0, nxv8s32, 32},
+                                               {nxv16s32, p0, nxv16s32, 32}});
+
   auto &ExtLoadActions =
       getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
           .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
@@ -279,7 +315,28 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   } else if (ST.hasStdExtD()) {
     LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
   }
-  LoadStoreActions.clampScalar(0, s32, sXLen).lower();
+  if (ST.hasVInstructions() && ST.getELen() == 64)
+    LoadStoreActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
+                                               {nxv1s16, p0, nxv1s16, 16},
+                                               {nxv1s32, p0, nxv1s32, 32}});
+
+  if (ST.hasVInstructionsI64())
+    LoadStoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+
+                                               {nxv2s64, p0, nxv2s64, 64},
+                                               {nxv4s64, p0, nxv4s64, 64},
+                                               {nxv8s64, p0, nxv8s64, 64}});
+
+  LoadStoreActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
+      .lowerIfMemSizeNotByteSizePow2()
+      // we will take the custom lowering logic if we have scalable vector types
+      // with non-standard alignments
+      .customIf(LegalityPredicate(
+          LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                                  typeIsLegalPtrVec(0, PtrVecTys, ST))))
+      .clampScalar(0, s32, sXLen)
+      .lower();
+
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
   getActionDefinitionsBuilder({G_PTR_ADD, G_PTRMASK}).legalFor({{p0, sXLen}});
@@ -651,6 +708,46 @@ bool RISCVLegalizerInfo::legalizeExt(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
+                                           LegalizerHelper &Helper,
+                                           MachineIRBuilder &MIB) const {
+  assert((isa<GLoad>(MI) || isa<GStore>(MI)) &&
+         "Machine instructions must be Load/Store.");
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  MachineFunction *MF = MI.getMF();
+  const DataLayout &DL = MIB.getDataLayout();
+  LLVMContext &Ctx = MF->getFunction().getContext();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DataTy = MRI.getType(DstReg);
+  if (!DataTy.isVector())
+    return false;
+
+  if (!MI.hasOneMemOperand())
+    return false;
+
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+
+  const auto *TLI = STI.getTargetLowering();
+  EVT VT = EVT::getEVT(getTypeForLLT(DataTy, Ctx));
+
+  if (TLI->allowsMemoryAccessForAlignment(Ctx, DL, VT, *MMO))
+    return true;
+
+  unsigned EltSizeBits = DataTy.getScalarSizeInBits();
+  assert((EltSizeBits == 16 || EltSizeBits == 32 || EltSizeBits == 64) &&
+         "Unexpected unaligned RVV load type");
+
+  // Calculate the new vector type with i8 elements
+  unsigned NumElements =
+      DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
+  LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
+
+  Helper.bitcast(MI, 0, NewDataTy);
+
+  return true;
+}
+
 /// Return the type of the mask type suitable for masking the provided
 /// vector type.  This is simply an i1 element type vector of the same
 /// (possibly scalable) length.
@@ -828,6 +925,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return legalizeExt(MI, MIRBuilder);
   case TargetOpcode::G_SPLAT_VECTOR:
     return legalizeSplatVector(MI, MIRBuilder);
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE:
+    return legalizeLoadStore(MI, Helper, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

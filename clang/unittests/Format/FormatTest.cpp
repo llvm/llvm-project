@@ -27445,6 +27445,10 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("static_assert((std::is_constructible_v<T, Args &&> && ...));",
                "static_assert(((std::is_constructible_v<T, Args &&> && ...)));",
                Style);
+  verifyFormat("foo((a, b));", "foo(((a, b)));", Style);
+  verifyFormat("foo((a, b));", "foo(((a), b));", Style);
+  verifyFormat("foo((a, b));", "foo((a, (b)));", Style);
+  verifyFormat("foo((a, b, c));", "foo((a, ((b)), c));", Style);
   verifyFormat("return (0);", "return (((0)));", Style);
   verifyFormat("return (({ 0; }));", "return ((({ 0; })));", Style);
   verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",

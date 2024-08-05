@@ -58,6 +58,8 @@ DEF_INSTR(Cast,  OPCODES(\
                          OP(BitCast)       \
                          OP(AddrSpaceCast) \
                          ),                 CastInst)
+DEF_INSTR(PHI,           OP(PHI),           PHINode)
+  
 // clang-format on
 #ifdef DEF_VALUE
 #undef DEF_VALUE
