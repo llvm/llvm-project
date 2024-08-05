@@ -414,7 +414,8 @@ DiagRecursiveConstraintEval(Sema &S, llvm::FoldingSetNodeID &ID,
   E->Profile(ID, S.Context, /*Canonical=*/true);
   for (const auto &List : MLTAL)
     for (const auto &TemplateArg : List.Args)
-      TemplateArg.Profile(ID, S.Context);
+      S.Context.getCanonicalTemplateArgument(TemplateArg)
+          .Profile(ID, S.Context);
 
   // Note that we have to do this with our own collection, because there are
   // times where a constraint-expression check can cause us to need to evaluate
@@ -638,8 +639,8 @@ bool Sema::CheckConstraintSatisfaction(
   // here.
   llvm::SmallVector<TemplateArgument, 4> FlattenedArgs;
   for (auto List : TemplateArgsLists)
-    FlattenedArgs.insert(FlattenedArgs.end(), List.Args.begin(),
-                         List.Args.end());
+    for (const TemplateArgument &Arg : List.Args)
+      FlattenedArgs.emplace_back(Context.getCanonicalTemplateArgument(Arg));
 
   llvm::FoldingSetNodeID ID;
   ConstraintSatisfaction::Profile(ID, Context, Template, FlattenedArgs);
@@ -823,6 +824,8 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
                                    /*RelativeToPrimary=*/true,
                                    /*Pattern=*/nullptr,
                                    /*ForConstraintInstantiation=*/true);
+  if (TemplateArgs)
+    MLTAL.replaceInnermostTemplateArguments(FD, *TemplateArgs, /*Final=*/true);
   if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
     return std::nullopt;
 
@@ -1476,7 +1479,7 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                                         const ConceptSpecializationExpr *CSE) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       CSE->getNamedConcept(), CSE->getNamedConcept()->getLexicalDeclContext(),
-      /*Final=*/false, CSE->getTemplateArguments(),
+      /*Final=*/true, CSE->getTemplateArguments(),
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true);
