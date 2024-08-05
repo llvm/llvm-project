@@ -25,8 +25,12 @@ typedef unsigned short uint16_t;
 typedef short int16_t;
 #endif
 
+// 32-bit integer.
+typedef int int32_t;
+
 // unsigned 32-bit integer.
 typedef unsigned int uint;
+typedef unsigned int uint32_t;
 
 // 64-bit integer.
 typedef unsigned long uint64_t;
