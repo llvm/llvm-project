@@ -1,7 +1,8 @@
 ; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation floor does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload Type
+; CHECK: in function floor_double
+; CHECK-SAME: Cannot create Floor operation: Invalid overload type
 
 define noundef double @floor_double(double noundef %a) {
 entry:

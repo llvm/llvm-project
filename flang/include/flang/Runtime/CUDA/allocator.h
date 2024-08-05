@@ -11,10 +11,6 @@
 
 #include "flang/Runtime/descriptor.h"
 
-static constexpr unsigned kPinnedAllocatorPos = 1;
-static constexpr unsigned kDeviceAllocatorPos = 2;
-static constexpr unsigned kManagedAllocatorPos = 3;
-
 #define CUDA_REPORT_IF_ERROR(expr) \
   [](CUresult result) { \
     if (!result) \
