@@ -26,6 +26,11 @@ let Definition = "target_experimental" in {
   def SwiftAllowExplicitModules: Property<"swift-allow-explicit-modules", "Boolean">,
     DefaultTrue,
     Desc<"Allows explicit module flags to be passed through to ClangImporter.">;
+  def SwiftPCMValidation: Property<"swift-pcm-validation", "Enum">,
+    Global,
+    DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
+    EnumValues<"OptionEnumValues(g_swift_pcm_validation_values)">,
+    Desc<"Enable validation when loading Clang PCM files (-fvalidate-pch, -fmodules-check-relocated).">;
 }
 
 let Definition = "target" in {

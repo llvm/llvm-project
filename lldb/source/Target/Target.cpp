@@ -4634,6 +4634,13 @@ static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_swift_pcm_validation_values[] = {
+    {llvm::to_underlying(AutoBool::Auto), "auto",
+     "Turned on when explicit modules are enabled"},
+    {llvm::to_underlying(AutoBool::True), "true", "Enable validation."},
+    {llvm::to_underlying(AutoBool::False), "false", "Disable validation."},
+};
+
 
 #define LLDB_PROPERTIES_target
 #include "TargetProperties.inc"
@@ -4863,6 +4870,19 @@ bool TargetProperties::GetSwiftAllowExplicitModules() const {
         .value_or(true);
 
   return true;
+}
+
+AutoBool TargetProperties::GetSwiftPCMValidation() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<AutoBool>(ePropertySwiftPCMValidation)
+      .value_or(AutoBool::Auto);
+
+  return AutoBool::Auto;
 }
 
 Args TargetProperties::GetSwiftPluginServerForPath() const {
