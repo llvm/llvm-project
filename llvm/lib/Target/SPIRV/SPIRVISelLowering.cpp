@@ -329,6 +329,27 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
     return;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
+/*
+  // Try to find redundant copies between virtual registers of the same class.
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.empty())
+      continue;
+    bool ReachedBegin = false;
+    for (auto MII = std::prev(MBB.end()), Begin = MBB.begin(); !ReachedBegin;) {
+      MachineInstr &MI = *MII;
+      if (MII == Begin)
+        ReachedBegin = true;
+      else
+        --MII;
+      if (MI.getOpcode() != TargetOpcode::COPY)
+        continue;
+      Register SrcReg = MI.getOperand(1).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
+      MRI->replaceRegWith(DstReg, SrcReg);
+      MI.eraseFromParent();
+    }
+  }
+*/
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   GR.setCurrentFunc(MF);
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {

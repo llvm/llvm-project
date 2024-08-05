@@ -440,7 +440,8 @@ private:
   Register getOrCreateBaseRegister(Constant *Val, MachineInstr &I,
                                    SPIRVType *SpvType,
                                    const SPIRVInstrInfo &TII,
-                                   unsigned BitWidth);
+                                   unsigned BitWidth,
+                                   bool ZeroAsNull);
   Register getOrCreateCompositeOrNull(Constant *Val, MachineInstr &I,
                                       SPIRVType *SpvType,
                                       const SPIRVInstrInfo &TII, Constant *CA,
