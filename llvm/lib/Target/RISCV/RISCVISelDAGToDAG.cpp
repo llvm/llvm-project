@@ -1462,7 +1462,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue X = N0.getOperand(0);
 
       // Prefer SRAIW + ANDI when possible.
-      bool Skip = C2 > 32 && IsC1ANDI && X.getOpcode() == ISD::SHL &&
+      bool Skip = C2 > 32 && isInt<12>(N1C->getSExtValue()) &&
+                  X.getOpcode() == ISD::SHL &&
                   isa<ConstantSDNode>(X.getOperand(1)) &&
                   X.getConstantOperandVal(1) == 32;
       if (isMask_64(C1) && !Skip) {
