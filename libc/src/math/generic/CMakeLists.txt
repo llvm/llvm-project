@@ -1553,6 +1553,29 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pow
+  SRCS
+    pow.cpp
+  HDRS
+    ../pow.h
+  DEPENDS
+    .common_constants
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   copysign
   SRCS
     copysign.cpp
