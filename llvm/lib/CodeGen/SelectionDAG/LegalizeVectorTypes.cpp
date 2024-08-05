@@ -25,6 +25,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
@@ -5686,6 +5687,17 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
   unsigned WidenNumElts = WidenVT.getVectorMinNumElements();
   unsigned InNumElts = InVT.getVectorMinNumElements();
   unsigned VTNumElts = VT.getVectorMinNumElements();
+
+  if (InVT.isScalableVector())
+  {
+     unsigned EltSize = InVT.getScalarType ().getFixedSizeInBits ();
+
+     unsigned MinVScale = getVScaleRange(&DAG.getMachineFunction ().getFunction(), 64)
+                                 .getUnsignedMin().getZExtValue ();
+     InNumElts = InNumElts * MinVScale;
+  }
+
+
   assert(IdxVal % VTNumElts == 0 &&
          "Expected Idx to be a multiple of subvector minimum vector length");
   if (IdxVal % WidenNumElts == 0 && IdxVal + WidenNumElts < InNumElts)

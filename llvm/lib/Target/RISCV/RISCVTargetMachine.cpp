@@ -128,6 +128,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
+  initializeRISCVLegalizeNonPowerOf2VectorPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT,
@@ -452,6 +453,7 @@ bool RISCVPassConfig::addPreISel() {
 void RISCVPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createTypePromotionLegacyPass());
+  addPass(createRISCVLegalizeNonPowerOf2Vector());
   TargetPassConfig::addCodeGenPrepare();
 }
 
