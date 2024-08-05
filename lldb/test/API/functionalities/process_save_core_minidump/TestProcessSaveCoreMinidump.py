@@ -254,3 +254,67 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(thread_subset_dmp):
                 os.unlink(thread_subset_dmp)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_linux_mini_dump_thread_default_options(self):
+        """Test that we can save a Linux mini dump with default SBSaveCoreOptions"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        default_value_file = self.getBuildArtifact("core.defaults.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            # This is almost identical to the single thread test case because
+            # minidump defaults to stacks only, so we want to see if the
+            # default options work as expected.
+            options = lldb.SBSaveCoreOptions()
+            default_value_spec = lldb.SBFileSpec(default_value_file)
+            options.SetOutputFile(default_value_spec)
+            options.SetPluginName("minidump")
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+
+            core_target = self.dbg.CreateTarget(None)
+            core_process = core_target.LoadCore(thread_subset_dmp)
+
+            self.assertTrue(core_process, PROCESS_IS_VALID)
+            self.assertEqual(core_process.GetNumThreads(), 1)
+            saved_thread = core_process.GetThreadAtIndex(0)
+            expected_thread = process.GetThreadAtIndex(0)
+            self.assertEqual(expected_thread.GetThreadID(), saved_thread.GetThreadID())
+            expected_frame = expected_thread.GetFrameAtIndex(0)
+            expected_sp = expected_frame.GetSP()
+            saved_sp = saved_thread.GetFrameAtIndex(0).GetSP()
+            self.assertEqual(expected_sp, saved_sp)
+            expected_region = lldb.SBMemoryRegionInfo()
+            saved_region = lldb.SBMemoryRegionInfo()
+            error = core_process.GetMemoryRegionInfo(saved_sp, saved_region)
+            self.assertTrue(error.Success(), error.GetCString())
+            error = process.GetMemoryRegionInfo(expected_sp, expected_region)
+            self.assertTrue(error.Success(), error.GetCString())
+            self.assertEqual(
+                expected_region.GetRegionBase(), saved_region.GetRegionBase()
+            )
+            self.assertEqual(
+                expected_region.GetRegionEnd(), saved_region.GetRegionEnd()
+            )
+
+            heap_addr_variable = expected_frame.FindVariable("heap_addr")
+            info = lldb.SBMemoryRegionInfo()
+            error = process.GetMemoryRegionInfo(heap_addr_variable.GetValueAsUnsigned(), info)
+            self.assertTrue(error.Success(), error.GetCString())
+            # Because the default value is stacks, we shouldn't have the memory
+            # region that the heap allocated array points to.
+            error = core_process.GetMemoryRegionInfo(heap_addr_variable.GetValueAsUnsigned(), info)
+            self.assertTrue(error.Fail(), error.GetCString())
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(default_value_file):
+                os.unlink(default_value_file)
