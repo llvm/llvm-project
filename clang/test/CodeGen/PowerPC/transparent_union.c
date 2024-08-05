@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple powerpc64le-unknown-linux -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -emit-llvm -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -emit-llvm -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
 // RUN: %clang_cc1 -triple powerpc-unknown-linux -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   -emit-llvm -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -emit-llvm -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   -emit-llvm -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
 
 typedef union tu_c {
 	char a;
@@ -60,13 +60,8 @@ typedef union etest {
   enum weekend {sun, sat} b;
 } etest_t __attribute__((transparent_union));
 
-// CHECK-64-LABEL: define{{.*}} void @test(
-// CHECK-64-SAME: i32 noundef zeroext [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-64-NEXT:  [[ENTRY:.*:]]
-// CHECK-64-NEXT:    ret void
-//
-// CHECK-32-LABEL: define{{.*}} void @test(
-// CHECK-32-SAME: i32 [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-32-NEXT:  [[ENTRY:.*:]]
-// CHECK-32-NEXT:    ret void
-void test(etest_t a) {}
+// CHECK-LABEL: define{{.*}} void @ftest4(
+// CHECK-SAME: i8 noundef zeroext [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    ret void
+void ftest4(etest_t a) {}
