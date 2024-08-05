@@ -246,10 +246,7 @@ CodeGenFunction::EmitPointerAuthQualify(PointerAuthQualifier DestQualifier,
                                         const Expr *E,
                                         Address DestStorageAddress) {
   assert(DestQualifier);
-
-  auto Src = EmitOrigPointerRValue(E);
-  auto *Value = Src.first;
-  auto CurAuthInfo = Src.second;
+  auto [Value, CurAuthInfo] = EmitOrigPointerRValue(E);
 
   auto DestAuthInfo = EmitPointerAuthInfo(DestQualifier, DestStorageAddress);
   return emitPointerAuthResign(Value, E->getType(), CurAuthInfo, DestAuthInfo,

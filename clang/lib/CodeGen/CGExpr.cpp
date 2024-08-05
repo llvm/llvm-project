@@ -527,7 +527,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
     // initialized it.
     if (!Var->hasInitializer()) {
       Var->setInitializer(CGM.EmitNullConstant(E->getType()));
-      QualType RefType = M->getType();
+      QualType RefType = M->getType().withoutLocalFastQualifiers();
       if (RefType.getPointerAuth()) {
         // Use the qualifier of the reference temporary to sign the pointer.
         auto LV = MakeRawAddrLValue(Object.getPointer(), RefType,
