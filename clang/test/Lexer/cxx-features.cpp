@@ -34,9 +34,10 @@
 
 // --- C++26 features ---
 
-#if check(variadic_friend, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
-#error "wrong value for __cpp_variadic_friend"
-#endif
+// TODO: enable once it's fully implemented.
+//#if check(variadic_friend, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+//#error "wrong value for __cpp_variadic_friend"
+//#endif
 
 #if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
 #error "wrong value for __cpp_deleted_function"
