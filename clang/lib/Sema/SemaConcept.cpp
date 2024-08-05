@@ -532,6 +532,10 @@ static ExprResult calculateConstraintSatisfaction(
 
     std::optional<unsigned>
     EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) const {
+
+      // We should ignore errors in the presence of packs of different size.
+      Sema::SFINAETrap Trap(S);
+
       Expr *Pattern = FE->getPattern();
 
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
