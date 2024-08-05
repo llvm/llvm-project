@@ -1728,7 +1728,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   auto &dyn = config->androidPackDynRelocs ? *in.relaPlt : *mainPart->relaDyn;
   addPltEntry(*in.iplt, *in.igotPlt, dyn, target->iRelativeRel, *directSym);
   sym.allocateAux();
-  symAux.back().pltIdx = symAux[directSym->auxIdx].pltIdx;
+  ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
@@ -1846,7 +1846,7 @@ void elf::postScanRelocations() {
           {R_ADDEND, target->symbolicRel, got->getTlsIndexOff(), 1, &dummy});
   }
 
-  assert(symAux.size() == 1);
+  assert(ctx.symAux.size() == 1);
   for (Symbol *sym : symtab.getSymbols())
     fn(*sym);
 
