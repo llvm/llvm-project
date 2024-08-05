@@ -2200,6 +2200,7 @@ public:
   void VisitOMPTaskyieldDirective(const OMPTaskyieldDirective *D);
   void VisitOMPBarrierDirective(const OMPBarrierDirective *D);
   void VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *D);
+  void VisitOMPAssumeDirective(const OMPAssumeDirective *D);
   void VisitOMPErrorDirective(const OMPErrorDirective *D);
   void VisitOMPTaskgroupDirective(const OMPTaskgroupDirective *D);
   void
@@ -2424,6 +2425,20 @@ void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
 
 void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
+
+void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
+
+void OMPClauseEnqueue::VisitOMPHoldsClause(const OMPHoldsClause *) {}
+
+void OMPClauseEnqueue::VisitOMPContainsClause(const OMPContainsClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoOpenMPRoutinesClause(
+    const OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoParallelismClause(
+    const OMPNoParallelismClause *) {}
 
 void OMPClauseEnqueue::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
@@ -3308,6 +3323,10 @@ void EnqueueVisitor::VisitOMPBarrierDirective(const OMPBarrierDirective *D) {
 
 void EnqueueVisitor::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *D) {
   VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPAssumeDirective(const OMPAssumeDirective *D) {
+  VisitOMPAssumeDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPErrorDirective(const OMPErrorDirective *D) {
@@ -6146,6 +6165,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPBarrierDirective");
   case CXCursor_OMPTaskwaitDirective:
     return cxstring::createRef("OMPTaskwaitDirective");
+  case CXCursor_OMPAssumeDirective:
+    return cxstring::createRef("OMPAssumeDirective");
   case CXCursor_OMPErrorDirective:
     return cxstring::createRef("OMPErrorDirective");
   case CXCursor_OMPTaskgroupDirective:
