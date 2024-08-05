@@ -71,10 +71,13 @@ inline std::string get_temp_file_name() {
     abort();
   }
 #elif !__has_include(<unistd.h>)
-  char buffer[L_tmpnam];
-  char* filename = tmpnam(buffer);
-  if (!filename)
-    abort();
+  // Without `unistd.h` we cannot guarnatee that the file is unused, however we
+  // can simply generate a good guess in the temporary folder and create it.
+  constexpr char chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  char Name[]            = "/tmp/libcxx.XXXXXX";
+  for (int i = 0; i < sizeof(Name); ++i)
+    if (Name[i] == 'X')
+      Name[i] = chars[rand() % strlen(chars)];
   FILE* file = fopen(filename, "w");
   if (!file)
     abort();
