@@ -237,7 +237,8 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         // the same BB, so it will not impact outgoing CFA.
         ++RememberState;
         if (RememberState != 1)
-          MF->getContext().reportError(SMLoc(),
+          MF->getContext().reportError(
+              SMLoc(),
               "Support for cfi_remember_state not implemented! Value of CFA "
               "may be incorrect!\n");
 #endif
@@ -247,7 +248,8 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
 #ifndef NDEBUG
         --RememberState;
         if (RememberState != 0)
-          MF->getContext().reportError(SMLoc(),
+          MF->getContext().reportError(
+              SMLoc(),
               "Support for cfi_restore_state not implemented! Value of CFA may "
               "be incorrect!\n");
 #endif
@@ -277,9 +279,10 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
 
 #ifndef NDEBUG
   if (RememberState != 0)
-    MF->getContext().reportError(SMLoc(),
-        "Support for cfi_remember_state not implemented! Value of CFA "
-        "may be incorrect!\n");
+    MF->getContext().reportError(
+        SMLoc(),
+        "Support for cfi_remember_state not implemented! Value of CFA may be "
+        "incorrect!\n");
 #endif
 
   MBBInfo.Processed = true;

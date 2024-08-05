@@ -273,14 +273,14 @@ private:
   /// Issue instructions to allocate stack space and spill frame pointer and/or
   /// base pointer to stack using stack pointer register.
   void spillFPBPUsingSP(MachineFunction &MF,
-                        const MachineBasicBlock::iterator BeforeMI,
-                        Register FP, Register BP, int SPAdjust) const;
+                        const MachineBasicBlock::iterator BeforeMI, Register FP,
+                        Register BP, int SPAdjust) const;
 
   /// Issue instructions to restore frame pointer and/or base pointer from stack
   /// using stack pointer register, and free stack space.
   void restoreFPBPUsingSP(MachineFunction &MF,
-                          const MachineBasicBlock::iterator AfterMI, Register FP,
-                          Register BP, int SPAdjust) const;
+                          const MachineBasicBlock::iterator AfterMI,
+                          Register FP, Register BP, int SPAdjust) const;
 
   void saveAndRestoreFPBPUsingSP(MachineFunction &MF,
                                  MachineBasicBlock::iterator BeforeMI,
