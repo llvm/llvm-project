@@ -102,7 +102,7 @@ public:
   }
 
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __temporary_allocation_result<_Tp> __release() _NOEXCEPT {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __temporary_allocation_result<_Tp> __release_to_raw() _NOEXCEPT {
     __temporary_allocation_result<_Tp> __result = {__ptr_, __count_};
 
     __ptr_   = NULL;

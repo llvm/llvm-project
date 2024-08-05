@@ -28,7 +28,7 @@ template <class _Tp>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_DEPRECATED_IN_CXX17 pair<_Tp*, ptrdiff_t>
 get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
   __scoped_temporary_buffer<_Tp> __scoped_buf(__n);
-  __temporary_allocation_result<_Tp> __result = __scoped_buf.__release();
+  __temporary_allocation_result<_Tp> __result = __scoped_buf.__release_to_raw();
   return pair<_Tp*, ptrdiff_t>(__result.__ptr, __result.__count);
 }
 
