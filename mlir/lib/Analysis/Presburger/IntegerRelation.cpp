@@ -1515,7 +1515,7 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
 
   appendVar(VarKind::Local);
 
-  SmallVector<DynamicAPInt, 8> dividendCopy(dividend.begin(), dividend.end());
+  SmallVector<DynamicAPInt, 8> dividendCopy(dividend);
   dividendCopy.insert(dividendCopy.end() - 1, DynamicAPInt(0));
   addInequality(
       getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));

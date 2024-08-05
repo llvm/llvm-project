@@ -48,6 +48,8 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
        - substring: A substring operator (offset, length) for CHARACTER.
        - LEN type parameters: A vector of runtime LEN type parameters that
          describe an correspond to the elemental derived type.
+       - sourceBox: A box to read information from such as CFI type,
+         type descriptor or element size to populate the new descriptor.
        - allocator_idx: specify special allocator to use.
 
     The memref and shape arguments are mandatory. The rest are optional.
