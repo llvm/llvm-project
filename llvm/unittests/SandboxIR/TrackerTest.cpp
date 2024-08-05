@@ -505,6 +505,42 @@ define void @foo(i32 %arg) {
   Add0->insertBefore(Ret);
 }
 
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, CreateAndInsertInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+  %ld = load i8, ptr %ptr, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *Ptr = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ret = &*It++;
+
+  Ctx.save();
+  // Check create(InsertBefore) with tracking enabled.
+  sandboxir::LoadInst *NewLd =
+      sandboxir::LoadInst::create(Ld->getType(), Ptr, Align(8),
+                                  /*InsertBefore=*/Ld, Ctx, "NewLd");
+  It = BB->begin();
+  EXPECT_EQ(&*It++, NewLd);
+  EXPECT_EQ(&*It++, Ld);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ld);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+}
+
 TEST_F(TrackerTest, CallBaseSetters) {
   parseIR(C, R"IR(
 declare void @bar1(i8)
