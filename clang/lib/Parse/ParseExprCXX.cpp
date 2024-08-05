@@ -2455,6 +2455,11 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
                        Policy);                                                \
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case tok::kw_##Name:                                                         \
+    DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec, DiagID, Policy);   \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   case tok::annot_decltype:
   case tok::kw_decltype:
