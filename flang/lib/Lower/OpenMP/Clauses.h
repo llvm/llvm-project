@@ -177,6 +177,7 @@ using Capture = tomp::clause::CaptureT<TypeTy, IdTy, ExprTy>;
 using Collapse = tomp::clause::CollapseT<TypeTy, IdTy, ExprTy>;
 using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Compare = tomp::clause::CompareT<TypeTy, IdTy, ExprTy>;
+using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Copyin = tomp::clause::CopyinT<TypeTy, IdTy, ExprTy>;
 using Copyprivate = tomp::clause::CopyprivateT<TypeTy, IdTy, ExprTy>;
 using Defaultmap = tomp::clause::DefaultmapT<TypeTy, IdTy, ExprTy>;

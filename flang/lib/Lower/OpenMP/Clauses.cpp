@@ -218,9 +218,9 @@ MAKE_EMPTY_CLASS(Full, Full);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
-// MAKE_EMPTY_CLASS(NoOpenmp, );         // missing-in-parser
-// MAKE_EMPTY_CLASS(NoOpenmpRoutines, ); // missing-in-parser
-// MAKE_EMPTY_CLASS(NoParallelism, );    // missing-in-parser
+MAKE_EMPTY_CLASS(NoOpenmp, NoOpenmp);
+MAKE_EMPTY_CLASS(NoOpenmpRoutines, NoOpenmpRoutines);
+MAKE_EMPTY_CLASS(NoParallelism, NoParallelism);
 MAKE_EMPTY_CLASS(Notinbranch, Notinbranch);
 MAKE_EMPTY_CLASS(Nowait, Nowait);
 MAKE_EMPTY_CLASS(OmpxAttribute, OmpxAttribute);
@@ -321,7 +321,6 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 // --------------------------------------------------------------------
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
-// Absent: missing-in-parser
 Absent make(const parser::OmpClause::Absent &inp,
             semantics::SemanticsContext &semaCtx) {
   llvm_unreachable("Unimplemented: absent");
@@ -450,7 +449,6 @@ Collapse make(const parser::OmpClause::Collapse &inp,
 
 // Compare: empty
 
-// Contains: missing-in-parser
 Contains make(const parser::OmpClause::Contains &inp,
               semantics::SemanticsContext &semaCtx) {
   llvm_unreachable("Unimplemented: contains");
@@ -714,7 +712,6 @@ Hint make(const parser::OmpClause::Hint &inp,
   return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
 }
 
-// Holds: missing-in-parser
 Holds make(const parser::OmpClause::Holds &inp,
            semantics::SemanticsContext &semaCtx) {
   llvm_unreachable("Unimplemented: holds");
@@ -897,24 +894,9 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
   return Nontemporal{/*List=*/makeList(inp.v, makeObjectFn(semaCtx))};
 }
 
-// NoOpenmp: missing-in-parser
-NoOpenmp make(const parser::OmpClause::NoOpenmp &inp,
-              semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Unimplemented: no_openmp");
-}
-
-// NoOpenmpRoutines: missing-in-parser
-NoOpenmpRoutines make(const parser::OmpClause::NoOpenmpRoutines &inp,
-                      semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Unimplemented: no_openmp_routines");
-}
-
-// NoParallelism: missing-in-parser
-NoParallelism make(const parser::OmpClause::NoParallelism &inp,
-                   semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Unimplemented: no_parallelism");
-}
-
+// NoOpenmp: empty
+// NoOpenmpRoutines: empty
+// NoParallelism: empty
 // Notinbranch: empty
 
 Novariants make(const parser::OmpClause::Novariants &inp,
