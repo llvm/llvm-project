@@ -965,6 +965,12 @@ def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
 
+def ext_variadic_friends : ExtWarn<
+  "variadic 'friend' declarations are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_variadic_friends : Warning<
+  "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
   "default member initializer for non-static data member is a C++11 "

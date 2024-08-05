@@ -1504,6 +1504,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
+Variadic Friends                             __cpp_variadic_friend            C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89

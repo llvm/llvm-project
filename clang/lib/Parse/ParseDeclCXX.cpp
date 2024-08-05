@@ -3068,15 +3068,17 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // C++26 [class.mem.general]p10: If a name-declaration matches the
   // syntactic requirements of friend-type-declaration, it is a
   // friend-type-declaration.
-  //
-  // This means that e.g. 'friend int, long;' is valid, but
-  // 'int friend, long;' is not.
-  //
-  // TODO: Do we want to expose this in earlier language modes?
-  if (DS.isFriendSpecifiedFirst() && getLangOpts().CPlusPlus26 &&
-      Tok.isOneOf(tok::comma, tok::ellipsis)) {
+  if (DS.isFriendSpecifiedFirst() && Tok.isOneOf(tok::comma, tok::ellipsis)) {
     SourceLocation FriendLoc = DS.getFriendSpecLoc();
     SmallVector<Decl *> Decls;
+    auto DiagnoseCompat = [&, Diagnosed = false] () mutable {
+      if (Diagnosed)
+        return;
+      Diagnosed = true;
+      Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                                  ? diag::warn_cxx23_variadic_friends
+                                  : diag::ext_variadic_friends);
+    };
 
     // Handles a single friend-type-specifier.
     auto ParsedFriendDecl = [&](ParsingDeclSpec &DeclSpec) {
@@ -3093,8 +3095,10 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
       }
 
       // Eat the '...'.
-      if (Variadic)
+      if (Variadic) {
+        DiagnoseCompat();
         ConsumeToken();
+      }
 
       Decls.push_back(D);
       return false;
@@ -3120,6 +3124,9 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
       SkipUntil(tok::semi);
       return nullptr;
     }*/
+
+    if (Tok.is(tok::comma))
+      DiagnoseCompat();
 
     while (TryConsumeToken(tok::comma)) {
       ParsingDeclSpec DeclSpec(*this, TemplateDiags);
