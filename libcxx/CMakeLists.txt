@@ -97,6 +97,7 @@ option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
    embedded)." ON)
+option(LIBCXX_HAS_TERMINAL_AVAILABLE "Build libc++ with terminal checking support" ON)
 option(LIBCXX_ENABLE_WIDE_CHARACTERS
   "Whether to include support for wide characters in the library. Disabling
    wide character support can be useful when porting to platforms that don't
@@ -297,7 +298,6 @@ option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32
 option(LIBCXX_HAS_EXTERNAL_THREAD_API
   "Build libc++ with an externalized threading API.
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
-option(LIBCXX_HAS_TERMINAL_AVAILABLE "Build libc++ with terminal checking support" ON)
 
 if (LIBCXX_ENABLE_THREADS)
   set(LIBCXX_PSTL_BACKEND "std_thread" CACHE STRING "Which PSTL backend to use")
