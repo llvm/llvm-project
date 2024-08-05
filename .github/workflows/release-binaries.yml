@@ -442,7 +442,7 @@ jobs:
     - name: Upload Build Provenance
       uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 #v4.3.3
       with:
-        name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
+        name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
 
     - name: Upload Release
