@@ -1,4 +1,4 @@
-#Check default environment.
+# Check default environment.
 # RUN: env | FileCheck -check-prefix=NO-ARGS %s
 #
 # NO-ARGS: BAR=2
