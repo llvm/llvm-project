@@ -181,7 +181,7 @@ private:
                                     Register TargetReg) const;
 
   void emitRemarks(const MachineFunction &MF,
-                   MachineOptimizationRemarkEmitter &ORE) const;
+                   MachineOptimizationRemarkEmitter *ORE) const override;
 };
 
 } // End llvm namespace

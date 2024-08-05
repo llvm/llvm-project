@@ -92,45 +92,41 @@ entry:
 }
 declare ptr @memset(ptr, i32, i32)
 
-%struct.test_struct = type { i32, float, i32 }
+%struct.mixed_struct = type { i32, float }
 
-define i32 @mixed_stack_object(i32  %a, i32  %b, i32  %c, i32  %d, i32  %e, i32  %f, i32  %g, i32  %h, i32  %i, i64 %mixed_obj) #2 {
-; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_object': Mixed stack object at [SP+8] accessed by both GP and FP instructions
-; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_object': Mixed stack object at [SP+8] accessed by both GP and FP instructions
+define i32 @mixed_stack_object(i32  %a, float %b) #2 {
+; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_object': Mixed stack object at [SP-8] accessed by both GP and FP instructions
+; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_object': Mixed stack object at [SP-8] accessed by both GP and FP instructions
 entry:
-  %t.sroa.0.0.extract.trunc = trunc i64 %mixed_obj to i32
-  %t.sroa.2.0.extract.shift = lshr i64 %mixed_obj, 32
-  %t.sroa.2.0.extract.trunc = trunc nuw i64 %t.sroa.2.0.extract.shift to i32
-  %0 = bitcast i32 %t.sroa.2.0.extract.trunc to float
-  %conv = sitofp i32 %t.sroa.0.0.extract.trunc to float
-  %add = fadd float %conv, %0
-  %conv2 = fptosi float %add to i32
-  ret i32 %conv2
+  %s = alloca %struct.mixed_struct
+  %s.i = getelementptr %struct.mixed_struct, ptr %s, i32 0, i32 0
+  %s.f = getelementptr %struct.mixed_struct, ptr %s, i32 0, i32 1
+  store i32 %a, ptr %s.i
+  store float %b, ptr %s.f
+  ret i32 %a
 }
 
-define i32 @mixed_stack_objects(i32  %a, i32  %b, i32  %c, i32  %d, i32  %e, i32  %f, i32  %g, i32  %h, i32  %i, i64 %mixed_obj_0, i64 %mixed_obj_1) #2 {
-; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP+8] is too close to Mixed stack object at [SP+16]
-; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP+8] accessed by both GP and FP instructions
-; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP+16] accessed by both GP and FP instructions
-; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP+8] is too close to Mixed stack object at [SP+16]
-; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP+8] accessed by both GP and FP instructions
-; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP+16] accessed by both GP and FP instructions
+define i32 @mixed_stack_objects(i32  %a, float %b) #2 {
+; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP-16] is too close to Mixed stack object at [SP-8]
+; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP-16] accessed by both GP and FP instructions
+; CHECK: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP-8] accessed by both GP and FP instructions
+; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP-16] is too close to Mixed stack object at [SP-8]
+; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP-16] accessed by both GP and FP instructions
+; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'mixed_stack_objects': Mixed stack object at [SP-8] accessed by both GP and FP instructions
 entry:
-  %t0.sroa.0.0.extract.trunc = trunc i64 %mixed_obj_0 to i32
-  %t0.sroa.2.0.extract.shift = lshr i64 %mixed_obj_0, 32
-  %t0.sroa.2.0.extract.trunc = trunc nuw i64 %t0.sroa.2.0.extract.shift to i32
-  %t1.sroa.0.0.extract.trunc = trunc i64 %mixed_obj_1 to i32
-  %t1.sroa.2.0.extract.shift = lshr i64 %mixed_obj_1, 32
-  %t1.sroa.2.0.extract.trunc = trunc nuw i64 %t1.sroa.2.0.extract.shift to i32
-  %0 = bitcast i32 %t0.sroa.2.0.extract.trunc to float
-  %1 = bitcast i32 %t1.sroa.2.0.extract.trunc to float
-  %conv0 = sitofp i32 %t0.sroa.0.0.extract.trunc to float
-  %conv1 = sitofp i32 %t1.sroa.0.0.extract.trunc to float
-  %add0 = fadd float %conv0, %0
-  %add1 = fadd float %conv1, %1
-  %add = fadd float %add0, %add1
-  %conv2 = fptosi float %add to i32
-  ret i32 %conv2
+  %s0 = alloca %struct.mixed_struct
+  %s0.i = getelementptr %struct.mixed_struct, ptr %s0, i32 0, i32 0
+  %s0.f = getelementptr %struct.mixed_struct, ptr %s0, i32 0, i32 1
+  store i32 %a, ptr %s0.i
+  store float %b, ptr %s0.f
+
+  %s1 = alloca %struct.mixed_struct
+  %s1.i = getelementptr %struct.mixed_struct, ptr %s1, i32 0, i32 0
+  %s1.f = getelementptr %struct.mixed_struct, ptr %s1, i32 0, i32 1
+  store i32 %a, ptr %s1.i
+  store float %b, ptr %s1.f
+
+  ret i32 %a
 }
 
 ; VLA-area stack objects are not separated.

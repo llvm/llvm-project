@@ -4643,10 +4643,6 @@ void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
       if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
     }
-
-  // Run remarks pass.
-  MachineOptimizationRemarkEmitter ORE(MF, nullptr);
-  emitRemarks(MF, ORE);
 }
 
 /// For Win64 AArch64 EH, the offset to the Unwind object is from the SP
@@ -5076,7 +5072,7 @@ struct StackAccess {
     return AccessTypes & (AccessType::GPR | AccessType::PPR);
   }
   bool isSME() const { return AccessTypes & AccessType::FPR; }
-  bool isMixed() const { return ((AccessTypes & (AccessTypes - 1)) != 0); }
+  bool isMixed() const { return isCPU() && isSME(); }
 
   int64_t start() const { return Offset.getFixed() + Offset.getScalable(); }
   int64_t end() const { return start() + Size; }
@@ -5112,7 +5108,7 @@ static inline raw_ostream &operator<<(raw_ostream &OS, const StackAccess &SA) {
 }
 
 void AArch64FrameLowering::emitRemarks(
-    const MachineFunction &MF, MachineOptimizationRemarkEmitter &ORE) const {
+    const MachineFunction &MF, MachineOptimizationRemarkEmitter *ORE) const {
 
   SMEAttrs Attrs(MF.getFunction());
   if (Attrs.hasNonStreamingInterfaceAndBody())
@@ -5125,6 +5121,9 @@ void AArch64FrameLowering::emitRemarks(
     return;
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  // Bail if function has no stack objects.
+  if (!MFI.hasStackObjects())
+    return;
 
   std::vector<StackAccess> StackAccesses(MFI.getNumObjects());
 
@@ -5187,8 +5186,8 @@ void AArch64FrameLowering::emitRemarks(
   if (StackAccesses.front().isMixed())
     MixedObjects.push_back(&StackAccesses.front());
 
-  for (auto It = StackAccesses.begin(), End = StackAccesses.end();
-       It != (End - 1); ++It) {
+  for (auto It = StackAccesses.begin(), End = std::prev(StackAccesses.end());
+       It != End; ++It) {
     const auto &First = *It;
     const auto &Second = *(It + 1);
 
@@ -5204,7 +5203,7 @@ void AArch64FrameLowering::emitRemarks(
   }
 
   auto EmitRemark = [&](llvm::StringRef Str) {
-    ORE.emit([&]() {
+    ORE->emit([&]() {
       auto R = MachineOptimizationRemarkAnalysis(
           "sme", "StackHazard", MF.getFunction().getSubprogram(), &MF.front());
       return R << formatv("stack hazard in '{0}': ", MF.getName()).str() << Str;
