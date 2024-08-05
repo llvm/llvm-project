@@ -83,7 +83,7 @@ inline std::string get_temp_file_name() {
     abort();
   if (fclose(file) == EOF)
     abort();
-  return std::string(filename);
+  return std::string(Name);
 #else
   std::string Name = "libcxx.XXXXXX";
   int FD           = mkstemp(&Name[0]);
