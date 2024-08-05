@@ -1090,7 +1090,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   unsigned ID = RC.getID();
 
   if (!VRM)
-      return BaseImplRetVal;
+    return BaseImplRetVal;
 
   if (ID != X86::TILERegClassID) {
     if (DisableRegAllocNDDHints)
