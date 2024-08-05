@@ -2,7 +2,8 @@
 ; RUN: llc -filetype=obj a.ll -o a.o
 ; RUN: llvm-readelf -r a.o 2>err | FileCheck %s --check-prefix=RELOC
 ; RUN: llvm-objdump -Sl --no-show-raw-insn a.o 2>err | FileCheck %s
-;; Test that ULEB128 relocs do not lead to spurious warnings. #101544
+;; Test that ULEB128 relocs do not lead to spurious warnings.
+;; https://github.com/llvm/llvm-project/issues/101544
 ; RUN: count 0 < err
 
 ; RELOC:      Relocation section '.rela.debug_loclists'

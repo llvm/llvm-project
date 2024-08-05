@@ -4146,11 +4146,9 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
       llvm::append_range(flatExprs, map.getValue().getResults());
       auto operandsRef = llvm::ArrayRef(mapOperands);
       auto dimsRef = operandsRef.take_front(map.getValue().getNumDims());
-      SmallVector<OpAsmParser::UnresolvedOperand> dims(dimsRef.begin(),
-                                                       dimsRef.end());
+      SmallVector<OpAsmParser::UnresolvedOperand> dims(dimsRef);
       auto symsRef = operandsRef.drop_front(map.getValue().getNumDims());
-      SmallVector<OpAsmParser::UnresolvedOperand> syms(symsRef.begin(),
-                                                       symsRef.end());
+      SmallVector<OpAsmParser::UnresolvedOperand> syms(symsRef);
       flatDimOperands.append(map.getValue().getNumResults(), dims);
       flatSymOperands.append(map.getValue().getNumResults(), syms);
       numMapsPerGroup.push_back(map.getValue().getNumResults());

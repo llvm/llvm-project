@@ -227,6 +227,7 @@ public:
   Float8E5M2FNUZType f8E5M2FNUZTy;
   Float8E4M3FNUZType f8E4M3FNUZTy;
   Float8E4M3B11FNUZType f8E4M3B11FNUZTy;
+  Float8E3M4Type f8E3M4Ty;
   BFloat16Type bf16Ty;
   Float16Type f16Ty;
   FloatTF32Type tf32Ty;
@@ -318,6 +319,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   impl->f8E5M2FNUZTy = TypeUniquer::get<Float8E5M2FNUZType>(this);
   impl->f8E4M3FNUZTy = TypeUniquer::get<Float8E4M3FNUZType>(this);
   impl->f8E4M3B11FNUZTy = TypeUniquer::get<Float8E4M3B11FNUZType>(this);
+  impl->f8E3M4Ty = TypeUniquer::get<Float8E3M4Type>(this);
   impl->bf16Ty = TypeUniquer::get<BFloat16Type>(this);
   impl->f16Ty = TypeUniquer::get<Float16Type>(this);
   impl->tf32Ty = TypeUniquer::get<FloatTF32Type>(this);
@@ -1028,6 +1030,9 @@ Float8E4M3FNUZType Float8E4M3FNUZType::get(MLIRContext *context) {
 }
 Float8E4M3B11FNUZType Float8E4M3B11FNUZType::get(MLIRContext *context) {
   return context->getImpl().f8E4M3B11FNUZTy;
+}
+Float8E3M4Type Float8E3M4Type::get(MLIRContext *context) {
+  return context->getImpl().f8E3M4Ty;
 }
 BFloat16Type BFloat16Type::get(MLIRContext *context) {
   return context->getImpl().bf16Ty;

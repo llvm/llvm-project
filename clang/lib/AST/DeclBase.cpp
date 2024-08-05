@@ -1144,6 +1144,10 @@ bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
 }
 
+bool Decl::isFromGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isGlobalModule();
+}
+
 bool Decl::isInNamedModule() const {
   return getOwningModule() && getOwningModule()->isNamedModule();
 }

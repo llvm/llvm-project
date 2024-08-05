@@ -350,12 +350,14 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
 
     list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
         RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
-
-    list(APPEND SCUDO_DEPS
-      RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-      )
+    
+    if (COMPILER_RT_BUILD_GWP_ASAN)
+      list(APPEND SCUDO_DEPS
+        RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+        )
+    endif()
 
     add_entrypoint_external(
       malloc

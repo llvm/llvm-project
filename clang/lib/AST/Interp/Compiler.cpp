@@ -29,9 +29,7 @@ template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
       : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P, VD),
-        OldGlobalDecl(Ctx->GlobalDecl),
         OldInitializingDecl(Ctx->InitializingDecl) {
-    Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
     Ctx->InitializingDecl = VD;
     Ctx->InitStack.push_back(InitLink::Decl(VD));
   }
@@ -41,14 +39,12 @@ public:
   }
 
   ~DeclScope() {
-    this->Ctx->GlobalDecl = OldGlobalDecl;
     this->Ctx->InitializingDecl = OldInitializingDecl;
     this->Ctx->InitStack.pop_back();
   }
 
 private:
   Program::DeclScope Scope;
-  bool OldGlobalDecl;
   const ValueDecl *OldInitializingDecl;
 };
 
@@ -426,7 +422,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (CE->getType()->isAtomicType()) {
       if (!this->discard(SubExpr))
         return false;
-      return this->emitInvalidCast(CastKind::Reinterpret, CE);
+      return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, CE);
     }
 
     if (DiscardResult)
@@ -733,8 +729,8 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   }
 
   // Typecheck the args.
-  std::optional<PrimType> LT = classify(LHS->getType());
-  std::optional<PrimType> RT = classify(RHS->getType());
+  std::optional<PrimType> LT = classify(LHS);
+  std::optional<PrimType> RT = classify(RHS);
   std::optional<PrimType> T = classify(BO->getType());
 
   // Special case for C++'s three-way/spaceship operator <=>, which
@@ -769,8 +765,16 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return this->VisitPointerArithBinOp(BO);
   }
 
-  if (!visit(LHS) || !visit(RHS))
-    return false;
+  // Assignmentes require us to evalute the RHS first.
+  if (BO->getOpcode() == BO_Assign) {
+    if (!visit(RHS) || !visit(LHS))
+      return false;
+    if (!this->emitFlip(*LT, *RT, BO))
+      return false;
+  } else {
+    if (!visit(LHS) || !visit(RHS))
+      return false;
+  }
 
   // For languages such as C, cast the result of one
   // of our comparision opcodes to T (which is usually int).
@@ -1282,21 +1286,31 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-  const Expr *Base = E->getBase();
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
   const Expr *Index = E->getIdx();
 
   if (DiscardResult)
-    return this->discard(Base) && this->discard(Index);
+    return this->discard(LHS) && this->discard(RHS);
 
-  // Take pointer of LHS, add offset from RHS.
-  // What's left on the stack after this is a pointer.
-  if (!this->visit(Base))
-    return false;
+  // C++17's rules require us to evaluate the LHS first, regardless of which
+  // side is the base.
+  bool Success = true;
+  for (const Expr *SubExpr : {LHS, RHS}) {
+    if (!this->visit(SubExpr))
+      Success = false;
+  }
 
-  if (!this->visit(Index))
+  if (!Success)
     return false;
 
   PrimType IndexT = classifyPrim(Index->getType());
+  // If the index is first, we need to change that.
+  if (LHS == Index) {
+    if (!this->emitFlip(PT_Ptr, IndexT, E))
+      return false;
+  }
+
   return this->emitArrayElemPtrPop(IndexT, E);
 }
 
@@ -2226,7 +2240,7 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
 
   assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
 
-  return this->delegate(SubExpr) && ES.destroyLocals();
+  return this->delegate(SubExpr) && ES.destroyLocals(E);
 }
 
 template <class Emitter>
@@ -2247,7 +2261,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // the temporary is explicitly static, create a global variable.
   std::optional<PrimType> SubExprT = classify(SubExpr);
   bool IsStatic = E->getStorageDuration() == SD_Static;
-  if (GlobalDecl || IsStatic) {
+  if (IsStatic) {
     std::optional<unsigned> GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
@@ -2447,10 +2461,13 @@ bool Compiler<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
-  if (!this->discard(E->getSubExpr()))
+  const Expr *SubExpr = E->getSubExpr();
+
+  bool TypesMatch = classify(E) == classify(SubExpr);
+  if (!this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/!TypesMatch, E))
     return false;
 
-  return this->emitInvalidCast(CastKind::Reinterpret, E);
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>
@@ -2537,13 +2554,8 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
         return false;
     }
 
-    // Immediately call the destructor if we have to.
-    if (DiscardResult) {
-      if (!this->emitRecordDestruction(getRecord(E->getType())))
-        return false;
-      if (!this->emitPopPtr(E))
-        return false;
-    }
+    if (DiscardResult)
+      return this->emitPopPtr(E);
     return true;
   }
 
@@ -3964,7 +3976,19 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  auto Args = llvm::ArrayRef(E->getArgs(), E->getNumArgs());
+  SmallVector<const Expr *, 8> Args(
+      llvm::ArrayRef(E->getArgs(), E->getNumArgs()));
+
+  bool IsAssignmentOperatorCall = false;
+  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
+      OCE && OCE->isAssignmentOp()) {
+    // Just like with regular assignments, we need to special-case assignment
+    // operators here and evaluate the RHS (the second arg) before the LHS (the
+    // first arg. We fix this by using a Flip op later.
+    assert(Args.size() == 2);
+    IsAssignmentOperatorCall = true;
+    std::reverse(Args.begin(), Args.end());
+  }
   // Calling a static operator will still
   // pass the instance, but we don't need it.
   // Discard it here.
@@ -3973,7 +3997,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
         MD && MD->isStatic()) {
       if (!this->discard(E->getArg(0)))
         return false;
-      Args = Args.drop_front();
+      // Drop first arg.
+      Args.erase(Args.begin());
     }
   }
 
@@ -3998,6 +4023,13 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     } else if (!this->visit(MC->getImplicitObjectArgument())) {
       return false;
     }
+  } else if (!FuncDecl) {
+    const Expr *Callee = E->getCallee();
+    CalleeOffset = this->allocateLocalPrimitive(Callee, PT_FnPtr, true, false);
+    if (!this->visit(Callee))
+      return false;
+    if (!this->emitSetLocal(PT_FnPtr, *CalleeOffset, E))
+      return false;
   }
 
   llvm::BitVector NonNullArgs = collectNonNullArgs(FuncDecl, Args);
@@ -4016,6 +4048,15 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       }
     }
     ++ArgIndex;
+  }
+
+  // Undo the argument reversal we did earlier.
+  if (IsAssignmentOperatorCall) {
+    assert(Args.size() == 2);
+    PrimType Arg1T = classify(Args[0]).value_or(PT_Ptr);
+    PrimType Arg2T = classify(Args[1]).value_or(PT_Ptr);
+    if (!this->emitFlip(Arg2T, Arg1T, E))
+      return false;
   }
 
   if (FuncDecl) {
@@ -4066,22 +4107,19 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
       ArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
 
-    // Get the callee, either from a member pointer saved in CalleeOffset,
-    // or by just visiting the Callee expr.
-    if (CalleeOffset) {
+    // Get the callee, either from a member pointer or function pointer saved in
+    // CalleeOffset.
+    if (isa<CXXMemberCallExpr>(E) && CalleeOffset) {
       if (!this->emitGetLocal(PT_MemberPtr, *CalleeOffset, E))
         return false;
       if (!this->emitGetMemberPtrDecl(E))
         return false;
-      if (!this->emitCallPtr(ArgSize, E, E))
-        return false;
     } else {
-      if (!this->visit(E->getCallee()))
-        return false;
-
-      if (!this->emitCallPtr(ArgSize, E, E))
+      if (!this->emitGetLocal(PT_FnPtr, *CalleeOffset, E))
         return false;
     }
+    if (!this->emitCallPtr(ArgSize, E, E))
+      return false;
   }
 
   // Cleanup for discarded return values.
@@ -4222,22 +4260,6 @@ template <class Emitter> bool Compiler<Emitter>::visitStmt(const Stmt *S) {
   }
 }
 
-/// Visits the given statment without creating a variable
-/// scope for it in case it is a compound statement.
-template <class Emitter> bool Compiler<Emitter>::visitLoopBody(const Stmt *S) {
-  if (isa<NullStmt>(S))
-    return true;
-
-  if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
-    for (const auto *InnerStmt : CS->body())
-      if (!visitStmt(InnerStmt))
-        return false;
-    return true;
-  }
-
-  return this->visitStmt(S);
-}
-
 template <class Emitter>
 bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
   BlockScope<Emitter> Scope(this);
@@ -4300,8 +4322,6 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
-  BlockScope<Emitter> IfScope(this);
-
   if (IS->isNonNegatedConsteval())
     return visitStmt(IS->getThen());
   if (IS->isNegatedConsteval())
@@ -4340,7 +4360,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     this->emitLabel(LabelEnd);
   }
 
-  return IfScope.destroyLocals();
+  return true;
 }
 
 template <class Emitter>
@@ -4364,12 +4384,8 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   if (!this->jumpFalse(EndLabel))
     return false;
 
-  LocalScope<Emitter> Scope(this);
-  {
-    DestructorScope<Emitter> DS(Scope);
-    if (!this->visitLoopBody(Body))
-      return false;
-  }
+  if (!this->visitStmt(Body))
+    return false;
 
   if (!this->jump(CondLabel))
     return false;
@@ -4387,14 +4403,11 @@ template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
   LabelTy EndLabel = this->getLabel();
   LabelTy CondLabel = this->getLabel();
   LoopScope<Emitter> LS(this, EndLabel, CondLabel);
-  LocalScope<Emitter> Scope(this);
 
   this->fallthrough(StartLabel);
   this->emitLabel(StartLabel);
   {
-    DestructorScope<Emitter> DS(Scope);
-
-    if (!this->visitLoopBody(Body))
+    if (!this->visitStmt(Body))
       return false;
     this->fallthrough(CondLabel);
     this->emitLabel(CondLabel);
@@ -4421,10 +4434,10 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   LabelTy CondLabel = this->getLabel();
   LabelTy IncLabel = this->getLabel();
   LoopScope<Emitter> LS(this, EndLabel, IncLabel);
-  LocalScope<Emitter> Scope(this);
 
   if (Init && !this->visitStmt(Init))
     return false;
+
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
@@ -4440,10 +4453,9 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   }
 
   {
-    DestructorScope<Emitter> DS(Scope);
-
-    if (Body && !this->visitLoopBody(Body))
+    if (Body && !this->visitStmt(Body))
       return false;
+
     this->fallthrough(IncLabel);
     this->emitLabel(IncLabel);
     if (Inc && !this->discard(Inc))
@@ -4495,13 +4507,11 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
     return false;
 
   // Body.
-  LocalScope<Emitter> Scope(this);
   {
-    DestructorScope<Emitter> DS(Scope);
-
-    if (!this->visitLoopBody(Body))
+    if (!this->visitStmt(Body))
       return false;
-  this->fallthrough(IncLabel);
+
+    this->fallthrough(IncLabel);
     this->emitLabel(IncLabel);
     if (!this->discard(Inc))
       return false;
@@ -4520,7 +4530,7 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (!BreakLabel)
     return false;
 
-  this->VarScope->emitDestructors();
+  this->emitCleanup();
   return this->jump(*BreakLabel);
 }
 
@@ -4529,7 +4539,7 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (!ContinueLabel)
     return false;
 
-  this->VarScope->emitDestructors();
+  this->emitCleanup();
   return this->jump(*ContinueLabel);
 }
 
