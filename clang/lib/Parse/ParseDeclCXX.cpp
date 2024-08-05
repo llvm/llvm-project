@@ -3092,7 +3092,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   if (DS.isFriendSpecifiedFirst() && Tok.isOneOf(tok::comma, tok::ellipsis)) {
     SourceLocation FriendLoc = DS.getFriendSpecLoc();
     SmallVector<Decl *> Decls;
-    auto DiagnoseCompat = [&, Diagnosed = false] () mutable {
+    auto DiagnoseCompat = [&, Diagnosed = false]() mutable {
       if (Diagnosed)
         return;
       Diagnosed = true;
