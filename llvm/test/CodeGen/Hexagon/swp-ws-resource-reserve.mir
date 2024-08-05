@@ -5,26 +5,27 @@
 # RUN: | FileCheck %s
 
 # We want to verify that all three V6_vaddw instructions are emitted in the same cycle.
-# CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
-# CHECK-NEXT: Cycle [[CycleNum:[0-9]+]] [[[StageNum:S.[0-9]+]]]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
-# CHECK-NEXT: Cycle [[CycleNum]] [[[StageNum]]]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
-# CHECK-NEXT: Cycle [[CycleNum]] [[[StageNum]]]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
+# CHECK-LABEL: Current window Offset is 2
+# CHECK: Cycle [[CycleNum:[0-9]+]] [{{S.[0-9]+}}]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
+# CHECK: Cycle [[CycleNum]] [{{S.[0-9]+}}]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
+# CHECK: Cycle [[CycleNum]] [{{S.[0-9]+}}]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
+# CHECK-LABEL: Current window Offset is 3
 
 --- |
   define void @add_parallel(i32 %N, ptr noalias %x, ptr noalias %y) {
   entry:
     %isZeroLength = icmp eq i32 %N, 0
     br i1 %isZeroLength, label %loop.exit, label %loop.preheader
-  
+
   loop.preheader:                                   ; preds = %entry
     %half_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1056964608)
     %one_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1065353216)
     %two_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1073741824)
     br label %loop.body
-  
+
   loop.exit:                                        ; preds = %loop.body, %entry
     ret void
-  
+
   loop.body:                                        ; preds = %loop.body, %loop.preheader
     %lsr.iv1 = phi ptr [ %cgep2, %loop.body ], [ %x, %loop.preheader ]
     %lsr.iv = phi ptr [ %cgep1, %loop.body ], [ %y, %loop.preheader ]
@@ -54,17 +55,17 @@ body:             |
   bb.0.entry:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
     liveins: $r0, $r1, $r2
-  
+
     %0:intregs = COPY $r2
     %1:intregs = COPY $r1
     %2:intregs = COPY $r0
     %3:predregs = C2_cmpeqi %2, 0
     J2_jumpt killed %3, %bb.2, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
-  
+
   bb.1.loop.preheader:
     successors: %bb.3(0x80000000)
-  
+
     %4:intregs = A2_tfrsi 1056964608
     %5:hvxvr = V6_lvsplatw killed %4
     %6:intregs = A2_tfrsi 1065353216
@@ -76,13 +77,13 @@ body:             |
     %12:intregs = COPY %11
     J2_loop0r %bb.3, %12, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
     J2_jump %bb.3, implicit-def dead $pc
-  
+
   bb.2.loop.exit:
     PS_jmpret $r31, implicit-def dead $pc
-  
+
   bb.3.loop.body (machine-block-address-taken):
     successors: %bb.3(0x7c000000), %bb.2(0x04000000)
-  
+
     %13:intregs = PHI %1, %bb.1, %14, %bb.3
     %15:intregs = PHI %0, %bb.1, %16, %bb.3
     %17:hvxvr, %14:intregs = V6_vL32b_pi %13, 128 :: (load (s1024) from %ir.lsr.iv1)

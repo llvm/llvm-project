@@ -170,19 +170,7 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst
@@ -282,36 +270,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -428,19 +392,7 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_remote_memory(ptr 
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
@@ -540,36 +492,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -669,36 +597,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -798,36 +702,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -944,19 +824,7 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode(
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
@@ -1017,19 +885,7 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
@@ -1056,36 +912,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -1202,19 +1034,7 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -1275,19 +1095,7 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -1314,36 +1122,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -1404,19 +1188,7 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
@@ -1443,36 +1215,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -1533,19 +1281,7 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX90A-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
@@ -1572,36 +1308,12 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ;
 ; GFX11-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret float [[TMP5]]
 ;
 ; GFX12-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -1722,19 +1434,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent(ptr addrspace(1) %ptr, f
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst
@@ -1834,36 +1534,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -1980,19 +1656,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_remote_memory
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
@@ -2092,36 +1756,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -2221,36 +1861,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -2350,36 +1966,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -2496,19 +2088,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
@@ -2552,36 +2132,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
@@ -2608,36 +2164,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -2754,19 +2286,7 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -2810,36 +2330,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -2866,36 +2362,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -2939,36 +2411,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
@@ -2995,36 +2443,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
@@ -3068,36 +2492,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX908-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
@@ -3124,36 +2524,12 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ;
 ; GFX11-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX11:       atomicrmw.start:
-; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX11-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX11-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX11-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX12:       atomicrmw.start:
-; GFX12-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX12-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE]]
-; GFX12-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX12-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX12-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0

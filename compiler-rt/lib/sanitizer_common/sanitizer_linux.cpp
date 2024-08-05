@@ -152,6 +152,8 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 
 #  if SANITIZER_FREEBSD
 #    define SANITIZER_USE_GETENTROPY 1
+extern "C" void *__sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
+                            off_t offset);
 #  endif
 
 namespace __sanitizer {
@@ -218,7 +220,9 @@ ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 #    if !SANITIZER_S390
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                    u64 offset) {
-#      if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
+#      if SANITIZER_FREEBSD
+  return (uptr)__sys_mmap(addr, length, prot, flags, fd, offset);
+#      elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return internal_syscall(SYSCALL(mmap), (uptr)addr, length, prot, flags, fd,
                           offset);
 #      else

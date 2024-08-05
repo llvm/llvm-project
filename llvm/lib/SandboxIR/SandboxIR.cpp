@@ -430,6 +430,11 @@ void Instruction::insertBefore(Instruction *BeforeI) {
   assert(is_sorted(getLLVMInstrs(),
                    [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
          "Expected program order!");
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<InsertIntoBB>(this, Tracker));
+
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->insertBefore(BeforeTopI);
@@ -443,14 +448,21 @@ void Instruction::insertInto(BasicBlock *BB, const BBIterator &WhereIt) {
   llvm::BasicBlock *LLVMBB = cast<llvm::BasicBlock>(BB->Val);
   llvm::Instruction *LLVMBeforeI;
   llvm::BasicBlock::iterator LLVMBeforeIt;
+  Instruction *BeforeI;
   if (WhereIt != BB->end()) {
-    Instruction *BeforeI = &*WhereIt;
+    BeforeI = &*WhereIt;
     LLVMBeforeI = BeforeI->getTopmostLLVMInstruction();
     LLVMBeforeIt = LLVMBeforeI->getIterator();
   } else {
+    BeforeI = nullptr;
     LLVMBeforeI = nullptr;
     LLVMBeforeIt = LLVMBB->end();
   }
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<InsertIntoBB>(this, Tracker));
+
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->insertInto(LLVMBB, LLVMBeforeIt);
@@ -610,6 +622,13 @@ void BranchInst::dump() const {
 }
 #endif // NDEBUG
 
+void LoadInst::setVolatile(bool V) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  cast<llvm::LoadInst>(Val)->setVolatile(V);
+}
+
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx,
                            const Twine &Name) {
@@ -664,6 +683,14 @@ void LoadInst::dump() const {
   dbgs() << "\n";
 }
 #endif // NDEBUG
+
+void StoreInst::setVolatile(bool V) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  cast<llvm::StoreInst>(Val)->setVolatile(V);
+}
+
 StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
                              Instruction *InsertBefore, Context &Ctx) {
   return create(V, Ptr, Align, InsertBefore, /*IsVolatile=*/false, Ctx);

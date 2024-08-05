@@ -309,3 +309,6 @@ if (TARGET flang-new AND TARGET module_files)
   add_dependencies(FortranRuntime flang-new module_files)
 endif()
 
+if (FLANG_CUF_RUNTIME)
+  add_subdirectory(CUDA)
+endif()

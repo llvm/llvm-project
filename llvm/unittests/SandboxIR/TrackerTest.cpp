@@ -442,6 +442,69 @@ define i32 @foo(i32 %arg) {
   EXPECT_EQ(It, BB->end());
 }
 
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, InsertIntoBB) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %add0 = add i32 %arg, %arg
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Ret = &*It++;
+  // Detach `Add0` before we save.
+  Add0->removeFromParent();
+
+  // Check insertBefore(Instruction *) with tracking enabled.
+  Ctx.save();
+  Add0->insertBefore(Ret);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Check insertAfter(Instruction *) with tracking enabled.
+  Ctx.save();
+  Add0->insertAfter(Ret);
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // Check insertInto(BasicBlock *, BasicBlock::iterator) with tracking enabled.
+  Ctx.save();
+  Add0->insertInto(BB, Ret->getIterator());
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Add0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+
+  // To make sure we don't leak memory insert `Add0` back into the BB before the
+  // end of the test.
+  Add0->insertBefore(Ret);
+}
+
 TEST_F(TrackerTest, CallBaseSetters) {
   parseIR(C, R"IR(
 declare void @bar1(i8)
@@ -707,4 +770,36 @@ bb2:
   EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
   EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+}
+
+TEST_F(TrackerTest, SetVolatile) {
+  parseIR(C, R"IR(
+define void @foo(ptr %arg0, i8 %val) {
+  %ld = load i8, ptr %arg0, align 64
+  store i8 %val, ptr %arg0, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Load = cast<sandboxir::LoadInst>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+
+  EXPECT_FALSE(Load->isVolatile());
+  Ctx.save();
+  Load->setVolatile(true);
+  EXPECT_TRUE(Load->isVolatile());
+  Ctx.revert();
+  EXPECT_FALSE(Load->isVolatile());
+
+  EXPECT_FALSE(Store->isVolatile());
+  Ctx.save();
+  Store->setVolatile(true);
+  EXPECT_TRUE(Store->isVolatile());
+  Ctx.revert();
+  EXPECT_FALSE(Store->isVolatile());
 }
