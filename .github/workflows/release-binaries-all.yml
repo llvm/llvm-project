@@ -91,4 +91,8 @@ jobs:
       release-version: "${{ needs.setup-variables.outputs.release-version }}"
       upload: ${{ needs.setup-variables.outputs.upload == 'true'}}
       runs-on: "${{ matrix.runs-on }}"
-
+    secrets:
+      # This will be empty for pull_request events, but that's fine, because
+      # the release-binaries workflow does not use this secret for the
+      # pull_request event.
+      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
