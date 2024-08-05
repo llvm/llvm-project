@@ -467,7 +467,7 @@ void X86IntelInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
     DispSpec.getExpr()->print(O, &MAI);
   }
 
-  O << ']';
+  O << M << ']';
 }
 
 void X86IntelInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
