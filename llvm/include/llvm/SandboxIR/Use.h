@@ -22,6 +22,7 @@ class Context;
 class Value;
 class User;
 class CallBase;
+class CallBrInst;
 class PHINode;
 
 /// Represents a Def-use/Use-def edge in SandboxIR.
