@@ -4030,7 +4030,7 @@ public:
 
   ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                LambdaScopeInfo *LSI) {
-    // Default arguments might contain unexpanded packs that would expand later.
+    // Default arguments might still contain unexpanded packs that would expand later.
     for (ParmVarDecl *PVD : LSI->CallOperator->parameters()) {
       if (Expr *Init = PVD->getInit())
         LSI->ContainsUnexpandedParameterPack |=
@@ -14615,7 +14615,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         }
         NewVDs.push_back(NewVD);
         getSema().addInitCapture(LSI, NewVD, C->getCaptureKind() == LCK_ByRef);
-        // The Init expression might be expanded by an outer fold expression.
         LSI->ContainsUnexpandedParameterPack |=
             Init.get()->containsUnexpandedParameterPack();
       }
@@ -14685,7 +14684,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
     }
 
-    // The captured pack might be expanded by an outer fold expression.
     if (auto *VD = dyn_cast<VarDecl>(CapturedVar); VD && !C->isPackExpansion())
       LSI->ContainsUnexpandedParameterPack |= VD->isParameterPack();
 
@@ -14703,8 +14701,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   if (TPL) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
-    // The parameter list might reference to a pack that an outer fold
-    // expression would expand.
     LSI->ContainsUnexpandedParameterPack |=
         TPL->containsUnexpandedParameterPack();
   }
