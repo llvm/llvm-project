@@ -36,18 +36,11 @@ void test() {
   assert(!sp.empty());
   assert(sp.size() == 4);
 
-  // Mode: default (`in` | `out`)
+  // Mode: default (`out`)
   {
     SpStream spSt{sp};
     assert(spSt.rdbuf()->span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.rdbuf()->span().empty());
-    assert(spSt.rdbuf()->span().size() == 0);
-  }
-  // Mode: `in`
-  {
-    SpStream spSt{sp, std::ios_base::in};
-    assert(spSt.rdbuf()->span().data() == arr);
     assert(spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 0);
   }
@@ -59,33 +52,43 @@ void test() {
     assert(spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 0);
   }
-  // Mode: multiple
-  {
-    SpStream spSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    assert(spSt.rdbuf()->span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spSt.rdbuf()->span().empty());
-    assert(spSt.rdbuf()->span().size() == 0);
-  }
   // Mode: `ate`
   {
-    SpStream spSt{sp, std::ios_base::out | std::ios_base::ate};
+    SpStream spSt{sp, std::ios_base::ate};
     assert(spSt.rdbuf()->span().data() == arr);
     assert(!spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 4);
   }
+  // Mode: multiple
+  {
+    SpStream spSt{sp, std::ios_base::ate | std::ios_base::binary};
+    assert(spSt.rdbuf()->span().data() == arr);
+    assert(!spSt.rdbuf()->span().empty());
+    assert(spSt.rdbuf()->span().size() == 4);
+  }
+
 }
 
 int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();
 #endif
+
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
   test<wchar_t, constexpr_char_traits<wchar_t>>();
 #endif
+
+#ifndef TEST_HAS_NO_CHAR8_T
+  test<char8_t>();
+  test<char8_t, constexpr_char_traits<char8_t>>();
+#endif
+  test<char16_t>();
+  test<char16_t, constexpr_char_traits<char16_t>>();
+  test<char32_t>();
+  test<char32_t, constexpr_char_traits<char32_t>>();
 
   return 0;
 }
