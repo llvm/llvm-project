@@ -258,8 +258,6 @@ def OpConstantComposite: Op<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
 def OpConstantSampler: Op<45, (outs ID:$res),
                   (ins TYPE:$t, SamplerAddressingMode:$s, i32imm:$p, SamplerFilterMode:$f),
                   "$res = OpConstantSampler $t $s $p $f">;
-//def OpConstantNull: Op<46, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantNull $src_ty",
-//                      [(set ID:$dst, (assigntype ConstPseudoNull, TYPE:$src_ty))]>;
 def OpConstantNull: Op<46, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantNull $src_ty">;
 
 def OpSpecConstantTrue: Op<48, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantTrue $t">;
@@ -472,8 +470,6 @@ def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
                   "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
-//def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, ID:$vec, ID:$idx),
-//                  "$res = OpVectorExtractDynamic $type $vec $idx">;
 
 def OpVectorInsertDynamic: Op<78, (outs ID:$res), (ins TYPE:$ty, ID:$vec, ID:$comp, ID:$idx),
                   "$res = OpVectorInsertDynamic $ty $vec $comp $idx">;

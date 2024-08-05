@@ -336,7 +336,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
-      MI.dump();
       switch (MI.getOpcode()) {
       case SPIRV::OpAtomicLoad:
       case SPIRV::OpAtomicExchange:

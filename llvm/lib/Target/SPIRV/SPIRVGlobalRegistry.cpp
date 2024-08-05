@@ -368,12 +368,9 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   return Res;
 }
 
-Register SPIRVGlobalRegistry::getOrCreateBaseRegister(Constant *Val,
-                                                      MachineInstr &I,
-                                                      SPIRVType *SpvType,
-                                                      const SPIRVInstrInfo &TII,
-                                                      unsigned BitWidth,
-                                                      bool ZeroAsNull) {
+Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
+    Constant *Val, MachineInstr &I, SPIRVType *SpvType,
+    const SPIRVInstrInfo &TII, unsigned BitWidth, bool ZeroAsNull) {
   SPIRVType *Type = SpvType;
   if (SpvType->getOpcode() == SPIRV::OpTypeVector ||
       SpvType->getOpcode() == SPIRV::OpTypeArray) {

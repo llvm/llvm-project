@@ -288,34 +288,12 @@ void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 }
 
-// To ensure that pattern matching rules are working.
+// Ensure that register classes correspond to pattern matching rules.
 void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   if (HasVRegsReset == &MF)
     return;
   HasVRegsReset = &MF;
 
-  /*
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-      Register Reg = Register::index2VirtReg(I);
-      MachineInstr *Def = MRI.getVRegDef(Reg);
-      LLT Ty = MRI.getType(Reg);
-      const TargetRegisterClass *RegClass = MRI.getRegClassOrNull(Reg);
-      if (Ty.isScalar() && (RegClass == &SPIRV::IDRegClass || RegClass ==
-    &SPIRV::ANYIDRegClass)) MRI.setType(Reg, LLT::scalar(32)); if (Def &&
-    Def->getOpcode() == SPIRV::ASSIGN_TYPE) { Register SrcReg =
-    Def->getOperand(1).getReg();
-        //MRI.setType(Reg, LLT::scalar(32));
-        MRI.setType(Reg, MRI.getType(SrcReg));
-        MRI.setRegClass(Reg, &SPIRV::ANYIDRegClass);
-        //MRI.setType(SrcReg, LLT::scalar(32));
-        //MRI.setRegClass(SrcReg, &SPIRV::IDRegClass);
-      } else {
-        //if (Ty.isScalar()) // unsigned Bits = Ty.getScalarSizeInBits();
-        //  MRI.setType(Reg, LLT::scalar(32));
-      } // G_FCONSTANT
-    }
-  */
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
@@ -324,14 +302,6 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
       MRI.setType(Reg, LLT::scalar(32));
     else if (Ty.isVector() && !Ty.isPointer())
       MRI.setType(Reg, LLT::scalar(32));
-      //MRI.setType(Reg, LLT::fixed_vector(2, LLT::scalar(32)));
-    /*    auto *Def = MRI.getVRegDef(Reg));
-        if (!Def)
-          continue;
-        if (Def->getOpcode() == SPIRV::ASSIGN_TYPE) {
-          Register SrcReg = Def->getOperand(1).getReg();
-          MRI.setType(Reg, LLT::scalar(32));
-        }*/
   }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {
@@ -348,7 +318,6 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
       const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
       if (DstRC != SrcRC && SrcRC)
         MRI.setRegClass(DstReg, SrcRC);
-      //MRI.setType(Reg, LLT::scalar(32));
     }
   }
 }
@@ -375,9 +344,6 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
         if (MRI->getType(DstReg).isPointer())
           MRI->setType(DstReg, LLT::scalar(32));
         bool Res = selectImpl(I, *CoverageInfo);
-        if (!Res && Def->getOpcode() != TargetOpcode::G_CONSTANT) {
-          I.dump();
-        }
         assert(Res || Def->getOpcode() == TargetOpcode::G_CONSTANT);
         if (Res)
           return Res;
