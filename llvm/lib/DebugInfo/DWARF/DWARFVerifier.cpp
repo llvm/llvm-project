@@ -1662,6 +1662,18 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
     DWARFUnit *NonSkeletonUnit = NonSkeletonUnitDie.getDwarfUnit();
     uint64_t DIEOffset =
         NonSkeletonUnit->getOffset() + *EntryOr->getDIEUnitOffset();
+    const uint64_t NextUnitOffset = NonSkeletonUnit->getNextUnitOffset();
+    // DIE offsets are relative to the specified CU or TU. Make sure the DIE
+    // offsets is a valid relative offset.
+    if (DIEOffset >= NextUnitOffset) {
+      ErrorCategory.Report("NameIndex relative DIE offset too large", [&]() {
+        error() << formatv("Name Index @ {0:x}: Entry @ {1:x} references a "
+                           "DIE @ {2:x} when CU or TU ends at {3:x}.\n",
+                           NI.getUnitOffset(), EntryID, DIEOffset,
+                           NextUnitOffset);
+      });
+      continue;
+    }
     DWARFDie DIE = NonSkeletonUnit->getDIEForOffset(DIEOffset);
 
     if (!DIE) {
