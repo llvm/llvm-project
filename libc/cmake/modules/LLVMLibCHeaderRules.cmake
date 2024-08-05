@@ -10,7 +10,7 @@ function(add_header target_name)
   cmake_parse_arguments(
     "ADD_HEADER"
     ""    # No optional arguments
-    "HDR" # Single value arguments
+    "HDR;SRCHDR" # Single value arguments
     "DEPENDS"
     ${ARGN}
   )
@@ -21,7 +21,11 @@ function(add_header target_name)
   set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
   set(dest_file ${LIBC_INCLUDE_DIR}/${relative_path})
-  set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
+  if(ADD_HEADER_SRCHDR)
+    set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_SRCHDR})
+  else()
+    set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
+  endif()
 
   add_custom_command(
     OUTPUT ${dest_file}
