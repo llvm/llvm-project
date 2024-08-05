@@ -3260,12 +3260,9 @@ static SDValue extractBooleanFlip(SDValue V, SelectionDAG &DAG,
   if (V.getOpcode() != ISD::XOR)
     return SDValue();
 
-  if (!isConstOrConstSplat(V.getOperand(1), false))
-    return SDValue();
-
-  if (DAG.isBoolConstant(V.getOperand(1), true))
+  if (DAG.isBoolConstant(V.getOperand(1)) == true)
     return V.getOperand(0);
-  if (Force)
+  if (Force && isConstOrConstSplat(V.getOperand(1), false))
     return DAG.getLogicalNOT(SDLoc(V), V, V.getValueType());
   return SDValue();
 }

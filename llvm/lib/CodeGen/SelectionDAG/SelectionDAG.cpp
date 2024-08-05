@@ -9923,11 +9923,9 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
     return T;
 
   // select true, T, F --> T
-  if (isBoolConstant(Cond, true, /*AllowTruncation=*/true))
-    return T;
   // select false, T, F --> F
-  if (isBoolConstant(Cond, false, /*AllowTruncation=*/true))
-    return F;
+  if (auto C = isBoolConstant(Cond, /*AllowTruncation=*/true))
+    return *C ? T : F;
 
   // select ?, T, T --> T
   if (T == F)
@@ -13119,21 +13117,28 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
   return nullptr;
 }
 
-bool SelectionDAG::isBoolConstant(SDValue N, bool Value,
-                                  bool AllowTruncation) const {
+std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
+                                                 bool AllowTruncation) const {
   ConstantSDNode *Const = isConstOrConstSplat(N, false, AllowTruncation);
   if (!Const)
-    return false;
+    return std::nullopt;
 
   const APInt &CVal = Const->getAPIntValue();
   switch (TLI->getBooleanContents(N.getValueType())) {
   case TargetLowering::ZeroOrOneBooleanContent:
-    return Value ? CVal.isOne() : CVal.isZero();
+    if (CVal.isOne())
+      return true;
+    if (CVal.isZero())
+      return false;
+    return std::nullopt;
   case TargetLowering::ZeroOrNegativeOneBooleanContent:
-    return Value ? CVal.isAllOnes() : CVal.isZero();
-    break;
+    if (CVal.isAllOnes())
+      return true;
+    if (CVal.isZero())
+      return false;
+    return std::nullopt;
   case TargetLowering::UndefinedBooleanContent:
-    return Value ? CVal[0] : !CVal[0];
+    return CVal[0];
   }
 }
 
