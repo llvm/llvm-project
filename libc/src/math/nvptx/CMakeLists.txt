@@ -468,3 +468,27 @@ add_entrypoint_object(
     -O2
   VENDOR
 )
+
+add_entrypoint_object(
+  lgamma
+  SRCS
+    lgamma.cpp
+  HDRS
+    ../lgamma.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
+
+add_entrypoint_object(
+  lgamma_r
+  SRCS
+    lgamma_r.cpp
+  HDRS
+    ../lgamma_r.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
