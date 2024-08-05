@@ -430,6 +430,11 @@ void Instruction::insertBefore(Instruction *BeforeI) {
   assert(is_sorted(getLLVMInstrs(),
                    [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
          "Expected program order!");
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<InsertIntoBB>(this, Tracker));
+
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->insertBefore(BeforeTopI);
@@ -443,14 +448,21 @@ void Instruction::insertInto(BasicBlock *BB, const BBIterator &WhereIt) {
   llvm::BasicBlock *LLVMBB = cast<llvm::BasicBlock>(BB->Val);
   llvm::Instruction *LLVMBeforeI;
   llvm::BasicBlock::iterator LLVMBeforeIt;
+  Instruction *BeforeI;
   if (WhereIt != BB->end()) {
-    Instruction *BeforeI = &*WhereIt;
+    BeforeI = &*WhereIt;
     LLVMBeforeI = BeforeI->getTopmostLLVMInstruction();
     LLVMBeforeIt = LLVMBeforeI->getIterator();
   } else {
+    BeforeI = nullptr;
     LLVMBeforeI = nullptr;
     LLVMBeforeIt = LLVMBB->end();
   }
+
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<InsertIntoBB>(this, Tracker));
+
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
     I->insertInto(LLVMBB, LLVMBeforeIt);

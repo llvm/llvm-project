@@ -43,7 +43,7 @@ int getStructWithDtorValue() { return struct_with_dtor.value; }
 
 int main() { return 0; }
 
-// CHECK: DynInitPoison module: {{.*}}initialization-nobug.cpp
+// CHECK: DynInitPoison
 // CHECK: DynInitUnpoison
-// CHECK: DynInitPoison module: {{.*}}initialization-nobug-extra.cpp
+// CHECK: DynInitPoison
 // CHECK: DynInitUnpoison

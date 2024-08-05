@@ -665,7 +665,7 @@ static Relocation *getRISCVPCRelHi20(const Symbol *sym, uint64_t addend) {
 // target-specific adjustment to produce a thread-pointer-relative offset.
 static int64_t getTlsTpOffset(const Symbol &s) {
   // On targets that support TLSDESC, _TLS_MODULE_BASE_@tpoff = 0.
-  if (&s == ElfSym::tlsModuleBase)
+  if (&s == ctx.sym.tlsModuleBase)
     return 0;
 
   // There are 2 TLS layouts. Among targets we support, x86 uses TLS Variant 2
@@ -679,7 +679,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   // Variant 2. Static TLS blocks, followed by alignment padding are placed
   // before TP. The alignment padding is added so that (TP - padding -
   // p_memsz) is congruent to p_vaddr modulo p_align.
-  PhdrEntry *tls = Out::tlsPhdr;
+  PhdrEntry *tls = ctx.tlsPhdr;
   switch (config->emachine) {
     // Variant 1.
   case EM_ARM:

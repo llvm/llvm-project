@@ -70,6 +70,9 @@ static ListOfGlobals &GlobalsByIndicator(uptr odr_indicator)
   return (*globals_by_indicator)[odr_indicator];
 }
 
+static const char *current_dynamic_init_module_name
+    SANITIZER_GUARDED_BY(mu_for_globals) = nullptr;
+
 using DynInitGlobalsByModule =
     DenseMap<const char *, IntrusiveList<DynInitGlobal>>;
 
@@ -492,18 +495,29 @@ void __asan_before_dynamic_init(const char *module_name) {
   CHECK(module_name);
   CHECK(AsanInited());
   Lock lock(&mu_for_globals);
+  if (current_dynamic_init_module_name == module_name)
+    return;
   if (flags()->report_globals >= 3)
     Printf("DynInitPoison module: %s\n", module_name);
 
-  DynInitGlobals().forEach([&](auto &kv) {
-    if (kv.first != module_name) {
-      PoisonDynamicGlobals(kv.second);
-    } else {
-      UnpoisonDynamicGlobals(kv.second,
-                             /*mark_initialized=*/!strict_init_order);
-    }
-    return true;
-  });
+  if (current_dynamic_init_module_name == nullptr) {
+    // First call, poison all globals from other modules.
+    DynInitGlobals().forEach([&](auto &kv) {
+      if (kv.first != module_name) {
+        PoisonDynamicGlobals(kv.second);
+      } else {
+        UnpoisonDynamicGlobals(kv.second,
+                               /*mark_initialized=*/!strict_init_order);
+      }
+      return true;
+    });
+  } else {
+    // Module changed.
+    PoisonDynamicGlobals(DynInitGlobals()[current_dynamic_init_module_name]);
+    UnpoisonDynamicGlobals(DynInitGlobals()[module_name],
+                           /*mark_initialized=*/!strict_init_order);
+  }
+  current_dynamic_init_module_name = module_name;
 }
 
 // This method runs immediately after dynamic initialization in each TU, when
@@ -514,6 +528,9 @@ void __asan_after_dynamic_init() {
     return;
   CHECK(AsanInited());
   Lock lock(&mu_for_globals);
+  if (!current_dynamic_init_module_name)
+    return;
+
   if (flags()->report_globals >= 3)
     Printf("DynInitUnpoison\n");
 
@@ -521,4 +538,6 @@ void __asan_after_dynamic_init() {
     UnpoisonDynamicGlobals(kv.second, /*mark_initialized=*/false);
     return true;
   });
+
+  current_dynamic_init_module_name = nullptr;
 }
