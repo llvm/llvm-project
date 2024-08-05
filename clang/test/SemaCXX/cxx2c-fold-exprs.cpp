@@ -275,3 +275,33 @@ static_assert(S<int>::g<int>() == 2); // expected-error {{call to 'g' is ambiguo
 
 
 }
+
+namespace GH99430 {
+
+template <class _Ty1, class _Ty2>
+using _Synth_three_way_result = int;
+
+template <class... _Types>
+class tuple;
+
+template <int _Index>
+struct tuple_element;
+
+template <class, int...>
+struct _Three_way_comparison_result_with_tuple_like {
+  using type = int;
+};
+
+template <class... _TTypes, int... _Indices>
+  requires(requires {
+    typename _Synth_three_way_result<_TTypes, tuple_element<_Indices>>;
+  } && ...)
+
+struct _Three_way_comparison_result_with_tuple_like<tuple<_TTypes...>, _Indices...>{
+    using type = long;
+};
+
+static_assert(__is_same_as(_Three_way_comparison_result_with_tuple_like<tuple<int>, 0, 1>::type, int));
+static_assert(__is_same_as(_Three_way_comparison_result_with_tuple_like<tuple<int>, 0>::type, long));
+
+}
