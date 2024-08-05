@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::FILE _LIBCPP_USING_IF_EXISTS;
   using ::fpos_t _LIBCPP_USING_IF_EXISTS;
   using ::size_t _LIBCPP_USING_IF_EXISTS;
@@ -58,4 +58,4 @@ export {
   using ::vsprintf _LIBCPP_USING_IF_EXISTS;
   using ::vsscanf _LIBCPP_USING_IF_EXISTS;
 
-} // export
+} // _LIBCPP_MODULE_EXPORT

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #if _LIBCPP_STD_VER >= 23
   // [expected.unexpected], class template unexpected
   using std::unexpected;

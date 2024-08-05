@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::double_t _LIBCPP_USING_IF_EXISTS;
   using ::float_t _LIBCPP_USING_IF_EXISTS;
 
@@ -265,4 +265,4 @@ export {
   using ::signbit _LIBCPP_USING_IF_EXISTS;
 
   // [sf.cmath], mathematical special functions
-} // export
+} // _LIBCPP_MODULE_EXPORT
