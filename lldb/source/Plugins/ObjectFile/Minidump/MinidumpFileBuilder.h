@@ -76,7 +76,7 @@ class MinidumpFileBuilder {
 public:
   MinidumpFileBuilder(lldb::FileUP &&core_file,
                       const lldb::ProcessSP &process_sp,
-                      const lldb_private::SaveCoreOptions &save_core_options)
+                      lldb_private::SaveCoreOptions &save_core_options)
       : m_process_sp(process_sp), m_core_file(std::move(core_file)),
         m_save_core_options(save_core_options){};
 
