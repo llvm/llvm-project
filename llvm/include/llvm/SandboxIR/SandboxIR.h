@@ -1585,7 +1585,7 @@ public:
     return cast<llvm::PHINode>(Val)->hasConstantOrUndefValue();
   }
   bool isComplete() const { return cast<llvm::PHINode>(Val)->isComplete(); }
-  void replaceIncomingBlockWith (const BasicBlock *Old, BasicBlock *New);
+  void replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New);
   void removeIncomingValueIf(function_ref< bool(unsigned)> Predicate);
   // TODO: Implement 
   // void copyIncomingBlocks(iterator_range<const_block_iterator> BBRange,

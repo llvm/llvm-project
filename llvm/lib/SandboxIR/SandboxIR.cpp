@@ -1150,10 +1150,10 @@ Value *PHINode::hasConstantValue() const {
   llvm::Value *LLVMV = cast<llvm::PHINode>(Val)->hasConstantValue();
   return LLVMV != nullptr ? Ctx.getValue(LLVMV) : nullptr;
 }
-void PHINode::replaceIncomingBlockWith (const BasicBlock *Old, BasicBlock *New) {
+void PHINode::replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New) {
   assert(New && Old && "Sandbox IR PHI node got a null basic block!");
-  for (unsigned Idx = 0,
-            NumOps = cast<llvm::PHINode>(Val)->getNumOperands(); Idx != NumOps; ++Idx)
+  for (unsigned Idx = 0, NumOps = cast<llvm::PHINode>(Val)->getNumOperands();
+       Idx != NumOps; ++Idx)
     if (getIncomingBlock(Idx) == Old)
       setIncomingBlock(Idx, New);
 }
