@@ -14,16 +14,9 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/CPP/array.h"
 
 #include <stdint.h>
-
-// AMDGPU does not support input register constraints for i1 and i8, so we must
-// cast them to uint16_t's before loading them into registers.
-#define FORCE_TO_REGISTER(TYPE, VARIABLE)                                      \
-  if constexpr (cpp::is_same_v<TYPE, char> || cpp::is_same_v<TYPE, bool>)      \
-    asm("" ::"v"(static_cast<uint16_t>(VARIABLE)));                            \
-  else                                                                         \
-    asm("" ::"v"(VARIABLE))
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -50,7 +43,8 @@ template <typename F, typename T>
   volatile T storage = t;
   T arg = storage;
 
-  FORCE_TO_REGISTER(T, arg);
+  // VGPR constraints can only accept primitive values.
+  asm("" ::"v"(&arg));
 
   // The AMDGPU architecture needs to wait on pending results.
   gpu::memory_fence();
@@ -59,8 +53,7 @@ template <typename F, typename T>
 
   // This forces the compiler to load the input argument and run the clock
   // cycle counter before the profiling region.
-  FORCE_TO_REGISTER(T, arg);
-  asm("" ::"s"(start));
+  asm("" ::"s"(start), "v"(&arg));
 
   // Run the function under test and return its value.
   auto result = f(arg);
@@ -87,15 +80,12 @@ template <typename F, typename T1, typename T2>
   T1 arg1 = storage1;
   T2 arg2 = storage2;
 
-  FORCE_TO_REGISTER(T1, arg1);
-  FORCE_TO_REGISTER(T2, arg2);
+  asm("" ::"v"(&arg1), "v"(&arg2));
 
   gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
-  FORCE_TO_REGISTER(T1, arg1);
-  FORCE_TO_REGISTER(T2, arg2);
-  asm("" ::"s"(start));
+  asm("" ::"s"(start), "v"(&arg1), "v"(&arg2));
 
   auto result = f(arg1, arg2);
 
@@ -106,6 +96,35 @@ template <typename F, typename T1, typename T2>
   asm("" ::"s"(stop));
   gpu::memory_fence();
 
+  return stop - start;
+}
+
+// Provides throughput benchmarking.
+template <typename F, typename T, size_t N>
+[[gnu::noinline]] static LIBC_INLINE uint64_t
+latency(F f, const cpp::array<T, N> &inputs) {
+  volatile auto storage = &inputs;
+  auto array_pointer = storage;
+  asm("" ::"v"(array_pointer));
+  auto register_array = *array_pointer;
+
+  gpu::memory_fence();
+  uint64_t start = gpu::processor_clock();
+
+  asm("" ::"s"(start), "v"(array_pointer));
+
+  for (auto input : register_array) {
+    auto result = f(input);
+
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
+        static_cast<uint32_t>(result)));
+  }
+
+  uint64_t stop = gpu::processor_clock();
+  asm("" ::"s"(stop));
+  gpu::memory_fence();
+
+  // Return the time elapsed.
   return stop - start;
 }
 

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_UTILS_GPU_TIMING_NVPTX
 #define LLVM_LIBC_UTILS_GPU_TIMING_NVPTX
 
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
@@ -92,6 +94,36 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
   asm("" ::"r"(stop));
   volatile auto output = result;
 
+  return stop - start;
+}
+
+// Provides throughput benchmarking.
+template <typename F, typename T, size_t N>
+[[gnu::noinline]] static LIBC_INLINE uint64_t
+latency(F f, const cpp::array<T, N> &inputs) {
+  volatile auto storage = &inputs;
+  auto array_pointer = storage;
+  asm("" ::"r"(array_pointer));
+  auto register_array = *array_pointer;
+
+  gpu::memory_fence();
+  uint64_t start = gpu::processor_clock();
+
+  asm("" ::"r"(array_pointer), "llr"(start));
+
+  uint64_t result;
+  for (auto input : register_array) {
+    asm("" ::"r"(input));
+    result = f(input);
+    asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result));
+  }
+
+  uint64_t stop = gpu::processor_clock();
+  gpu::memory_fence();
+  asm("" ::"r"(stop));
+  volatile auto output = result;
+
+  // Return the time elapsed.
   return stop - start;
 }
 } // namespace LIBC_NAMESPACE_DECL
