@@ -74,13 +74,7 @@ int main(int, char**) {
   // Make sure we can call `std::isnan` with convertible types
   {
     assert(!std::isnan(ConvertibleTo<float>()));
-    // When libc++ is layered on top of Bionic's libc, `math.h` exposes a
-    // function prototype for `isnan(double)` with return type `int`. libc++
-    // can only work around it via `_LIBCPP_PREFERRED_OVERLOAD`, which is only
-    // available in modern versions of Clang, and not elsewhere.
-#if defined(TEST_COMPILER_CLANG) || !defined(__BIONIC__)
     assert(!std::isnan(ConvertibleTo<double>()));
-#endif
     assert(!std::isnan(ConvertibleTo<long double>()));
   }
 

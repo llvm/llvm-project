@@ -74,13 +74,7 @@ int main(int, char**) {
   // Make sure we can call `std::isinf` with convertible types
   {
     assert(!std::isinf(ConvertibleTo<float>()));
-    // When libc++ is layered on top of Bionic's libc, `math.h` exposes a
-    // function prototype for `isinf(double)` with return type `int`. libc++
-    // can only work around it via `_LIBCPP_PREFERRED_OVERLOAD`, which is only
-    // available in modern versions of Clang, and not elsewhere.
-#if defined(TEST_COMPILER_CLANG) || !defined(__BIONIC__)
     assert(!std::isinf(ConvertibleTo<double>()));
-#endif
     assert(!std::isinf(ConvertibleTo<long double>()));
   }
 
