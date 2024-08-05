@@ -304,6 +304,16 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbs"
 // MCPU-SIFIVE-P450-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p470 | FileCheck -check-prefix=MCPU-SIFIVE-P470 %s
+// MCPU-SIFIVE-P470: "-target-cpu" "sifive-p470"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+c" "-target-feature" "+v" "-target-feature" "+zic64b" "-target-feature" "+zicbom" "-target-feature" "+zicbop" "-target-feature" "+zicboz" "-target-feature" "+ziccamoa" "-target-feature" "+ziccif" "-target-feature" "+zicclsm" "-target-feature" "+ziccrse" "-target-feature" "+zicsr" "-target-feature" "+zifencei" "-target-feature" "+zihintntl" "-target-feature" "+zihintpause" "-target-feature" "+zihpm" "-target-feature" "+zmmul" "-target-feature" "+za64rs" "-target-feature" "+zfhmin"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zba" "-target-feature" "+zbb" "-target-feature" "+zbs"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbb" "-target-feature" "+zvbc"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve32f" "-target-feature" "+zve32x" "-target-feature" "+zve64d" "-target-feature" "+zve64f" "-target-feature" "+zve64x"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvkg" "-target-feature" "+zvkn" "-target-feature" "+zvknc" "-target-feature" "+zvkned" "-target-feature" "+zvkng" "-target-feature" "+zvknhb" "-target-feature" "+zvks" "-target-feature" "+zvksc" "-target-feature" "+zvksed" "-target-feature" "+zvksg" "-target-feature" "+zvksh" "-target-feature" "+zvkt"
+// MCPU-SIFIVE-P470-SAME: "-target-abi" "lp64d"
+
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p670 | FileCheck -check-prefix=MCPU-SIFIVE-P670 %s
 // MCPU-SIFIVE-P670: "-target-cpu" "sifive-p670"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+m"
