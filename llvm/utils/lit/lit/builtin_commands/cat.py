@@ -7,16 +7,19 @@ try:
 except ImportError:
     from io import StringIO
 
+
 @dataclass
 class Options:
     show_ends: bool
     show_nonprinting: bool
 
+
 def convertTextNotation(data, options):
     newdata = StringIO()
     if isinstance(data, str):
         data = bytearray(data.encode())
-    
+
+
     for intval in data:
         if options.show_ends:
             if intval == 10:
