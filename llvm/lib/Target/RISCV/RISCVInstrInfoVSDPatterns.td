@@ -1430,7 +1430,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16] in
+  let Predicates = [HasVInstructionsBF16Minimal] in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
                 (fvti.Vector (IMPLICIT_DEF)),

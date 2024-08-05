@@ -47,6 +47,8 @@ to learn about the defaults for your platform and target.
 * **"scanf" options**
     - ``LIBC_CONF_SCANF_DISABLE_FLOAT``: Disable parsing floating point values in scanf and friends.
     - ``LIBC_CONF_SCANF_DISABLE_INDEX_MODE``: Disable index mode in the scanf format string.
+* **"setjmp" options**
+    - ``LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER``: Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved.
 * **"string" options**
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
     - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.

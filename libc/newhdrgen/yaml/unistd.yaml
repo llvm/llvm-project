@@ -23,39 +23,39 @@ objects:
     object_type: int
 functions:
   - name: access
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: int
   - name: chdir
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
   - name: close
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: dup
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: dup2
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
       - type: int
   - name: dup3
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -63,7 +63,7 @@ functions:
       - type: int
       - type: int
   - name: execve
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -71,57 +71,57 @@ functions:
       - type: __exec_argv_t
       - type: __exec_envp_t
   - name: fchdir
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: fsync
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: ftruncate
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
       - type: off_t
   - name: getcwd
-    standards: 
+    standards:
       - POSIX
     return_type: char *
     arguments:
       - type: char *
       - type: size_t
   - name: geteuid
-    standards: 
+    standards:
       - POSIX
     return_type: uid_t
     arguments:
       - type: void
   - name: getpid
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: void
   - name: getppid
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: void
   - name: getuid
-    standards: 
+    standards:
       - POSIX
     return_type: uid_t
     arguments:
       - type: void
   - name: isatty
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -129,14 +129,14 @@ functions:
     guard: null
     attributes: []
   - name: link
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: linkat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -145,8 +145,8 @@ functions:
       - type: int
       - type: const char *
       - type: int
-  - name: lseek 
-    standards: 
+  - name: lseek
+    standards:
       - POSIX
     return_type: off_t
     arguments:
@@ -154,13 +154,13 @@ functions:
       - type: off_t
       - type: int
   - name: pipe
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int *
   - name: pread
-    standards: 
+    standards:
       - POSIX
     return_type: ssize_t
     arguments:
@@ -169,7 +169,7 @@ functions:
       - type: size_t
       - type: off_t
   - name: pwrite
-    standards: 
+    standards:
       - POSIX
     return_type: ssize_t
     arguments:
@@ -178,7 +178,7 @@ functions:
       - type: size_t
       - type: off_t
   - name: read
-    standards: 
+    standards:
       - POSIX
     return_type: ssize_t
     arguments:
@@ -186,7 +186,7 @@ functions:
       - type: void *
       - type: size_t
   - name: readlink
-    standards: 
+    standards:
       - POSIX
     return_type: ssize_t
     arguments:
@@ -194,7 +194,7 @@ functions:
       - type: char *__restrict
       - type: size_t
   - name: readlinkat
-    standards: 
+    standards:
       - POSIX
     return_type: ssize_t
     arguments:
@@ -202,20 +202,20 @@ functions:
       - type: char *__restrict
       - type: size_t
   - name: rmdir
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
   - name: symlink
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: symlinkat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -224,26 +224,26 @@ functions:
       - type: int
       - type: const char *
   - name: sysconf
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: truncate
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: off_t
   - name: unlink
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
   - name: unlinkat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -251,7 +251,7 @@ functions:
       - type: const char *
       - type: int
   - name: write
-    standards: 
+    standards:
       - POSIX
     return_type: ssize_t
     arguments:
@@ -261,26 +261,26 @@ functions:
     guard: null
     attributes: []
   - name: _exit
-    standards: 
+    standards:
       - POSIX
     return_type: _Noreturn void
     arguments:
       - type: int
   - name: execv
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: __exec_argv_t
   - name: fork
-    standards: 
+    standards:
       - POSIX
     return_type: pid_t
     arguments:
       - type: void
   - name: __llvm_libc_syscall
-    standards: 
+    standards:
       - POSIX
     return_type: long
     arguments:
@@ -292,7 +292,7 @@ functions:
       - type: long
       - type: long
   - name: getopt
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -300,10 +300,16 @@ functions:
       - type: __getoptargv_t
       - type: const char *
   - name: swab
-    standards: 
+    standards:
       - POSIX
     return_type: void
     arguments:
       - type: const void *__restrict
       - type: void *
       - type: ssize_t
+  - name: gettid
+    standards:
+      - Linux
+    return_type: pid_t
+    arguments:
+      - type: void

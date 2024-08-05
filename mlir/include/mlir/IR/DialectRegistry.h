@@ -60,7 +60,7 @@ protected:
   /// If the list is empty, the extension is invoked for every loaded dialect
   /// independently.
   DialectExtensionBase(ArrayRef<StringRef> dialectNames)
-      : dialectNames(dialectNames.begin(), dialectNames.end()) {}
+      : dialectNames(dialectNames) {}
 
 private:
   /// The names of the dialects affected by this extension.

@@ -17,21 +17,21 @@ enums: []
 objects: []
 functions:
   - name: chmod
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: mode_t
   - name: fchmod
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
       - type: mode_t
   - name: fchmodat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -40,28 +40,28 @@ functions:
       - type: mode_t
       - type: int
   - name: fstat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
       - type: struct stat *
   - name: lstat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: struct stat *__restrict
   - name: mkdir
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: mode_t
   - name: mkdirat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -69,7 +69,7 @@ functions:
       - type: const char *
       - type: mode_t
   - name: stat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:

@@ -625,7 +625,7 @@ bool AArch64Err843419Patcher::createFixes() {
     init();
 
   bool addressesChanged = false;
-  for (OutputSection *os : outputSections) {
+  for (OutputSection *os : ctx.outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
     for (SectionCommand *cmd : os->commands)

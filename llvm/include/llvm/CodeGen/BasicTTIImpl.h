@@ -1628,7 +1628,9 @@ public:
       const Value *Mask = Args[3];
       const Value *EVL = Args[4];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
-      Align Alignment = I->getParamAlign(1).valueOrOne();
+      Type *EltTy = cast<VectorType>(Data->getType())->getElementType();
+      Align Alignment =
+          I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getStridedMemoryOpCost(Instruction::Store,
                                              Data->getType(), Ptr, VarMask,
                                              Alignment, CostKind, I);
@@ -1638,7 +1640,9 @@ public:
       const Value *Mask = Args[2];
       const Value *EVL = Args[3];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
-      Align Alignment = I->getParamAlign(0).valueOrOne();
+      Type *EltTy = cast<VectorType>(RetTy)->getElementType();
+      Align Alignment =
+          I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
                                              VarMask, Alignment, CostKind, I);
     }

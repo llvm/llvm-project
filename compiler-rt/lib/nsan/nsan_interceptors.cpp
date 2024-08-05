@@ -21,10 +21,6 @@
 
 #include <wchar.h>
 
-#if SANITIZER_LINUX
-extern "C" int mallopt(int param, int value);
-#endif
-
 using namespace __sanitizer;
 using __nsan::nsan_init_is_running;
 using __nsan::nsan_initialized;
@@ -208,12 +204,6 @@ INTERCEPTOR(uptr, strxfrm, char *dst, const char *src, uptr size) {
 void __nsan::InitializeInterceptors() {
   static bool initialized = false;
   CHECK(!initialized);
-
-  // Instruct libc malloc to consume less memory.
-#if SANITIZER_LINUX
-  mallopt(1, 0);          // M_MXFAST
-  mallopt(-3, 32 * 1024); // M_MMAP_THRESHOLD
-#endif
 
   InitializeMallocInterceptors();
 

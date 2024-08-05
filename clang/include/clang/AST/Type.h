@@ -2509,6 +2509,7 @@ public:
   bool isFunctionNoProtoType() const { return getAs<FunctionNoProtoType>(); }
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
+  bool isPointerOrReferenceType() const;
   bool isSignableType() const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
@@ -2628,6 +2629,10 @@ public:
   bool isPipeType() const;                      // OpenCL pipe type
   bool isBitIntType() const;                    // Bit-precise integer type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
+
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+  bool isHLSLSpecificType() const; // Any HLSL specific type
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -3021,6 +3026,9 @@ public:
 // AMDGPU types
 #define AMDGPU_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/AMDGPUTypes.def"
+// HLSL intangible Types
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/HLSLIntangibleTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -7996,6 +8004,10 @@ inline bool Type::isPointerType() const {
   return isa<PointerType>(CanonicalType);
 }
 
+inline bool Type::isPointerOrReferenceType() const {
+  return isPointerType() || isReferenceType();
+}
+
 inline bool Type::isAnyPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
@@ -8254,6 +8266,19 @@ inline bool Type::isOCLExtOpaqueType() const {
 inline bool Type::isOpenCLSpecificType() const {
   return isSamplerT() || isEventT() || isImageType() || isClkEventT() ||
          isQueueT() || isReserveIDT() || isPipeType() || isOCLExtOpaqueType();
+}
+
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
+inline bool Type::isHLSLSpecificType() const {
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) is##Id##Type() ||
+  return
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      false; // end boolean or operation
 }
 
 inline bool Type::isTemplateTypeParmType() const {

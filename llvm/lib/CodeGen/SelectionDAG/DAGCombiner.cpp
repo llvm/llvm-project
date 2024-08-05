@@ -1086,9 +1086,10 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   // (load/store (add/sub (add x, y), vscale))
   // (load/store (add/sub (add x, y), (lsl vscale, C)))
   // (load/store (add/sub (add x, y), (mul vscale, C)))
-  if (sd_match(N1, m_AnyOf(m_VScale(m_Value()),
-                           m_Shl(m_VScale(m_Value()), m_ConstInt()),
-                           m_Mul(m_VScale(m_Value()), m_ConstInt()))) &&
+  if ((N1.getOpcode() == ISD::VSCALE ||
+       ((N1.getOpcode() == ISD::SHL || N1.getOpcode() == ISD::MUL) &&
+        N1.getOperand(0).getOpcode() == ISD::VSCALE &&
+        isa<ConstantSDNode>(N1.getOperand(1)))) &&
       N1.getValueType().getFixedSizeInBits() <= 64) {
     int64_t ScalableOffset = N1.getOpcode() == ISD::VSCALE
                                  ? N1.getConstantOperandVal(0)
@@ -2974,7 +2975,8 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   }
 
   // fold a+vscale(c1)+vscale(c2) -> a+vscale(c1+c2)
-  if (sd_match(N0, m_Add(m_Value(), m_VScale(m_Value()))) &&
+  if (N0.getOpcode() == ISD::ADD &&
+      N0.getOperand(1).getOpcode() == ISD::VSCALE &&
       N1.getOpcode() == ISD::VSCALE) {
     const APInt &VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
     const APInt &VS1 = N1->getConstantOperandAPInt(0);
@@ -25239,7 +25241,7 @@ static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
   if (!VT.isInteger() || IsBigEndian)
     return SDValue();
 
-  SmallVector<int, 16> Mask(SVN->getMask().begin(), SVN->getMask().end());
+  SmallVector<int, 16> Mask(SVN->getMask());
   auto ForEachDecomposedIndice = [NumElts, &Mask](auto Fn) {
     for (int &Indice : Mask) {
       if (Indice < 0)
@@ -25442,8 +25444,7 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
       if (!MinNonUndefIdx)
         return DAG.getUNDEF(VT); // All undef - result is undef.
       assert(*MinNonUndefIdx < NumElts && "Expected valid element index.");
-      SmallVector<int, 8> SplatMask(Shuf->getMask().begin(),
-                                    Shuf->getMask().end());
+      SmallVector<int, 8> SplatMask(Shuf->getMask());
       for (int &Idx : SplatMask) {
         if (Idx < 0)
           continue; // Passthrough sentinel indices.

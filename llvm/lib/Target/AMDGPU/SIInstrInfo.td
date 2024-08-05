@@ -828,7 +828,9 @@ def InlineImmFP64 : FPImmLeaf<f64, [{
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
   return isVGPRImm(N);
-}]>;
+}]> {
+  let GISelPredicateCode = [{return true;}];
+}
 
 def NegateImm : SDNodeXForm<imm, [{
   return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);

@@ -527,10 +527,7 @@ struct VectorShuffleOpConvert final
       return rewriter.notifyMatchFailure(shuffleOp,
                                          "unsupported result vector type");
 
-    SmallVector<int32_t, 4> mask = llvm::map_to_vector<4>(
-        shuffleOp.getMask(), [](Attribute attr) -> int32_t {
-          return cast<IntegerAttr>(attr).getValue().getZExtValue();
-        });
+    auto mask = llvm::to_vector_of<int32_t>(shuffleOp.getMask());
 
     VectorType oldV1Type = shuffleOp.getV1VectorType();
     VectorType oldV2Type = shuffleOp.getV2VectorType();

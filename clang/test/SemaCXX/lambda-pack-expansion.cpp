@@ -41,3 +41,30 @@ int h(Ts... ts) {
 }
 
 }
+
+namespace GH63677 {
+
+template<typename>
+void f() {
+  []<typename... Ts>() -> void {
+    [...us = Ts{}]{
+      (Ts(us), ...);
+    };
+  }.template operator()<int, int>();
+}
+
+template void f<int>();
+
+template <class>
+inline constexpr auto fun =
+  []<class... Ts>(Ts... ts) {
+    return [... us = (Ts&&) ts]<class Fun>(Fun&& fn) mutable {
+      return static_cast<Fun&&>(fn)(static_cast<Ts&&>(us)...);
+    };
+  };
+
+void f() {
+  [[maybe_unused]] auto s = fun<int>(1, 2, 3, 4);
+}
+
+}

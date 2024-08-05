@@ -820,9 +820,9 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      4     1.00                        vpcmpeqw	%zmm0, %zmm1, %k2 {%k3}
 # CHECK-NEXT:  2      11    1.00    *                   vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  2      3     1.00                        vpextrb	$0, %xmm16, %eax
-# CHECK-NEXT:  3      2     1.00           *            vpextrb	$0, %xmm16, (%rax)
+# CHECK-NEXT:  3      2     0.50           *            vpextrb	$0, %xmm16, (%rax)
 # CHECK-NEXT:  2      3     1.00                        vpextrw	$0, %xmm16, %eax
-# CHECK-NEXT:  3      2     1.00           *            vpextrw	$0, %xmm16, (%rax)
+# CHECK-NEXT:  3      2     0.50           *            vpextrw	$0, %xmm16, (%rax)
 # CHECK-NEXT:  2      2     2.00                        vpinsrb	$0, %eax, %xmm16, %xmm19
 # CHECK-NEXT:  2      6     1.00    *                   vpinsrb	$0, (%rax), %xmm16, %xmm19
 # CHECK-NEXT:  2      2     2.00                        vpinsrw	$0, %eax, %xmm16, %xmm19
@@ -1128,7 +1128,7 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     239.50 17.50  110.00 110.00 8.00   295.50 0.50   8.00   8.00   8.00
+# CHECK-NEXT:  -      -     239.50 19.50  110.00 110.00 8.00   293.50 0.50   8.00   8.00   8.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1340,10 +1340,10 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpcmpeqw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpcmpeqw	%zmm0, %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     vpextrb	$0, %xmm16, %eax
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   vpextrb	$0, %xmm16, (%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     vpextrw	$0, %xmm16, %eax
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   vpextrw	$0, %xmm16, (%rax)
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     vpextrb	$0, %xmm16, %eax
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   vpextrb	$0, %xmm16, (%rax)
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     vpextrw	$0, %xmm16, %eax
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   vpextrw	$0, %xmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpinsrb	$0, %eax, %xmm16, %xmm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpinsrb	$0, (%rax), %xmm16, %xmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpinsrw	$0, %eax, %xmm16, %xmm19
