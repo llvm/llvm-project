@@ -32,3 +32,55 @@ if.true:
 if.end:
   ret void
 }
+
+;; load + zext
+define void @load_zext(i1 %cond, ptr %b, ptr %p) {
+; CHECK-LABEL: load_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    negb %dil
+; CHECK-NEXT:    cfcmovnew (%rsi), %ax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    cfcmovnel %eax, (%rdx)
+; CHECK-NEXT:    retq
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  br label %if.end
+
+if.true:
+  %0 = load i16, ptr %b, align 2
+  %zext = zext i16 %0 to i32
+  store i32 %zext, ptr %p, align 4
+  br label %if.false
+
+if.end:
+  ret void
+}
+
+;; load + sext
+define void @load_sext(i1 %cond, ptr %b, ptr %q) {
+; CHECK-LABEL: load_sext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    negb %dil
+; CHECK-NEXT:    cfcmovnel (%rsi), %eax
+; CHECK-NEXT:    cltq
+; CHECK-NEXT:    cfcmovneq %rax, (%rdx)
+; CHECK-NEXT:    retq
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  br label %if.end
+
+if.true:
+  %1 = load i32, ptr %b, align 4
+  %sext = sext i32 %1 to i64
+  store i64 %sext, ptr %q, align 8
+  br label %if.false
+
+if.end:
+  ret void
+}
