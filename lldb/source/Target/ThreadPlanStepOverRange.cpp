@@ -348,6 +348,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
 }
 
 void ThreadPlanStepOverRange::DidPush() {
+  ThreadPlanStepRange::DidPush();
   if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
     PushNewTimeout();
 }
