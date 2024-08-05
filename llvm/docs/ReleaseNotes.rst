@@ -106,6 +106,7 @@ Changes to the RISC-V Backend
 * `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
+* Added Syntacore SCR4 CPUs: ``-mcpu=syntacore-scr4-rv32/64``
 
 Changes to the WebAssembly Backend
 ----------------------------------
