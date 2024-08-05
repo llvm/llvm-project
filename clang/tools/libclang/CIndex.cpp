@@ -3326,7 +3326,7 @@ void EnqueueVisitor::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *D) {
 }
 
 void EnqueueVisitor::VisitOMPAssumeDirective(const OMPAssumeDirective *D) {
-  VisitOMPAssumeDirective(D);
+  VisitOMPExecutableDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPErrorDirective(const OMPErrorDirective *D) {
