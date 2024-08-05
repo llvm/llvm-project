@@ -228,7 +228,7 @@ if.true:
   %0 = load i16, ptr %p, align 2, !range !{i16 0, i16 10}
   %1 = load i32, ptr %q, align 4, !annotation !1
   store i16 %0, ptr %q, align 4, !annotation !1
-  store i32 %1, ptr %p, align 2
+  store i32 %1, ptr %p, align 2, !DIAssignID !2
   br label %if.false
 
 if.end:
@@ -644,3 +644,4 @@ declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
 !0 = !{!"branch_weights", i32 1, i32 99}
 !1 = !{ !"auto-init" }
+!2 = distinct !DIAssignID()
