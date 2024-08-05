@@ -7546,7 +7546,7 @@ bool CombinerHelper::matchFoldC1Minus2MinusC2(const MachineInstr &MI,
   return true;
 }
 
-bool CombinerHelper::matchFoldAMinusC2PlusC2(const MachineInstr &MI,
+bool CombinerHelper::matchFoldAMinusC1PlusC2(const MachineInstr &MI,
                                              BuildFnTy &MatchInfo) {
   // fold ((A-C1)+C2) -> (A+(C2-C1))
   const GAdd *Add = cast<GAdd>(&MI);

@@ -1788,13 +1788,13 @@ def C1Minus2MinusC2: GICombineRule<
    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 // fold ((A-C1)+C2) -> (A+(C2-C1))
-def AMinusC2PlusC2: GICombineRule<
+def AMinusC1PlusC2: GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
    (match (G_CONSTANT $c2, $imm2),
           (G_CONSTANT $c1, $imm1),
           (G_SUB $sub, $A, $c1),
           (G_ADD $root, $sub, $c2):$root,
-   [{ return Helper.matchFoldAMinusC2PlusC2(*${root}, ${matchinfo}); }]),
+   [{ return Helper.matchFoldAMinusC1PlusC2(*${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def integer_reassoc_combines: GICombineGroup<[
@@ -1810,7 +1810,7 @@ def integer_reassoc_combines: GICombineGroup<[
   C2MinusAPlusC1,
   AMinusC1MinusC2,
   C1Minus2MinusC2,
-  AMinusC2PlusC2
+  AMinusC1PlusC2
 ]>;
 
 def freeze_of_non_undef_non_poison : GICombineRule<

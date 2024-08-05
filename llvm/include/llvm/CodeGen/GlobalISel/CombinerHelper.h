@@ -900,7 +900,8 @@ public:
 
   bool matchFoldC1Minus2MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  bool matchFoldAMinusC2PlusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  // fold ((A-C1)+C2) -> (A+(C2-C1))
+  bool matchFoldAMinusC1PlusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
