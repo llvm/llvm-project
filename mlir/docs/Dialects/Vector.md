@@ -99,9 +99,6 @@ LLVM does (c.f. (Vector Type)[https://llvm.org/docs/LangRef.html#vector-type]):
 > scalable vector type is thus constant within IR, even if the exact size in
 > bytes cannot be determined until run time.
 
-Specifically, the size of a scalable vector is not known at compile time, but
-known and fixed at run time
-
 ### Hardware Vector Ops
 
 Hardware Vector Ops are implemented as one dialect per target. For internal
