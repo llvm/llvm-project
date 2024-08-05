@@ -149,6 +149,8 @@ Improvements to Clang's diagnostics
 
 - -Wdangling-assignment-gsl is enabled by default.
 - Clang now does a better job preserving the template arguments as written when specializing concepts.
+- Clang now always preserves the template arguments as written used
+  to specialize template type aliases.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -228,6 +230,8 @@ X86 Support
   found in the file ``clang/www/builtins.py``.
 
 - Support ISA of ``AVX10.2``.
+  * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
+  ``*_(mask(z)))_minmax_s[s|d|h]``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
