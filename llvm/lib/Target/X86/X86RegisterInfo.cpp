@@ -47,9 +47,9 @@ EnableBasePointer("x86-use-base-pointer", cl::Hidden, cl::init(true),
 
 static cl::opt<bool>
     DisableRegAllocNDDHints("x86-disable-regalloc-hints-for-ndd", cl::Hidden,
-                         cl::init(false),
-                         cl::desc("Disable two address hints for register "
-                                  "allocation"));
+                            cl::init(false),
+                            cl::desc("Disable two address hints for register "
+                                     "allocation"));
 
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
@@ -1163,5 +1163,4 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 #undef DEBUG_TYPE
 
   return true;
-
 }
