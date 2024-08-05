@@ -54,3 +54,19 @@ void ftest2(tu_us_t uc) { }
 // CHECK-32-NEXT:  [[ENTRY:.*:]]
 // CHECK-32-NEXT:    ret void
 void ftest3(tu_l_t uc) { }
+
+typedef union etest {
+  enum flag {red, yellow, blue} fl;
+  enum weekend {sun, sat} b;
+} etest_t __attribute__((transparent_union));
+
+// CHECK-64-LABEL: define{{.*}} void @test(
+// CHECK-64-SAME: i32 noundef zeroext [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-64-NEXT:  [[ENTRY:.*:]]
+// CHECK-64-NEXT:    ret void
+//
+// CHECK-32-LABEL: define{{.*}} void @test(
+// CHECK-32-SAME: i32 [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-32-NEXT:  [[ENTRY:.*:]]
+// CHECK-32-NEXT:    ret void
+void test(etest_t a) {}
