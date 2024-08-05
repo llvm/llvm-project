@@ -4980,6 +4980,85 @@ let TargetPrefix = "x86" in {
 //===----------------------------------------------------------------------===//
 // AVX10.2 intrinsics
 let TargetPrefix = "x86" in {
+  // VNNI FP16
+  def int_x86_avx10_vdpphps_128 :
+      ClangBuiltin<"__builtin_ia32_vdpphps128">,
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
+                            [llvm_v4f32_ty, llvm_v8f16_ty, llvm_v8f16_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vdpphps_256 :
+      ClangBuiltin<"__builtin_ia32_vdpphps256">,
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty],
+                            [llvm_v8f32_ty, llvm_v16f16_ty, llvm_v16f16_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vdpphps_512 :
+      ClangBuiltin<"__builtin_ia32_vdpphps512">,
+      DefaultAttrsIntrinsic<[llvm_v16f32_ty],
+                            [llvm_v16f32_ty, llvm_v32f16_ty, llvm_v32f16_ty],
+                            [IntrNoMem]>;
+  // VNNI INT8
+  def int_x86_avx10_vpdpbssd_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpbssd512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpbssds_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpbssds512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpbsud_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpbsud512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpbsuds_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpbsuds512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpbuud_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpbuud512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpbuuds_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpbuuds512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  // VNNI INT16
+  def int_x86_avx10_vpdpwsud_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpwsud512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpwsuds_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpwsuds512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpwusd_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpwusd512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpwusds_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpwusds512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpwuud_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpwuud512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+  def int_x86_avx10_vpdpwuuds_512 :
+      ClangBuiltin<"__builtin_ia32_vpdpwuuds512">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty],
+                            [llvm_v16i32_ty, llvm_v16i32_ty, llvm_v16i32_ty],
+                            [IntrNoMem]>;
+
   // VMPSADBW
   def int_x86_avx10_vmpsadbw_512 :
       ClangBuiltin<"__builtin_ia32_mpsadbw512">,

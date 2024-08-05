@@ -10463,6 +10463,28 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_acq_rel:
     C = new (Context) OMPAcqRelClause();
     break;
+  case llvm::omp::OMPC_absent: {
+    unsigned NumKinds = Record.readInt();
+    C = OMPAbsentClause::CreateEmpty(Context, NumKinds);
+    break;
+  }
+  case llvm::omp::OMPC_holds:
+    C = new (Context) OMPHoldsClause();
+    break;
+  case llvm::omp::OMPC_contains: {
+    unsigned NumKinds = Record.readInt();
+    C = OMPContainsClause::CreateEmpty(Context, NumKinds);
+    break;
+  }
+  case llvm::omp::OMPC_no_openmp:
+    C = new (Context) OMPNoOpenMPClause();
+    break;
+  case llvm::omp::OMPC_no_openmp_routines:
+    C = new (Context) OMPNoOpenMPRoutinesClause();
+    break;
+  case llvm::omp::OMPC_no_parallelism:
+    C = new (Context) OMPNoParallelismClause();
+    break;
   case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
@@ -10862,6 +10884,40 @@ void OMPClauseReader::VisitOMPFailClause(OMPFailClause *C) {
   OpenMPClauseKind CKind = Record.readEnum<OpenMPClauseKind>();
   C->setFailParameter(CKind);
 }
+
+void OMPClauseReader::VisitOMPAbsentClause(OMPAbsentClause *C) {
+  unsigned Count = C->getDirectiveKinds().size();
+  C->setLParenLoc(Record.readSourceLocation());
+  llvm::SmallVector<OpenMPDirectiveKind, 4> DKVec;
+  DKVec.reserve(Count);
+  for (unsigned I = 0; I < Count; I++) {
+    DKVec.push_back(Record.readEnum<OpenMPDirectiveKind>());
+  }
+  C->setDirectiveKinds(DKVec);
+}
+
+void OMPClauseReader::VisitOMPHoldsClause(OMPHoldsClause *C) {
+  C->setExpr(Record.readExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPContainsClause(OMPContainsClause *C) {
+  unsigned Count = C->getDirectiveKinds().size();
+  C->setLParenLoc(Record.readSourceLocation());
+  llvm::SmallVector<OpenMPDirectiveKind, 4> DKVec;
+  DKVec.reserve(Count);
+  for (unsigned I = 0; I < Count; I++) {
+    DKVec.push_back(Record.readEnum<OpenMPDirectiveKind>());
+  }
+  C->setDirectiveKinds(DKVec);
+}
+
+void OMPClauseReader::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
+
+void OMPClauseReader::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseReader::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
