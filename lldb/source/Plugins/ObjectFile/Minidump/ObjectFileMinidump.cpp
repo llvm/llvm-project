@@ -56,15 +56,16 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
 }
 
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
-                                  lldb_private::SaveCoreOptions &options,
+                                  const lldb_private::SaveCoreOptions &options,
                                   lldb_private::Status &error) {
   // Output file and process_sp are both checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());
   assert(process_sp);
 
   // Minidump defaults to stacks only.
-  if (options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
-    options.SetStyle(SaveCoreStyle::eSaveCoreStackOnly);
+  SaveCoreStyle core_style = options.GetStyle();
+  if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
+    core_style = SaveCoreStyle::eSaveCoreStackOnly;
 
   llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
       options.GetOutputFile().value(),
