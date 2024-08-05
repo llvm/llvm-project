@@ -85,15 +85,19 @@ one uses `llvm.extractelement`, `llvm.insertelement` and `llvm.shufflevector`.
 The section on [LLVM Lowering Tradeoffs](#llvm-lowering-tradeoffs) offers a
 deeper dive into the current design choices and tradeoffs.
 
-Note, while LLVM supports vectors of scalable vectors, these are required to be
-fixed-width arrays of 1-D scalable vectors. This means, effectively, that
-scalable vectors with a non-trailing scalable dimension (e.g.
-`vector<4x[8]x128xf32`) are not convertible to LLVM.
+Note, while LLVM supports arrarys of scalable vectors, these are required to be
+fixed-width arrays of 1-D scalable vectors. This means scalable vectors with a
+non-trailing scalable dimension (e.g. `vector<4x[8]x128xf32`) are not
+convertible to LLVM.
 
 Finally, as a brief reminder, MLIR takes similiar view on scalable Vectors as
 LLVM does (c.f. (Vector Type)[https://llvm.org/docs/LangRef.html#vector-type]):
-> The size of a specific scalable vector type is thus constant within IR, even
-> if the exact size in bytes cannot be determined until run time.
+> For scalable vectors, the total number of elements is a constant multiple
+> (called vscale) of the specified number of elements; vscale is a positive
+> integer that is unknown at compile time and the same hardware-dependent
+> constant for all scalable vectors at run time.  The size of a specific
+> scalable vector type is thus constant within IR, even if the exact size in
+> bytes cannot be determined until run time.
 
 Specifically, the size of a scalable vector is not known at compile time, but
 known and fixed at run time
