@@ -40,11 +40,11 @@ static cl::opt<unsigned> SLPMaxVF(
 bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
                                     IntrinsicInst *II) const {
   const DataLayout &DL = getDataLayout();
-  Intrinsic::ID IntNo = II->getIntrinsicID();
+  Intrinsic::ID IID = II->getIntrinsicID();
   LLVMContext &C = II->getContext();
   bool HasMask = false;
 
-  switch (IntNo) {
+  switch (IID) {
   case Intrinsic::riscv_vle_mask:
   case Intrinsic::riscv_vse_mask:
     HasMask = true;
@@ -53,13 +53,13 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
   case Intrinsic::riscv_vse: {
     bool IsWrite = II->getType()->isVoidTy();
     Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
-    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
     unsigned VLIndex = RVVIInfo->VLOperand;
     unsigned PtrOperandNo = VLIndex - 1 - HasMask;
     MaybeAlign Alignment =
         II->getArgOperand(PtrOperandNo)->getPointerAlignment(DL);
     Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
-    Value *Mask = ConstantInt::get(MaskType, 1);
+    Value *Mask = ConstantInt::getTrue(MaskType);
     if (HasMask)
       Mask = II->getArgOperand(VLIndex - 1);
     Value *EVL = II->getArgOperand(VLIndex);
@@ -75,7 +75,7 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
   case Intrinsic::riscv_vsse: {
     bool IsWrite = II->getType()->isVoidTy();
     Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
-    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
     unsigned VLIndex = RVVIInfo->VLOperand;
     unsigned PtrOperandNo = VLIndex - 2 - HasMask;
     MaybeAlign Alignment =
@@ -91,7 +91,7 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
       Alignment = Align(1);
 
     Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
-    Value *Mask = ConstantInt::get(MaskType, 1);
+    Value *Mask = ConstantInt::getTrue(MaskType);
     if (HasMask)
       Mask = II->getArgOperand(VLIndex - 1);
     Value *EVL = II->getArgOperand(VLIndex);
