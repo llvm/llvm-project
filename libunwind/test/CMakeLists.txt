@@ -9,6 +9,7 @@ macro(pythonize_bool var)
 endmacro()
 
 pythonize_bool(LIBUNWIND_ENABLE_CET)
+pythonize_bool(LIBUNWIND_ENABLE_GCS)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)
 pythonize_bool(LIBUNWIND_USES_ARM_EHABI)
 
