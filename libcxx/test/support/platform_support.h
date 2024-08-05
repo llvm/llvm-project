@@ -40,8 +40,8 @@
 #   include <io.h> // _mktemp_s
 #   include <fcntl.h> // _O_EXCL, ...
 #   include <sys/stat.h> // _S_IREAD, ...
-#else
-#   include <unistd.h> // close
+#elif __has_include(<unistd.h>)
+#  include <unistd.h> // close
 #endif
 
 #if defined(_CS_GNU_LIBC_VERSION)
@@ -55,31 +55,41 @@ extern "C" {
 }
 #endif
 
-inline
-std::string get_temp_file_name()
-{
+inline std::string get_temp_file_name() {
 #if defined(_WIN32)
-    while (true) {
-        char Name[] = "libcxx.XXXXXX";
-        if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
-        int fd = _open(Name, _O_RDWR | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
-        if (fd != -1) {
-            _close(fd);
-            return Name;
-        }
-        if (errno == EEXIST)
-            continue;
-        abort();
+  while (true) {
+    char Name[] = "libcxx.XXXXXX";
+    if (_mktemp_s(Name, sizeof(Name)) != 0)
+      abort();
+    int fd = _open(Name, _O_RDWR | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
+    if (fd != -1) {
+      _close(fd);
+      return Name;
     }
+    if (errno == EEXIST)
+      continue;
+    abort();
+  }
+#elif !__has_include(<unistd.h>)
+  char buffer[L_tmpnam];
+  char* filename = tmpnam(buffer);
+  if (!filename)
+    abort();
+  FILE* file = fopen(filename, "w");
+  if (!file)
+    abort();
+  if (fclose(file) == EOF)
+    abort();
+  return std::string(filename);
 #else
-    std::string Name = "libcxx.XXXXXX";
-    int FD = mkstemp(&Name[0]);
-    if (FD == -1) {
-        perror("mkstemp");
-        abort();
-    }
-    close(FD);
-    return Name;
+  std::string Name = "libcxx.XXXXXX";
+  int FD           = mkstemp(&Name[0]);
+  if (FD == -1) {
+    perror("mkstemp");
+    abort();
+  }
+  close(FD);
+  return Name;
 #endif
 }
 
