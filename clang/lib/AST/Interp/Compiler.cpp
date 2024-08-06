@@ -3161,10 +3161,11 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
   if (!E->isExpressibleAsConstantInitializer())
-    return this->emitInvalid(E);
+    return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(E->getSubExpr());
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>
