@@ -109,11 +109,11 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    and sp, x9, #0xffffffffffffffc0
 ; CHECK-NEXT:    add x9, x0, #15
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-DAG:    str xzr, [sp]
-; CHECK-DAG:    and x9, x9, #0xfffffffffffffff0
+; CHECK-DAG:     str xzr, [sp]
+; CHECK-DAG:     and x9, x9, #0xfffffffffffffff0
 ; CHECK-NOT:     INVALID_TO_BREAK_UP_CHECK_DAG
-; CHECK-DAG:    mov x19, sp
-; CHECK-DAG:    sub x8, x8, x9
+; CHECK-DAG:     mov x19, sp
+; CHECK-DAG:     sub x8, x8, x9
 ; CHECK-NEXT:    and x8, x8, #0xffffffffffffffc0
 ; CHECK-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
@@ -169,11 +169,11 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    add x9, x0, #15
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-DAG:    ldr xzr, [sp]
-; CHECK-DAG:    and x9, x9, #0xfffffffffffffff0
+; CHECK-DAG:     ldr xzr, [sp]
+; CHECK-DAG:     and x9, x9, #0xfffffffffffffff0
 ; CHECK-NOT:     INVALID_TO_BREAK_UP_CHECK_DAG
-; CHECK-DAG:    mov x19, sp
-; CHECK-DAG:    sub x8, x8, x9
+; CHECK-DAG:     mov x19, sp
+; CHECK-DAG:     sub x8, x8, x9
 ; CHECK-NEXT:    and x8, x8, #0xffffffffffffe000
 ; CHECK-NEXT:  .LBB3_4: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
