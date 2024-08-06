@@ -558,8 +558,6 @@ protected:
   }
   // END SWIFT MOD
 
-  virtual lldb::StateType GetPlanRunState() = 0;
-
   bool IsUsuallyUnexplainedStopReason(lldb::StopReason);
 
   /// Determine if the first StackID is younger than the second.
