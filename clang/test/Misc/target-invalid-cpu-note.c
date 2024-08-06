@@ -37,7 +37,7 @@
 
 // RUN: not %clang_cc1 -triple amdgcn--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AMDGCN
 // AMDGCN: error: unknown target CPU 'not-a-cpu'
-// AMDGCN-NEXT: note: valid target CPU values are: gfx600, tahiti, gfx601, pitcairn, verde, gfx602, hainan, oland, gfx700, kaveri, gfx701, hawaii, gfx702, gfx703, kabini, mullins, gfx704, bonaire, gfx705, gfx801, carrizo, gfx802, iceland, tonga, gfx803, fiji, polaris10, polaris11, gfx805, tongapro, gfx810, stoney, gfx900, gfx902, gfx904, gfx906, gfx908, gfx909, gfx90a, gfx90c, gfx940, gfx941, gfx942, gfx1010, gfx1011, gfx1012, gfx1013, gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1200, gfx1201, gfx9-generic, gfx10-1-generic, gfx10-3-generic, gfx11-generic, gfx12-generic{{$}}
+// AMDGCN-NEXT: note: valid target CPU values are: gfx600, tahiti, gfx601, pitcairn, verde, gfx602, hainan, oland, gfx700, kaveri, gfx701, hawaii, gfx702, gfx703, kabini, mullins, gfx704, bonaire, gfx705, gfx801, carrizo, gfx802, iceland, tonga, gfx803, fiji, polaris10, polaris11, gfx805, tongapro, gfx810, stoney, gfx900, gfx902, gfx904, gfx906, gfx908, gfx909, gfx90a, gfx90c, gfx940, gfx941, gfx942, gfx1010, gfx1011, gfx1012, gfx1013, gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx115F, gfx1200, gfx1201, gfx120E, gfx120F, gfx9-generic, gfx10-1-generic, gfx10-3-generic, gfx11-generic, gfx12-generic{{$}}
 
 // RUN: not %clang_cc1 -triple wasm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix WEBASM
 // WEBASM: error: unknown target CPU 'not-a-cpu'
@@ -81,16 +81,16 @@
 
 // RUN: not %clang_cc1 -triple riscv32 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV32
 // RISCV32: error: unknown target CPU 'not-a-cpu'
-// RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32{{$}}
+// RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32, syntacore-scr4-rv32{{$}}
 
 // RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
 // RISCV64: error: unknown target CPU 'not-a-cpu'
-// RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, veyron-v1, xiangshan-nanhu{{$}}
+// RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, syntacore-scr4-rv64, veyron-v1, xiangshan-nanhu{{$}}
 
 // RUN: not %clang_cc1 -triple riscv32 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV32
 // TUNE-RISCV32: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32, generic, rocket, sifive-7-series{{$}}
+// TUNE-RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32, syntacore-scr4-rv32, generic, rocket, sifive-7-series{{$}}
 
 // RUN: not %clang_cc1 -triple riscv64 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV64
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, veyron-v1, xiangshan-nanhu, generic, rocket, sifive-7-series{{$}}
+// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, syntacore-scr4-rv64, veyron-v1, xiangshan-nanhu, generic, rocket, sifive-7-series{{$}}

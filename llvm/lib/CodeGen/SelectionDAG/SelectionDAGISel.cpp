@@ -1591,7 +1591,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   ++NumEntryBlocks;
 
   // Set up FuncInfo for ISel. Entry blocks never have PHIs.
-  FuncInfo->MBB = FuncInfo->MBBMap[&Fn.getEntryBlock()];
+  FuncInfo->MBB = FuncInfo->getMBB(&Fn.getEntryBlock());
   FuncInfo->InsertPt = FuncInfo->MBB->begin();
 
   CurDAG->setFunctionLoweringInfo(FuncInfo.get());
@@ -1669,7 +1669,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     BasicBlock::const_iterator const End = LLVMBB->end();
     BasicBlock::const_iterator BI = End;
 
-    FuncInfo->MBB = FuncInfo->MBBMap[LLVMBB];
+    FuncInfo->MBB = FuncInfo->getMBB(LLVMBB);
     if (!FuncInfo->MBB)
       continue; // Some blocks like catchpads have no code or MBB.
 
@@ -1821,7 +1821,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     if (SP->shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
           TLI->getSSPStackGuardCheck(*Fn.getParent());
-      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->MBBMap[LLVMBB],
+      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
                                    FunctionBasedInstrumentation);
     }
 

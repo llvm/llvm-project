@@ -85,9 +85,6 @@ HANDLE_LIBCALL(NEG_I64, "__negdi2")
 HANDLE_LIBCALL(CTLZ_I32, "__clzsi2")
 HANDLE_LIBCALL(CTLZ_I64, "__clzdi2")
 HANDLE_LIBCALL(CTLZ_I128, "__clzti2")
-HANDLE_LIBCALL(CTPOP_I32, "__popcountsi2")
-HANDLE_LIBCALL(CTPOP_I64, "__popcountdi2")
-HANDLE_LIBCALL(CTPOP_I128, "__popcountti2")
 
 // Floating-point
 HANDLE_LIBCALL(ADD_F32, "__addsf3")
