@@ -2,6 +2,8 @@
 ; RUN:   -O2 -o - < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-64
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux -mcpu=pwr7 \
 ; RUN:   -O2 -o - < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-64
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux -mcpu=pwr7 \
+; RUN:   -O2 -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK-32
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix -mcpu=pwr7 \
 ; RUN:   -O2 -o - < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-64
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-aix -mcpu=pwr7 \
@@ -18,6 +20,14 @@ define void @ftest0(i8 noundef zeroext %uc.coerce) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stb 3, -1(1)
 ; CHECK-NEXT:    blr
+;
+; CHECK-32-LABEL: ftest0:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    stwu 1, -16(1)
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-32-NEXT:    stb 3, 15(1)
+; CHECK-32-NEXT:    addi 1, 1, 16
+; CHECK-32-NEXT:    blr
 entry:
   %uc = alloca %union.tu_c, align 1
   %coerce.dive = getelementptr inbounds %union.tu_c, ptr %uc, i32 0, i32 0
@@ -30,6 +40,14 @@ define void @ftest1(i16 noundef signext %uc.coerce) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sth 3, -2(1)
 ; CHECK-NEXT:    blr
+;
+; CHECK-32-LABEL: ftest1:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    stwu 1, -16(1)
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-32-NEXT:    sth 3, 14(1)
+; CHECK-32-NEXT:    addi 1, 1, 16
+; CHECK-32-NEXT:    blr
 entry:
   %uc = alloca %union.tu_s, align 2
   %coerce.dive = getelementptr inbounds %union.tu_s, ptr %uc, i32 0, i32 0
@@ -42,6 +60,14 @@ define void @ftest2(i16 noundef zeroext %uc.coerce) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sth 3, -2(1)
 ; CHECK-NEXT:    blr
+;
+; CHECK-32-LABEL: ftest2:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    stwu 1, -16(1)
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-32-NEXT:    sth 3, 14(1)
+; CHECK-32-NEXT:    addi 1, 1, 16
+; CHECK-32-NEXT:    blr
 entry:
   %uc = alloca %union.tu_us, align 2
   %coerce.dive = getelementptr inbounds %union.tu_us, ptr %uc, i32 0, i32 0
@@ -60,6 +86,15 @@ define void @ftest3(i64 %uc.coerce) {
 ; CHECK-AIX-32-NEXT:    stw 4, -4(1)
 ; CHECK-AIX-32-NEXT:    stw 3, -8(1)
 ; CHECK-AIX-32-NEXT:    blr
+;
+; CHECK-32-LABEL: ftest3:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    stwu 1, -16(1)
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-32-NEXT:    stw 4, 12(1)
+; CHECK-32-NEXT:    stw 3, 8(1)
+; CHECK-32-NEXT:    addi 1, 1, 16
+; CHECK-32-NEXT:    blr
 entry:
   %uc = alloca %union.tu_l, align 8
   %coerce.dive = getelementptr inbounds %union.tu_l, ptr %uc, i32 0, i32 0
@@ -72,6 +107,14 @@ define dso_local void @ftest4(i8 noundef zeroext %a.coerce) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stb 3, -1(1)
 ; CHECK-NEXT:    blr
+;
+; CHECK-32-LABEL: ftest4:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    stwu 1, -16(1)
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-32-NEXT:    stb 3, 15(1)
+; CHECK-32-NEXT:    addi 1, 1, 16
+; CHECK-32-NEXT:    blr
 entry:
   %a = alloca %union.etest, align 1
   %coerce.dive = getelementptr inbounds %union.etest, ptr %a, i32 0, i32 0
