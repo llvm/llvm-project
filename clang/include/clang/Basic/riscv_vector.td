@@ -1378,6 +1378,9 @@ let HasMasked = false,
     let RequiredFeatures = ["Zvfhmin"] in
       defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "x",
                                     [["v", "v", "vv"]]>;
+    let RequiredFeatures = ["Zvfbfmin"] in
+      defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "y",
+                                    [["v", "v", "vv"]]>;
   let SupportOverloading = false in
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_x", "csil",
                                    [["x", "v", "ve"],
@@ -1889,6 +1892,9 @@ let HasMasked = false,
                                     [["vvm", "v", "vvvm"]]>;
   let RequiredFeatures = ["Zvfhmin"] in
     defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "x",
+                                      [["vvm", "v", "vvvm"]]>;
+  let RequiredFeatures = ["Zvfbfmin"] in
+    defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "y",
                                       [["vvm", "v", "vvvm"]]>;
   defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
                                      [["vfm", "v", "vvem"]]>;
