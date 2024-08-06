@@ -446,10 +446,21 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
 
   // We only check for NaNs in the value, not the shadow.
   if (flags().check_nan && isnan(check_value)) {
+    GET_CALLER_PC_BP;
+    BufferedStackTrace stack;
+    stack.Unwind(pc, bp, nullptr, false);
+    if (GetSuppressionForStack(&stack, CheckKind::Consistency)) {
+      // FIXME: optionally print.
+      return flags().resume_after_suppression ? kResumeFromValue
+                                              : kContinueWithShadow;
+    }
     Decorator D;
     Printf("%s", D.Warning());
     Printf("WARNING: NumericalStabilitySanitizer: NaN detected\n");
     Printf("%s", D.Default());
+    stack.Print();
+    // Performing other tests for NaN values is meaningless when dealing with numbers.
+    return kResumeFromValue;
   }
 
   // See this article for an interesting discussion of how to compare floats:
