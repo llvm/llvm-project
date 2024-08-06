@@ -6,22 +6,22 @@
 # RUN: ld.lld -shared %t1.o %t2.o -o %t.so
 # RUN: llvm-objdump -d %t.so | FileCheck %s
 
-# Check that, when the input is a mixture of objects which can and cannot use
-# the ARM ISA, we use the default ARM PLT sequences.
+## Check that, when the input is a mixture of objects which can and cannot use
+## the ARM ISA, we use the default ARM PLT sequences.
 
-# CHECK:      000101d0 <.plt>:
-# CHECK-NEXT: 101d0: e52de004      str     lr, [sp, #-0x4]!
-# CHECK-NEXT: 101d4: e28fe600      add     lr, pc, #0, #12
-# CHECK-NEXT: 101d8: e28eea20      add     lr, lr, #32, #20
-# CHECK-NEXT: 101dc: e5bef084      ldr     pc, [lr, #0x84]!
-# CHECK-NEXT: 101e0: d4 d4 d4 d4   .word   0xd4d4d4d4
-# CHECK-NEXT: 101e4: d4 d4 d4 d4   .word   0xd4d4d4d4
-# CHECK-NEXT: 101e8: d4 d4 d4 d4   .word   0xd4d4d4d4
-# CHECK-NEXT: 101ec: d4 d4 d4 d4   .word   0xd4d4d4d4
-# CHECK-NEXT: 101f0: e28fc600      add     r12, pc, #0, #12
-# CHECK-NEXT: 101f4: e28cca20      add     r12, r12, #32, #20
-# CHECK-NEXT: 101f8: e5bcf06c      ldr     pc, [r12, #0x6c]!
-# CHECK-NEXT: 101fc: d4 d4 d4 d4   .word   0xd4d4d4d4
+# CHECK:      <.plt>:
+# CHECK-NEXT: e52de004      str     lr, [sp, #-0x4]!
+# CHECK-NEXT: e28fe600      add     lr, pc, #0, #12
+# CHECK-NEXT: e28eea20      add     lr, lr, #32, #20
+# CHECK-NEXT: e5bef084      ldr     pc, [lr, #0x84]!
+# CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
+# CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
+# CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
+# CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
+# CHECK-NEXT: e28fc600      add     r12, pc, #0, #12
+# CHECK-NEXT: e28cca20      add     r12, r12, #32, #20
+# CHECK-NEXT: e5bcf06c      ldr     pc, [r12, #0x6c]!
+# CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
 
 #--- a.s
   .globl foo
