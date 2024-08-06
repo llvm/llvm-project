@@ -802,8 +802,8 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Value box = !fir::isBoxAddress(info.addr.getType())
                           ? info.addr
                           : builder.create<fir::LoadOp>(loc, info.addr);
-    bounds = gatherBoundsOrBoundValues<BoundsOp, BoundsType>(
-        builder, loc, dataExv, box);
+    bounds = gatherBoundsOrBoundValues<BoundsOp, BoundsType>(builder, loc,
+                                                             dataExv, box);
   }
   return bounds;
 }

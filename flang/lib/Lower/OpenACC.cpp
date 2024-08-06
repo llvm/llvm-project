@@ -106,9 +106,8 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
               .genIfOp(loc, {ifRetTy}, isPresent,
                        /*withElseRegion=*/true)
               .genThen([&]() {
-                if (fir::isBoxAddress(baseAddr.getType())) {
+                if (fir::isBoxAddress(baseAddr.getType()))
                   baseAddr = builder.create<fir::LoadOp>(loc, baseAddr);
-                }
                 mlir::Value boxAddr =
                     builder.create<fir::BoxAddrOp>(loc, baseAddr);
                 builder.create<fir::ResultOp>(loc, mlir::ValueRange{boxAddr});
@@ -120,9 +119,8 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
               })
               .getResults()[0];
     } else {
-      if (fir::isBoxAddress(baseAddr.getType())) {
+      if (fir::isBoxAddress(baseAddr.getType()))
         baseAddr = builder.create<fir::LoadOp>(loc, baseAddr);
-      }
       baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     }
     retTy = baseAddr.getType();
