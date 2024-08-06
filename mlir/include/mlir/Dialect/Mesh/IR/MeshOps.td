@@ -162,6 +162,7 @@ def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
 def Mesh_ShardingOp : Mesh_Op<"sharding", [
     Pure,
     AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
   ]> {
   let summary = "Define a sharding of a tensor.";

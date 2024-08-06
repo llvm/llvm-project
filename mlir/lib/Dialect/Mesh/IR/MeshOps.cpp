@@ -152,6 +152,20 @@ static LogicalResult verifyMeshAxes(Location loc, ArrayRef<MeshAxis> axes,
   return success();
 }
 
+template <typename Op>
+static FailureOr<MeshOp>
+getMeshAndVerifyAxes(Op op, SymbolTableCollection &symbolTable) {
+  auto mesh =
+      ::getMeshAndVerify(op.getOperation(), op.getMeshAttr(), symbolTable);
+  if (failed(mesh)) {
+    return failure();
+  }
+  if (failed(verifyMeshAxes(op.getLoc(), op.getMeshAxes(), mesh.value()))) {
+    return failure();
+  }
+  return mesh;
+}
+
 template <typename InShape, typename MeshShape, typename SplitAxes,
           typename OutShape>
 static void shardShape(const InShape &inShape, const MeshShape &meshShape,
@@ -449,6 +463,65 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
         from.getDynamicHaloSizes());
 }
 
+LogicalResult ShardingOp::verify() {
+  llvm::SmallSet<MeshAxis, 4> visitedAxes;
+
+  auto checkMeshAxis = [&](ArrayRef<MeshAxis> axesArray) -> LogicalResult {
+    for (MeshAxis axis : axesArray) {
+      if (axis < 0)
+        return emitError() << "mesh axis is expected to be non-negative";
+      if (!visitedAxes.insert(axis).second)
+        return emitError() << "mesh axis duplicated";
+    }
+    return success();
+  };
+
+  for (auto subAxes : getSplitAxes().getAxes()) {
+    ArrayRef<MeshAxis> subAxesArray = subAxes.asArrayRef();
+    if (failed(checkMeshAxis(subAxesArray)))
+      return failure();
+  }
+  if (getPartialAxes().has_value() &&
+      failed(checkMeshAxis(getPartialAxes().value())))
+    return failure();
+
+  if (!getStaticHaloSizes().empty() && !getStaticShardedDimsSizes().empty()) {
+    return emitOpError("halo sizes and shard shapes are mutually exclusive");
+  }
+
+  if (!getStaticHaloSizes().empty()) {
+    auto numSplitAxes = getSplitAxes().getAxes().size();
+    for (auto splitAxis : getSplitAxes().getAxes()) {
+      if (splitAxis.empty()) {
+        --numSplitAxes;
+      }
+    }
+    if (getStaticHaloSizes().size() != numSplitAxes * 2) {
+      return emitError() << "halo sizes must be specified for all split axes.";
+    }
+  }
+
+  return success();
+}
+
+void ShardingOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "sharding");
+}
+
+LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto mesh = ::getMeshAndVerify(getOperation(), getMeshAttr(), symbolTable);
+  if (failed(mesh)) {
+    return failure();
+  }
+  if (mlir::ShapedType::isDynamicShape(mesh->getShape()) &&
+      getStaticShardedDimsSizes().size() > 0) {
+    return emitError() << "sharded dims sizes are not allowed for "
+                          "devices meshes with dynamic shape.";
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // MeshSharding
 //===----------------------------------------------------------------------===//
@@ -566,52 +639,6 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
   clone(dynamic_sharded_dims_sizes_, res.dynamic_sharded_dims_sizes);
 
   return res;
-}
-
-LogicalResult ShardingOp::verify() {
-  llvm::SmallSet<MeshAxis, 4> visitedAxes;
-
-  auto checkMeshAxis = [&](ArrayRef<MeshAxis> axesArray) -> LogicalResult {
-    for (MeshAxis axis : axesArray) {
-      if (axis < 0)
-        return emitError() << "mesh axis is expected to be non-negative";
-      if (!visitedAxes.insert(axis).second)
-        return emitError() << "mesh axis duplicated";
-    }
-    return success();
-  };
-
-  for (auto subAxes : getSplitAxes().getAxes()) {
-    ArrayRef<MeshAxis> subAxesArray = subAxes.asArrayRef();
-    if (failed(checkMeshAxis(subAxesArray)))
-      return failure();
-  }
-  if (getPartialAxes().has_value() &&
-      failed(checkMeshAxis(getPartialAxes().value())))
-    return failure();
-
-  if (!getStaticHaloSizes().empty() && !getStaticShardedDimsSizes().empty()) {
-    return emitOpError("halo sizes and shard shapes are mutually exclusive");
-  }
-
-  if (!getStaticHaloSizes().empty()) {
-    auto numSplitAxes = getSplitAxes().getAxes().size();
-    for (auto splitAxis : getSplitAxes().getAxes()) {
-      if (splitAxis.empty()) {
-        --numSplitAxes;
-      }
-    }
-    if (getStaticHaloSizes().size() != numSplitAxes * 2) {
-      return emitError() << "halo sizes must be specified for all split axes.";
-    }
-  }
-
-  return success();
-}
-
-void ShardingOp::getAsmResultNames(
-    function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "sharding");
 }
 
 //===----------------------------------------------------------------------===//
@@ -752,20 +779,6 @@ static LogicalResult verifyInGroupDevice(Location loc, StringRef deviceName,
     }
   }
   return success();
-}
-
-template <typename Op>
-static FailureOr<MeshOp>
-getMeshAndVerifyAxes(Op op, SymbolTableCollection &symbolTable) {
-  auto mesh =
-      ::getMeshAndVerify(op.getOperation(), op.getMeshAttr(), symbolTable);
-  if (failed(mesh)) {
-    return failure();
-  }
-  if (failed(verifyMeshAxes(op.getLoc(), op.getMeshAxes(), mesh.value()))) {
-    return failure();
-  }
-  return mesh;
 }
 
 template <typename It>
