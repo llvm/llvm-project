@@ -21,6 +21,7 @@ set( LLVM_LINK_COMPONENTS
 # Support plugins.
 if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)
+  set(export_symbols EXPORT_SYMBOLS_FOR_PLUGINS)
 endif()
 
 add_clang_tool(clang
@@ -35,6 +36,7 @@ add_clang_tool(clang
   ARMTargetParserTableGen
   AArch64TargetParserTableGen
   ${support_plugins}
+  ${export_symbols}
   GENERATE_DRIVER
   )
 
@@ -52,11 +54,6 @@ if(WIN32 AND NOT CYGWIN)
   # Prevent versioning if the buildhost is targeting for Win32.
 else()
   set_target_properties(clang PROPERTIES VERSION ${CLANG_EXECUTABLE_VERSION})
-endif()
-
-# Support plugins.
-if(CLANG_PLUGIN_SUPPORT)
-  export_executable_symbols_for_plugins(clang)
 endif()
 
 add_dependencies(clang clang-resource-headers)

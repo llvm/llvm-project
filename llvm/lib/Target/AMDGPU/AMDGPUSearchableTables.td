@@ -382,3 +382,6 @@ def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_waterfall_readfirstlane>;
 def : AlwaysUniform<int_amdgcn_waterfall_begin>;
 def : AlwaysUniform<int_amdgcn_waterfall_last_use>;
+def : AlwaysUniform<int_amdgcn_workgroup_id_x>;
+def : AlwaysUniform<int_amdgcn_workgroup_id_y>;
+def : AlwaysUniform<int_amdgcn_workgroup_id_z>;

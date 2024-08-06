@@ -186,7 +186,7 @@ def FeatureJS : ExtensionWithMArch<"jsconv", "JS", "FEAT_JSCVT",
   [FeatureFPARMv8]>;
 
 def FeatureFPAC : Extension<"fpac", "FPAC", "FEAT_FPAC",
-  "Enable v8.3-A Pointer Authentication Faulting enhancement">;
+  "Enable Armv8.3-A Pointer Authentication Faulting enhancement">;
 
 def FeatureCCIDX : Extension<"ccidx", "CCIDX", "FEAT_CCIDX",
   "Enable Armv8.3-A Extend of the CCSIDR number of sets">;
