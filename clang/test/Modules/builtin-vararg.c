@@ -8,11 +8,13 @@
 // RUN:   -fmodules -fno-implicit-modules -fbuiltin-headers-in-system-modules \
 // RUN:   -emit-module -fmodule-name=DeclareVarargs \
 // RUN:   -x c %t/include/module.modulemap -o %t/DeclareVarargs.pcm \
+// RUN:   -fmodule-related-to-pch \
 // RUN:   -fmodule-map-file=%t/resource_dir/module.modulemap -isystem %t/resource_dir
 // RUN: %clang_cc1 -triple x86_64-apple-darwin \
 // RUN:   -fmodules -fno-implicit-modules -fbuiltin-headers-in-system-modules \
 // RUN:   -emit-pch -fmodule-name=Prefix \
 // RUN:   -x c-header %t/prefix.pch -o %t/prefix.pch.gch \
+// RUN:   -fmodule-related-to-pch \
 // RUN:   -fmodule-map-file=%t/include/module.modulemap -fmodule-file=DeclareVarargs=%t/DeclareVarargs.pcm \
 // RUN:   -I %t/include
 // RUN: %clang_cc1 -triple x86_64-apple-darwin \
@@ -20,6 +22,7 @@
 // RUN:   -emit-obj -fmodule-name=test \
 // RUN:   -x c %t/test.c -o %t/test.o \
 // RUN:   -Werror=incompatible-pointer-types \
+// RUN:   -fmodule-related-to-pch \
 // RUN:   -fmodule-file=%t/DeclareVarargs.pcm -include-pch %t/prefix.pch.gch \
 // RUN:   -I %t/include
 
