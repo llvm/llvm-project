@@ -289,8 +289,10 @@ ArrayRef<TargetInfo::GCCRegAlias> CSKYTargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
-bool CSKYTargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+bool CSKYTargetInfo::validateAsmConstraint(const char *&Name,
+                                           TargetInfo::ConstraintInfo &Info,
+                                           llvm::StringMap<bool> *FeatureMap,
+                                           diag::kind &Diag) const {
   switch (*Name) {
   default:
     return false;

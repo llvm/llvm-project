@@ -71,8 +71,10 @@ ArrayRef<TargetInfo::GCCRegAlias> RISCVTargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
-bool RISCVTargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+bool RISCVTargetInfo::validateAsmConstraint(const char *&Name,
+                                            TargetInfo::ConstraintInfo &Info,
+                                            llvm::StringMap<bool> *FeatureMap,
+                                            diag::kind &Diag) const {
   switch (*Name) {
   default:
     return false;

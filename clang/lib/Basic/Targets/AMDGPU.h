@@ -137,7 +137,9 @@ public:
   /// {s[n:m]}
   /// {a[n:m]}
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &Info) const override {
+                             TargetInfo::ConstraintInfo &Info,
+                             llvm::StringMap<bool> *FeatureMap,
+                             diag::kind &Diag) const override {
     static const ::llvm::StringSet<> SpecialRegs({
         "exec", "vcc", "flat_scratch", "m0", "scc", "tba", "tma",
         "flat_scratch_lo", "flat_scratch_hi", "vcc_lo", "vcc_hi", "exec_lo",
@@ -232,7 +234,8 @@ public:
 
     const char *Begin = Constraint;
     TargetInfo::ConstraintInfo Info("", "");
-    if (validateAsmConstraint(Constraint, Info))
+    diag::kind AsmDiag;
+    if (validateAsmConstraint(Constraint, Info, nullptr, AsmDiag))
       return std::string(Begin).substr(0, Constraint - Begin + 1);
 
     Constraint = Begin;

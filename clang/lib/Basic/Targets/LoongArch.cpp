@@ -119,7 +119,8 @@ LoongArchTargetInfo::getGCCRegAliases() const {
 }
 
 bool LoongArchTargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+    const char *&Name, TargetInfo::ConstraintInfo &Info,
+    llvm::StringMap<bool> *FeatureMap, diag::kind &Diag) const {
   // See the GCC definitions here:
   // https://gcc.gnu.org/onlinedocs/gccint/Machine-Constraints.html
   // Note that the 'm' constraint is handled in TargetInfo.

@@ -72,8 +72,9 @@ bool SPIRV64AMDGCNTargetInfo::initFeatureMap(
 }
 
 bool SPIRV64AMDGCNTargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
-  return AMDGPUTI.validateAsmConstraint(Name, Info);
+    const char *&Name, TargetInfo::ConstraintInfo &Info,
+    llvm::StringMap<bool> *FeatureMap, diag::kind &Diag) const {
+  return AMDGPUTI.validateAsmConstraint(Name, Info, FeatureMap, Diag);
 }
 
 std::string

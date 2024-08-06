@@ -309,6 +309,39 @@ def err_asm_invalid_type : Error<
 def err_ms_asm_bitfield_unsupported : Error<
   "an inline asm block cannot have an operand which is a bit-field">;
 
+def asm_invalid_constraint_generic : TextSubstitution<
+  "invalid %select{input|output}0 constraint '%1' in asm">;
+def err_asm_invalid_constraint : Error<
+  "%sub{asm_invalid_constraint_generic}0,1">;
+def err_asm_invalid_constraint_start : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: output constraint must start with"
+  " '=' or '+'">;
+def err_asm_invalid_constraint_rw_clobber : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: early clobber with a read-write"
+  " constraint must be a register">;
+def err_asm_invalid_constraint_mem_or_reg : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: constraint must allow either"
+  " memory or register operands">;
+def err_asm_invalid_constraint_missing_bracket : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: missing ']'">;
+def err_asm_invalid_constraint_wrong_symbol : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: no matching output constraint"
+  " with the specified name">;
+def err_asm_invalid_constraint_empty : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: empty constraint has been"
+  " provided">;
+def err_asm_invalid_constraint_oob : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: the index is out of bounds">;
+def err_asm_invalid_constraint_missing : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: references non-existent output"
+  " constraint">;
+def err_asm_invalid_constraint_wrongly_tied : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: tied constraint must be tied to"
+  " the same operand referenced to by the number">;
+def err_asm_invalid_constraint_output_only : Error<
+  "%sub{asm_invalid_constraint_generic}0,1: must refer to an output-only"
+  " operand">;
+
 def warn_stack_clash_protection_inline_asm : Warning<
   "unable to protect inline asm that clobbers stack pointer against stack "
   "clash">, InGroup<DiagGroup<"stack-protector">>;

@@ -218,7 +218,9 @@ public:
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &Info) const override {
+                             TargetInfo::ConstraintInfo &Info,
+                             llvm::StringMap<bool> *FeatureMap,
+                             diag::kind &Diag) const override {
     switch (*Name) {
     default:
       return false;

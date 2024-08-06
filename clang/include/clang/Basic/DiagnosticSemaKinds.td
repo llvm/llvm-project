@@ -9328,12 +9328,8 @@ let CategoryName = "Inline Assembly Issue" in {
     : Error<"cannot pass a pointer-to-member through register-constrained "
             "inline assembly parameter">;
   def err_asm_invalid_lvalue_in_output : Error<"invalid lvalue in asm output">;
-  def err_asm_invalid_output_constraint : Error<
-    "invalid output constraint '%0' in asm">;
   def err_asm_invalid_lvalue_in_input : Error<
     "invalid lvalue in asm input for constraint '%0'">;
-  def err_asm_invalid_input_constraint : Error<
-    "invalid input constraint '%0' in asm">;
   def err_asm_tying_incompatible_types : Error<
     "unsupported inline asm: input with type "
     "%diff{$ matching output with type $|}0,1">;

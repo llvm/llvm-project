@@ -10,12 +10,12 @@ void f(void) {
   asm ("foo\n" : "=a" (i + 2)); // expected-error {{invalid lvalue in asm output}}
 
   asm ("foo\n" : [symbolic_name] "=a" (i) : "[symbolic_name]" (i));
-  asm ("foo\n" : "=a" (i) : "[" (i)); // expected-error {{invalid input constraint '[' in asm}}
-  asm ("foo\n" : "=a" (i) : "[foo" (i)); // expected-error {{invalid input constraint '[foo' in asm}}
-  asm ("foo\n" : "=a" (i) : "[symbolic_name]" (i)); // expected-error {{invalid input constraint '[symbolic_name]' in asm}}
+  asm ("foo\n" : "=a" (i) : "[" (i)); // expected-error {{invalid input constraint '[' in asm: missing ']'}}
+  asm ("foo\n" : "=a" (i) : "[foo" (i)); // expected-error {{invalid input constraint '[foo' in asm: missing ']'}}
+  asm ("foo\n" : "=a" (i) : "[symbolic_name]" (i)); // expected-error {{invalid input constraint '[symbolic_name]' in asm: no matching output constraint with the specified name}}
 
-  asm ("foo\n" : : "" (i)); // expected-error {{invalid input constraint '' in asm}}
-  asm ("foo\n" : "=a" (i) : "" (i)); // expected-error {{invalid input constraint '' in asm}}
+  asm ("foo\n" : : "" (i)); // expected-error {{invalid input constraint '' in asm: empty constraint has been provided}}
+  asm ("foo\n" : "=a" (i) : "" (i)); // expected-error {{invalid input constraint '' in asm: empty constraint has been provided}}
 }
 
 void clobbers(void) {
@@ -91,13 +91,13 @@ int test7(unsigned long long b) {
 // PR3904
 void test8(int i) {
   // A number in an input constraint can't point to a read-write constraint.
-  asm("" : "+r" (i), "=r"(i) :  "0" (i)); // expected-error{{invalid input constraint '0' in asm}}
+  asm("" : "+r" (i), "=r"(i) :  "0" (i)); // expected-error{{invalid input constraint '0' in asm: must refer to an output-only operand}}
 }
 
 // PR3905
 void test9(int i) {
-  asm("" : [foo] "=r" (i), "=r"(i) : "1[foo]"(i)); // expected-error{{invalid input constraint '1[foo]' in asm}}
-  asm("" : [foo] "=r" (i), "=r"(i) : "[foo]1"(i)); // expected-error{{invalid input constraint '[foo]1' in asm}}
+  asm("" : [foo] "=r" (i), "=r"(i) : "1[foo]"(i)); // expected-error{{invalid input constraint '1[foo]' in asm: tied constraint must be tied to the same operand referenced to by the number}}
+  asm("" : [foo] "=r" (i), "=r"(i) : "[foo]1"(i)); // expected-error{{invalid input constraint '[foo]1' in asm: tied constraint must be tied to the same operand referenced to by the number}}
 }
 
 void test10(void){
@@ -139,14 +139,14 @@ void test14(struct S *s) {
 // PR15759.
 double test15(void) {
   double ret = 0;
-  __asm("0.0":"="(ret)); // expected-error {{invalid output constraint '=' in asm}}
-  __asm("0.0":"=&"(ret)); // expected-error {{invalid output constraint '=&' in asm}}
-  __asm("0.0":"+?"(ret)); // expected-error {{invalid output constraint '+?' in asm}}
-  __asm("0.0":"+!"(ret)); // expected-error {{invalid output constraint '+!' in asm}}
-  __asm("0.0":"+#"(ret)); // expected-error {{invalid output constraint '+#' in asm}}
-  __asm("0.0":"+*"(ret)); // expected-error {{invalid output constraint '+*' in asm}}
-  __asm("0.0":"=%"(ret)); // expected-error {{invalid output constraint '=%' in asm}}
-  __asm("0.0":"=,="(ret)); // expected-error {{invalid output constraint '=,=' in asm}}
+  __asm("0.0":"="(ret)); // expected-error {{invalid output constraint '=' in asm: constraint must allow either memory or register operands}}
+  __asm("0.0":"=&"(ret)); // expected-error {{invalid output constraint '=&' in asm: constraint must allow either memory or register operands}}
+  __asm("0.0":"+?"(ret)); // expected-error {{invalid output constraint '+?' in asm: constraint must allow either memory or register operands}}
+  __asm("0.0":"+!"(ret)); // expected-error {{invalid output constraint '+!' in asm: constraint must allow either memory or register operands}}
+  __asm("0.0":"+#"(ret)); // expected-error {{invalid output constraint '+#' in asm: constraint must allow either memory or register operands}}
+  __asm("0.0":"+*"(ret)); // expected-error {{invalid output constraint '+*' in asm: constraint must allow either memory or register operands}}
+  __asm("0.0":"=%"(ret)); // expected-error {{invalid output constraint '=%' in asm: constraint must allow either memory or register operands}}
+  __asm("0.0":"=,="(ret)); // expected-error {{invalid output constraint '=,=' in asm: constraint must allow either memory or register operands}}
   __asm("0.0":"=,g"(ret)); // no-error
   __asm("0.0":"=g"(ret)); // no-error
   return ret;
@@ -158,33 +158,33 @@ void iOutputConstraint(int x){
   __asm ("nop" : "=ig" (x) : :); // no-error
   __asm ("nop" : "=im" (x) : :); // no-error
   __asm ("nop" : "=imr" (x) : :); // no-error
-  __asm ("nop" : "=i" (x) : :); // expected-error{{invalid output constraint '=i' in asm}}
-  __asm ("nop" : "+i" (x) : :); // expected-error{{invalid output constraint '+i' in asm}}
-  __asm ("nop" : "=ii" (x) : :); // expected-error{{invalid output constraint '=ii' in asm}}
+  __asm ("nop" : "=i" (x) : :); // expected-error{{invalid output constraint '=i' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "+i" (x) : :); // expected-error{{invalid output constraint '+i' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "=ii" (x) : :); // expected-error{{invalid output constraint '=ii' in asm: constraint must allow either memory or register operands}}
   __asm ("nop" : "=nr" (x) : :); // no-error
   __asm ("nop" : "=rn" (x) : :); // no-error
   __asm ("nop" : "=ng" (x) : :); // no-error
   __asm ("nop" : "=nm" (x) : :); // no-error
   __asm ("nop" : "=nmr" (x) : :); // no-error
-  __asm ("nop" : "=n" (x) : :); // expected-error{{invalid output constraint '=n' in asm}}
-  __asm ("nop" : "+n" (x) : :); // expected-error{{invalid output constraint '+n' in asm}}
-  __asm ("nop" : "=nn" (x) : :); // expected-error{{invalid output constraint '=nn' in asm}}
+  __asm ("nop" : "=n" (x) : :); // expected-error{{invalid output constraint '=n' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "+n" (x) : :); // expected-error{{invalid output constraint '+n' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "=nn" (x) : :); // expected-error{{invalid output constraint '=nn' in asm: constraint must allow either memory or register operands}}
   __asm ("nop" : "=Fr" (x) : :); // no-error
   __asm ("nop" : "=rF" (x) : :); // no-error
   __asm ("nop" : "=Fg" (x) : :); // no-error
   __asm ("nop" : "=Fm" (x) : :); // no-error
   __asm ("nop" : "=Fmr" (x) : :); // no-error
-  __asm ("nop" : "=F" (x) : :); // expected-error{{invalid output constraint '=F' in asm}}
-  __asm ("nop" : "+F" (x) : :); // expected-error{{invalid output constraint '+F' in asm}}
-  __asm ("nop" : "=FF" (x) : :); // expected-error{{invalid output constraint '=FF' in asm}}
+  __asm ("nop" : "=F" (x) : :); // expected-error{{invalid output constraint '=F' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "+F" (x) : :); // expected-error{{invalid output constraint '+F' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "=FF" (x) : :); // expected-error{{invalid output constraint '=FF' in asm: constraint must allow either memory or register operands}}
   __asm ("nop" : "=Er" (x) : :); // no-error
   __asm ("nop" : "=rE" (x) : :); // no-error
   __asm ("nop" : "=Eg" (x) : :); // no-error
   __asm ("nop" : "=Em" (x) : :); // no-error
   __asm ("nop" : "=Emr" (x) : :); // no-error
-  __asm ("nop" : "=E" (x) : :); // expected-error{{invalid output constraint '=E' in asm}}
-  __asm ("nop" : "+E" (x) : :); // expected-error{{invalid output constraint '+E' in asm}}
-  __asm ("nop" : "=EE" (x) : :); // expected-error{{invalid output constraint '=EE' in asm}}
+  __asm ("nop" : "=E" (x) : :); // expected-error{{invalid output constraint '=E' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "+E" (x) : :); // expected-error{{invalid output constraint '+E' in asm: constraint must allow either memory or register operands}}
+  __asm ("nop" : "=EE" (x) : :); // expected-error{{invalid output constraint '=EE' in asm: constraint must allow either memory or register operands}}
 }
 
 // PR19837
@@ -214,13 +214,13 @@ void fn1(void) {
 void fn2(void) {
   int l;
  __asm__(""
-          : "+&m"(l)); // expected-error {{invalid output constraint '+&m' in asm}}
+          : "+&m"(l)); // expected-error {{invalid output constraint '+&m' in asm: early clobber with a read-write constraint must be a register}}
 }
 
 void fn3(void) {
   int l;
  __asm__(""
-          : "+#r"(l)); // expected-error {{invalid output constraint '+#r' in asm}}
+          : "+#r"(l)); // expected-error {{invalid output constraint '+#r' in asm: constraint must allow either memory or register operands}}
 }
 
 void fn4(void) {
@@ -234,14 +234,14 @@ void fn5(void) {
   int l;
     __asm__(""
           : [g] "+r"(l)
-          : "[g]"(l)); // expected-error {{invalid input constraint '[g]' in asm}}
+          : "[g]"(l)); // expected-error {{invalid input constraint '[g]' in asm: must refer to an output-only operand}}
 }
 
 void fn6(void) {
     int a;
   __asm__(""
             : "=rm"(a), "=rm"(a)
-            : "11m"(a)); // expected-error {{invalid input constraint '11m' in asm}}
+            : "11m"(a)); // expected-error {{invalid input constraint '11m' in asm: references non-existent output constraint}}
 }
 
 // PR14269
@@ -358,4 +358,11 @@ void test19(long long x)
   asm ("" : "=rm" (e): "0" (1)); // no-error
   // FIXME: This case should be supported by codegen, but it fails now.
   asm ("" : "=rm" (x): "0" (e)); // expected-error {{unsupported inline asm: input with type 'st_size128' (aka 'struct _st_size128') matching output with type 'long long'}}
+}
+
+void test20(long long x)
+{
+  st_size64 a;
+  asm ("" : "=rm" (a): "9876543210" (1)); // expected-error {{invalid input constraint '9876543210' in asm: the index is out of bounds}}
+  asm ("" : "rm" (a): "0" (1)); // expected-error {{invalid output constraint 'rm' in asm: output constraint must start with '=' or '+'}}
 }

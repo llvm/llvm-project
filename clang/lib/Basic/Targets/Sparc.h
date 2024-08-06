@@ -58,7 +58,9 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &info) const override {
+                             TargetInfo::ConstraintInfo &Info,
+                             llvm::StringMap<bool> *FeatureMap,
+                             diag::kind &Diag) const override {
     // FIXME: Implement!
     switch (*Name) {
     case 'I': // Signed 13-bit constant
@@ -72,7 +74,7 @@ public:
 
     case 'f':
     case 'e':
-      info.setAllowsRegister();
+      Info.setAllowsRegister();
       return true;
     }
     return false;

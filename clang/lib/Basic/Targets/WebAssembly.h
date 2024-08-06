@@ -132,7 +132,9 @@ private:
   }
 
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &Info) const final {
+                             TargetInfo::ConstraintInfo &Info,
+                             llvm::StringMap<bool> *FeatureMap,
+                             diag::kind &Diag) const final {
     return false;
   }
 

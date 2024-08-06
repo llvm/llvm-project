@@ -94,7 +94,9 @@ public:
   }
 
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &Info) const override {
+                             TargetInfo::ConstraintInfo &Info,
+                             llvm::StringMap<bool> *FeatureMap,
+                             diag::kind &Diag) const override {
     // There aren't any multi-character AVR specific constraints.
     if (StringRef(Name).size() > 1)
       return false;
