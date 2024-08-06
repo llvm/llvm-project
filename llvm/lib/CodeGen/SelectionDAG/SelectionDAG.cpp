@@ -7024,6 +7024,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      return getNode(ISD::XOR, DL, VT, N1, N2);
     break;
   case ISD::SMIN:
   case ISD::UMAX:
@@ -9924,15 +9926,8 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
 
   // select true, T, F --> T
   // select false, T, F --> F
-  if (auto *CondC = dyn_cast<ConstantSDNode>(Cond))
-    return CondC->isZero() ? F : T;
-
-  // TODO: This should simplify VSELECT with non-zero constant condition using
-  // something like this (but check boolean contents to be complete?):
-  if (ConstantSDNode *CondC = isConstOrConstSplat(Cond, /*AllowUndefs*/ false,
-                                                  /*AllowTruncation*/ true))
-    if (CondC->isZero())
-      return F;
+  if (auto C = isBoolConstant(Cond, /*AllowTruncation=*/true))
+    return *C ? T : F;
 
   // select ?, T, T --> T
   if (T == F)
@@ -10032,7 +10027,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   // Copy from an SDUse array into an SDValue array for use with
   // the regular getNode logic.
-  SmallVector<SDValue, 8> NewOps(Ops.begin(), Ops.end());
+  SmallVector<SDValue, 8> NewOps(Ops);
   return getNode(Opcode, DL, VT, NewOps);
 }
 
@@ -13139,6 +13134,32 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
     return N.getNode();
 
   return nullptr;
+}
+
+std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
+                                                 bool AllowTruncation) const {
+  ConstantSDNode *Const = isConstOrConstSplat(N, false, AllowTruncation);
+  if (!Const)
+    return std::nullopt;
+
+  const APInt &CVal = Const->getAPIntValue();
+  switch (TLI->getBooleanContents(N.getValueType())) {
+  case TargetLowering::ZeroOrOneBooleanContent:
+    if (CVal.isOne())
+      return true;
+    if (CVal.isZero())
+      return false;
+    return std::nullopt;
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    if (CVal.isAllOnes())
+      return true;
+    if (CVal.isZero())
+      return false;
+    return std::nullopt;
+  case TargetLowering::UndefinedBooleanContent:
+    return CVal[0];
+  }
+  llvm_unreachable("Unknown BooleanContent enum");
 }
 
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {

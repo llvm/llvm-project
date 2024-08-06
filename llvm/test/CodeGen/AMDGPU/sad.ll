@@ -86,9 +86,9 @@ define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat1(ptr addrspace(1) %out, i
 ; GCN-NEXT:    s_add_u32 s16, s16, s13
 ; GCN-NEXT:    s_addc_u32 s17, s17, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_max_u32 s3, s0, s1
-; GCN-NEXT:    s_min_u32 s0, s0, s1
-; GCN-NEXT:    s_sub_i32 s0, s3, s0
+; GCN-NEXT:    s_min_u32 s3, s0, s1
+; GCN-NEXT:    s_max_u32 s0, s0, s1
+; GCN-NEXT:    s_sub_i32 s0, s0, s3
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    s_add_i32 s0, s0, s2

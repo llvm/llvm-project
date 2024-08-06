@@ -228,7 +228,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
-    libc.src.math.daddl
     libc.src.math.dfmal
     libc.src.math.dsqrtl
     libc.src.math.erff
@@ -351,6 +350,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextup
     libc.src.math.nextupf
     libc.src.math.nextupl
+    libc.src.math.pow
     libc.src.math.powf
     libc.src.math.remainder
     libc.src.math.remainderf

@@ -37,6 +37,11 @@ on:
         description: "Runner to use for the build"
         required: true
         type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
+
 
 permissions:
   contents: read # Default everything to read-only
@@ -57,6 +62,12 @@ jobs:
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
 
     steps:
+    # It's good practice to use setup-python, but this is also required on macos-14
+    # due to https://github.com/actions/runner-images/issues/10385
+    - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f
+      with:
+        python-version: '3.12'
+
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
@@ -436,7 +447,7 @@ jobs:
     - name: Upload Build Provenance
       uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 #v4.3.3
       with:
-        name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
+        name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
 
     - name: Upload Release

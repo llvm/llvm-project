@@ -15,6 +15,11 @@
 
 static constexpr unsigned kDefaultAllocator = 0;
 
+// Allocator used for CUF
+static constexpr unsigned kPinnedAllocatorPos = 1;
+static constexpr unsigned kDeviceAllocatorPos = 2;
+static constexpr unsigned kManagedAllocatorPos = 3;
+
 #define MAX_ALLOCATOR 5
 
 namespace Fortran::runtime {
