@@ -278,15 +278,12 @@ static void parseArgs(int argc, char **argv) {
 
   ShowCGDataVersion = Args.hasArg(OPT_cgdata_version);
 
-  auto parseFormat = [](const StringRef FT) {
-    return StringSwitch<CGDataFormat>(FT)
-        .Case("text", CGDataFormat::Text)
-        .Case("binary", CGDataFormat::Binary)
-        .Default(CGDataFormat::Invalid);
-  };
   if (opt::Arg *A = Args.getLastArg(OPT_format)) {
     StringRef OF = A->getValue();
-    OutputFormat = parseFormat(OF);
+    OutputFormat = StringSwitch<CGDataFormat>(OF)
+                       .Case("text", CGDataFormat::Text)
+                       .Case("binary", CGDataFormat::Binary)
+                       .Default(CGDataFormat::Invalid);
     if (OutputFormat == CGDataFormat::Invalid)
       exitWithError("unsupported format '" + OF + "'");
   }
@@ -304,11 +301,16 @@ static void parseArgs(int argc, char **argv) {
             "Input file name cannot be the same as the output file name!\n");
   }
 
-  SmallVector<opt::Arg *, 1> ActionArgs(Args.filtered(OPT_action_group));
-  if (ActionArgs.size() != 1)
-    exitWithError("Only one action is required.");
+  opt::Arg *ActionArg = nullptr;
+  for (opt::Arg *Arg : Args.filtered(OPT_action_group)) {
+    if (ActionArg)
+      exitWithError("Only one action is allowed.");
+    ActionArg = Arg;
+  }
+  if (!ActionArg)
+    exitWithError("One action is required.");
 
-  switch (ActionArgs[0]->getOption().getID()) {
+  switch (ActionArg->getOption().getID()) {
   case OPT_show:
     if (InputFilenames.size() != 1)
       exitWithError("only one input file is allowed.");

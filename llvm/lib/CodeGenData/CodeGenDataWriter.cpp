@@ -67,7 +67,8 @@ public:
           uint64_t Bytes =
               endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
           Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
-                       (const char *)&Bytes, sizeof(uint64_t));
+                       reinterpret_cast<const char *>(&Bytes),
+                       sizeof(uint64_t));
         }
       }
     }
