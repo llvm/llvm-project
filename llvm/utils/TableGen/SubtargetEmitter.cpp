@@ -259,8 +259,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   llvm::sort(FeatureList, LessRecordFieldName());
 
-  // Check that there are no duplicate keys.
-  DenseMap<StringRef, const Record *> UniqueKeys;
+  // Check that there are no duplicate features.
+  DenseMap<StringRef, const Record *> UniqueFeatures;
 
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
@@ -291,7 +291,7 @@ unsigned SubtargetEmitter::FeatureKeyValues(
     OS << " },\n";
     ++NumFeatures;
 
-    auto [It, Inserted] = UniqueKeys.insert({CommandLineName, Feature});
+    auto [It, Inserted] = UniqueFeatures.insert({CommandLineName, Feature});
     if (!Inserted) {
       PrintError(Feature, "Feature `" + CommandLineName + "` already defined.");
       const Record *Previous = It->second;
