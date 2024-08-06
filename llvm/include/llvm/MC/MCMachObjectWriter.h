@@ -174,9 +174,6 @@ private:
   std::optional<unsigned> PtrAuthABIVersion;
   bool PtrAuthKernelABIVersion;
 
-  // The list of linker options for LC_LINKER_OPTION.
-  std::vector<std::vector<std::string>> LinkerOptions;
-
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
   void writeWithPadding(StringRef Str, uint64_t Size);
@@ -280,9 +277,6 @@ public:
   }
   void setPtrAuthKernelABIVersion(bool V) override {
     PtrAuthKernelABIVersion = V;
-  }
-  std::vector<std::vector<std::string>> &getLinkerOptions() {
-    return LinkerOptions;
   }
 
   /// @}

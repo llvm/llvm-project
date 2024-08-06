@@ -25,6 +25,7 @@ void MCObjectWriter::reset() {
   EmitAddrsigSection = false;
   SubsectionsViaSymbols = false;
   CGProfile.clear();
+  LinkerOptions.clear();
 }
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(

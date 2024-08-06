@@ -33,6 +33,9 @@ class MCValue;
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
 protected:
+  // The list of linker options for LC_LINKER_OPTION.
+  std::vector<std::vector<std::string>> LinkerOptions;
+
   /// List of declared file names
   SmallVector<std::pair<std::string, size_t>, 0> FileNames;
   // XCOFF specific: Optional compiler version.
@@ -60,6 +63,10 @@ public:
 
   /// \name High-Level API
   /// @{
+
+  std::vector<std::vector<std::string>> &getLinkerOptions() {
+    return LinkerOptions;
+  }
 
   /// Perform any late binding of symbols (for example, to assign symbol
   /// indices for use when generating relocations).
