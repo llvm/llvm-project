@@ -10,7 +10,7 @@
 !llvm.module.flags = !{!0, !1}
 
 !0 = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
-!1 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 85}
+!1 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 341}
 
 ; ASM: .section .note.gnu.property,"a",@note
 ; ASM-NEXT: .p2align 3, 0x0

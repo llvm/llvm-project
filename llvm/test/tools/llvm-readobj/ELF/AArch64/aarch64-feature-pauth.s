@@ -180,10 +180,10 @@ end:
 # RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-511.s -o gnu-0x10000002-511.o
 # RUN: llvm-readelf --notes gnu-0x10000002-511.o | \
 # RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" \
-# RUN:   -DVERSION="0x1ff (PointerAuthIntrinsics, PointerAuthCalls, PointerAuthReturns, PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, PointerAuthELFGOT)" %s
+# RUN:   -DVERSION="0x1ff (PointerAuthIntrinsics, PointerAuthCalls, PointerAuthReturns, PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, PointerAuthInitFiniAddressDiscrimination, PointerAuthELFGOT)" %s
 # RUN: llvm-readobj --notes gnu-0x10000002-511.o | \
 # RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" \
-# RUN:   -DVERSION="0x1ff (PointerAuthIntrinsics, PointerAuthCalls, PointerAuthReturns, PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, PointerAuthELFGOT)" %s
+# RUN:   -DVERSION="0x1ff (PointerAuthIntrinsics, PointerAuthCalls, PointerAuthReturns, PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, PointerAuthInitFiniAddressDiscrimination, PointerAuthELFGOT)" %s
 
 #--- gnu-0x10000002-512.s
 .section ".note.gnu.property", "a"
