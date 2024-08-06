@@ -12,6 +12,40 @@
 //
 //===----------------------------------------------------------------------===//
 
+// VNNI FP16
+let ExeDomain = SSEPackedSingle in
+defm VDPPHPS : avx512_dpf16ps_sizes<0x52, "vdpphps", X86dpfp16ps, avx512vl_f16_info,
+                                    [HasAVX10_2], [HasAVX10_2_512]>,
+                    T8, PS, EVEX_CD8<32, CD8VF>;
+
+// VNNI INT8
+defm VPDPBSSD   : VNNI_common<0x50, "vpdpbssd", X86vpdpbssd, SchedWriteVecIMul, 1,
+                              [HasAVX10_2], [HasAVX10_2_512]>, XD;
+defm VPDPBSSDS  : VNNI_common<0x51, "vpdpbssds", X86vpdpbssds, SchedWriteVecIMul, 1,
+                              [HasAVX10_2], [HasAVX10_2_512]>, XD;
+defm VPDPBSUD   : VNNI_common<0x50, "vpdpbsud", X86vpdpbsud, SchedWriteVecIMul, 0,
+                              [HasAVX10_2], [HasAVX10_2_512]>, XS;
+defm VPDPBSUDS  : VNNI_common<0x51, "vpdpbsuds", X86vpdpbsuds, SchedWriteVecIMul, 0,
+                              [HasAVX10_2], [HasAVX10_2_512]>, XS;
+defm VPDPBUUD   : VNNI_common<0x50, "vpdpbuud", X86vpdpbuud, SchedWriteVecIMul, 1,
+                              [HasAVX10_2], [HasAVX10_2_512]>, PS;
+defm VPDPBUUDS  : VNNI_common<0x51, "vpdpbuuds", X86vpdpbuuds, SchedWriteVecIMul, 1,
+                              [HasAVX10_2], [HasAVX10_2_512]>, PS;
+
+// VNNI INT16
+defm VPDPWSUD   : VNNI_common<0xd2, "vpdpwsud", X86vpdpwsud, SchedWriteVecIMul, 0,
+                              [HasAVX10_2], [HasAVX10_2_512]>, XS;
+defm VPDPWSUDS  : VNNI_common<0xd3, "vpdpwsuds", X86vpdpwsuds, SchedWriteVecIMul, 0,
+                              [HasAVX10_2], [HasAVX10_2_512]>, XS;
+defm VPDPWUSD   : VNNI_common<0xd2, "vpdpwusd", X86vpdpwusd, SchedWriteVecIMul, 0,
+                              [HasAVX10_2], [HasAVX10_2_512]>, PD;
+defm VPDPWUSDS  : VNNI_common<0xd3, "vpdpwusds", X86vpdpwusds, SchedWriteVecIMul, 0,
+                              [HasAVX10_2], [HasAVX10_2_512]>, PD;
+defm VPDPWUUD   : VNNI_common<0xd2, "vpdpwuud", X86vpdpwuud, SchedWriteVecIMul, 1,
+                              [HasAVX10_2], [HasAVX10_2_512]>, PS;
+defm VPDPWUUDS  : VNNI_common<0xd3, "vpdpwuuds", X86vpdpwuuds, SchedWriteVecIMul, 1,
+                              [HasAVX10_2], [HasAVX10_2_512]>, PS;
+
 // VMPSADBW
 defm VMPSADBW : avx512_common_3Op_rm_imm8<0x42, X86Vmpsadbw, "vmpsadbw", SchedWritePSADBW,
                                           avx512vl_i16_info, avx512vl_i8_info,
@@ -305,3 +339,115 @@ let Predicates = [HasAVX10_2], hasEVEX_U = 1, OpEnc = EncEVEX in {
   defm VFCMADDCPHZ256 : avx512_cfmaop_round<0x56, "vfcmaddcph", x86vfcmaddcRnd,
                                             v8f32x_info>, T_MAP6,XD, EVEX_CD8<32, CD8VF>, Sched<[WriteFMAY]>;
 }
+
+//-------------------------------------------------
+// AVX10 MINMAX instructions
+//-------------------------------------------------
+
+multiclass avx10_minmax_packed_base<string OpStr, X86VectorVTInfo VTI, SDNode OpNode> {
+  let ExeDomain = VTI.ExeDomain, Uses = [MXCSR], mayRaiseFPException = 1 in {
+    defm rri : AVX512_maskable<0x52, MRMSrcReg, VTI, (outs VTI.RC:$dst),
+                                (ins VTI.RC:$src1, VTI.RC:$src2, i32u8imm:$src3), OpStr,
+                                "$src3, $src2, $src1", "$src1, $src2, $src3",
+                                (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
+                                                (i32 timm:$src3)))>,
+                                EVEX, VVVV, Sched<[WriteFMAX]>;
+    defm rmi : AVX512_maskable<0x52, MRMSrcMem, VTI, (outs VTI.RC:$dst),
+                                (ins VTI.RC:$src1, VTI.MemOp:$src2, i32u8imm:$src3), OpStr,
+                                "$src3, $src2, $src1", "$src1, $src2, $src3",
+                                (VTI.VT (OpNode VTI.RC:$src1, (VTI.LdFrag addr:$src2),
+                                                (i32 timm:$src3)))>,
+                                EVEX, VVVV,
+                                Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
+    defm rmbi : AVX512_maskable<0x52, MRMSrcMem, VTI, (outs VTI.RC:$dst),
+                                (ins VTI.RC:$src1, VTI.ScalarMemOp:$src2, i32u8imm:$src3),
+                                OpStr, "$src3, ${src2}"#VTI.BroadcastStr#", $src1",
+                                "$src1, ${src2}"#VTI.BroadcastStr#", $src3",
+                                (VTI.VT (OpNode VTI.RC:$src1, (VTI.BroadcastLdFrag addr:$src2),
+                                                (i32 timm:$src3)))>,
+                                EVEX, VVVV, EVEX_B,
+                                Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
+  }
+}
+
+multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
+  let Uses = []<Register>, mayRaiseFPException = 0 in {
+    defm Zrrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info512, (outs VTI.info512.RC:$dst),
+                                (ins VTI.info512.RC:$src1, VTI.info512.RC:$src2, i32u8imm:$src3), OpStr,
+                                "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
+                                (VTI.info512.VT (OpNode (VTI.info512.VT VTI.info512.RC:$src1),
+                                                        (VTI.info512.VT VTI.info512.RC:$src2),
+                                                        (i32 timm:$src3)))>,
+                                EVEX, VVVV, EVEX_B, EVEX_V512, Sched<[WriteFMAX]>;
+    let hasEVEX_U = 1 in
+    defm Z256rrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info256, (outs VTI.info256.RC:$dst),
+                                (ins VTI.info256.RC:$src1, VTI.info256.RC:$src2, i32u8imm:$src3), OpStr,
+                                "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
+                                (VTI.info256.VT (OpNode (VTI.info256.VT VTI.info256.RC:$src1),
+                                                        (VTI.info256.VT VTI.info256.RC:$src2),
+                                                        (i32 timm:$src3)))>,
+                                EVEX, VVVV, EVEX_B, EVEX_V256, Sched<[WriteFMAX]>;
+  }
+}
+
+multiclass avx10_minmax_packed<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
+  let Predicates = [HasAVX10_2_512] in
+    defm Z    :   avx10_minmax_packed_base<OpStr, VTI.info512, OpNode>, EVEX_V512;
+  let Predicates = [HasAVX10_2] in {
+    defm Z256 :   avx10_minmax_packed_base<OpStr, VTI.info256, OpNode>, EVEX_V256;
+    defm Z128 :   avx10_minmax_packed_base<OpStr, VTI.info128, OpNode>, EVEX_V128;
+  }
+}
+
+multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
+                                SDNode OpNodeSAE> {
+  let ExeDomain = _.ExeDomain, Predicates = [HasAVX10_2] in {
+    let mayRaiseFPException = 1 in {
+      defm rri : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
+                               (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+                                OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
+                                (_.VT (OpNode (_.VT _.RC:$src1), (_.VT _.RC:$src2),
+                                              (i32 timm:$src3)))>,
+                                Sched<[WriteFMAX]>;
+
+      defm rmi : AVX512_maskable<0x53, MRMSrcMem, _, (outs VR128X:$dst),
+                       (ins VR128X:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
+                       OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
+                       (_.VT (OpNode (_.VT _.RC:$src1), (_.ScalarIntMemFrags addr:$src2),
+                                     (i32 timm:$src3)))>,
+                       Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
+    }
+    let Uses = []<Register>, mayRaiseFPException = 0 in
+      defm rrib : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
+                        (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+                        OpStr, "$src3, {sae}, $src2, $src1",
+                        "$src1, $src2, {sae}, $src3",
+                        (_.VT (OpNodeSAE (_.VT _.RC:$src1), (_.VT _.RC:$src2),
+                                         (i32 timm:$src3)))>,
+                        Sched<[WriteFMAX]>, EVEX_B;
+  }
+}
+
+
+let mayRaiseFPException = 0 in
+defm VMINMAXNEPBF16 : avx10_minmax_packed<"vminmaxnepbf16", avx512vl_bf16_info, X86vminmax>,
+                      AVX512XDIi8Base, EVEX_CD8<16, CD8VF>, TA;
+
+defm VMINMAXPD : avx10_minmax_packed<"vminmaxpd", avx512vl_f64_info, X86vminmax>,
+                 avx10_minmax_packed_sae<"vminmaxpd", avx512vl_f64_info, X86vminmaxSae>,
+                 AVX512PDIi8Base, REX_W, TA, EVEX_CD8<64, CD8VF>;
+
+defm VMINMAXPH : avx10_minmax_packed<"vminmaxph", avx512vl_f16_info, X86vminmax>,
+                 avx10_minmax_packed_sae<"vminmaxph", avx512vl_f16_info, X86vminmaxSae>,
+                 AVX512PSIi8Base, TA, EVEX_CD8<16, CD8VF>;
+
+defm VMINMAXPS : avx10_minmax_packed<"vminmaxps", avx512vl_f32_info, X86vminmax>,
+                 avx10_minmax_packed_sae<"vminmaxps", avx512vl_f32_info, X86vminmaxSae>,
+                 AVX512PDIi8Base, TA, EVEX_CD8<32, CD8VF>;
+
+defm VMINMAXSD : avx10_minmax_scalar<"vminmaxsd", v2f64x_info, X86vminmaxs, X86vminmaxsSae>,
+                 AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<64, CD8VT1>, REX_W;
+defm VMINMAXSH : avx10_minmax_scalar<"vminmaxsh", v8f16x_info, X86vminmaxs, X86vminmaxsSae>,
+                 AVX512PSIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<16, CD8VT1>, TA;
+defm VMINMAXSS : avx10_minmax_scalar<"vminmaxss", v4f32x_info, X86vminmaxs, X86vminmaxsSae>,
+                 AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<32, CD8VT1>;

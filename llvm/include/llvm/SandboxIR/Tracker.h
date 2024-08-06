@@ -328,6 +328,23 @@ public:
 #endif // NDEBUG
 };
 
+class CreateAndInsertInst final : public IRChangeBase {
+  Instruction *NewI = nullptr;
+
+public:
+  CreateAndInsertInst(Instruction *NewI, Tracker &Tracker)
+      : IRChangeBase(Tracker), NewI(NewI) {}
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "CreateAndInsertInst";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 /// The tracker collects all the change objects and implements the main API for
 /// saving / reverting / accepting.
 class Tracker {

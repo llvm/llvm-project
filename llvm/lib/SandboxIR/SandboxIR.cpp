@@ -1359,6 +1359,16 @@ std::unique_ptr<Value> Context::detach(Value *V) {
 Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
+
+  // Track creation of instructions.
+  // Please note that we don't allow the creation of detached instructions,
+  // meaning that the instructions need to be inserted into a block upon
+  // creation. This is why the tracker class combines creation and insertion.
+  auto &Tracker = getTracker();
+  if (Tracker.isTracking())
+    if (auto *I = dyn_cast<Instruction>(VPtr.get()))
+      Tracker.track(std::make_unique<CreateAndInsertInst>(I, Tracker));
+
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =
       LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
