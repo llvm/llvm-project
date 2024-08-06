@@ -359,6 +359,8 @@ protected:
   /// may (but is not required to) be null for a forward (backwards)
   /// statically unreachable block.
   DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
+    assert((!BB || Parent == NodeTrait::getParent(const_cast<NodeT *>(BB))) &&
+           "cannot get DomTreeNode of block with different parent");
     auto I = DomTreeNodes.find(BB);
     if (I != DomTreeNodes.end())
       return I->second.get();
