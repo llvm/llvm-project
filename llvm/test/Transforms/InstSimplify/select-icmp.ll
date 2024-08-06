@@ -42,10 +42,7 @@ define i32 @pr54735_sgt(i32 %x, i32 %y) {
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABSCOND:%.*]] = icmp slt i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[ABSCOND]], i32 [[NEG]], i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[ABS]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -74,10 +71,7 @@ define i32 @pr54735_sge(i32 %x, i32 %y) {
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABSCOND:%.*]] = icmp slt i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[ABSCOND]], i32 [[NEG]], i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[ABS]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    ret i32 0
 ;
