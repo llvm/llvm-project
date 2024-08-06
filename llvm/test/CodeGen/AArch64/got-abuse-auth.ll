@@ -41,4 +41,4 @@ entry:
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
-!1 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 128}
+!1 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 256}
