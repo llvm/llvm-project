@@ -79,6 +79,8 @@ define i32 @baz() "branch-target-enforcement" {
 ; BTI-LABEL: baz:
 ; BTI:       @ %bb.0: @ %entry
 ; BTI-NEXT:    bti
+; BTI-NEXT:    .save {r7, lr}
+; BTI-NEXT:    push {r7, lr}
 ; BTI-NEXT:    .pad #160
 ; BTI-NEXT:    sub sp, #160
 ; BTI-NEXT:    mov r0, sp
@@ -86,7 +88,7 @@ define i32 @baz() "branch-target-enforcement" {
 ; BTI-NEXT:    bti
 ; BTI-NEXT:    movs r0, #0
 ; BTI-NEXT:    add sp, #160
-; BTI-NEXT:    bx lr
+; BTI-NEXT:    pop {r7, pc}
 ;
 ; NOBTI-LABEL: baz:
 ; NOBTI:       @ %bb.0: @ %entry
