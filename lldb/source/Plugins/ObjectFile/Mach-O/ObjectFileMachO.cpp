@@ -6157,6 +6157,12 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   return nullptr;
 }
 
+bool ObjectFileMachO::CanBeTargetModule(Status *status) {
+  if (m_header.filetype == MH_DSYM)
+    return true;
+  return ObjectFile::CanBeTargetModule(status);
+}
+
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
   if (!section)
     return false;
