@@ -130,7 +130,7 @@ public:
   ///
   /// \returns true to indicate the options are invalid or false otherwise.
   virtual bool ReadLanguageOptions(const LangOptions &LangOpts,
-                                   StringRef Filename,
+                                   StringRef ModuleFilename,
                                    bool Complain,
                                    bool AllowCompatibleDifferences) {
     return false;
@@ -140,7 +140,7 @@ public:
   ///
   /// \returns true to indicate the target options are invalid, or false
   /// otherwise.
-  virtual bool ReadTargetOptions(const TargetOptions &TargetOpts, StringRef Filename, bool Complain,
+  virtual bool ReadTargetOptions(const TargetOptions &TargetOpts, StringRef ModuleFilename, bool Complain,
                                  bool AllowCompatibleDifferences) {
     return false;
   }
@@ -151,7 +151,7 @@ public:
   /// otherwise.
   virtual bool
   ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                        StringRef Filename,
+                        StringRef ModuleFilename,
                         bool Complain) {
     return false;
   }
@@ -174,7 +174,7 @@ public:
   /// \returns true to indicate the header search options are invalid, or false
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                       StringRef Filename,
+                                       StringRef ModuleFilename,
                                        StringRef SpecificModuleCachePath,
                                        bool Complain) {
     return false;
@@ -203,7 +203,7 @@ public:
   /// \returns true to indicate the preprocessor options are invalid, or false
   /// otherwise.
   virtual bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                                       StringRef Filename,
+                                       StringRef ModuleFilename,
                                        bool ReadMacros, bool Complain,
                                        std::string &SuggestedPredefines) {
     return false;
@@ -266,22 +266,22 @@ public:
   bool ReadFullVersionInformation(StringRef FullVersion) override;
   void ReadModuleName(StringRef ModuleName) override;
   void ReadModuleMapFile(StringRef ModuleMapPath) override;
-  bool ReadLanguageOptions(const LangOptions &LangOpts, StringRef Filename, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts, StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, StringRef Filename, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts, StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                             StringRef Filename,
+                             StringRef ModuleFilename,
                              bool Complain) override;
   bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override;
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef Filename,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               StringRef Filename,
+                               StringRef ModuleFilename,
                                bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
 
@@ -306,19 +306,19 @@ public:
   PCHValidator(Preprocessor &PP, ASTReader &Reader)
       : PP(PP), Reader(Reader) {}
 
-  bool ReadLanguageOptions(const LangOptions &LangOpts, StringRef Filename, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts, StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, StringRef Filename, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts, StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                             StringRef Filename,
+                             StringRef ModuleFilename,
                              bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               StringRef Filename,
+                               StringRef ModuleFilename,
                                bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef Filename,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
@@ -335,7 +335,7 @@ public:
   SimpleASTReaderListener(Preprocessor &PP) : PP(PP) {}
 
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               StringRef Filename,
+                               StringRef ModuleFilename,
                                bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
 };
@@ -1403,21 +1403,21 @@ private:
                                        unsigned ClientLoadCapabilities);
   llvm::Error ReadSubmoduleBlock(ModuleFile &F,
                                  unsigned ClientLoadCapabilities);
-  static bool ParseLanguageOptions(const RecordData &Record, StringRef Filename, bool Complain,
+  static bool ParseLanguageOptions(const RecordData &Record, StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
                                    bool AllowCompatibleDifferences);
-  static bool ParseTargetOptions(const RecordData &Record, StringRef Filename, bool Complain,
+  static bool ParseTargetOptions(const RecordData &Record, StringRef ModuleFilename, bool Complain,
                                  ASTReaderListener &Listener,
                                  bool AllowCompatibleDifferences);
-  static bool ParseDiagnosticOptions(const RecordData &Record, StringRef Filename, bool Complain,
+  static bool ParseDiagnosticOptions(const RecordData &Record, StringRef ModuleFilename, bool Complain,
                                      ASTReaderListener &Listener);
   static bool ParseFileSystemOptions(const RecordData &Record, bool Complain,
                                      ASTReaderListener &Listener);
-  static bool ParseHeaderSearchOptions(const RecordData &Record, StringRef Filename, bool Complain,
+  static bool ParseHeaderSearchOptions(const RecordData &Record, StringRef ModuleFilename, bool Complain,
                                        ASTReaderListener &Listener);
   static bool ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
                                      ASTReaderListener &Listener);
-  static bool ParsePreprocessorOptions(const RecordData &Record, StringRef Filename, bool Complain,
+  static bool ParsePreprocessorOptions(const RecordData &Record, StringRef ModuleFilename, bool Complain,
                                        ASTReaderListener &Listener,
                                        std::string &SuggestedPredefines);
 
