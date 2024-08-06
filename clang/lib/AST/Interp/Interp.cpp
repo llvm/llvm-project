@@ -924,12 +924,12 @@ void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
   if (ED->getNumNegativeBits() &&
       (Max.slt(Value.getSExtValue()) || Min.sgt(Value.getSExtValue()))) {
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
-    S.report(Loc, diag::warn_constexpr_unscoped_enum_out_of_range)
+    S.CCEDiag(Loc, diag::note_constexpr_unscoped_enum_out_of_range)
         << llvm::toString(Value, 10) << Min.getSExtValue() << Max.getSExtValue()
         << ED;
   } else if (!ED->getNumNegativeBits() && Max.ult(Value.getZExtValue())) {
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
-    S.report(Loc, diag::warn_constexpr_unscoped_enum_out_of_range)
+    S.CCEDiag(Loc, diag::note_constexpr_unscoped_enum_out_of_range)
         << llvm::toString(Value, 10) << Min.getZExtValue() << Max.getZExtValue()
         << ED;
   }

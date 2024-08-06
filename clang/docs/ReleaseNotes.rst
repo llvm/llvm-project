@@ -49,6 +49,9 @@ C++ Specific Potentially Breaking Changes
   few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
   which GCC supports as well.
 
+- The warning `-Wenum-constexpr-conversion` has been upgraded into a hard
+  compiler error that cannot be suppressed, as required by the C++ Standard.
+
 ABI Changes in This Version
 ---------------------------
 
