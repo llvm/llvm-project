@@ -47,7 +47,7 @@ static cl::opt<int64_t> MemIntrinsicExpandSizeThresholdOpt(
 namespace {
 
 struct PreISelIntrinsicLowering {
-  const TargetMachine &TM;
+  const TargetMachine *TM;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
@@ -57,7 +57,7 @@ struct PreISelIntrinsicLowering {
   const bool UseMemIntrinsicLibFunc;
 
   explicit PreISelIntrinsicLowering(
-      const TargetMachine &TM_,
+      const TargetMachine *TM_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
@@ -223,10 +223,12 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool canEmitLibcall(const TargetMachine &TM, Function *F,
+static bool canEmitLibcall(const TargetMachine *TM, Function *F,
                            RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
-  const TargetLowering *TLI = TM.getSubtargetImpl(*F)->getTargetLowering();
+  if (!TM)
+    return true;
+  const TargetLowering *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
   return TLI->getLibcallName(LC) != nullptr;
 }
 
@@ -464,7 +466,7 @@ public:
       return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     };
 
-    const auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     PreISelIntrinsicLowering Lowering(TM, LookupTTI, LookupTLI);
     return Lowering.lowerIntrinsics(M);
   }
