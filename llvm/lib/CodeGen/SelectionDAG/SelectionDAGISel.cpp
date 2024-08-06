@@ -572,8 +572,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   SwiftError->setFunction(mf);
-  Function &Fn = mf.getFunction();
-  Fn.renumberBlocks(); // renumber blocks for dense numbers
+  const Function &Fn = mf.getFunction();
 
   bool InstrRef = mf.shouldUseDebugInstrRef();
 
