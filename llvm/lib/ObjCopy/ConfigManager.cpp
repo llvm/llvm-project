@@ -26,7 +26,8 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
       Common.DecompressDebugSections ||
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
-      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0)
+      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
+      !Common.ChangeSectionAddress.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for COFF");
 
@@ -48,7 +49,8 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
       Common.DecompressDebugSections || Common.StripUnneeded ||
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
-      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0)
+      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
+      !Common.ChangeSectionAddress.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for MachO");
 
@@ -68,7 +70,8 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
       !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
       !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
       !Common.SymbolsToRename.empty() || Common.GapFill != 0 ||
-      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0)
+      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
+      !Common.ChangeSectionAddress.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "only flags for section dumping, removal, and "
                              "addition are supported");
@@ -97,7 +100,8 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
       Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
       Common.Weaken || Common.StripUnneeded || Common.DecompressDebugSections ||
       Common.GapFill != 0 || Common.PadTo != 0 ||
-      Common.ChangeSectionLMAValAll != 0) {
+      Common.ChangeSectionLMAValAll != 0 ||
+      !Common.ChangeSectionAddress.empty()) {
     return createStringError(
         llvm::errc::invalid_argument,
         "no flags are supported yet, only basic copying is allowed");

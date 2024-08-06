@@ -127,8 +127,7 @@ public:
   AbstractArrayBox() = default;
   AbstractArrayBox(llvm::ArrayRef<mlir::Value> extents,
                    llvm::ArrayRef<mlir::Value> lbounds)
-      : extents{extents.begin(), extents.end()}, lbounds{lbounds.begin(),
-                                                         lbounds.end()} {}
+      : extents{extents}, lbounds{lbounds} {}
 
   // Every array has extents that describe its shape.
   const llvm::SmallVectorImpl<mlir::Value> &getExtents() const {
@@ -296,7 +295,7 @@ public:
            llvm::ArrayRef<mlir::Value> explicitParams,
            llvm::ArrayRef<mlir::Value> explicitExtents = {})
       : AbstractIrBox{addr, lbounds, explicitExtents},
-        explicitParams{explicitParams.begin(), explicitParams.end()} {
+        explicitParams{explicitParams} {
     assert(verify());
   }
   // TODO: check contiguous attribute of addr

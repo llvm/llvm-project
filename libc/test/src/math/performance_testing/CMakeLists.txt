@@ -176,6 +176,17 @@ add_perf_binary(
 )
 
 add_perf_binary(
+  expf16_perf
+  SRCS
+    expf16_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.expf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
   fabsf_perf
   SRCS
     fabsf_perf.cpp

@@ -32,27 +32,26 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 
-namespace llvm {
+namespace {
 
-class SPIRVMachineModuleInfo : public MachineModuleInfoImpl {
-public:
-  SyncScope::ID Work_ItemSSID;
-  SyncScope::ID WorkGroupSSID;
-  SyncScope::ID DeviceSSID;
-  SyncScope::ID AllSVMDevicesSSID;
-  SyncScope::ID SubGroupSSID;
+struct SyncScopeIDs {
+  llvm::SyncScope::ID Work_ItemSSID;
+  llvm::SyncScope::ID WorkGroupSSID;
+  llvm::SyncScope::ID DeviceSSID;
+  llvm::SyncScope::ID AllSVMDevicesSSID;
+  llvm::SyncScope::ID SubGroupSSID;
 
-  SPIRVMachineModuleInfo(const MachineModuleInfo &MMI) {
-    LLVMContext &CTX = MMI.getModule()->getContext();
-    Work_ItemSSID = CTX.getOrInsertSyncScopeID("work_item");
-    WorkGroupSSID = CTX.getOrInsertSyncScopeID("workgroup");
-    DeviceSSID = CTX.getOrInsertSyncScopeID("device");
-    AllSVMDevicesSSID = CTX.getOrInsertSyncScopeID("all_svm_devices");
-    SubGroupSSID = CTX.getOrInsertSyncScopeID("sub_group");
+  SyncScopeIDs() {}
+  SyncScopeIDs(llvm::LLVMContext &Context) {
+    Work_ItemSSID = Context.getOrInsertSyncScopeID("work_item");
+    WorkGroupSSID = Context.getOrInsertSyncScopeID("workgroup");
+    DeviceSSID = Context.getOrInsertSyncScopeID("device");
+    AllSVMDevicesSSID = Context.getOrInsertSyncScopeID("all_svm_devices");
+    SubGroupSSID = Context.getOrInsertSyncScopeID("sub_group");
   }
 };
 
-} // end namespace llvm
+} // namespace
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -76,7 +75,7 @@ class SPIRVInstructionSelector : public InstructionSelector {
   const RegisterBankInfo &RBI;
   SPIRVGlobalRegistry &GR;
   MachineRegisterInfo *MRI;
-  SPIRVMachineModuleInfo *MMI = nullptr;
+  SyncScopeIDs SSIDs;
 
   /// We need to keep track of the number we give to anonymous global values to
   /// generate the same name every time when this is needed.
@@ -280,7 +279,7 @@ void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                        CodeGenCoverage *CoverageInfo,
                                        ProfileSummaryInfo *PSI,
                                        BlockFrequencyInfo *BFI) {
-  MMI = &MF.getMMI().getObjFileInfo<SPIRVMachineModuleInfo>();
+  SSIDs = SyncScopeIDs(MF.getFunction().getContext());
   MRI = &MF.getRegInfo();
   GR.setCurrentFunc(MF);
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
@@ -721,16 +720,16 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
 }
 
 static SPIRV::Scope::Scope getScope(SyncScope::ID Ord,
-                                    SPIRVMachineModuleInfo *MMI) {
-  if (Ord == SyncScope::SingleThread || Ord == MMI->Work_ItemSSID)
+                                    const SyncScopeIDs &SSIDs) {
+  if (Ord == SyncScope::SingleThread || Ord == SSIDs.Work_ItemSSID)
     return SPIRV::Scope::Invocation;
-  else if (Ord == SyncScope::System || Ord == MMI->DeviceSSID)
+  else if (Ord == SyncScope::System || Ord == SSIDs.DeviceSSID)
     return SPIRV::Scope::Device;
-  else if (Ord == MMI->WorkGroupSSID)
+  else if (Ord == SSIDs.WorkGroupSSID)
     return SPIRV::Scope::Workgroup;
-  else if (Ord == MMI->AllSVMDevicesSSID)
+  else if (Ord == SSIDs.AllSVMDevicesSSID)
     return SPIRV::Scope::CrossDevice;
-  else if (Ord == MMI->SubGroupSSID)
+  else if (Ord == SSIDs.SubGroupSSID)
     return SPIRV::Scope::Subgroup;
   else
     // OpenCL approach is: "The functions that do not have memory_scope argument
@@ -896,7 +895,7 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   assert(I.hasOneMemOperand());
   const MachineMemOperand *MemOp = *I.memoperands_begin();
   uint32_t Scope =
-      static_cast<uint32_t>(getScope(MemOp->getSyncScopeID(), MMI));
+      static_cast<uint32_t>(getScope(MemOp->getSyncScopeID(), SSIDs));
   Register ScopeReg = buildI32Constant(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
@@ -967,7 +966,7 @@ bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   Register MemSemReg = buildI32Constant(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
-  uint32_t Scope = static_cast<uint32_t>(getScope(Ord, MMI));
+  uint32_t Scope = static_cast<uint32_t>(getScope(Ord, SSIDs));
   Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemoryBarrier))
@@ -987,7 +986,7 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
     assert(I.hasOneMemOperand());
     const MachineMemOperand *MemOp = *I.memoperands_begin();
     unsigned Scope =
-        static_cast<uint32_t>(getScope(MemOp->getSyncScopeID(), MMI));
+        static_cast<uint32_t>(getScope(MemOp->getSyncScopeID(), SSIDs));
     ScopeReg = buildI32Constant(Scope, I);
 
     unsigned ScSem = static_cast<uint32_t>(

@@ -21,6 +21,9 @@ class RISCVTuneInfo {
   bits<32> MaxPrefetchIterationsAhead = -1;
 
   bits<32> MinimumJumpTableEntries = 5;
+
+  // Tail duplication threshold at -O3.
+  bits<32> TailDupAggressiveThreshold = 6;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -29,7 +32,7 @@ def RISCVTuneInfoTable : GenericTable {
   let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
                 "CacheLineSize", "PrefetchDistance",
                 "MinPrefetchStride", "MaxPrefetchIterationsAhead",
-                "MinimumJumpTableEntries"];
+                "MinimumJumpTableEntries", "TailDupAggressiveThreshold"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -347,6 +350,31 @@ def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
                                                FeatureStdExtZifencei,
                                                FeatureStdExtM,
                                                FeatureStdExtA,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR4_RV32 : RISCVProcessorModel<"syntacore-scr4-rv32",
+                                              NoSchedModel,
+                                              [Feature32Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR4_RV64 : RISCVProcessorModel<"syntacore-scr4-rv64",
+                                              NoSchedModel,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
                                                FeatureStdExtC],
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 

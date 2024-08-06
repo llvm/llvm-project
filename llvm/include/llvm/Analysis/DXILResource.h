@@ -47,10 +47,14 @@ class ResourceInfo {
 
   struct StructInfo {
     uint32_t Stride;
-    Align Alignment;
+    // Note: we store an integer here rather than using `MaybeAlign` because in
+    // GCC 7 MaybeAlign isn't trivial so having one in this union would delete
+    // our move constructor.
+    // See https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0602r4.html
+    uint32_t AlignLog2;
 
     bool operator==(const StructInfo &RHS) const {
-      return std::tie(Stride, Alignment) == std::tie(RHS.Stride, RHS.Alignment);
+      return std::tie(Stride, AlignLog2) == std::tie(RHS.Stride, RHS.AlignLog2);
     }
     bool operator!=(const StructInfo &RHS) const { return !(*this == RHS); }
   };
@@ -106,6 +110,11 @@ class ResourceInfo {
 
   MSInfo MultiSample;
 
+public:
+  ResourceInfo(dxil::ResourceClass RC, dxil::ResourceKind Kind, Value *Symbol,
+               StringRef Name)
+      : Symbol(Symbol), Name(Name), RC(RC), Kind(Kind) {}
+
   // Conditions to check before accessing union members.
   bool isUAV() const;
   bool isCBuffer() const;
@@ -115,17 +124,51 @@ class ResourceInfo {
   bool isFeedback() const;
   bool isMultiSample() const;
 
-  ResourceInfo(dxil::ResourceClass RC, dxil::ResourceKind Kind, Value *Symbol,
-               StringRef Name)
-      : Symbol(Symbol), Name(Name), RC(RC), Kind(Kind) {}
+  void bind(uint32_t UniqueID, uint32_t Space, uint32_t LowerBound,
+            uint32_t Size) {
+    Binding.UniqueID = UniqueID;
+    Binding.Space = Space;
+    Binding.LowerBound = LowerBound;
+    Binding.Size = Size;
+  }
+  void setUAV(bool GloballyCoherent, bool HasCounter, bool IsROV) {
+    assert(isUAV() && "Not a UAV");
+    UAVFlags.GloballyCoherent = GloballyCoherent;
+    UAVFlags.HasCounter = HasCounter;
+    UAVFlags.IsROV = IsROV;
+  }
+  void setCBuffer(uint32_t Size) {
+    assert(isCBuffer() && "Not a CBuffer");
+    CBufferSize = Size;
+  }
+  void setSampler(dxil::SamplerType Ty) { SamplerTy = Ty; }
+  void setStruct(uint32_t Stride, MaybeAlign Alignment) {
+    assert(isStruct() && "Not a Struct");
+    Struct.Stride = Stride;
+    Struct.AlignLog2 = Alignment ? Log2(*Alignment) : 0;
+  }
+  void setTyped(dxil::ElementType ElementTy, uint32_t ElementCount) {
+    assert(isTyped() && "Not Typed");
+    Typed.ElementTy = ElementTy;
+    Typed.ElementCount = ElementCount;
+  }
+  void setFeedback(dxil::SamplerFeedbackType Type) {
+    assert(isFeedback() && "Not Feedback");
+    Feedback.Type = Type;
+  }
+  void setMultiSample(uint32_t Count) {
+    assert(isMultiSample() && "Not MultiSampled");
+    MultiSample.Count = Count;
+  }
 
-public:
+  bool operator==(const ResourceInfo &RHS) const;
+
   static ResourceInfo SRV(Value *Symbol, StringRef Name,
                           dxil::ElementType ElementTy, uint32_t ElementCount,
                           dxil::ResourceKind Kind);
   static ResourceInfo RawBuffer(Value *Symbol, StringRef Name);
   static ResourceInfo StructuredBuffer(Value *Symbol, StringRef Name,
-                                       uint32_t Stride, Align Alignment);
+                                       uint32_t Stride, MaybeAlign Alignment);
   static ResourceInfo Texture2DMS(Value *Symbol, StringRef Name,
                                   dxil::ElementType ElementTy,
                                   uint32_t ElementCount, uint32_t SampleCount);
@@ -141,9 +184,9 @@ public:
   static ResourceInfo RWRawBuffer(Value *Symbol, StringRef Name,
                                   bool GloballyCoherent, bool IsROV);
   static ResourceInfo RWStructuredBuffer(Value *Symbol, StringRef Name,
-                                         uint32_t Stride,
-                                         Align Alignment, bool GloballyCoherent,
-                                         bool IsROV, bool HasCounter);
+                                         uint32_t Stride, MaybeAlign Alignment,
+                                         bool GloballyCoherent, bool IsROV,
+                                         bool HasCounter);
   static ResourceInfo RWTexture2DMS(Value *Symbol, StringRef Name,
                                     dxil::ElementType ElementTy,
                                     uint32_t ElementCount, uint32_t SampleCount,
@@ -163,16 +206,6 @@ public:
 
   static ResourceInfo Sampler(Value *Symbol, StringRef Name,
                               dxil::SamplerType SamplerTy);
-
-  void bind(uint32_t UniqueID, uint32_t Space, uint32_t LowerBound,
-            uint32_t Size) {
-    Binding.UniqueID = UniqueID;
-    Binding.Space = Space;
-    Binding.LowerBound = LowerBound;
-    Binding.Size = Size;
-  }
-
-  bool operator==(const ResourceInfo &RHS) const;
 
   MDTuple *getAsMetadata(LLVMContext &Ctx) const;
 

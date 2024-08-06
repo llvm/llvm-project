@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_STREAMING %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_LOCALLY %s
 
+// REQUIRES: aarch64-registered-target
+
 #define __ai __attribute__((always_inline))
 __ai void inlined_fn(void) {}
 __ai void inlined_fn_streaming_compatible(void) __arm_streaming_compatible {}

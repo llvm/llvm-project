@@ -14,6 +14,7 @@
 #include "dyadic_float.h"
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/big_int.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -320,7 +321,7 @@ totalorder(T x, T y) {
   StorageType x_u = x_bits.uintval();
   StorageType y_u = y_bits.uintval();
 
-  using signed_t = cpp::make_signed_t<StorageType>;
+  using signed_t = make_integral_or_big_int_signed_t<StorageType>;
   signed_t x_signed = static_cast<signed_t>(x_u);
   signed_t y_signed = static_cast<signed_t>(y_u);
 

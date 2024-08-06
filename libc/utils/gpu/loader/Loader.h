@@ -53,8 +53,9 @@ struct end_args_t {
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.
-int load(int argc, char **argv, char **evnp, void *image, size_t size,
-         const LaunchParameters &params, bool print_resource_usage);
+int load(int argc, const char **argv, const char **evnp, void *image,
+         size_t size, const LaunchParameters &params,
+         bool print_resource_usage);
 
 /// Return \p V aligned "upwards" according to \p Align.
 template <typename V, typename A> inline V align_up(V val, A align) {
@@ -63,7 +64,7 @@ template <typename V, typename A> inline V align_up(V val, A align) {
 
 /// Copy the system's argument vector to GPU memory allocated using \p alloc.
 template <typename Allocator>
-void *copy_argument_vector(int argc, char **argv, Allocator alloc) {
+void *copy_argument_vector(int argc, const char **argv, Allocator alloc) {
   size_t argv_size = sizeof(char *) * (argc + 1);
   size_t str_size = 0;
   for (int i = 0; i < argc; ++i)
@@ -90,9 +91,9 @@ void *copy_argument_vector(int argc, char **argv, Allocator alloc) {
 
 /// Copy the system's environment to GPU memory allocated using \p alloc.
 template <typename Allocator>
-void *copy_environment(char **envp, Allocator alloc) {
+void *copy_environment(const char **envp, Allocator alloc) {
   int envc = 0;
-  for (char **env = envp; *env != 0; ++env)
+  for (const char **env = envp; *env != 0; ++env)
     ++envc;
 
   return copy_argument_vector(envc, envp, alloc);
