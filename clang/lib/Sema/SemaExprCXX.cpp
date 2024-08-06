@@ -9083,8 +9083,7 @@ Sema::CorrectDelayedTyposInExpr(Expr *E, VarDecl *InitDecl,
 
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
                                      bool DiscardedValue, bool IsConstexpr,
-                                     bool IsTemplateArgument,
-                                     bool PerformsCheckCompletedExpr) {
+                                     bool IsTemplateArgument) {
   ExprResult FullExpr = FE;
 
   if (!FullExpr.get())
@@ -9118,8 +9117,7 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   if (FullExpr.isInvalid())
     return ExprError();
 
-  if (PerformsCheckCompletedExpr)
-    CheckCompletedExpr(FullExpr.get(), CC, IsConstexpr);
+  CheckCompletedExpr(FullExpr.get(), CC, IsConstexpr);
 
   // At the end of this full expression (which could be a deeply nested
   // lambda), if there is a potential capture within the nested lambda,
