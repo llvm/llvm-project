@@ -576,8 +576,12 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.daddf128
+    libc.src.math.ddivf128
+    libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
+    libc.src.math.dsubf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
@@ -617,6 +621,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundevenf128
     libc.src.math.roundf128
     libc.src.math.scalbnf128
+    libc.src.math.setpayloadf128
     libc.src.math.sqrtf128
     libc.src.math.totalorderf128
     libc.src.math.totalordermagf128

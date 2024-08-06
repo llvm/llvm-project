@@ -1730,14 +1730,24 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       thread_sp = memory_thread_sp;
 
     if (exc_type != 0) {
-      const size_t exc_data_size = exc_data.size();
-
-      thread_sp->SetStopInfo(
-          StopInfoMachException::CreateStopReasonWithMachException(
-              *thread_sp, exc_type, exc_data_size,
-              exc_data_size >= 1 ? exc_data[0] : 0,
-              exc_data_size >= 2 ? exc_data[1] : 0,
-              exc_data_size >= 3 ? exc_data[2] : 0));
+      // For thread plan async interrupt, creating stop info on the
+      // original async interrupt request thread instead. If interrupt thread
+      // does not exist anymore we fallback to current signal receiving thread
+      // instead.
+      ThreadSP interrupt_thread;
+      if (m_interrupt_tid != LLDB_INVALID_THREAD_ID)
+        interrupt_thread = HandleThreadAsyncInterrupt(signo, description);
+      if (interrupt_thread)
+        thread_sp = interrupt_thread;
+      else {
+        const size_t exc_data_size = exc_data.size();
+        thread_sp->SetStopInfo(
+            StopInfoMachException::CreateStopReasonWithMachException(
+                *thread_sp, exc_type, exc_data_size,
+                exc_data_size >= 1 ? exc_data[0] : 0,
+                exc_data_size >= 2 ? exc_data[1] : 0,
+                exc_data_size >= 3 ? exc_data[2] : 0));
+      }
     } else {
       bool handled = false;
       bool did_exec = false;
@@ -1936,9 +1946,20 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                   *thread_sp, signo, description.c_str()));
           }
         }
-        if (!handled)
-          thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-              *thread_sp, signo, description.c_str()));
+        if (!handled) {
+          // For thread plan async interrupt, creating stop info on the
+          // original async interrupt request thread instead. If interrupt
+          // thread does not exist anymore we fallback to current signal
+          // receiving thread instead.
+          ThreadSP interrupt_thread;
+          if (m_interrupt_tid != LLDB_INVALID_THREAD_ID)
+            interrupt_thread = HandleThreadAsyncInterrupt(signo, description);
+          if (interrupt_thread)
+            thread_sp = interrupt_thread;
+          else
+            thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithSignal(
+                *thread_sp, signo, description.c_str()));
+        }
       }
 
       if (!description.empty()) {
@@ -1954,6 +1975,24 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       }
     }
   }
+  return thread_sp;
+}
+
+ThreadSP
+ProcessGDBRemote::HandleThreadAsyncInterrupt(uint8_t signo,
+                                             const std::string &description) {
+  ThreadSP thread_sp;
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+    thread_sp = m_thread_list_real.FindThreadByProtocolID(m_interrupt_tid,
+                                                          /*can_update=*/false);
+  }
+  if (thread_sp)
+    thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithInterrupt(
+        *thread_sp, signo, description.c_str()));
+  // Clear m_interrupt_tid regardless we can find original interrupt thread or
+  // not.
+  m_interrupt_tid = LLDB_INVALID_THREAD_ID;
   return thread_sp;
 }
 
