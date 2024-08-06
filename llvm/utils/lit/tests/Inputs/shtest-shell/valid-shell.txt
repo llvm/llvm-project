@@ -169,3 +169,23 @@
 # NPLONG-CAT-OUTPUT-NEXT: M-HM-IM-JM-KM-LM-MM-NM-OM-PM-QM-RM-SM-TM-UM-VM-WM-XM-YM-ZM-[
 # NPLONG-CAT-OUTPUT-NEXT: M-\M-]M-^M-_M-`M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-o
 # NPLONG-CAT-OUTPUT-NEXT: M-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-zM-{M-|M-}M-~M-^?
+#
+## Check cat command with -e option.
+## -e will convert text to ^ and M- notation and append a '$' to each new line.
+#
+# RUN: cat -e %S/cat_nonprinting.bin \
+# RUN: | FileCheck --check-prefix=NPE-CAT-OUTPUT --implicit-check-not={{.}} --match-full-lines --strict-whitespace %s
+# NPE-CAT-OUTPUT:^@^A^B^C^D^E^F^G	^H$
+# NPE-CAT-OUTPUT-NEXT:^K^L^M^N^O^P^Q^R^S$
+# NPE-CAT-OUTPUT-NEXT:^T^U^V^W^X^Y^Z^[^\^]^^^_ !"#$%&'$
+# NPE-CAT-OUTPUT-NEXT:()*+,-./0123456789:;$
+# NPE-CAT-OUTPUT-NEXT:<=>?@ABCDEFGHIJKLMNO$
+# NPE-CAT-OUTPUT-NEXT:PQRSTUVWXYZ[\]^_`abc$
+# NPE-CAT-OUTPUT-NEXT:defghijklmnopqrstuvw$
+# NPE-CAT-OUTPUT-NEXT:xyz{|}~^?M-^@M-^AM-^BM-^CM-^DM-^EM-^FM-^GM-^HM-^IM-^JM-^K$
+# NPE-CAT-OUTPUT-NEXT:M-^LM-^MM-^NM-^OM-^PM-^QM-^RM-^SM-^TM-^UM-^VM-^WM-^XM-^YM-^ZM-^[M-^\M-^]M-^^M-^_$
+# NPE-CAT-OUTPUT-NEXT:M- M-!M-"M-#M-$M-%M-&M-'M-(M-)M-*M-+M-,M--M-.M-/M-0M-1M-2M-3$
+# NPE-CAT-OUTPUT-NEXT:M-4M-5M-6M-7M-8M-9M-:M-;M-<M-=M->M-?M-@M-AM-BM-CM-DM-EM-FM-G$
+# NPE-CAT-OUTPUT-NEXT:M-HM-IM-JM-KM-LM-MM-NM-OM-PM-QM-RM-SM-TM-UM-VM-WM-XM-YM-ZM-[$
+# NPE-CAT-OUTPUT-NEXT:M-\M-]M-^M-_M-`M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-o$
+# NPE-CAT-OUTPUT-NEXT:M-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-zM-{M-|M-}M-~M-^?$

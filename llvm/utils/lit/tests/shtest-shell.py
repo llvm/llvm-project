@@ -649,6 +649,6 @@
 #      CHECK: false
 #      CHECK: ***
 
-# CHECK: PASS: shtest-shell :: valid-shell.txt
+# CHECK: FAIL: shtest-shell :: valid-shell.txt
 # CHECK: Unresolved Tests (1)
-# CHECK: Failed Tests (38)
+# CHECK: Failed Tests (39)
