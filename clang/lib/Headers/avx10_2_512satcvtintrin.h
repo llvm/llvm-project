@@ -18,53 +18,53 @@
   ((__m512i)__builtin_ia32_vcvtnebf162ibs512((__v32bf)(__m512bh)(A)))
 
 #define _mm512_mask_ipcvtnebf16_epi8(W, U, A)                                  \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvtnebf16_epi8(A),                     \
-      (__v32hi)(__m512i)(W)))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvtnebf16_epi8(A),    \
+                                       (__v32hi)(__m512i)(W)))
 
 #define _mm512_maskz_ipcvtnebf16_epi8(U, A)                                    \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvtnebf16_epi8(A),                     \
-      (__v32hi)_mm512_setzero_si512()))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvtnebf16_epi8(A),    \
+                                       (__v32hi)_mm512_setzero_si512()))
 
 #define _mm512_ipcvtnebf16_epu8(A)                                             \
   ((__m512i)__builtin_ia32_vcvtnebf162iubs512((__v32bf)(__m512bh)(A)))
 
 #define _mm512_mask_ipcvtnebf16_epu8(W, U, A)                                  \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvtnebf16_epu8(A),                     \
-      (__v32hi)(__m512i)(W)))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvtnebf16_epu8(A),    \
+                                       (__v32hi)(__m512i)(W)))
 
 #define _mm512_maskz_ipcvtnebf16_epu8(U, A)                                    \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvtnebf16_epu8(A),                     \
-      (__v32hi)_mm512_setzero_si512()))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvtnebf16_epu8(A),    \
+                                       (__v32hi)_mm512_setzero_si512()))
 
 #define _mm512_ipcvttnebf16_epi8(A)                                            \
   ((__m512i)__builtin_ia32_vcvttnebf162ibs512((__v32bf)(__m512bh)(A)))
 
 #define _mm512_mask_ipcvttnebf16_epi8(W, U, A)                                 \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvttnebf16_epi8(A),                    \
-      (__v32hi)(__m512i)(W)))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvttnebf16_epi8(A),   \
+                                       (__v32hi)(__m512i)(W)))
 
 #define _mm512_maskz_ipcvttnebf16_epi8(U, A)                                   \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvttnebf16_epi8(A),                    \
-      (__v32hi)_mm512_setzero_si512()))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvttnebf16_epi8(A),   \
+                                       (__v32hi)_mm512_setzero_si512()))
 
 #define _mm512_ipcvttnebf16_epu8(A)                                            \
   ((__m512i)__builtin_ia32_vcvttnebf162iubs512((__v32bf)(__m512bh)(A)))
 
 #define _mm512_mask_ipcvttnebf16_epu8(W, U, A)                                 \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvttnebf16_epu8(A),                    \
-      (__v32hi)(__m512i)(W)))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvttnebf16_epu8(A),   \
+                                       (__v32hi)(__m512i)(W)))
 
 #define _mm512_maskz_ipcvttnebf16_epu8(U, A)                                   \
-  ((__m512i)__builtin_ia32_selectw_512(                                        \
-      (__mmask32)(U), (__v32hi)_mm512_ipcvttnebf16_epu8(A),                    \
-      (__v32hi)_mm512_setzero_si512()))
+  ((__m512i)__builtin_ia32_selectw_512((__mmask32)(U),                         \
+                                       (__v32hi)_mm512_ipcvttnebf16_epu8(A),   \
+                                       (__v32hi)_mm512_setzero_si512()))
 
 #define _mm512_ipcvtph_epi8(A)                                                 \
   ((__m512i)__builtin_ia32_vcvtph2ibs512_mask(                                 \
@@ -257,7 +257,7 @@
 
 #define _mm512_ipcvtt_roundps_epi8(A, S)                                       \
   ((__m512i)__builtin_ia32_vcvttps2ibs512_mask(                                \
-      (__v16sf)(__m512h)(A), (__v16su)_mm512_setzero_si512(), (__mmask16)-1, \
+      (__v16sf)(__m512h)(A), (__v16su)_mm512_setzero_si512(), (__mmask16)-1,   \
       S))
 
 #define _mm512_mask_ipcvtt_roundps_epi8(W, U, A, S)                            \
@@ -271,7 +271,7 @@
 
 #define _mm512_ipcvttps_epu8(A)                                                \
   ((__m512i)__builtin_ia32_vcvttps2iubs512_mask(                               \
-      (__v16sf)(__m512h)(A), (__v16su)_mm512_setzero_si512(), (__mmask16)-1, \
+      (__v16sf)(__m512h)(A), (__v16su)_mm512_setzero_si512(), (__mmask16)-1,   \
       _MM_FROUND_CUR_DIRECTION))
 
 #define _mm512_mask_ipcvttps_epu8(W, U, A)                                     \
@@ -286,7 +286,7 @@
 
 #define _mm512_ipcvtt_roundps_epu8(A, S)                                       \
   ((__m512i)__builtin_ia32_vcvttps2iubs512_mask(                               \
-      (__v16sf)(__m512h)(A), (__v16su)_mm512_setzero_si512(), (__mmask16)-1, \
+      (__v16sf)(__m512h)(A), (__v16su)_mm512_setzero_si512(), (__mmask16)-1,   \
       S))
 
 #define _mm512_mask_ipcvtt_roundps_epu8(W, U, A, S)                            \
