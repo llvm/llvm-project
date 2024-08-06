@@ -142,7 +142,7 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (Args.hasArg(options::OPT_static))
-    CmdArgs.push_back("--static");
+    CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
   if (Args.hasArg(options::OPT_shared))
@@ -241,7 +241,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (Args.hasArg(options::OPT_static))
-    CmdArgs.push_back("--static");
+    CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
   if (Args.hasArg(options::OPT_shared))

@@ -3,7 +3,7 @@
 // RUN: %clang --target=x86_64-scei-ps4 -static %s -### 2>&1 | FileCheck --check-prefixes=CHECK-STATIC %s
 
 // CHECK-STATIC: {{ld(\.exe)?}}"
-// CHECK-STATIC-SAME: "--static"
+// CHECK-STATIC-SAME: "-static"
 
 // Test the driver's control over the JustMyCode behavior with linker flags.
 
