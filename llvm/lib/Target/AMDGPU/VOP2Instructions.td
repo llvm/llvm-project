@@ -1648,6 +1648,9 @@ multiclass VOP2_Real_FULL_with_name_gfx11_gfx12<bits<6> op, string opName,
 multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
   VOP2Only_Real<GFX11Gen, op>, VOP2Only_Real<GFX12Gen, op>;
 
+multiclass VOP2_V_PK_FMAC_F16_gfx11_gfx12<bits<6> op> :
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>;
+
 multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
 
@@ -1694,7 +1697,8 @@ defm V_SUBREV_CO_CI_U32 :
 
 defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11_gfx12<0x02f,
   "V_CVT_PKRTZ_F16_F32", "v_cvt_pk_rtz_f16_f32">;
-defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx11_gfx12<0x03c>;
+
+defm V_PK_FMAC_F16     : VOP2_V_PK_FMAC_F16_gfx11_gfx12<0x03c>;
 
 defm V_ADD_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x032, "v_add_f16">;
 defm V_ADD_F16_fake16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x032, "v_add_f16">;
@@ -1964,6 +1968,11 @@ multiclass VOP2e_Real_gfx10<bits<6> op, string opName, string asmName> :
   VOP2be_Real_dpp_gfx10<op, opName, asmName>,
   VOP2be_Real_dpp8_gfx10<op, opName, asmName>;
 
+multiclass VOP2_FMAC_Real<bits<6> op> :
+  VOP2_Real_e32_gfx10<op>,
+  VOP2_Real_dpp_gfx10<op>,
+  VOP2_Real_dpp8_gfx10<op>;
+
 multiclass VOP2_Real_gfx10<bits<6> op> :
   VOP2_Real_e32_gfx10<op>, VOP2_Real_e64_gfx10<op>,
   VOP2_Real_sdwa_gfx10<op>, VOP2_Real_dpp_gfx10<op>, VOP2_Real_dpp8_gfx10<op>;
@@ -2007,9 +2016,7 @@ defm V_MAX_F16         : VOP2_Real_gfx10<0x039>;
 defm V_MIN_F16         : VOP2_Real_gfx10<0x03a>;
 defm V_LDEXP_F16       : VOP2_Real_gfx10<0x03b>;
 
-let IsSingle = 1 in {
-  defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
-}
+defm V_PK_FMAC_F16     : VOP2_FMAC_Real<0x03c>;
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
