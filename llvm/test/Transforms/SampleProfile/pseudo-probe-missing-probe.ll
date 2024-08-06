@@ -1,10 +1,9 @@
-; RUN: opt < %s -passes=sample-profile --overwrite-existing-weights -sample-profile-file=%S/Inputs/pseudo-probe-missing-probe.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile --overwrite-existing-weights -sample-profile-file=%S/Inputs/pseudo-probe-missing-probe.prof -S | FileCheck %s
 
-; CHECK:  edge %while.body -> %if.then probability is 0x7212005e / 0x80000000 = 89.12% [HOT edge]
-; CHECK:  edge %while.body -> %if.else probability is 0x0dedffa2 / 0x80000000 = 10.88%
-
-; CHECK-NOT:  edge %while.body -> %if.then probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NOT:  edge %while.body -> %if.else probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK:  br i1 %tobool, label %if.then, label %if.else, !dbg ![[#]], !prof ![[#PROF:]]
+; CHECK:  [[#PROF]] = !{!"branch_weights", i32 14904, i32 1820}
+; Verify the else branch is not set to a zero count
+; CHECK-NOT:  [[#PROF]] = !{!"branch_weights", i32 16724, i32 0}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

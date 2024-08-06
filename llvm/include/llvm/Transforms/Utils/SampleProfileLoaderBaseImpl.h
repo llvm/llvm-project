@@ -461,8 +461,13 @@ SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
     return std::error_code();
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
-  if (!FS)
+  if (!FS) {
+    // If we can't find the function samples for a probe, it could be due to the
+    // probe is later optimized away or the inlining context is mismatced. We
+    // treat it as unknown, leaving it to profile inference instead of forcing a
+    // zero count.
     return std::error_code();
+  }
 
   auto R = FS->findSamplesAt(Probe->Id, Probe->Discriminator);
   if (R) {
