@@ -23,7 +23,7 @@ def LLVM_Dialect : Dialect {
 
   let discardableAttrs = (ins
     /// Attribute encoding size and type of GPU workgroup attributions.
-    "WorkgroupAttribAttr":$workgroup_attrib
+    "WorkgroupAttributionAttr":$workgroup_attribution
   );
 
   let extraClassDeclaration = [{

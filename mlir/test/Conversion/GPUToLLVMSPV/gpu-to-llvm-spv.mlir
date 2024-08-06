@@ -418,7 +418,7 @@ gpu.module @kernels {
 // -----
 
 gpu.module @kernels {
-// CHECK-LABEL:           llvm.func spir_kernelcc @kernel_with_private_attribs(
+// CHECK-LABEL:           llvm.func spir_kernelcc @kernel_with_private_attributions(
 // CHECK-SAME:                %[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: i16) attributes {gpu.kernel} {
 
 // Private attribution is converted to an llvm.alloca
@@ -444,7 +444,7 @@ gpu.module @kernels {
 
 // CHECK:                %[[VAL_17:.*]] = llvm.insertvalue %[[VAL_15]], %[[VAL_16]][0]
 // CHECK:                llvm.insertvalue %[[VAL_15]], %[[VAL_17]][1]
-  gpu.func @kernel_with_private_attribs(%arg0: f32, %arg1: i16)
+  gpu.func @kernel_with_private_attributions(%arg0: f32, %arg1: i16)
       private(%arg2: memref<32xf32>, %arg3: memref<16xi16>)
       kernel {
     gpu.return
@@ -452,10 +452,10 @@ gpu.module @kernels {
 
 // Workgroup attributions are converted to an llvm.ptr<3> argument
 
-// CHECK-LABEL:        llvm.func spir_kernelcc @kernel_with_workgoup_attribs(
+// CHECK-LABEL:        llvm.func spir_kernelcc @kernel_with_workgoup_attributions(
 // CHECK-SAME:             %[[VAL_27:.*]]: f32, %[[VAL_28:.*]]: i16,
-// CHECK-SAME:             %[[VAL_29:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<32 : i64, f32>},
-// CHECK-SAME:             %[[VAL_30:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i16>}) attributes {gpu.kernel} {
+// CHECK-SAME:             %[[VAL_29:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<32 : i64, f32>},
+// CHECK-SAME:             %[[VAL_30:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<16 : i64, i16>}) attributes {gpu.kernel} {
 
 // MemRef descriptor built from new argument
 
@@ -472,7 +472,7 @@ gpu.module @kernels {
 
 // CHECK:                %[[VAL_42:.*]] = llvm.insertvalue %[[VAL_30]], %[[VAL_41]][0]
 // CHECK:                llvm.insertvalue %[[VAL_30]], %[[VAL_42]][1]
-  gpu.func @kernel_with_workgoup_attribs(%arg0: f32, %arg1: i16)
+  gpu.func @kernel_with_workgoup_attributions(%arg0: f32, %arg1: i16)
       workgroup(%arg2: memref<32xf32, 3>, %arg3: memref<16xi16, 3>)
       kernel {
     gpu.return
@@ -481,9 +481,9 @@ gpu.module @kernels {
 // Check with both private and workgroup attributions. Simply check additional
 // arguments and a llvm.alloca are present.
 
-// CHECK-LABEL:        llvm.func spir_kernelcc @kernel_with_both_attribs(
-// CHECK-64-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i64, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<8 : i64, f32>}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i64>}) attributes {gpu.kernel} {
-// CHECK-32-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i32, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<8 : i64, f32>}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attrib = #llvm.mlir.workgroup_attrib<16 : i64, i32>}) attributes {gpu.kernel} {
+// CHECK-LABEL:        llvm.func spir_kernelcc @kernel_with_both_attributions(
+// CHECK-64-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i64, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<8 : i64, f32>}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<16 : i64, i64>}) attributes {gpu.kernel} {
+// CHECK-32-SAME:          %[[VAL_52:.*]]: f32, %[[VAL_53:.*]]: i16, %[[VAL_54:.*]]: i32, %[[VAL_55:.*]]: i32, %[[VAL_56:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<8 : i64, f32>}, %[[VAL_57:.*]]: !llvm.ptr<3> {llvm.noalias, llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<16 : i64, i32>}) attributes {gpu.kernel} {
 
 // CHECK:                %[[VAL_79:.*]] = llvm.mlir.constant(32 : i64) : i64
 // CHECK:                %[[VAL_80:.*]] = llvm.alloca %[[VAL_79]] x i32 : (i64) -> !llvm.ptr
@@ -491,7 +491,7 @@ gpu.module @kernels {
 // CHECK:                %[[VAL_91:.*]] = llvm.mlir.constant(32 : i64) : i64
 // CHECK-64:             %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i64 : (i64) -> !llvm.ptr
 // CHECK-32:             %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i32 : (i64) -> !llvm.ptr
-  gpu.func @kernel_with_both_attribs(%arg0: f32, %arg1: i16, %arg2: i32, %arg3: index)
+  gpu.func @kernel_with_both_attributions(%arg0: f32, %arg1: i16, %arg2: i32, %arg3: index)
       workgroup(%arg4: memref<8xf32, 3>, %arg5: memref<16xindex, 3>)
       private(%arg6: memref<32xi32>, %arg7: memref<32xindex>)
       kernel {

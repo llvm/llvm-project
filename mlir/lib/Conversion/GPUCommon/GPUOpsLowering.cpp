@@ -42,12 +42,12 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         rewriter.getType<LLVM::LLVMPointerType>(workgroupAddrSpace);
     SmallVector<Type> argTypes(numAttributions, workgroupPtrType);
 
-    // Attributes: noalias, llvm.mlir.workgroup_attrib_size(<size>)
+    // Attributes: noalias, llvm.mlir.workgroup_attribution(<size>, <type>)
     std::array attrs{
         rewriter.getNamedAttr(LLVM::LLVMDialect::getNoAliasAttrName(),
                               rewriter.getUnitAttr()),
         rewriter.getNamedAttr(
-            getDialect().getWorkgroupAttribAttrHelper().getName(),
+            getDialect().getWorkgroupAttributionAttrHelper().getName(),
             rewriter.getUnitAttr()),
     };
     SmallVector<DictionaryAttr> argAttrs;
@@ -61,7 +61,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         return failure();
       TypeAttr type = TypeAttr::get(llvmElementType);
       attrs.back().setValue(
-          rewriter.getAttr<LLVM::WorkgroupAttribAttr>(numElements, type));
+          rewriter.getAttr<LLVM::WorkgroupAttributionAttr>(numElements, type));
       argAttrs.push_back(rewriter.getDictionaryAttr(attrs));
     }
 
@@ -322,7 +322,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       copyPointerAttribute(
           LLVM::LLVMDialect::getDereferenceableOrNullAttrName());
       copyPointerAttribute(
-          LLVM::LLVMDialect::WorkgroupAttribAttrHelper::getNameStr());
+          LLVM::LLVMDialect::WorkgroupAttributionAttrHelper::getNameStr());
     }
   }
   rewriter.eraseOp(gpuFuncOp);
