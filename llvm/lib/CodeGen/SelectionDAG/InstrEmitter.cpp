@@ -1065,14 +1065,17 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Create the new machine instruction.
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II);
 
+  // Transfer IR flags from the SDNode to the MachineInstr
+  MachineInstr *MI = MIB.getInstr();
+  const SDNodeFlags Flags = Node->getFlags();
+  if (Flags.hasUnpredictable())
+    MI->setFlag(MachineInstr::MIFlag::Unpredictable);
+
   // Add result register values for things that are defined by this
   // instruction.
   if (NumResults) {
     CreateVirtualRegisters(Node, MIB, II, IsClone, IsCloned, VRBaseMap);
 
-    // Transfer any IR flags from the SDNode to the MachineInstr
-    MachineInstr *MI = MIB.getInstr();
-    const SDNodeFlags Flags = Node->getFlags();
     if (Flags.hasNoSignedZeros())
       MI->setFlag(MachineInstr::MIFlag::FmNsz);
 
@@ -1105,9 +1108,6 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasNoFPExcept())
       MI->setFlag(MachineInstr::MIFlag::NoFPExcept);
-
-    if (Flags.hasUnpredictable())
-      MI->setFlag(MachineInstr::MIFlag::Unpredictable);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the
