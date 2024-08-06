@@ -8,8 +8,6 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 
-// leak-no-diagnostics
-
 // RUN: %clang_analyze_cc1 -std=c++11 -DLEAKS -fblocks %s \
 // RUN:   -verify=mismatch \
 // RUN:   -analyzer-checker=core \
@@ -60,14 +58,14 @@ void testFreeOpNew() {
   void *p = operator new(0);
   free(p);
   // mismatch-warning@-1{{Memory allocated by 'operator new' should be deallocated by 'delete', not 'free()'}}
-}
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 void testFreeNewExpr() {
   int *p = new int;
   free(p);
   // mismatch-warning@-1{{Memory allocated by 'new' should be deallocated by 'delete', not 'free()'}}
   free(p);
-}
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 void testObjcFreeNewed() {
   int *p = new int;
