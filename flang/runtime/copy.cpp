@@ -48,9 +48,9 @@ struct CopyDescriptor {
 
   // Increment the toAt_ and fromAt_ subscripts to the next
   // element.
-  RT_API_ATTRS void incrementSubscripts(Terminator &terminator) {
+  RT_API_ATTRS void IncrementSubscripts(Terminator &terminator) {
     // This method must not be called for copy descriptors
-    // using external non-modifiable subscript storages.
+    // using external non-modifiable subscript storage.
     RUNTIME_CHECK(terminator, toAt_ == toAtPtr_ && fromAt_ == fromAtPtr_);
     to_.IncrementSubscripts(toAt_);
     from_.IncrementSubscripts(fromAt_);
@@ -151,7 +151,7 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     std::memcpy(toPtr, fromPtr, curTo.ElementBytes());
     --elements;
     if (elements != 0) {
-      currentCopy.incrementSubscripts(terminator);
+      currentCopy.IncrementSubscripts(terminator);
     }
 
     // Deep copy allocatable and automatic components if any.
