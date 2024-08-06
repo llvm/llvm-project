@@ -358,5 +358,8 @@ considered for standardization. Please post on the
 | device extension             | `'ompx_hold' map type modifier                                                    | :good:`prototyped`       | D106509, D106510                                       |
 |                              | <https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#ompx-hold>`_          |                          |                                                        |
 +------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
+| device extension             | `'ompx_bare' clause on 'target teams' construct                                   | :good:`prototyped`       | #66844, #70612                                         |
+|                              | <https://www.osti.gov/servlets/purl/2205717>`_                                    |                          |                                                        |
++------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
 
 .. _Discourse forums (Runtimes - OpenMP category): https://discourse.llvm.org/c/runtimes/openmp/35

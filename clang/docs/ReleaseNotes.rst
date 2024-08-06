@@ -156,6 +156,7 @@ Bug Fixes in This Version
 
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
+- Fixed a failed assertion when checking required literal types in C context. (#GH101304).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -301,6 +302,7 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
 
 OpenMP Support
 --------------

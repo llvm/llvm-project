@@ -771,7 +771,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 64
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v0, v10
-    V_STORE_IDX undef $vgpr10, $idx1, 0, 1, implicit $exec
+    V_STORE_IDX undef $vgpr10, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
 
     ; reset idx, set msb 0 & dst
     ; GCN-NEXT: s_set_vgpr_frames 0x4100
@@ -783,7 +783,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0x140
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v0, v24 /*v280*/
-    V_STORE_IDX undef $vgpr280, $idx1, 0, 1, implicit $exec
+    V_STORE_IDX undef $vgpr280, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
 
     ; reset idx, set dst msb, set src0 msb
     ; GCN-NEXT: s_set_vgpr_frames 0x4300
@@ -795,11 +795,11 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0x301
     ; ASM-SAME:                                         ;  vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=3 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, v231 /*v999*/
-    renamable $vgpr11 = V_LOAD_IDX $idx1, 999, 1, implicit $exec
+    renamable $vgpr11 = V_LOAD_IDX $idx1, 999, implicit $exec :: (load (s32), addrspace 10)
 
     ; no set_vgpr_frames
     ; GCN-NEXT: v_mov_b32_e32 v12, v230 /*v998*/
-    renamable $vgpr12 = V_LOAD_IDX $idx1, 998, 1, implicit $exec
+    renamable $vgpr12 = V_LOAD_IDX $idx1, 998, implicit $exec :: (load (s32), addrspace 10)
 
     ; FLAT (vaddr, vdata and vdst operands)
 
@@ -812,13 +812,13 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 1
     ; ASM-SAME:                                         ;  vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, v1
-    renamable $vgpr11 = V_LOAD_IDX $idx1, 1, 1, implicit $exec
+    renamable $vgpr11 = V_LOAD_IDX $idx1, 1, implicit $exec :: (load (s32), addrspace 10)
 
     ; set dst idx, reset src0 idx, set src0 msb
     ; GCN-NEXT: s_set_vgpr_frames 0x140
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v1, v24 /*v280*/
-    V_STORE_IDX undef $vgpr280, $idx1, 1, 1, implicit $exec
+    V_STORE_IDX undef $vgpr280, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
 
     ; reset idx, no mod src0 msb
     ; GCN-NEXT: s_set_vgpr_frames 0x100
@@ -834,7 +834,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 2
     ; ASM-SAME:                                         ;  vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, v5
-    renamable $vgpr11 = V_LOAD_IDX $idx2, 5, 1, implicit $exec
+    renamable $vgpr11 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
 
     ; GCN-NEXT: s_set_gpr_idx_u32 idx3, s5
     $idx3 = S_SET_GPR_IDX_U32 undef $sgpr5
@@ -842,7 +842,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0xc0
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=3 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v0, v10
-    V_STORE_IDX undef $vgpr10, $idx3, 0, 1, implicit $exec
+    V_STORE_IDX undef $vgpr10, $idx3, 0, implicit $exec :: (store (s32), addrspace 10)
 
     ; GCN-NEXT: s_set_gpr_idx_u32 idx0, s6
     $idx0 = S_SET_GPR_IDX_U32 undef $sgpr6
@@ -850,7 +850,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, v6
-    renamable $vgpr11 = V_LOAD_IDX $idx0, 6, 1, implicit $exec
+    renamable $vgpr11 = V_LOAD_IDX $idx0, 6, implicit $exec :: (load (s32), addrspace 10)
 
     ; TODO-GFX13 tests with idx bits
     ; Tuple crossing the 256 boundary

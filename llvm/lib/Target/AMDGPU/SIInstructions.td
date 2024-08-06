@@ -1212,13 +1212,13 @@ def SI_WATERFALL_LAST_USE_V8_V : SI_WATERFALL_LAST_USE<VReg_256>;
 // That case and laneshared have different fence semantics.
 def V_LOAD_IDX : VPseudoInstSI <
   (outs VGPR_IDX_DATA_OP:$data_op),
-  (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset, i32imm:$is_laneshared)> {
+  (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
     let mayLoad = 1;
     let UseNamedOperandTable = 1;
 }
 def V_STORE_IDX : VPseudoInstSI <
   (outs),
-  (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset, i32imm:$is_laneshared)> {
+  (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
     let mayStore = 1;
     let UseNamedOperandTable = 1;
 }

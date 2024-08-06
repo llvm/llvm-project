@@ -351,6 +351,80 @@ static void SetupDefaultClangDiagnostics(CompilerInstance &compiler) {
   }
 }
 
+/// Returns a string representing current ABI.
+///
+/// \param[in] target_arch
+///     The target architecture.
+///
+/// \return
+///     A string representing target ABI for the current architecture.
+static std::string GetClangTargetABI(const ArchSpec &target_arch) {
+  std::string abi;
+
+  if (target_arch.IsMIPS()) {
+    switch (target_arch.GetFlags() & ArchSpec::eMIPSABI_mask) {
+    case ArchSpec::eMIPSABI_N64:
+      abi = "n64";
+      break;
+    case ArchSpec::eMIPSABI_N32:
+      abi = "n32";
+      break;
+    case ArchSpec::eMIPSABI_O32:
+      abi = "o32";
+      break;
+    default:
+      break;
+    }
+  }
+  return abi;
+}
+
+static void SetupTargetOpts(CompilerInstance &compiler,
+                            lldb_private::Target const &target) {
+  Log *log = GetLog(LLDBLog::Expressions);
+  ArchSpec target_arch = target.GetArchitecture();
+
+  const auto target_machine = target_arch.GetMachine();
+  if (target_arch.IsValid()) {
+    std::string triple = target_arch.GetTriple().str();
+    compiler.getTargetOpts().Triple = triple;
+    LLDB_LOGF(log, "Using %s as the target triple",
+              compiler.getTargetOpts().Triple.c_str());
+  } else {
+    // If we get here we don't have a valid target and just have to guess.
+    // Sometimes this will be ok to just use the host target triple (when we
+    // evaluate say "2+3", but other expressions like breakpoint conditions and
+    // other things that _are_ target specific really shouldn't just be using
+    // the host triple. In such a case the language runtime should expose an
+    // overridden options set (3), below.
+    compiler.getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
+    LLDB_LOGF(log, "Using default target triple of %s",
+              compiler.getTargetOpts().Triple.c_str());
+  }
+  // Now add some special fixes for known architectures: Any arm32 iOS
+  // environment, but not on arm64
+  if (compiler.getTargetOpts().Triple.find("arm64") == std::string::npos &&
+      compiler.getTargetOpts().Triple.find("arm") != std::string::npos &&
+      compiler.getTargetOpts().Triple.find("ios") != std::string::npos) {
+    compiler.getTargetOpts().ABI = "apcs-gnu";
+  }
+  // Supported subsets of x86
+  if (target_machine == llvm::Triple::x86 ||
+      target_machine == llvm::Triple::x86_64) {
+    compiler.getTargetOpts().FeaturesAsWritten.push_back("+sse");
+    compiler.getTargetOpts().FeaturesAsWritten.push_back("+sse2");
+  }
+
+  // Set the target CPU to generate code for. This will be empty for any CPU
+  // that doesn't really need to make a special
+  // CPU string.
+  compiler.getTargetOpts().CPU = target_arch.GetClangTargetCPU();
+
+  // Set the target ABI
+  if (std::string abi = GetClangTargetABI(target_arch); !abi.empty())
+    compiler.getTargetOpts().ABI = std::move(abi);
+}
+
 //===----------------------------------------------------------------------===//
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
@@ -395,12 +469,6 @@ ClangExpressionParser::ClangExpressionParser(
   // Defaults to lldb::eLanguageTypeUnknown.
   lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
 
-  std::string abi;
-  ArchSpec target_arch;
-  target_arch = target_sp->GetArchitecture();
-
-  const auto target_machine = target_arch.GetMachine();
-
   // If the expression is being evaluated in the context of an existing stack
   // frame, we introspect to see if the language runtime is available.
 
@@ -419,45 +487,7 @@ ClangExpressionParser::ClangExpressionParser(
 
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
-  if (target_arch.IsValid()) {
-    std::string triple = target_arch.GetTriple().str();
-    m_compiler->getTargetOpts().Triple = triple;
-    LLDB_LOGF(log, "Using %s as the target triple",
-              m_compiler->getTargetOpts().Triple.c_str());
-  } else {
-    // If we get here we don't have a valid target and just have to guess.
-    // Sometimes this will be ok to just use the host target triple (when we
-    // evaluate say "2+3", but other expressions like breakpoint conditions and
-    // other things that _are_ target specific really shouldn't just be using
-    // the host triple. In such a case the language runtime should expose an
-    // overridden options set (3), below.
-    m_compiler->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
-    LLDB_LOGF(log, "Using default target triple of %s",
-              m_compiler->getTargetOpts().Triple.c_str());
-  }
-  // Now add some special fixes for known architectures: Any arm32 iOS
-  // environment, but not on arm64
-  if (m_compiler->getTargetOpts().Triple.find("arm64") == std::string::npos &&
-      m_compiler->getTargetOpts().Triple.find("arm") != std::string::npos &&
-      m_compiler->getTargetOpts().Triple.find("ios") != std::string::npos) {
-    m_compiler->getTargetOpts().ABI = "apcs-gnu";
-  }
-  // Supported subsets of x86
-  if (target_machine == llvm::Triple::x86 ||
-      target_machine == llvm::Triple::x86_64) {
-    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse");
-    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse2");
-  }
-
-  // Set the target CPU to generate code for. This will be empty for any CPU
-  // that doesn't really need to make a special
-  // CPU string.
-  m_compiler->getTargetOpts().CPU = target_arch.GetClangTargetCPU();
-
-  // Set the target ABI
-  abi = GetClangTargetABI(target_arch);
-  if (!abi.empty())
-    m_compiler->getTargetOpts().ABI = abi;
+  SetupTargetOpts(*m_compiler, *target_sp);
 
   // 3. Create and install the target on the compiler.
   m_compiler->createDiagnostics();
@@ -465,18 +495,24 @@ ClangExpressionParser::ClangExpressionParser(
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
 
-  auto target_info = TargetInfo::CreateTargetInfo(
-      m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
-  if (log) {
-    LLDB_LOGF(log, "Target datalayout string: '%s'",
-              target_info->getDataLayoutString());
-    LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
-    LLDB_LOGF(log, "Target vector alignment: %d",
-              target_info->getMaxVectorAlign());
-  }
-  m_compiler->setTarget(target_info);
+  if (auto *target_info = TargetInfo::CreateTargetInfo(
+          m_compiler->getDiagnostics(),
+          m_compiler->getInvocation().TargetOpts)) {
+    if (log) {
+      LLDB_LOGF(log, "Target datalayout string: '%s'",
+                target_info->getDataLayoutString());
+      LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
+      LLDB_LOGF(log, "Target vector alignment: %d",
+                target_info->getMaxVectorAlign());
+    }
+    m_compiler->setTarget(target_info);
+  } else {
+    if (log)
+      LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
+                m_compiler->getTargetOpts().Triple.c_str());
 
-  assert(m_compiler->hasTarget());
+    lldbassert(false && "Failed to create TargetInfo.");
+  }
 
   // 4. Set language options.
   lldb::LanguageType language = expr.Language().AsLanguageType();
@@ -1177,28 +1213,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   adapter->ResetManager();
 
   return num_errors;
-}
-
-std::string
-ClangExpressionParser::GetClangTargetABI(const ArchSpec &target_arch) {
-  std::string abi;
-
-  if (target_arch.IsMIPS()) {
-    switch (target_arch.GetFlags() & ArchSpec::eMIPSABI_mask) {
-    case ArchSpec::eMIPSABI_N64:
-      abi = "n64";
-      break;
-    case ArchSpec::eMIPSABI_N32:
-      abi = "n32";
-      break;
-    case ArchSpec::eMIPSABI_O32:
-      abi = "o32";
-      break;
-    default:
-      break;
-    }
-  }
-  return abi;
 }
 
 /// Applies the given Fix-It hint to the given commit.

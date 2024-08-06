@@ -16,7 +16,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds [70 x float], ptr addrspace(10) @exchange, i32 17, i32 %i.024
   ; CHECK: [[SFR0:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 %1, 2, implicit-def dead $scc
   ; CHECK-NEXT: [[ADD0:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[SFR0]], 1190, implicit-def dead $scc
-  ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[ADD0]], 0, 1, implicit $exec
+  ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[ADD0]], 0, implicit $exec
   ; SCRATCH: [[LOAD:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR {{%[0-9]+}}, 4760, 0, implicit $exec, implicit $flat_scr
   %0 = load float, ptr addrspace(10) %arrayidx, align 4, !tbaa !4
   %rem = urem i32 %i.024, 10
@@ -36,7 +36,7 @@ for.body8:                                        ; preds = %for.body, %for.body
   %2 = extractelement <10 x float> %1, i64 %idxprom10
   %arrayidx13 = getelementptr inbounds [70 x float], ptr addrspace(10) @exchange, i32 5, i32 %i3.025
   ; CHECK: [[SFR1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 %27, 2, implicit-def dead $scc
-  ; CHECK-NEXT: V_STORE_IDX {{%[0-9]+}}, [[SFR1]], 350, 1, implicit $exec
+  ; CHECK-NEXT: V_STORE_IDX {{%[0-9]+}}, [[SFR1]], 350, implicit $exec
   ; SCRATCH: SCRATCH_STORE_DWORD_SADDR killed {{%[0-9]+}}, {{%[0-9]+}}, 1400, 0, implicit $exec, implicit $flat_scr
   store float %2, ptr addrspace(10) %arrayidx13, align 4, !tbaa !4
   %inc15 = add nuw nsw i32 %i3.025, 1

@@ -23,14 +23,14 @@ entry:
 ; CHECK: SCRATCH_STORE_DWORDX4_SADDR
 ; VIDX: [[OFF1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 48
 ; VIDX-NEXT: [[SFR1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[OFF1]], 2, implicit-def dead $scc
-; VIDX-NEXT: [[MATA:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[SFR1]], 0, 1, implicit $exec
+; VIDX-NEXT: [[MATA:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[SFR1]], 0, implicit $exec
 ; VIDX-NEXT: [[OFF2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 32
 ; VIDX-NEXT: [[SFR2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[OFF2]], 2, implicit-def dead $scc
-; VIDX-NEXT: [[MATB:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[SFR2]], 0, 1, implicit $exec
+; VIDX-NEXT: [[MATB:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[SFR2]], 0, implicit $exec
 ; VIDX-NEXT: early-clobber [[MATD:%[0-9]+]]:vreg_256_align2 = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, [[MATA]], 8, [[MATB]], 8, 0, 0, 0, implicit $exec
 ; VIDX-NEXT: [[OFF3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
 ; VIDX-NEXT: [[SFR3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[OFF3]], 2, implicit-def dead $scc
-; VIDX-NEXT: V_STORE_IDX [[MATD]], [[SFR3]], 0, 1, implicit $exec
+; VIDX-NEXT: V_STORE_IDX [[MATD]], [[SFR3]], 0, implicit $exec
   ret void
 }
 

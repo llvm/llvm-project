@@ -25,10 +25,10 @@ body:             |
     %18:sreg_32_xexec_hi = S_LSHR_B32 %13, 2, implicit-def dead $scc
     %15:sreg_32_xexec_hi = S_LSHL_B32 killed %8, %9, implicit-def dead $scc
     %19:sreg_32_xexec_hi = S_LSHR_B32 %15, 2, implicit-def dead $scc
-    %11:vgpr_32 = V_LOAD_IDX %16, 0, 1, implicit $exec
-    V_STORE_IDX %11, %17, 0, 1, implicit $exec
-    %14:vgpr_32 = V_LOAD_IDX %18, 0, 1, implicit $exec
-    V_STORE_IDX %14, %19, 0, 1, implicit $exec
+    %11:vgpr_32 = V_LOAD_IDX %16, 0, implicit $exec :: (load (s32), addrspace 10)
+    V_STORE_IDX %11, %17, 0, implicit $exec :: (store (s32), addrspace 10)
+    %14:vgpr_32 = V_LOAD_IDX %18, 0, implicit $exec :: (load (s32), addrspace 10)
+    V_STORE_IDX %14, %19, 0, implicit $exec :: (store (s32), addrspace 10)
     ; CHECK: $idx1 = S_SET_GPR_IDX_U32
     ; CHECK: $idx3 = S_SET_GPR_IDX_U32
     ; CHECK: $idx2 = S_SET_GPR_IDX_U32
