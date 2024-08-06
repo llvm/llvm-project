@@ -177,7 +177,11 @@ public:
   T &operator[](uptr UNUSED Idx) { UNREACHABLE("Unsupported!"); }
 };
 
-template <typename Config> class MapAllocatorCache {
+// The default unmap callback is simply scudo::unmap.
+// In testing, a different unmap callback is used to
+// record information about unmaps in the cache
+template <typename Config, void (*unmapCallBack)(MemMapT &) = unmap>
+class MapAllocatorCache {
 public:
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
@@ -245,6 +249,7 @@ public:
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
     u64 Time;
     CachedBlock Entry;
+
     Entry.CommitBase = CommitBase;
     Entry.CommitSize = CommitSize;
     Entry.BlockBegin = BlockBegin;
@@ -289,7 +294,7 @@ public:
         // read Options and when we locked Mutex. We can't insert our entry into
         // the quarantine or the cache because the permissions would be wrong so
         // just unmap it.
-        unmap(Entry.MemMap);
+        unmapCallBack(Entry.MemMap);
         break;
       }
       if (Config::getQuarantineSize() && useMemoryTagging<Config>(Options)) {
@@ -320,7 +325,7 @@ public:
     } while (0);
 
     for (MemMapT &EvictMemMap : EvictionMemMaps)
-      unmap(EvictMemMap);
+      unmapCallBack(EvictMemMap);
 
     if (Interval >= 0) {
       // TODO: Add ReleaseToOS logic to LRU algorithm
@@ -422,7 +427,7 @@ public:
     for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
       if (Quarantine[I].isValid()) {
         MemMapT &MemMap = Quarantine[I].MemMap;
-        unmap(MemMap);
+        unmapCallBack(MemMap);
         Quarantine[I].invalidate();
       }
     }
@@ -516,7 +521,7 @@ private:
     }
     for (uptr I = 0; I < N; I++) {
       MemMapT &MemMap = MapInfo[I];
-      unmap(MemMap);
+      unmapCallBack(MemMap);
     }
   }
 
