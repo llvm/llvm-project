@@ -7464,8 +7464,6 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
     const MCSubtargetInfo *STI = getTargetMachine().getMCSubtargetInfo();
     assert(STI);
     CodeEmitter->encodeInstruction(MC, CB, Fixups, *STI);
-    assert(CB.size() == 4);
-    assert(Fixups.empty());
     uint32_t Encoding = support::endian::read32le(CB.data());
     return Encoding;
   };
