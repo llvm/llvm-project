@@ -30,6 +30,4 @@ class TestSwiftClangImporterExplicitNoImplicit(TestBase):
                     substrs=["hidden"])
         self.filecheck('platform shell cat "%s"' % log, __file__)
 #       CHECK-NOT: IMPLICIT-CLANG-MODULE-CACHE/{{.*}}/SwiftShims-{{.*}}.pcm
-#       CHECK: Turning off implicit Clang modules
 #       CHECK: IMPLICIT-CLANG-MODULE-CACHE/{{.*}}/Hidden-{{.*}}.pcm
-#       CHECK: Turning on implicit Clang modules

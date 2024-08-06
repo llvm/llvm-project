@@ -16,17 +16,24 @@ class TestSwiftPrivateImport(TestBase):
         os.unlink(self.getBuildArtifact("Invisible.swiftmodule"))
         os.unlink(self.getBuildArtifact("Invisible.swiftinterface"))
 
-        if lldb.remote_platform:
-            wd = lldb.remote_platform.GetWorkingDirectory()
-            filename = 'libInvisible.dylib'
-            err = lldb.remote_platform.Put(
-                lldb.SBFileSpec(self.getBuildArtifact(filename)),
-                lldb.SBFileSpec(os.path.join(wd, filename)))
-            self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
-
+        log = self.getBuildArtifact("types.log")
+        self.expect('log enable lldb types -f "%s"' % log)
         lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'),
-            extra_images=['Library'])
+            extra_images=['Library', 'Invisible'])
+
+        precise = self.dbg.GetSetting('symbols.swift-precise-compiler-invocation').GetBooleanValue()
+        if precise:
+            # Test that importing the expression context (i.e., the module
+            # "a") pulls in the explicit dependencies, but not their
+            # private imports.  This comes before the other checks,
+            # because type reconstruction will still trigger an import of
+            # the "Invisible" module that we can't prevent later one.
+            self.expect("expression 1+1")
+            self.filecheck('platform shell cat "%s"' % log, __file__)
+#           CHECK:  Module import remark: loaded module 'Library'
+#           CHECK-NOT: Module import remark: loaded module 'Invisible'
+
         self.expect("fr var -d run -- x", substrs=["(Invisible.InvisibleStruct)"])
-        # FIXME: This crashes LLDB with a Swift DESERIALIZATION FAILURE.
-        # self.expect("fr var -d run -- y", substrs=["(Any)"])
+        self.expect("fr var -d run -- y", substrs=["(Library.Conforming)",
+                                                   "conforming"])
