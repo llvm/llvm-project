@@ -661,6 +661,8 @@ SetupImportStdModuleLangOpts(CompilerInstance &compiler,
   // FIXME: We should use the driver to derive this for us.
   // ClangModulesDeclVendor already parses the SDKSettings for the purposes of
   // this check.
+  // FIXME: Instead of using include_dirs here, we should use DW_AT_LLVM_sdk
+  // and look up a matching local SDK using HostInfo.
   lang_opts.BuiltinHeadersInSystemModules =
       !sdkSupportsBuiltinModules(triple, include_dirs);
 
