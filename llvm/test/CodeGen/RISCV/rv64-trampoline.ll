@@ -28,7 +28,7 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    addi a0, a0, 919
 ; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    addi a1, sp, 40
+; RV64-NEXT:    addi a1, sp, 24
 ; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    addi s1, sp, 8
 ; RV64-NEXT:    call __clear_cache
@@ -59,7 +59,7 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LINUX-NEXT:    slli a0, a0, 32
 ; RV64-LINUX-NEXT:    addi a0, a0, 919
 ; RV64-LINUX-NEXT:    sd a0, 8(sp)
-; RV64-LINUX-NEXT:    addi a1, sp, 40
+; RV64-LINUX-NEXT:    addi a1, sp, 24
 ; RV64-LINUX-NEXT:    addi a0, sp, 8
 ; RV64-LINUX-NEXT:    addi s1, sp, 8
 ; RV64-LINUX-NEXT:    li a2, 0

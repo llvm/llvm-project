@@ -7521,11 +7521,12 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 
   SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 
-  // Compute end of trampoline.
-  SDValue EndOfTrmp = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                                  DAG.getConstant(32, dl, MVT::i64));
+  // Compute end of instructions of trampoline.
+  SDValue EndOfTrmp =
+      DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                  DAG.getConstant(StaticChainOffset, dl, MVT::i64));
 
-  // Call clear cache on the trampoline buffer.
+  // Call clear cache on the trampoline instructions.
   SDValue Chain = DAG.getNode(ISD::CLEAR_CACHE, dl, MVT::Other, StoreToken,
                               Trmp, EndOfTrmp);
 
