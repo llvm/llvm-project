@@ -62,6 +62,14 @@ E.g.
 - ``std::hermite(unsigned n, T x)`` for ``n >= 128``
 
 
+`[stringbuf.cons] <http://eel.is/c++draft/stringbuf.cons>`_ Whether sequence pointers are initialized to null pointers
+----------------------------------------------------------------------------------------------------------------------
+
+Libc++ does not initialize the pointers to null pointers. It resizes the buffer
+to its capacity and uses that size. This means the SSO buffer of
+``std::string`` is used as initial output buffer.
+
+
 Listed in the index of implementation-defined behavior
 ======================================================
 

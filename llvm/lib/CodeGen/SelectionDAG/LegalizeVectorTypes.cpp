@@ -147,6 +147,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::FLDEXP:
+  case ISD::ABDS:
+  case ISD::ABDU:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -1233,6 +1235,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::MUL: case ISD::VP_MUL:
   case ISD::MULHS:
   case ISD::MULHU:
+  case ISD::ABDS:
+  case ISD::ABDU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
@@ -4368,6 +4372,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::MUL: case ISD::VP_MUL:
   case ISD::MULHS:
   case ISD::MULHU:
+  case ISD::ABDS:
+  case ISD::ABDU:
   case ISD::OR: case ISD::VP_OR:
   case ISD::SUB: case ISD::VP_SUB:
   case ISD::XOR: case ISD::VP_XOR:
@@ -7299,14 +7305,14 @@ static std::optional<EVT> findMemType(SelectionDAG &DAG,
   unsigned WidenEltWidth = WidenEltVT.getSizeInBits();
   unsigned AlignInBits = Align*8;
 
-  // If we have one element to load/store, return it.
   EVT RetVT = WidenEltVT;
-  if (!Scalable && Width == WidenEltWidth)
-    return RetVT;
-
   // Don't bother looking for an integer type if the vector is scalable, skip
   // to vector types.
   if (!Scalable) {
+    // If we have one element to load/store, return it.
+    if (Width == WidenEltWidth)
+      return RetVT;
+
     // See if there is larger legal integer than the element type to load/store.
     for (EVT MemVT : reverse(MVT::integer_valuetypes())) {
       unsigned MemVTWidth = MemVT.getSizeInBits();

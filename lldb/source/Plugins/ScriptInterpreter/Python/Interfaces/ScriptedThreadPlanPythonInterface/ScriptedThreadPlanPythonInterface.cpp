@@ -26,7 +26,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::python;
 
-LLDB_PLUGIN_DEFINE(ScriptedThreadPlanPythonInterface)
+LLDB_PLUGIN_DEFINE_ADV(ScriptedThreadPlanPythonInterface, ScriptInterpreterPythonScriptedThreadPlanPythonInterface)
 
 ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)

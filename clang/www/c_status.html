@@ -306,7 +306,10 @@ conformance.</p>
           glibc</a>, <a href="https://git.musl-libc.org/cgit/musl/tree/include/stdc-predef.h">
           musl</a> will define the macro regardless of compiler support unless
           the compiler defines <code>__GCC_IEC_559</code>, which Clang does not
-          currently define.
+          currently define.<br>
+          Additionally, Clang intentionally will not conform to Annex F on
+          32-bit x86 without SSE2 due to the behavior of floating-point
+          operations in x87.
         </details>
       </td>
     </tr>
@@ -501,7 +504,14 @@ conformance.</p>
     <tr>
       <td>Wide function returns (alternate proposal)</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1396.htm">N1396</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">
+        <details><summary>Yes*</summary>
+        Clang conforms to this paper on all targets except 32-bit x86 without
+        SSE2. However, Clang does not claim conformance to Annex F on any
+        target and does not intend to ever conform to Annex F on that specific
+        target, so no changes are needed to conform to this paper.
+        </details>
+      </td>
     </tr>
     <tr id="alignment">
       <td rowspan="3">Alignment</td>

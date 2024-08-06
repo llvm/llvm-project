@@ -22,12 +22,12 @@
 ; ASM-NEXT: .word 3221225473
 ; ASM-NEXT: .word 16
 ; ASM-NEXT: .xword 268435458
-; ASM-NEXT: .xword 85
+; ASM-NEXT: .xword 341
 
 ; OBJ: Displaying notes found in: .note.gnu.property
 ; OBJ-NEXT:   Owner                 Data size	Description
 ; OBJ-NEXT:   GNU                   0x00000018	NT_GNU_PROPERTY_TYPE_0 (property note)
-; OBJ-NEXT:   AArch64 PAuth ABI core info: platform 0x10000002 (llvm_linux), version 0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, !PointerAuthELFGOT)
+; OBJ-NEXT:   AArch64 PAuth ABI core info: platform 0x10000002 (llvm_linux), version 0x155 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, !PointerAuthInitFiniAddressDiscrimination, PointerAuthELFGOT)
 
 ; ERR: either both or no 'aarch64-elf-pauthabi-platform' and 'aarch64-elf-pauthabi-version' module flags must be present
 

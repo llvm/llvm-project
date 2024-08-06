@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginScriptedPlatformPythonInterface PLUGIN
+add_lldb_library(lldbPluginScriptInterpreterPythonScriptedPlatformPythonInterface PLUGIN
 
   ScriptedPlatformPythonInterface.cpp
 
@@ -7,6 +7,7 @@ add_lldb_library(lldbPluginScriptedPlatformPythonInterface PLUGIN
     lldbHost
     lldbInterpreter
     lldbTarget
+    lldbPluginScriptInterpreterPython
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
 

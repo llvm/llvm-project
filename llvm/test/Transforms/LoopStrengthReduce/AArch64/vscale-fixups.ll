@@ -384,27 +384,31 @@ for.exit:
   ret void
 }
 
-;; This test demonstrates an incorrect MUL VL address calculation. Here there
-;; are two writes that should be `16 * vscale * vscale` apart, however,
-;; loop-strength-reduce has ignored the second `vscale` and offset the second
-;; write by `#4, mul vl` which is an offset of `16 * vscale` dropping a vscale.
+;; Here are two writes that should be `16 * vscale * vscale` apart, so MUL VL
+;; addressing cannot be used to offset the second write, as for example,
+;; `#4, mul vl` would only be an offset of `16 * vscale` (dropping a vscale).
 define void @vscale_squared_offset(ptr %alloc) #0 {
 ; COMMON-LABEL: vscale_squared_offset:
 ; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    rdvl x9, #1
 ; COMMON-NEXT:    fmov z0.s, #4.00000000
 ; COMMON-NEXT:    mov x8, xzr
-; COMMON-NEXT:    cntw x9
+; COMMON-NEXT:    lsr x9, x9, #4
 ; COMMON-NEXT:    fmov z1.s, #8.00000000
+; COMMON-NEXT:    cntw x10
 ; COMMON-NEXT:    ptrue p0.s, vl1
-; COMMON-NEXT:    cmp x8, x9
+; COMMON-NEXT:    umull x9, w9, w9
+; COMMON-NEXT:    lsl x9, x9, #6
+; COMMON-NEXT:    cmp x8, x10
 ; COMMON-NEXT:    b.ge .LBB6_2
 ; COMMON-NEXT:  .LBB6_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    add x11, x0, x9
 ; COMMON-NEXT:    st1w { z0.s }, p0, [x0]
 ; COMMON-NEXT:    add x8, x8, #1
-; COMMON-NEXT:    st1w { z1.s }, p0, [x0, #4, mul vl]
+; COMMON-NEXT:    st1w { z1.s }, p0, [x11]
 ; COMMON-NEXT:    addvl x0, x0, #1
-; COMMON-NEXT:    cmp x8, x9
+; COMMON-NEXT:    cmp x8, x10
 ; COMMON-NEXT:    b.lt .LBB6_1
 ; COMMON-NEXT:  .LBB6_2: // %for.exit
 ; COMMON-NEXT:    ret

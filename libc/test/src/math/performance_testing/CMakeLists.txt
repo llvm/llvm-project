@@ -176,6 +176,17 @@ add_perf_binary(
 )
 
 add_perf_binary(
+  expf16_perf
+  SRCS
+    expf16_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.expf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
   fabsf_perf
   SRCS
     fabsf_perf.cpp
@@ -418,6 +429,28 @@ add_perf_binary(
     libc.src.math.copysignf16
     libc.src.math.fabsf
     libc.src.math.fabsf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  max_min_funcs_perf
+  SRCS
+    max_min_funcs_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fmaxf
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximumf
+    libc.src.math.fmaximumf16
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fminf
+    libc.src.math.fminf16
+    libc.src.math.fminimumf
+    libc.src.math.fminimumf16
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf16
   COMPILE_OPTIONS
     -fno-builtin
 )

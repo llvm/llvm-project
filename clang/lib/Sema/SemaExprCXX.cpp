@@ -711,7 +711,7 @@ getUuidAttrOfType(Sema &SemaRef, QualType QT,
                   llvm::SmallSetVector<const UuidAttr *, 1> &UuidAttrs) {
   // Optionally remove one level of pointer, reference or array indirection.
   const Type *Ty = QT.getTypePtr();
-  if (QT->isPointerType() || QT->isReferenceType())
+  if (QT->isPointerOrReferenceType())
     Ty = QT->getPointeeType().getTypePtr();
   else if (QT->isArrayType())
     Ty = Ty->getBaseElementTypeUnsafe();
@@ -3806,6 +3806,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                                      Overaligned, DeleteName);
     }
 
+    if (OperatorDelete->isInvalidDecl())
+      return ExprError();
+
     MarkFunctionReferenced(StartLoc, OperatorDelete);
 
     // Check access and ambiguity of destructor if we're going to call it.
@@ -4979,7 +4982,6 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsArray:
   case UTT_IsBoundedArray:
   case UTT_IsPointer:
-  case UTT_IsNullPointer:
   case UTT_IsReferenceable:
   case UTT_IsLvalueReference:
   case UTT_IsRvalueReference:
@@ -5238,8 +5240,6 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isIncompleteArrayType();
   case UTT_IsPointer:
     return T->isAnyPointerType();
-  case UTT_IsNullPointer:
-    return T->isNullPtrType();
   case UTT_IsLvalueReference:
     return T->isLValueReferenceType();
   case UTT_IsRvalueReference:
@@ -6026,6 +6026,32 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
 
     return cast<CXXRecordDecl>(rhsRecord->getDecl())
       ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+  }
+  case BTT_IsVirtualBaseOf: {
+    const RecordType *BaseRecord = LhsT->getAs<RecordType>();
+    const RecordType *DerivedRecord = RhsT->getAs<RecordType>();
+
+    if (!BaseRecord || !DerivedRecord) {
+      DiagnoseVLAInCXXTypeTrait(Self, Lhs,
+                                tok::kw___builtin_is_virtual_base_of);
+      DiagnoseVLAInCXXTypeTrait(Self, Rhs,
+                                tok::kw___builtin_is_virtual_base_of);
+      return false;
+    }
+
+    if (BaseRecord->isUnionType() || DerivedRecord->isUnionType())
+      return false;
+
+    if (!BaseRecord->isStructureOrClassType() ||
+        !DerivedRecord->isStructureOrClassType())
+      return false;
+
+    if (Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                                 diag::err_incomplete_type))
+      return false;
+
+    return cast<CXXRecordDecl>(DerivedRecord->getDecl())
+        ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
   }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);
@@ -9304,14 +9330,13 @@ Sema::BuildExprRequirement(
     //     be satisfied.
     TemplateParameterList *TPL =
         ReturnTypeRequirement.getTypeConstraintTemplateParameterList();
-    QualType MatchedType =
-        Context.getReferenceQualifiedType(E).getCanonicalType();
+    QualType MatchedType = Context.getReferenceQualifiedType(E);
     llvm::SmallVector<TemplateArgument, 1> Args;
     Args.push_back(TemplateArgument(MatchedType));
 
     auto *Param = cast<TemplateTypeParmDecl>(TPL->getParam(0));
 
-    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/false);
+    MultiLevelTemplateArgumentList MLTAL(Param, Args, /*Final=*/true);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
     const TypeConstraint *TC = Param->getTypeConstraint();
     assert(TC && "Type Constraint cannot be null here");

@@ -48,12 +48,21 @@ STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
 STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
 STATISTIC(NumReturnedArg, "Number of arguments inferred as returned");
 STATISTIC(NumWillReturn, "Number of functions inferred as willreturn");
+STATISTIC(NumCold, "Number of functions inferred as cold");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
     return false;
   F.setDoesNotAccessMemory();
   ++NumReadNone;
+  return true;
+}
+
+static bool setIsCold(Function &F) {
+  if (F.hasFnAttribute(Attribute::Cold))
+    return false;
+  F.addFnAttr(Attribute::Cold);
+  ++NumCold;
   return true;
 }
 
@@ -270,6 +279,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setNonLazyBind(F);
 
   switch (TheLibFunc) {
+  case LibFunc_nan:
+  case LibFunc_nanf:
+  case LibFunc_nanl:
   case LibFunc_strlen:
   case LibFunc_strnlen:
   case LibFunc_wcslen:
@@ -1086,6 +1098,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotThrow(F);
+    break;
+  case LibFunc_abort:
+    Changed |= setIsCold(F);
     break;
   // int __nvvm_reflect(const char *)
   case LibFunc_nvvm_reflect:

@@ -21,6 +21,39 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  realloc
+  SRCS
+    realloc.cpp
+  HDRS
+    ../realloc.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.__support.GPU.allocator
+)
+
+add_entrypoint_object(
+  calloc
+  SRCS
+    calloc.cpp
+  HDRS
+    ../calloc.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.__support.GPU.allocator
+)
+
+add_entrypoint_object(
+  aligned_alloc
+  SRCS
+    aligned_alloc.cpp
+  HDRS
+    ../aligned_alloc.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.__support.GPU.allocator
+)
+
+add_entrypoint_object(
   abort
   SRCS
     abort.cpp

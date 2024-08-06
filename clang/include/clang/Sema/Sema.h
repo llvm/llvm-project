@@ -2214,6 +2214,7 @@ public:
     FST_FreeBSDKPrintf,
     FST_OSTrace,
     FST_OSLog,
+    FST_Syslog,
     FST_Unknown
   };
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
@@ -3455,6 +3456,8 @@ public:
                                     DeclarationName Name, SourceLocation Loc,
                                     TemplateIdAnnotation *TemplateId,
                                     bool IsMemberSpecialization);
+
+  bool checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range);
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
 
