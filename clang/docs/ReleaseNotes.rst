@@ -190,6 +190,7 @@ Bug Fixes to C++ Support
 - Fix init-capture packs having a size of one before being instantiated. (#GH63677)
 - Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
   (#GH99877).
+- Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -332,6 +333,9 @@ OpenMP Support
 Improvements
 ^^^^^^^^^^^^
 - Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
+
+- `num_teams` now accepts multiple expressions when it is used along in ``target teams ompx_bare`` construct.
+  This allows the target region to be launched with multi-dim grid on GPUs.
 
 Additional Information
 ======================
