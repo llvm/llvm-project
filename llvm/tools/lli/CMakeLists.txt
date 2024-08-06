@@ -56,6 +56,6 @@ add_llvm_tool(lli
 
   DEPENDS
   intrinsics_gen
-
-  EXPORT_SYMBOLS
   )
+
+export_executable_symbols(lli)
