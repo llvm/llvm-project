@@ -972,8 +972,15 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // equivalence.
   LocalInstantiationScope ScopeForParameters(S);
   if (auto *FD = DeclInfo.getDecl()->getAsFunction())
-    for (auto *PVD : FD->parameters())
-      ScopeForParameters.InstantiatedLocal(PVD, PVD);
+    for (auto *PVD : FD->parameters()) {
+      if (!PVD->isParameterPack()) {
+        ScopeForParameters.InstantiatedLocal(PVD, PVD);
+        continue;
+      }
+      // Parameter packs should expand to a size-of-1 argument.
+      ScopeForParameters.MakeInstantiatedLocalArgPack(PVD);
+      ScopeForParameters.InstantiatedLocalPackArg(PVD, PVD);
+    }
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
 
