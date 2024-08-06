@@ -9,7 +9,7 @@
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/allocator.h"
 
-namespace Fortran::runtime::cuf {
+namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
@@ -25,4 +25,4 @@ void RTDEF(CUFFreeDesciptor)(
 
 RT_EXT_API_GROUP_END
 }
-} // namespace Fortran::runtime::cuf
+} // namespace Fortran::runtime::cuda
