@@ -63,3 +63,28 @@ struct VS {
   friend class C<Us>::Nested...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
                                  // expected-warning@-1 {{dependent nested name specifier 'C<Us>::' for friend class declaration is not supported; turning off access control for 'VS'}}
 };
+
+namespace length_mismatch {
+struct A {
+  template <typename...>
+  struct Nested {
+    struct Foo{};
+  };
+};
+template <typename ...Ts>
+struct S {
+  template <typename ...Us>
+  struct T {
+    // expected-error@+2 {{pack expansion contains parameter packs 'Ts' and 'Us' that have different lengths (1 vs. 2)}}
+    // expected-error@+1 {{pack expansion contains parameter packs 'Ts' and 'Us' that have different lengths (2 vs. 1)}}
+    friend class Ts::template Nested<Us>::Foo...;
+  };
+};
+
+void f() {
+  S<A>::T<int> s;
+  S<A, A>::T<int, long> s2;
+  S<A>::T<int, long> s3; // expected-note {{in instantiation of}}
+  S<A, A>::T<int> s4; // expected-note {{in instantiation of}}
+}
+}
