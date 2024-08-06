@@ -2123,7 +2123,7 @@ Error Arm64XRelocRef::validate(const COFFObjectFile *Obj) const {
                              "Unaligned ARM64X relocation RVA (" +
                                  Twine(getRVA()) + ")");
   if (Header->PageRVA) {
-    uint64_t IntPtr;
+    uintptr_t IntPtr;
     return Obj->getRvaPtr(getRVA() + getSize(), IntPtr, "ARM64X reloc");
   }
   return Error::success();
