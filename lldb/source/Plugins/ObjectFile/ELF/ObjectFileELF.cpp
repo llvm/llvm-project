@@ -419,19 +419,35 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 ObjectFile *ObjectFileELF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (data_sp && data_sp->GetByteSize() > (llvm::ELF::EI_NIDENT)) {
-    const uint8_t *magic = data_sp->GetBytes();
-    if (ELFHeader::MagicBytesMatch(magic)) {
-      unsigned address_size = ELFHeader::AddressSizeInBytes(magic);
-      if (address_size == 4 || address_size == 8) {
-        std::unique_ptr<ObjectFileELF> objfile_up(
-            new ObjectFileELF(module_sp, data_sp, process_sp, header_addr));
-        ArchSpec spec = objfile_up->GetArchitecture();
-        if (spec && objfile_up->SetModulesArchitecture(spec))
-          return objfile_up.release();
-      }
-    }
-  }
+  if (!data_sp || data_sp->GetByteSize() < (llvm::ELF::EI_NIDENT))
+    return nullptr;
+  const uint8_t *magic = data_sp->GetBytes();
+  if (!ELFHeader::MagicBytesMatch(magic))
+    return nullptr;
+  // Read the ELF header first so we can figure out how many bytes we need
+  // to read to get as least the ELF header + program headers.
+  DataExtractor data;
+  data.SetData(data_sp);
+  elf::ELFHeader hdr;
+  lldb::offset_t offset = 0;
+  if (!hdr.Parse(data, &offset))
+    return nullptr;
+
+  // Make sure the address size is set correctly in the ELF header.
+  if (!hdr.Is32Bit() && !hdr.Is64Bit())
+    return nullptr;
+  // Figure out where the program headers end and read enough bytes to get the
+  // program headers in their entirety.
+  lldb::offset_t end_phdrs = hdr.e_phoff + (hdr.e_phentsize * hdr.e_phnum);
+  if (end_phdrs > data_sp->GetByteSize())
+    data_sp = ReadMemory(process_sp, header_addr, end_phdrs);
+
+  std::unique_ptr<ObjectFileELF> objfile_up(
+      new ObjectFileELF(module_sp, data_sp, process_sp, header_addr));
+  ArchSpec spec = objfile_up->GetArchitecture();
+  if (spec && objfile_up->SetModulesArchitecture(spec))
+    return objfile_up.release();
+
   return nullptr;
 }
 
@@ -876,35 +892,35 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
   for (size_t i = 0; i < m_dynamic_symbols.size(); ++i) {
     const ELFDynamic &symbol = m_dynamic_symbols[i].symbol;
 
-    if (symbol.d_tag == DT_DEBUG) {
-      // Compute the offset as the number of previous entries plus the size of
-      // d_tag.
-      addr_t offset = (i * 2 + 1) * GetAddressByteSize();
-      addr_t file_addr = m_dynamic_base_addr + offset;
-      Address addr;
-      if (addr.ResolveAddressUsingFileSections(file_addr, GetSectionList()))
-        return addr;
-    }
+    if (symbol.d_tag != DT_DEBUG &&
+        symbol.d_tag != DT_MIPS_RLD_MAP &&
+        symbol.d_tag != DT_MIPS_RLD_MAP_REL)
+      continue;
+
+    // Compute the offset as the number of previous entries plus the size of
+    // d_tag.
+    const addr_t offset = (i * 2 + 1) * GetAddressByteSize();
+    const addr_t d_file_addr = m_dynamic_base_addr + offset;
+    Address d_addr;
+    if (d_addr.ResolveAddressUsingFileSections(d_file_addr, GetSectionList()))
+      return Address();
+    if (symbol.d_tag == DT_DEBUG)
+      return d_addr;
+
     // MIPS executables uses DT_MIPS_RLD_MAP_REL to support PIE. DT_MIPS_RLD_MAP
     // exists in non-PIE.
-    else if ((symbol.d_tag == DT_MIPS_RLD_MAP ||
-              symbol.d_tag == DT_MIPS_RLD_MAP_REL) &&
-             target) {
-      SectionSP dynsym_section_sp(section_list->FindSectionByType(
-          eSectionTypeELFDynamicLinkInfo, true));
-      if (!dynsym_section_sp)
-        return Address();
-
-      addr_t offset = (i * 2 + 1) * GetAddressByteSize();
-      addr_t dyn_base = dynsym_section_sp->GetLoadBaseAddress(target);
-      if (dyn_base == LLDB_INVALID_ADDRESS)
+    if ((symbol.d_tag == DT_MIPS_RLD_MAP ||
+         symbol.d_tag == DT_MIPS_RLD_MAP_REL) &&
+         target) {
+      const addr_t d_load_addr = d_addr.GetLoadAddress(target);
+      if (d_load_addr == LLDB_INVALID_ADDRESS)
         return Address();
 
       Status error;
       if (symbol.d_tag == DT_MIPS_RLD_MAP) {
         // DT_MIPS_RLD_MAP tag stores an absolute address of the debug pointer.
         Address addr;
-        if (target->ReadPointerFromMemory(dyn_base + offset, error, addr, true))
+        if (target->ReadPointerFromMemory(d_load_addr, error, addr, true))
           return addr;
       }
       if (symbol.d_tag == DT_MIPS_RLD_MAP_REL) {
@@ -912,18 +928,17 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
         // relative to the address of the tag.
         uint64_t rel_offset;
         rel_offset = target->ReadUnsignedIntegerFromMemory(
-            dyn_base + offset, GetAddressByteSize(), UINT64_MAX, error, true);
+            d_load_addr, GetAddressByteSize(), UINT64_MAX, error, true);
         if (error.Success() && rel_offset != UINT64_MAX) {
           Address addr;
           addr_t debug_ptr_address =
-              dyn_base + (offset - GetAddressByteSize()) + rel_offset;
+              d_load_addr - GetAddressByteSize() + rel_offset;
           addr.SetOffset(debug_ptr_address);
           return addr;
         }
       }
     }
   }
-
   return Address();
 }
 
@@ -3802,9 +3817,9 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
         // the section.
         if (Section *dynstr =
                 section_list->FindSectionByID(header->sh_link).get()) {
-          DataExtractor data;
+        DataExtractor data;
           if (ReadSectionData(dynstr, data))
-            return data;
+          return data;
         }
       }
     }
@@ -3818,20 +3833,27 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
   // When loading and ELF file from memory, only the program headers end up
   // being mapped into memory, and we can find these values in the PT_DYNAMIC
   // segment.
-  if (!IsInMemory())
-    return std::nullopt;
-  ProcessSP process_sp(m_process_wp.lock());
-  if (!process_sp)
-    return std::nullopt;
-
   const ELFDynamic *strtab = FindDynamicSymbol(DT_STRTAB);
   const ELFDynamic *strsz = FindDynamicSymbol(DT_STRSZ);
   if (strtab == nullptr || strsz == nullptr)
     return std::nullopt;
 
-  if (DataBufferSP data_sp =
-          ReadMemory(process_sp, strtab->d_ptr, strsz->d_val))
-    return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
+  if (ProcessSP process_sp = m_process_wp.lock()) {
+    if (DataBufferSP data_sp =
+            ReadMemory(process_sp, strtab->d_ptr, strsz->d_val))
+      return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
+  } else {
+    // We have an ELF file with no section headers or we didn't find the
+    // .dynamic section. Try and find the .dynstr section.
+    Address addr;
+    if (addr.ResolveAddressUsingFileSections(strtab->d_ptr, GetSectionList())) {
+      DataExtractor data;
+      addr.GetSection()->GetSectionData(data);
+      return DataExtractor(data,
+                            strtab->d_ptr - addr.GetSection()->GetFileOffset(),
+                            strsz->d_val);
+    }
+  }
   return std::nullopt;
 }
 
