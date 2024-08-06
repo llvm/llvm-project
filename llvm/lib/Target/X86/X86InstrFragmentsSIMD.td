@@ -833,6 +833,20 @@ def X86vpdpwuuds : SDNode<"X86ISD::VPDPWUUDS", SDTVnni>;
 
 def X86Vmpsadbw : SDNode<"X86ISD::MPSADBW", SDTX86PSADBW>;
 
+// in place saturated cvt fp-to-int
+def X86vcvtp2ibs : SDNode<"X86ISD::CVTP2IBS",  SDTFloatToInt>;
+def X86vcvtp2iubs : SDNode<"X86ISD::CVTP2IUBS",  SDTFloatToInt>;
+
+def X86vcvtp2ibsRnd : SDNode<"X86ISD::CVTP2IBS_RND",  SDTFloatToIntRnd>;
+def X86vcvtp2iubsRnd : SDNode<"X86ISD::CVTP2IUBS_RND",  SDTFloatToIntRnd>;
+
+// in place saturated cvtt fp-to-int staff
+def X86vcvttp2ibs : SDNode<"X86ISD::CVTTP2IBS",  SDTFloatToInt>;
+def X86vcvttp2iubs : SDNode<"X86ISD::CVTTP2IUBS",  SDTFloatToInt>;
+
+def X86vcvttp2ibsSAE : SDNode<"X86ISD::CVTTP2IBS_SAE", SDTFloatToInt>;
+def X86vcvttp2iubsSAE : SDNode<"X86ISD::CVTTP2IUBS_SAE", SDTFloatToInt>;
+
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
 //===----------------------------------------------------------------------===//

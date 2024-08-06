@@ -701,7 +701,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       // Scale by the type size.
       unsigned TypeSize = AllocTypeSize.getFixedValue();
-      LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
+      LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->hasNoUnsignedSignedWrap());
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);
 
