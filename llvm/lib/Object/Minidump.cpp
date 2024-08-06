@@ -156,8 +156,8 @@ MinidumpFile::create(MemoryBufferRef Source) {
       new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap)));
 }
 
-Expected<MinidumpFile::Memory64ListFacade>
-MinidumpFile::getMemory64List() const {
+Expected<iterator_range<MinidumpFile::FallibleMemory64Iterator>>
+MinidumpFile::getMemory64List(Error &Err) const {
   Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
   if (!ListHeader)
     return ListHeader.takeError();
@@ -175,14 +175,7 @@ MinidumpFile::getMemory64List() const {
   if (!Descriptors)
     return Descriptors.takeError();
 
-  uint64_t FileSize = getData().size();
-  uint64_t BaseRVA = ListHeader->BaseRVA;
-  uint64_t Offset = BaseRVA;
-  for (const minidump::MemoryDescriptor_64 &Descriptor : *Descriptors) {
-    Offset += Descriptor.DataSize;
-    if (Offset > FileSize)
-      return createEOFError();
-  }
-
-  return Memory64ListFacade(getData(), *Descriptors, BaseRVA);
+  return make_range(
+    FallibleMemory64Iterator::itr(Memory64Iterator::begin(getData(), *Descriptors, ListHeader->BaseRVA), Err),
+    FallibleMemory64Iterator::end(Memory64Iterator::end()));
 }

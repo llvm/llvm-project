@@ -17,6 +17,8 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
 
+#include <iostream>
+
 namespace llvm {
 namespace object {
 
@@ -140,70 +142,78 @@ public:
     size_t Stride;
   };
 
-  class Memory64ListFacade {
-    struct Memory64Iterator {
-    public:
-      Memory64Iterator(size_t Count, uint64_t BaseRVA,
-                       const Memory64ListFacade *Parent)
-          : Parent(Parent), BaseRVA(BaseRVA), Count(Count) {};
-
-      const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>>
-      operator*() {
-        return Parent->Next(this);
-      }
-
-      bool operator==(const Memory64Iterator &R) const {
-        return Parent == R.Parent && Count == R.Count;
-      }
-
-      bool operator!=(const Memory64Iterator &R) const { return !(*this == R); }
-
-    private:
-      friend class Memory64ListFacade;
-      const Memory64ListFacade *Parent;
-      uint64_t BaseRVA;
-      size_t Count;
-    };
-
+class Memory64Iterator {
   public:
-    Memory64ListFacade(ArrayRef<uint8_t> Storage,
-                       std::vector<minidump::MemoryDescriptor_64> Descriptors,
-                       uint64_t BaseRVA)
-        : BaseRVA(BaseRVA), Storage(Storage),
-          Descriptors(std::move(Descriptors)) {};
-
-    Memory64Iterator begin() const {
-      return Memory64Iterator(0, BaseRVA, this);
+    static Memory64Iterator begin(ArrayRef<uint8_t> Storage, ArrayRef<minidump::MemoryDescriptor_64> Descriptors, uint64_t BaseRVA) {
+      return Memory64Iterator(Storage, Descriptors, BaseRVA);
     }
 
-    Memory64Iterator end() const {
-      return Memory64Iterator(Descriptors.size(), BaseRVA, this);
+    static Memory64Iterator end() {
+      return Memory64Iterator();
     }
 
-    size_t size() const { return Descriptors.size(); }
+    std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> Current;
+
+    bool operator==(const Memory64Iterator &R) const {
+      return isEnd == R.isEnd;
+    }
+
+    bool operator!=(const Memory64Iterator &R) const { return !(*this == R); }
+
+    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> &operator*() const {
+      return Current;
+    }
+
+    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> *operator->() const {
+      return &Current;
+    }
+
+    Error inc() {
+      if (Storage.size() == 0 || Descriptors.size() == 0)
+        return make_error<GenericBinaryError>("No Memory64List Stream", object_error::parse_failed);
+
+      if (Index >= Descriptors.size())
+        return createError("Can't read past of Memory64List Stream");
+
+      const minidump::MemoryDescriptor_64 &Descriptor = Descriptors[Index];
+      if (RVA + Descriptor.DataSize > Storage.size())
+        return make_error<GenericBinaryError>("Memory64 Descriptor exceeds end of file.",
+              object_error::unexpected_eof);
+
+      ArrayRef<uint8_t> Content =
+          Storage.slice(RVA, Descriptor.DataSize);
+      Current = std::make_pair(Descriptor, Content);
+      RVA += Descriptor.DataSize;
+      Index++;
+      if (Index >= Descriptors.size())
+        isEnd = true;
+      return Error::success();
+    }
 
   private:
-    uint64_t BaseRVA;
-    ArrayRef<uint8_t> Storage;
-    std::vector<minidump::MemoryDescriptor_64> Descriptors;
+    Memory64Iterator(ArrayRef<uint8_t> Storage,
+                      ArrayRef<minidump::MemoryDescriptor_64> Descriptors,
+                      uint64_t BaseRVA)
+        : RVA(BaseRVA), Storage(Storage),
+          Descriptors(Descriptors), isEnd(false) {}
+    
+    Memory64Iterator() : RVA(0),
+    Storage(ArrayRef<uint8_t>()), Descriptors(ArrayRef<minidump::MemoryDescriptor_64>()), isEnd(true) {}
 
-    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>>
-    Next(Memory64Iterator *Iterator) const {
-      assert(Descriptors.size() > Iterator->Count);
-      minidump::MemoryDescriptor_64 Descriptor = Descriptors[Iterator->Count];
-      ArrayRef<uint8_t> Content =
-          Storage.slice(Iterator->BaseRVA, Descriptor.DataSize);
-      Iterator->BaseRVA += Descriptor.DataSize;
-      Iterator->Count++;
-      return std::make_pair(Descriptor, Content);
-    }
+    size_t Index = 0;
+    uint64_t RVA;
+    ArrayRef<uint8_t> Storage;
+    ArrayRef<minidump::MemoryDescriptor_64> Descriptors;
+    bool isEnd;
   };
+
+  using FallibleMemory64Iterator = llvm::fallible_iterator<Memory64Iterator>;
 
   /// Returns an iterator that pairs each descriptor with it's respective
   /// content from the Memory64List stream. An error is returned if the file
   /// does not contain a Memory64List stream, or if the descriptor data is
   /// unreadable.
-  Expected<Memory64ListFacade> getMemory64List() const;
+  Expected<iterator_range<FallibleMemory64Iterator>> getMemory64List(Error &Err) const;
 
   /// Returns the list of descriptors embedded in the MemoryInfoList stream. The
   /// descriptors provide properties (e.g. permissions) of interesting regions
@@ -239,7 +249,7 @@ private:
                ArrayRef<minidump::Directory> Streams,
                DenseMap<minidump::StreamType, std::size_t> StreamMap)
       : Binary(ID_Minidump, Source), Header(Header), Streams(Streams),
-        StreamMap(std::move(StreamMap)) {};
+        StreamMap(std::move(StreamMap)) {}
 
   ArrayRef<uint8_t> getData() const {
     return arrayRefFromStringRef(Data.getBuffer());

@@ -9,6 +9,8 @@
 #include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/Support/Allocator.h"
 
+#include <iostream>
+
 using namespace llvm;
 using namespace llvm::MinidumpYAML;
 using namespace llvm::minidump;
@@ -326,6 +328,14 @@ static void streamMapping(yaml::IO &IO, Memory64ListStream &Stream) {
   IO.mapRequired("Memory Ranges", Stream.Entries);
 }
 
+static std::string streamValidate(Memory64ListStream &Stream) {
+  for (auto &Entry : Stream.Entries) {
+    if (Entry.Entry.DataSize < Entry.Content.binary_size())
+      return "Memory region size must be greater or equal to the content size";
+  }
+  return "";
+}
+
 static void streamMapping(yaml::IO &IO, ModuleListStream &Stream) {
   IO.mapRequired("Modules", Stream.Entries);
 }
@@ -374,6 +384,7 @@ void yaml::MappingContextTraits<MemoryDescriptor_64, yaml::BinaryRef>::mapping(
     IO &IO, MemoryDescriptor_64 &Memory, BinaryRef &Content) {
   mapRequiredHex(IO, "Start of Memory Range", Memory.StartOfMemoryRange);
   IO.mapRequired("Content", Content);
+  mapOptional(IO, "Data Size", Memory.DataSize, Content.binary_size());
 }
 
 void yaml::MappingTraits<ThreadListStream::entry_type>::mapping(
@@ -462,10 +473,11 @@ std::string yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
   switch (S->Kind) {
   case MinidumpYAML::Stream::StreamKind::RawContent:
     return streamValidate(cast<RawContentStream>(*S));
+  case MinidumpYAML::Stream::StreamKind::Memory64List:
+    return streamValidate(cast<Memory64ListStream>(*S));
   case MinidumpYAML::Stream::StreamKind::Exception:
   case MinidumpYAML::Stream::StreamKind::MemoryInfoList:
   case MinidumpYAML::Stream::StreamKind::MemoryList:
-  case MinidumpYAML::Stream::StreamKind::Memory64List:
   case MinidumpYAML::Stream::StreamKind::ModuleList:
   case MinidumpYAML::Stream::StreamKind::SystemInfo:
   case MinidumpYAML::Stream::StreamKind::TextContent:
@@ -519,16 +531,29 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
     return std::make_unique<MemoryListStream>(std::move(Ranges));
   }
   case StreamKind::Memory64List: {
-    auto ExpectedList = File.getMemory64List();
+    // Error, unlike expected is true in failure state
+    Error Err = Error::success();
+    // Explicit check on Err so that if we return due to getmemory64list
+    // getting an error, it's not destructed when unchecked.
+    if (Err)
+      return Err;
+    auto ExpectedList = File.getMemory64List(Err);
     if (!ExpectedList)
       return ExpectedList.takeError();
-    object::MinidumpFile::Memory64ListFacade &Memory64List = *ExpectedList;
     std::vector<Memory64ListStream::entry_type> Ranges;
-    for (auto It = Memory64List.begin(); It != Memory64List.end();) {
-      std::pair<MemoryDescriptor_64, ArrayRef<uint8_t>> Pair = *It;
-      Ranges.push_back({Pair.first, Pair.second});
+    for (auto It = ExpectedList->begin(); It != ExpectedList->end(); ++It) {
+      const auto Pair = *It;
+      if (Err.success()) {
+        Ranges.push_back({Pair.first, Pair.second});
+      }
     }
-    return std::make_unique<Memory64ListStream>(std::move(Ranges));
+
+    // If we don't have an error, or if any of the reads succeed, return ranges
+    // this would also work if we have no descriptors.
+    if (!Err || Ranges.size() > 0)
+      return std::make_unique<Memory64ListStream>(std::move(Ranges));
+
+    return Err;
   }
   case StreamKind::ModuleList: {
     auto ExpectedList = File.getModuleList();

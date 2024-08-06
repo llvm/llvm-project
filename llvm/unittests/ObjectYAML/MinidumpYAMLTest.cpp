@@ -355,26 +355,32 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<object::MinidumpFile::Memory64ListFacade> ExpectedMemoryList =
-      File.getMemory64List();
+  Error Err = Error::success();
+  // Explicit Err check
+  ASSERT_FALSE(Err);
+  Expected<iterator_range<object::MinidumpFile::FallibleMemory64Iterator>> ExpectedMemoryList =
+      File.getMemory64List(Err);
 
   ASSERT_THAT_EXPECTED(ExpectedMemoryList, Succeeded());
 
-  object::MinidumpFile::Memory64ListFacade MemoryList = *ExpectedMemoryList;
-  ASSERT_EQ(2u, MemoryList.size());
-
+  iterator_range<object::MinidumpFile::FallibleMemory64Iterator> MemoryList = *ExpectedMemoryList;
   auto Iterator = MemoryList.begin();
+
+  ++Iterator;
+  ASSERT_FALSE(Err);
 
   auto DescOnePair = *Iterator;
   const minidump::MemoryDescriptor_64 &DescOne = DescOnePair.first;
   ASSERT_EQ(0x7FFFFFCF0818283u, DescOne.StartOfMemoryRange);
   ASSERT_EQ(5u, DescOne.DataSize);
 
+  ++Iterator;
+  ASSERT_FALSE(Err);
+
   auto DescTwoPair = *Iterator;
   const minidump::MemoryDescriptor_64 &DescTwo = DescTwoPair.first;
   ASSERT_EQ(0x7FFFFFFF0818283u, DescTwo.StartOfMemoryRange);
   ASSERT_EQ(5u, DescTwo.DataSize);
-
   const std::optional<ArrayRef<uint8_t>> ExpectedContent =
       File.getRawStream(StreamType::Memory64List);
   ASSERT_TRUE(ExpectedContent);
@@ -396,5 +402,5 @@ Streams:
   ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
   ASSERT_EQ(arrayRefFromStringRef("world"), *DescTwoExpectedContentSlice);
 
-  ASSERT_EQ(Iterator, MemoryList.end());
+  ASSERT_TRUE(Iterator == MemoryList.end());
 }
