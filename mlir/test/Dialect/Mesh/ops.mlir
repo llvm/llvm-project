@@ -151,18 +151,6 @@ func.func @mesh_shard_dims_sizes() -> () {
   return
 }
 
-// CHECK-LABEL: func @mesh_shard_op_force
-// CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
-func.func @mesh_shard_op_force(%arg0 : tensor<4x8xf32>) -> (tensor<4x8xf32>, tensor<4x8xf32>) {
-  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh0 split_axes = {{\[\[}}]] : !mesh.sharding
-  %s = mesh.sharding @mesh0 split_axes = [[]] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] force : tensor<4x8xf32>
-  %1 = mesh.shard %arg0 to %s force : tensor<4x8xf32>
-  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] annotate_for_users force : tensor<4x8xf32>
-  %2 = mesh.shard %arg0 to %s annotate_for_users force : tensor<4x8xf32>
-  return %1, %2 : tensor<4x8xf32>, tensor<4x8xf32>
-}
-
 // CHECK-LABEL: func @mesh_shard_shape
 func.func @mesh_shard_shape() {
   // CHECK: %[[C3:.*]] = arith.constant 3 : index
@@ -620,4 +608,25 @@ func.func @shift(
     shift_axis = 2 offset = -2 rotate
     : tensor<2xi8> -> tensor<2xi8>
   return %0 : tensor<2xi8>
+}
+
+// CHECK-LABEL: func @update_halo
+func.func @update_halo(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<12x12xi8>
+    %arg0 : tensor<12x12xi8>) -> (tensor<12x12xi8>, tensor<12x12xi8>) {
+  // CHECK-NEXT: %[[C2:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: mesh.update_halo %[[ARG]] on @mesh0 mesh_axes = [0]
+  // CHECK-SAME: halo_sizes = [2, %c2_i64] : tensor<12x12xi8> ->
+  // CHECK-SAME: tensor<12x12xi8>
+  %c2 = arith.constant 2 : i64
+  %0 = mesh.update_halo %arg0 on @mesh0 mesh_axes = [0]
+    halo_sizes = [2, %c2] : tensor<12x12xi8> -> tensor<12x12xi8>
+  // CHECK-NEXT: mesh.update_halo %[[ARG]] on @mesh0 mesh_axes = [0, 1]
+  // CHECK-SAME: halo_sizes = [2, 2, %[[C2]], 2]
+  // CHECK-SAME: target_halo_sizes = [3, 3, 2, 2] :
+  // CHECK-SAME: tensor<12x12xi8> -> tensor<12x12xi8>
+  %1 = mesh.update_halo %arg0 on @mesh0 mesh_axes = [0, 1]
+    halo_sizes = [2, 2, %c2, 2] target_halo_sizes = [3, 3, 2, 2]
+    : tensor<12x12xi8> -> tensor<12x12xi8>
+  return %0, %1: tensor<12x12xi8>, tensor<12x12xi8>
 }

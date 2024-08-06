@@ -429,59 +429,11 @@ tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   return std::nullopt;
 }
 
-static TypedValue<ShapedType>
-updateHalosInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
-                        TypedValue<ShapedType> sourceShard,
-                        MeshSharding sourceSharding,
-                        MeshSharding targetSharding) {
-  assert(sourceSharding.getMesh() == targetSharding.getMesh());
-  assert(sourceSharding.getSplitAxes() == targetSharding.getSplitAxes());
-
-  SmallVector<MeshAxis> splitMeshAxes;
-  for (auto axis : targetSharding.getSplitAxes()) {
-    assert(axis.size() == 1);
-    splitMeshAxes.emplace_back(axis[0]);
-  }
-  auto res =
-      builder
-          .create<UpdateHaloOp>(
-              sourceShard.getType(), // update halo keeps the source type
-              mesh.getSymName(), splitMeshAxes, sourceShard,
-              sourceSharding.getDynamicHaloSizes(),
-              ::mlir::DenseI64ArrayAttr::get(
-                  builder.getContext(), sourceSharding.getStaticHaloSizes()))
-          .getResult();
-  return cast<TypedValue<ShapedType>>(res);
-}
-
-// Detect if the resharding is a halo update.
-static bool detectUpdateHalosInResharding(MeshSharding sourceSharding,
-                                          MeshSharding targetSharding) {
-  return (sourceSharding.equalSplitAndPartialAxes(targetSharding) &&
-          !targetSharding.getStaticHaloSizes().empty());
-}
-
-static std::optional<std::tuple<TypedValue<ShapedType>, MeshSharding>>
-tryUpdateHalosInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
-                           MeshSharding sourceSharding,
-                           MeshSharding targetSharding,
-                           ShapedType sourceUnshardedShape,
-                           TypedValue<ShapedType> sourceShard) {
-  if (detectUpdateHalosInResharding(sourceSharding, targetSharding)) {
-    return std::make_tuple(updateHalosInResharding(builder, mesh, sourceShard,
-                                                   sourceSharding,
-                                                   targetSharding),
-                           targetSharding);
-  }
-
-  return std::nullopt;
-}
-
 // Handles only resharding on a 1D mesh.
 // Currently the sharded tensor axes must be exactly divisible by the single
 // mesh axis size.
 static TypedValue<ShapedType>
-reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh, bool force,
+reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh,
                 MeshSharding sourceSharding, MeshSharding targetSharding,
                 TypedValue<ShapedType> sourceUnshardedValue,
                 TypedValue<ShapedType> sourceShard) {
@@ -496,13 +448,13 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh, bool force,
       handlePartialAxesDuringResharding(builder, sourceSharding, targetSharding,
                                         sourceShard);
 
-  if (!force && reducedSourceSharding == targetSharding) {
+  if (reducedSourceSharding == targetSharding) {
     return reducedSourceShard;
   }
 
   TypedValue<ShapedType> targetShard;
   MeshSharding actualTargetSharding;
-  if (!force && reducedSourceSharding.getStaticHaloSizes().empty() &&
+  if (reducedSourceSharding.getStaticHaloSizes().empty() &&
       targetSharding.getStaticHaloSizes().empty() &&
       reducedSourceSharding.getStaticShardedDimsSizes().empty() &&
       targetSharding.getStaticShardedDimsSizes().empty()) {
@@ -519,12 +471,6 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh, bool force,
                    sourceUnshardedValue.getType(), reducedSourceShard)) {
       std::tie(targetShard, actualTargetSharding) = tryRes.value();
     }
-  } else if (force) {
-    if (auto tryRes = tryUpdateHalosInResharding(
-            builder, mesh, reducedSourceSharding, targetSharding,
-            sourceUnshardedValue.getType(), reducedSourceShard)) {
-      std::tie(targetShard, actualTargetSharding) = tryRes.value();
-    }
   }
   assert(targetShard && "Did not find any pattern to apply.");
   assert(actualTargetSharding == targetSharding);
@@ -533,14 +479,14 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh, bool force,
 }
 
 TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, MeshOp mesh,
-                               bool force, MeshSharding sourceSharding,
+                               MeshSharding sourceSharding,
                                MeshSharding targetSharding,
                                TypedValue<ShapedType> sourceUnshardedValue,
                                TypedValue<ShapedType> sourceShard) {
   // Resort to handling only 1D meshes since the general case is complicated if
   // it needs to be communication efficient in terms of minimizing the data
   // transfered between devices.
-  return reshardOn1DMesh(builder, mesh, force, sourceSharding, targetSharding,
+  return reshardOn1DMesh(builder, mesh, sourceSharding, targetSharding,
                          sourceUnshardedValue, sourceShard);
 }
 
@@ -551,8 +497,8 @@ TypedValue<ShapedType> reshard(OpBuilder &builder, MeshOp mesh, ShardOp source,
   auto sourceSharding = source.getSharding();
   auto targetSharding = target.getSharding();
   ImplicitLocOpBuilder implicitLocOpBuilder(target->getLoc(), builder);
-  return reshard(implicitLocOpBuilder, mesh, target.getForce(), sourceSharding,
-                 targetSharding, cast<TypedValue<ShapedType>>(source.getSrc()),
+  return reshard(implicitLocOpBuilder, mesh, sourceSharding, targetSharding,
+                 cast<TypedValue<ShapedType>>(source.getSrc()),
                  sourceShardValue);
 }
 

@@ -189,48 +189,6 @@ func.func @incomplete_sharding(
 }
 
 mesh.mesh @mesh_1d_4(shape = 4)
-// CHECK-LABEL: func @update_halo_static
-func.func @update_halo_static(
-  // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<11x16xi8>
-  %in1: tensor<32x16xi8>
-  // CHECK-SAME: -> tensor<11x16xi8> {
-) -> tensor<32x16xi8> {
-  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_4  mesh_axes = [0] halo_sizes = [2, 1] : (tensor<11x16xi8>) -> tensor<11x16xi8>
-  %sin1_sharded1 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<32x16xi8>
-  %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<32x16xi8>
-  // CHECK: return %[[RES]] : tensor<11x16xi8>
-  return %in1_sharded2 : tensor<32x16xi8>
-}
-
-// CHECK-LABEL: func @update_halo_dynamic
-func.func @update_halo_dynamic(
-  // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<?x16xi8>
-  %in1: tensor<?x16xi8>
-  // CHECK-SAME: -> tensor<?x16xi8> {
-) -> tensor<?x16xi8> {
-  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_4  mesh_axes = [0] halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
-  %sin1_sharded1 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<?x16xi8>
-  %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<?x16xi8>
-  // CHECK: return %[[RES]] : tensor<?x16xi8>
-  return %in1_sharded2 : tensor<?x16xi8>
-}
-
-mesh.mesh @mesh_1d_dyn(shape = ?)
-// CHECK-LABEL: func @update_halo_dynamic_mesh
-func.func @update_halo_dynamic_mesh(
-  // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<?x16xi8>
-  %in1: tensor<32x16xi8>
-  // CHECK-SAME: -> tensor<?x16xi8> {
-) -> tensor<32x16xi8> {
-  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_dyn  mesh_axes = [0] halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
-  %sin1_sharded1 = mesh.sharding @mesh_1d_dyn split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<32x16xi8>
-  %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<32x16xi8>
-  // CHECK: return %[[RES]] : tensor<?x16xi8>
-  return %in1_sharded2 : tensor<32x16xi8>
-}
 
 // CHECK-LABEL: func @ew_chain_with_halo
 func.func @ew_chain_with_halo(
