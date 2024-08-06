@@ -3607,6 +3607,45 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  scalbln_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbln_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbln
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  scalblnf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalblnf_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalblnf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  scalblnl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalblnl_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalblnl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   scalblnf16_test
   SUITE
     libc-math-smoke-tests
@@ -3616,6 +3655,19 @@ add_fp_unittest(
     ScalbnTest.h
   DEPENDS
     libc.src.math.scalblnf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  scalblnf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalblnf128_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalblnf128
     libc.src.__support.FPUtil.fp_bits
 )
 

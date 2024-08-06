@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC_MATH_SCALBLNF128_H
 
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-float scalblnf128(float128 x, long n);
+float128 scalblnf128(float128 x, long n);
 
 } // namespace LIBC_NAMESPACE_DECL
 

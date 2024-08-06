@@ -10,4 +10,4 @@
 
 #include "src/math/scalblnf128.h"
 
-LIST_SCALBN_TESTS(float128, LIBC_NAMESPACE::scalblnf128)
+LIST_SCALBN_TESTS(float128, long, LIBC_NAMESPACE::scalblnf128)

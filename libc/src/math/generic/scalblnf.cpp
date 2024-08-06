@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/scalblnf.h"
+#include "hdr/float_macros.h"
+#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
+#if FLT_RADIX != 2
+#error "FLT_RADIX != 2 is not supported."
+#endif
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, scalblnf, (float x, long n)) {
-  // TODO: Implement function.
+  return fputil::ldexp(x, n);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

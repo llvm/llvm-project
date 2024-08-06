@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-float scalbln(double x, long n);
+double scalbln(double x, long n);
 
 } // namespace LIBC_NAMESPACE_DECL
 
