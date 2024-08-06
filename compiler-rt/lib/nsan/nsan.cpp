@@ -470,7 +470,7 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
 
   if (!flags().disable_warnings) {
     GET_CALLER_PC_BP;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     stack.Unwind(pc, bp, nullptr, false);
     if (GetSuppressionForStack(&stack, CheckKind::Consistency)) {
       // FIXME: optionally print.
@@ -637,7 +637,7 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   }
 
   GET_CALLER_PC_BP;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.Unwind(pc, bp, nullptr, false);
 
   if (GetSuppressionForStack(&stack, CheckKind::Fcmp)) {
