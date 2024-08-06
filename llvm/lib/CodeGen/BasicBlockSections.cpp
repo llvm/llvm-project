@@ -396,7 +396,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   // Handle basic block address map after basic block sections are finalized.
   auto R2 = handleBBAddrMap(MF);
 
-  // We renumer blocks, so update the dominator tree we want to preserve.
+  // We renumber blocks, so update the dominator tree we want to preserve.
   if (auto *WP = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
     WP->getDomTree().updateBlockNumbers();
   if (auto *WP = getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>())

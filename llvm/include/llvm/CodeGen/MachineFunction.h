@@ -295,7 +295,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
 
   // MBBNumbering epoch, incremented after renumbering to detect use of old
   // block numbers.
-  unsigned MBBNumberingEpoch;
+  unsigned MBBNumberingEpoch = 0;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
