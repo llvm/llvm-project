@@ -34,12 +34,11 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
-
-class RealpathPrefixes;
 
 OptionEnumValues GetDynamicValueTypes();
 

@@ -391,6 +391,10 @@ public:
   ///     A SymbolContext list class that will get any matching
   ///     entries appended to.
   ///
+  /// \param[in] realpath_prefixes
+  ///     Paths that start with one of the prefixes in this list will be
+  ///     realpath'ed to resolve any symlinks.
+  ///
   /// \see enum SymbolContext::Scope
   void
   ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
