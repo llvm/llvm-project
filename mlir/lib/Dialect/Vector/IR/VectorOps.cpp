@@ -2432,15 +2432,13 @@ LogicalResult BroadcastOp::verify() {
   if (res == BroadcastableToResult::SourceRankHigher)
     return emitOpError("source rank higher than destination rank");
   if (res == BroadcastableToResult::DimensionMismatch) {
-    std::string msg = (Twine("dimension mismatch (") +
-                       (mismatchingDims.first.isScalable ? "[" : "") +
-                       Twine(mismatchingDims.first.dim) +
-                       (mismatchingDims.first.isScalable ? "]" : "") + " vs. " +
-                       (mismatchingDims.second.isScalable ? "[" : "") +
-                       Twine(mismatchingDims.second.dim) +
-                       (mismatchingDims.second.isScalable ? "]" : "") + ")")
-                          .str();
-    return emitOpError(msg);
+    return emitOpError("dimension mismatch (")
+           << (mismatchingDims.first.isScalable ? "[" : "")
+           << mismatchingDims.first.dim
+           << (mismatchingDims.first.isScalable ? "]" : "") << " vs. "
+           << (mismatchingDims.second.isScalable ? "[" : "")
+           << mismatchingDims.second.dim
+           << (mismatchingDims.second.isScalable ? "]" : "") << ")";
   }
   if (res == BroadcastableToResult::SourceTypeNotAVector)
     return emitOpError("source type is not a vector");
