@@ -76,7 +76,7 @@ static constexpr StringRef getGlobalCtorsVarName() {
 
 /// Prefix used for symbols of nameless llvm globals.
 static constexpr StringRef getNamelessGlobalPrefix() {
-  return "mlir.llvm.nameless_global.";
+  return "mlir.llvm.nameless_global";
 }
 
 /// Returns the name of the global_dtors global variables.
@@ -892,13 +892,15 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   // Workaround to support LLVM's nameless globals. MLIR, in contrast to LLVM,
   // always requires a symbol name.
-  std::string globalName = globalVar->getName().str();
+  SmallString<128> globalName(globalVar->getName());
   if (globalName.empty()) {
     // Make sure the symbol name does not clash with an existing symbol.
-    do {
-      globalName =
-          getNamelessGlobalPrefix().str() + std::to_string(namelessGlobalId++);
-    } while (llvmModule->getNamedValue(globalName));
+    globalName = SymbolTable::generateSymbolName<128>(
+        getNamelessGlobalPrefix(),
+        [this](StringRef newName) {
+          return llvmModule->getNamedValue(newName);
+        },
+        namelessGlobalId);
     namelessGlobals[globalVar] = FlatSymbolRefAttr::get(context, globalName);
   }
   GlobalOp globalOp = builder.create<GlobalOp>(
