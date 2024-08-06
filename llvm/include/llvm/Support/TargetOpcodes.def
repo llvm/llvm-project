@@ -814,6 +814,15 @@ HANDLE_TARGET_OPCODE(G_FSINH)
 /// Floating point hyperbolic tangent.
 HANDLE_TARGET_OPCODE(G_FTANH)
 
+/// Floating point vector dot product
+HANDLE_TARGET_OPCODE(G_FDOTPROD)
+
+/// Unsigned integer vector dot product
+HANDLE_TARGET_OPCODE(G_UDOTPROD)
+
+/// Signed integer vector dot product
+HANDLE_TARGET_OPCODE(G_SDOTPROD)
+
 /// Floating point square root.
 HANDLE_TARGET_OPCODE(G_FSQRT)
 

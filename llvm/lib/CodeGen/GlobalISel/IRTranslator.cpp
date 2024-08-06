@@ -1903,6 +1903,12 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_CTPOP;
     case Intrinsic::exp:
       return TargetOpcode::G_FEXP;
+    case Intrinsic::fdot:
+      return TargetOpcode::G_FDOTPROD;
+    case Intrinsic::sdot:
+      return TargetOpcode::G_SDOTPROD;
+    case Intrinsic::udot:
+      return TargetOpcode::G_UDOTPROD;
     case Intrinsic::exp2:
       return TargetOpcode::G_FEXP2;
     case Intrinsic::exp10:
