@@ -70,6 +70,7 @@ strcoll        |check|
 strcpy         |check|
 strcspn        |check|
 strdup         |check|
+strerror       |check|
 strlcat        |check|
 strlcpy        |check|
 strlen         |check|
@@ -229,6 +230,15 @@ fputc          |check|    |check|
 fwrite         |check|    |check|
 remove         |check|    |check|
 putc           |check|    |check|
+printf         |check|    |check|
+vprintf        |check|    |check|
+fprintf        |check|    |check|
+vfprintf       |check|    |check|
+sprintf        |check|
+snprintf       |check|
+vsprintf       |check|
+vsnprintf      |check|
+sscanf         |check|
 putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|
@@ -242,6 +252,7 @@ time.h
 Function Name  Available  RPC Required
 =============  =========  ============
 clock          |check|
+clock_gettime  |check|
 nanosleep      |check|
 =============  =========  ============
 

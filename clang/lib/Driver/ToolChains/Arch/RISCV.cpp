@@ -310,8 +310,24 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // 2. Get march (isa string) based on `-mcpu=`
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPU = A->getValue();
-    if (CPU == "native")
+    if (CPU == "native") {
       CPU = llvm::sys::getHostCPUName();
+      // If the target cpu is unrecognized, use target features.
+      if (CPU.starts_with("generic")) {
+        auto FeatureMap = llvm::sys::getHostCPUFeatures();
+        // hwprobe may be unavailable on older Linux versions.
+        if (!FeatureMap.empty()) {
+          std::vector<std::string> Features;
+          for (auto &F : FeatureMap)
+            Features.push_back(((F.second ? "+" : "-") + F.first()).str());
+          auto ParseResult = llvm::RISCVISAInfo::parseFeatures(
+              Triple.isRISCV32() ? 32 : 64, Features);
+          if (ParseResult)
+            return (*ParseResult)->toString();
+        }
+      }
+    }
+
     StringRef MArch = llvm::RISCV::getMArchFromMcpu(CPU);
     // Bypass if target cpu's default march is empty.
     if (MArch != "")

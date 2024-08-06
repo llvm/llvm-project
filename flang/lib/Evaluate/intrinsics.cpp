@@ -822,6 +822,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"second", {}, DefaultReal, Rank::scalar},
     {"selected_char_kind", {{"name", DefaultChar, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"selected_int_kind", {{"r", AnyInt, Rank::scalar}}, DefaultInt,
@@ -1474,6 +1475,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"status", DefaultInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::scalar, IntrinsicClass::impureSubroutine},
+    {"second", {{"time", DefaultReal, Rank::scalar}}, {}, Rank::scalar,
+        IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
             {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
@@ -2623,7 +2626,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{
-      {"etime"s}, {"getcwd"s}, {"rename"s}};
+      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}};
 
   return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
              [&name](const std::string &dualName) {

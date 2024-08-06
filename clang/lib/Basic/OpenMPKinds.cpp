@@ -684,7 +684,8 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 }
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_tile || DKind == OMPD_unroll;
+  return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
+         DKind == OMPD_interchange;
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
@@ -709,6 +710,13 @@ bool clang::isOpenMPExecutableDirective(OpenMPDirectiveKind DKind) {
   return Cat == Category::Executable || Cat == Category::Subsidiary;
 }
 
+bool clang::isOpenMPInformationalDirective(OpenMPDirectiveKind DKind) {
+  if (DKind == OMPD_error)
+    return true;
+  Category Cat = getDirectiveCategory(DKind);
+  return Cat == Category::Informational;
+}
+
 bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
   if (isOpenMPExecutableDirective(DKind)) {
     switch (DKind) {
@@ -725,6 +733,7 @@ bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
     case OMPD_section:
     case OMPD_taskwait:
     case OMPD_taskyield:
+    case OMPD_assume:
       return false;
     default:
       return !isOpenMPLoopTransformationDirective(DKind);

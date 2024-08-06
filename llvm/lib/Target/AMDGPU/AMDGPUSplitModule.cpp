@@ -480,7 +480,7 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
   // partitions) so it's a cheap operation.
   std::vector<std::pair<PartitionID, CostType>> BalancingQueue;
   for (unsigned I = 0; I < NumParts; ++I)
-    BalancingQueue.push_back(std::make_pair(I, 0));
+    BalancingQueue.emplace_back(I, 0);
 
   // Helper function to handle assigning a function to a partition. This takes
   // care of updating the balancing queue.

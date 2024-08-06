@@ -149,6 +149,11 @@ static llvm::cl::opt<bool> enableOpenMPForceUSM(
     llvm::cl::desc("force openmp unified shared memory mode"),
     llvm::cl::init(false));
 
+static llvm::cl::list<std::string> targetTriplesOpenMP(
+    "fopenmp-targets",
+    llvm::cl::desc("comma-separated list of OpenMP offloading triples"),
+    llvm::cl::CommaSeparated);
+
 // A simplified subset of the OpenMP RTL Flags from Flang, only the primary
 // positive options are available, no negative options e.g. fopen_assume* vs
 // fno_open_assume*
@@ -367,11 +372,12 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setNSWOnLoopVarInc(setNSW);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
+  constexpr const char *tuneCPU = "";
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine);
+      semanticsContext.languageFeatures(), targetMachine, tuneCPU);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
@@ -379,11 +385,17 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
                       "-fopenmp-is-target-device is also set";
       return mlir::failure();
     }
+    // Construct offloading target triples vector.
+    std::vector<llvm::Triple> targetTriples;
+    targetTriples.reserve(targetTriplesOpenMP.size());
+    for (llvm::StringRef s : targetTriplesOpenMP)
+      targetTriples.emplace_back(s);
+
     auto offloadModuleOpts = OffloadModuleOpts(
         setOpenMPTargetDebug, setOpenMPTeamSubscription,
         setOpenMPThreadSubscription, setOpenMPNoThreadState,
         setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
-        enableOpenMPForceUSM, setOpenMPVersion, "", setNoGPULib);
+        enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }

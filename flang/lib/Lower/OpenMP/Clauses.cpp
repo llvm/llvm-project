@@ -322,6 +322,11 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
 // Absent: missing-in-parser
+Absent make(const parser::OmpClause::Absent &inp,
+            semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: absent");
+}
+
 // AcqRel: empty
 // Acquire: empty
 // AdjustArgs: incomplete
@@ -444,7 +449,12 @@ Collapse make(const parser::OmpClause::Collapse &inp,
 }
 
 // Compare: empty
+
 // Contains: missing-in-parser
+Contains make(const parser::OmpClause::Contains &inp,
+              semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: contains");
+}
 
 Copyin make(const parser::OmpClause::Copyin &inp,
             semantics::SemanticsContext &semaCtx) {
@@ -705,6 +715,10 @@ Hint make(const parser::OmpClause::Hint &inp,
 }
 
 // Holds: missing-in-parser
+Holds make(const parser::OmpClause::Holds &inp,
+           semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: holds");
+}
 
 If make(const parser::OmpClause::If &inp,
         semantics::SemanticsContext &semaCtx) {
@@ -884,8 +898,23 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
 }
 
 // NoOpenmp: missing-in-parser
+NoOpenmp make(const parser::OmpClause::NoOpenmp &inp,
+              semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: no_openmp");
+}
+
 // NoOpenmpRoutines: missing-in-parser
+NoOpenmpRoutines make(const parser::OmpClause::NoOpenmpRoutines &inp,
+                      semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: no_openmp_routines");
+}
+
 // NoParallelism: missing-in-parser
+NoParallelism make(const parser::OmpClause::NoParallelism &inp,
+                   semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: no_parallelism");
+}
+
 // Notinbranch: empty
 
 Novariants make(const parser::OmpClause::Novariants &inp,

@@ -416,7 +416,7 @@ public:
     // below them can initialize the same object (or part of it).
     if (isa<CXXConstructExpr>(E) || isa<CallExpr>(E) || isa<LambdaExpr>(E) ||
         isa<CXXDefaultArgExpr>(E) || isa<CXXStdInitializerListExpr>(E) ||
-        isa<AtomicExpr>(E) ||
+        isa<AtomicExpr>(E) || isa<CXXInheritedCtorInitExpr>(E) ||
         // We treat `BuiltinBitCastExpr` as an "original initializer" too as
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
@@ -524,12 +524,21 @@ void Environment::initialize() {
           assert(VarDecl != nullptr);
           setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
         } else if (Capture.capturesThis()) {
-          const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(InitialTargetFunc->getNonClosureAncestor());
-          QualType ThisPointeeType =
-              SurroundingMethodDecl->getFunctionObjectParameterType();
-          setThisPointeeStorageLocation(
-              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+          if (auto *Ancestor = InitialTargetFunc->getNonClosureAncestor()) {
+            const auto *SurroundingMethodDecl = cast<CXXMethodDecl>(Ancestor);
+            QualType ThisPointeeType =
+                SurroundingMethodDecl->getFunctionObjectParameterType();
+            setThisPointeeStorageLocation(
+                cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+          } else if (auto *FieldBeingInitialized =
+                         dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
+            // This is in a field initializer, rather than a method.
+            setThisPointeeStorageLocation(
+                cast<RecordStorageLocation>(createObject(QualType(
+                    FieldBeingInitialized->getParent()->getTypeForDecl(), 0))));
+          } else {
+            assert(false && "Unexpected this-capturing lambda context.");
+          }
         }
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {

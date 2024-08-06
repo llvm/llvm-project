@@ -1605,7 +1605,7 @@ private:
                           ArrayRef<Function *> Fns) {
     // This only works under the switch-lowering ABI because coro elision
     // only works on the switch-lowering ABI.
-    SmallVector<Constant *, 4> Args(Fns.begin(), Fns.end());
+    SmallVector<Constant *, 4> Args(Fns);
     assert(!Args.empty());
     Function *Part = *Fns.begin();
     Module *M = Part->getParent();

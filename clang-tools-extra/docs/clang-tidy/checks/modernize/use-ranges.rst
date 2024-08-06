@@ -46,6 +46,7 @@ Calls to the following std library algorithms are checked:
 ``std::for_each``,
 ``std::generate``,
 ``std::includes``,
+``std::inplace_merge``,
 ``std::iota``,
 ``std::is_heap_until``,
 ``std::is_heap``,
@@ -79,6 +80,8 @@ Calls to the following std library algorithms are checked:
 ``std::replace``,
 ``std::reverse_copy``,
 ``std::reverse``,
+``std::rotate``,
+``std::rotate_copy``,
 ``std::sample``,
 ``std::search``,
 ``std::set_difference``,
@@ -116,8 +119,8 @@ Transforms to:
 
 .. code-block:: c++
 
-  auto AreSame = std::equal(std::views::reverse(Items1),
-                            std::views::reverse(Items2));
+  auto AreSame = std::ranges::equal(std::ranges::reverse_view(Items1),
+                                    std::ranges::reverse_view(Items2));
 
 Options
 -------
@@ -127,3 +130,17 @@ Options
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
 
+.. option:: UseReversePipe
+
+  When `true` (default `false`), fixes which involve reverse ranges will use the
+  pipe adaptor syntax instead of the function syntax.
+
+  .. code-block:: c++
+
+    std::find(Items.rbegin(), Items.rend(), 0);
+
+  Transforms to:
+
+  .. code-block:: c++
+
+    std::ranges::find(Items | std::views::reverse, 0);

@@ -33,16 +33,6 @@ int call(fn_t f) {
   return f();
 }
 
-#ifndef __cplusplus
-// C: define internal ptr @resolver1() #[[#]] {
-int ifunc1(int) __attribute__((ifunc("resolver1")));
-static void *resolver1(void) { return 0; }
-
-// C: define internal ptr @resolver2() #[[#]] {
-static void *resolver2(void) { return 0; }
-long ifunc2(long) __attribute__((ifunc("resolver2")));
-#endif
-
 // CHECK-DAG: define internal{{.*}} i32 @{{f3|_ZL2f3v}}(){{.*}} !kcfi_type ![[#TYPE]]
 static int f3(void) { return 1; }
 
@@ -57,6 +47,16 @@ static int f5(void) { return 2; }
 
 // CHECK-DAG: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @{{f6|_Z2f6v}}()
 extern int f6(void);
+
+#ifndef __cplusplus
+// C: define internal ptr @resolver1() #[[#]] !kcfi_type ![[#]] {
+int ifunc1(int) __attribute__((ifunc("resolver1")));
+static void *resolver1(void) { return 0; }
+
+// C: define internal ptr @resolver2() #[[#]] !kcfi_type ![[#]] {
+static void *resolver2(void) { return 0; }
+long ifunc2(long) __attribute__((ifunc("resolver2")));
+#endif
 
 int test(void) {
   return call(f1) +

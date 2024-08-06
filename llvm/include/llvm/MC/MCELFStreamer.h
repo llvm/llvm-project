@@ -15,6 +15,7 @@
 
 namespace llvm {
 
+class ELFObjectWriter;
 class MCContext;
 class MCDataFragment;
 class MCFragment;
@@ -41,6 +42,8 @@ public:
     SeenIdent = false;
     MCObjectStreamer::reset();
   }
+
+  ELFObjectWriter &getWriter();
 
   /// \name MCStreamer Interface
   /// @{

@@ -21,19 +21,19 @@
 	.text
 	.code16gcc
 	.globl	test
-	.p2align	4, 0x90
+	.p2align	4
 	.type	test,@function
 test:
 	.nops	34
 	movl	%eax, %edi
 	xorl	%ebx, %ebx
-	.p2align	4, 0x90
+	.p2align	4
 	movzbl	(%esi,%ebx), %ecx
 	calll	called
 	.nops	3
 	retl
 
-	.p2align	4, 0x90
+	.p2align	4
 	.type	called,@function
 called:
 	.nops	1

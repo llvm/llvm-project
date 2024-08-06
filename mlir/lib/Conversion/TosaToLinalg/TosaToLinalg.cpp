@@ -298,6 +298,14 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::ExpOp>(op) && isa<FloatType>(elementTy))
     return rewriter.create<mlir::math::ExpOp>(loc, resultTypes, args);
 
+  // tosa::SinOp
+  if (isa<tosa::SinOp>(op) && isa<FloatType>(elementTy))
+    return rewriter.create<mlir::math::SinOp>(loc, resultTypes, args);
+
+  // tosa::CosOp
+  if (isa<tosa::CosOp>(op) && isa<FloatType>(elementTy))
+    return rewriter.create<mlir::math::CosOp>(loc, resultTypes, args);
+
   // tosa::TanhOp
   if (isa<tosa::TanhOp>(op) && isa<FloatType>(elementTy))
     return rewriter.create<mlir::math::TanhOp>(loc, resultTypes, args);
@@ -2598,6 +2606,8 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       PointwiseConverter<tosa::LogOp>,
       PointwiseConverter<tosa::ExpOp>,
       PointwiseConverter<tosa::AbsOp>,
+      PointwiseConverter<tosa::SinOp>,
+      PointwiseConverter<tosa::CosOp>,
       PointwiseConverter<tosa::TanhOp>,
       PointwiseConverter<tosa::ErfOp>,
       PointwiseConverter<tosa::BitwiseAndOp>,

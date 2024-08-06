@@ -62,15 +62,15 @@ define amdgpu_kernel void @if_masked_0x80000000(i32 %arg, ptr addrspace(1) %p)  
 define amdgpu_kernel void @if_masked_0x8000000000000000(i64 %arg, ptr addrspace(1) %p)  {
 ; GCN-LABEL: if_masked_0x8000000000000000:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_and_b32 s1, s1, 0x80000000
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_and_b32 s1, s5, 0x80000000
 ; GCN-NEXT:    s_cmp_eq_u64 s[0:1], 0
 ; GCN-NEXT:    s_cselect_b32 s0, 22, 33
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    global_store_dword v0, v1, s[2:3]
+; GCN-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GCN-NEXT:    s_endpgm
   %and = and i64 %arg, 9223372036854775808
   %cmp = icmp eq i64 %and, 0

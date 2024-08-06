@@ -803,6 +803,37 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
                                   tok::kw_switch);
   };
+  auto IsFunctionCallParen = [](const FormatToken &Tok) {
+    return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
+           Tok.Previous->is(tok::identifier);
+  };
+  const auto IsInTemplateString = [this](const FormatToken &Tok) {
+    if (!Style.isJavaScript())
+      return false;
+    for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
+      if (Prev->is(TT_TemplateString) && Prev->opensScope())
+        return true;
+      if (Prev->is(TT_TemplateString) && Prev->closesScope())
+        break;
+    }
+    return false;
+  };
+  // Identifies simple (no expression) one-argument function calls.
+  const auto IsSimpleFunction = [&](const FormatToken &Tok) {
+    if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
+      return false;
+    const auto *Previous = Tok.Previous;
+    if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
+                                         TT_LambdaDefinitionLParen) &&
+                      !IsFunctionCallParen(*Previous))) {
+      return true;
+    }
+    if (IsOpeningBracket(Tok) || IsInTemplateString(Tok))
+      return true;
+    const auto *Next = Tok.Next;
+    return !Next || Next->isMemberAccess() ||
+           Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
+  };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
       IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
@@ -813,10 +844,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //       caaaaaaaaaaaall(
       //           caaaaaaaaaaaall(
       //               caaaaaaaaaaaaaaaaaaaaaaall(aaaaaaaaaaaaaa, aaaaaaaaa))));
-      Current.FakeLParens.size() > 0 &&
-      Current.FakeLParens.back() > prec::Unknown) {
+      !IsSimpleFunction(Current)) {
     CurrentState.NoLineBreak = true;
   }
+
   if (Previous.is(TT_TemplateString) && Previous.opensScope())
     CurrentState.NoLineBreak = true;
 
@@ -831,7 +862,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
-       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
+       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
+      !IsInTemplateString(Current)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }
