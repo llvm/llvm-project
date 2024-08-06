@@ -141,7 +141,6 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
 
-
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("--static");
   if (Args.hasArg(options::OPT_rdynamic))
