@@ -145,7 +145,7 @@ Improvements to Clang's diagnostics
 
 - -Wdangling-assignment-gsl is enabled by default.
 
-- Clang now diagnoses the use of `main` in an `extern` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
+- Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
 Improvements to Clang's time-trace
 ----------------------------------

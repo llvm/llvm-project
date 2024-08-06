@@ -7353,13 +7353,26 @@ void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
   }
 }
 
-// Checks if VD is declared at global scope or with C language linkage.
-static bool isMainVar(DeclarationName Name, VarDecl *VD) {
-  return Name.getAsIdentifierInfo() &&
-         Name.getAsIdentifierInfo()->isStr("main") &&
-         !VD->getDescribedVarTemplate() &&
-         (VD->getDeclContext()->getRedeclContext()->isTranslationUnit() ||
-          VD->isExternC());
+enum MainVarClassificationKind {
+  IMV_NotMain,
+  IMV_GlobalMain,
+  IMV_CLinkageMain,
+};
+
+// Determines if the variable is a 'main' function defined in global scope or
+// with C linkage.
+static MainVarClassificationKind classifyMainVar(DeclarationName Name,
+                                                 VarDecl *VD) {
+  if (Name.getAsIdentifierInfo() && Name.getAsIdentifierInfo()->isStr("main") &&
+      !VD->getDescribedVarTemplate()) {
+    if (VD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
+      return IMV_GlobalMain;
+    }
+    if (VD->isExternC()) {
+      return IMV_CLinkageMain;
+    }
+  }
+  return IMV_NotMain;
 }
 
 NamedDecl *Sema::ActOnVariableDeclarator(
@@ -8061,7 +8074,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   }
 
   // Special handling of variable named 'main'.
-  if (!getLangOpts().Freestanding && isMainVar(Name, NewVD)) {
+  MainVarClassificationKind MainKind = classifyMainVar(Name, NewVD);
+  if (!getLangOpts().Freestanding &&
+      MainKind != MainVarClassificationKind::IMV_NotMain) {
     // C++ [basic.start.main]p3:
     //   A program that declares
     //    - a variable main at global scope, or
@@ -8069,7 +8084,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     //   is ill-formed
     if (getLangOpts().CPlusPlus)
       Diag(D.getBeginLoc(), diag::err_main_global_variable)
-          << NewVD->isExternC();
+          << (MainKind == MainVarClassificationKind::IMV_CLinkageMain);
 
     // In C, and external-linkage variable named main results in undefined
     // behavior.
