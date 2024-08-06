@@ -8,12 +8,11 @@
 ; ModuleID = '<stdin>'
 source_filename = "test.cpp"
 
-@_ZZZZ4mainENKUlRN4sycl3_V17handlerEE_clES2_ENKUlvE_clEvE7_format = internal constant [24 x i8] c"Result1: Hello, World!\0A\00", align 16, !dbg !9
+@_ZZZZ4main_format = internal constant [24 x i8] c"Result1: Hello, World!\0A\00", align 16, !dbg !9
 
-; Function Attrs: convergent mustprogress norecurse
 define void  @foo() align 2 !dbg !5 {
 entry:
-  call void @llvm.dbg.value(metadata ptr @_ZZZZ4mainENKUlRN4sycl3_V17handlerEE_clES2_ENKUlvE_clEvE7_format, metadata !11, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.value(metadata ptr @_ZZZZ4main_format, metadata !11, metadata !DIExpression()), !dbg !12
   ret void
 }
 
