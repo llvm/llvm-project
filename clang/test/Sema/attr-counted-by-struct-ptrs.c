@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// Test that in late parsing mode attributes that don't require late parsing
+// are handled correctly
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-late-parse-attributes %s -verify
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 

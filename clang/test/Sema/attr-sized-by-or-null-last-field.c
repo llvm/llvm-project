@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -DLATE_PARSING_ENABLED -fsyntax-only -fexperimental-late-parse-attributes -verify %s
 
 #define __sized_by_or_null(f)  __attribute__((sized_by_or_null(f)))
 
@@ -80,10 +81,17 @@ struct found_outside_of_struct {
   struct bar ** ptr __sized_by_or_null(global); // expected-error {{field 'global' in 'sized_by_or_null' not inside structure}}
 };
 
+#ifndef LATE_PARSING_ENABLED
 struct self_referrential {
   int bork;
   struct bar *self[] __sized_by_or_null(self); // expected-error {{use of undeclared identifier 'self'}}
 };
+#else
+struct self_referrential {
+  int bork;
+  struct bar *self[] __sized_by_or_null(self); // expected-error {{'sized_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
+};
+#endif
 
 struct non_int_size {
   double dbl_size;

@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// Test that in late parsing mode attributes that don't require late parsing
+// still parse correctly.
+// RUN: %clang_cc1 -DLATE_PARSING_ENABLED -fsyntax-only -fexperimental-late-parse-attributes %s -verify
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
@@ -78,10 +81,17 @@ struct found_outside_of_struct {
   struct bar *fam[] __counted_by(global); // expected-error {{field 'global' in 'counted_by' not inside structure}}
 };
 
+#ifndef LATE_PARSING_ENABLED
 struct self_referrential {
   int bork;
   struct bar *self[] __counted_by(self); // expected-error {{use of undeclared identifier 'self'}}
 };
+#else
+struct self_referrential {
+  int bork;
+  struct bar *self[] __counted_by(self); // expected-error {{'counted_by' requires a non-boolean integer type argument}}
+};
+#endif
 
 struct non_int_count {
   double dbl_count;
