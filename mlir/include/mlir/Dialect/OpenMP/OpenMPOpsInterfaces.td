@@ -142,12 +142,10 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   ];
 }
 
-def ComposableLoopWrapperInterface : OpInterface<"ComposableLoopWrapperInterface"> {
+def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
   let description = [{
-    OpenMP operations that can wrap a single loop nest. When taking a wrapper
-    role, these operations must only contain a single region with a single block
-    in which there's a single operation and a terminator. That nested operation
-    must be another loop wrapper or an `omp.loop_nest`.
+    OpenMP operations that can represent a single leaf of a composite OpenMP
+    construct.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -155,7 +153,8 @@ def ComposableLoopWrapperInterface : OpInterface<"ComposableLoopWrapperInterface
   let methods = [
     InterfaceMethod<
       /*description=*/[{
-        Check whether the operation is composable.
+        Check whether the operation is representing a leaf of a composite OpenMP
+        construct.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isComposite",
@@ -165,12 +164,15 @@ def ComposableLoopWrapperInterface : OpInterface<"ComposableLoopWrapperInterface
     >,
     InterfaceMethod<
       /*description=*/[{
-        Set the CompositeAttr for the op.
+        Mark the operation as part of an OpenMP composite construct.
       }],
       /*retTy=*/"void",
       /*methodName=*/"setComposite",
-      (ins), [{}], [{
-        $_op->setDiscardableAttr("omp.composite", mlir::UnitAttr::get($_op->getContext()));
+      (ins "bool":$val), [{}], [{
+        if(val)
+          $_op->setDiscardableAttr("omp.composite", mlir::UnitAttr::get($_op->getContext()));
+        else
+          $_op->removeDiscardableAttr("omp.composite");
       }]
     >
   ];
