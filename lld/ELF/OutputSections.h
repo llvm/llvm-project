@@ -143,6 +143,25 @@ struct OutputDesc final : SectionCommand {
   }
 };
 
+// This represents a CLASS(class_name) { ... } that can be referenced by output
+// section descriptions. If referenced more than once, the sections can be
+// spilled to the next reference like --enable-non-contiguous-regions.
+struct SectionClass final : public SectionBase {
+  SmallVector<InputSectionDescription *, 0> commands;
+  bool assigned = false;
+
+  SectionClass(StringRef name) : SectionBase(Class, name, 0, 0, 0, 0, 0, 0) {}
+  static bool classof(const SectionBase *s) { return s->kind() == Class; }
+};
+
+struct SectionClassDesc : SectionCommand {
+  SectionClass sc;
+
+  SectionClassDesc(StringRef name) : SectionCommand(ClassKind), sc(name) {}
+
+  static bool classof(const SectionCommand *c) { return c->kind == ClassKind; }
+};
+
 int getPriority(StringRef s);
 
 InputSection *getFirstInputSection(const OutputSection *os);
@@ -150,23 +169,7 @@ llvm::ArrayRef<InputSection *>
 getInputSections(const OutputSection &os,
                  SmallVector<InputSection *, 0> &storage);
 
-// All output sections that are handled by the linker specially are
-// globally accessible. Writer initializes them, so don't use them
-// until Writer is initialized.
-struct Out {
-  static uint8_t *bufferStart;
-  static PhdrEntry *tlsPhdr;
-  static OutputSection *elfHeader;
-  static OutputSection *programHeaders;
-  static OutputSection *preinitArray;
-  static OutputSection *initArray;
-  static OutputSection *finiArray;
-};
-
 uint64_t getHeaderSize();
-
-LLVM_LIBRARY_VISIBILITY extern llvm::SmallVector<OutputSection *, 0>
-    outputSections;
 } // namespace lld::elf
 
 #endif

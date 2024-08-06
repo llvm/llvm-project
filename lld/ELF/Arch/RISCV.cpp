@@ -466,7 +466,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case INTERNAL_R_RISCV_GPREL_I:
   case INTERNAL_R_RISCV_GPREL_S: {
-    Defined *gp = ElfSym::riscvGlobalPointer;
+    Defined *gp = ctx.sym.riscvGlobalPointer;
     int64_t displace = SignExtend64(val - gp->getVA(), bits);
     checkInt(loc, displace, 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_GP << 15);
@@ -680,7 +680,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 
 void elf::initSymbolAnchors() {
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -719,7 +719,7 @@ void elf::initSymbolAnchors() {
   // efficiently. For a zero size symbol, ensure that its start anchor precedes
   // its end anchor. For two symbols with anchors at the same offset, their
   // order does not matter.
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -789,7 +789,7 @@ static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
 
 static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
                           Relocation &r, uint32_t &remove) {
-  const Defined *gp = ElfSym::riscvGlobalPointer;
+  const Defined *gp = ctx.sym.riscvGlobalPointer;
   if (!gp)
     return;
 
@@ -922,7 +922,7 @@ bool RISCV::relaxOnce(int pass) const {
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
@@ -935,7 +935,7 @@ void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
   log("relaxation passes: " + Twine(passes));
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {

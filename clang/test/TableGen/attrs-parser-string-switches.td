@@ -22,19 +22,15 @@ def TestUnEvalTwo : InheritableAttr {
 }
 
 // CHECK: #if defined(CLANG_ATTR_ARG_CONTEXT_LIST)
-// CHECK-NOT: .Case("Pragma::test_uneval", true)
-// CHECK: .Case("GNU::test_uneval", true)
-// CHECK-NOT: .Case("Pragma::test_uneval", true)
-// CHECK: .Case("CXX11::clang::test_uneval", true)
-// CHECK-NOT: .Case("Pragma::test_uneval", true)
-// CHECK: .Case("C23::clang::test_uneval", true)
-// CHECK-NOT: .Case("Pragma::test_uneval", true)
+// CHECK: .Case("test_uneval", (Syntax==AttributeCommonInfo::AS_GNU && !ScopeName) ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_CXX11 && ScopeName && ScopeName->getName()=="clang") ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_C23 && ScopeName && ScopeName->getName()=="clang") ? 1 : 0)
 // CHECK: #endif // CLANG_ATTR_ARG_CONTEXT_LIST
 
 // Test attributeHasIdentifierArg: Same spelling, one with and one without
 // an IdentifierArg.
 def TestIdentOne : Attr {
-  let Spellings = [Clang<"test_ident">];
+  let Spellings = [GNU<"test_ident">];
   let Args = [EnumArgument<"Option", "OptionType", /*is_string=*/false,
               ["optA", "optB"], ["OPTA", "OPTB"]>];
   let Subjects = SubjectList<[Function]>;
@@ -48,28 +44,35 @@ def TestIdentTwo : StmtAttr {
   let Documentation = [Undocumented];
 }
 
+// Checks that the simple value is produced if only one attribute with a
+// spelling.
+def TestOnlyIdent : Attr {
+  let Spellings = [GNU<"test_only_ident">];
+  let Args = [EnumArgument<"Option", "OptionType", /*is_string=*/false,
+              ["optA", "optB"], ["OPTA", "OPTB"]>];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
+}
+
 // CHECK: #if defined(CLANG_ATTR_IDENTIFIER_ARG_LIST)
-// CHECK-NOT: .Case("Pragma::test_ident", true)
-// CHECK: .Case("GNU::test_ident", true)
-// CHECK-NOT: .Case("Pragma::test_ident", true)
-// CHECK: .Case("CXX11::clang::test_ident", true)
-// CHECK-NOT: .Case("Pragma::test_ident", true)
-// CHECK: .Case("C23::clang::test_ident", true)
-// CHECK-NOT: .Case("Pragma::test_ident", true)
+// CHECK: .Case("test_ident", (Syntax==AttributeCommonInfo::AS_GNU && !ScopeName)
+// CHECK: .Case("test_only_ident", true)
+// CHECK: .Case("test_targspec",
+// CHECK-SAME: (T.getArch() == llvm::Triple::arm)) ? 1 : 0
 // CHECK: #endif // CLANG_ATTR_IDENTIFIER_ARG_LIST
 
 // Test attributeStringLiteralListArg : Same spelling, some with a
 // StringArgument, some without, some in different locations.
 def TestStringOne : DeclOrTypeAttr {
   let Spellings = [Clang<"test_string">];
-  let Args = [StringArgument<"strarg">];
+  let Args = [UnsignedArgument<"unsarg">];
   let Subjects = SubjectList<[Function, TypedefName, ParmVar]>;
   let Documentation = [AcquireHandleDocs];
 }
 
 def TestStringTwo : InheritableAttr {
   let Spellings = [Pragma<"", "test_string">];
-  let Args = [UnsignedArgument<"unsarg">];
+  let Args = [StringArgument<"strarg">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
@@ -83,39 +86,31 @@ def TestStringThree : Attr {
 }
 
 // CHECK: #if defined(CLANG_ATTR_STRING_LITERAL_ARG_LIST)
-// CHECK-NOT: .Case("Pragma::test_string"
-// CHECK: .Case("GNU::test_string", 1)
-// CHECK: .Case("CXX11::clang::test_string", 1)
-// CHECK: .Case("C23::clang::test_string", 1)
-// CHECK-NOT: .Case("Pragma::test_string"
-// CHECK: .Case("Declspec::test_string", 2)
-// CHECK-NOT: .Case("Pragma::test_string"
+// CHECK: .Case("test_string", (Syntax==AttributeCommonInfo::AS_Declspec && !ScopeName) ? 2 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_Pragma && !ScopeName) ? 1 : 0)
+// CHECK: .Case("test_targspec",
+// CHECK-SAME: (T.getArch() == llvm::Triple::arm)) ? 4294967294 :
+// CHECK-SAME: (T.getArch() == llvm::Triple::ppc)) ? 1 :
 // CHECK: #endif // CLANG_ATTR_STRING_LITERAL_ARG_LIST
 
 // Test attributeHasVariadicIdentifierArg : One with VariadicIdentifierArgument
 // and one without.
 def TestVariadicIdentOne : InheritableAttr {
   let Spellings = [Clang<"test_var_ident">];
-  let Args = [VariadicIdentifierArgument<"iargs">];
+  let Args = [UnsignedArgument<"Hint">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
 def TestVariadicIdentTwo : InheritableAttr {
   let Spellings = [Pragma<"", "test_var_ident">];
-  let Args = [UnsignedArgument<"Hint">];
+  let Args = [VariadicIdentifierArgument<"iargs">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
 // CHECK: #if defined(CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST)
-// CHECK-NOT: .Case("Pragma::"test_var_ident", true)
-// CHECK: .Case("GNU::test_var_ident", true)
-// CHECK-NOT: .Case("Pragma::test_var_ident", true)
-// CHECK: .Case("CXX11::clang::test_var_ident", true)
-// CHECK-NOT: .Case("Pragma::test_var_ident", true)
-// CHECK: .Case("C23::clang::test_var_ident", true)
-// CHECK-NOT: .Case("Pragma::test_var_ident", true)
+// CHECK: .Case("test_var_ident", (Syntax==AttributeCommonInfo::AS_Pragma && !ScopeName))
 // CHECK: #endif // CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
 
 // Test attributeTreatsKeywordThisAsIdentifier : Same spelling, one with and
@@ -135,13 +130,9 @@ def TestVarOrIdxTwo : InheritableAttr {
 }
 
 // CHECK: #if defined(CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST)
-// CHECK-NOT: .Case("Pragma::test_var_idx", true)
-// CHECK: .Case("GNU::test_var_idx", true)
-// CHECK-NOT: .Case("Pragma::test_var_idx", true)
-// CHECK: .Case("CXX11::clang::test_var_idx", true)
-// CHECK-NOT: .Case("Pragma::test_var_idx", true)
-// CHECK: .Case("C23::clang::test_var_idx", true)
-// CHECK-NOT: .Case("Pragma::test_var_idx", true)
+// CHECK: .Case("test_var_idx", (Syntax==AttributeCommonInfo::AS_GNU && !ScopeName) ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_CXX11 && ScopeName && ScopeName->getName()=="clang") ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_C23 && ScopeName && ScopeName->getName()=="clang") ? 1 : 0)
 // CHECK: #endif // CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST
 
 // Test attributeAcceptsExprPack : One with, one without.
@@ -161,13 +152,9 @@ def TestExprPackTwo : InheritableAttr {
 }
 
 // CHECK: #if defined(CLANG_ATTR_ACCEPTS_EXPR_PACK)
-// CHECK-NOT: .Case("Pragma::test_expr_pack", true)
-// CHECK: .Case("GNU::test_expr_pack", true)
-// CHECK-NOT: .Case("Pragma::test_expr_pack", true)
-// CHECK: .Case("CXX11::clang::test_expr_pack", true)
-// CHECK-NOT: .Case("Pragma::test_expr_pack", true)
-// CHECK: .Case("C23::clang::test_expr_pack", true)
-// CHECK-NOT: .Case("Pragma::test_expr_pack", true)
+// CHECK: .Case("test_expr_pack", (Syntax==AttributeCommonInfo::AS_GNU && !ScopeName) ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_CXX11 && ScopeName && ScopeName->getName()=="clang") ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_C23 && ScopeName && ScopeName->getName()=="clang") ? 1 : 0)
 // CHECK: #endif // CLANG_ATTR_ACCEPTS_EXPR_PACK
 
 
@@ -188,17 +175,12 @@ def TestTypeTwo : InheritableAttr {
 }
 
 // CHECK: #if defined(CLANG_ATTR_TYPE_ARG_LIST)
-// CHECK-NOT: .Case("Pragma::test_type", true)
-// CHECK: .Case("GNU::test_type", true)
-// CHECK-NOT: .Case("Pragma::test_type", true)
-// CHECK: .Case("CXX11::clang::test_type", true)
-// CHECK-NOT: .Case("Pragma::test_type", true)
-// CHECK: .Case("C23::clang::test_type", true)
-// CHECK-NOT: .Case("Pragma::test_type", true)
+// CHECK: .Case("test_type", (Syntax==AttributeCommonInfo::AS_GNU && !ScopeName) ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_CXX11 && ScopeName && ScopeName->getName()=="clang") ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_C23 && ScopeName && ScopeName->getName()=="clang") ? 1 : 0)
 // CHECK: #endif // CLANG_ATTR_TYPE_ARG_LIST
 
-// Test attributeHasStrictIdentifierArgs and
-// attributeHasStrictIdentifierArgAtIndex, one used StrictEnumParameters, the
+// Test attributeHasStrictIdentifierArgs, one used StrictEnumParameters, the
 // other does not.
 def TestStrictEnumOne : InheritableAttr {
   let Spellings = [Clang<"strict_enum">];
@@ -221,12 +203,32 @@ def TestStrictEnumTwo : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-// CHECK: #if defined(CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST)
-// CHECK-NOT: .Case("Pragma::strict_enum", 5ull)
-// CHECK: .Case("GNU::strict_enum", 5ull)
-// CHECK-NOT: .Case("Pragma::strict_enum", 5ull)
-// CHECK: .Case("CXX11::clang::strict_enum", 5ull)
-// CHECK-NOT: .Case("Pragma::strict_enum", 5ull)
-// CHECK: .Case("C23::clang::strict_enum", 5ull)
-// CHECK-NOT: .Case("Pragma::strict_enum", 5ull)
-// CHECK: #endif // CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST
+// CHECK: #if defined(CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST)
+// CHECK: .Case("strict_enum", (Syntax==AttributeCommonInfo::AS_GNU && !ScopeName) ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_CXX11 && ScopeName && ScopeName->getName()=="clang") ? 1 :
+// CHECK-SAME: (Syntax==AttributeCommonInfo::AS_C23 && ScopeName && ScopeName->getName()=="clang") ? 1 : 0)
+// CHECK: #endif // CLANG_ATTR_STRICT_IDENTIFIER_ARG_LIST
+
+// Test that TargetSpecific attributes work as expected.
+
+def TargSpecX86 : InheritableAttr, TargetSpecificAttr<TargetArch<["x86"]>> {
+  let Spellings = [GCC<"test_targspec">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [UnsignedArgument<"ua">, DefaultIntArgument<"o", 0>];
+  let ParseKind = "TargSpec";
+  let Documentation = [Undocumented];
+}
+def TargSpecPPC : InheritableAttr, TargetSpecificAttr<TargetArch<["ppc"]>> {
+  let Spellings = [GCC<"test_targspec">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [StringArgument<"str">, VariadicExprArgument<"args">];
+  let ParseKind = "TargSpec";
+  let Documentation = [Undocumented];
+}
+def TargSpecARM : InheritableAttr, TargetSpecificAttr<TargetArch<["arm"]>> {
+  let Spellings = [GCC<"test_targspec">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [IdentifierArgument<"id">, VariadicStringArgument<"sargs">];
+  let ParseKind = "TargSpec";
+  let Documentation = [Undocumented];
+}

@@ -1151,6 +1151,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    return Importer.getToContext().SingletonId;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
@@ -8629,13 +8633,15 @@ ASTNodeImporter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
     return UnresolvedLookupExpr::Create(
         Importer.getToContext(), *ToNamingClassOrErr, *ToQualifierLocOrErr,
         *ToTemplateKeywordLocOrErr, ToNameInfo, E->requiresADL(), &ToTAInfo,
-        ToDecls.begin(), ToDecls.end(), KnownDependent);
+        ToDecls.begin(), ToDecls.end(), KnownDependent,
+        /*KnownInstantiationDependent=*/E->isInstantiationDependent());
   }
 
   return UnresolvedLookupExpr::Create(
       Importer.getToContext(), *ToNamingClassOrErr, *ToQualifierLocOrErr,
       ToNameInfo, E->requiresADL(), ToDecls.begin(), ToDecls.end(),
-      /*KnownDependent=*/E->isTypeDependent());
+      /*KnownDependent=*/E->isTypeDependent(),
+      /*KnownInstantiationDependent=*/E->isInstantiationDependent());
 }
 
 ExpectedStmt

@@ -37,11 +37,17 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+
+- The type trait builtin ``__is_nullptr`` has been removed, since it has very
+  few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
+  which GCC supports as well.
 
 ABI Changes in This Version
 ---------------------------
@@ -144,6 +150,9 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
 
 - -Wdangling-assignment-gsl is enabled by default.
+- Clang now does a better job preserving the template arguments as written when specializing concepts.
+- Clang now always preserves the template arguments as written used
+  to specialize template type aliases.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -175,6 +184,13 @@ Bug Fixes to C++ Support
   with a string literal. (#GH82167)
 - Fix a crash when matching template template parameters with templates which have
   parameters of different class type. (#GH101394)
+- Clang now correctly recognizes the correct context for parameter
+  substitutions in concepts, so it doesn't incorrectly complain of missing
+  module imports in those situations. (#GH60336)
+- Fix init-capture packs having a size of one before being instantiated. (#GH63677)
+- Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
+  (#GH99877).
+- Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -220,6 +236,8 @@ X86 Support
   found in the file ``clang/www/builtins.py``.
 
 - Support ISA of ``AVX10.2``.
+  * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
+  ``*_(mask(z)))_minmax_s[s|d|h]``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -310,10 +328,14 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support for 'omp assume' directive.
 
 Improvements
 ^^^^^^^^^^^^
 - Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
+
+- `num_teams` now accepts multiple expressions when it is used along in ``target teams ompx_bare`` construct.
+  This allows the target region to be launched with multi-dim grid on GPUs.
 
 Additional Information
 ======================

@@ -3492,7 +3492,7 @@ class OffloadingActionBuilder final {
         // a fat binary containing all the code objects for different GPU's.
         // The fat binary is then an input to the host action.
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-          if (C.getDriver().isUsingLTO(/*IsOffload=*/true)) {
+          if (C.getDriver().isUsingOffloadLTO()) {
             // When LTO is enabled, skip the backend and assemble phases and
             // use lld to link the bitcode.
             ActionList AL;
@@ -4856,8 +4856,7 @@ Action *Driver::ConstructPhaseAction(
         Output = types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    if (isUsingLTO(/* IsOffload */ true) &&
-        TargetDeviceOffloadKind != Action::OFK_None) {
+    if (isUsingOffloadLTO() && TargetDeviceOffloadKind != Action::OFK_None) {
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
