@@ -3696,6 +3696,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  pow_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    pow_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.pow
+)
+
+add_fp_unittest(
   powf_test
   SUITE
     libc-math-smoke-tests

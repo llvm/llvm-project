@@ -215,11 +215,13 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       // these overwrite higher input bits, otherwise the lower word of output
       // depends only on the lower word of input. So check their uses read W.
-      case RISCV::SLLI:
-        if (Bits >= (ST.getXLen() - UserMI->getOperand(2).getImm()))
+      case RISCV::SLLI: {
+        unsigned ShAmt = UserMI->getOperand(2).getImm();
+        if (Bits >= (ST.getXLen() - ShAmt))
           break;
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.push_back(std::make_pair(UserMI, Bits + ShAmt));
         break;
+      }
       case RISCV::ANDI: {
         uint64_t Imm = UserMI->getOperand(2).getImm();
         if (Bits >= (unsigned)llvm::bit_width(Imm))

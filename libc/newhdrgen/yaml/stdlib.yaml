@@ -1,5 +1,5 @@
 header: stdlib.h
-standards: 
+standards:
   - stdc
 macros: []
 types:
@@ -15,37 +15,37 @@ enums: []
 objects: []
 functions:
   - name: abs
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: atoi
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *
   - name: atof
-    standards: 
+    standards:
       - stdc
     return_type: double
     arguments:
       - type: const char *__restrict
   - name: atol
-    standards: 
+    standards:
       - stdc
     return_type: long
     arguments:
       - type: const char *
   - name: atoll
-    standards: 
+    standards:
       - stdc
     return_type: long long
     arguments:
       - type: const char *
   - name: bsearch
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
@@ -55,40 +55,40 @@ functions:
       - type: size_t
       - type: __bsearchcompare_t
   - name: div
-    standards: 
+    standards:
       - stdc
     return_type: div_t
     arguments:
       - type: int
       - type: int
   - name: labs
-    standards: 
+    standards:
       - stdc
     return_type: long
     arguments:
       - type: long
   - name: ldiv
-    standards: 
+    standards:
       - stdc
     return_type: ldiv_t
     arguments:
       - type: long
       - type: long
   - name: llabs
-    standards: 
+    standards:
       - stdc
     return_type: long long
     arguments:
       - type: long long
   - name: lldiv
-    standards: 
+    standards:
       - stdc
     return_type: lldiv_t
     arguments:
       - type: long long
       - type: long long
   - name: qsort
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
@@ -97,8 +97,8 @@ functions:
       - type: size_t
       - type: __qsortcompare_t
   - name: qsort_r
-    standards: 
-      - GNUExtensions 
+    standards:
+      - GNUExtensions
     return_type: void
     arguments:
       - type: void *
@@ -107,19 +107,19 @@ functions:
       - type: __qsortrcompare_t
       - type: void *
   - name: rand
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: void
   - name: srand
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
       - type: unsigned int
   - name: strfromd
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -128,7 +128,7 @@ functions:
       - type: const char *__restrict
       - type: double
   - name: strfromf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -137,7 +137,7 @@ functions:
       - type: const char *__restrict
       - type: float
   - name: strfroml
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -146,21 +146,21 @@ functions:
       - type: const char *__restrict
       - type: long double
   - name: strtod
-    standards: 
+    standards:
       - stdc
     return_type: double
     arguments:
       - type: const char *__restrict
       - type: char **__restrict
   - name: strtof
-    standards: 
+    standards:
       - stdc
     return_type: float
     arguments:
       - type: const char *__restrict
       - type: char **__restrict
   - name: strtol
-    standards: 
+    standards:
       - stdc
     return_type: long
     arguments:
@@ -168,14 +168,14 @@ functions:
       - type: char **__restrict
       - type: int
   - name: strtold
-    standards: 
+    standards:
       - stdc
     return_type: long double
     arguments:
       - type: const char *__restrict
       - type: char **__restrict
   - name: strtoll
-    standards: 
+    standards:
       - stdc
     return_type: long long
     arguments:
@@ -183,7 +183,7 @@ functions:
       - type: char **__restrict
       - type: int
   - name: strtoul
-    standards: 
+    standards:
       - stdc
     return_type: unsigned long
     arguments:
@@ -191,7 +191,7 @@ functions:
       - type: char **__restrict
       - type: int
   - name: strtoull
-    standards: 
+    standards:
       - stdc
     return_type: unsigned long long
     arguments:
@@ -199,76 +199,76 @@ functions:
       - type: char **__restrict
       - type: int
   - name: malloc
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
       - type: size_t
   - name: calloc
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
       - type: size_t
       - type: size_t
   - name: realloc
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
       - type: void *
       - type: size_t
   - name: aligned_alloc
-    standards: 
+    standards:
       - stdc
     return_type: void *
     arguments:
       - type: size_t
       - type: size_t
   - name: free
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
       - type: void *
   - name: _Exit
-    standards: 
+    standards:
       - stdc
     return_type: _Noreturn void
     arguments:
       - type: int
   - name: abort
-    standards: 
+    standards:
       - stdc
     return_type: _Noreturn void
     arguments:
       - type: void
   - name: at_quick_exit
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: __atexithandler_t
   - name: atexit
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: __atexithandler_t
   - name: exit
-    standards: 
+    standards:
       - stdc
     return_type: _Noreturn void
     arguments:
       - type: int
   - name: getenv
-    standards: 
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const char *
   - name: quick_exit
-    standards: 
+    standards:
       - stdc
     return_type: _Noreturn void
     arguments:

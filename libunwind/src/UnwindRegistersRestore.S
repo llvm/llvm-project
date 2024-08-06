@@ -680,7 +680,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldr    x16,     [x0, #0x0F8]
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x16                 // restore sp
-  ret    x30                    // jump to pc
+  br     x30                    // jump to pc
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
@@ -1169,7 +1169,11 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
     ILOAD x\i, (RISCV_ISIZE * \i)(a0)
   .endr
   // skip a0 for now
+#if defined(__riscv_32e)
+  .irp i,11,12,13,14,15
+#else
   .irp i,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+#endif
     ILOAD x\i, (RISCV_ISIZE * \i)(a0)
   .endr
   ILOAD    x10, (RISCV_ISIZE * 10)(a0)   // restore a0

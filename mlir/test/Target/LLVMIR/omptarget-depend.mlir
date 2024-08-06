@@ -1,4 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
     %0 = llvm.mlir.constant(39 : index) : i64
     %1 = llvm.mlir.constant(0 : index) : i64
@@ -117,6 +119,7 @@
     llvm.call @_FortranAProgramEndStatement() {fastmathFlags = #llvm.fastmath<contract>} : () -> ()
     llvm.return %0 : i32
   }
+}
 
 // %strucArg holds pointers to shared data.
 // CHECK: define void @_QQmain() {

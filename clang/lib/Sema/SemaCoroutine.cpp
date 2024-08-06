@@ -684,6 +684,19 @@ bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
   return ThrowingDecls.empty();
 }
 
+// [stmt.return.coroutine]p1:
+//   A coroutine shall not enclose a return statement ([stmt.return]).
+static void checkReturnStmtInCoroutine(Sema &S, FunctionScopeInfo *FSI) {
+  assert(FSI && "FunctionScopeInfo is null");
+  assert(FSI->FirstCoroutineStmtLoc.isValid() &&
+         "first coroutine location not set");
+  if (FSI->FirstReturnLoc.isInvalid())
+    return;
+  S.Diag(FSI->FirstReturnLoc, diag::err_return_in_coroutine);
+  S.Diag(FSI->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
+      << FSI->getFirstCoroutineStmtKeyword();
+}
+
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
                                    StringRef Keyword) {
   // Ignore previous expr evaluation contexts.
@@ -693,6 +706,10 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
     return false;
   auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
+
+  // Avoid duplicate errors, report only on first keyword.
+  if (ScopeInfo->FirstCoroutineStmtLoc == KWLoc)
+    checkReturnStmtInCoroutine(*this, ScopeInfo);
 
   // If we have existing coroutine statements then we have already built
   // the initial and final suspend points.
@@ -801,6 +818,7 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
     if (R.isInvalid()) return ExprError();
     E = R.get();
   }
+
   ExprResult Lookup = BuildOperatorCoawaitLookupExpr(S, Loc);
   if (Lookup.isInvalid())
     return ExprError();
@@ -1117,16 +1135,6 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   // diagnose if we've seen a VLA in the body of this function.
   if (Fn->FirstVLALoc.isValid())
     Diag(Fn->FirstVLALoc, diag::err_vla_in_coroutine_unsupported);
-
-  // [stmt.return.coroutine]p1:
-  //   A coroutine shall not enclose a return statement ([stmt.return]).
-  if (Fn->FirstReturnLoc.isValid()) {
-    assert(Fn->FirstCoroutineStmtLoc.isValid() &&
-                   "first coroutine location not set");
-    Diag(Fn->FirstReturnLoc, diag::err_return_in_coroutine);
-    Diag(Fn->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
-            << Fn->getFirstCoroutineStmtKeyword();
-  }
 
   // Coroutines will get splitted into pieces. The GNU address of label
   // extension wouldn't be meaningful in coroutines.
