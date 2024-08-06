@@ -369,6 +369,10 @@ private:
   ModuleOp mlirModule;
   /// The LLVM module being imported.
   std::unique_ptr<llvm::Module> llvmModule;
+  /// Nameless globals.
+  DenseMap<llvm::GlobalVariable *, FlatSymbolRefAttr> namelessGlobals;
+  /// Counter used to assign a unique ID to each nameless global.
+  unsigned namelessGlobalId = 0;
 
   /// A dialect interface collection used for dispatching the import to specific
   /// dialects.
