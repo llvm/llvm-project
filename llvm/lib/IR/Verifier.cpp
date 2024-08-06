@@ -402,8 +402,20 @@ public:
       : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
         SawFrameEscape(false), TBAAVerifyHelper(this) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
-    if (unsigned V = getDebugMetadataVersionFromModule(M))
-      DebugInfoVersion = V;
+    if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+      auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
+        if (Flag->getNumOperands() < 3)
+          return false;
+        if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
+          return K->getString() == "Debug Info Version";
+        return false;
+      });
+      if (OpIt != ModFlags->op_end()) {
+        const MDOperand &ValOp = (*OpIt)->getOperand(2);
+        if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(ValOp))
+          DebugInfoVersion = CI->getZExtValue();
+      }
+    }
   }
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
