@@ -167,9 +167,9 @@ html_theme = "furo"
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-  "source_repository": "https://github.com/llvm/llvm-project",
-  "source_branch": "main",
-  "source_directory": "lldb/docs/",
+    "source_repository": "https://github.com/llvm/llvm-project",
+    "source_branch": "main",
+    "source_directory": "lldb/docs/",
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
