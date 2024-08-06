@@ -539,9 +539,11 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
     if (!ExpectedList)
       return ExpectedList.takeError();
     std::vector<Memory64ListStream::entry_type> Ranges;
-    for (auto It = ExpectedList->begin(); It != ExpectedList->end(); ++It) {
+    for (auto It = ExpectedList->begin(); It != ExpectedList->end();) {
+      // Explicilty advance the iterator before dereference.
+      ++It;
       const auto Pair = *It;
-      if (Err.success()) {
+      if (!Err) {
         Ranges.push_back({Pair.first, Pair.second});
       }
     }

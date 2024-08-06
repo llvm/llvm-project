@@ -140,6 +140,11 @@ public:
     size_t Stride;
   };
 
+
+  /// Class the provides an iterator over the memory64 memory ranges. Ranges
+  /// are not validated before hand, and so any increment operation could fail.
+  /// For this reason, the iterator in it's initial state points to a default
+  /// initialized std::pair and should be advanced before dereferencing.
   class Memory64Iterator {
   public:
     static Memory64Iterator
