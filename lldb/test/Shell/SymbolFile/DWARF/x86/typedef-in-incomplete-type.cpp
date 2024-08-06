@@ -1,4 +1,4 @@
-// RUN: %clangxx --target=x86_64-pc-linux -o %t -c %s -g
+// RUN: %clangxx --target=x86_64-pc-linux -flimit-debug-info -o %t -c %s -g
 // RUN: %lldb %t -o "target var a" -o "expr -- var" -o exit | FileCheck %s
 
 // This forces lldb to attempt to complete the type A. Since it has no
