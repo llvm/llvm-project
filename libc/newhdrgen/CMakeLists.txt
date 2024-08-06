@@ -8,7 +8,7 @@ if(LLVM_LIBC_FULL_BUILD)
     NAME newhdrgen_integration_test
     COMMAND python3 ${NEWHDGEN_TESTS_DIR}/test_integration.py --output_dir ${TEST_OUTPUT_DIR}
   )
-  
+ 
   add_custom_target(check-newhdrgen
     COMMAND ${CMAKE_CTEST_COMMAND} -R newhdrgen_integration_test --output-on-failure
   )

@@ -2046,6 +2046,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  pow_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    pow_test.cpp
+  DEPENDS
+    libc.src.math.pow
+)
+
+add_fp_unittest(
   powf_test
   NEED_MPFR
   SUITE

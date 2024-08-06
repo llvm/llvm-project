@@ -125,9 +125,17 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1152"},   {"gfx1152"}, GK_GFX1152, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#if LLPC_BUILD_GFX12
+    {{"gfx115F"},   {"gfx115F"}, GK_GFX115F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#endif /* LLPC_BUILD_GFX12 */
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#if LLPC_BUILD_GFX12
+    {{"gfx120E"},   {"gfx120E"}, GK_GFX120E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx120F"},   {"gfx120F"}, GK_GFX120F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#else /* LLPC_BUILD_GFX12 */
 
+#endif /* LLPC_BUILD_GFX12 */
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx10-3-generic"},   {"gfx10-3-generic"}, GK_GFX10_3_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
@@ -277,8 +285,15 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1150: return {11, 5, 0};
   case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1152: return {11, 5, 2};
+#if LLPC_BUILD_GFX12
+  case GK_GFX115F: return {11, 5, 0xFFFF};
+#endif /* LLPC_BUILD_GFX12 */
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
+#if LLPC_BUILD_GFX12
+  case GK_GFX120E: return {12, 0, 0xFFFE};
+  case GK_GFX120F: return {12, 0, 0xFFFF};
+#endif /* LLPC_BUILD_GFX12 */
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -357,6 +372,10 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["wavefrontsize64"] = true;
   } else if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+#if LLPC_BUILD_GFX12
+    case GK_GFX120F:
+    case GK_GFX120E:
+#endif /* LLPC_BUILD_GFX12 */
     case GK_GFX1201:
     case GK_GFX1200:
     case GK_GFX12_GENERIC:
@@ -383,6 +402,9 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["fp8-conversion-insts"] = true;
       break;
+#if LLPC_BUILD_GFX12
+    case GK_GFX115F:
+#endif /* LLPC_BUILD_GFX12 */
     case GK_GFX1152:
     case GK_GFX1151:
     case GK_GFX1150:
@@ -583,8 +605,15 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+#if LLPC_BUILD_GFX12
+    case GK_GFX120E:
+    case GK_GFX120F:
+#endif /* LLPC_BUILD_GFX12 */
     case GK_GFX1201:
     case GK_GFX1200:
+#if LLPC_BUILD_GFX12
+    case GK_GFX115F:
+#endif /* LLPC_BUILD_GFX12 */
     case GK_GFX1152:
     case GK_GFX1151:
     case GK_GFX1150:

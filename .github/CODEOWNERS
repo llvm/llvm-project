@@ -150,3 +150,6 @@ clang/test/AST/Interp/ @tbaederr
 /llvm/**/DWARFLinker/ @JDevlieghere
 /llvm/**/dsymutil/ @JDevlieghere
 /llvm/**/llvm-dwarfutil/ @JDevlieghere
+
+# libclang/Python bindings
+/clang/bindings/python @DeinAlptraum
