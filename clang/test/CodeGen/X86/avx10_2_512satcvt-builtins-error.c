@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2-512 \
-// RUN: -emit-llvm -Wall -Werror -verify
+// RUN: -Wall -Werror -verify
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2-512 \
-// RUN: -emit-llvm -Wall -Werror -verify
+// RUN: -Wall -Werror -verify
 
 #include <immintrin.h>
 
