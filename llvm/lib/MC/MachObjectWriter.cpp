@@ -541,7 +541,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
   }
 
   // Bind non-lazy symbol pointers first.
-  for (auto [IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
+  for (const auto &[IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
     const auto &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
@@ -555,7 +555,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
   }
 
   // Then lazy symbol pointers and symbol stubs.
-  for (auto [IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
+  for (const auto &[IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
     const auto &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_LAZY_SYMBOL_POINTERS &&
