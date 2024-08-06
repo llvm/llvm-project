@@ -275,10 +275,12 @@ DWARF:
                                 {DW_TAG_namespace, "NAMESPACE"}}));
   EXPECT_THAT(anon_struct_die.GetDeclContext(),
               testing::ElementsAre(make_namespace("NAMESPACE"),
-                                   make_namespace(nullptr), make_struct("STRUCT")));
+                                   make_namespace(nullptr),
+                                   make_struct("STRUCT")));
   EXPECT_THAT(anon_struct_die.GetTypeLookupContext(),
               testing::ElementsAre(make_namespace("NAMESPACE"),
-                                   make_namespace(nullptr), make_struct("STRUCT")));
+                                   make_namespace(nullptr),
+                                   make_struct("STRUCT")));
   EXPECT_THAT(anon_struct_die.GetDWARFDeclContext(),
               DWARFDeclContext({{DW_TAG_structure_type, "STRUCT"},
                                 {DW_TAG_namespace, nullptr},

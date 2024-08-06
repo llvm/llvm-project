@@ -184,7 +184,6 @@ class DynamicValueTestCase(TestBase):
         self.assertEqual(anotherA_loc, reallyA_loc)
         self.assertEqual(anotherA_value.GetTypeName().find("B"), -1)
 
-
         # Finally do the same with a B in an anonymous namespace.
         threads = lldbutil.continue_to_breakpoint(process, do_something_bpt)
         self.assertEqual(len(threads), 1)
@@ -197,7 +196,6 @@ class DynamicValueTestCase(TestBase):
         anon_b_value = anotherA_value.GetChildMemberWithName("m_anon_b_value")
         self.assertTrue(anon_b_value)
         self.assertEqual(anon_b_value.GetValueAsSigned(), 47)
-
 
     def examine_value_object_of_this_ptr(
         self, this_static, this_dynamic, dynamic_location

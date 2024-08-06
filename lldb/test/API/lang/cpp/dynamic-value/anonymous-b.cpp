@@ -10,6 +10,4 @@ private:
 };
 } // namespace
 
-A *make_anonymous_B() {
-  return new B();
-}
+A *make_anonymous_B() { return new B(); }
