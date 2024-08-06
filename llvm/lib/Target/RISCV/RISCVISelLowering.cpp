@@ -7458,11 +7458,11 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   constexpr unsigned StaticChainOffset = 16;
   constexpr unsigned FunctionAddressOffset = 24;
 
+  const MCSubtargetInfo *STI = getTargetMachine().getMCSubtargetInfo();
+  assert(STI);
   auto GetEncoding = [&](const MCInst &MC) {
     SmallVector<char, 4> CB;
     SmallVector<MCFixup> Fixups;
-    const MCSubtargetInfo *STI = getTargetMachine().getMCSubtargetInfo();
-    assert(STI);
     CodeEmitter->encodeInstruction(MC, CB, Fixups, *STI);
     uint32_t Encoding = support::endian::read32le(CB.data());
     return Encoding;
