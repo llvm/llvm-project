@@ -25,7 +25,7 @@
 
 namespace llvm {
 /// A node (context) in the loaded contextual profile, suitable for mutation
-/// during IPO passes. We generally expect a fraction of counters and of
+/// during IPO passes. We generally expect a fraction of counters and
 /// callsites to be populated. We continue to model counters as vectors, but
 /// callsites are modeled as a map of a map. The expectation is that, typically,
 /// there is a small number of indirect targets (usually, 1 for direct calls);
