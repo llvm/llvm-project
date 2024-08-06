@@ -15,6 +15,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlanSingleThreadTimeout.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -36,7 +37,8 @@ ThreadPlanStepOverRange::ThreadPlanStepOverRange(
     : ThreadPlanStepRange(ThreadPlan::eKindStepOverRange,
                           "Step range stepping over", thread, range,
                           addr_context, stop_others),
-      ThreadPlanShouldStopHere(this), m_first_resume(true) {
+      ThreadPlanShouldStopHere(this), TimeoutResumeAll(thread),
+      m_first_resume(true), m_run_mode(stop_others) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 }
@@ -124,6 +126,11 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
   return m_addr_context.symbol && m_addr_context.symbol == context.symbol;
 }
 
+void ThreadPlanStepOverRange::SetStopOthers(bool stop_others) {
+  if (!stop_others)
+    m_stop_others = RunMode::eAllThreads;
+}
+
 bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Step);
   Thread &thread = GetThread();
@@ -134,6 +141,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                 GetTarget().GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepOverRange reached %s.", s.GetData());
   }
+  ClearNextBranchBreakpointExplainedStop();
 
   // If we're out of the range but in the same frame or in our caller's frame
   // then we should stop. When stepping out we only stop others if we are
@@ -141,6 +149,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   bool stop_others = (m_stop_others == lldb::eOnlyThisThread);
   ThreadPlanSP new_plan_sp;
   FrameComparison frame_order = CompareCurrentFrameToStartFrame();
+  LLDB_LOGF(log, "ThreadPlanStepOverRange compare frame result: %d.",
+            frame_order);
 
   if (frame_order == eFrameCompareOlder) {
     // If we're in an older frame then we should stop.
@@ -337,6 +347,43 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     return false;
 }
 
+void ThreadPlanStepOverRange::DidPush() {
+  ThreadPlanStepRange::DidPush();
+  if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
+    PushNewTimeout();
+}
+
+bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
+  // For crashes, breakpoint hits, signals, etc, let the base plan (or some
+  // plan above us) handle the stop.  That way the user can see the stop, step
+  // around, and then when they are done, continue and have their step
+  // complete.  The exception is if we've hit our "run to next branch"
+  // breakpoint. Note, unlike the step in range plan, we don't mark ourselves
+  // complete if we hit an unexplained breakpoint/crash.
+
+  Log *log = GetLog(LLDBLog::Step);
+  StopInfoSP stop_info_sp = GetPrivateStopInfo();
+  bool return_value;
+
+  if (stop_info_sp) {
+    StopReason reason = stop_info_sp->GetStopReason();
+
+    if (reason == eStopReasonTrace) {
+      return_value = true;
+    } else if (reason == eStopReasonBreakpoint) {
+      return_value = NextRangeBreakpointExplainsStop(stop_info_sp);
+    } else {
+      if (log)
+        log->PutCString("ThreadPlanStepOverRange got asked if it explains the "
+                        "stop for some reason other than step.");
+      return_value = false;
+    }
+  } else
+    return_value = true;
+
+  return return_value;
+}
+
 bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
                                            bool current_plan) {
   if (resume_state != eStateSuspended && m_first_resume) {
@@ -383,6 +430,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       }
     }
   }
-
+  if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
+    ResumeWithTimeout();
   return true;
 }
