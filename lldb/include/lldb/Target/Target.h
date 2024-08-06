@@ -190,6 +190,8 @@ public:
 
   bool GetSwiftAllowExplicitModules() const;
 
+  AutoBool GetSwiftPCMValidation() const;
+
   Args GetSwiftPluginServerForPath() const;
 
   bool GetSwiftAutoImportFrameworks() const;
