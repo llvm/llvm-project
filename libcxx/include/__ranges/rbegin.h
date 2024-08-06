@@ -85,34 +85,6 @@ inline constexpr auto rbegin = __rbegin::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-// [range.access.crbegin]
-
-namespace ranges {
-namespace __crbegin {
-struct __fn {
-  template <class _Tp>
-    requires is_lvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::rbegin(static_cast<const remove_reference_t<_Tp>&>(__t))))
-          -> decltype(ranges::rbegin(static_cast<const remove_reference_t<_Tp>&>(__t))) {
-    return ranges::rbegin(static_cast<const remove_reference_t<_Tp>&>(__t));
-  }
-
-  template <class _Tp>
-    requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::rbegin(static_cast<const _Tp&&>(__t))))
-          -> decltype(ranges::rbegin(static_cast<const _Tp&&>(__t))) {
-    return ranges::rbegin(static_cast<const _Tp&&>(__t));
-  }
-};
-} // namespace __crbegin
-
-inline namespace __cpo {
-inline constexpr auto crbegin = __crbegin::__fn{};
-} // namespace __cpo
-} // namespace ranges
-
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD

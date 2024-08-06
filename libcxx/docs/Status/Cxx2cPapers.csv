@@ -42,7 +42,7 @@
 "`P2819R2 <https://wg21.link/P2819R2>`__","Add tuple protocol to complex","Kona November 2023","|Complete|","19.0",""
 "`P2937R0 <https://wg21.link/P2937R0>`__","Freestanding: Remove ``strtok``","Kona November 2023","","",""
 "`P2833R2 <https://wg21.link/P2833R2>`__","Freestanding Library: inout expected span","Kona November 2023","","",""
-"`P2836R1 <https://wg21.link/P2836R1>`__","``std::basic_const_iterator`` should follow its underlying type's convertibility","Kona November 2023","","","|DR|"
+"`P2836R1 <https://wg21.link/P2836R1>`__","``std::basic_const_iterator`` should follow its underlying type's convertibility","Kona November 2023","|Complete| [#note-P2836R1]","20.0","|DR|"
 "`P2264R7 <https://wg21.link/P2264R7>`__","Make ``assert()`` macro user friendly for C and C++","Kona November 2023","","",""
 "`P1673R13 <https://wg21.link/P1673R13>`__","A free function linear algebra interface based on the BLAS","Kona November 2023","","",""
 "","","","","",""

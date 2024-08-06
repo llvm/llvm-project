@@ -167,7 +167,7 @@
     __cpp_lib_print                                         202207L [C++23]
     __cpp_lib_quoted_string_io                              201304L [C++14]
     __cpp_lib_ranges                                        202207L [C++20]
-    __cpp_lib_ranges_as_const                               202207L [C++23]
+    __cpp_lib_ranges_as_const                               202311L [C++23]
     __cpp_lib_ranges_as_rvalue                              202207L [C++23]
     __cpp_lib_ranges_chunk                                  202202L [C++23]
     __cpp_lib_ranges_chunk_by                               202202L [C++23]
@@ -5627,8 +5627,8 @@
 #   ifndef __cpp_lib_ranges_as_const
 #     error "__cpp_lib_ranges_as_const should be defined in c++23"
 #   endif
-#   if __cpp_lib_ranges_as_const != 202207L
-#     error "__cpp_lib_ranges_as_const should have the value 202207L in c++23"
+#   if __cpp_lib_ranges_as_const != 202311L
+#     error "__cpp_lib_ranges_as_const should have the value 202311L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_ranges_as_const
@@ -7478,8 +7478,8 @@
 #   ifndef __cpp_lib_ranges_as_const
 #     error "__cpp_lib_ranges_as_const should be defined in c++26"
 #   endif
-#   if __cpp_lib_ranges_as_const != 202207L
-#     error "__cpp_lib_ranges_as_const should have the value 202207L in c++26"
+#   if __cpp_lib_ranges_as_const != 202311L
+#     error "__cpp_lib_ranges_as_const should have the value 202311L in c++26"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_ranges_as_const

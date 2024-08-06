@@ -182,18 +182,21 @@ export namespace std {
   using std::insert_iterator;
   using std::inserter;
 
+#if _LIBCPP_STD_VER >= 23
   // [const.iterators], constant iterators and sentinels
   // [const.iterators.alias], alias templates
-  //  using std::const_iterator;
-  //  using std::const_sentinel;
-  //  using std::iter_const_reference_t;
+  using std::const_iterator;
+  using std::const_sentinel;
+  using std::iter_const_reference_t;
 
   // [const.iterators.iterator], class template basic_const_iterator
-  //  using std::basic_const_iterator;
+  using std::basic_const_iterator;
 
-  // using std::common_type;
+  using std::common_type;
 
-  //  using std::make_const_iterator;
+  using std::make_const_iterator;
+  using std::make_const_sentinel;
+#endif
 
   // [move.iterators], move iterators and sentinels
   using std::move_iterator;

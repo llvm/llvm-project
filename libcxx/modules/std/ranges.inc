@@ -34,10 +34,14 @@ export namespace std {
 
     using std::ranges::borrowed_range;
 
-    // using std::ranges::const_iterator_t;
-    // using std::ranges::const_sentinel_t;
+#if _LIBCPP_STD_VER >= 23
+    using std::ranges::const_iterator_t;
+    using std::ranges::const_sentinel_t;
+#endif
     using std::ranges::iterator_t;
-    // using std::ranges::range_const_reference_t;
+#if _LIBCPP_STD_VER >= 23
+    using std::ranges::range_const_reference_t;
+#endif
     using std::ranges::range_common_reference_t;
     using std::ranges::range_difference_t;
     using std::ranges::range_reference_t;
@@ -58,7 +62,9 @@ export namespace std {
     // [range.refinements], other range refinements
     using std::ranges::bidirectional_range;
     using std::ranges::common_range;
-    // using std::ranges::constant_range;
+#if _LIBCPP_STD_VER >= 23
+    using std::ranges::constant_range;
+#endif
     using std::ranges::contiguous_range;
     using std::ranges::forward_range;
     using std::ranges::input_range;

@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // std::ranges::rend
-// std::ranges::crend
+// std::ranges::crend // before C++23
 
 #include <ranges>
 
@@ -19,7 +19,9 @@
 #include "test_iterators.h"
 
 using RangeREndT = decltype(std::ranges::rend);
+#if TEST_STD_VER < 23
 using RangeCREndT = decltype(std::ranges::crend);
+#endif // TEST_STD_VER < 23
 
 static int globalBuff[8];
 
@@ -27,16 +29,20 @@ static_assert(!std::is_invocable_v<RangeREndT, int (&&)[]>);
 static_assert(!std::is_invocable_v<RangeREndT, int (&)[]>);
 static_assert(!std::is_invocable_v<RangeREndT, int (&&)[10]>);
 static_assert( std::is_invocable_v<RangeREndT, int (&)[10]>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, int (&&)[]>);
 static_assert(!std::is_invocable_v<RangeCREndT, int (&)[]>);
 static_assert(!std::is_invocable_v<RangeCREndT, int (&&)[10]>);
 static_assert( std::is_invocable_v<RangeCREndT, int (&)[10]>);
+#endif // TEST_STD_VER < 23
 
 struct Incomplete;
 static_assert(!std::is_invocable_v<RangeREndT, Incomplete(&&)[]>);
 static_assert(!std::is_invocable_v<RangeREndT, Incomplete(&&)[42]>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, Incomplete(&&)[]>);
 static_assert(!std::is_invocable_v<RangeCREndT, Incomplete(&&)[42]>);
+#endif // TEST_STD_VER < 23
 
 struct REndMember {
   int x;
@@ -49,50 +55,50 @@ static_assert( std::is_invocable_v<RangeREndT, REndMember&>);
 static_assert(!std::is_invocable_v<RangeREndT, REndMember &&>);
 static_assert( std::is_invocable_v<RangeREndT, REndMember const&>);
 static_assert(!std::is_invocable_v<RangeREndT, REndMember const&&>);
+#if TEST_STD_VER < 23
 static_assert( std::is_invocable_v<RangeCREndT, REndMember &>);
 static_assert(!std::is_invocable_v<RangeCREndT, REndMember &&>);
 static_assert( std::is_invocable_v<RangeCREndT, REndMember const&>);
 static_assert(!std::is_invocable_v<RangeCREndT, REndMember const&&>);
+#endif // TEST_STD_VER < 23
 
 constexpr bool testReturnTypes() {
-  {
-    int *x[2];
-    ASSERT_SAME_TYPE(decltype(std::ranges::rend(x)), std::reverse_iterator<int**>);
-    ASSERT_SAME_TYPE(decltype(std::ranges::crend(x)), std::reverse_iterator<int* const*>);
-  }
+  int* a[2];
+  int b[2][2];
+  struct Different {
+    char* rbegin();
+    sentinel_wrapper<char*>& rend();
+    short* rbegin() const;
+    sentinel_wrapper<short*>& rend() const;
+  } c;
 
-  {
-    int x[2][2];
-    ASSERT_SAME_TYPE(decltype(std::ranges::rend(x)), std::reverse_iterator<int(*)[2]>);
-    ASSERT_SAME_TYPE(decltype(std::ranges::crend(x)), std::reverse_iterator<const int(*)[2]>);
-  }
+  ASSERT_SAME_TYPE(decltype(std::ranges::rend(a)), std::reverse_iterator<int**>);
+  ASSERT_SAME_TYPE(decltype(std::ranges::rend(b)), std::reverse_iterator<int(*)[2]>);
+  ASSERT_SAME_TYPE(decltype(std::ranges::rend(c)), sentinel_wrapper<char*>);
 
-  {
-    struct Different {
-      char* rbegin();
-      sentinel_wrapper<char*>& rend();
-      short* rbegin() const;
-      sentinel_wrapper<short*>& rend() const;
-    } x;
-    ASSERT_SAME_TYPE(decltype(std::ranges::rend(x)), sentinel_wrapper<char*>);
-    ASSERT_SAME_TYPE(decltype(std::ranges::crend(x)), sentinel_wrapper<short*>);
-  }
+#if TEST_STD_VER < 23
+  ASSERT_SAME_TYPE(decltype(std::ranges::crend(a)), std::reverse_iterator<int* const*>);
+  ASSERT_SAME_TYPE(decltype(std::ranges::crend(b)), std::reverse_iterator<const int(*)[2]>);
+  ASSERT_SAME_TYPE(decltype(std::ranges::crend(c)), sentinel_wrapper<short*>);
+#endif // TEST_STD_VER < 23
 
   return true;
 }
 
 constexpr bool testArray() {
   int a[2];
-  assert(std::ranges::rend(a).base() == a);
-  assert(std::ranges::crend(a).base() == a);
-
   int b[2][2];
-  assert(std::ranges::rend(b).base() == b);
-  assert(std::ranges::crend(b).base() == b);
-
   REndMember c[2];
+
+  assert(std::ranges::rend(a).base() == a);
+  assert(std::ranges::rend(b).base() == b);
   assert(std::ranges::rend(c).base() == c);
+
+#if TEST_STD_VER < 23
+  assert(std::ranges::crend(b).base() == b);
+  assert(std::ranges::crend(a).base() == a);
   assert(std::ranges::crend(c).base() == c);
+#endif // TEST_STD_VER < 23
 
   return true;
 }
@@ -130,8 +136,10 @@ struct NonConstREndMember {
 };
 static_assert( std::is_invocable_v<RangeREndT,  NonConstREndMember &>);
 static_assert(!std::is_invocable_v<RangeREndT,  NonConstREndMember const&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, NonConstREndMember &>);
 static_assert(!std::is_invocable_v<RangeCREndT, NonConstREndMember const&>);
+#endif // TEST_STD_VER < 23
 
 struct EnabledBorrowingREndMember {
   constexpr int* rbegin() const { return nullptr; }
@@ -163,24 +171,24 @@ struct EmptyPtrREndMember {
 
 constexpr bool testREndMember() {
   REndMember a;
-  assert(std::ranges::rend(a) == &a.x);
-  assert(std::ranges::crend(a) == &a.x);
-
   NonConstREndMember b;
-  assert(std::ranges::rend(b) == &b.x);
-  static_assert(!std::is_invocable_v<RangeCREndT, decltype((b))>);
-
   EnabledBorrowingREndMember c;
-  assert(std::ranges::rend(std::move(c)) == &globalBuff[0]);
-  assert(std::ranges::crend(std::move(c)) == &globalBuff[0]);
-
   REndMemberFunction d;
-  assert(std::ranges::rend(d) == &d.x);
-  assert(std::ranges::crend(d) == &d.x);
-
   EmptyPtrREndMember e;
+
+  assert(std::ranges::rend(a) == &a.x);
+  assert(std::ranges::rend(b) == &b.x);
+  assert(std::ranges::rend(std::move(c)) == &globalBuff[0]);
+  assert(std::ranges::rend(d) == &d.x);
   assert(std::ranges::rend(e) == &e.x);
+
+#if TEST_STD_VER < 23
+  assert(std::ranges::crend(a) == &a.x);
+  static_assert(!std::is_invocable_v<RangeCREndT, decltype((b))>);
+  assert(std::ranges::crend(std::move(c)) == &globalBuff[0]);
+  assert(std::ranges::crend(d) == &d.x);
   assert(std::ranges::crend(e) == &e.x);
+#endif // TEST_STD_VER < 23
 
   return true;
 }
@@ -197,8 +205,10 @@ static_assert(!std::is_invocable_v<RangeREndT, REndFunction &&>);
 static_assert( std::is_invocable_v<RangeREndT,  REndFunction const&>);
 static_assert(!std::is_invocable_v<RangeREndT,  REndFunction &&>);
 static_assert(std::is_invocable_v<RangeREndT, REndFunction&>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+#if TEST_STD_VER < 23
 static_assert( std::is_invocable_v<RangeCREndT, REndFunction const&>);
 static_assert( std::is_invocable_v<RangeCREndT, REndFunction &>);
+#endif // TEST_STD_VER < 23
 
 struct REndFunctionReturnsInt {
   friend constexpr int rbegin(REndFunctionReturnsInt const&);
@@ -233,7 +243,9 @@ struct REndFunctionByValue {
   friend constexpr int* rbegin(REndFunctionByValue) { return nullptr; }
   friend constexpr int* rend(REndFunctionByValue) { return &globalBuff[1]; }
 };
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, REndFunctionByValue>);
+#endif // TEST_STD_VER < 23
 
 struct REndFunctionEnabledBorrowing {
   friend constexpr int* rbegin(REndFunctionEnabledBorrowing) { return nullptr; }
@@ -269,47 +281,45 @@ struct RBeginMemberEndFunction {
 
 constexpr bool testREndFunction() {
   const REndFunction a{};
-  assert(std::ranges::rend(a) == &a.x);
-  assert(std::ranges::crend(a) == &a.x);
   REndFunction aa{};
-  assert(std::ranges::rend(aa) == &aa.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
-  assert(std::ranges::crend(aa) == &aa.x);
-
   REndFunctionByValue b;
-  assert(std::ranges::rend(b) == &globalBuff[1]);
-  assert(std::ranges::crend(b) == &globalBuff[1]);
-
   REndFunctionEnabledBorrowing c;
-  assert(std::ranges::rend(std::move(c)) == &globalBuff[2]);
-  assert(std::ranges::crend(std::move(c)) == &globalBuff[2]);
-
   const REndFunctionReturnsEmptyPtr d{};
-  assert(std::ranges::rend(d) == &d.x);
-  assert(std::ranges::crend(d) == &d.x);
   REndFunctionReturnsEmptyPtr dd{};
-  assert(std::ranges::rend(dd) == &dd.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
-  assert(std::ranges::crend(dd) == &dd.x);
-
   const REndFunctionWithDataMember e{};
-  assert(std::ranges::rend(e) == &e.x);
-  assert(std::ranges::crend(e) == &e.x);
   REndFunctionWithDataMember ee{};
-  assert(std::ranges::rend(ee) == &ee.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
-  assert(std::ranges::crend(ee) == &ee.x);
-
   const REndFunctionWithPrivateEndMember f{};
-  assert(std::ranges::rend(f) == &f.y);
-  assert(std::ranges::crend(f) == &f.y);
   REndFunctionWithPrivateEndMember ff{};
-  assert(std::ranges::rend(ff) == &ff.y); // Ill-formed before P2602R2 Poison Pills are Too Toxic
-  assert(std::ranges::crend(ff) == &ff.y);
-
   const RBeginMemberEndFunction g{};
-  assert(std::ranges::rend(g) == &g.x);
-  assert(std::ranges::crend(g) == &g.x);
   RBeginMemberEndFunction gg{};
+
+  assert(std::ranges::rend(a) == &a.x);
+  assert(std::ranges::rend(aa) == &aa.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+  assert(std::ranges::rend(b) == &globalBuff[1]);
+  assert(std::ranges::rend(std::move(c)) == &globalBuff[2]);
+  assert(std::ranges::rend(d) == &d.x);
+  assert(std::ranges::rend(dd) == &dd.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+  assert(std::ranges::rend(e) == &e.x);
+  assert(std::ranges::rend(ee) == &ee.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+  assert(std::ranges::rend(f) == &f.y);
+  assert(std::ranges::rend(ff) == &ff.y); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+  assert(std::ranges::rend(g) == &g.x);
   assert(std::ranges::rend(gg) == &gg.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+
+#if TEST_STD_VER < 23
+  assert(std::ranges::crend(a) == &a.x);
+  assert(std::ranges::crend(aa) == &aa.x);
+  assert(std::ranges::crend(b) == &globalBuff[1]);
+  assert(std::ranges::crend(std::move(c)) == &globalBuff[2]);
+  assert(std::ranges::crend(d) == &d.x);
+  assert(std::ranges::crend(dd) == &dd.x);
+  assert(std::ranges::crend(e) == &e.x);
+  assert(std::ranges::crend(ee) == &ee.x);
+  assert(std::ranges::crend(f) == &f.y);
+  assert(std::ranges::crend(ff) == &ff.y);
+  assert(std::ranges::crend(g) == &g.x);
   assert(std::ranges::crend(gg) == &gg.x);
+#endif // TEST_STD_VER < 23
 
   return true;
 }
@@ -325,7 +335,9 @@ struct MemberBeginEnd {
 };
 static_assert( std::is_invocable_v<RangeREndT, MemberBeginEnd&>);
 static_assert( std::is_invocable_v<RangeREndT, MemberBeginEnd const&>);
+#if TEST_STD_VER < 23
 static_assert( std::is_invocable_v<RangeCREndT, MemberBeginEnd const&>);
+#endif // TEST_STD_VER < 23
 
 struct FunctionBeginEnd {
   int b, e;
@@ -343,7 +355,9 @@ struct FunctionBeginEnd {
 };
 static_assert( std::is_invocable_v<RangeREndT, FunctionBeginEnd&>);
 static_assert( std::is_invocable_v<RangeREndT, FunctionBeginEnd const&>);
+#if TEST_STD_VER < 23
 static_assert( std::is_invocable_v<RangeCREndT, FunctionBeginEnd const&>);
+#endif // TEST_STD_VER < 23
 
 struct MemberBeginFunctionEnd {
   int b, e;
@@ -359,7 +373,9 @@ struct MemberBeginFunctionEnd {
 };
 static_assert( std::is_invocable_v<RangeREndT, MemberBeginFunctionEnd&>);
 static_assert( std::is_invocable_v<RangeREndT, MemberBeginFunctionEnd const&>);
+#if TEST_STD_VER < 23
 static_assert( std::is_invocable_v<RangeCREndT, MemberBeginFunctionEnd const&>);
+#endif // TEST_STD_VER < 23
 
 struct FunctionBeginMemberEnd {
   int b, e;
@@ -375,59 +391,77 @@ struct FunctionBeginMemberEnd {
 };
 static_assert( std::is_invocable_v<RangeREndT, FunctionBeginMemberEnd&>);
 static_assert( std::is_invocable_v<RangeREndT, FunctionBeginMemberEnd const&>);
+#if TEST_STD_VER < 23
 static_assert( std::is_invocable_v<RangeCREndT, FunctionBeginMemberEnd const&>);
+#endif // TEST_STD_VER < 23
 
 struct MemberBeginEndDifferentTypes {
   bidirectional_iterator<int*> begin();
   bidirectional_iterator<const int*> end();
 };
 static_assert(!std::is_invocable_v<RangeREndT, MemberBeginEndDifferentTypes&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, MemberBeginEndDifferentTypes&>);
+#endif // TEST_STD_VER < 23
 
 struct FunctionBeginEndDifferentTypes {
   friend bidirectional_iterator<int*> begin(FunctionBeginEndDifferentTypes&);
   friend bidirectional_iterator<const int*> end(FunctionBeginEndDifferentTypes&);
 };
 static_assert(!std::is_invocable_v<RangeREndT, FunctionBeginEndDifferentTypes&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, FunctionBeginEndDifferentTypes&>);
+#endif // TEST_STD_VER < 23
 
 struct MemberBeginEndForwardIterators {
   forward_iterator<int*> begin();
   forward_iterator<int*> end();
 };
 static_assert(!std::is_invocable_v<RangeREndT, MemberBeginEndForwardIterators&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, MemberBeginEndForwardIterators&>);
+#endif // TEST_STD_VER < 23
 
 struct FunctionBeginEndForwardIterators {
   friend forward_iterator<int*> begin(FunctionBeginEndForwardIterators&);
   friend forward_iterator<int*> end(FunctionBeginEndForwardIterators&);
 };
 static_assert(!std::is_invocable_v<RangeREndT, FunctionBeginEndForwardIterators&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, FunctionBeginEndForwardIterators&>);
+#endif // TEST_STD_VER < 23
 
 struct MemberBeginOnly {
   bidirectional_iterator<int*> begin() const;
 };
 static_assert(!std::is_invocable_v<RangeREndT, MemberBeginOnly&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, MemberBeginOnly&>);
+#endif // TEST_STD_VER < 23
 
 struct FunctionBeginOnly {
   friend bidirectional_iterator<int*> begin(FunctionBeginOnly&);
 };
 static_assert(!std::is_invocable_v<RangeREndT, FunctionBeginOnly&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, FunctionBeginOnly&>);
+#endif // TEST_STD_VER < 23
 
 struct MemberEndOnly {
   bidirectional_iterator<int*> end() const;
 };
 static_assert(!std::is_invocable_v<RangeREndT, MemberEndOnly&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, MemberEndOnly&>);
+#endif // TEST_STD_VER < 23
 
 struct FunctionEndOnly {
   friend bidirectional_iterator<int*> end(FunctionEndOnly&);
 };
 static_assert(!std::is_invocable_v<RangeREndT, FunctionEndOnly&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, FunctionEndOnly&>);
+#endif // TEST_STD_VER < 23
 
 // Make sure there is no clash between the following cases:
 // - the case that handles classes defining member `rbegin` and `rend` functions;
@@ -438,53 +472,60 @@ struct MemberBeginAndRBegin {
   int* rbegin() const;
   int* rend() const;
 };
-static_assert( std::is_invocable_v<RangeREndT, MemberBeginAndRBegin&>);
-static_assert( std::is_invocable_v<RangeCREndT, MemberBeginAndRBegin&>);
+static_assert(std::is_invocable_v<RangeREndT, MemberBeginAndRBegin&>);
 static_assert( std::same_as<std::invoke_result_t<RangeREndT, MemberBeginAndRBegin&>, int*>);
+#if TEST_STD_VER < 23
+static_assert(std::is_invocable_v<RangeCREndT, MemberBeginAndRBegin&>);
 static_assert( std::same_as<std::invoke_result_t<RangeCREndT, MemberBeginAndRBegin&>, int*>);
+#endif // TEST_STD_VER < 23
 
 constexpr bool testBeginEnd() {
   MemberBeginEnd a{};
   const MemberBeginEnd aa{};
-  assert(base(std::ranges::rend(a).base()) == &a.b);
-  assert(base(std::ranges::crend(a).base()) == &a.cb);
-  assert(base(std::ranges::rend(aa).base()) == &aa.cb);
-  assert(base(std::ranges::crend(aa).base()) == &aa.cb);
-
   FunctionBeginEnd b{};
   const FunctionBeginEnd bb{};
-  assert(base(std::ranges::rend(b).base()) == &b.b);
-  assert(base(std::ranges::crend(b).base()) == &b.cb);
-  assert(base(std::ranges::rend(bb).base()) == &bb.cb);
-  assert(base(std::ranges::crend(bb).base()) == &bb.cb);
-
   MemberBeginFunctionEnd c{};
   const MemberBeginFunctionEnd cc{};
-  assert(base(std::ranges::rend(c).base()) == &c.b);
-  assert(base(std::ranges::crend(c).base()) == &c.cb);
-  assert(base(std::ranges::rend(cc).base()) == &cc.cb);
-  assert(base(std::ranges::crend(cc).base()) == &cc.cb);
-
   FunctionBeginMemberEnd d{};
   const FunctionBeginMemberEnd dd{};
+
+  assert(base(std::ranges::rend(a).base()) == &a.b);
+  assert(base(std::ranges::rend(aa).base()) == &aa.cb);
+  assert(base(std::ranges::rend(b).base()) == &b.b);
+  assert(base(std::ranges::rend(bb).base()) == &bb.cb);
+  assert(base(std::ranges::rend(c).base()) == &c.b);
+  assert(base(std::ranges::rend(cc).base()) == &cc.cb);
   assert(base(std::ranges::rend(d).base()) == &d.b);
-  assert(base(std::ranges::crend(d).base()) == &d.cb);
   assert(base(std::ranges::rend(dd).base()) == &dd.cb);
+
+#if TEST_STD_VER < 23
+  assert(base(std::ranges::crend(a).base()) == &a.cb);
+  assert(base(std::ranges::crend(aa).base()) == &aa.cb);
+  assert(base(std::ranges::crend(b).base()) == &b.cb);
+  assert(base(std::ranges::crend(bb).base()) == &bb.cb);
+  assert(base(std::ranges::crend(c).base()) == &c.cb);
+  assert(base(std::ranges::crend(cc).base()) == &cc.cb);
+  assert(base(std::ranges::crend(d).base()) == &d.cb);
   assert(base(std::ranges::crend(dd).base()) == &dd.cb);
+#endif // TEST_STD_VER < 23
 
   return true;
 }
 
 
 ASSERT_NOEXCEPT(std::ranges::rend(std::declval<int (&)[10]>()));
+#if TEST_STD_VER < 23
 ASSERT_NOEXCEPT(std::ranges::crend(std::declval<int (&)[10]>()));
+#endif // TEST_STD_VER < 23
 
 struct NoThrowMemberREnd {
   ThrowingIterator<int> rbegin() const;
   ThrowingIterator<int> rend() const noexcept; // auto(t.rend()) doesn't throw
 } ntmre;
 static_assert(noexcept(std::ranges::rend(ntmre)));
+#if TEST_STD_VER < 23
 static_assert(noexcept(std::ranges::crend(ntmre)));
+#endif // TEST_STD_VER < 23
 
 struct NoThrowADLREnd {
   ThrowingIterator<int> rbegin() const;
@@ -492,43 +533,55 @@ struct NoThrowADLREnd {
   friend ThrowingIterator<int> rend(const NoThrowADLREnd&) noexcept;
 } ntare;
 static_assert(noexcept(std::ranges::rend(ntare)));
+#if TEST_STD_VER < 23
 static_assert(noexcept(std::ranges::crend(ntare)));
+#endif // TEST_STD_VER < 23
 
 struct NoThrowMemberREndReturnsRef {
   ThrowingIterator<int> rbegin() const;
   ThrowingIterator<int>& rend() const noexcept; // auto(t.rend()) may throw
 } ntmrerr;
 static_assert(!noexcept(std::ranges::rend(ntmrerr)));
+#if TEST_STD_VER < 23
 static_assert(!noexcept(std::ranges::crend(ntmrerr)));
+#endif // TEST_STD_VER < 23
 
 struct REndReturnsArrayRef {
     auto rbegin() const noexcept -> int(&)[10];
     auto rend() const noexcept -> int(&)[10];
 } rerar;
 static_assert(noexcept(std::ranges::rend(rerar)));
+#if TEST_STD_VER < 23
 static_assert(noexcept(std::ranges::crend(rerar)));
+#endif // TEST_STD_VER < 23
 
 struct NoThrowBeginThrowingEnd {
   int* begin() const noexcept;
   int* end() const;
 } ntbte;
 static_assert(noexcept(std::ranges::rend(ntbte)));
+#if TEST_STD_VER < 23
 static_assert(noexcept(std::ranges::crend(ntbte)));
+#endif // TEST_STD_VER < 23
 
 struct NoThrowEndThrowingBegin {
   int* begin() const;
   int* end() const noexcept;
 } ntetb;
 static_assert(!noexcept(std::ranges::rend(ntetb)));
+#if TEST_STD_VER < 23
 static_assert(!noexcept(std::ranges::crend(ntetb)));
+#endif // TEST_STD_VER < 23
 
 // Test ADL-proofing.
 struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(!std::is_invocable_v<RangeREndT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeREndT, Holder<Incomplete>*&>);
+#if TEST_STD_VER < 23
 static_assert(!std::is_invocable_v<RangeCREndT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeCREndT, Holder<Incomplete>*&>);
+#endif // TEST_STD_VER < 23
 
 int main(int, char**) {
   static_assert(testReturnTypes());
