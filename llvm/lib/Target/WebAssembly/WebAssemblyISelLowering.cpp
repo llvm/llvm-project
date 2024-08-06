@@ -2276,9 +2276,9 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     };
   } else {
     size_t DestLaneSize = VecT.getVectorElementType().getFixedSizeInBits();
-    if (NumSplatLanes == 1 && (DestLaneSize == 32 || DestLaneSize == 64)) {
+    if (NumSplatLanes == 1 && Op->getOperand(0) == SplatValue &&
+        (DestLaneSize == 32 || DestLaneSize == 64)) {
       // Could be selected to load_zero.
-      assert(SplatValue == Op->getOperand(0));
       Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecT, SplatValue);
     } else {
       // Use a splat (which might be selected as a load splat)

@@ -55,7 +55,7 @@
 ## Check to ensure that '--skip-line-zero' with '--output-style=JSON' displays approximate flag in JSON output.
 # RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero --output-style=JSON 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=JSON %s
 
-# JSON:[{"Address":"0x1717","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}skip-line-zero.s.tmp.o","Symbol":[{"Approximate":true,"Column":0,"Discriminator":0,"FileName":"main.c","FunctionName":"","Line":1,"StartAddress":"","StartFileName":"","StartLine":0}]}]
+# JSON:[{"Address":"0x1717","ModuleName":"{{.*}}{{[/|\]+}}skip-line-zero.s{{.*}}","Symbol":[{"Approximate":true,"Column":0,"Discriminator":0,"FileName":"main.c","FunctionName":"","Line":1,"StartAddress":"","StartFileName":"","StartLine":0}]}]
 
 ## main.c
 ## __attribute__((section("def"))) int foo() { return 1234; }

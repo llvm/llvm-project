@@ -335,6 +335,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!PointeeType.isNull()) {
       if (std::optional<PrimType> T = classify(PointeeType))
         Desc = P.createDescriptor(SubExpr, *T);
+      else
+        Desc = P.createDescriptor(SubExpr, PointeeType.getTypePtr(),
+                                  std::nullopt, true, false,
+                                  /*IsMutable=*/false, nullptr);
     }
     return this->emitNull(classifyPrim(CE->getType()), Desc, CE);
   }
@@ -3157,10 +3161,11 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
   if (!E->isExpressibleAsConstantInitializer())
-    return this->emitInvalid(E);
+    return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(E->getSubExpr());
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>

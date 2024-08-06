@@ -4631,7 +4631,17 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       // 3. The loads are ordered, or number of unordered loads <=
       // MaxProfitableUnorderedLoads, or loads are in reversed order.
       // (this check is to avoid extra costs for very expensive shuffles).
-      if (IsPossibleStrided && (((Sz > MinProfitableStridedLoads ||
+      // 4. Any pointer operand is an instruction with the users outside of the
+      // current graph (for masked gathers extra extractelement instructions
+      // might be required).
+      auto IsAnyPointerUsedOutGraph =
+          IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
+            return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                     return !getTreeEntry(U) && !MustGather.contains(U);
+                   });
+          });
+      if (IsPossibleStrided && (IsAnyPointerUsedOutGraph ||
+                                ((Sz > MinProfitableStridedLoads ||
                                   (static_cast<unsigned>(std::abs(*Diff)) <=
                                        MaxProfitableLoadStride * Sz &&
                                    isPowerOf2_32(std::abs(*Diff)))) &&
@@ -9766,6 +9776,23 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       InstructionCost VecCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), VecTy, MaskTy, VecPred, CostKind, VL0);
+      if (auto *SI = dyn_cast<SelectInst>(VL0)) {
+        auto *CondType =
+            getWidenedType(SI->getCondition()->getType(), VL.size());
+        unsigned CondNumElements = CondType->getNumElements();
+        unsigned VecTyNumElements = getNumElements(VecTy);
+        assert(VecTyNumElements >= CondNumElements &&
+               VecTyNumElements % CondNumElements == 0 &&
+               "Cannot vectorize Instruction::Select");
+        if (CondNumElements != VecTyNumElements) {
+          // When the return type is i1 but the source is fixed vector type, we
+          // need to duplicate the condition value.
+          VecCost += TTI->getShuffleCost(
+              TTI::SK_PermuteSingleSrc, CondType,
+              createReplicatedMask(VecTyNumElements / CondNumElements,
+                                   CondNumElements));
+        }
+      }
       return VecCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -18549,6 +18576,12 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
     return !IsCompatibility;
   if (CI1->getOperand(0)->getType()->getTypeID() >
       CI2->getOperand(0)->getType()->getTypeID())
+    return false;
+  if (CI1->getOperand(0)->getType()->getScalarSizeInBits() <
+      CI2->getOperand(0)->getType()->getScalarSizeInBits())
+    return !IsCompatibility;
+  if (CI1->getOperand(0)->getType()->getScalarSizeInBits() >
+      CI2->getOperand(0)->getType()->getScalarSizeInBits())
     return false;
   CmpInst::Predicate Pred1 = CI1->getPredicate();
   CmpInst::Predicate Pred2 = CI2->getPredicate();

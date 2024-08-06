@@ -604,10 +604,10 @@ class RVVConvToWidenUnsignedBuiltin<string overloaded_name>
     : RVVConvBuiltin<"Uw", "Uwv", "xf", overloaded_name>;
 
 class RVVConvToNarrowingSignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Iv", "IvFw", "csi", overloaded_name>;
+    : RVVConvBuiltin<"Iv", "IvFw", "si", overloaded_name>;
 
 class RVVConvToNarrowingUnsignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Uv", "UvFw", "csi", overloaded_name>;
+    : RVVConvBuiltin<"Uv", "UvFw", "si", overloaded_name>;
 
 let HasMaskedOffOperand = true in {
   multiclass RVVSignedReductionBuiltin {
