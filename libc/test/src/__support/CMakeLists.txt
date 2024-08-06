@@ -34,6 +34,7 @@ if(LLVM_LIBC_FULL_BUILD)
     SUITE
       libc-support-tests
     SRCS
+      fake_heap.s
       freelist_heap_test.cpp
       freelist_malloc_test.cpp
     DEPENDS

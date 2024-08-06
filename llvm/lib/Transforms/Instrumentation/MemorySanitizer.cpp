@@ -2987,8 +2987,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Caller guarantees that this intrinsic does not access memory.
   bool maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I) {
     Type *RetTy = I.getType();
-    if (!(RetTy->isIntOrIntVectorTy() || RetTy->isFPOrFPVectorTy() ||
-          RetTy->isX86_MMXTy()))
+    if (!(RetTy->isIntOrIntVectorTy() || RetTy->isFPOrFPVectorTy()))
       return false;
 
     unsigned NumArgOperands = I.arg_size();
@@ -3218,7 +3217,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Get an X86_MMX-sized vector type.
+  // Get an MMX-sized vector type.
   Type *getMMXVectorTy(unsigned EltSizeInBits) {
     const unsigned X86_MMXSizeInBits = 64;
     assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
@@ -3264,20 +3263,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // packs elements of 2 input vectors into half as many bits with saturation.
   // Shadow is propagated with the signed variant of the same intrinsic applied
   // to sext(Sa != zeroinitializer), sext(Sb != zeroinitializer).
-  // EltSizeInBits is used only for x86mmx arguments.
-  void handleVectorPackIntrinsic(IntrinsicInst &I, unsigned EltSizeInBits = 0) {
+  // MMXEltSizeInBits is used only for x86mmx arguments.
+  void handleVectorPackIntrinsic(IntrinsicInst &I,
+                                 unsigned MMXEltSizeInBits = 0) {
     assert(I.arg_size() == 2);
-    bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
     IRBuilder<> IRB(&I);
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
-    assert(isX86_MMX || S1->getType()->isVectorTy());
+    assert(S1->getType()->isVectorTy());
 
     // SExt and ICmpNE below must apply to individual elements of input vectors.
     // In case of x86mmx arguments, cast them to appropriate vector types and
     // back.
-    Type *T = isX86_MMX ? getMMXVectorTy(EltSizeInBits) : S1->getType();
-    if (isX86_MMX) {
+    Type *T =
+        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits) : S1->getType();
+    if (MMXEltSizeInBits) {
       S1 = IRB.CreateBitCast(S1, T);
       S2 = IRB.CreateBitCast(S2, T);
     }
@@ -3285,10 +3285,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         IRB.CreateSExt(IRB.CreateICmpNE(S1, Constant::getNullValue(T)), T);
     Value *S2_ext =
         IRB.CreateSExt(IRB.CreateICmpNE(S2, Constant::getNullValue(T)), T);
-    if (isX86_MMX) {
-      Type *X86_MMXTy = Type::getX86_MMXTy(*MS.C);
-      S1_ext = IRB.CreateBitCast(S1_ext, X86_MMXTy);
-      S2_ext = IRB.CreateBitCast(S2_ext, X86_MMXTy);
+    if (MMXEltSizeInBits) {
+      S1_ext = IRB.CreateBitCast(S1_ext, getMMXVectorTy(64));
+      S2_ext = IRB.CreateBitCast(S2_ext, getMMXVectorTy(64));
     }
 
     Function *ShadowFn = Intrinsic::getDeclaration(
@@ -3296,7 +3295,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *S =
         IRB.CreateCall(ShadowFn, {S1_ext, S2_ext}, "_msprop_vector_pack");
-    if (isX86_MMX)
+    if (MMXEltSizeInBits)
       S = IRB.CreateBitCast(S, getShadowTy(&I));
     setShadow(&I, S);
     setOriginForNaryOp(I);
@@ -3403,10 +3402,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Instrument sum-of-absolute-differences intrinsic.
-  void handleVectorSadIntrinsic(IntrinsicInst &I) {
+  void handleVectorSadIntrinsic(IntrinsicInst &I, bool IsMMX = false) {
     const unsigned SignificantBitsPerResultElement = 16;
-    bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
-    Type *ResTy = isX86_MMX ? IntegerType::get(*MS.C, 64) : I.getType();
+    Type *ResTy = IsMMX ? IntegerType::get(*MS.C, 64) : I.getType();
     unsigned ZeroBitsPerResultElement =
         ResTy->getScalarSizeInBits() - SignificantBitsPerResultElement;
 
@@ -3425,9 +3423,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument multiply-add intrinsic.
   void handleVectorPmaddIntrinsic(IntrinsicInst &I,
-                                  unsigned EltSizeInBits = 0) {
-    bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
-    Type *ResTy = isX86_MMX ? getMMXVectorTy(EltSizeInBits * 2) : I.getType();
+                                  unsigned MMXEltSizeInBits = 0) {
+    Type *ResTy =
+        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits * 2) : I.getType();
     IRBuilder<> IRB(&I);
     auto *Shadow0 = getShadow(&I, 0);
     auto *Shadow1 = getShadow(&I, 1);
@@ -3875,11 +3873,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// Handle Arm NEON vector store intrinsics (vst{2,3,4}).
+  /// Handle Arm NEON vector store intrinsics (vst{2,3,4} and vst1x_{2,3,4}).
   ///
   /// Arm NEON vector store intrinsics have the output address (pointer) as the
   /// last argument, with the initial arguments being the inputs. They return
   /// void.
+  ///
+  /// - st4 interleaves the output e.g., st4 (inA, inB, inC, inD, outP) writes
+  ///   abcdabcdabcdabcd... into *outP
+  /// - st1_x4 is non-interleaved e.g., st1_x4 (inA, inB, inC, inD, outP)
+  ///   writes aaaa...bbbb...cccc...dddd... into *outP
+  /// These instructions can all be instrumented with essentially the same
+  /// MSan logic, simply by applying the corresponding intrinsic to the shadow.
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
@@ -3894,11 +3899,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
+    SmallVector<Value *, 8> Shadows;
     // Every arg operand, other than the last one, is an input vector
-    IntrinsicInst *ShadowI = cast<IntrinsicInst>(I.clone());
     for (int i = 0; i < numArgOperands - 1; i++) {
       assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
-      ShadowI->setArgOperand(i, getShadow(&I, i));
+      Value *Shadow = getShadow(&I, i);
+      Shadows.append(1, Shadow);
     }
 
     // MSan's GetShadowTy assumes the LHS is the type we want the shadow for
@@ -3916,13 +3922,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getElementType(),
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements() *
             (numArgOperands - 1));
-    Type *ShadowTy = getShadowTy(OutputVectorTy);
-    Value *ShadowPtr, *OriginPtr;
+    Type *OutputShadowTy = getShadowTy(OutputVectorTy);
+
+    Value *OutputShadowPtr, *OutputOriginPtr;
     // AArch64 NEON does not need alignment (unless OS requires it)
-    std::tie(ShadowPtr, OriginPtr) =
-        getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
-    ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);
-    ShadowI->insertAfter(&I);
+    std::tie(OutputShadowPtr, OutputOriginPtr) = getShadowOriginPtr(
+        Addr, IRB, OutputShadowTy, Align(1), /*isStore*/ true);
+    Shadows.append(1, OutputShadowPtr);
+
+    // CreateIntrinsic will select the correct (integer) type for the
+    // intrinsic; the original instruction I may have either integer- or
+    // float-type inputs.
+    CallInst *CI =
+        IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), Shadows);
+    setShadow(&I, CI);
 
     if (MS.TrackOrigins) {
       // TODO: if we modelled the vst* instruction more precisely, we could
@@ -3934,7 +3947,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         OC.Add(I.getArgOperand(i));
 
       const DataLayout &DL = F.getDataLayout();
-      OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy), OriginPtr);
+      OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy),
+                            OutputOriginPtr);
     }
   }
 
@@ -4161,6 +4175,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
 
     case Intrinsic::x86_mmx_psad_bw:
+      handleVectorSadIntrinsic(I, true);
+      break;
     case Intrinsic::x86_sse2_psad_bw:
     case Intrinsic::x86_avx2_psad_bw:
       handleVectorSadIntrinsic(I);
@@ -4277,6 +4293,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       break;
 
+    case Intrinsic::aarch64_neon_st1x2:
+    case Intrinsic::aarch64_neon_st1x3:
+    case Intrinsic::aarch64_neon_st1x4:
     case Intrinsic::aarch64_neon_st2:
     case Intrinsic::aarch64_neon_st3:
     case Intrinsic::aarch64_neon_st4: {
@@ -5048,7 +5067,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
     Type *T = arg->getType();
     if (T->isX86_FP80Ty())
       return AK_Memory;
-    if (T->isFPOrFPVectorTy() || T->isX86_MMXTy())
+    if (T->isFPOrFPVectorTy())
       return AK_FloatingPoint;
     if (T->isIntegerTy() && T->getPrimitiveSizeInBits() <= 64)
       return AK_GeneralPurpose;

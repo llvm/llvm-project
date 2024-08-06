@@ -8,6 +8,7 @@ add_flang_library(FIRTransforms
   CharacterConversion.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
+  CufOpConversion.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   MemoryUtils.cpp
@@ -29,11 +30,13 @@ add_flang_library(FIRTransforms
   DebugTypeGenerator.cpp
 
   DEPENDS
+  CUFDialect
   FIRDialect
   FIROptTransformsPassIncGen
   HLFIROpsIncGen
 
   LINK_LIBS
+  CUFDialect
   FIRAnalysis
   FIRBuilder
   FIRCodeGen

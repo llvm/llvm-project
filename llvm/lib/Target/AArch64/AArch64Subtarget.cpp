@@ -565,8 +565,13 @@ bool AArch64Subtarget::useAA() const { return UseAA; }
 // exception on its own. Later, if the callee spills the signed LR value and
 // neither FEAT_PAuth2 nor FEAT_EPAC are implemented, the valid PAC replaces
 // the higher bits of LR thus hiding the authentication failure.
-AArch64PAuth::AuthCheckMethod
-AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
+AArch64PAuth::AuthCheckMethod AArch64Subtarget::getAuthenticatedLRCheckMethod(
+    const MachineFunction &MF) const {
+  // TODO: Check subtarget for the scheme. Present variant is a default for
+  // pauthtest ABI.
+  if (MF.getFunction().hasFnAttribute("ptrauth-returns") &&
+      MF.getFunction().hasFnAttribute("ptrauth-auth-traps"))
+    return AArch64PAuth::AuthCheckMethod::HighBitsNoTBI;
   if (AuthenticatedLRCheckMethod.getNumOccurrences())
     return AuthenticatedLRCheckMethod;
 

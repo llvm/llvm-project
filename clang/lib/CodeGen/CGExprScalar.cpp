@@ -2841,9 +2841,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
           isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
       llvm::Value *amt = llvm::ConstantFP::get(
           VMContext, llvm::APFloat(static_cast<float>(1.0)));
-      llvm::Value *old =
-          Builder.CreateAtomicRMW(aop, LV.getAddress(), amt,
-                                  llvm::AtomicOrdering::SequentiallyConsistent);
+      llvm::AtomicRMWInst *old =
+          CGF.emitAtomicRMWInst(aop, LV.getAddress(), amt,
+                                llvm::AtomicOrdering::SequentiallyConsistent);
+
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
     value = EmitLoadOfLValue(LV, E->getExprLoc());
@@ -3583,9 +3584,9 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
             EmitScalarConversion(OpInfo.RHS, E->getRHS()->getType(), LHSTy,
                                  E->getExprLoc()),
             LHSTy);
-        Value *OldVal = Builder.CreateAtomicRMW(
-            AtomicOp, LHSLV.getAddress(), Amt,
-            llvm::AtomicOrdering::SequentiallyConsistent);
+
+        llvm::AtomicRMWInst *OldVal =
+            CGF.emitAtomicRMWInst(AtomicOp, LHSLV.getAddress(), Amt);
 
         // Since operation is atomic, the result type is guaranteed to be the
         // same as the input in LLVM terms.

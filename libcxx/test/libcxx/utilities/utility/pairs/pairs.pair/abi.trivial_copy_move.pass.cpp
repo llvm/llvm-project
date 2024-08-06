@@ -162,13 +162,8 @@ void test_trivial()
         static_assert(!std::is_trivially_copy_constructible<P>::value, "");
         static_assert(!std::is_trivially_move_constructible<P>::value, "");
 #endif // TEST_STD_VER >= 11
-#ifndef _LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR
         static_assert(!std::is_trivially_copy_assignable<P>::value, "");
         static_assert(!std::is_trivially_move_assignable<P>::value, "");
-#else
-        static_assert(std::is_trivially_copy_assignable<P>::value, "");
-        static_assert(std::is_trivially_move_assignable<P>::value, "");
-#endif
         static_assert(std::is_trivially_destructible<P>::value, "");
     }
 }

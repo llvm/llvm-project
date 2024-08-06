@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -16,34 +14,19 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
-#include <memory>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::dwarf;
-
-static cl::opt<bool>
-    DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
-                             cl::desc("Disable debug info printing"));
 
 // Out of line virtual method.
 MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
 
 void MachineModuleInfo::initialize() {
   ObjFileMMI = nullptr;
-  CurCallSite = 0;
   NextFnNum = 0;
-  UsesMSVCFloatingPoint = false;
-  DbgInfoAvailable = false;
 }
 
 void MachineModuleInfo::finalize() {
@@ -61,7 +44,6 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
       MachineFunctions(std::move(MMI.MachineFunctions)) {
   Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
-  CurCallSite = MMI.CurCallSite;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
 }
@@ -104,7 +86,7 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
   if (I.second) {
     // No pre-existing machine function, create a new one.
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
-    MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
+    MF = new MachineFunction(F, TM, STI, getContext(), NextFnNum++);
     MF->initTargetMachineFunctionInfo(STI);
 
     // MRI callback for target specific initializations.
@@ -224,8 +206,6 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
-                         !M.debug_compile_units().empty();
   return false;
 }
 
@@ -250,7 +230,5 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable =
-      !DisableDebugInfoPrinting && !M.debug_compile_units().empty();
   return Result(MMI);
 }

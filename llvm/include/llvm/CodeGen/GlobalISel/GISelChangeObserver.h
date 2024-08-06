@@ -69,8 +69,7 @@ class GISelObserverWrapper : public MachineFunction::Delegate,
 
 public:
   GISelObserverWrapper() = default;
-  GISelObserverWrapper(ArrayRef<GISelChangeObserver *> Obs)
-      : Observers(Obs.begin(), Obs.end()) {}
+  GISelObserverWrapper(ArrayRef<GISelChangeObserver *> Obs) : Observers(Obs) {}
   // Adds an observer.
   void addObserver(GISelChangeObserver *O) { Observers.push_back(O); }
   // Removes an observer from the list and does nothing if observer is not

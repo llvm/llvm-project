@@ -207,7 +207,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     assert(isExtended() && "Type is not extended!");
     return LLVMTy;
   case MVT::isVoid:  return Type::getVoidTy(Context);
-  case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
+  case MVT::x86mmx:  return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case MVT::aarch64svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
@@ -241,8 +241,8 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::BFloatTyID:    return MVT(MVT::bf16);
   case Type::FloatTyID:     return MVT(MVT::f32);
   case Type::DoubleTyID:    return MVT(MVT::f64);
-  case Type::X86_FP80TyID:  return MVT(MVT::f80);
-  case Type::X86_MMXTyID:   return MVT(MVT::x86mmx);
+  case Type::X86_FP80TyID:
+    return MVT(MVT::f80);
   case Type::TargetExtTyID: {
     TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
     if (TargetExtTy->getName() == "aarch64.svcount")
@@ -302,4 +302,3 @@ void MVT::print(raw_ostream &OS) const {
   else
     OS << EVT(*this).getEVTString();
 }
-

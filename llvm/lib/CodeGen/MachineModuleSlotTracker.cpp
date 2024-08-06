@@ -64,10 +64,11 @@ void MachineModuleSlotTracker::collectMachineMDNodes(
 }
 
 MachineModuleSlotTracker::MachineModuleSlotTracker(
-    const MachineFunction *MF, bool ShouldInitializeAllMetadata)
+    const MachineModuleInfo &MMI, const MachineFunction *MF,
+    bool ShouldInitializeAllMetadata)
     : ModuleSlotTracker(MF->getFunction().getParent(),
                         ShouldInitializeAllMetadata),
-      TheFunction(MF->getFunction()), TheMMI(MF->getMMI()) {
+      TheFunction(MF->getFunction()), TheMMI(MMI) {
   setProcessHook([this](AbstractSlotTrackerStorage *AST, const Module *M,
                         bool ShouldInitializeAllMetadata) {
     this->processMachineModule(AST, M, ShouldInitializeAllMetadata);

@@ -1487,7 +1487,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
-      CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
+      CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy)
@@ -2601,6 +2602,41 @@ AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress) ||
           MF.getFunction().hasFnAttribute(Attribute::SanitizeMemTag),
       /*ForSimm=*/false);
+}
+
+StackOffset
+AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                   int FI) const {
+  // This function serves to provide a comparable offset from a single reference
+  // point (the value of SP at function entry) that can be used for analysis,
+  // e.g. the stack-frame-layout analysis pass. It is not guaranteed to be
+  // correct for all objects in the presence of VLA-area objects or dynamic
+  // stack re-alignment.
+
+  const auto &MFI = MF.getFrameInfo();
+
+  int64_t ObjectOffset = MFI.getObjectOffset(FI);
+
+  // This is correct in the absence of any SVE stack objects.
+  StackOffset SVEStackSize = getSVEStackSize(MF);
+  if (!SVEStackSize)
+    return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
+
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
+                            ObjectOffset);
+  }
+
+  bool IsFixed = MFI.isFixedObjectIndex(FI);
+  bool IsCSR =
+      !IsFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+
+  StackOffset ScalableOffset = {};
+  if (!IsFixed && !IsCSR)
+    ScalableOffset = -SVEStackSize;
+
+  return StackOffset::getFixed(ObjectOffset) + ScalableOffset;
 }
 
 StackOffset

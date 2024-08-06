@@ -303,7 +303,6 @@ Example usage for a project using a compile commands database:
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       std::vector<std::unique_ptr<doc::Info>> Infos;
-
       for (auto &Bitcode : Group.getValue()) {
         llvm::BitstreamCursor Stream(Bitcode);
         doc::ClangDocBitcodeReader Reader(Stream);

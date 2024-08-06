@@ -1070,6 +1070,24 @@ TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
                 .multiplyWithNoWrap(ConstantRange(APInt(8, 100), APInt(8, 121)),
                                     OBO::NoSignedWrap),
             ConstantRange::getEmpty(8));
+  EXPECT_TRUE(ConstantRange::getFull(8)
+                  .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .isAllNonNegative());
+  EXPECT_TRUE(ConstantRange(APInt(8, 2), APInt(8, 128))
+                  .multiplyWithNoWrap(ConstantRange::getFull(8),
+                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .isAllNonNegative());
+  EXPECT_FALSE(
+      ConstantRange::getFull(8)
+          .multiplyWithNoWrap(ConstantRange(APInt(8, 1), APInt(8, 128)),
+                              OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+          .isAllNonNegative());
+  EXPECT_FALSE(
+      ConstantRange::getFull(8)
+          .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                              OBO::NoSignedWrap)
+          .isAllNonNegative());
 
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -1482,6 +1500,48 @@ TEST_F(ConstantRangeTest, Shl) {
         // We currently only produce precise results for single element RHS.
         return CR2.isSingleElement();
       });
+}
+
+TEST_F(ConstantRangeTest, ShlWithNoWrap) {
+  using OBO = OverflowingBinaryOperator;
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.ushl_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return std::nullopt;
+        return Res;
+      },
+      PreferSmallest, CheckCorrectnessOnly);
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.shlWithNoWrap(CR2, OBO::NoSignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.sshl_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return std::nullopt;
+        return Res;
+      },
+      PreferSmallest, CheckCorrectnessOnly);
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow1, IsOverflow2;
+        APInt Res1 = N1.ushl_ov(N2, IsOverflow1);
+        APInt Res2 = N1.sshl_ov(N2, IsOverflow2);
+        if (IsOverflow1 || IsOverflow2)
+          return std::nullopt;
+        assert(Res1 == Res2 && "Left shift results differ?");
+        return Res1;
+      },
+      PreferSmallest, CheckCorrectnessOnly);
 }
 
 TEST_F(ConstantRangeTest, Lshr) {

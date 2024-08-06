@@ -61,6 +61,20 @@ TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                MFI.getOffsetAdjustment());
 }
 
+/// Returns the offset from the stack pointer to the slot of the specified
+/// index. This function serves to provide a comparable offset from a single
+/// reference point (the value of the stack-pointer at function entry) that can
+/// be used for analysis. This is the default implementation using
+/// MachineFrameInfo offsets.
+StackOffset
+TargetFrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                  int FI) const {
+  // To display the true offset from SP, we need to subtract the offset to the
+  // local area from MFI's ObjectOffset.
+  return StackOffset::getFixed(MF.getFrameInfo().getObjectOffset(FI) -
+                               getOffsetOfLocalArea());
+}
+
 bool TargetFrameLowering::needsFrameIndexResolution(
     const MachineFunction &MF) const {
   return MF.getFrameInfo().hasStackObjects();

@@ -18,6 +18,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an induction variable.
 ; CHECK-NEXT:  LV: Did not find one integer induction var.
 ; CHECK-NEXT:  LV: We can vectorize this loop (with a runtime bound check)!
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Found trip count: 0
 ; CHECK-NEXT:  LV: Scalable vectorization is available
 ; CHECK-NEXT:  LV: The max safe fixed VF is: 67108864.
@@ -134,8 +135,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Not Interleaving.
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
-; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
+; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<%0> = VF * UF
@@ -222,6 +223,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found FP op with unsafe algebra.
 ; CHECK-NEXT:  LV: Did not find one integer induction var.
 ; CHECK-NEXT:  LV: We can vectorize this loop (with a runtime bound check)!
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Found trip count: 0
 ; CHECK-NEXT:  LV: Scalable vectorization is available
 ; CHECK-NEXT:  LV: The max safe fixed VF is: 67108864.
@@ -338,8 +340,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Not Interleaving.
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
-; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
+; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<%0> = VF * UF
