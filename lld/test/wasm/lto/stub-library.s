@@ -6,10 +6,10 @@
 # RUN: wasm-ld %t.o %t/libfoo.a %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-## The function `bar` is declared in stub.so and depends on `foo`, which happens
-## be in an LTO object, in an archive file.
-## This verifies that stub library dependencies (required exports) can be defined
-## in LTO objects.
+## The function `bar` is declared in stub.so and depends on `foo`, which in this
+## case is defined in an LTO object, inside an archive file.
+## This verifies that stub library dependencies (required exports) can be
+## defined in LTO objects.
 .functype bar () -> ()
 
 .globl _start
