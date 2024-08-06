@@ -3652,7 +3652,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
   // Fast path for a single digit (which is quite common).  A single digit
   // cannot have a trigraph, escaped newline, radix prefix, or suffix.
   if (Tok.getLength() == 1 || Tok.getKind() == tok::binary_data) {
-    const char Val = PP.getSpellingOfSingleCharacterNumericConstant(Tok);
+    const uint8_t Val = PP.getSpellingOfSingleCharacterNumericConstant(Tok);
     return ActOnIntegerConstant(Tok.getLocation(), Val);
   }
 
