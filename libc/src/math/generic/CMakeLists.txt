@@ -2891,7 +2891,7 @@ add_entrypoint_object(
   HDRS
     ../fsub.h
   DEPENDS
-   libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.add_sub
   COMPILE_OPTIONS
     -O3
 )
