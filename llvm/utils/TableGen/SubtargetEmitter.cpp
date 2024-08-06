@@ -14,6 +14,7 @@
 #include "Common/CodeGenSchedule.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/PredicateExpander.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -259,8 +260,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   llvm::sort(FeatureList, LessRecordFieldName());
 
-  // Check that there are no duplicate keys
-  llvm::StringSet<> UniqueKeys;
+  // Check that there are no duplicate keys.
+  DenseMap<StringRef, const Record *> UniqueKeys;
 
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
@@ -291,9 +292,12 @@ unsigned SubtargetEmitter::FeatureKeyValues(
     OS << " },\n";
     ++NumFeatures;
 
-    if (!UniqueKeys.insert(CommandLineName).second)
-      PrintFatalError("Duplicate key in SubtargetFeatureKV: " +
-                      CommandLineName);
+    auto [It, Inserted] = UniqueKeys.insert({CommandLineName, Feature});
+    if (!Inserted) {
+      PrintError(Feature, "Feature `" + CommandLineName + "` already defined.");
+      const Record *Previous = It->second;
+      PrintFatalNote(Previous, "Previous definition here.");
+    }
   }
 
   // End feature table
