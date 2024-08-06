@@ -157,8 +157,8 @@ private:
   Instructions Insts;
 
   /// Keep track of the predecessor / successor basic blocks.
-  std::vector<MachineBasicBlock *> Predecessors;
-  std::vector<MachineBasicBlock *> Successors;
+  SmallVector<MachineBasicBlock *, 4> Predecessors;
+  SmallVector<MachineBasicBlock *, 2> Successors;
 
   /// Keep track of the probabilities to the successors. This vector has the
   /// same order as Successors, or it is empty if we don't use it (disable
@@ -387,18 +387,20 @@ public:
   }
 
   // Machine-CFG iterators
-  using pred_iterator = std::vector<MachineBasicBlock *>::iterator;
-  using const_pred_iterator = std::vector<MachineBasicBlock *>::const_iterator;
-  using succ_iterator = std::vector<MachineBasicBlock *>::iterator;
-  using const_succ_iterator = std::vector<MachineBasicBlock *>::const_iterator;
+  using pred_iterator = SmallVectorImpl<MachineBasicBlock *>::iterator;
+  using const_pred_iterator =
+      SmallVectorImpl<MachineBasicBlock *>::const_iterator;
+  using succ_iterator = SmallVectorImpl<MachineBasicBlock *>::iterator;
+  using const_succ_iterator =
+      SmallVectorImpl<MachineBasicBlock *>::const_iterator;
   using pred_reverse_iterator =
-      std::vector<MachineBasicBlock *>::reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::reverse_iterator;
   using const_pred_reverse_iterator =
-      std::vector<MachineBasicBlock *>::const_reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::const_reverse_iterator;
   using succ_reverse_iterator =
-      std::vector<MachineBasicBlock *>::reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::reverse_iterator;
   using const_succ_reverse_iterator =
-      std::vector<MachineBasicBlock *>::const_reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::const_reverse_iterator;
   pred_iterator        pred_begin()       { return Predecessors.begin(); }
   const_pred_iterator  pred_begin() const { return Predecessors.begin(); }
   pred_iterator        pred_end()         { return Predecessors.end();   }
