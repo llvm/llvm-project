@@ -367,7 +367,7 @@ def Vector_BroadcastOp :
                                s_1     x .. x s_j x .. x s_k
                <duplication>         <potential stretch>
        ```
-    * a scalable unit dimension, `[1]`, must match exactly.
+       * in addition, any scalable unit dimension, `[1]`, must match exactly.
 
     The source operand is duplicated over all the missing leading dimensions
     and stretched over the trailing dimensions where the source has a non-equal

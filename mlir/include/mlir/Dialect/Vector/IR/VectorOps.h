@@ -68,9 +68,10 @@ enum class BroadcastableToResult {
   DimensionMismatch = 2,
   SourceTypeNotAVector = 3
 };
+
 struct VectorDim {
   int64_t dim;
-  bool scalableFlag;
+  bool isScalable;
 };
 BroadcastableToResult
 isBroadcastableTo(Type srcType, VectorType dstVectorType,

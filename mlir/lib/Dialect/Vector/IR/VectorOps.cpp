@@ -2390,29 +2390,29 @@ BroadcastableToResult mlir::vector::isBroadcastableTo(
   // Source has an exact match or singleton value for all trailing dimensions
   // (all leading dimensions are simply duplicated).
   int64_t lead = dstRank - srcRank;
-  for (int64_t r = 0; r < srcRank; ++r) {
+  for (int64_t dimIdx = 0; dimIdx < srcRank; ++dimIdx) {
     bool mismatch = false;
 
-    // Check fixed-width dims
-    int64_t srcDim = srcVectorType.getDimSize(r);
-    int64_t dstDim = dstVectorType.getDimSize(lead + r);
-    if ((srcDim != 1 && srcDim != dstDim))
+    // Check fixed-width dims.
+    int64_t srcDim = srcVectorType.getDimSize(dimIdx);
+    int64_t dstDim = dstVectorType.getDimSize(lead + dimIdx);
+    if (srcDim != 1 && srcDim != dstDim)
       mismatch = true;
 
-    // Check scalable flags
-    bool srcDimScalableFlag = srcVectorType.getScalableDims()[r];
-    bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + r];
+    // Check scalable flags.
+    bool srcDimScalableFlag = srcVectorType.getScalableDims()[dimIdx];
+    bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + dimIdx];
     if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
         (srcDimScalableFlag != dstDimScalableFlag))
       mismatch = true;
 
     if (mismatch) {
-      if (mismatchingDims) {
+      if (mismatchingDims != nullptr) {
         mismatchingDims->first.dim = srcDim;
-        mismatchingDims->first.scalableFlag = srcDimScalableFlag;
+        mismatchingDims->first.isScalable = srcDimScalableFlag;
 
         mismatchingDims->second.dim = dstDim;
-        mismatchingDims->second.scalableFlag = dstDimScalableFlag;
+        mismatchingDims->second.isScalable = dstDimScalableFlag;
       }
       return BroadcastableToResult::DimensionMismatch;
     }
@@ -2430,15 +2430,14 @@ LogicalResult BroadcastOp::verify() {
   if (res == BroadcastableToResult::SourceRankHigher)
     return emitOpError("source rank higher than destination rank");
   if (res == BroadcastableToResult::DimensionMismatch) {
-    std::string msg =
-        (Twine("dimension mismatch (") +
-         (mismatchingDims.first.scalableFlag ? "[" : "") +
-         std::to_string(mismatchingDims.first.dim) +
-         (mismatchingDims.first.scalableFlag ? "]" : "") + " vs. " +
-         (mismatchingDims.second.scalableFlag ? "[" : "") +
-         std::to_string(mismatchingDims.second.dim) +
-         (mismatchingDims.second.scalableFlag ? "]" : "") + ")")
-            .str();
+    std::string msg = (Twine("dimension mismatch (") +
+                       (mismatchingDims.first.isScalable ? "[" : "") +
+                       std::to_string(mismatchingDims.first.dim) +
+                       (mismatchingDims.first.isScalable ? "]" : "") + " vs. " +
+                       (mismatchingDims.second.isScalable ? "[" : "") +
+                       std::to_string(mismatchingDims.second.dim) +
+                       (mismatchingDims.second.isScalable ? "]" : "") + ")")
+                          .str();
     return emitOpError(msg);
   }
   if (res == BroadcastableToResult::SourceTypeNotAVector)
