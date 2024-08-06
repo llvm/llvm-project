@@ -695,8 +695,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.frexpf128
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128
-    libc.src.math.fsubf128
     libc.src.math.fsqrtf128
+    libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
