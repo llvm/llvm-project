@@ -5837,9 +5837,7 @@ QualType TreeTransform<Derived>::TransformDependentAddressSpaceType(
     NewTL.setAttrNameLoc(TL.getAttrNameLoc());
 
   } else {
-    TypeSourceInfo *DI = getSema().Context.getTrivialTypeSourceInfo(
-        Result, getDerived().getBaseLocation());
-    TLB.TypeWasModifiedSafely(DI->getType());
+    TLB.TypeWasModifiedSafely(Result);
   }
 
   return Result;
