@@ -329,7 +329,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
         Value *Root, *SubOp1;
         // Matching "i - ((i >> 1) & 0x55555555...)".
         if (match(AndOp0, m_Sub(m_Value(Root), m_Value(SubOp1))) &&
-            match(SubOp1, m_And(m_LShr(m_Specific(Root), m_SpecificInt(1)),
+            match(SubOp1, m_And(m_LShr(m_Specific(Root), m_One()),
                                 m_SpecificInt(Mask55)))) {
           LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
           IRBuilder<> Builder(&I);
