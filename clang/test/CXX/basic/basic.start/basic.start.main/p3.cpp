@@ -8,9 +8,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST8
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST9
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST10 -ffreestanding
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic-errors %s -DTEST11
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic-errors %s -DTEST12
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic-errors %s -DTEST13
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST11
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST12
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST13
 
 #if TEST1
 int main; // expected-error{{main cannot be declared as global variable}}
@@ -78,12 +78,12 @@ namespace ns {
 extern "C" struct A { int main(); }; // ok
 
 namespace c {
-  extern "C" void main(); // expected-error {{'main' should not be 'extern "C"'}}
+  extern "C" void main(); // expected-warning {{'main' should not be 'extern "C"'}}
 }
 
 extern "C" {
   namespace Z {
-    void main(); // expected-error {{'main' should not be 'extern "C"'}}
+    void main(); // expected-warning {{'main' should not be 'extern "C"'}}
   }
 }
 
@@ -99,15 +99,15 @@ namespace ns {
 
 #elif TEST13
 extern "C++" {
-  int main(); // expected-error {{'main' should not be 'extern "C++"'}}
+  int main(); // expected-warning {{'main' should not be 'extern "C++"'}}
 }
 
 extern "C" {
-  int main(); // expected-error {{'main' should not be 'extern "C"'}}
+  int main(); // expected-warning {{'main' should not be 'extern "C"'}}
 }
 
-extern "C" int main(); // expected-error {{'main' should not be 'extern "C"'}}
-extern "C++" int main(); // expected-error {{'main' should not be 'extern "C++"'}}
+extern "C" int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+extern "C++" int main(); // expected-warning {{'main' should not be 'extern "C++"'}}
 
 namespace ns1 {
   extern "C++" int main(); // ok

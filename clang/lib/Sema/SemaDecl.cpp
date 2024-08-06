@@ -7353,7 +7353,7 @@ void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
   }
 }
 
-// Checks if VD is declared at global scope or with C language linkage
+// Checks if VD is declared at global scope or with C language linkage.
 static bool isMainVar(DeclarationName Name, VarDecl *VD) {
   return Name.getAsIdentifierInfo() &&
          Name.getAsIdentifierInfo()->isStr("main") &&
