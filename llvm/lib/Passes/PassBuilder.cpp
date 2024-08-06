@@ -28,6 +28,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallPrinter.h"
 #include "llvm/Analysis/CostModel.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DDGPrinter.h"
@@ -329,6 +330,8 @@ cl::opt<bool> PrintPipelinePasses(
     cl::desc("Print a '-passes' compatible string describing the pipeline "
              "(best-effort only)."));
 } // namespace llvm
+
+extern cl::opt<std::string> UseCtxProfile;
 
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
