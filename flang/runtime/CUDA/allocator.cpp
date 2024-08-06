@@ -17,7 +17,7 @@
 
 #include "cuda.h"
 
-namespace Fortran::runtime::cuf {
+namespace Fortran::runtime::cuda {
 
 void CUFRegisterAllocator() {
   allocatorRegistry.Register(
@@ -57,4 +57,4 @@ void CUFFreeManaged(void *p) {
   CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(p)));
 }
 
-} // namespace Fortran::runtime::cuf
+} // namespace Fortran::runtime::cuda

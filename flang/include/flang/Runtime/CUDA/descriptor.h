@@ -13,7 +13,7 @@
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
 
-namespace Fortran::runtime::cuf {
+namespace Fortran::runtime::cuda {
 
 extern "C" {
 
@@ -26,5 +26,5 @@ void RTDECL(CUFFreeDesciptor)(
     Descriptor *, const char *sourceFile = nullptr, int sourceLine = 0);
 
 } // extern "C"
-} // namespace Fortran::runtime::cuf
+} // namespace Fortran::runtime::cuda
 #endif // FORTRAN_RUNTIME_CUDA_DESCRIPTOR_H_

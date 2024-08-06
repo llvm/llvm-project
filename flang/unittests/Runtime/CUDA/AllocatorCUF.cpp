@@ -17,7 +17,7 @@
 #include "cuda.h"
 
 using namespace Fortran::runtime;
-using namespace Fortran::runtime::cuf;
+using namespace Fortran::runtime::cuda;
 
 static OwningPtr<Descriptor> createAllocatable(
     Fortran::common::TypeCategory tc, int kind, int rank = 1) {
@@ -55,7 +55,7 @@ public:
 
 TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
   using Fortran::common::TypeCategory;
-  Fortran::runtime::cuf::CUFRegisterAllocator();
+  Fortran::runtime::cuda::CUFRegisterAllocator();
   ScopedContext ctx;
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
@@ -73,7 +73,7 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
 
 TEST(AllocatableCUFTest, SimplePinnedAllocate) {
   using Fortran::common::TypeCategory;
-  Fortran::runtime::cuf::CUFRegisterAllocator();
+  Fortran::runtime::cuda::CUFRegisterAllocator();
   ScopedContext ctx;
   // INTEGER(4), PINNED, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Integer, 4)};
@@ -92,7 +92,7 @@ TEST(AllocatableCUFTest, SimplePinnedAllocate) {
 
 TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   using Fortran::common::TypeCategory;
-  Fortran::runtime::cuf::CUFRegisterAllocator();
+  Fortran::runtime::cuda::CUFRegisterAllocator();
   ScopedContext ctx;
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
