@@ -8959,9 +8959,11 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
       }
     }
-    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy))
+    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "FixedVectorType is not expected.");
       transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
                                              CommonMask);
+    }
     InVectors.front() =
         Constant::getNullValue(getWidenedType(ScalarTy, CommonMask.size()));
     if (InVectors.size() == 2)
@@ -9214,6 +9216,7 @@ public:
         Vals.push_back(Constant::getNullValue(V->getType()));
       }
       if (auto *VecTy = dyn_cast<FixedVectorType>(Vals.front()->getType())) {
+        assert(SLPReVec && "FixedVectorType is not expected.");
         // When REVEC is enabled, we need to expand vector types into scalar
         // types.
         unsigned VecTyNumElements = VecTy->getNumElements();
@@ -11753,6 +11756,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
 
     Instruction *InsElt;
     if (auto *VecTy = dyn_cast<FixedVectorType>(Scalar->getType())) {
+      assert(SLPReVec && "FixedVectorType is not expected.");
       Vec = InsElt = Builder.CreateInsertVector(
           Vec->getType(), Vec, V,
           Builder.getInt64(Pos * VecTy->getNumElements()));
@@ -12272,6 +12276,7 @@ public:
     IsFinalized = true;
     SmallVector<int> NewExtMask(ExtMask);
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "FixedVectorType is not expected.");
       transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
                                              CommonMask);
       transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
@@ -14063,6 +14068,7 @@ Value *BoUpSLP::vectorizeTree(
             Ex = CloneGEP;
           } else if (auto *VecTy =
                          dyn_cast<FixedVectorType>(Scalar->getType())) {
+            assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned VecTyNumElements = VecTy->getNumElements();
             // When REVEC is enabled, we need to extract a vector.
             // Note: The element size of Scalar may be different from the
