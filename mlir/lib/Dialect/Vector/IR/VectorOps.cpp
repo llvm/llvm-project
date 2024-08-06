@@ -2391,22 +2391,24 @@ BroadcastableToResult mlir::vector::isBroadcastableTo(
   // (all leading dimensions are simply duplicated).
   int64_t lead = dstRank - srcRank;
   for (int64_t dimIdx = 0; dimIdx < srcRank; ++dimIdx) {
-    bool mismatch = false;
+    // Have mismatching dims (in the sense of vector.broadcast semantics) been
+    // encountered?
+    bool foundMismatchingDims = false;
 
     // Check fixed-width dims.
     int64_t srcDim = srcVectorType.getDimSize(dimIdx);
     int64_t dstDim = dstVectorType.getDimSize(lead + dimIdx);
     if (srcDim != 1 && srcDim != dstDim)
-      mismatch = true;
+      foundMismatchingDims = true;
 
     // Check scalable flags.
     bool srcDimScalableFlag = srcVectorType.getScalableDims()[dimIdx];
     bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + dimIdx];
     if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
         (srcDimScalableFlag != dstDimScalableFlag))
-      mismatch = true;
+      foundMismatchingDims = true;
 
-    if (mismatch) {
+    if (foundMismatchingDims) {
       if (mismatchingDims != nullptr) {
         mismatchingDims->first.dim = srcDim;
         mismatchingDims->first.isScalable = srcDimScalableFlag;
@@ -2432,10 +2434,10 @@ LogicalResult BroadcastOp::verify() {
   if (res == BroadcastableToResult::DimensionMismatch) {
     std::string msg = (Twine("dimension mismatch (") +
                        (mismatchingDims.first.isScalable ? "[" : "") +
-                       std::to_string(mismatchingDims.first.dim) +
+                       Twine(mismatchingDims.first.dim) +
                        (mismatchingDims.first.isScalable ? "]" : "") + " vs. " +
                        (mismatchingDims.second.isScalable ? "[" : "") +
-                       std::to_string(mismatchingDims.second.dim) +
+                       Twine(mismatchingDims.second.dim) +
                        (mismatchingDims.second.isScalable ? "]" : "") + ")")
                           .str();
     return emitOpError(msg);
