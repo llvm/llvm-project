@@ -3302,19 +3302,18 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   }
   for (auto *I : SpeculatedConditionalLoadsStores) {
     IRBuilder<> Builder(I);
-    // NOTE: Now we assume conditional faulting load/store is supported for
-    // scalar only when creating new instructions, but it's easy to extend it
-    // for vector types in the future.
+    // We currently assume conditional faulting load/store is supported for
+    // scalar types only when creating new instructions. This can be easily
+    // extended for vector types in the future.
     assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
     auto *Op0 = I->getOperand(0);
     Instruction *MaskedLoadStore = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Handle Load.
       auto *Ty = I->getType();
-      auto *V0 = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1), Op0,
-                                          LI->getAlign(), Mask);
-      I->replaceAllUsesWith(Builder.CreateBitCast(V0, Ty));
-      MaskedLoadStore = V0;
+      MaskedLoadStore = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1),
+                                                 Op0, LI->getAlign(), Mask);
+      I->replaceAllUsesWith(Builder.CreateBitCast(MaskedLoadStore, Ty));
     } else {
       // Handle Store.
       auto *StoredVal =
