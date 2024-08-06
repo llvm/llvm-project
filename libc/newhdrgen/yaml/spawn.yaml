@@ -9,7 +9,7 @@ enums: []
 objects: []
 functions:
   - name: posix_spawn
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -20,14 +20,14 @@ functions:
       - type: const char *__restrict *
       - type: const char *__restrict *
   - name: posix_spawn_file_actions_addclose
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: posix_spawn_file_actions_t *
       - type: int
   - name: posix_spawn_file_actions_adddup2
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -35,7 +35,7 @@ functions:
       - type: int
       - type: int
   - name: posix_spawn_file_actions_addopen
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -45,13 +45,13 @@ functions:
       - type: int
       - type: mode_t
   - name: posix_spawn_file_actions_destroy
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: posix_spawn_file_actions_t *
   - name: posix_spawn_file_actions_init
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
