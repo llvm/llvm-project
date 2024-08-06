@@ -13,7 +13,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST13
 
 #if TEST1
-int main; // expected-error{{main cannot be declared as global variable}}
+int main; // expected-error{{main cannot be declared as a variable in the global scope}}
 
 #elif TEST2
 // expected-no-diagnostics
@@ -49,7 +49,7 @@ namespace foo {
 #elif TEST8
 void z(void)
 {
-  extern int main;  // expected-error{{main cannot be declared as global variable}}
+  extern int main;  // expected-error{{main cannot be declared as a variable in the global scope}}}
 }
 
 #elif TEST9
@@ -67,11 +67,11 @@ int main;
 #elif TEST11
 extern "C" {
   namespace Y {
-    int main; // expected-error {{main cannot be declared as global variable}}
+    int main; // expected-error {{main cannot be declared as a variable with C language linkage}}}
   }
 }
 namespace ns {
-  extern "C" int main; // expected-error {{main cannot be declared as global variable}}
+  extern "C" int main; // expected-error {{main cannot be declared as a variable with C language linkage}}
 }
 
 #elif TEST12

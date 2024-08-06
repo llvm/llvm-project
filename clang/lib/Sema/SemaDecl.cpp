@@ -8062,10 +8062,14 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   // Special handling of variable named 'main'.
   if (!getLangOpts().Freestanding && isMainVar(Name, NewVD)) {
-    // C++ [basic.start.main]p3
-    // A program that declares a variable main at global scope is ill-formed.
+    // C++ [basic.start.main]p3:
+    //   A program that declares
+    //    - a variable main at global scope, or
+    //    - an entity named main with C language linkage (in any namespace)
+    //   is ill-formed
     if (getLangOpts().CPlusPlus)
-      Diag(D.getBeginLoc(), diag::err_main_global_variable);
+      Diag(D.getBeginLoc(), diag::err_main_global_variable)
+          << NewVD->isExternC();
 
     // In C, and external-linkage variable named main results in undefined
     // behavior.
@@ -12255,6 +12259,7 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
         << FixItHint::CreateRemoval(DS.getConstexprSpecLoc());
     FD->setConstexprKind(ConstexprSpecKind::Unspecified);
   }
+
   if (getLangOpts().OpenCL) {
     Diag(FD->getLocation(), diag::err_opencl_no_main)
         << FD->hasAttr<OpenCLKernelAttr>();
