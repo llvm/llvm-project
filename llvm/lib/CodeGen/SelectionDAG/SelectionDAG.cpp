@@ -13157,6 +13157,7 @@ std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
   case TargetLowering::UndefinedBooleanContent:
     return CVal[0];
   }
+  llvm_unreachable("Unknown BooleanContent enum");
 }
 
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
