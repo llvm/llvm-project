@@ -124,6 +124,7 @@ class GetElementPtrInst;
 class CastInst;
 class PtrToIntInst;
 class BitCastInst;
+class AllocaInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -240,6 +241,7 @@ protected:
   friend class InvokeInst;        // For getting `Val`.
   friend class CallBrInst;        // For getting `Val`.
   friend class GetElementPtrInst; // For getting `Val`.
+  friend class AllocaInst;        // For getting `Val`.
   friend class CastInst;          // For getting `Val`.
   friend class PHINode;           // For getting `Val`.
 
@@ -633,6 +635,7 @@ protected:
   friend class InvokeInst;        // For getTopmostLLVMInstruction().
   friend class CallBrInst;        // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst; // For getTopmostLLVMInstruction().
+  friend class AllocaInst;        // For getTopmostLLVMInstruction().
   friend class CastInst;          // For getTopmostLLVMInstruction().
   friend class PHINode;           // For getTopmostLLVMInstruction().
 
@@ -1393,6 +1396,103 @@ public:
 #endif
 };
 
+class AllocaInst final : public UnaryInstruction {
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+  AllocaInst(llvm::AllocaInst *AI, Context &Ctx)
+      : UnaryInstruction(ClassID::Alloca, Instruction::Opcode::Alloca, AI,
+                         Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static AllocaInst *create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
+                            BasicBlock *WhereBB, Context &Ctx,
+                            Value *ArraySize = nullptr, const Twine &Name = "");
+  static AllocaInst *create(Type *Ty, unsigned AddrSpace,
+                            Instruction *InsertBefore, Context &Ctx,
+                            Value *ArraySize = nullptr, const Twine &Name = "");
+  static AllocaInst *create(Type *Ty, unsigned AddrSpace,
+                            BasicBlock *InsertAtEnd, Context &Ctx,
+                            Value *ArraySize = nullptr, const Twine &Name = "");
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+
+  /// Return true if there is an allocation size parameter to the allocation
+  /// instruction that is not 1.
+  bool isArrayAllocation() const {
+    return cast<llvm::AllocaInst>(Val)->isArrayAllocation();
+  }
+  /// Get the number of elements allocated. For a simple allocation of a single
+  /// element, this will return a constant 1 value.
+  Value *getArraySize();
+  const Value *getArraySize() const {
+    return const_cast<AllocaInst *>(this)->getArraySize();
+  }
+  /// Overload to return most specific pointer type.
+  PointerType *getType() const {
+    return cast<llvm::AllocaInst>(Val)->getType();
+  }
+  /// Return the address space for the allocation.
+  unsigned getAddressSpace() const {
+    return cast<llvm::AllocaInst>(Val)->getAddressSpace();
+  }
+  /// Get allocation size in bytes. Returns std::nullopt if size can't be
+  /// determined, e.g. in case of a VLA.
+  std::optional<TypeSize> getAllocationSize(const DataLayout &DL) const {
+    return cast<llvm::AllocaInst>(Val)->getAllocationSize(DL);
+  }
+  /// Get allocation size in bits. Returns std::nullopt if size can't be
+  /// determined, e.g. in case of a VLA.
+  std::optional<TypeSize> getAllocationSizeInBits(const DataLayout &DL) const {
+    return cast<llvm::AllocaInst>(Val)->getAllocationSizeInBits(DL);
+  }
+  /// Return the type that is being allocated by the instruction.
+  Type *getAllocatedType() const {
+    return cast<llvm::AllocaInst>(Val)->getAllocatedType();
+  }
+  /// for use only in special circumstances that need to generically
+  /// transform a whole instruction (eg: IR linking and vectorization).
+  void setAllocatedType(Type *Ty);
+  /// Return the alignment of the memory that is being allocated by the
+  /// instruction.
+  Align getAlign() const { return cast<llvm::AllocaInst>(Val)->getAlign(); }
+  void setAlignment(Align Align);
+  /// Return true if this alloca is in the entry block of the function and is a
+  /// constant size. If so, the code generator will fold it into the
+  /// prolog/epilog code, so it is basically free.
+  bool isStaticAlloca() const {
+    return cast<llvm::AllocaInst>(Val)->isStaticAlloca();
+  }
+  /// Return true if this alloca is used as an inalloca argument to a call. Such
+  /// allocas are never considered static even if they are in the entry block.
+  bool isUsedWithInAlloca() const {
+    return cast<llvm::AllocaInst>(Val)->isUsedWithInAlloca();
+  }
+  /// Specify whether this alloca is used to represent the arguments to a call.
+  void setUsedWithInAlloca(bool V);
+
+  static bool classof(const Value *From) {
+    if (auto *I = dyn_cast<Instruction>(From))
+      return I->getSubclassID() == Instruction::ClassID::Alloca;
+    return false;
+  }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::AllocaInst>(Val) && "Expected AllocaInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
 class CastInst : public UnaryInstruction {
   static Opcode getCastOpcode(llvm::Instruction::CastOps CastOp) {
     switch (CastOp) {
@@ -1726,6 +1826,8 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  AllocaInst *createAllocaInst(llvm::AllocaInst *I);
+  friend AllocaInst; // For createAllocaInst()
   CastInst *createCastInst(llvm::CastInst *I);
   friend CastInst; // For createCastInst()
   PHINode *createPHINode(llvm::PHINode *I);
