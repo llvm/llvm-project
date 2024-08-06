@@ -120,7 +120,7 @@ struct Memory64ListStream
 
   explicit Memory64ListStream(
       std::vector<detail::ParsedMemory64Descriptor> Entries = {})
-      : ListStream(Entries) {};
+      : ListStream(Entries){};
 };
 
 /// ExceptionStream minidump stream.

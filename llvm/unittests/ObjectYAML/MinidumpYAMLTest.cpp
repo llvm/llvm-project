@@ -358,12 +358,13 @@ Streams:
   Error Err = Error::success();
   // Explicit Err check
   ASSERT_FALSE(Err);
-  Expected<iterator_range<object::MinidumpFile::FallibleMemory64Iterator>> ExpectedMemoryList =
-      File.getMemory64List(Err);
+  Expected<iterator_range<object::MinidumpFile::FallibleMemory64Iterator>>
+      ExpectedMemoryList = File.getMemory64List(Err);
 
   ASSERT_THAT_EXPECTED(ExpectedMemoryList, Succeeded());
 
-  iterator_range<object::MinidumpFile::FallibleMemory64Iterator> MemoryList = *ExpectedMemoryList;
+  iterator_range<object::MinidumpFile::FallibleMemory64Iterator> MemoryList =
+      *ExpectedMemoryList;
   auto Iterator = MemoryList.begin();
 
   ++Iterator;

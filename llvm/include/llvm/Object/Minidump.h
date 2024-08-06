@@ -140,15 +140,16 @@ public:
     size_t Stride;
   };
 
-class Memory64Iterator {
+  class Memory64Iterator {
   public:
-    static Memory64Iterator begin(ArrayRef<uint8_t> Storage, ArrayRef<minidump::MemoryDescriptor_64> Descriptors, uint64_t BaseRVA) {
+    static Memory64Iterator
+    begin(ArrayRef<uint8_t> Storage,
+          ArrayRef<minidump::MemoryDescriptor_64> Descriptors,
+          uint64_t BaseRVA) {
       return Memory64Iterator(Storage, Descriptors, BaseRVA);
     }
 
-    static Memory64Iterator end() {
-      return Memory64Iterator();
-    }
+    static Memory64Iterator end() { return Memory64Iterator(); }
 
     std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> Current;
 
@@ -158,28 +159,31 @@ class Memory64Iterator {
 
     bool operator!=(const Memory64Iterator &R) const { return !(*this == R); }
 
-    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> &operator*() const {
+    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> &
+    operator*() const {
       return Current;
     }
 
-    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> *operator->() const {
+    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> *
+    operator->() const {
       return &Current;
     }
 
     Error inc() {
       if (Storage.size() == 0 || Descriptors.size() == 0)
-        return make_error<GenericBinaryError>("No Memory64List Stream", object_error::parse_failed);
+        return make_error<GenericBinaryError>("No Memory64List Stream",
+                                              object_error::parse_failed);
 
       if (Index >= Descriptors.size())
         return createError("Can't read past of Memory64List Stream");
 
       const minidump::MemoryDescriptor_64 &Descriptor = Descriptors[Index];
       if (RVA + Descriptor.DataSize > Storage.size())
-        return make_error<GenericBinaryError>("Memory64 Descriptor exceeds end of file.",
-              object_error::unexpected_eof);
+        return make_error<GenericBinaryError>(
+            "Memory64 Descriptor exceeds end of file.",
+            object_error::unexpected_eof);
 
-      ArrayRef<uint8_t> Content =
-          Storage.slice(RVA, Descriptor.DataSize);
+      ArrayRef<uint8_t> Content = Storage.slice(RVA, Descriptor.DataSize);
       Current = std::make_pair(Descriptor, Content);
       RVA += Descriptor.DataSize;
       Index++;
@@ -190,13 +194,14 @@ class Memory64Iterator {
 
   private:
     Memory64Iterator(ArrayRef<uint8_t> Storage,
-                      ArrayRef<minidump::MemoryDescriptor_64> Descriptors,
-                      uint64_t BaseRVA)
-        : RVA(BaseRVA), Storage(Storage),
-          Descriptors(Descriptors), isEnd(false) {}
-    
-    Memory64Iterator() : RVA(0),
-    Storage(ArrayRef<uint8_t>()), Descriptors(ArrayRef<minidump::MemoryDescriptor_64>()), isEnd(true) {}
+                     ArrayRef<minidump::MemoryDescriptor_64> Descriptors,
+                     uint64_t BaseRVA)
+        : RVA(BaseRVA), Storage(Storage), Descriptors(Descriptors),
+          isEnd(false) {}
+
+    Memory64Iterator()
+        : RVA(0), Storage(ArrayRef<uint8_t>()),
+          Descriptors(ArrayRef<minidump::MemoryDescriptor_64>()), isEnd(true) {}
 
     size_t Index = 0;
     uint64_t RVA;
@@ -211,7 +216,8 @@ class Memory64Iterator {
   /// content from the Memory64List stream. An error is returned if the file
   /// does not contain a Memory64List stream, or if the descriptor data is
   /// unreadable.
-  Expected<iterator_range<FallibleMemory64Iterator>> getMemory64List(Error &Err) const;
+  Expected<iterator_range<FallibleMemory64Iterator>>
+  getMemory64List(Error &Err) const;
 
   /// Returns the list of descriptors embedded in the MemoryInfoList stream. The
   /// descriptors provide properties (e.g. permissions) of interesting regions
