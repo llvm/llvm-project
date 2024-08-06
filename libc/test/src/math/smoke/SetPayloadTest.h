@@ -63,7 +63,7 @@ public:
               FPBits(res).uintval());
 
     // The following code is creating a NaN manually to prevent a conversion
-    // from BigInt to long double.
+    // from BigInt to float128.
     FPBits nan_payload_bits = FPBits::one();
     nan_payload_bits.set_biased_exponent(FPBits::SIG_LEN - 2 +
                                          FPBits::EXP_BIAS);
