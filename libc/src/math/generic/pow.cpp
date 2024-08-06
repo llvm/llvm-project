@@ -359,11 +359,12 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
   //   log2(m_x) = log2( (1 + dx) / r )
   //             = log2(1 + dx) - log2(r).
 
-  // In order for the overall computations x^y = 2^(y * log2(x)) to has relative
-  // errors < 2^-52 (1ULP), we will need evaluate the exponent part y * log2(x)
-  // with absolute errors < 2^52 (or better, 2^-53).  Since the whole exponent
-  // range for double precision is bounded by |y * log2(x)| < 1076 ~ 2^10, we
-  // need to evaluate log2(x) with absolute errors < 2^-53 * 2^-10 = 2^-63.
+  // In order for the overall computations x^y = 2^(y * log2(x)) to have the
+  // relative errors < 2^-52 (1ULP), we will need to evaluate the exponent part
+  // y * log2(x) with absolute errors < 2^-52 (or better, 2^-53).  Since the
+  // whole exponent range for double precision is bounded by
+  // |y * log2(x)| < 1076 ~ 2^10, we need to evaluate log2(x) with absolute
+  // errors < 2^-53 * 2^-10 = 2^-63.
 
   // With that requirement, we use the following degree-6 polynomial
   // approximation:
