@@ -71,11 +71,6 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     int64_t dropCount = oldSrcType.getRank() - newSrcType.getRank();
 
     VectorType oldDstType = extractOp.getType();
-    VectorType newDstType =
-        VectorType::get(oldDstType.getShape().drop_front(dropCount),
-                        oldDstType.getElementType(),
-                        oldDstType.getScalableDims().drop_front(dropCount));
-
     Location loc = extractOp.getLoc();
 
     Value newSrcVector = rewriter.create<vector::ExtractOp>(
@@ -83,15 +78,12 @@ struct CastAwayExtractStridedSliceLeadingOneDim
 
     // The offsets/sizes/strides attribute can have a less number of elements
     // than the input vector's rank: it is meant for the leading dimensions.
-    auto newOffsets = rewriter.getArrayAttr(
-        extractOp.getOffsets().getValue().drop_front(dropCount));
-    auto newSizes = rewriter.getArrayAttr(
-        extractOp.getSizes().getValue().drop_front(dropCount));
-    auto newStrides = rewriter.getArrayAttr(
-        extractOp.getStrides().getValue().drop_front(dropCount));
+    auto newOffsets = extractOp.getOffsets().drop_front(dropCount);
+    auto newSizes = extractOp.getSizes().drop_front(dropCount);
+    auto newStrides = extractOp.getStrides().drop_front(dropCount);
 
     auto newExtractOp = rewriter.create<vector::ExtractStridedSliceOp>(
-        loc, newDstType, newSrcVector, newOffsets, newSizes, newStrides);
+        loc, newSrcVector, newOffsets, newSizes, newStrides);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(extractOp, oldDstType,
                                                      newExtractOp);
@@ -126,13 +118,11 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
 
-    auto newOffsets = rewriter.getArrayAttr(
-        insertOp.getOffsets().getValue().take_back(newDstType.getRank()));
-    auto newStrides = rewriter.getArrayAttr(
-        insertOp.getStrides().getValue().take_back(newSrcType.getRank()));
+    auto newOffsets = insertOp.getOffsets().take_back(newDstType.getRank());
+    auto newStrides = insertOp.getStrides().take_back(newSrcType.getRank());
 
     auto newInsertOp = rewriter.create<vector::InsertStridedSliceOp>(
-        loc, newDstType, newSrcVector, newDstVector, newOffsets, newStrides);
+        loc, newSrcVector, newDstVector, newOffsets, newStrides);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
                                                      newInsertOp);

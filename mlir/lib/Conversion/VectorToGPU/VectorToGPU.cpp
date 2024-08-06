@@ -940,12 +940,6 @@ convertTransferWriteToStores(RewriterBase &rewriter, vector::TransferWriteOp op,
   return success();
 }
 
-static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
-                                       SmallVectorImpl<int64_t> &results) {
-  for (auto attr : arrayAttr)
-    results.push_back(cast<IntegerAttr>(attr).getInt());
-}
-
 static LogicalResult
 convertExtractStridedSlice(RewriterBase &rewriter,
                            vector::ExtractStridedSliceOp op,
@@ -996,11 +990,8 @@ convertExtractStridedSlice(RewriterBase &rewriter,
   auto sourceVector = it->second;
 
   // offset and sizes at warp-level of onwership.
-  SmallVector<int64_t> offsets;
-  populateFromInt64AttrArray(op.getOffsets(), offsets);
+  ArrayRef<int64_t> offsets = op.getOffsets();
 
-  SmallVector<int64_t> sizes;
-  populateFromInt64AttrArray(op.getSizes(), sizes);
   ArrayRef<int64_t> warpVectorShape = op.getSourceVectorType().getShape();
 
   // Compute offset in vector registers. Note that the mma.sync vector registers

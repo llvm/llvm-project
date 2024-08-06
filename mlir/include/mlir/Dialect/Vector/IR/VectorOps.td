@@ -1040,8 +1040,8 @@ def Vector_InsertStridedSliceOp :
     PredOpTrait<"operand #0 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
     AllTypesMatch<["dest", "res"]>]>,
-    Arguments<(ins AnyVector:$source, AnyVector:$dest, I64ArrayAttr:$offsets,
-               I64ArrayAttr:$strides)>,
+    Arguments<(ins AnyVector:$source, AnyVector:$dest,
+               Vector_StridedSliceAttr:$strided_slice)>,
     Results<(outs AnyVector:$res)> {
   let summary = "strided_slice operation";
   let description = [{
@@ -1060,13 +1060,13 @@ def Vector_InsertStridedSliceOp :
 
     ```mlir
     %2 = vector.insert_strided_slice %0, %1
-        {offsets = [0, 0, 2], strides = [1, 1]}:
-      vector<2x4xf32> into vector<16x4x8xf32>
+        {offsets = [0, 0, 2], strides = [1, 1]}
+        : vector<2x4xf32> into vector<16x4x8xf32>
     ```
   }];
 
   let assemblyFormat = [{
-    $source `,` $dest attr-dict `:` type($source) `into` type($dest)
+    $source `,` $dest $strided_slice attr-dict `:` type($source) `into` type($dest)
   }];
 
   let builders = [
@@ -1081,10 +1081,13 @@ def Vector_InsertStridedSliceOp :
       return ::llvm::cast<VectorType>(getDest().getType());
     }
     bool hasNonUnitStrides() {
-      return llvm::any_of(getStrides(), [](Attribute attr) {
-        return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
+      return llvm::any_of(getStrides(), [](int64_t stride) {
+        return stride != 1;
       });
     }
+
+    ArrayRef<int64_t> getOffsets() { return getStridedSlice().getOffsets(); }
+    ArrayRef<int64_t> getStrides() { return getStridedSlice().getStrides(); }
   }];
 
   let hasFolder = 1;
@@ -1182,8 +1185,7 @@ def Vector_ExtractStridedSliceOp :
   Vector_Op<"extract_strided_slice", [Pure,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins AnyVector:$vector, I64ArrayAttr:$offsets,
-               I64ArrayAttr:$sizes, I64ArrayAttr:$strides)>,
+    Arguments<(ins AnyVector:$vector, Vector_StridedSliceAttr:$strided_slice)>,
     Results<(outs AnyVector)> {
   let summary = "extract_strided_slice operation";
   let description = [{
@@ -1201,12 +1203,8 @@ def Vector_ExtractStridedSliceOp :
 
     ```mlir
     %1 = vector.extract_strided_slice %0
-        {offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}:
-      vector<4x8x16xf32> to vector<2x4x16xf32>
-
-    // TODO: Evolve to a range form syntax similar to:
-    %1 = vector.extract_strided_slice %0[0:2:1][2:4:1]
-      vector<4x8x16xf32> to vector<2x4x16xf32>
+        {offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}
+        : vector<4x8x16xf32> to vector<2x4x16xf32>
     ```
   }];
   let builders = [
@@ -1217,17 +1215,20 @@ def Vector_ExtractStridedSliceOp :
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
-    void getOffsets(SmallVectorImpl<int64_t> &results);
     bool hasNonUnitStrides() {
-      return llvm::any_of(getStrides(), [](Attribute attr) {
-        return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
+      return llvm::any_of(getStrides(), [](int64_t stride) {
+        return stride != 1;
       });
     }
+
+    ArrayRef<int64_t> getOffsets() { return getStridedSlice().getOffsets(); }
+    ArrayRef<int64_t> getSizes() { return getStridedSlice().getSizes(); }
+    ArrayRef<int64_t> getStrides() { return getStridedSlice().getStrides(); }
   }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$vector attr-dict `:` type($vector) `to` type(results)";
+  let assemblyFormat = "$vector $strided_slice attr-dict `:` type($vector) `to` type(results)";
 }
 
 // TODO: Tighten semantics so that masks and inbounds can't be used
