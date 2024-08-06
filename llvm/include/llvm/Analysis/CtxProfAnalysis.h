@@ -17,23 +17,25 @@
 namespace llvm {
 class CtxProfAnalysis : public AnalysisInfoMixin<CtxProfAnalysis> {
   StringRef Profile;
+
 public:
   static AnalysisKey Key;
   explicit CtxProfAnalysis(StringRef Profile) : Profile(Profile) {};
 
   class Result {
     std::optional<PGOContextualProfile::CallTargetMapTy> Profiles;
-    public:
-      explicit Result(PGOContextualProfile::CallTargetMapTy &&Profiles)
-          : Profiles(std::move(Profiles)) {}
-      Result() = default;
-      Result(const Result&) = delete;
-      Result(Result &&) = default;
 
-      operator bool() const { return !!Profiles; }
-      const PGOContextualProfile::CallTargetMapTy &profiles() const {
-        return *Profiles;
-      }
+  public:
+    explicit Result(PGOContextualProfile::CallTargetMapTy &&Profiles)
+        : Profiles(std::move(Profiles)) {}
+    Result() = default;
+    Result(const Result &) = delete;
+    Result(Result &&) = default;
+
+    operator bool() const { return !!Profiles; }
+    const PGOContextualProfile::CallTargetMapTy &profiles() const {
+      return *Profiles;
+    }
   };
 
   Result run(Module &M, ModuleAnalysisManager &MAM);

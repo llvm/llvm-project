@@ -17,12 +17,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace json {
-Value toJSON(const PGOContextualProfile &P) { 
+Value toJSON(const PGOContextualProfile &P) {
   Object Ret;
   Ret["Guid"] = P.guid();
   Ret["Counters"] = Array(P.counters());
@@ -44,7 +44,7 @@ Value toJSON(const PGOContextualProfile &P) {
   return Ret;
 }
 
-Value toJSON(const PGOContextualProfile::CallTargetMapTy &P) { 
+Value toJSON(const PGOContextualProfile::CallTargetMapTy &P) {
   Array Ret;
   for (const auto &[_, Ctx] : P)
     Ret.push_back(toJSON(Ctx));
@@ -84,7 +84,7 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
     return PreservedAnalyses::all();
   }
   const auto JSONed = ::llvm::json::toJSON(C.profiles());
-  
+
   OS << formatv("{0:2}", JSONed);
   OS << "\n";
   return PreservedAnalyses::all();
