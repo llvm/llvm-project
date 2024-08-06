@@ -1,6 +1,6 @@
 import getopt
 import sys
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 
 try:
     from StringIO import StringIO
@@ -22,9 +22,8 @@ def convertTextNotation(data, options):
     if isinstance(data, str):
         data = bytearray(data.encode())
 
-
     for intval in data:
-        if options.show_ends and intval == 10:
+        if intval == 10 and options.show_ends:
             newdata.write("$")
             newdata.write(chr(intval))
             continue
@@ -53,6 +52,7 @@ def main(argv):
     short_options = "ve"
     long_options = ["show-nonprinting"]
     enabled_options = Options(show_ends=False, show_nonprinting=False)
+    convert_text = False
 
     try:
         options, filenames = getopt.gnu_getopt(arguments, short_options, long_options)
@@ -63,8 +63,10 @@ def main(argv):
     for option, value in options:
         if option == "-v" or option == "--show-nonprinting" or option == "-e":
             enabled_options.show_nonprinting = True
+            convert_text = True
         if option == "-e":
             enabled_options.show_ends = True
+            convert_text = True
 
     writer = getattr(sys.stdout, "buffer", None)
     if writer is None:
@@ -89,7 +91,7 @@ def main(argv):
                 fileToCat = open(filename, "rb")
                 contents = fileToCat.read()
 
-            if True in fields(enabled_options):
+            if convert_text:
                 contents = convertTextNotation(contents, enabled_options)
             elif is_text:
                 contents = contents.encode()
