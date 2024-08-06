@@ -34,6 +34,7 @@ public:
   void DidPush() override;
 
 protected:
+  bool DoPlanExplainsStop(Event *event_ptr) override;
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
 
   void SetFlagsToDefault() override {
