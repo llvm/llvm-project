@@ -73,7 +73,7 @@ public:
   /// allocated to hold a pointer to the hidden sret parameter.
   Register DemoteRegister;
 
-  /// MBBMap - A mapping from LLVM basic block number to their machine block.
+  /// A mapping from LLVM basic block number to their machine block.
   SmallVector<MachineBasicBlock *> MBBMap;
 
   /// ValueMap - Since we emit code for the function a basic block at a time,
@@ -172,8 +172,8 @@ public:
   /// for a value.
   DenseMap<const Value *, ISD::NodeType> PreferredExtendType;
 
-  /// VisitedBBs - The set of basic blocks visited thus far by instruction
-  /// selection. Indexed by basic block number.
+  /// The set of basic blocks visited thus far by instruction selection. Indexed
+  /// by basic block number.
   SmallVector<bool> VisitedBBs;
 
   /// PHINodesToUpdate - A list of phi instructions whose operand list will

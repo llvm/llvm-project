@@ -3908,7 +3908,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   bool HasMustTailInVarArgFn = false;
 
   // Create all blocks, in IR order, to preserve the layout.
-  FuncInfo.MBBMap.assign(F.getMaxBlockNumber(), nullptr);
+  FuncInfo.MBBMap.resize(F.getMaxBlockNumber());
   for (const BasicBlock &BB: F) {
     auto *&MBB = FuncInfo.MBBMap[BB.getNumber()];
 
