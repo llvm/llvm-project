@@ -59,6 +59,10 @@ MATCHER_P(MatchesIgnoringModules, pattern, "") {
   TypeQuery query(pattern, TypeQueryOptions::e_ignore_modules);
   return query.ContextMatches(arg);
 }
+MATCHER_P(MatchesWithStrictNamespaces, pattern, "") {
+  TypeQuery query(pattern, TypeQueryOptions::e_strict_namespaces);
+  return query.ContextMatches(arg);
+}
 } // namespace
 
 TEST(Type, CompilerContextPattern) {
@@ -111,4 +115,22 @@ TEST(Type, CompilerContextPattern) {
               Matches(std::vector{make_class("C")}));
   EXPECT_THAT((std::vector{make_namespace("NS"), make_class("C")}),
               Not(Matches(std::vector{make_any_type("C")})));
+
+  EXPECT_THAT((std::vector{make_namespace(""), make_class("C")}),
+              Matches(std::vector{make_class("C")}));
+  EXPECT_THAT((std::vector{make_namespace(""), make_class("C")}),
+              Not(MatchesWithStrictNamespaces(std::vector{make_class("C")})));
+  EXPECT_THAT((std::vector{make_namespace(""), make_class("C")}),
+              Matches(std::vector{make_namespace(""), make_class("C")}));
+  EXPECT_THAT((std::vector{make_namespace(""), make_class("C")}),
+              MatchesWithStrictNamespaces(
+                  std::vector{make_namespace(""), make_class("C")}));
+  EXPECT_THAT((std::vector{make_class("C")}),
+              Not(Matches(std::vector{make_namespace(""), make_class("C")})));
+  EXPECT_THAT((std::vector{make_class("C")}),
+              Not(MatchesWithStrictNamespaces(
+                  std::vector{make_namespace(""), make_class("C")})));
+  EXPECT_THAT((std::vector{make_namespace(""), make_namespace("NS"),
+                           make_namespace(""), make_class("C")}),
+              Matches(std::vector{make_namespace("NS"), make_class("C")}));
 }

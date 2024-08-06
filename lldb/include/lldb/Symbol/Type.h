@@ -77,10 +77,13 @@ FLAGS_ENUM(TypeQueryOptions){
     /// If set, the query will ignore all Module entries in the type context,
     /// even for exact matches.
     e_ignore_modules = (1u << 2),
+    /// If set, all anonymous namespaces in the context must be matched exactly
+    /// by the pattern. Otherwise, superfluous namespaces are skipped.
+    e_strict_namespaces = (1u << 3),
     /// When true, the find types call should stop the query as soon as a single
     /// matching type is found. When false, the type query should find all
     /// matching types.
-    e_find_one = (1u << 3),
+    e_find_one = (1u << 4),
 };
 LLDB_MARK_AS_BITMASK_ENUM(TypeQueryOptions)
 
@@ -265,6 +268,11 @@ public:
 
   bool GetIgnoreModules() const { return (m_options & e_ignore_modules) != 0; }
   void SetIgnoreModules() { m_options &= ~e_ignore_modules; }
+
+  bool GetStrictNamespaces() const {
+    return (m_options & e_strict_namespaces) != 0;
+  }
+  void SetStrictNamespaces() { m_options &= ~e_strict_namespaces; }
 
   /// The \a m_context can be used in two ways: normal types searching with
   /// the context containing a stanadard declaration context for a type, or
