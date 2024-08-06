@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
 
@@ -482,6 +483,11 @@ public:
   /// Return the frame base information to be encoded in the DWARF subprogram
   /// debug info.
   virtual DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const;
+
+  /// This method is called at the end of prolog/epilog code insertion, so
+  /// targets can emit remarks based on the final frame layout.
+  virtual void emitRemarks(const MachineFunction &MF,
+                           MachineOptimizationRemarkEmitter *ORE) const {};
 };
 
 } // End llvm namespace
