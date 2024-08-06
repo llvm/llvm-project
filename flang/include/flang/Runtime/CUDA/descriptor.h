@@ -17,7 +17,7 @@ namespace Fortran::runtime::cuf {
 
 extern "C" {
 
-// Allocate a descriptor in managed or unified memory.
+// Allocate a descriptor in managed.
 Descriptor *RTDECL(CUFAllocDesciptor)(
     std::size_t, const char *sourceFile = nullptr, int sourceLine = 0);
 
