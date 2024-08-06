@@ -1,0 +1,4 @@
+module MyCxxDep {
+    header "header.h"
+    export *
+}
