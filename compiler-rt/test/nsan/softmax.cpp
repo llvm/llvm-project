@@ -1,12 +1,20 @@
-// RUN: %clangxx_nsan -O0 -g %s -o %t
+// RUN: %clangxx_nsan -O0 -g -DSOFTMAX=softmax %s -o %t
 // RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_nsan -O0 -g -DSOFTMAX=softmax %s -o %t
+// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_nsan -O0 -g -DSOFTMAX=stable_softmax %s -o %t
+// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t 2>&1 
+// RUN: %clangxx_nsan -O0 -g -DSOFTMAX=stable_softmax %s -o %t
+// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t 2>&1
+
 #include<iostream>
 #include<vector>
 #include<algorithm>
 #include<cmath>
-
-__attribute__((noinline)) void softmax(std::vector<double> &values) {
-    double sum_exp = 0.0;
+// unstable softmax
+template <typename T>
+__attribute__((noinline)) void softmax(std::vector<T> &values) {
+    T sum_exp = 0.0;
     for (auto &i: values) {
       i = std::exp(i);
       sum_exp += i;
@@ -16,9 +24,12 @@ __attribute__((noinline)) void softmax(std::vector<double> &values) {
     }
 }
 
-__attribute__((noinline)) void stable_softmax(std::vector<double> values) {
-  double sum_exp = 0.0;
-  double max_values = *std::max_element(values.begin(), values.end());
+// use max value to avoid overflow
+// \sigma_i exp(x_i) / \sum_j exp(x_j) = \sigma_i exp(x_i - max(x)) / \sum_j exp(x_j - max(x))
+template <typename T>
+__attribute__((noinline)) void stable_softmax(std::vector<T> values) {
+  T sum_exp = 0.0;
+  T max_values = *std::max_element(values.begin(), values.end());
   for (auto &i: values) {
     i = std::exp(i - max_values);
     sum_exp += i;
@@ -30,16 +41,9 @@ __attribute__((noinline)) void stable_softmax(std::vector<double> values) {
 
 int main() {
   std::vector<double> data = {1000, 1001, 1002};
-  stable_softmax(data);
-  for (auto i:data) {
-    printf("%f ", i);
-  }
-  printf("\n");
-  data = {1000, 1001, 1002};
-  softmax(data);
-  for (auto i:data) {
+  SOFTMAX(data);
+  for (auto i: data) {
     printf("%f", i);
     // CHECK: WARNING: NumericalStabilitySanitizer: NaN detected
   }
-  printf("\n");
 }
