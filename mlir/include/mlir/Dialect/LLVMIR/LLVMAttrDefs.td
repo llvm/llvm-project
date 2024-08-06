@@ -1112,11 +1112,13 @@ def WorkgroupAttributionAttr
     : LLVM_Attr<"WorkgroupAttribution", "mlir.workgroup_attribution"> {
   let summary = "GPU workgroup attribution information";
   let description = [{
-    GPU workgroup attributions are `gpu.func` arguments encoding memory
+    GPU workgroup attributions are `gpu.func` attributes encoding memory
     allocations in the workgroup address space. These might be encoded as
-    `llvm.ptr` function arguments in our dialect, dropping type and size
-    information. This attribute can be attached to function arguments to keep
-    this information when converting from GPU to LLVM dialect.
+    `llvm.ptr` function arguments in our dialect, but then type and size
+    information would be dropped. This attribute can be attached to `llvm.ptr`
+    function arguments encoding GPU workgroup attributions to mark them as
+    arguments encoding workgroup attributions and keeping type and size
+    information in our dialect.
   }];
   let parameters = (ins "IntegerAttr":$num_elements,
                         "TypeAttr":$element_type);
