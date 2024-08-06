@@ -329,10 +329,6 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
     as an operand in subsequent operations. If not, the sharding applies to the
     operation that defines the tensor value.
 
-    4. `force`: A unit attribute requesting an explicit sharding of the data,
-    therefore not allowing to be optimizied away. This is useful in the presence
-    of halos and inplace semantics.
-
     Example:
     ```
     func.func @only_result_annotated(%arg0 : tensor<4x8xf32>) -> () {
@@ -413,8 +409,7 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
   let arguments = (ins
     AnyRankedTensor:$src,
     Mesh_Sharding:$sharding,
-    UnitAttr:$annotate_for_users,
-    UnitAttr:$force
+    UnitAttr:$annotate_for_users
   );
   let results = (outs
     AnyRankedTensor:$result
@@ -422,7 +417,6 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
   let assemblyFormat = [{
     $src `to` $sharding
       (`annotate_for_users` $annotate_for_users^)?
-      (`force` $force^)?
       attr-dict `:` type($result)
   }];
 }
@@ -1089,7 +1083,7 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
     (`mesh_axes` `=` $mesh_axes^)?
     (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
     (`target_halo_sizes` `=` $target_halo_sizes^)?
-    attr-dict `:` functional-type(operands, results)
+    attr-dict `:` type($input) `->` type($result)
   }];
 }
 #endif // MLIR_DIALECT_MESH_IR_MESHOPS_TD
