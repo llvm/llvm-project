@@ -4,7 +4,7 @@
 // specifying a constant register binding offset within the $Globals cbuffer, which is legacy behavior from DX9.
 float a : register(c0);
 
-// expected-error@+1 {{cbv type 'cbuffer' requires register type 'b', but register type 'i' was used}}
+// expected-error@+1 {{binding type 'i' is invalid}}
 cbuffer b : register(i0) {
 
 }
@@ -44,7 +44,7 @@ float x[2] : register(c2); // valid
 float y[2][2] : register(c3); // valid
 float z[2][2][3] : register(c4); // valid
 
-// expected-error@+1 {{register binding type 'c' not supported for variable of type 'groupshared float[10]}}
+// expected-error@+1 {{binding type 'c' only applies to numeric variables in the global scope}}
 groupshared float fa[10] : register(c5);
 
 void foo() {
@@ -56,7 +56,7 @@ void foo2() {
   extern RWBuffer<float> U2 : register(u5);
 }
 
-// expected-error@+1 {{unsupported resource register binding 'u' on variable of type 'float'}}
+// expected-error@+1 {{binding type 'u' only applies to uav resources}}
 float b : register(u0, space1);
 
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
@@ -69,5 +69,5 @@ struct S {
   RWBuffer<float> U : register(u3);
 };
 
-// expected-error@+1 {{invalid register type 'z' used; expected 't', 'u', 'b', or 's'}}
+// expected-error@+1 {{binding type 'z' is invalid}}
 RWBuffer<float> U3 : register(z5);

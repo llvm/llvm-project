@@ -752,8 +752,8 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
       int registerTypeIndex = getRegisterTypeIndex(attr->getSlot());
       if (RegisterTypesDetected[registerTypeIndex]) {
         S.Diag(TheDecl->getLocation(),
-               diag::err_hlsl_conflicting_register_annotations)
-            << attr->getSlot().substr(0, 1);
+               diag::err_hlsl_duplicate_register_annotation)
+            << registerTypeIndex;
       } else {
         RegisterTypesDetected[registerTypeIndex] = true;
       }
@@ -774,8 +774,8 @@ std::string getHLSLResourceTypeStr(Sema &S, Decl *TheDecl) {
   }
 }
 
-static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
-                                        Decl *TheDecl, StringRef &Slot) {
+static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
+                                          Decl *TheDecl, StringRef &Slot) {
 
   // Samplers, UAVs, and SRVs are VarDecl types
   VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
@@ -793,10 +793,16 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
              1 &&
          "only one resource analysis result should be expected");
 
+  int regType = getRegisterTypeIndex(Slot);
+
   // first, if "other" is set, emit an error
   if (Flags.Other) {
-    S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
-        << Slot.substr(0, 1) << getHLSLResourceTypeStr(S, TheDecl);
+    if (regType == RegisterType::I) {
+      S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_invalid)
+          << "i";
+      return;
+    }
+    S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
     return;
   }
 
@@ -806,6 +812,11 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   // next, if resource is set, make sure the register type in the register
   // annotation is compatible with the variable's resource type.
   if (Flags.Resource) {
+    if (regType == RegisterType::I) {
+      S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_invalid)
+          << "i";
+      return;
+    }
     const HLSLResourceAttr *resAttr =
         getHLSLResourceAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
     const HLSLResourceClassAttr *resClassAttr =
@@ -818,32 +829,24 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
 
     switch (DeclResourceClass) {
     case llvm::hlsl::ResourceClass::SRV:
-      if (getRegisterTypeIndex(Slot) != RegisterType::SRV)
-        S.Diag(TheDecl->getLocation(),
-               diag::err_hlsl_mismatching_register_type_and_resource_type)
-            << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
-            << 0 /*srv*/;
+      if (regType != RegisterType::SRV)
+        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
+            << regType;
       break;
     case llvm::hlsl::ResourceClass::UAV:
-      if (getRegisterTypeIndex(Slot) != RegisterType::UAV)
-        S.Diag(TheDecl->getLocation(),
-               diag::err_hlsl_mismatching_register_type_and_resource_type)
-            << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
-            << 1 /*uav*/;
+      if (regType != RegisterType::UAV)
+        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
+            << regType;
       break;
     case llvm::hlsl::ResourceClass::CBuffer:
-      if (getRegisterTypeIndex(Slot) != RegisterType::CBuffer)
-        S.Diag(TheDecl->getLocation(),
-               diag::err_hlsl_mismatching_register_type_and_resource_type)
-            << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
-            << 2 /*cbv*/;
+      if (regType != RegisterType::CBuffer)
+        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
+            << regType;
       break;
     case llvm::hlsl::ResourceClass::Sampler:
-      if (getRegisterTypeIndex(Slot) != RegisterType::Sampler)
-        S.Diag(TheDecl->getLocation(),
-               diag::err_hlsl_mismatching_register_type_and_resource_type)
-            << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
-            << 3 /*sampler*/;
+      if (regType != RegisterType::Sampler)
+        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
+            << regType;
       break;
     }
     return;
@@ -853,79 +856,78 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   // including the legacy "i" and "b" register types.
   if (Flags.Basic) {
     if (Flags.DefaultGlobals) {
-      if (getRegisterTypeIndex(Slot) == RegisterType::CBuffer)
+      if (regType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
-      if (getRegisterTypeIndex(Slot) == RegisterType::I)
+      else if (regType == RegisterType::I)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
+      else if (regType != RegisterType::C)
+        S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
+      return;
     }
 
-    if (getRegisterTypeIndex(Slot) == RegisterType::C) {
-      if (!Flags.DefaultGlobals) {
-        S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_not_in_global_scope);
-      }
-    } else if (getRegisterTypeIndex(Slot) == RegisterType::SRV) {
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_variable_type)
-          << 0 << getHLSLResourceTypeStr(S, TheDecl);
-    } else if (getRegisterTypeIndex(Slot) == RegisterType::UAV) {
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_variable_type)
-          << 1 << getHLSLResourceTypeStr(S, TheDecl);
-    } else if (getRegisterTypeIndex(Slot) == RegisterType::Sampler) {
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_variable_type)
-          << 3 << getHLSLResourceTypeStr(S, TheDecl);
-      // any other register type should emit
-      // err_hlsl_unsupported_register_type_and_variable_type
-    } else if (!Flags.DefaultGlobals) {
-      S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
-          << Slot.substr(0, 1) << getHLSLResourceTypeStr(S, TheDecl);
-    }
+    if (regType == RegisterType::C)
+      S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_packoffset);
+    else if (regType == RegisterType::I)
+      S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
+    else
+      S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
+
     return;
   }
 
   // finally, we handle the udt case
   if (Flags.UDT) {
+    if (regType == RegisterType::I) {
+      S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_invalid)
+          << "i";
+      return;
+    }
     switch (getRegisterTypeIndex(Slot)) {
     case RegisterType::SRV: {
       if (!Flags.SRV) {
         S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_UDT_missing_resource_type_member)
-            << getHLSLResourceTypeStr(S, TheDecl) << "t" << 0;
+               diag::warn_hlsl_user_defined_type_missing_member)
+            << regType;
       }
       break;
     }
     case RegisterType::UAV: {
       if (!Flags.UAV) {
         S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_UDT_missing_resource_type_member)
-            << getHLSLResourceTypeStr(S, TheDecl) << "u" << 1;
+               diag::warn_hlsl_user_defined_type_missing_member)
+            << getHLSLResourceTypeStr(S, TheDecl) << regType;
       }
       break;
     }
     case RegisterType::CBuffer: {
       if (!Flags.CBV) {
         S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_UDT_missing_resource_type_member)
-            << getHLSLResourceTypeStr(S, TheDecl) << "b" << 2;
+               diag::warn_hlsl_user_defined_type_missing_member)
+            << getHLSLResourceTypeStr(S, TheDecl) << regType;
       }
       break;
     }
     case RegisterType::Sampler: {
       if (!Flags.Sampler) {
         S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_UDT_missing_resource_type_member)
-            << getHLSLResourceTypeStr(S, TheDecl) << "s" << 3;
+               diag::warn_hlsl_user_defined_type_missing_member)
+            << getHLSLResourceTypeStr(S, TheDecl) << regType;
       }
       break;
     }
     case RegisterType::C: {
       if (!Flags.ContainsNumeric)
-        S.Diag(TheDecl->getLocation(), diag::warn_hlsl_UDT_missing_basic_type);
+        S.Diag(TheDecl->getLocation(),
+               diag::warn_hlsl_user_defined_type_missing_member)
+            << regType;
       break;
     }
-    default: {
+    case RegisterType::I: {
       S.Diag(TheDecl->getLocation(),
-             diag::err_hlsl_unsupported_register_type_and_variable_type)
-          << Slot.front() << getHLSLResourceTypeStr(S, TheDecl);
+             diag::warn_hlsl_deprecated_register_type_i);
     }
+    default:
+      llvm_unreachable("invalid register type");
     }
     return;
   }
@@ -984,8 +986,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     case 'I':
       break;
     default:
-      Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_resource_type)
-          << Slot.substr(0, 1);
+      Diag(ArgLoc, diag::err_hlsl_binding_type_invalid) << Slot.substr(0, 1);
       return;
     }
 
@@ -1008,7 +1009,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     return;
   }
 
-  DiagnoseHLSLResourceRegType(SemaRef, ArgLoc, TheDecl, Slot);
+  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, Slot);
 
   HLSLResourceBindingAttr *NewAttr =
       HLSLResourceBindingAttr::Create(getASTContext(), Slot, Space, AL);

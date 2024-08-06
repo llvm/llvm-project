@@ -59,7 +59,7 @@ Eg4 e4 : register(s5);
 struct Eg5 {
   float f;
 }; 
-// expected-warning@+1{{variable of type 'Eg5' bound to register type 't' does not contain a matching 'srv' resource}}
+// expected-warning@+1{{binding type 't' only applies to types containing srv resources}}
 Eg5 e5 : register(t0);
 
 struct Eg6 {
@@ -68,13 +68,13 @@ struct Eg6 {
   };
   Bar b;
 };
-// expected-warning@+1{{variable of type 'Eg6' bound to register type 't' does not contain a matching 'srv' resource}}
+// expected-warning@+1{{binding type 't' only applies to types containing srv resources}}
 Eg6 e6 : register(t0);
 
 struct Eg7 {
   RWBuffer<int> a;
 }; 
-// expected-warning@+1{{register 'c' used on type with no contents to allocate in a constant buffer}}
+// expected-warning@+1{{binding type 'c' only applies to types containing numeric types}}
 Eg7 e7 : register(c0);
 
 
@@ -89,7 +89,7 @@ template<typename R>
 struct Eg9 {
     R b;
 };
-// expecting warning: {{variable of type 'Eg9' bound to register type 'u' does not contain a matching 'uav' resource}}
+// expecting warning: {{binding type 'u' only applies to types containing uav resources}}
 Eg9<Texture2D> e9 : register(u0);
 // invalid because after template expansion, there are no valid resources inside Eg10 to bind as a UAV.
 
@@ -99,7 +99,7 @@ struct Eg10{
   RWBuffer<int> b;
 };
 
-// expected-error@+1{{conflicting register annotations: multiple register annotations detected for register type 'u'}}
+// expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg10 e10 : register(u9) : register(u10);
-// expected-error@+1{{conflicting register annotations: multiple register annotations detected for register type 'u'}}
+// expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg10 e10a : register(u9, space0) : register(u9, space1);

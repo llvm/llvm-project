@@ -3,10 +3,10 @@
 // This test validates the diagnostics that are emitted when a variable with a "resource" type
 // is bound to a register using the register annotation
 
-// expected-error@+1  {{uav type 'RWBuffer<int>' requires register type 'u', but register type 'b' was used}}
+// expected-error@+1  {{binding type 'b' only applies to constant buffer resources}}
 RWBuffer<int> a : register(b2, space1);
 
-// expected-error@+1  {{uav type 'RWBuffer<int>' requires register type 'u', but register type 't' was used}}
+// expected-error@+1  {{binding type 't' only applies to srv resources}}
 RWBuffer<int> b : register(t2, space1);
 
 // NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture1D' (expected 't')}}
@@ -49,14 +49,14 @@ RWBuffer<int> b : register(t2, space1);
 // NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'StructuredBuffer' (expected 'u')}}
 // NOT YET IMPLEMENTED StructuredBuffer ROVStructuredBuff_t2  : register(T2);
 
-// expected-error@+1 {{cbv type 'cbuffer' requires register type 'b', but register type 's' was used}}
+// expected-error@+1 {{binding type 's' only applies to sampler state}}
 cbuffer f : register(s2, space1) {}
 
 // NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'Sampler' (expected 's')}}
 // Can this type just be Sampler instead of SamplerState?
 // NOT YET IMPLEMENTED SamplerState MySampler : register(t3, space1);
 
-// expected-error@+1 {{srv type 'tbuffer' requires register type 't', but register type 's' was used}}
+// expected-error@+1 {{binding type 's' only applies to sampler state}}
 tbuffer f : register(s2, space1) {}
 
 // NOT YET IMPLEMENTED : RTAccelerationStructure doesn't have any example tests in DXC
