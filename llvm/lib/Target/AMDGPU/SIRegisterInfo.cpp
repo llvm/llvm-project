@@ -2474,8 +2474,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       if (OtherOp.isImm())
         NewOffset += OtherOp.getImm();
 
-      if (NewOffset == 0 && DeadSCC) {
-        MI->eraseFromParent();
+      if (NewOffset == 0 && DeadSCC && DstOp.getReg() == MaterializedReg) {
+        MI->removeOperand(3);
+        MI->removeOperand(FIOperandNum);
+        MI->setDesc(
+            TII->get(OtherOp.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
       } else if (!MaterializedReg && OtherOp.isImm()) {
         // In a kernel, the address should just be an immediate.
         // SCC should really be dead, but preserve the def just in case it
