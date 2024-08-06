@@ -8634,13 +8634,14 @@ ASTNodeImporter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
         Importer.getToContext(), *ToNamingClassOrErr, *ToQualifierLocOrErr,
         *ToTemplateKeywordLocOrErr, ToNameInfo, E->requiresADL(), &ToTAInfo,
         ToDecls.begin(), ToDecls.end(), KnownDependent,
-        E->isInstantiationDependent());
+        /*KnownInstantiationDependent=*/E->isInstantiationDependent());
   }
 
   return UnresolvedLookupExpr::Create(
       Importer.getToContext(), *ToNamingClassOrErr, *ToQualifierLocOrErr,
       ToNameInfo, E->requiresADL(), ToDecls.begin(), ToDecls.end(),
-      /*KnownDependent=*/E->isTypeDependent(), E->isInstantiationDependent());
+      /*KnownDependent=*/E->isTypeDependent(),
+      /*KnownInstantiationDependent=*/E->isInstantiationDependent());
 }
 
 ExpectedStmt
