@@ -5,9 +5,9 @@ define void @test(ptr noalias %x, ptr noalias %y, ptr noalias %z) {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %load = load double, ptr %gep.sel, align 8 ->
 ; CHECK-NEXT:            store double %load, ptr %gep.sel2, align 8
 ; CHECK-EMPTY:
