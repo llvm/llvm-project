@@ -71,6 +71,10 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
           GuardedFunctionSpec<"f16sub", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16subf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16subl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          
+          GuardedFunctionSpec<"fdivf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          GuardedFunctionSpec<"ffmaf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           GuardedFunctionSpec<"fmulf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 

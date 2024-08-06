@@ -68,6 +68,32 @@ static void printOptionHelp(StringRef arg, StringRef desc, size_t indent,
 // PassRegistry
 //===----------------------------------------------------------------------===//
 
+/// Prints the passes that were previously registered and stored in passRegistry
+void mlir::printRegisteredPasses() {
+  size_t maxWidth = 0;
+  for (auto &entry : *passRegistry)
+    maxWidth = std::max(maxWidth, entry.second.getOptionWidth() + 4);
+
+  // Functor used to print the ordered entries of a registration map.
+  auto printOrderedEntries = [&](StringRef header, auto &map) {
+    llvm::SmallVector<PassRegistryEntry *, 32> orderedEntries;
+    for (auto &kv : map)
+      orderedEntries.push_back(&kv.second);
+    llvm::array_pod_sort(
+        orderedEntries.begin(), orderedEntries.end(),
+        [](PassRegistryEntry *const *lhs, PassRegistryEntry *const *rhs) {
+          return (*lhs)->getPassArgument().compare((*rhs)->getPassArgument());
+        });
+
+    llvm::outs().indent(0) << header << ":\n";
+    for (PassRegistryEntry *entry : orderedEntries)
+      entry->printHelpStr(/*indent=*/2, maxWidth);
+  };
+
+  // Print the available passes.
+  printOrderedEntries("Passes", *passRegistry);
+}
+
 /// Print the help information for this pass. This includes the argument,
 /// description, and any pass options. `descIndent` is the indent that the
 /// descriptions should be aligned.

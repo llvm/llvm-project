@@ -2449,6 +2449,70 @@ bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
 }
 
+void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
+  assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
+         "Not a pointer induction according to InductionDescriptor!");
+  assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
+         "Unexpected type.");
+  assert(!onlyScalarsGenerated(State.VF.isScalable()) &&
+         "Recipe should have been replaced");
+
+  auto *IVR = getParent()->getPlan()->getCanonicalIV();
+  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0, /*IsScalar*/ true));
+  Type *PhiType = IndDesc.getStep()->getType();
+
+  // Build a pointer phi
+  Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
+  Type *ScStValueType = ScalarStartValue->getType();
+  PHINode *NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
+                                           CanonicalIV->getIterator());
+
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
+
+  // A pointer induction, performed by using a gep
+  BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
+
+  Value *ScalarStepValue = State.get(getOperand(1), VPIteration(0, 0));
+  Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
+  Value *NumUnrolledElems =
+      State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, State.UF));
+  Value *InductionGEP = GetElementPtrInst::Create(
+      State.Builder.getInt8Ty(), NewPointerPhi,
+      State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
+      InductionLoc);
+  // Add induction update using an incorrect block temporarily. The phi node
+  // will be fixed after VPlan execution. Note that at this point the latch
+  // block cannot be used, as it does not exist yet.
+  // TODO: Model increment value in VPlan, by turning the recipe into a
+  // multi-def and a subclass of VPHeaderPHIRecipe.
+  NewPointerPhi->addIncoming(InductionGEP, VectorPH);
+
+  // Create UF many actual address geps that use the pointer
+  // phi as base and a vectorized version of the step value
+  // (<step*0, ..., step*N>) as offset.
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Type *VecPhiType = VectorType::get(PhiType, State.VF);
+    Value *StartOffsetScalar =
+        State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, Part));
+    Value *StartOffset =
+        State.Builder.CreateVectorSplat(State.VF, StartOffsetScalar);
+    // Create a vector of consecutive numbers from zero to VF.
+    StartOffset = State.Builder.CreateAdd(
+        StartOffset, State.Builder.CreateStepVector(VecPhiType));
+
+    assert(ScalarStepValue == State.get(getOperand(1), VPIteration(Part, 0)) &&
+           "scalar step must be the same across all parts");
+    Value *GEP = State.Builder.CreateGEP(
+        State.Builder.getInt8Ty(), NewPointerPhi,
+        State.Builder.CreateMul(
+            StartOffset,
+            State.Builder.CreateVectorSplat(State.VF, ScalarStepValue),
+            "vector.gep"));
+    State.set(this, GEP, Part);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
