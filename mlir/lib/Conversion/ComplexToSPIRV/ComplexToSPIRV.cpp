@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ComplexToSPIRV/ComplexToSPIRV.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -108,4 +109,32 @@ void mlir::populateComplexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
   patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern>(
       typeConverter, context);
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToSPIRVPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert complex to SPIR-V.
+struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
+  using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const override {
+    context->loadDialect<spirv::SPIRVDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToSPIRVConversionPatterns(
+      ConversionTarget &target, SPIRVTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const override {
+    populateComplexToSPIRVPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertComplexToSPIRVInterface(DialectRegistry &registry) {
+  registry.addExtension(
+      +[](MLIRContext *ctx, complex::ComplexDialect *dialect) {
+        dialect->addInterfaces<ToSPIRVDialectInterface>();
+      });
 }

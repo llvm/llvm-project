@@ -17,6 +17,7 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
+#include "mlir/Conversion/ComplexToSPIRV/ComplexToSPIRV.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -76,6 +77,7 @@ inline void registerAllExtensions(DialectRegistry &registry) {
 
   // Register all conversions to SPIR-V extensions.
   arith::registerConvertArithToSPIRVInterface(registry);
+  registerConvertComplexToSPIRVInterface(registry);
   cf::registerConvertControlFlowToSPIRVInterface(registry);
   registerConvertFuncToSPIRVInterface(registry);
   index::registerConvertIndexToSPIRVInterface(registry);

@@ -16,7 +16,7 @@ using namespace mlir;
 void mlir::populateConversionTargetFromOperation(
     Operation *root, ConversionTarget &target,
     SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
-  DenseSet<Dialect *> dialects;
+  llvm::SmallDenseSet<Dialect *> dialects;
   root->walk([&](Operation *op) {
     Dialect *dialect = op->getDialect();
     if (!dialects.insert(dialect).second)

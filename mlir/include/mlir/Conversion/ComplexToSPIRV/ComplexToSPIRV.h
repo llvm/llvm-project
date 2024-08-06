@@ -13,16 +13,19 @@
 #ifndef MLIR_CONVERSION_COMPLEXTOSPIRV_COMPLEXTOSPIRV_H
 #define MLIR_CONVERSION_COMPLEXTOSPIRV_COMPLEXTOSPIRV_H
 
-#include "mlir/Transforms/DialectConversion.h"
-
 namespace mlir {
+class DialectRegistry;
 class SPIRVTypeConverter;
+class RewritePatternSet;
 
 /// Appends to a pattern list additional patterns for translating Complex ops
 /// to SPIR-V ops.
 void populateComplexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                     RewritePatternSet &patterns);
 
+/// Registers the `ConvertToSPIRVPatternInterface` interface in the `complex`
+/// dialect.
+void registerConvertComplexToSPIRVInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_COMPLEXTOSPIRV_COMPLEXTOSPIRV_H

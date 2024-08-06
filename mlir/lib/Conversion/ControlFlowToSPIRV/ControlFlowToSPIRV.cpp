@@ -123,7 +123,7 @@ namespace {
 /// Implement the interface to convert cf to SPIR-V.
 struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
   using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
-  void loadDependentDialects(MLIRContext *context) const final {
+  void loadDependentDialects(MLIRContext *context) const override {
     context->loadDialect<spirv::SPIRVDialect>();
   }
 
@@ -131,7 +131,7 @@ struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToSPIRVConversionPatterns(
       ConversionTarget &target, SPIRVTypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
+      RewritePatternSet &patterns) const override {
     // TODO: We should also take care of block argument type conversion.
     cf::populateControlFlowToSPIRVPatterns(typeConverter, patterns);
   }

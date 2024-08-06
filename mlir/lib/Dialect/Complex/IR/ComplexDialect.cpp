@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToSPIRV/ToSPIRVInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/IR/Builders.h"
@@ -41,6 +42,7 @@ void complex::ComplexDialect::initialize() {
 #include "mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc"
       >();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ComplexDialect>();
+  declarePromisedInterface<ConvertToSPIRVPatternInterface, ComplexDialect>();
   addInterfaces<ComplexInlinerInterface>();
 }
 

@@ -1377,7 +1377,7 @@ namespace {
 /// Implement the interface to convert arith to SPIR-V.
 struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
   using ConvertToSPIRVPatternInterface::ConvertToSPIRVPatternInterface;
-  void loadDependentDialects(MLIRContext *context) const final {
+  void loadDependentDialects(MLIRContext *context) const override {
     context->loadDialect<spirv::SPIRVDialect>();
   }
 
@@ -1385,13 +1385,9 @@ struct ToSPIRVDialectInterface : public ConvertToSPIRVPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToSPIRVConversionPatterns(
       ConversionTarget &target, SPIRVTypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
+      RewritePatternSet &patterns) const override {
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);
-
-    // Use UnrealizedConversionCast as the bridge so that we don't need to pull
-    // in patterns for other dialects.
-    target.addLegalOp<UnrealizedConversionCastOp>();
 
     // Fail hard when there are any remaining 'arith' ops.
     target.addIllegalDialect<arith::ArithDialect>();
