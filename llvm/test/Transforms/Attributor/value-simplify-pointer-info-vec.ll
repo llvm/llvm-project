@@ -101,8 +101,8 @@ define i32 @vec_write_5(i32 %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@vec_write_5
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store i32 [[ARG]], ptr [[A]], align 16
+; CHECK-NEXT:    [[A1:%.*]] = alloca [12 x i8], align 1
+; CHECK-NEXT:    store i32 [[ARG]], ptr [[A1]], align 16
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[ARG]], 5
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 5, [[ADD1]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]

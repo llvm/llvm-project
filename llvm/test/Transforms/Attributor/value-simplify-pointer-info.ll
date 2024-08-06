@@ -2666,18 +2666,19 @@ define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[DST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 24, align 1
-; TUNIT-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 2
-; TUNIT-NEXT:    store ptr @global, ptr [[INNER]], align 8
+; TUNIT-NEXT:    [[LOCAL1:%.*]] = alloca [8 x i8], align 1
+; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY:%.*]], ptr [[LOCAL1]], i64 0, i32 2
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr ptr, ptr [[INNER]], i64 -16
+; TUNIT-NEXT:    store ptr @global, ptr [[NEWGEP]], align 8
 ; TUNIT-NEXT:    store ptr [[DST]], ptr [[CALL_H2S]], align 8
 ; TUNIT-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[CALL_H2S]], i64 8
 ; TUNIT-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
 ; TUNIT-NEXT:    store ptr [[CALL_H2S]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
-; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LOCAL]], align 8
-; TUNIT-NEXT:    [[LOCAL_B8:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 8
-; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[LOCAL_B8]], align 8
-; TUNIT-NEXT:    [[LOCAL_B16:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 16
-; TUNIT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOCAL_B16]], align 8
+; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LOCAL1]], align 8
+; TUNIT-NEXT:    [[LOCAL1_B8:%.*]] = getelementptr i8, ptr [[LOCAL1]], i64 8
+; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[LOCAL1_B8]], align 8
+; TUNIT-NEXT:    [[LOCAL1_B16:%.*]] = getelementptr i8, ptr [[LOCAL1]], i64 16
+; TUNIT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOCAL1_B16]], align 8
 ; TUNIT-NEXT:    call fastcc void @nested_memory_callee(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]]) #[[ATTR21:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
@@ -3017,8 +3018,10 @@ define i8 @gep_index_from_binary_operator(i1 %cnd1, i1 %cnd2) {
 ; CHECK-LABEL: define {{[^@]+}}@gep_index_from_binary_operator
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 12
+; CHECK-NEXT:    [[BYTES1:%.*]] = alloca [1 x i8], align 1
+; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES1]], i64 0, i64 12
+; CHECK-NEXT:    [[NEWGEP:%.*]] = getelementptr ptr, ptr [[GEP_FIXED]], i64 -12
+; CHECK-NEXT:    store i8 100, ptr [[NEWGEP]], align 4
 ; CHECK-NEXT:    ret i8 100
 ;
 entry:
@@ -3036,8 +3039,10 @@ define i8 @gep_index_from_memory(i1 %cnd1, i1 %cnd2) {
 ; CHECK-LABEL: define {{[^@]+}}@gep_index_from_memory
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP_LOADED:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 12
+; CHECK-NEXT:    [[BYTES1:%.*]] = alloca [1 x i8], align 1
+; CHECK-NEXT:    [[GEP_LOADED:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES1]], i64 0, i64 12
+; CHECK-NEXT:    [[NEWGEP:%.*]] = getelementptr ptr, ptr [[GEP_LOADED]], i64 -12
+; CHECK-NEXT:    store i8 100, ptr [[NEWGEP]], align 4
 ; CHECK-NEXT:    ret i8 100
 ;
 entry:
