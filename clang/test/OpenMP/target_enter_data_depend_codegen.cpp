@@ -238,15 +238,15 @@ void foo(int arg) {
   {++arg;}
 
   // Region 04
-  // CK1: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+  // CK1: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
   // CK1: [[BP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK1: store ptr @gb, ptr [[BP0]],
   // CK1: [[P0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P:%.+]], i32 0, i32 0
-  // CK1: store ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1), ptr [[P0]],
+  // CK1: store ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), ptr [[P0]],
   // CK1: [[PS0:%.+]] = getelementptr inbounds [2 x i64], ptr [[PS:%.+]], i32 0, i32 0
   // CK1: store i64 [[DIV]], ptr [[PS0]],
   // CK1: [[BP1:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 1
-  // CK1: store ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1), ptr [[BP1]],
+  // CK1: store ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), ptr [[BP1]],
   // CK1: [[P1:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 1
   // CK1: store ptr %{{.+}}, ptr [[P1]],
   // CK1: [[GEPBP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 0

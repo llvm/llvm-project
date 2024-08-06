@@ -70,7 +70,7 @@ namespace test_complex_int_ref_mutable {
     const _Complex int &x = y;
     takeABlock(^{ takeItByValue(x); });
     // CHECK:      [[R:%.*]] = load i32, ptr @_ZN28test_complex_int_ref_mutable1yE
-    // CHECK-NEXT: [[I:%.*]] = load i32, ptr getelementptr inbounds ({ i32, i32 }, ptr @_ZN28test_complex_int_ref_mutable1yE, i32 0, i32 1)
+    // CHECK-NEXT: [[I:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @_ZN28test_complex_int_ref_mutable1yE, i32 0, i32 1)
     // CHECK-NEXT: [[RSLOT:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[CSLOT:%.*]], i32 0, i32 0
     // CHECK-NEXT: [[ISLOT:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[CSLOT]], i32 0, i32 1
     // CHECK-NEXT: store i32 [[R]], ptr [[RSLOT]]

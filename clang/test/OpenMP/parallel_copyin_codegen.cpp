@@ -775,7 +775,7 @@ void foo() {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
 // CHECK4-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // CHECK4-NEXT:    ret i32 0
 //
@@ -812,7 +812,7 @@ void foo() {
 // CHECK4-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP1]])
 // CHECK4-NEXT:    [[TMP6:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP1]], ptr @g, i64 4, ptr @g.cache.)
 // CHECK4-NEXT:    store volatile i32 1, ptr [[TMP6]], align 128
-// CHECK4-NEXT:    [[TMP7:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global.2, i32 0, i32 3), align 8
+// CHECK4-NEXT:    [[TMP7:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global.2, i32 0, i32 3), align 8
 // CHECK4-NEXT:    call void [[TMP7]](ptr noundef @__block_literal_global.2)
 // CHECK4-NEXT:    ret void
 //
@@ -1491,7 +1491,7 @@ void foo() {
 // CHECK14-NEXT:  entry:
 // CHECK14-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK14-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK14-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// CHECK14-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
 // CHECK14-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // CHECK14-NEXT:    ret i32 0
 //
@@ -1533,7 +1533,7 @@ void foo() {
 // CHECK14-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB1:[0-9]+]], i32 [[TMP7]])
 // CHECK14-NEXT:    [[TMP8:%.*]] = call align 128 ptr @llvm.threadlocal.address.p0(ptr align 128 @g)
 // CHECK14-NEXT:    store volatile i32 1, ptr [[TMP8]], align 128
-// CHECK14-NEXT:    [[TMP9:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global.2, i32 0, i32 3), align 8
+// CHECK14-NEXT:    [[TMP9:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global.2, i32 0, i32 3), align 8
 // CHECK14-NEXT:    call void [[TMP9]](ptr noundef @__block_literal_global.2)
 // CHECK14-NEXT:    ret void
 //

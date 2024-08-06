@@ -1134,7 +1134,7 @@ void array_func(int n, float a[n], St s[2]) {
 // BLOCKS-NEXT:  entry:
 // BLOCKS-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // BLOCKS-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// BLOCKS-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// BLOCKS-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
 // BLOCKS-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // BLOCKS-NEXT:    ret i32 0
 //
@@ -2158,7 +2158,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY3-NEXT:  entry:
 // SIMD-ONLY3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // SIMD-ONLY3-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// SIMD-ONLY3-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// SIMD-ONLY3-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
 // SIMD-ONLY3-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // SIMD-ONLY3-NEXT:    ret i32 0
 //

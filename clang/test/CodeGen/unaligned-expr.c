@@ -180,8 +180,8 @@ struct S1 {
 
 __unaligned S1 s1;
 void test20(void) {
-    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds (%struct.S1, ptr @s1, i32 0, i32 1), align 1
-    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds (%struct.S1, ptr @s1, i32 0, i32 1), align 1
+    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (%struct.S1, ptr @s1, i32 0, i32 1), align 1
+    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (%struct.S1, ptr @s1, i32 0, i32 1), align 1
     s1.x++;
 }
 
@@ -202,8 +202,8 @@ struct __attribute__((packed)) S2 {
 
 __unaligned S2 s2;
 void test22(void) {
-    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds (%struct.S2, ptr @s2, i32 0, i32 1), align 1
-    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds (%struct.S2, ptr @s2, i32 0, i32 1), align 1
+    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (%struct.S2, ptr @s2, i32 0, i32 1), align 1
+    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (%struct.S2, ptr @s2, i32 0, i32 1), align 1
     s2.x++;
 }
 
