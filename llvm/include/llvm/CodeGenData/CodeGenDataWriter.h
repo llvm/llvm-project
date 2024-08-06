@@ -15,11 +15,43 @@
 
 #include "llvm/CodeGenData/CodeGenData.h"
 #include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 
-class CGDataOStream;
+/// A struct to define how the data stream should be patched.
+struct CGDataPatchItem {
+  uint64_t Pos; // Where to patch.
+  uint64_t *D;  // Pointer to an array of source data.
+  int N;        // Number of elements in \c D array.
+};
+
+/// A wrapper class to abstract writer stream with support of bytes
+/// back patching.
+class CGDataOStream {
+public:
+  CGDataOStream(raw_fd_ostream &FD)
+      : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}
+  CGDataOStream(raw_string_ostream &STR)
+      : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
+
+  uint64_t tell() { return OS.tell(); }
+  void write(uint64_t V) { LE.write<uint64_t>(V); }
+  void write32(uint32_t V) { LE.write<uint32_t>(V); }
+  void write8(uint8_t V) { LE.write<uint8_t>(V); }
+
+  // \c patch can only be called when all data is written and flushed.
+  // For raw_string_ostream, the patch is done on the target string
+  // directly and it won't be reflected in the stream's internal buffer.
+  void patch(ArrayRef<CGDataPatchItem> P);
+
+  // If \c OS is an instance of \c raw_fd_ostream, this field will be
+  // true. Otherwise, \c OS will be an raw_string_ostream.
+  bool IsFDOStream;
+  raw_ostream &OS;
+  support::endian::Writer LE;
+};
 
 class CodeGenDataWriter {
   /// The outlined hash tree to be written.
