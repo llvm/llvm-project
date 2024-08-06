@@ -9217,18 +9217,19 @@ public:
         // When REVEC is enabled, we need to expand vector types into scalar
         // types.
         unsigned VecTyNumElements = VecTy->getNumElements();
-        SmallVector<Constant *> NewVals;
-        NewVals.reserve(VL.size() * VecTyNumElements);
-        for (Constant *V : Vals)
-          for (unsigned I = 0; I != VecTyNumElements; ++I) {
-            Type *ScalarTy = V->getType()->getScalarType();
-            if (isa<PoisonValue>(V))
-              NewVals.push_back(PoisonValue::get(ScalarTy));
-            else if (isa<UndefValue>(V))
-              NewVals.push_back(UndefValue::get(ScalarTy));
-            else
-              NewVals.push_back(Constant::getNullValue(ScalarTy));
-          }
+        SmallVector<Constant *> NewVals(VF * VecTyNumElements, nullptr);
+        for (auto [I, V] : enumerate(Vals)) {
+          Type *ScalarTy = V->getType()->getScalarType();
+          Constant *NewVal;
+          if (isa<PoisonValue>(V))
+            NewVal = PoisonValue::get(ScalarTy);
+          else if (isa<UndefValue>(V))
+            NewVal = UndefValue::get(ScalarTy);
+          else
+            NewVal = Constant::getNullValue(ScalarTy);
+          std::fill_n(NewVals.begin() + I * VecTyNumElements, VecTyNumElements,
+                      NewVal);
+        }
         Vals.swap(NewVals);
       }
       return ConstantVector::get(Vals);
