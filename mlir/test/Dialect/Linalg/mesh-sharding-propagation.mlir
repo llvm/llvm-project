@@ -3,7 +3,7 @@
 // RUN:   --pass-pipeline="builtin.module(func.func(sharding-propagation))" \
 // RUN:   %s | FileCheck %s
 
-mesh.mesh @mesh_2_2(shape = 2)
+mesh.mesh @mesh_2(shape = 2)
 
 // CHECK-LABEL: func @matmul_shard_prallel_axis
 func.func @matmul_shard_prallel_axis(

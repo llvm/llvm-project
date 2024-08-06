@@ -97,6 +97,16 @@ func.func @sharding_attribute_invalid_sizes(%arg0 : tensor<4x8xf32>) {
 
 // -----
 
+mesh.mesh @mesh_dyn(shape = ?x?)
+func.func @sharding_dyn_mesh_and_sizes(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{sharded dims sizes are not allowed for devices meshes with dynamic shape}}
+  %s = mesh.sharding @mesh_dyn split_axes = [[0]] sharded_dims_sizes = [2, 2] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
 mesh.mesh @mesh0(shape = 2x4)
 
 func.func @mesh_shape_mesh_axis_out_of_bounds() -> (index, index) {
