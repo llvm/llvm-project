@@ -16,6 +16,7 @@ struct Eg12{
 
 Eg12 e12 : register(c9);
 
+Eg12 bar : register(i1);
 
 struct Eg7 {
   struct Bar {

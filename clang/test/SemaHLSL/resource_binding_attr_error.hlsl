@@ -4,7 +4,7 @@
 // specifying a constant register binding offset within the $Globals cbuffer, which is legacy behavior from DX9.
 float a : register(c0);
 
-// expected-error@+1 {{binding type 'i' is invalid}}
+// expected-error@+1 {{binding type 'i' ignored. The 'integer constant' binding type is no longer supported}}
 cbuffer b : register(i0) {
 
 }

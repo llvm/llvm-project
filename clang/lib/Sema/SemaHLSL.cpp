@@ -798,8 +798,8 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // first, if "other" is set, emit an error
   if (Flags.Other) {
     if (regType == RegisterType::I) {
-      S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_invalid)
-          << "i";
+      S.Diag(TheDecl->getLocation(),
+             diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
     S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
@@ -813,8 +813,8 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // annotation is compatible with the variable's resource type.
   if (Flags.Resource) {
     if (regType == RegisterType::I) {
-      S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_invalid)
-          << "i";
+      S.Diag(TheDecl->getLocation(),
+             diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
     const HLSLResourceAttr *resAttr =
@@ -878,8 +878,8 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // finally, we handle the udt case
   if (Flags.UDT) {
     if (regType == RegisterType::I) {
-      S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_invalid)
-          << "i";
+      S.Diag(TheDecl->getLocation(),
+             diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
     switch (getRegisterTypeIndex(Slot)) {
