@@ -91,57 +91,6 @@ define <vscale x 4 x float> @test_compress_nxv4f32(<vscale x 4 x float> %vec, <v
     ret <vscale x 4 x float> %out
 }
 
-define <vscale x 8 x i8> @test_compress_nxv8i8(<vscale x 8 x i8> %vec, <vscale x 8 x i1> %mask) {
-; CHECK-LABEL: test_compress_nxv8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1b { z0.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1b { z0.h }, p1/z, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-    %out = call <vscale x 8 x i8> @llvm.experimental.vector.compress(<vscale x 8 x i8> %vec, <vscale x 8 x i1> %mask, <vscale x 8 x i8> undef)
-    ret <vscale x 8 x i8> %out
-}
-
-define <vscale x 8 x i16> @test_compress_nxv8i16(<vscale x 8 x i16> %vec, <vscale x 8 x i1> %mask) {
-; CHECK-LABEL: test_compress_nxv8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-    %out = call <vscale x 8 x i16> @llvm.experimental.vector.compress(<vscale x 8 x i16> %vec, <vscale x 8 x i1> %mask, <vscale x 8 x i16> undef)
-    ret <vscale x 8 x i16> %out
-}
-
-define <vscale x 16 x i8> @test_compress_nxv16i8(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask) {
-; CHECK-LABEL: test_compress_nxv16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    ld1b { z0.b }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-    %out = call <vscale x 16 x i8> @llvm.experimental.vector.compress(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
-    ret <vscale x 16 x i8> %out
-}
-
 define <vscale x 4 x i4> @test_compress_illegal_element_type(<vscale x 4 x i4> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compress_illegal_element_type:
 ; CHECK:       // %bb.0:
@@ -158,83 +107,28 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    ptrue p2.s
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    compact z0.s, p2, z0.s
+; CHECK-NEXT:    cntp x8, p1, p2.s
+; CHECK-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p1, [sp]
-; CHECK-NEXT:    cntp x8, p2, p1.s
 ; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z0.s }, p2/z, [sp]
-; CHECK-NEXT:    ld1w { z1.s }, p2/z, [sp, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p1, [x9, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [sp]
+; CHECK-NEXT:    ld1w { z1.s }, p1/z, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
     %out = call <vscale x 8 x i32> @llvm.experimental.vector.compress(<vscale x 8 x i32> %vec, <vscale x 8 x i1> %mask, <vscale x 8 x i32> undef)
     ret <vscale x 8 x i32> %out
 }
-
-define <vscale x 64 x i8> @test_compress_very_large(<vscale x 64 x i8> %vec, <vscale x 64 x i1> %mask) {
-; CHECK-LABEL: test_compress_very_large:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-8
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc8, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 72 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p4.b
-; CHECK-NEXT:    rdvl x10, #2
-; CHECK-NEXT:    mov x11, sp
-; CHECK-NEXT:    sub x10, x10, #1
-; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    cntp x8, p4, p0.b
-; CHECK-NEXT:    cntp x9, p4, p2.b
-; CHECK-NEXT:    eor p0.b, p4/z, p0.b, p1.b
-; CHECK-NEXT:    mov w8, w8
-; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    mov w9, w9
-; CHECK-NEXT:    csel x8, x8, x10, lo
-; CHECK-NEXT:    cmp x9, x10
-; CHECK-NEXT:    st1b { z1.b }, p1, [x11, x8]
-; CHECK-NEXT:    addvl x8, sp, #2
-; CHECK-NEXT:    csel x9, x9, x10, lo
-; CHECK-NEXT:    st1b { z2.b }, p2, [sp, #2, mul vl]
-; CHECK-NEXT:    addvl x10, sp, #4
-; CHECK-NEXT:    st1b { z3.b }, p3, [x8, x9]
-; CHECK-NEXT:    cntp x8, p4, p0.b
-; CHECK-NEXT:    rdvl x9, #4
-; CHECK-NEXT:    ld1b { z0.b }, p4/z, [sp, #1, mul vl]
-; CHECK-NEXT:    sub x9, x9, #1
-; CHECK-NEXT:    st1b { z0.b }, p4, [sp, #5, mul vl]
-; CHECK-NEXT:    ld1b { z0.b }, p4/z, [sp]
-; CHECK-NEXT:    mov w8, w8
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    st1b { z0.b }, p4, [sp, #4, mul vl]
-; CHECK-NEXT:    ld1b { z0.b }, p4/z, [sp, #2, mul vl]
-; CHECK-NEXT:    st1b { z0.b }, p4, [x10, x8]
-; CHECK-NEXT:    add x8, x10, x8
-; CHECK-NEXT:    ld1b { z0.b }, p4/z, [sp, #3, mul vl]
-; CHECK-NEXT:    st1b { z0.b }, p4, [x8, #1, mul vl]
-; CHECK-NEXT:    ld1b { z0.b }, p4/z, [sp, #4, mul vl]
-; CHECK-NEXT:    ld1b { z1.b }, p4/z, [sp, #5, mul vl]
-; CHECK-NEXT:    ld1b { z2.b }, p4/z, [sp, #6, mul vl]
-; CHECK-NEXT:    ld1b { z3.b }, p4/z, [sp, #7, mul vl]
-; CHECK-NEXT:    addvl sp, sp, #8
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-    %out = call <vscale x 64 x i8> @llvm.experimental.vector.compress(<vscale x 64 x i8> %vec, <vscale x 64 x i1> %mask, <vscale x 64 x i8> undef)
-    ret <vscale x 64 x i8> %out
-}
-
 
 ; We pass a placeholder value for the const_mask* tests to check that they are converted to a no-op by simply copying
 ; the second vector input register to the ret register or doing nothing.
@@ -260,27 +154,6 @@ define <vscale x 4 x i32> @test_compress_undef_mask(<vscale x 4 x i32> %ignore, 
     %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> undef, <vscale x 4 x i32> undef)
     ret <vscale x 4 x i32> %out
 }
-
-define void @test_combine_compress_store_nxv16i8(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask, ptr %ptr) {
-; CHECK-LABEL: test_combine_compress_store_nxv16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
-; CHECK-NEXT:    ret
-    %out = call <vscale x 16 x i8> @llvm.experimental.vector.compress(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
-    store <vscale x 16 x i8> %out, ptr %ptr
-    ret void
-}
-
-define void @test_combine_compress_store_nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, ptr %ptr) {
-; CHECK-LABEL: test_combine_compress_store_nxv4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
-; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
-    store <vscale x 4 x i32> %out, ptr %ptr
-    ret void
-}
-
 
 define <4 x i32> @test_compress_v4i32_with_sve(<4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK-LABEL: test_compress_v4i32_with_sve:
@@ -317,30 +190,6 @@ define <1 x i32> @test_compress_v1i32_with_sve(<1 x i32> %vec, <1 x i1> %mask) {
     ret <1 x i32> %out
 }
 
-define <8 x i16> @test_compress_v8i16_with_sve(<8 x i16> %vec, <8 x i1> %mask) {
-; CHECK-LABEL: test_compress_v8i16_with_sve:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    shl v1.8h, v1.8h, #15
-; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
-; CHECK-NEXT:    and z1.h, z1.h, #0x1
-; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
-; CHECK-NEXT:    st1h { z0.h }, p1, [sp]
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [sp]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-    %out = call <8 x i16> @llvm.experimental.vector.compress(<8 x i16> %vec, <8 x i1> %mask, <8 x i16> undef)
-    ret <8 x i16> %out
-}
-
 define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %mask) {
 ; CHECK-LABEL: test_compress_v4f64_with_sve:
 ; CHECK:       // %bb.0:
@@ -348,9 +197,8 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    ushll v3.2d, v2.2s, #0
 ; CHECK-NEXT:    ushll2 v4.2d, v2.4s, #0
 ; CHECK-NEXT:    fmov x8, d2
@@ -358,15 +206,19 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    shl v4.2d, v4.2d, #63
 ; CHECK-NEXT:    lsr x9, x8, #32
 ; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    cmlt v3.2d, v3.2d, #0
 ; CHECK-NEXT:    cmlt v4.2d, v4.2d, #0
 ; CHECK-NEXT:    and x8, x8, #0x3
+; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    and z3.d, z3.d, #0x1
 ; CHECK-NEXT:    and z4.d, z4.d, #0x1
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z4.d, #0
-; CHECK-NEXT:    st1d { z0.d }, p1, [x10]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x10, x8, lsl #3]
+; CHECK-NEXT:    compact z0.d, p1, z0.d
+; CHECK-NEXT:    compact z1.d, p0, z1.d
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    str q1, [x9, x8]
 ; CHECK-NEXT:    ldp q0, q1, [sp], #32
 ; CHECK-NEXT:    ret
     %out = call <4 x double> @llvm.experimental.vector.compress(<4 x double> %vec, <4 x i1> %mask, <4 x double> undef)
@@ -388,35 +240,6 @@ define <2 x i16> @test_compress_v2i16_with_sve(<2 x i16> %vec, <2 x i1> %mask) {
     ret <2 x i16> %out
 }
 
-define void @test_combine_compress_store_v4i32_with_sve(<4 x i32> %vec, <4 x i1> %mask, ptr %ptr) {
-; CHECK-LABEL: test_combine_compress_store_v4i32_with_sve:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    and z1.s, z1.s, #0x1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
-; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> undef)
-    store <4 x i32> %out, ptr %ptr
-    ret void
-}
-
-define void @test_combine_compress_store_v16i8_with_sve(<16 x i8> %vec, <16 x i1> %mask, ptr %ptr) {
-; CHECK-LABEL: test_combine_compress_store_v16i8_with_sve:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    and z1.b, z1.b, #0x1
-; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, #0
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
-; CHECK-NEXT:    ret
-    %out = call <16 x i8> @llvm.experimental.vector.compress(<16 x i8> %vec, <16 x i1> %mask, <16 x i8> undef)
-    store <16 x i8> %out, ptr %ptr
-    ret void
-}
 
 define <vscale x 4 x i32> @test_compress_nxv4i32_with_passthru(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) {
 ; CHECK-LABEL: test_compress_nxv4i32_with_passthru:
@@ -456,41 +279,4 @@ define <vscale x 4 x i32> @test_compress_nxv4i32_with_const_passthru(<vscale x 4
 ; CHECK-NEXT:    ret
     %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> splat(i32 5))
     ret <vscale x 4 x i32> %out
-}
-
-define <vscale x 16 x i8> @test_compress_nxv16i8_with_passthru(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask, <vscale x 16 x i8> %passthru) {
-; CHECK-LABEL: test_compress_nxv16i8_with_passthru:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    st1b { z1.b }, p1, [sp]
-; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    ld1b { z0.b }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-    %out = call <vscale x 16 x i8> @llvm.experimental.vector.compress(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask, <vscale x 16 x i8> %passthru)
-    ret <vscale x 16 x i8> %out
-}
-
-define <vscale x 16 x i8> @test_compress_nxv16i8_with_const_passthru(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask) {
-; CHECK-LABEL: test_compress_nxv16i8_with_const_passthru:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov z1.b, #5 // =0x5
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    st1b { z1.b }, p1, [sp]
-; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    ld1b { z0.b }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-    %out = call <vscale x 16 x i8> @llvm.experimental.vector.compress(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask, <vscale x 16 x i8> splat(i8 5))
-    ret <vscale x 16 x i8> %out
 }

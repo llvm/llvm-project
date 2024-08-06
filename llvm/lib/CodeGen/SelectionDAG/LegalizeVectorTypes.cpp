@@ -2418,18 +2418,18 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   EVT VecVT = N->getValueType(0);
 
   auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VecVT);
-  bool HasLegalOrCustom = false;
+  bool HasCustomLowering = false;
   EVT CheckVT = LoVT;
   while (CheckVT.getVectorMinNumElements() > 1) {
-    if (TLI.isOperationLegalOrCustom(ISD::VECTOR_COMPRESS, CheckVT)) {
-      HasLegalOrCustom = true;
+    if (TLI.isOperationCustom(ISD::VECTOR_COMPRESS, CheckVT)) {
+      HasCustomLowering = true;
       break;
     }
     CheckVT = CheckVT.getHalfNumVectorElementsVT(*DAG.getContext());
   }
 
   SDValue Passthru = N->getOperand(2);
-  if (!HasLegalOrCustom || !Passthru.isUndef()) {
+  if (!HasCustomLowering || !Passthru.isUndef()) {
     SDValue Compressed = TLI.expandVECTOR_COMPRESS(N, DAG);
     std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL, LoVT, HiVT);
     return;
