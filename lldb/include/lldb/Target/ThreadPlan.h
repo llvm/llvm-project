@@ -304,6 +304,7 @@ public:
     eKindStepThrough,
     eKindStepThroughGenericTrampoline,
     eKindStepUntil
+    eKindSingleThreadTimeout,
   };
 
   virtual ~ThreadPlan();
@@ -395,6 +396,11 @@ public:
   virtual bool WillStop() = 0;
 
   bool IsControllingPlan() { return m_is_controlling_plan; }
+
+  // Returns true if this plan is a leaf plan, meaning the plan will be popped
+  // during each stop if it does not explain the stop and re-pushed before
+  // resuming to stay at the top of the stack.
+  virtual bool IsLeafPlan() { return false; }
 
   bool SetIsControllingPlan(bool value) {
     bool old_value = m_is_controlling_plan;
@@ -505,6 +511,7 @@ public:
   friend lldb::ThreadPlanSP
   Process::DoesStackExplainStopNoLock(ThreadPlanStack &stack, Thread &thread,
                                       Event *event_ptr);
+  virtual lldb::StateType GetPlanRunState() = 0;
 
 protected:
   // Constructors and Destructors
