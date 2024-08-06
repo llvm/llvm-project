@@ -110,25 +110,20 @@ enum LoadStore {
 // Extends LLVM AtomicOrdering with PTX Orderings:
 using OrderingUnderlyingType = unsigned int;
 enum Ordering : OrderingUnderlyingType {
-  NotAtomic = 0, // PTX calls these: "Weak"
+  NotAtomic = (OrderingUnderlyingType)
+      AtomicOrdering::NotAtomic, // PTX calls these: "Weak"
   // Unordered = 1, // NVPTX maps LLVM Unorderd to Relaxed
-  Relaxed = 2,
+  Relaxed = (OrderingUnderlyingType)AtomicOrdering::Monotonic,
   // Consume = 3,   // Unimplemented in LLVM; NVPTX would map to "Acquire"
-  Acquire = 4,
-  Release = 5,
+  Acquire = (OrderingUnderlyingType)AtomicOrdering::Acquire,
+  Release = (OrderingUnderlyingType)AtomicOrdering::Release,
   // AcquireRelease = 6, // TODO
-  SequentiallyConsistent = 7,
-  Volatile = 8,
-  RelaxedMMIO = 9,
+  SequentiallyConsistent =
+      (OrderingUnderlyingType)AtomicOrdering::SequentiallyConsistent,
+  Volatile = SequentiallyConsistent + 1,
+  RelaxedMMIO = Volatile + 1,
   LAST = RelaxedMMIO
 };
-// Values match LLVM AtomicOrdering for common orderings:
-static_assert(Ordering::NotAtomic == (unsigned)AtomicOrdering::NotAtomic);
-static_assert(Ordering::Relaxed == (unsigned)AtomicOrdering::Monotonic);
-static_assert(Ordering::Acquire == (unsigned)AtomicOrdering::Acquire);
-static_assert(Ordering::Release == (unsigned)AtomicOrdering::Release);
-static_assert(Ordering::SequentiallyConsistent ==
-              (unsigned)AtomicOrdering::SequentiallyConsistent);
 
 namespace PTXLdStInstCode {
 enum AddressSpace {

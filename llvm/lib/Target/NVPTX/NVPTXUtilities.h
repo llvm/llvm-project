@@ -113,6 +113,6 @@ inline raw_ostream &operator<<(raw_ostream &O, Ordering Order) {
 }
 
 } // namespace NVPTX
-}
+} // namespace llvm
 
 #endif
