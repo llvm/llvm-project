@@ -366,13 +366,18 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "MIRProfileLoader pass working on Func: "
                     << MF.getFunction().getName() << "\n");
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  MIRSampleLoader->setInitVals(
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
-      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree(),
-      &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,
-      &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
+  auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto *MPDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
 
   MF.RenumberBlocks();
+  MDT->updateBlockNumbers();
+  MPDT->updateBlockNumbers();
+
+  MIRSampleLoader->setInitVals(
+      MDT, MPDT, &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,
+      &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
+
   if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        MF.getFunction().getName() == ViewBlockFreqFuncName)) {

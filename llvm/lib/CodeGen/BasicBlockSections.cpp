@@ -72,8 +72,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
@@ -393,12 +395,21 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   auto R1 = handleBBSections(MF);
   // Handle basic block address map after basic block sections are finalized.
   auto R2 = handleBBAddrMap(MF);
+
+  // We renumber blocks, so update the dominator tree we want to preserve.
+  if (auto *WP = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
+    WP->getDomTree().updateBlockNumbers();
+  if (auto *WP = getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>())
+    WP->getPostDomTree().updateBlockNumbers();
+
   return R1 || R2;
 }
 
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
+  AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
+  AU.addUsedIfAvailable<MachinePostDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
