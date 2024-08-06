@@ -821,87 +821,19 @@ def X86vpdpbuuds : SDNode<"X86ISD::VPDPBUUDS", SDTVnni>;
 
 def X86Vmpsadbw : SDNode<"X86ISD::MPSADBW", SDTX86PSADBW>;
 
-def SDTAVX10SATCVT_BF162I : SDTypeProfile<1, 1, [
-  SDTCVecEltisVT<0, i16>, SDTCVecEltisVT<1, bf16>
-]>;
+// in place saturated cvt fp-to-int
+def X86vcvtp2ibs : SDNode<"X86ISD::CVTP2IBS",  SDTFloatToInt>;
+def X86vcvtp2iubs : SDNode<"X86ISD::CVTP2IUBS",  SDTFloatToInt>;
 
-def SDTAVX10SATCVT_PH2I : SDTypeProfile<1, 1, [
-  SDTCVecEltisVT<0, i16>, SDTCVecEltisVT<1, f16>
-]>;
+def X86vcvtp2ibsRnd : SDNode<"X86ISD::CVTP2IBS_RND",  SDTFloatToIntRnd>;
+def X86vcvtp2iubsRnd : SDNode<"X86ISD::CVTP2IUBS_RND",  SDTFloatToIntRnd>;
 
-def SDTAVX10SATCVT_PS2I : SDTypeProfile<1, 1, [
-  SDTCVecEltisVT<0, i32>, SDTCVecEltisVT<1, f32>
-]>;
+// in place saturated cvtt fp-to-int staff
+def X86vcvttp2ibs : SDNode<"X86ISD::CVTTP2IBS",  SDTFloatToInt>;
+def X86vcvttp2iubs : SDNode<"X86ISD::CVTTP2IUBS",  SDTFloatToInt>;
 
-def SDTAVX10SATCVT_PH2I_ROUND : SDTypeProfile<1, 2, [
-  SDTCVecEltisVT<0, i16>, SDTCVecEltisVT<1, f16>, SDTCisInt<2>
-]>;
-
-def SDTAVX10SATCVT_PS2I_RND : SDTypeProfile<1, 2, [
-  SDTCVecEltisVT<0, i32>, SDTCVecEltisVT<1, f32>, SDTCisInt<2>
-]>;
-
-def SDTAVX10SATCVT_PH2I_SAE : SDTypeProfile<1, 1, [
-  SDTCVecEltisVT<0, i16>, SDTCVecEltisVT<1, f16>,
-  SDTCisSameNumEltsAs<0, 1>
-]>;
-
-def SDTAVX10SATCVT_PS2I_SAE : SDTypeProfile<1, 1, [
-  SDTCVecEltisVT<0, i32>, SDTCVecEltisVT<1, f32>,
-  SDTCisSameNumEltsAs<0, 1>
-]>;
-
-def X86vcvtnebf162ibs
-    : SDNode<"X86ISD::VCVTNEBF162IBS", SDTAVX10SATCVT_BF162I>;
-
-def X86vcvtnebf162iubs
-    : SDNode<"X86ISD::VCVTNEBF162IUBS", SDTAVX10SATCVT_BF162I>;
-
-def X86vcvtph2ibs : SDNode<"X86ISD::VCVTPH2IBS", SDTAVX10SATCVT_PH2I>;
-
-def X86vcvtph2ibsRnd
-    : SDNode<"X86ISD::VCVTPH2IBS_RND", SDTAVX10SATCVT_PH2I_ROUND>;
-
-def X86vcvtph2iubs : SDNode<"X86ISD::VCVTPH2IUBS", SDTAVX10SATCVT_PH2I>;
-
-def X86vcvtph2iubsRnd
-    : SDNode<"X86ISD::VCVTPH2IUBS_RND", SDTAVX10SATCVT_PH2I_ROUND>;
-
-def X86vcvtps2ibs : SDNode<"X86ISD::VCVTPS2IBS", SDTAVX10SATCVT_PS2I>;
-
-def X86vcvtps2ibsRnd
-    : SDNode<"X86ISD::VCVTPS2IBS_RND", SDTAVX10SATCVT_PS2I_RND>;
-
-def X86vcvtps2iubs : SDNode<"X86ISD::VCVTPS2IUBS", SDTAVX10SATCVT_PS2I>;
-
-def X86vcvtps2iubsRnd
-    : SDNode<"X86ISD::VCVTPS2IUBS_RND", SDTAVX10SATCVT_PS2I_RND>;
-
-def X86vcvttnebf162ibs
-    : SDNode<"X86ISD::VCVTTNEBF162IBS", SDTAVX10SATCVT_BF162I>;
-
-def X86vcvttnebf162iubs
-    : SDNode<"X86ISD::VCVTTNEBF162IUBS", SDTAVX10SATCVT_BF162I>;
-
-def X86vcvttph2ibs : SDNode<"X86ISD::VCVTTPH2IBS", SDTAVX10SATCVT_PH2I>;
-
-def X86vcvttph2ibsSAE
-    : SDNode<"X86ISD::VCVTTPH2IBS_SAE", SDTAVX10SATCVT_PH2I_SAE>;
-
-def X86vcvttph2iubs : SDNode<"X86ISD::VCVTTPH2IUBS", SDTAVX10SATCVT_PH2I>;
-
-def X86vcvttph2iubsSAE
-    : SDNode<"X86ISD::VCVTTPH2IUBS_SAE", SDTAVX10SATCVT_PH2I_SAE>;
-
-def X86vcvttps2ibs : SDNode<"X86ISD::VCVTTPS2IBS", SDTAVX10SATCVT_PS2I>;
-
-def X86vcvttps2ibsSAE
-    : SDNode<"X86ISD::VCVTTPS2IBS_SAE", SDTAVX10SATCVT_PS2I_SAE>;
-
-def X86vcvttps2iubs : SDNode<"X86ISD::VCVTTPS2IUBS", SDTAVX10SATCVT_PS2I>;
-
-def X86vcvttps2iubsSAE
-    : SDNode<"X86ISD::VCVTTPS2IUBS_SAE", SDTAVX10SATCVT_PS2I_SAE>;
+def X86vcvttp2ibsSAE : SDNode<"X86ISD::CVTTP2IBS_SAE", SDTFloatToInt>;
+def X86vcvttp2iubsSAE : SDNode<"X86ISD::CVTTP2IUBS_SAE", SDTFloatToInt>;
 
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
