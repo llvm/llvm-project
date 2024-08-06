@@ -3292,9 +3292,9 @@ bool FunctionDecl::isImmediateFunction() const {
 }
 
 bool FunctionDecl::isMain() const {
-  const DeclContext *DC = getDeclContext();
   return isNamed(this, "main") && !getLangOpts().Freestanding &&
-         (DC->getRedeclContext()->isTranslationUnit() || isExternC());
+         (getDeclContext()->getRedeclContext()->isTranslationUnit() ||
+          isExternC());
 }
 
 bool FunctionDecl::isMSVCRTEntryPoint() const {
