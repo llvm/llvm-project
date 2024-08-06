@@ -35,7 +35,7 @@ public:
 
 private:
   Thread &m_thread;
-  std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo> m_timeout_info;
+  ThreadPlanSingleThreadTimeout::TimeoutInfoSP m_timeout_info;
 };
 
 } // namespace lldb_private

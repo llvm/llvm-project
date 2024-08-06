@@ -25,8 +25,7 @@ using namespace lldb_private;
 using namespace lldb;
 
 ThreadPlanSingleThreadTimeout::ThreadPlanSingleThreadTimeout(
-    Thread &thread,
-    std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo> &info)
+    Thread &thread, TimeoutInfoSP &info)
     : ThreadPlan(ThreadPlan::eKindSingleThreadTimeout, "Single thread timeout",
                  thread, eVoteNo, eVoteNoOpinion),
       m_info(info), m_state(State::WaitTimeout) {
@@ -66,9 +65,8 @@ std::string ThreadPlanSingleThreadTimeout::StateToString(State state) {
   }
 }
 
-void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(
-    Thread &thread,
-    std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo> &info) {
+void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(Thread &thread,
+                                                       TimeoutInfoSP &info) {
   uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
   if (timeout_in_ms == 0)
     return;
@@ -89,9 +87,8 @@ void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(
       timeout_in_ms);
 }
 
-void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(
-    Thread &thread,
-    std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo> &info) {
+void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(Thread &thread,
+                                                        TimeoutInfoSP &info) {
   uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
   if (timeout_in_ms == 0)
     return;
