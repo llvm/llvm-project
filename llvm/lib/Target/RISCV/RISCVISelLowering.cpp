@@ -7508,8 +7508,9 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 
   // Store the given static chain and function pointer in the trampoline buffer.
   struct OffsetValuePair {
-    unsigned Offset;
-    SDValue Value;
+    const unsigned Offset;
+    const SDValue Value;
+    SDValue Addr = SDValue(); // Used to cache the address.
   } OffsetValues[] = {
       {StaticChainOffset, StaticChain},
       {FunctionAddressOffset, FunctionAddress},
@@ -7518,6 +7519,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
     SDValue Addr =
         DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                     DAG.getConstant(OffsetValue.Offset, dl, MVT::i64));
+    OffsetValue.Addr = Addr;
     OutChains[Idx + 4] =
         DAG.getStore(Root, dl, OffsetValue.Value, Addr,
                      MachinePointerInfo(TrmpAddr, OffsetValue.Offset));
@@ -7525,10 +7527,9 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 
   SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 
-  // Compute end of instructions of trampoline.
-  SDValue EndOfTrmp =
-      DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                  DAG.getConstant(StaticChainOffset, dl, MVT::i64));
+  // The end of instructions of trampoline is the same as the static chain
+  // address that we computed earlier.
+  SDValue EndOfTrmp = OffsetValues[0].Addr;
 
   // Call clear cache on the trampoline instructions.
   SDValue Chain = DAG.getNode(ISD::CLEAR_CACHE, dl, MVT::Other, StoreToken,
