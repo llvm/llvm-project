@@ -1029,7 +1029,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     std::optional<unsigned> FOp =
         VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
     if (FOp && !ICA.getArgTypes().empty())
-      return getCastInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
+      return getCastInstrCost(*FOp, RetTy, ICA.getArgTypes()[0],
                               TTI::CastContextHint::None, CostKind);
     break;
   }
