@@ -4611,7 +4611,17 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       // 3. The loads are ordered, or number of unordered loads <=
       // MaxProfitableUnorderedLoads, or loads are in reversed order.
       // (this check is to avoid extra costs for very expensive shuffles).
-      if (IsPossibleStrided && (((Sz > MinProfitableStridedLoads ||
+      // 4. Any pointer operand is an instruction with the users outside of the
+      // current graph (for masked gathers extra extractelement instructions
+      // might be required).
+      auto IsAnyPointerUsedOutGraph =
+          IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
+            return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                     return !getTreeEntry(U) && !MustGather.contains(U);
+                   });
+          });
+      if (IsPossibleStrided && (IsAnyPointerUsedOutGraph ||
+                                ((Sz > MinProfitableStridedLoads ||
                                   (static_cast<unsigned>(std::abs(*Diff)) <=
                                        MaxProfitableLoadStride * Sz &&
                                    isPowerOf2_32(std::abs(*Diff)))) &&
@@ -18418,6 +18428,12 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
     return !IsCompatibility;
   if (CI1->getOperand(0)->getType()->getTypeID() >
       CI2->getOperand(0)->getType()->getTypeID())
+    return false;
+  if (CI1->getOperand(0)->getType()->getScalarSizeInBits() <
+      CI2->getOperand(0)->getType()->getScalarSizeInBits())
+    return !IsCompatibility;
+  if (CI1->getOperand(0)->getType()->getScalarSizeInBits() >
+      CI2->getOperand(0)->getType()->getScalarSizeInBits())
     return false;
   CmpInst::Predicate Pred1 = CI1->getPredicate();
   CmpInst::Predicate Pred2 = CI2->getPredicate();

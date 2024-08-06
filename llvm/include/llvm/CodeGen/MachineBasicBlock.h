@@ -1297,6 +1297,11 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   static NodeRef getEntryNode(MachineBasicBlock *BB) { return BB; }
   static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+
+  static unsigned getNumber(MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
 
 template <> struct GraphTraits<const MachineBasicBlock *> {
@@ -1306,6 +1311,11 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
   static NodeRef getEntryNode(const MachineBasicBlock *BB) { return BB; }
   static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+
+  static unsigned getNumber(const MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
 
 // Provide specializations of GraphTraits to be able to treat a
@@ -1324,6 +1334,11 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
 
   static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+
+  static unsigned getNumber(MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
 
 template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
@@ -1336,6 +1351,11 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
 
   static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+
+  static unsigned getNumber(const MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
 
 // These accessors are handy for sharing templated code between IR and MIR.

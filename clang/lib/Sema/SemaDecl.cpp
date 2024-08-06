@@ -1219,7 +1219,7 @@ Corrected:
   return NameClassification::OverloadSet(UnresolvedLookupExpr::Create(
       Context, Result.getNamingClass(), SS.getWithLocInContext(Context),
       Result.getLookupNameInfo(), ADL, Result.begin(), Result.end(),
-      /*KnownDependent=*/false));
+      /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
 }
 
 ExprResult
@@ -7943,8 +7943,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     D.setRedeclaration(CheckVariableDeclaration(NewVD, Previous));
   } else {
     // If this is an explicit specialization of a static data member, check it.
-    if (IsMemberSpecialization && !IsVariableTemplateSpecialization &&
-        !NewVD->isInvalidDecl() && CheckMemberSpecialization(NewVD, Previous))
+    if (IsMemberSpecialization && !IsVariableTemplate &&
+        !IsVariableTemplateSpecialization && !NewVD->isInvalidDecl() &&
+        CheckMemberSpecialization(NewVD, Previous))
       NewVD->setInvalidDecl();
 
     // Merge the decl with the existing one if appropriate.
@@ -10446,7 +10447,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             << FixItHint::CreateRemoval(
                                       D.getDeclSpec().getStorageClassSpecLoc());
       }
-    } else if (isMemberSpecialization && isa<CXXMethodDecl>(NewFD)) {
+    } else if (isMemberSpecialization && !FunctionTemplate) {
       if (CheckMemberSpecialization(NewFD, Previous))
           NewFD->setInvalidDecl();
     }

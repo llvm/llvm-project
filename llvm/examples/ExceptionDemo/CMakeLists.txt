@@ -16,6 +16,6 @@ endif()
 
 add_llvm_example(ExceptionDemo
   ExceptionDemo.cpp
-
-  EXPORT_SYMBOLS
   )
+
+export_executable_symbols(ExceptionDemo)

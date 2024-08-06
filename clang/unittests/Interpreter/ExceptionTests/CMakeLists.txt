@@ -12,8 +12,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_unittest(ClangReplInterpreterExceptionTests
   InterpreterExceptionTest.cpp
-
-  EXPORT_SYMBOLS
   )
 
 llvm_update_compile_flags(ClangReplInterpreterExceptionTests)
@@ -24,3 +22,5 @@ target_link_libraries(ClangReplInterpreterExceptionTests PUBLIC
   clangFrontend
   )
 add_dependencies(ClangReplInterpreterExceptionTests clang-resource-headers)
+
+export_executable_symbols(ClangReplInterpreterExceptionTests)

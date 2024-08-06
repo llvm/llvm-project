@@ -132,3 +132,7 @@ dfeb3991fb48 Remove the `x86_mmx` IR type. (#98505)
 b7e4fba6e5dc Cleanup x86_mmx after removing IR type  (#100646) (Reason: dependent on dfeb3991fb48)
 Ron
 ---
+Revert: causing issues with IRVerifiery heterodebug
+[IR] Don't verify module flags on every access (#102153)
+Ron
+---
