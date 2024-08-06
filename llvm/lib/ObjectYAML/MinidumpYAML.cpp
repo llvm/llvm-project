@@ -9,8 +9,6 @@
 #include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/Support/Allocator.h"
 
-#include <iostream>
-
 using namespace llvm;
 using namespace llvm::MinidumpYAML;
 using namespace llvm::minidump;

@@ -353,7 +353,7 @@ Streams:
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
   object::MinidumpFile &File = **ExpectedFile;
 
-  ASSERT_EQ(1u, File.streams().size());
+  ASSERT_THAT(1u, File.streams().size());
 
   Error Err = Error::success();
   // Explicit Err check
@@ -371,36 +371,53 @@ Streams:
 
   auto DescOnePair = *Iterator;
   const minidump::MemoryDescriptor_64 &DescOne = DescOnePair.first;
-  ASSERT_EQ(0x7FFFFFCF0818283u, DescOne.StartOfMemoryRange);
-  ASSERT_EQ(5u, DescOne.DataSize);
+  ASSERT_THAT(0x7FFFFFCF0818283u, DescOne.StartOfMemoryRange);
+  ASSERT_THAT(5u, DescOne.DataSize);
 
   ++Iterator;
   ASSERT_FALSE(Err);
 
   auto DescTwoPair = *Iterator;
   const minidump::MemoryDescriptor_64 &DescTwo = DescTwoPair.first;
-  ASSERT_EQ(0x7FFFFFFF0818283u, DescTwo.StartOfMemoryRange);
-  ASSERT_EQ(5u, DescTwo.DataSize);
+  ASSERT_THAT(0x7FFFFFFF0818283u, DescTwo.StartOfMemoryRange);
+  ASSERT_THAT(5u, DescTwo.DataSize);
   const std::optional<ArrayRef<uint8_t>> ExpectedContent =
       File.getRawStream(StreamType::Memory64List);
   ASSERT_TRUE(ExpectedContent);
   const size_t ExpectedStreamSize =
       sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
-  ASSERT_EQ(ExpectedStreamSize, ExpectedContent->size());
+  ASSERT_THAT(ExpectedStreamSize, ExpectedContent->size());
 
   Expected<minidump::Memory64ListHeader> ExpectedHeader =
       File.getMemoryList64Header();
   ASSERT_THAT_EXPECTED(ExpectedHeader, Succeeded());
-  ASSERT_EQ(ExpectedHeader->BaseRVA, 92u);
+  ASSERT_THAT(ExpectedHeader->BaseRVA, 92u);
 
   Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = DescOnePair.second;
   ASSERT_THAT_EXPECTED(DescOneExpectedContentSlice, Succeeded());
-  ASSERT_EQ(5u, DescOneExpectedContentSlice->size());
-  ASSERT_EQ(arrayRefFromStringRef("hello"), *DescOneExpectedContentSlice);
+  ASSERT_THAT(5u, DescOneExpectedContentSlice->size());
+  ASSERT_THAT(arrayRefFromStringRef("hello"), *DescOneExpectedContentSlice);
 
   Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = DescTwoPair.second;
   ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
-  ASSERT_EQ(arrayRefFromStringRef("world"), *DescTwoExpectedContentSlice);
+  ASSERT_THAT(arrayRefFromStringRef("world"), *DescTwoExpectedContentSlice);
 
   ASSERT_TRUE(Iterator == MemoryList.end());
+}
+
+TEST(MinidumpYAML, MemoryRegion_DataSize_TooSmall) {
+  SmallString<0> Storage;
+  auto ExpectedFile = toBinary(Storage, R"(
+--- !minidump
+Streams:
+  - Type:            Memory64List
+    Memory Ranges:
+      - Start of Memory Range: 0x7FFFFFCF0818283
+        Data Size: 4           1
+        Content:               '68656c6c6f'
+      - Start of Memory Range: 0x7FFFFFFF0818283
+        Content:               '776f726c64'
+        )");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Failed());
 }

@@ -141,7 +141,7 @@ static size_t layout(BlobAllocator &File, MinidumpYAML::Memory64ListStream &S) {
   BaseRVA += S.Entries.size() * sizeof(minidump::MemoryDescriptor_64);
   S.Header.BaseRVA = BaseRVA;
   S.Header.NumberOfMemoryRanges = S.Entries.size();
-  File.allocateObject(S.Header);\
+  File.allocateObject(S.Header);
   for (auto &E : S.Entries)
     File.allocateObject(E.Entry);
 

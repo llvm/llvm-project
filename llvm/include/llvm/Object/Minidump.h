@@ -17,8 +17,6 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
 
-#include <iostream>
-
 namespace llvm {
 namespace object {
 
