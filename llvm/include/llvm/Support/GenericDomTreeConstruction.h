@@ -74,10 +74,10 @@ struct SemiNCAInfo {
   // a dummy element.
   SmallVector<NodePtr, 64> NumToNode = {nullptr};
   // If blocks have numbers (e.g., BasicBlock, MachineBasicBlock), store node
-  // infos in a vector.
-  SmallVector<InfoRec, 64> NodeInfos;
-  // For blocks without numbers, store InfoRec in a map.
-  DenseMap<NodePtr, InfoRec> NodeInfoMap;
+  // infos in a vector. Otherwise, store them in a map.
+  std::conditional_t<GraphHasNodeNumbers<NodePtr>, SmallVector<InfoRec, 64>,
+                     DenseMap<NodePtr, InfoRec>>
+      NodeInfos;
 
   using UpdateT = typename DomTreeT::UpdateType;
   using UpdateKind = typename DomTreeT::UpdateKind;
@@ -104,7 +104,6 @@ struct SemiNCAInfo {
   void clear() {
     NumToNode = {nullptr}; // Restore to initial state with a dummy start node.
     NodeInfos.clear();
-    NodeInfoMap.clear();
     // Don't reset the pointer to BatchUpdateInfo here -- if there's an update
     // in progress, we need this information to continue it.
   }
@@ -141,7 +140,7 @@ struct SemiNCAInfo {
       }
       return NodeInfos[Idx];
     } else {
-      return NodeInfoMap[BB];
+      return NodeInfos[BB];
     }
   }
 
