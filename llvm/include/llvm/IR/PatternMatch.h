@@ -603,8 +603,23 @@ inline cst_pred_ty<is_zero_int> m_ZeroInt() {
 struct is_zero {
   template <typename ITy> bool match(ITy *V) {
     auto *C = dyn_cast<Constant>(V);
-    // FIXME: this should be able to do something for scalable vectors
-    return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
+    if (C) {
+      if (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C)) {
+        return true;
+      }
+    }
+
+    // Handle scalable vectors
+    if (auto *SV = dyn_cast<ScalableVectorType>(V->getType())) {
+      for (unsigned i = 0; i < SV->getNumElements(); ++i) {
+        if (!match(SV->getElementAsConstant(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return false;
   }
 };
 /// Match any null constant or a vector with all elements equal to 0.
