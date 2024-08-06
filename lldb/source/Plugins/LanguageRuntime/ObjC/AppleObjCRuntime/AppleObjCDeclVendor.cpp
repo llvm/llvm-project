@@ -399,7 +399,8 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
       GetLog(LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
 
   ObjCLanguageRuntime::ObjCISA objc_isa = 0;
-  if (auto metadata = m_ast_ctx->GetMetadata(interface_decl))
+  if (std::optional<ClangASTMetadata> metadata =
+          m_ast_ctx->GetMetadata(interface_decl))
     objc_isa = metadata->GetISAPtr();
 
   if (!objc_isa)
@@ -558,7 +559,8 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
               ast_ctx.getObjCInterfaceType(result_iface_decl);
 
           uint64_t isa_value = LLDB_INVALID_ADDRESS;
-          if (auto metadata = m_ast_ctx->GetMetadata(result_iface_decl))
+          if (std::optional<ClangASTMetadata> metadata =
+                  m_ast_ctx->GetMetadata(result_iface_decl))
             isa_value = metadata->GetISAPtr();
 
           LLDB_LOGF(log,

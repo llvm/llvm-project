@@ -219,8 +219,9 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // whatever runtime the debug info says the object pointer belongs to.  Do
     // that here.
 
-    if (auto metadata = TypeSystemClang::DeclContextGetMetaData(decl_context,
-                                                                function_decl);
+    if (std::optional<ClangASTMetadata> metadata =
+            TypeSystemClang::DeclContextGetMetaData(decl_context,
+                                                    function_decl);
         metadata && metadata->HasObjectPtr()) {
       lldb::LanguageType language = metadata->GetObjectPtrLanguage();
       if (language == lldb::eLanguageTypeC_plus_plus) {
