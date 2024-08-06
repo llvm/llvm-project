@@ -398,6 +398,16 @@ BMIs cannot be shipped in an archive to create a module library. Instead, the
 BMIs(``*.pcm``) are compiled into object files(``*.o``) and those object files
 are added to the archive instead.
 
+clang-cl
+~~~~~~~~
+
+``clang-cl`` supports the same options as ``clang++`` for modules as detailed above;
+there is no need to prefix these options with ``/clang:``. Note that ``cl.exe``
+`options to emit/consume IFC files <https://devblogs.microsoft.com/cppblog/using-cpp-modules-in-msvc-from-the-command-line-part-1/>` are *not* supported.
+The resultant precompiled modules are also not compatible for use with ``cl.exe``.
+
+We recommend that build system authors use the above-mentioned ``clang++`` options  with ``clang-cl`` to build modules.
+
 Consistency Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1386,13 +1396,6 @@ Currently, Clang requires the file name of an ``importable module unit`` to
 have ``.cppm`` (or ``.ccm``, ``.cxxm``, ``.c++m``) as the file extension.
 However, the behavior is inconsistent with other compilers. This is tracked by
 `#57416 <https://github.com/llvm/llvm-project/issues/57416>`_.
-
-clang-cl is not compatible with standard C++ modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``/clang:-fmodule-file`` and ``/clang:-fprebuilt-module-path`` cannot be used
-to specify the BMI with ``clang-cl.exe``. This is tracked by
-`#64118 <https://github.com/llvm/llvm-project/issues/64118>`_.
 
 Incorrect ODR violation diagnostics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
