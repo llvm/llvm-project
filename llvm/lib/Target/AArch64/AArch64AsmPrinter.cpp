@@ -113,6 +113,8 @@ public:
 
   void emitFunctionEntryLabel() override;
 
+  void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
+
   void LowerJumpTableDest(MCStreamer &OutStreamer, const MachineInstr &MI);
 
   void LowerHardenedBRJumpTable(const MachineInstr &MI);
@@ -1278,6 +1280,23 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       }
     }
   }
+}
+
+void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
+                                       const Constant *CV) {
+  if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV))
+    if (CPA->hasAddressDiscriminator() &&
+        !CPA->hasSpecialAddressDiscriminator(
+            ConstantPtrAuth::AddrDiscriminator_CtorsDtors))
+      report_fatal_error(
+          "unexpected address discrimination value for ctors/dtors entry, only "
+          "'ptr inttoptr (i64 1 to ptr)' is allowed");
+  // If we have signed pointers in xxstructors list, they'll be lowered to @AUTH
+  // MCExpr's via AArch64AsmPrinter::lowerConstantPtrAuth. It does not look at
+  // actual address discrimination value and only checks
+  // hasAddressDiscriminator(), so it's OK to leave special address
+  // discrimination value here.
+  AsmPrinter::emitXXStructor(DL, CV);
 }
 
 void AArch64AsmPrinter::emitGlobalAlias(const Module &M,

@@ -38,6 +38,10 @@
 #error "wrong value for __cpp_deleted_function"
 #endif
 
+#if check(pack_indexing, 202311, 202311, 202311, 202311, 202311, 202311, 202311)
+#error "wrong value for __cpp_pack_indexing"
+#endif
+
 #if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_placeholder_variables"
 #endif
