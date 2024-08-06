@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Debug.h"
@@ -31,9 +32,8 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <map>
-#include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using namespace llvm;
@@ -260,7 +260,7 @@ unsigned SubtargetEmitter::FeatureKeyValues(
   llvm::sort(FeatureList, LessRecordFieldName());
 
   // Check that there are no duplicate keys
-  std::set<StringRef> UniqueKeys;
+  llvm::StringSet<> UniqueKeys;
 
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
@@ -494,7 +494,7 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
   // operand cycles, and pipeline bypass tables. Then add the new Itinerary
   // object with computed offsets to the ProcItinLists result.
   unsigned StageCount = 1, OperandCycleCount = 1;
-  std::map<std::string, unsigned> ItinStageMap, ItinOperandMap;
+  std::unordered_map<std::string, unsigned> ItinStageMap, ItinOperandMap;
   for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     // Add process itinerary to the list.
     std::vector<InstrItinerary> &ItinList = ProcItinLists.emplace_back();
