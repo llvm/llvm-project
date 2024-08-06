@@ -54,6 +54,7 @@ static void __attribute__((used)) __do_init(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
+#ifdef __clang__
 #if __has_feature(ptrauth_init_fini)
 // TODO: use __ptrauth-qualified pointers when they are supported on clang side
 #if __has_feature(ptrauth_init_fini_address_discrimination)
@@ -65,6 +66,10 @@ __attribute__((section(".init_array"), used)) static void *__init =
 __attribute__((section(".init_array"), used)) static void *__init =
     ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
                           __ptrauth_init_fini_discriminator);
+#endif
+#else
+__attribute__((section(".init_array"),
+               used)) static void (*__init)(void) = __do_init;
 #endif
 #else
 __attribute__((section(".init_array"),
@@ -125,6 +130,7 @@ static void __attribute__((used)) __do_fini(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
+#ifdef __clang__
 #if __has_feature(ptrauth_init_fini)
 // TODO: use __ptrauth-qualified pointers when they are supported on clang side
 #if __has_feature(ptrauth_init_fini_address_discrimination)
@@ -136,6 +142,10 @@ __attribute__((section(".fini_array"), used)) static void *__fini =
 __attribute__((section(".fini_array"), used)) static void *__fini =
     ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
                           __ptrauth_init_fini_discriminator);
+#endif
+#else
+__attribute__((section(".fini_array"),
+               used)) static void (*__fini)(void) = __do_fini;
 #endif
 #else
 __attribute__((section(".fini_array"),
