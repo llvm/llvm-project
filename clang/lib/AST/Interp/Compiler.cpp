@@ -335,6 +335,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!PointeeType.isNull()) {
       if (std::optional<PrimType> T = classify(PointeeType))
         Desc = P.createDescriptor(SubExpr, *T);
+      else
+        Desc = P.createDescriptor(SubExpr, PointeeType.getTypePtr(),
+                                  std::nullopt, true, false,
+                                  /*IsMutable=*/false, nullptr);
     }
     return this->emitNull(classifyPrim(CE->getType()), Desc, CE);
   }
