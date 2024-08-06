@@ -11423,8 +11423,10 @@ void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);
-  for (auto _ : llvm::seq<unsigned>(NumVars))
+  for (auto _ : llvm::seq<unsigned>(NumVars)) {
+    (void)_;
     Vars.push_back(Record.readSubExpr());
+  }
   C->setVarRefs(Vars);
 }
 
