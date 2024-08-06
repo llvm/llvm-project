@@ -413,7 +413,8 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_THM_JUMP24:
     // Source is Thumb, when all PLT entries are ARM interworking is required.
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 clear (ARM).
-    if ((expr == R_PLT_PC && !useThumbPLTs()) || (s.isFunc() && (s.getVA() & 1) == 0))
+    if ((expr == R_PLT_PC && !useThumbPLTs()) ||
+        (s.isFunc() && (s.getVA() & 1) == 0))
       return true;
     [[fallthrough]];
   case R_ARM_THM_CALL: {
