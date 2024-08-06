@@ -21,12 +21,12 @@ if.false:
   br label %if.end
 
 if.true:
-  %0 = load i16, ptr %p, align 2
-  %1 = load i32, ptr %q, align 4
-  %2 = load i64, ptr %b, align 8
-  store i16 %0, ptr %b, align 2
-  store i32 %1, ptr %p, align 4
-  store i64 %2, ptr %q, align 8
+  %pv = load i16, ptr %p, align 2
+  %qv = load i32, ptr %q, align 4
+  %bv = load i64, ptr %b, align 8
+  store i16 %pv, ptr %b, align 2
+  store i32 %qv, ptr %p, align 4
+  store i64 %bv, ptr %q, align 8
   br label %if.false
 
 if.end:
@@ -50,8 +50,8 @@ if.false:
   br label %if.end
 
 if.true:
-  %0 = load i16, ptr %b, align 2
-  %zext = zext i16 %0 to i32
+  %bv = load i16, ptr %b, align 2
+  %zext = zext i16 %bv to i32
   store i32 %zext, ptr %p, align 4
   br label %if.false
 
@@ -76,8 +76,8 @@ if.false:
   br label %if.end
 
 if.true:
-  %1 = load i32, ptr %b, align 4
-  %sext = sext i32 %1 to i64
+  %bv = load i32, ptr %b, align 4
+  %sext = sext i32 %bv to i64
   store i64 %sext, ptr %q, align 8
   br label %if.false
 

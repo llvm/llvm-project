@@ -3239,7 +3239,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
              std::prev(ThenBB->end()));
 
   // If the target supports conditional faulting,
-  // we are looking for code like the following:
+  // we look for the following pattern:
   // \code
   //   BB:
   //     ...
@@ -3249,8 +3249,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   //     store i32 1, ptr %q, align 4
   //     ...
   //   TrueBB:
-  //     %0 = load i32, ptr %b, align 4
-  //     store i32 %0, ptr %p, align 4
+  //     %maskedloadstore = load i32, ptr %b, align 4
+  //     store i32 %maskedloadstore, ptr %p, align 4
   //     ...
   // \endcode
   //
@@ -3260,8 +3260,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   //   BB:
   //     ...
   //     %cond = icmp ult %x, %y
-  //     %0 = cload i32, ptr %b, %cond
-  //     cstore i32 %0, ptr %p, %cond
+  //     %maskedloadstore = cload i32, ptr %b, %cond
+  //     cstore i32 %maskedloadstore, ptr %p, %cond
   //     cstore i32 1, ptr %q, ~%cond
   //     br i1 %cond, label %TrueBB, label %FalseBB
   //   FalseBB:
@@ -3270,14 +3270,14 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   //     ...
   // \endcode
   //
-  // where cload/cstore is represented by intrinsic like llvm.masked.load/store,
+  // where cload/cstore are represented by llvm.masked.load/store intrinsics,
   // e.g.
   //
   // \code
   //   %vcond = bitcast i1 %cond to <1 x i1>
   //   %v0 = call <1 x i32> @llvm.masked.load.v1i32.p0
   //                         (ptr %b, i32 4, <1 x i1> %vcond, <1 x i32> poison)
-  //   %0 = bitcast <1 x i32> %v0 to i32
+  //   %maskedloadstore = bitcast <1 x i32> %v0 to i32
   //   call void @llvm.masked.store.v1i32.p0
   //                          (<1 x i32> %v0, ptr %p, i32 4, <1 x i1> %vcond)
   //   %cond.not = xor i1 %cond, true
@@ -3290,18 +3290,16 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   auto &Context = BI->getParent()->getContext();
   auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
   auto *Cond = BI->getOperand(0);
-  Value *VCond = nullptr;
-  Value *VCondNot = nullptr;
-  // Construct the condition if need.
+  Value *Mask = nullptr;
+  // Construct the condition if needed.
   if (!SpeculatedConditionalLoadsStores.empty()) {
     IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
     if (Invert)
-      VCondNot = Builder.CreateBitCast(
+      Mask = Builder.CreateBitCast(
           Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
     else
-      VCond = Builder.CreateBitCast(Cond, VCondTy);
+      Mask = Builder.CreateBitCast(Cond, VCondTy);
   }
-  auto *Mask = Invert ? VCondNot : VCond;
   for (auto *I : SpeculatedConditionalLoadsStores) {
     IRBuilder<> Builder(I);
     // NOTE: Now we assume conditional faulting load/store is supported for
@@ -3311,20 +3309,18 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     auto *Op0 = I->getOperand(0);
     Instruction *MaskedLoadStore = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
-      // Load
+      // Handle Load.
       auto *Ty = I->getType();
       auto *V0 = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1), Op0,
                                           LI->getAlign(), Mask);
-      auto *S0 = Builder.CreateBitCast(V0, Ty);
-      I->replaceAllUsesWith(S0);
+      I->replaceAllUsesWith(Builder.CreateBitCast(V0, Ty));
       MaskedLoadStore = V0;
     } else {
-      // Store
+      // Handle Store.
       auto *StoredVal =
           Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
-      auto *VStore = Builder.CreateMaskedStore(
+      MaskedLoadStore = Builder.CreateMaskedStore(
           StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
-      MaskedLoadStore = VStore;
     }
     // For non-debug metadata, only !annotation, !range, !nonull and !align are
     // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
