@@ -485,7 +485,7 @@ if __name__ == "__main__":
     for k, v in list(symbol_defs.items()):
         # On AIX, export function descriptors instead of function entries.
         if platform.system() == "AIX" and k.startswith("."):
-          continue
+            continue
         template = get_template_name(k, args.mangling)
         if v == 1 and (not template or template in template_instantiation_refs):
             print(k, file=outfile)
