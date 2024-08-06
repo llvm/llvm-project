@@ -399,7 +399,6 @@ namespace std {
 #  include <__ranges/const_access.h>
 #  include <__ranges/counted.h>
 #  include <__ranges/dangling.h>
-#  include <__ranges/data.h>
 #  include <__ranges/drop_view.h>
 #  include <__ranges/drop_while_view.h>
 #  include <__ranges/elements_view.h>

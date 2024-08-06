@@ -644,7 +644,6 @@ set(files
   __ranges/container_compatible_range.h
   __ranges/counted.h
   __ranges/dangling.h
-  __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
   __ranges/elements_view.h

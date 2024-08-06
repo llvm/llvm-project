@@ -213,6 +213,48 @@ inline constexpr auto crend = __crend::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
+// [range.prim.cdata]
+
+namespace ranges {
+namespace __cdata {
+struct __fn {
+#  if _LIBCPP_STD_VER >= 23
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI constexpr static auto __as_const_pointer(const _Tp* __ptr) noexcept {
+    return __ptr;
+  }
+
+  template <__const_accessible_range _Rng>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
+  operator()(_Rng&& __rng) noexcept(noexcept(__as_const_pointer(ranges::data(ranges::__possibly_const_range(__rng)))))
+      -> decltype(__as_const_pointer(ranges::data(ranges::__possibly_const_range(__rng)))) {
+    return __as_const_pointer(ranges::data(ranges::__possibly_const_range(__rng)));
+  }
+
+#  else  // ^^^ _LIBCPP_STD_VER >= 23 / _LIBCPP_STD_VER < 23 vvv
+  template <class _Tp>
+    requires is_lvalue_reference_v<_Tp&&>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t))))
+          -> decltype(ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t))) {
+    return ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t));
+  }
+
+  template <class _Tp>
+    requires is_rvalue_reference_v<_Tp&&>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
+      noexcept(ranges::data(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::data(static_cast<const _Tp&&>(__t))) {
+    return ranges::data(static_cast<const _Tp&&>(__t));
+  }
+#  endif // ^^^ _LIBCPP_STD_VER < 23
+};
+} // namespace __cdata
+
+inline namespace __cpo {
+inline constexpr auto cdata = __cdata::__fn{};
+} // namespace __cpo
+} // namespace ranges
+
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
