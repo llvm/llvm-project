@@ -287,7 +287,7 @@ Align IRTranslator::getMemOpAlign(const Instruction &I) {
 }
 
 MachineBasicBlock &IRTranslator::getMBB(const BasicBlock &BB) {
-  MachineBasicBlock *&MBB = BBToMBB[&BB];
+  MachineBasicBlock *MBB = FuncInfo.getMBB(&BB);
   assert(MBB && "BasicBlock was not encountered before");
   return *MBB;
 }
@@ -3907,8 +3907,9 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   bool HasMustTailInVarArgFn = false;
 
   // Create all blocks, in IR order, to preserve the layout.
+  FuncInfo.MBBMap.resize(F.getMaxBlockNumber());
   for (const BasicBlock &BB: F) {
-    auto *&MBB = BBToMBB[&BB];
+    auto *&MBB = FuncInfo.MBBMap[BB.getNumber()];
 
     MBB = MF->CreateMachineBasicBlock(&BB);
     MF->push_back(MBB);
