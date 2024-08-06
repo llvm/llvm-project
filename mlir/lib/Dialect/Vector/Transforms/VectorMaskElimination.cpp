@@ -17,24 +17,6 @@ using namespace mlir;
 using namespace mlir::vector;
 namespace {
 
-/// If `value` is a constant multiple of `vector.vscale` (e.g. `%cst *
-/// vector.vscale`), return the multiplier (`%cst`). Otherwise, return
-/// `std::nullopt`.
-std::optional<int64_t> getConstantVscaleMultiplier(Value value) {
-  if (value.getDefiningOp<vector::VectorScaleOp>())
-    return 1;
-  auto mul = value.getDefiningOp<arith::MulIOp>();
-  if (!mul)
-    return {};
-  auto lhs = mul.getLhs();
-  auto rhs = mul.getRhs();
-  if (lhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(rhs);
-  if (rhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(lhs);
-  return {};
-}
-
 /// Attempts to resolve a (scalable) CreateMaskOp to an all-true constant mask.
 /// All-true masks can then be eliminated by simple folds.
 LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
