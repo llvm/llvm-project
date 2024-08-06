@@ -25,19 +25,19 @@
 
 namespace Fortran::runtime::cuda {
 
-void CUFRegisterAllocator();
+RT_API_ATTRS void CUFRegisterAllocator();
 
-void *CUFAllocPinned(std::size_t);
-void CUFFreePinned(void *);
+RT_API_ATTRS void *CUFAllocPinned(std::size_t);
+RT_API_ATTRS void CUFFreePinned(void *);
 
-void *CUFAllocDevice(std::size_t);
-void CUFFreeDevice(void *);
+RT_API_ATTRS void *CUFAllocDevice(std::size_t);
+RT_API_ATTRS void CUFFreeDevice(void *);
 
-void *CUFAllocManaged(std::size_t);
-void CUFFreeManaged(void *);
+RT_API_ATTRS void *CUFAllocManaged(std::size_t);
+RT_API_ATTRS void CUFFreeManaged(void *);
 
-void *CUFAllocUnified(std::size_t);
-void CUFFreeUnified(void *);
+RT_API_ATTRS void *CUFAllocUnified(std::size_t);
+RT_API_ATTRS void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda
 #endif // FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_

@@ -19,7 +19,7 @@
 
 namespace Fortran::runtime::cuda {
 
-void CUFRegisterAllocator() {
+RT_API_ATTRS void CUFRegisterAllocator() {
   allocatorRegistry.Register(
       kPinnedAllocatorPos, {&CUFAllocPinned, CUFFreePinned});
   allocatorRegistry.Register(
@@ -30,41 +30,43 @@ void CUFRegisterAllocator() {
       kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
 }
 
-void *CUFAllocPinned(std::size_t sizeInBytes) {
+RT_API_ATTRS void *CUFAllocPinned(std::size_t sizeInBytes) {
   void *p;
   CUDA_REPORT_IF_ERROR(cuMemAllocHost(&p, sizeInBytes));
   return p;
 }
 
-void CUFFreePinned(void *p) { CUDA_REPORT_IF_ERROR(cuMemFreeHost(p)); }
+RT_API_ATTRS void CUFFreePinned(void *p) {
+  CUDA_REPORT_IF_ERROR(cuMemFreeHost(p));
+}
 
-void *CUFAllocDevice(std::size_t sizeInBytes) {
+RT_API_ATTRS void *CUFAllocDevice(std::size_t sizeInBytes) {
   CUdeviceptr p = 0;
   CUDA_REPORT_IF_ERROR(cuMemAlloc(&p, sizeInBytes));
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeDevice(void *p) {
+RT_API_ATTRS void CUFFreeDevice(void *p) {
   CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(p)));
 }
 
-void *CUFAllocManaged(std::size_t sizeInBytes) {
+RT_API_ATTRS void *CUFAllocManaged(std::size_t sizeInBytes) {
   CUdeviceptr p = 0;
   CUDA_REPORT_IF_ERROR(
       cuMemAllocManaged(&p, sizeInBytes, CU_MEM_ATTACH_GLOBAL));
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeManaged(void *p) {
+RT_API_ATTRS void CUFFreeManaged(void *p) {
   CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(p)));
 }
 
-void *CUFAllocUnified(std::size_t sizeInBytes) {
+RT_API_ATTRS void *CUFAllocUnified(std::size_t sizeInBytes) {
   // Call alloc managed for the time being.
   return CUFAllocManaged(sizeInBytes);
 }
 
-void CUFFreeUnified(void *p) {
+RT_API_ATTRS void CUFFreeUnified(void *p) {
   // Call free managed for the time being.
   CUFFreeManaged(p);
 }
