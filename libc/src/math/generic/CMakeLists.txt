@@ -2903,7 +2903,7 @@ add_entrypoint_object(
   HDRS
     ../fsubl.h
   DEPENDS
-   libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.add_sub
   COMPILE_OPTIONS
     -O3
 )
@@ -2915,8 +2915,8 @@ add_entrypoint_object(
   HDRS
     ../fsubf128.h
   DEPENDS
-   libc.src.__support.macros.properties.types
-   libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
   COMPILE_OPTIONS
     -O3
 )
