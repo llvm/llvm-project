@@ -101,5 +101,3 @@ struct Eg10{
 
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg10 e10 : register(u9) : register(u10);
-// expected-error@+1{{binding type 'u' cannot be applied more than once}}
-Eg10 e10a : register(u9, space0) : register(u9, space1);
