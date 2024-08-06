@@ -303,7 +303,7 @@ public:
     eKindRunToAddress,
     eKindStepThrough,
     eKindStepThroughGenericTrampoline,
-    eKindStepUntil
+    eKindStepUntil,
     eKindSingleThreadTimeout,
   };
 
