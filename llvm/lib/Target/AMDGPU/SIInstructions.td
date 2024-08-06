@@ -2192,20 +2192,6 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
   }
 }
 
-let True16Predicate = UseRealTrue16Insts in {
-  def : GCNPat <
-    (VGPRImm<(i16 imm)>:$imm),
-    (V_MOV_B16_t16_e64 0, imm:$imm, 0)
-  >;
-
-  foreach vt = [f16, bf16] in {
-    def : GCNPat <
-      (VGPRImm<(vt fpimm)>:$imm),
-      (V_MOV_B16_t16_e64 0, $imm, 0)
-    >;
-  }
-}
-
 // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
 // immediate and wil be expanded as needed, but we will only use these patterns
 // for values which can be encoded.
