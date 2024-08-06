@@ -1366,7 +1366,7 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       auto OB1HasNSW = cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap();
       auto OB1HasNUW =
           cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap();
-      const APInt *C1, *C2;
+      const APInt *C1;
       if (IsSigned && OB0HasNSW) {
         if (OB1HasNSW && match(B, m_APInt(C1)) && !C1->isAllOnes())
           return BinaryOperator::CreateSDiv(A, B);
@@ -1374,7 +1374,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       if (!IsSigned && OB0HasNUW) {
         if (OB1HasNUW)
           return BinaryOperator::CreateUDiv(A, B);
-        if (match(A, m_APInt(C1)) && match(B, m_APInt(C2)) && C2->ule(*C1))
+        if (match(A, m_APInt(C1)) &&
+            match(B, m_SpecificInt_ICMP(ICmpInst::ICMP_ULE, *C1)))
           return BinaryOperator::CreateUDiv(A, B);
       }
       return nullptr;

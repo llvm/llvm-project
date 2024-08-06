@@ -460,8 +460,9 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   // C << (X - AddC) --> (C >> AddC) << X
   // and
   // C >> (X - AddC) --> (C << AddC) >> X
-  if (match(Op0, m_APInt(AC)) && match(Op1, m_Add(m_Value(A), m_APInt(AddC))) &&
-      AddC->isNegative() && (-*AddC).ult(BitWidth)) {
+  if (match(Op0, m_APInt(AC)) &&
+      match(Op1, m_Add(m_Value(A), m_Negative(AddC))) &&
+      (-*AddC).ult(BitWidth)) {
     assert(!AC->isZero() && "Expected simplify of shifted zero");
     unsigned PosOffset = (-*AddC).getZExtValue();
 

@@ -1882,7 +1882,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
         DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
     APInt MinSignedValue = APInt::getSignedMinValue(BitWidth);
     Value *X;
-    const APInt *Y, *C;
+    const APInt *Y;
     bool TrueWhenUnset;
     bool IsBitTest = false;
     if (ICmpInst::isEquality(Pred) &&
@@ -1905,19 +1905,19 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
       Value *V = nullptr;
       // (X & Y) == 0 ? X : X ^ Y  --> X & ~Y
       if (TrueWhenUnset && TrueVal == X &&
-          match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
+          match(FalseVal, m_Xor(m_Specific(X), m_SpecificInt(*Y))))
         V = Builder.CreateAnd(X, ~(*Y));
       // (X & Y) != 0 ? X ^ Y : X  --> X & ~Y
       else if (!TrueWhenUnset && FalseVal == X &&
-               match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
+               match(TrueVal, m_Xor(m_Specific(X), m_SpecificInt(*Y))))
         V = Builder.CreateAnd(X, ~(*Y));
       // (X & Y) == 0 ? X ^ Y : X  --> X | Y
       else if (TrueWhenUnset && FalseVal == X &&
-               match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
+               match(TrueVal, m_Xor(m_Specific(X), m_SpecificInt(*Y))))
         V = Builder.CreateOr(X, *Y);
       // (X & Y) != 0 ? X : X ^ Y  --> X | Y
       else if (!TrueWhenUnset && TrueVal == X &&
-               match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
+               match(FalseVal, m_Xor(m_Specific(X), m_SpecificInt(*Y))))
         V = Builder.CreateOr(X, *Y);
 
       if (V)

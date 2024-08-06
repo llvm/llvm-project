@@ -181,8 +181,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::AShr:
   case Instruction::LShr: {
     // Right-shift sign bit smear is negatible.
-    const APInt *Op1Val;
-    if (match(I->getOperand(1), m_APInt(Op1Val)) && *Op1Val == BitWidth - 1) {
+    if (match(I->getOperand(1), m_SpecificInt(BitWidth - 1))) {
       Value *BO = I->getOpcode() == Instruction::AShr
                       ? Builder.CreateLShr(I->getOperand(0), I->getOperand(1))
                       : Builder.CreateAShr(I->getOperand(0), I->getOperand(1));

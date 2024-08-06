@@ -30579,11 +30579,12 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
       Value *BitV = I->getOperand(1);
 
       Value *AndOp;
-      const APInt *AndC;
-      if (match(BitV, m_c_And(m_Value(AndOp), m_APInt(AndC)))) {
+      if (match(BitV,
+                m_c_And(m_Value(AndOp),
+                        m_SpecificInt(I->getType()->getPrimitiveSizeInBits() -
+                                      1)))) {
         // Read past a shiftmask instruction to find count
-        if (*AndC == (I->getType()->getPrimitiveSizeInBits() - 1))
-          BitV = AndOp;
+        BitV = AndOp;
       }
       return {BitV, BTK};
     }

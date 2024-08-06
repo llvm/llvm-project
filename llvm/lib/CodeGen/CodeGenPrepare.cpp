@@ -1733,9 +1733,9 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
     }
 
     // A + (-C), A u< C (canonicalized form of (sub A, C))
-    const APInt *CmpC, *AddC;
+    const APInt *AddC;
     if (match(U, m_Add(m_Specific(A), m_APInt(AddC))) &&
-        match(B, m_APInt(CmpC)) && *AddC == -(*CmpC)) {
+        match(B, m_SpecificInt(-*AddC))) {
       Sub = cast<BinaryOperator>(U);
       break;
     }

@@ -3803,12 +3803,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::SDiv: {
       const APInt *Denominator;
       // sdiv X, C -> adds log(C) sign bits.
-      if (match(U->getOperand(1), m_APInt(Denominator))) {
-
-        // Ignore non-positive denominator.
-        if (!Denominator->isStrictlyPositive())
-          break;
-
+      if (match(U->getOperand(1), m_StrictlyPositive(Denominator))) {
         // Calculate the incoming numerator bits.
         unsigned NumBits =
             ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q);
@@ -3826,26 +3821,24 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // srem X, C -> we know that the result is within [-C+1,C) when C is a
       // positive constant.  This let us put a lower bound on the number of sign
       // bits.
-      if (match(U->getOperand(1), m_APInt(Denominator))) {
+      if (match(U->getOperand(1), m_StrictlyPositive(Denominator))) {
 
         // Ignore non-positive denominator.
-        if (Denominator->isStrictlyPositive()) {
-          // Calculate the leading sign bit constraints by examining the
-          // denominator.  Given that the denominator is positive, there are two
-          // cases:
-          //
-          //  1. The numerator is positive. The result range is [0,C) and
-          //     [0,C) u< (1 << ceilLogBase2(C)).
-          //
-          //  2. The numerator is negative. Then the result range is (-C,0] and
-          //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
-          //
-          // Thus a lower bound on the number of sign bits is `TyBits -
-          // ceilLogBase2(C)`.
+        // Calculate the leading sign bit constraints by examining the
+        // denominator.  Given that the denominator is positive, there are two
+        // cases:
+        //
+        //  1. The numerator is positive. The result range is [0,C) and
+        //     [0,C) u< (1 << ceilLogBase2(C)).
+        //
+        //  2. The numerator is negative. Then the result range is (-C,0] and
+        //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
+        //
+        // Thus a lower bound on the number of sign bits is `TyBits -
+        // ceilLogBase2(C)`.
 
-          unsigned ResBits = TyBits - Denominator->ceilLogBase2();
-          Tmp = std::max(Tmp, ResBits);
-        }
+        unsigned ResBits = TyBits - Denominator->ceilLogBase2();
+        Tmp = std::max(Tmp, ResBits);
       }
       return Tmp;
     }

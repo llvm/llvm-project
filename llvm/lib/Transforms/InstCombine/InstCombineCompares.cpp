@@ -7245,11 +7245,10 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
       return Res;
 
   {
-    Value *X;
     const APInt *C;
     // icmp X+Cst, X
-    if (match(Op0, m_Add(m_Value(X), m_APInt(C))) && Op1 == X)
-      return foldICmpAddOpConst(X, *C, Pred);
+    if (match(Op0, m_Add(m_Specific(Op1), m_APInt(C))))
+      return foldICmpAddOpConst(Op1, *C, Pred);
   }
 
   // abs(X) >=  X --> true

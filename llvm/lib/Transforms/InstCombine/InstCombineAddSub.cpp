@@ -773,10 +773,10 @@ static Value *checkForNegativeOperand(BinaryOperator &I,
     if (match(X, m_Xor(m_Value(Y), m_APInt(C1)))) {
       // X = XOR(Y, C1), Y = OR(Z, C2), C2 = NOT(C1) ==> X == NOT(AND(Z, C1))
       // ADD(ADD(X, 1), RHS) == ADD(X, ADD(RHS, 1)) == SUB(RHS, AND(Z, C1))
-      if (match(Y, m_Or(m_Value(Z), m_APInt(C2))) && (*C2 == ~(*C1))) {
+      if (match(Y, m_Or(m_Value(Z), m_SpecificInt(~(*C1))))) {
         Value *NewAnd = Builder.CreateAnd(Z, *C1);
         return Builder.CreateSub(RHS, NewAnd, "sub");
-      } else if (match(Y, m_And(m_Value(Z), m_APInt(C2))) && (*C1 == *C2)) {
+      } else if (match(Y, m_And(m_Value(Z), m_SpecificInt(*C1)))) {
         // X = XOR(Y, C1), Y = AND(Z, C2), C2 == C1 ==> X == NOT(OR(Z, ~C1))
         // ADD(ADD(X, 1), RHS) == ADD(X, ADD(RHS, 1)) == SUB(RHS, OR(Z, ~C1))
         Value *NewOr = Builder.CreateOr(Z, ~(*C1));
