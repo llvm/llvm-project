@@ -63,7 +63,6 @@ void MachObjectWriter::reset() {
   TargetVariantVersionInfo.SDKVersion = VersionTuple();
   PtrAuthABIVersion = std::nullopt;
   PtrAuthKernelABIVersion = false;
-  LinkerOptions.clear();
   MCObjectWriter::reset();
 }
 

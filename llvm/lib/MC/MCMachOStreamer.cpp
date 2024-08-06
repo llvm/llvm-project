@@ -232,7 +232,7 @@ void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
-  getWriter().getLinkerOptions().push_back(Options);
+  getMCObjectWriter().getLinkerOptions().push_back(Options);
 }
 
 void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
