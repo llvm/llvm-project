@@ -58,15 +58,10 @@ add_header(pthread_rwlock_t HDR pthread_rwlock_t.h DEPENDS .__futex_word .pid_t)
 add_header(pthread_rwlockattr_t HDR pthread_rwlockattr_t.h)
 add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(rlim_t HDR rlim_t.h)
-if(LIBC_CONF_TIME_64BIT)
-  # Set time_t to 64 bit as requested in configuration
-  add_header(time_t HDR time_t.h SRCHDR time_t_64.h)
-elseif(LIBC_TARGET_ARCHITECTURE_IS_ARM)
-  # Set time_t to 32 bit for compatibility with glibc
-  add_header(time_t HDR time_t.h SRCHDR time_t_32.h)
+if(LIBC_TYPES_TIME_T_IS_32_BIT)
+  add_header(time_t HDR time_t_32.h DEST_HDR time_t.h)
 else()
-  # Other platforms default to 64-bit time_t
-  add_header(time_t HDR time_t.h SRCHDR time_t_64.h)
+  add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 endif()
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
