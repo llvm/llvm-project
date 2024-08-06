@@ -14,8 +14,7 @@
 namespace llvm {
 
 #ifdef HAS_LOGF128
-#if (__LDBL_MANT_DIG__ == 113) && !defined(__LONG_DOUBLE_IBM128__) &&          \
-    (__SIZEOF_INT128__ == 16)
+#if !defined(__LONG_DOUBLE_IBM128__) && (__SIZEOF_INT128__ == 16)
 typedef decltype(logf128(0.)) float128;
 #define HAS_IEE754_FLOAT128
 #endif
