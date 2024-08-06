@@ -7777,6 +7777,31 @@ namespace {
 /// The base class for shuffle instruction emission and shuffle cost estimation.
 class BaseShuffleAnalysis {
 protected:
+  Type *ScalarTy = nullptr;
+
+  BaseShuffleAnalysis(Type *ScalarTy) : ScalarTy(ScalarTy) {}
+
+  /// V is expected to be a vectorized value.
+  /// When REVEC is disabled, there is no difference between VF and
+  /// VNumElements.
+  /// When REVEC is enabled, VF is VNumElements / ScalarTyNumElements.
+  /// e.g., if ScalarTy is <4 x Ty> and V1 is <8 x Ty>, 2 is returned instead
+  /// of 8.
+  unsigned getVF(Value *V) const {
+    assert(V && "V cannot be nullptr");
+    assert(isa<FixedVectorType>(V->getType()) &&
+           "V does not have FixedVectorType");
+    assert(ScalarTy && "ScalarTy cannot be nullptr");
+    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+    unsigned VNumElements =
+        cast<FixedVectorType>(V->getType())->getNumElements();
+    assert(VNumElements > ScalarTyNumElements &&
+           "the number of elements of V is not large enough");
+    assert(VNumElements % ScalarTyNumElements == 0 &&
+           "the number of elements of V is not a vectorized value");
+    return VNumElements / ScalarTyNumElements;
+  }
+
   /// Checks if the mask is an identity mask.
   /// \param IsStrict if is true the function returns false if mask size does
   /// not match vector size.
@@ -8273,7 +8298,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   bool IsFinalized = false;
   SmallVector<int> CommonMask;
   SmallVector<PointerUnion<Value *, const TreeEntry *>, 2> InVectors;
-  Type *ScalarTy = nullptr;
   const TargetTransformInfo &TTI;
   InstructionCost Cost = 0;
   SmallDenseSet<Value *> VectorizedVals;
@@ -8285,27 +8309,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   /// May help better estimate the cost if same nodes must be permuted + allows
   /// to move most of the long shuffles cost estimation to TTI.
   bool SameNodesEstimated = true;
-
-  /// V is expected to be a vectorized value.
-  /// When REVEC is disabled, there is no difference between VF and
-  /// VNumElements.
-  /// When REVEC is enabled, VF is VNumElements / ScalarTyNumElements.
-  /// e.g., if ScalarTy is <4 x Ty> and V1 is <8 x Ty>, 2 is returned instead
-  /// of 8.
-  unsigned getVF(Value *V) const {
-    assert(V && "V cannot be nullptr");
-    assert(isa<FixedVectorType>(V->getType()) &&
-           "V does not have FixedVectorType");
-    assert(ScalarTy && "ScalarTy cannot be nullptr");
-    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-    unsigned VNumElements =
-        cast<FixedVectorType>(V->getType())->getNumElements();
-    assert(VNumElements > ScalarTyNumElements &&
-           "the number of elements of V is not large enough");
-    assert(VNumElements % ScalarTyNumElements == 0 &&
-           "the number of elements of V is not a vectorized value");
-    return VNumElements / ScalarTyNumElements;
-  }
 
   static Constant *getAllOnesValue(const DataLayout &DL, Type *Ty) {
     if (Ty->getScalarType()->isPointerTy()) {
@@ -8969,7 +8972,7 @@ public:
   ShuffleCostEstimator(Type *ScalarTy, TargetTransformInfo &TTI,
                        ArrayRef<Value *> VectorizedVals, BoUpSLP &R,
                        SmallPtrSetImpl<Value *> &CheckedExtracts)
-      : ScalarTy(ScalarTy), TTI(TTI),
+      : BaseShuffleAnalysis(ScalarTy), TTI(TTI),
         VectorizedVals(VectorizedVals.begin(), VectorizedVals.end()), R(R),
         CheckedExtracts(CheckedExtracts) {}
   Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
@@ -11831,7 +11834,6 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   /// resulting shuffle and the second operand sets to be the newly added
   /// operand. The \p CommonMask is transformed in the proper way after that.
   SmallVector<Value *, 2> InVectors;
-  Type *ScalarTy = nullptr;
   IRBuilderBase &Builder;
   BoUpSLP &R;
 
@@ -11957,7 +11959,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
 
 public:
   ShuffleInstructionBuilder(Type *ScalarTy, IRBuilderBase &Builder, BoUpSLP &R)
-      : ScalarTy(ScalarTy), Builder(Builder), R(R) {}
+      : BaseShuffleAnalysis(ScalarTy), Builder(Builder), R(R) {}
 
   /// Adjusts extractelements after reusing them.
   Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
