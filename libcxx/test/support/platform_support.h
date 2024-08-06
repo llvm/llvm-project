@@ -71,7 +71,7 @@ inline std::string get_temp_file_name() {
     abort();
   }
 #elif !__has_include(<unistd.h>)
-  // Without `unistd.h` we cannot guarnatee that the file is unused, however we
+  // Without `unistd.h` we cannot guarantee that the file is unused, however we
   // can simply generate a good guess in the temporary folder and create it.
   constexpr char chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   char Name[]            = "/tmp/libcxx.XXXXXX";
