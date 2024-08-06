@@ -1925,10 +1925,17 @@ bb1:
   br label %bb2
 
 bb2:
-  %phi = phi i32 [ %arg, %bb1 ], [ 0, %bb2 ]
+  %phi = phi i32 [ %arg, %bb1 ], [ 0, %bb2 ], [ 1, %bb3 ], [ 2, %bb4 ], [ 3, %bb5 ]
   br label %bb2
 
 bb3:
+  br label %bb2
+
+bb4:
+  br label %bb2
+
+bb5:
+  br label %bb2
   ret void
 }
 )IR");
@@ -2023,7 +2030,29 @@ bb3:
   EXPECT_EQ(PHI->hasConstantOrUndefValue(), LLVMPHI->hasConstantOrUndefValue());
   // Check isComplete().
   EXPECT_EQ(PHI->isComplete(), LLVMPHI->isComplete());
-
+  // Check replaceIncomingValueIf
+  EXPECT_EQ(PHI->getNumIncomingValues(), 5u);
+  auto *RemainBB0 = PHI->getIncomingBlock(0);
+  auto *RemoveBB0 = PHI->getIncomingBlock(1);
+  auto *RemainBB1 = PHI->getIncomingBlock(2);
+  auto *RemoveBB1 = PHI->getIncomingBlock(3);
+  auto *RemainBB2 = PHI->getIncomingBlock(4);
+  PHI->removeIncomingValueIf([&](unsigned Idx) {
+    return PHI->getIncomingBlock(Idx) == RemoveBB0 ||
+           PHI->getIncomingBlock(Idx) == RemoveBB1;
+  });
+  EXPECT_EQ(PHI->getNumIncomingValues(), 3u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), RemainBB0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), RemainBB1);
+  EXPECT_EQ(PHI->getIncomingBlock(2), RemainBB2);
+  // Check replaceIncomingBlockWith
+  OrigBB = RemainBB0;
+  auto *NewBB = RemainBB1;
+  EXPECT_NE(NewBB, OrigBB);
+  PHI->replaceIncomingBlockWith(OrigBB, NewBB);
+  EXPECT_EQ(PHI->getIncomingBlock(0), NewBB);
+  EXPECT_EQ(PHI->getIncomingBlock(1), RemainBB1);
+  EXPECT_EQ(PHI->getIncomingBlock(2), RemainBB2);
   // Check create().
   auto *NewPHI = cast<sandboxir::PHINode>(
       sandboxir::PHINode::create(PHI->getType(), 0, Br, Ctx, "NewPHI"));
