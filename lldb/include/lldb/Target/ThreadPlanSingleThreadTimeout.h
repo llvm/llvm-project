@@ -54,11 +54,15 @@ public:
   // state. The reference of \param info is passed in so that when
   // ThreadPlanSingleThreadTimeout got popped its last state can be stored
   // in it for future resume.
-  static void PushNewWithTimeout(Thread &thread, TimeoutInfo &info);
+  static void PushNewWithTimeout(
+      Thread &thread,
+      std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo> &info);
 
   // Push a new ThreadPlanSingleThreadTimeout by restoring state from
   // input \param info and resume execution.
-  static void ResumeFromPrevState(Thread &thread, TimeoutInfo &info);
+  static void ResumeFromPrevState(
+      Thread &thread,
+      std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo> &info);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   bool ValidatePlan(Stream *error) override { return true; }
@@ -78,7 +82,9 @@ public:
   bool StopOthers() override;
 
 private:
-  ThreadPlanSingleThreadTimeout(Thread &thread, TimeoutInfo &info);
+  ThreadPlanSingleThreadTimeout(
+      Thread &thread,
+      std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo> &info);
 
   bool IsTimeoutAsyncInterrupt(Event *event_ptr);
   bool HandleEvent(Event *event_ptr);
@@ -91,7 +97,8 @@ private:
   const ThreadPlanSingleThreadTimeout &
   operator=(const ThreadPlanSingleThreadTimeout &) = delete;
 
-  TimeoutInfo &m_info; // Reference to controlling ThreadPlan's TimeoutInfo.
+  std::shared_ptr<ThreadPlanSingleThreadTimeout::TimeoutInfo>
+      m_info; // Reference to controlling ThreadPlan's TimeoutInfo.
   State m_state;
 
   // Lock for m_wakeup_cv and m_exit_flag between thread plan thread and timer
