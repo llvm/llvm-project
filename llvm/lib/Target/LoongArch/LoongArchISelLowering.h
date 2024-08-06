@@ -120,6 +120,16 @@ enum NodeType : unsigned {
 
   // Vector Shuffle
   VREPLVE,
+  VSHUF,
+  VPICKEV,
+  VPICKOD,
+  VPACKEV,
+  VPACKOD,
+  VILVL,
+  VILVH,
+  VSHUF4I,
+  VREPLVEI,
+  XVPERMI,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -247,6 +257,9 @@ public:
   bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
   bool shouldExtendTypeInLibCall(EVT Type) const override;
 
+  bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
+                              Align &PrefAlign) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
@@ -267,7 +280,7 @@ private:
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, CodeModel::Model M,
                   bool IsLocal = true) const;
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                           unsigned Opc, bool Large = false) const;
+                           unsigned Opc, bool UseGOT, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                             unsigned Opc, bool Large = false) const;
   SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,

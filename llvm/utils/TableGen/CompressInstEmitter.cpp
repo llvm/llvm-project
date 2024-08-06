@@ -618,7 +618,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   }
 
   if (CompressPatterns.empty()) {
-    OS << FuncH.str();
+    OS << FH;
     OS.indent(2) << "return false;\n}\n";
     if (EType == EmitterType::Compress)
       OS << "\n#endif //GEN_COMPRESS_INSTR\n";
@@ -835,10 +835,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
-    mergeCondAndCode(CaseStream, CondStream.str(), CodeStream.str());
+    mergeCondAndCode(CaseStream, CondString, CodeString);
     PrevOp = CurOp;
   }
-  Func << CaseStream.str() << "\n";
+  Func << CaseString << "\n";
   // Close brace for the last case.
   Func.indent(4) << "} // case " << CurOp << "\n";
   Func.indent(2) << "} // switch\n";
@@ -876,8 +876,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
        << "}\n\n";
   }
 
-  OS << FuncH.str();
-  OS << Func.str();
+  OS << FH;
+  OS << F;
 
   if (EType == EmitterType::Compress)
     OS << "\n#endif //GEN_COMPRESS_INSTR\n";

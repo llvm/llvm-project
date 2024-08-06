@@ -1372,8 +1372,8 @@ void DumpProcessMap() {
   for (uptr i = 0; i < modules.size(); ++i) {
     char uuid_str[128];
     FormatUUID(uuid_str, sizeof(uuid_str), modules[i].uuid());
-    Printf("0x%zx-0x%zx %s (%s) %s\n", modules[i].base_address(),
-           modules[i].max_address(), modules[i].full_name(),
+    Printf("%p-%p %s (%s) %s\n", (void *)modules[i].base_address(),
+           (void *)modules[i].max_address(), modules[i].full_name(),
            ModuleArchToString(modules[i].arch()), uuid_str);
   }
   Printf("End of module map.\n");

@@ -24,22 +24,9 @@ bool IsX86_MMXType(llvm::Type *IRType) {
     IRType->getScalarSizeInBits() != 64;
 }
 
-static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
+static llvm::Type *X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
-                                          llvm::Type* Ty) {
-  bool IsMMXCons = llvm::StringSwitch<bool>(Constraint)
-                     .Cases("y", "&y", "^Ym", true)
-                     .Default(false);
-  if (IsMMXCons && Ty->isVectorTy()) {
-    if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedValue() !=
-        64) {
-      // Invalid MMX constraint
-      return nullptr;
-    }
-
-    return llvm::Type::getX86_MMXTy(CGF.getLLVMContext());
-  }
-
+                                          llvm::Type *Ty) {
   if (Constraint == "k") {
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGF.getLLVMContext());
     return llvm::FixedVectorType::get(Int1Ty, Ty->getScalarSizeInBits());
@@ -469,7 +456,8 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
-  if (State.FreeRegs) {
+  if (State.CC != llvm::CallingConv::X86_FastCall &&
+      State.CC != llvm::CallingConv::X86_VectorCall && State.FreeRegs) {
     --State.FreeRegs;
     if (!IsMCUABI)
       return getNaturalAlignIndirectInReg(RetTy);
@@ -805,6 +793,10 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
 
     // Ignore empty structs/unions on non-Windows.
     if (!IsWin32StructABI && isEmptyRecord(getContext(), Ty, true))
+      return ABIArgInfo::getIgnore();
+
+    // Ignore 0 sized structs.
+    if (TI.Width == 0)
       return ABIArgInfo::getIgnore();
 
     llvm::LLVMContext &LLVMContext = getVMContext();

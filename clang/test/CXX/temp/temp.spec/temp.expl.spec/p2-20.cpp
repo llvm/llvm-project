@@ -56,7 +56,7 @@ struct B {
   static int y;
 
   template<typename T>
-  int z; // expected-error {{member 'z' declared as a template}}
+  int z; // expected-error {{non-static data member 'z' cannot be declared as a template}}
 
   template<typename T>
   static int x<T*>;
@@ -65,7 +65,7 @@ struct B {
   static int y<T*>;
 
   template<typename T>
-  int x<T**>; // expected-error {{member 'x' declared as a template}}
+  int x<T**>; // expected-error {{non-static data member 'x' cannot be declared as a template}}
 
   template<>
   int x<short>;
@@ -169,7 +169,7 @@ struct D {
   static int y;
 
   template<typename U>
-  int z; // expected-error {{member 'z' declared as a template}}
+  int z; // expected-error {{non-static data member 'z' cannot be declared as a template}}
 
   template<typename U>
   static int x<U*>;
@@ -178,7 +178,7 @@ struct D {
   static int y<U*>;
 
   template<typename U>
-  int x<U**>; // expected-error {{member 'x' declared as a template}}
+  int x<U**>; // expected-error {{non-static data member 'x' cannot be declared as a template}}
 
   template<>
   int x<short>;

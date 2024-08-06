@@ -1057,9 +1057,7 @@ private:
   typedef unique_ptr<__node, _Dp> __node_holder;
   typedef allocator_traits<allocator_type> __alloc_traits;
 
-  static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
+  static_assert(__check_valid_allocator<allocator_type>::value, "");
 
   static_assert(is_same<typename __table::__container_value_type, value_type>::value, "");
   static_assert(is_same<typename __table::__node_value_type, __value_type>::value, "");
@@ -1839,6 +1837,7 @@ public:
   typedef pair<const key_type, mapped_type> value_type;
   typedef value_type& reference;
   typedef const value_type& const_reference;
+  static_assert(__check_valid_allocator<allocator_type>::value, "");
   static_assert(is_same<value_type, typename allocator_type::value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
@@ -1861,10 +1860,6 @@ private:
   typedef allocator_traits<allocator_type> __alloc_traits;
   static_assert(is_same<typename __node_traits::size_type, typename __alloc_traits::size_type>::value,
                 "Allocator uses different size_type for different types");
-
-  static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
 
 public:
   typedef typename __alloc_traits::pointer pointer;
@@ -2537,6 +2532,7 @@ _LIBCPP_POP_MACROS
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
 #  include <bit>
+#  include <cmath>
 #  include <concepts>
 #  include <cstdlib>
 #  include <iterator>

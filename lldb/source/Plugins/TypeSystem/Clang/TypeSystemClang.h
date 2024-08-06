@@ -191,11 +191,11 @@ public:
   void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);
   void SetMetadataAsUserID(const clang::Type *type, lldb::user_id_t user_id);
 
-  void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
+  void SetMetadata(const clang::Decl *object, ClangASTMetadata meta_data);
 
-  void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
-  ClangASTMetadata *GetMetadata(const clang::Decl *object);
-  ClangASTMetadata *GetMetadata(const clang::Type *object);
+  void SetMetadata(const clang::Type *object, ClangASTMetadata meta_data);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Decl *object);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Type *object);
 
   void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
                               clang::AccessSpecifier access);
@@ -498,7 +498,8 @@ public:
   // Array Types
 
   CompilerType CreateArrayType(const CompilerType &element_type,
-                               size_t element_count, bool is_vector);
+                               std::optional<size_t> element_count,
+                               bool is_vector);
 
   // Enumeration Types
   CompilerType CreateEnumerationType(llvm::StringRef name,
@@ -615,8 +616,9 @@ public:
   static clang::NamespaceDecl *
   DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc);
 
-  static ClangASTMetadata *DeclContextGetMetaData(const CompilerDeclContext &dc,
-                                                  const clang::Decl *object);
+  static std::optional<ClangASTMetadata>
+  DeclContextGetMetaData(const CompilerDeclContext &dc,
+                         const clang::Decl *object);
 
   static clang::ASTContext *
   DeclContextGetTypeSystemClang(const CompilerDeclContext &dc);
@@ -1171,6 +1173,9 @@ private:
   /// Helper method that is used in \ref TypeSystemClang::TypeSystemClang
   /// on creation of a new instance.
   void LogCreation() const;
+
+  std::optional<uint64_t> GetObjCBitSize(clang::QualType qual_type,
+                                         ExecutionContextScope *exe_scope);
 
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;

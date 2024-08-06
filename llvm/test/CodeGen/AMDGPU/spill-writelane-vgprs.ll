@@ -44,7 +44,7 @@ define void @device_writelane_intrinsic(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @kernel_writelane_intrinsic(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
 ; GCN-LABEL: kernel_writelane_intrinsic:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 45
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

@@ -15,7 +15,7 @@ def GetAlignedRange(test_base):
 
 def GetStackRange(test_base):
     frame = test_base.thread.GetSelectedFrame()
-    ex = frame.EvaluateExpression("stack_pointer")
+    ex = frame.EvaluateExpression("&stack_pointer")
     test_base.assertTrue(ex.IsValid())
     return GetRangeFromAddrValue(test_base, ex)
 
@@ -35,6 +35,7 @@ def GetRangeFromAddrValue(test_base, addr):
     )
 
     test_base.assertTrue(region.IsReadable())
+    test_base.assertFalse(region.IsExecutable())
 
     address_start = lldb.SBAddress(region.GetRegionBase(), test_base.target)
     stack_size = region.GetRegionEnd() - region.GetRegionBase()

@@ -12,6 +12,7 @@
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -292,6 +293,31 @@ TEST_F(AnalyzeTest, ResourceDirIsIgnored) {
   )cpp");
   TestAST AST(Inputs);
   auto Results = analyze({}, {}, PP.Includes, &PI, AST.preprocessor());
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, DifferentHeaderSameSpelling) {
+  Inputs.ExtraArgs.push_back("-Ifoo");
+  Inputs.ExtraArgs.push_back("-Ifoo_inner");
+  // `foo` is declared in foo_inner/foo.h, but there's no way to spell it
+  // directly. Make sure we don't generate unusued/missing include findings in
+  // such cases.
+  Inputs.Code = R"cpp(
+    #include <foo.h>
+    void baz() {
+      foo();
+    }
+  )cpp";
+  Inputs.ExtraFiles["foo/foo.h"] = guard("#include_next <foo.h>");
+  Inputs.ExtraFiles["foo_inner/foo.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  TestAST AST(Inputs);
+  std::vector<Decl *> DeclsInTU;
+  for (auto *D : AST.context().getTranslationUnitDecl()->decls())
+    DeclsInTU.push_back(D);
+  auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
   EXPECT_THAT(Results.Unused, testing::IsEmpty());
   EXPECT_THAT(Results.Missing, testing::IsEmpty());
 }

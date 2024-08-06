@@ -611,24 +611,21 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                        COFF::IMAGE_SCN_MEM_READ));
 
   DwarfAbbrevSection = Ctx->getCOFFSection(
-      ".debug_abbrev",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "section_abbrev");
+      ".debug_abbrev", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                           COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                           COFF::IMAGE_SCN_MEM_READ);
   DwarfInfoSection = Ctx->getCOFFSection(
-      ".debug_info",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "section_info");
+      ".debug_info", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                         COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                         COFF::IMAGE_SCN_MEM_READ);
   DwarfLineSection = Ctx->getCOFFSection(
       ".debug_line", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                          COFF::IMAGE_SCN_MEM_READ);
   DwarfLineStrSection = Ctx->getCOFFSection(
-      ".debug_line_str",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "section_line_str");
+      ".debug_line_str", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                             COFF::IMAGE_SCN_MEM_READ);
   DwarfFrameSection = Ctx->getCOFFSection(
       ".debug_frame", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                           COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -738,19 +735,17 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                           COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                           COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelNamesSection = Ctx->getCOFFSection(
-      ".apple_names",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "names_begin");
+      ".apple_names", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                          COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelNamespaceSection = Ctx->getCOFFSection(
       ".apple_namespaces", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                                COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelTypesSection = Ctx->getCOFFSection(
-      ".apple_types",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "types_begin");
+      ".apple_types", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                          COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelObjCSection = Ctx->getCOFFSection(
       ".apple_objc", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -953,52 +948,52 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   DwarfAbbrevSection = Ctx->getXCOFFSection(
       ".dwabrev", SectionKind::getMetadata(),
       /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwabrev", XCOFF::SSUBTYP_DWABREV);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWABREV);
 
   DwarfInfoSection = Ctx->getXCOFFSection(
       ".dwinfo", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwinfo", XCOFF::SSUBTYP_DWINFO);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWINFO);
 
   DwarfLineSection = Ctx->getXCOFFSection(
       ".dwline", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwline", XCOFF::SSUBTYP_DWLINE);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWLINE);
 
   DwarfFrameSection = Ctx->getXCOFFSection(
       ".dwframe", SectionKind::getMetadata(),
       /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwframe", XCOFF::SSUBTYP_DWFRAME);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWFRAME);
 
   DwarfPubNamesSection = Ctx->getXCOFFSection(
       ".dwpbnms", SectionKind::getMetadata(),
       /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwpbnms", XCOFF::SSUBTYP_DWPBNMS);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWPBNMS);
 
   DwarfPubTypesSection = Ctx->getXCOFFSection(
       ".dwpbtyp", SectionKind::getMetadata(),
       /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwpbtyp", XCOFF::SSUBTYP_DWPBTYP);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWPBTYP);
 
   DwarfStrSection = Ctx->getXCOFFSection(
       ".dwstr", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwstr", XCOFF::SSUBTYP_DWSTR);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWSTR);
 
   DwarfLocSection = Ctx->getXCOFFSection(
       ".dwloc", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwloc", XCOFF::SSUBTYP_DWLOC);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWLOC);
 
   DwarfARangesSection = Ctx->getXCOFFSection(
       ".dwarnge", SectionKind::getMetadata(),
       /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwarnge", XCOFF::SSUBTYP_DWARNGE);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWARNGE);
 
   DwarfRangesSection = Ctx->getXCOFFSection(
       ".dwrnges", SectionKind::getMetadata(),
       /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwrnges", XCOFF::SSUBTYP_DWRNGES);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWRNGES);
 
   DwarfMacinfoSection = Ctx->getXCOFFSection(
       ".dwmac", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
-      /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
+      /* MultiSymbolsAllowed */ true, XCOFF::SSUBTYP_DWMAC);
 }
 
 void MCObjectFileInfo::initDXContainerObjectFileInfo(const Triple &T) {

@@ -3104,7 +3104,7 @@ void ExportEntry::pushNode(uint64_t offset) {
         }
       }
     }
-    if(ExportStart + ExportInfoSize != State.Current) {
+    if (ExportStart + ExportInfoSize < State.Current) {
       *E = malformedError(
           "inconsistent export info size: 0x" +
           Twine::utohexstr(ExportInfoSize) + " where actual size was: 0x" +
@@ -5192,11 +5192,6 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
   const char *ImportsEnd = Contents + ImportsEndOffset;
   const char *Symbols = Contents + Header.symbols_offset;
   const char *SymbolsEnd = Contents + DyldChainedFixups.datasize;
-
-  if (ImportsEnd > Symbols)
-    return malformedError("bad chained fixups: imports end " +
-                          Twine(ImportsEndOffset) + " extends past end " +
-                          Twine(DyldChainedFixups.datasize));
 
   if (ImportsEnd > Symbols)
     return malformedError("bad chained fixups: imports end " +

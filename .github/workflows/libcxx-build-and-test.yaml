@@ -63,8 +63,8 @@ jobs:
         cxx: [ 'clang++-19' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
@@ -101,8 +101,8 @@ jobs:
         cxx: [ 'clang++-19' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
           - config: 'generic-cxx23'
             cc: 'clang-17'
             cxx: 'clang++-17'

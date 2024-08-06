@@ -38,7 +38,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -1301,9 +1300,9 @@ class DropInnerMostUnitDimsTransferRead
     if (dimsToDrop == 0)
       return failure();
 
-    // Make sure that the indices to be dropped are equal 0.
-    // TODO: Deal with cases when the indices are not 0.
-    if (!llvm::all_of(readOp.getIndices().take_back(dimsToDrop), isZeroIndex))
+    auto inBounds = readOp.getInBoundsValues();
+    auto droppedInBounds = ArrayRef<bool>(inBounds).take_back(dimsToDrop);
+    if (llvm::is_contained(droppedInBounds, false))
       return failure();
 
     auto resultTargetVecType =
@@ -1322,11 +1321,8 @@ class DropInnerMostUnitDimsTransferRead
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr =
-        readOp.getInBounds()
-            ? rewriter.getArrayAttr(
-                  readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
-            : ArrayAttr();
+    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
+        readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, readOp.getSource(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
@@ -1395,6 +1391,11 @@ class DropInnerMostUnitDimsTransferWrite
     if (dimsToDrop == 0)
       return failure();
 
+    auto inBounds = writeOp.getInBoundsValues();
+    auto droppedInBounds = ArrayRef<bool>(inBounds).take_back(dimsToDrop);
+    if (llvm::is_contained(droppedInBounds, false))
+      return failure();
+
     auto resultTargetVecType =
         VectorType::get(targetType.getShape().drop_back(dimsToDrop),
                         targetType.getElementType(),
@@ -1411,11 +1412,8 @@ class DropInnerMostUnitDimsTransferWrite
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr =
-        writeOp.getInBounds()
-            ? rewriter.getArrayAttr(
-                  writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
-            : ArrayAttr();
+    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
+        writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, writeOp.getSource(), offsets, sizes, strides);
@@ -1552,6 +1550,7 @@ private:
 /// Cores, i.e, `mma.sync.*.f32.f16.f16.f32` and `mma.sync.*.f32.bf16.bf16.f32`.
 /// This pattern folds the arithmetic extensions into the vector contraction and
 /// enables the usage of native mixed precision Tensor Core instructions.
+template <typename ExtOp>
 struct FoldArithExtIntoContractionOp
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -1559,8 +1558,8 @@ struct FoldArithExtIntoContractionOp
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto lhsDefOp = contractOp.getLhs().getDefiningOp<arith::ExtFOp>();
-    auto rhsDefOp = contractOp.getRhs().getDefiningOp<arith::ExtFOp>();
+    auto lhsDefOp = contractOp.getLhs().getDefiningOp<ExtOp>();
+    auto rhsDefOp = contractOp.getRhs().getDefiningOp<ExtOp>();
 
     if (!lhsDefOp || !rhsDefOp) {
       return rewriter.notifyMatchFailure(contractOp,
@@ -1622,10 +1621,11 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-// Scalable unit dimensions are not supported. Folding such dimensions would
-// require "shifting" the scalable flag onto some other fixed-width dim (e.g.
-// vector<[1]x4xf32> -> vector<[4]xf32>). This could be implemented in the
-// future.
+// Helper function dropping unit non-scalable dimension from a VectorType
+// keeping at least 1 dimension to avoid generating 0-D vectors. Scalable unit
+// dimensions are not dropped. Folding such dimensions would require "shifting"
+// the scalable flag onto some other fixed-width dim (e.g. vector<[1]x4xf32> ->
+// vector<[4]xf32>). This could be implemented in the future.
 static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
   auto inVecShape = inVecTy.getShape();
   SmallVector<int64_t> newShape;
@@ -1638,11 +1638,16 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
     newShape.push_back(dim);
     newScalableDims.push_back(isScalable);
   }
+  // All dims have been dropped, return vector<1xeType>.
+  if (newShape.empty()) {
+    newShape.push_back(1);
+    newScalableDims.push_back(false);
+  }
 
   return VectorType::get(newShape, inVecTy.getElementType(), newScalableDims);
 }
 
-/// For vectors with at least an unit dim, replaces:
+/// For vectors with at least one unit dim, replaces:
 ///   elementwise(a, b)
 /// with:
 ///   sc_a = shape_cast(a)
@@ -1683,7 +1688,9 @@ struct DropUnitDimFromElementwiseOps final
     // guaranteed to have identical shapes (with some exceptions such as
     // `arith.select`) and it suffices to only check one of them.
     auto sourceVectorType = dyn_cast<VectorType>(op->getOperand(0).getType());
-    if (!sourceVectorType || sourceVectorType.getRank() < 2)
+    if (!sourceVectorType)
+      return failure();
+    if (sourceVectorType.getRank() < 2)
       return failure();
 
     SmallVector<Value> newOperands;
@@ -1895,7 +1902,9 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
 
 void mlir::vector::populateFoldArithExtensionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldArithExtIntoContractionOp>(patterns.getContext());
+  patterns.add<FoldArithExtIntoContractionOp<arith::ExtFOp>,
+               FoldArithExtIntoContractionOp<arith::ExtSIOp>>(
+      patterns.getContext());
 }
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(

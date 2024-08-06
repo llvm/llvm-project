@@ -23,7 +23,7 @@ std::string Remark::getArgsAsMsg() const {
   raw_string_ostream OS(Str);
   for (const Argument &Arg : Args)
     OS << Arg.Val;
-  return OS.str();
+  return Str;
 }
 
 /// Returns the value of a specified key parsed from StringRef.

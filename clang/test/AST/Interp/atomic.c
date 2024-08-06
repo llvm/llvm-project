@@ -58,3 +58,16 @@ _Static_assert(atomic_is_lock_free((atomic_short*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_int*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_long*)0), "");
 _Static_assert(atomic_is_lock_free(0 + (atomic_char*)0), "");
+
+_Static_assert(__atomic_always_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_always_lock_free(1, (void*)-1), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)2), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)-2), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)-4), "");
+
+_Static_assert(__atomic_always_lock_free(1, "string"), "");
+_Static_assert(!__atomic_always_lock_free(2, "string"), "");
+_Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
+void dummyfn();
+_Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");

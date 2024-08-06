@@ -95,6 +95,7 @@ tools = [
     "llvm-ifs",
     "yaml2obj",
     "clang-linker-wrapper",
+    "clang-nvlink-wrapper",
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",
@@ -108,6 +109,15 @@ tools = [
 
 if config.clang_examples:
     config.available_features.add("examples")
+
+if config.llvm_examples:
+    config.available_features.add("llvm-examples")
+
+if config.llvm_linked_bye_extension:
+    config.substitutions.append(("%offload-opt-loadbye", ""))
+else:
+    loadbye = f"-load-pass-plugin={config.llvm_shlib_dir}/Bye{config.llvm_shlib_ext}"
+    config.substitutions.append(("%offload-opt-loadbye", f"--offload-opt={loadbye}"))
 
 
 def have_host_jit_feature_support(feature_name):
@@ -212,6 +222,9 @@ config.substitutions.append(("%host_cxx", config.host_cxx))
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add("plugins")
+
+if config.llvm_has_plugins and config.llvm_plugin_ext:
+    config.available_features.add("llvm-plugins")
 
 if config.clang_default_pie_on_linux:
     config.available_features.add("default-pie-on-linux")

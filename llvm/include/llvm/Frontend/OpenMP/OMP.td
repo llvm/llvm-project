@@ -32,6 +32,9 @@ def OpenMP : DirectiveLanguage {
 // Sorted alphabetically wrt clause spelling.
 //===----------------------------------------------------------------------===//
 
+def OMPC_Absent : Clause<"absent"> {
+  let clangClass = "OMPAbsentClause";
+}
 def OMPC_Acquire : Clause<"acquire"> {
   let clangClass = "OMPAcquireClause";
 }
@@ -86,6 +89,9 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_Taskgroup,
     OMP_CANCELLATION_CONSTRUCT_None
   ];
+}
+def OMPC_Contains : Clause<"contains"> {
+  let clangClass = "OMPContainsClause";
 }
 def OMPC_Capture : Clause<"capture"> {
   let clangClass = "OMPCaptureClause";
@@ -196,6 +202,9 @@ def OMPC_Hint : Clause<"hint"> {
   let clangClass = "OMPHintClause";
   let flangClass = "ConstantExpr";
 }
+def OMPC_Holds : Clause<"holds"> {
+  let clangClass = "OMPHoldsClause";
+}
 def OMPC_If : Clause<"if"> {
   let clangClass = "OMPIfClause";
   let flangClass = "OmpIfClause";
@@ -259,6 +268,15 @@ def OMPC_Mergeable : Clause<"mergeable"> {
 }
 def OMPC_Message : Clause<"message"> {
   let clangClass = "OMPMessageClause";
+}
+def OMPC_NoOpenMP : Clause<"no_openmp"> {
+  let clangClass = "OMPNoOpenMPClause";
+}
+def OMPC_NoOpenMPRoutines : Clause<"no_openmp_routines"> {
+  let clangClass = "OMPNoOpenMPRoutinesClause";
+}
+def OMPC_NoParallelism : Clause<"no_parallelism"> {
+  let clangClass = "OMPNoParallelismClause";
 }
 def OMPC_Nocontext : Clause<"nocontext"> {
   let clangClass = "OMPNocontextClause";
@@ -510,6 +528,18 @@ def OMP_EndAssumes : Directive<"end assumes"> {
   let association = AS_Delimited;
   let category = OMP_Assumes.category;
 }
+def OMP_Assume : Directive<"assume"> {
+  let association = AS_Block;
+  let category = CA_Informational;
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Absent, 51>,
+    VersionedClause<OMPC_Contains, 51>,
+    VersionedClause<OMPC_Holds, 51>,
+    VersionedClause<OMPC_NoOpenMP, 51>,
+    VersionedClause<OMPC_NoOpenMPRoutines, 51>,
+    VersionedClause<OMPC_NoParallelism, 51>,
+  ];
+}
 def OMP_Atomic : Directive<"atomic"> {
   let allowedClauses = [
     VersionedClause<OMPC_Capture>,
@@ -665,6 +695,7 @@ def OMP_Distribute : Directive<"distribute"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let association = AS_Loop;
   let category = CA_Executable;
@@ -731,6 +762,10 @@ def OMP_For : Directive<"for"> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Schedule>,
   ];
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
+def OMP_Interchange : Directive<"interchange"> {
   let association = AS_Loop;
   let category = CA_Executable;
 }
@@ -835,6 +870,10 @@ def OMP_Requires : Directive<"requires"> {
   ];
   let association = AS_None;
   let category = CA_Informational;
+}
+def OMP_Reverse : Directive<"reverse"> {
+  let association = AS_Loop;
+  let category = CA_Executable;
 }
 def OMP_Scan : Directive<"scan"> {
   let allowedClauses = [
@@ -2057,6 +2096,7 @@ def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute];
@@ -2330,6 +2370,7 @@ def OMP_TeamsDistribute : Directive<"teams distribute"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute];
   let category = CA_Executable;

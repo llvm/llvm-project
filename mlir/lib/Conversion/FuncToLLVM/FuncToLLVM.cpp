@@ -35,7 +35,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SmallVector.h"
@@ -326,7 +325,7 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
         rewriter.getContext(),
         {LLVM::ModRefInfo::NoModRef, LLVM::ModRefInfo::NoModRef,
          LLVM::ModRefInfo::NoModRef});
-    newFuncOp.setMemoryAttr(memoryAttr);
+    newFuncOp.setMemoryEffectsAttr(memoryAttr);
   }
 
   // Propagate argument/result attributes to all converted arguments/result

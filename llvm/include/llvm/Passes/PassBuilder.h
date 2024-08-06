@@ -390,9 +390,9 @@ public:
   /// returns false.
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
-  /// Parse RegClassFilterName to get RegClassFilterFunc.
-  std::optional<RegClassFilterFunc>
-  parseRegAllocFilter(StringRef RegClassFilterName);
+  /// Parse RegAllocFilterName to get RegAllocFilterFunc.
+  std::optional<RegAllocFilterFunc>
+  parseRegAllocFilter(StringRef RegAllocFilterName);
 
   /// Print pass names.
   void printPassNames(raw_ostream &OS);
@@ -586,7 +586,7 @@ public:
   /// needs it. E.g. AMDGPU requires regalloc passes can handle sgpr and vgpr
   /// separately.
   void registerRegClassFilterParsingCallback(
-      const std::function<RegClassFilterFunc(StringRef)> &C) {
+      const std::function<RegAllocFilterFunc(StringRef)> &C) {
     RegClassFilterParsingCallbacks.push_back(C);
   }
 
@@ -807,7 +807,7 @@ private:
               2>
       MachineFunctionPipelineParsingCallbacks;
   // Callbacks to parse `filter` parameter in register allocation passes
-  SmallVector<std::function<RegClassFilterFunc(StringRef)>, 2>
+  SmallVector<std::function<RegAllocFilterFunc(StringRef)>, 2>
       RegClassFilterParsingCallbacks;
 };
 
@@ -944,6 +944,10 @@ public:
     return Result();
   }
 };
+
+/// Common option used by multiple tools to print pipeline passes
+extern cl::opt<bool> PrintPipelinePasses;
+
 }
 
 #endif

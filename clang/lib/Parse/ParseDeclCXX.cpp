@@ -445,6 +445,14 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
 ///         'export' declaration
 ///         'export' '{' declaration-seq[opt] '}'
 ///
+/// HLSL: Parse export function declaration.
+///
+///      export-function-declaration:
+///         'export' function-declaration
+/// 
+///      export-declaration-group:
+///         'export' '{' function-declaration-seq[opt] '}'
+///
 Decl *Parser::ParseExportDeclaration() {
   assert(Tok.is(tok::kw_export));
   SourceLocation ExportLoc = ConsumeToken();
@@ -1791,7 +1799,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_nothrow_constructible,
           tok::kw___is_nothrow_convertible,
           tok::kw___is_nothrow_destructible,
-          tok::kw___is_nullptr,
           tok::kw___is_object,
           tok::kw___is_pod,
           tok::kw___is_pointer,
@@ -2680,6 +2687,10 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     ParseDeclarator(DeclaratorInfo);
   else
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
+
+  if (getLangOpts().HLSL)
+    MaybeParseHLSLAnnotations(DeclaratorInfo, nullptr,
+                              /*CouldBeBitField*/ true);
 
   if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
     assert(DeclaratorInfo.isPastIdentifier() &&

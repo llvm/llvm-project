@@ -110,7 +110,7 @@ SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
   return GetBaseSymbolFile().GetDIEToVariable();
 }
 
-SymbolFileDWARF::CompilerTypeToDIE &
+llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
 SymbolFileDWARFDwo::GetForwardDeclCompilerTypeToDIE() {
   return GetBaseSymbolFile().GetForwardDeclCompilerTypeToDIE();
 }
@@ -125,9 +125,8 @@ UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {
   return GetBaseSymbolFile().GetUniqueDWARFASTTypeMap();
 }
 
-lldb::TypeSP
-SymbolFileDWARFDwo::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
-  return GetBaseSymbolFile().FindDefinitionTypeForDWARFDeclContext(die);
+DWARFDIE SymbolFileDWARFDwo::FindDefinitionDIE(const DWARFDIE &die) {
+  return GetBaseSymbolFile().FindDefinitionDIE(die);
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(

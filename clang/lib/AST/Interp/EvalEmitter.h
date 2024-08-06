@@ -55,7 +55,8 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E) = 0;
-  virtual bool visitDecl(const VarDecl *VD, bool ConstantContext) = 0;
+  virtual bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) = 0;
+  virtual bool visitFunc(const FunctionDecl *F) = 0;
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
@@ -107,6 +108,8 @@ private:
     assert(It != Locals.end() && "Missing local variable");
     return reinterpret_cast<Block *>(It->second.get());
   }
+
+  void updateGlobalTemporaries();
 
   // The emitter always tracks the current instruction and sets OpPC to a token
   // value which is mapped to the location of the opcode being evaluated.

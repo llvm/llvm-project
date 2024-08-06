@@ -140,7 +140,8 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
            ValidationCounter->getValueAsDef("EventType")->getName(),
            getPfmCounterId(ValidationCounter->getValueAsString("Counter"))});
     }
-    llvm::sort(ValidationCounters, EventNumberLess);
+    std::sort(ValidationCounters.begin(), ValidationCounters.end(),
+              EventNumberLess);
     OS << "\nstatic const std::pair<ValidationEvent, const char*> " << Target
        << Def.getName() << "ValidationCounters[] = {\n";
     for (const ValidationCounterInfo &VCI : ValidationCounters) {

@@ -124,13 +124,13 @@ AggressiveAntiDepBreaker::AggressiveAntiDepBreaker(
       TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RCI) {
   /* Collect a bitset of all registers that are only broken if they
      are on the critical path. */
-  for (unsigned i = 0, e = CriticalPathRCs.size(); i < e; ++i) {
-    BitVector CPSet = TRI->getAllocatableSet(MF, CriticalPathRCs[i]);
+  for (const TargetRegisterClass *RC : CriticalPathRCs) {
+    BitVector CPSet = TRI->getAllocatableSet(MF, RC);
     if (CriticalPathSet.none())
       CriticalPathSet = CPSet;
     else
       CriticalPathSet |= CPSet;
-   }
+  }
 
    LLVM_DEBUG(dbgs() << "AntiDep Critical-Path Registers:");
    LLVM_DEBUG(for (unsigned r
