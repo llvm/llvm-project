@@ -1,5 +1,5 @@
 ; Tests that CoroEarly pass correctly lowers coro.noop
-; RUN: opt < %s -S -passes=coro-early | FileCheck %s
+; RUN: opt -S -passes=coro-early < %s | FileCheck %s
 
 ; CHECK: %NoopCoro.Frame = type { ptr, ptr }
 ; CHECK: @NoopCoro.Frame.Const = private constant %NoopCoro.Frame { ptr @__NoopCoro_ResumeDestroy, ptr @__NoopCoro_ResumeDestroy }
@@ -10,11 +10,11 @@ define ptr @noop() {
 ; CHECK-NEXT: entry
 entry:
 ; CHECK-NEXT: ret ptr @NoopCoro.Frame.Const
-  %n = call ptr @llvm.coro.noop()
+  %n = call ptr @llvm.coro.noop.p1()
   ret ptr %n
 }
 
-declare ptr @llvm.coro.noop()
+declare ptr @llvm.coro.noop.p1()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

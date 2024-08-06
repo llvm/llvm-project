@@ -24,6 +24,7 @@ namespace coro {
 bool declaresAnyIntrinsic(const Module &M);
 bool declaresIntrinsics(const Module &M,
                         const std::initializer_list<StringRef>);
+bool declaresIntrinsics(const Module &M, const DenseSet<llvm::Intrinsic::ID> &);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 
 /// Attempts to rewrite the location operand of debug intrinsics in terms of
