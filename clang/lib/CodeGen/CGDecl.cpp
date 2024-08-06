@@ -96,7 +96,6 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::FileScopeAsm:
   case Decl::TopLevelStmt:
   case Decl::Friend:
-  case Decl::FriendPack:
   case Decl::FriendTemplate:
   case Decl::Block:
   case Decl::Captured:

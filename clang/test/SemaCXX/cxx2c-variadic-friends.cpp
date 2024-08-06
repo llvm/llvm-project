@@ -134,3 +134,23 @@ class R<R<Ts...>, R<Us...>> {
 struct E { struct Nested; };
 R<R<E>, R<C, int>> rr;
 } // namespace p2893r3_note
+
+namespace template_template {
+template <typename U, template <typename> typename... Friend>
+class S {
+  friend class Friend<U>...;
+  static constexpr int a = 42;
+};
+
+template <typename U>
+struct T {
+  static_assert(S<U, T>::a == 42);
+  static_assert(S<U, T>::a == 43); // expected-error {{static assertion failed due to requirement 'S<int, template_template::T>::a == 43'}} \
+                                   // expected-note {{expression evaluates to '42 == 43'}}
+};
+
+void f() {
+  T<int> t; // expected-note {{in instantiation of}}
+}
+}
+

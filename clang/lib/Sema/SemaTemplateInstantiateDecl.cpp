@@ -1456,7 +1456,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
           return nullptr;
 
         assert(!RetainExpansion &&
-               "should never retain an expansion for a FriendPackDecl");
+               "should never retain an expansion for a variadic friend decl");
 
         if (ShouldExpand) {
           SmallVector<FriendDecl *> Decls;
@@ -1476,10 +1476,8 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
             Decls.push_back(FD);
           }
 
-          auto *FPD = FriendPackDecl::Create(SemaRef.Context, Owner, D, Decls);
-          FPD->setAccess(AS_public);
-          Owner->addDecl(FPD);
-          return FPD;
+          // Just drop this node; we have no use for it anymore.
+          return nullptr;
         }
       }
 
@@ -1514,12 +1512,6 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
   FD->setUnsupportedFriend(D->isUnsupportedFriend());
   Owner->addDecl(FD);
   return FD;
-}
-
-Decl *TemplateDeclInstantiator::VisitFriendPackDecl(FriendPackDecl *D) {
-  // These only get created for fully unexpanded packs, at which point
-  // we should never perform any subsequent instantiation on them.
-  llvm_unreachable("instantiating FriendPackDecl?");
 }
 
 Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {

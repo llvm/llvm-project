@@ -7032,7 +7032,6 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::PragmaComment:
   case Decl::PragmaDetectMismatch:
   case Decl::UsingPack:
-  case Decl::FriendPack:
   case Decl::Concept:
   case Decl::ImplicitConceptSpecialization:
   case Decl::LifetimeExtendedTemporary:

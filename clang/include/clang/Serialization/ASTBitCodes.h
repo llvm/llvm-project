@@ -1377,9 +1377,6 @@ enum DeclCode {
   /// A FriendDecl record.
   DECL_FRIEND,
 
-  /// A FriendPackDecl record.
-  DECL_FRIEND_PACK,
-
   /// A FriendTemplateDecl record.
   DECL_FRIEND_TEMPLATE,
 
