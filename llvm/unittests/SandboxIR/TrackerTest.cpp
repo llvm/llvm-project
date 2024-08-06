@@ -682,9 +682,8 @@ bb2:
 
   // Check removeIncomingValueIf(FromBB1).
   Ctx.save();
-  PHI->removeIncomingValueIf([&](unsigned Idx) {
-    return PHI->getIncomingBlock(Idx) == BB1;
-  });
+  PHI->removeIncomingValueIf(
+      [&](unsigned Idx) { return PHI->getIncomingBlock(Idx) == BB1; });
   EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
   Ctx.revert();
   EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
