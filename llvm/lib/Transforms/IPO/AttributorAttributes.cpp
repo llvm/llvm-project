@@ -11874,14 +11874,24 @@ struct AAUnderlyingObjectsImpl
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
-    return std::string("UnderlyingObjects ") +
-           (isValidState()
-                ? (std::string("inter #") +
-                   std::to_string(InterAssumedUnderlyingObjects.size()) +
-                   " objs" + std::string(", intra #") +
-                   std::to_string(IntraAssumedUnderlyingObjects.size()) +
-                   " objs")
-                : "<invalid>");
+    if (!isValidState())
+      return "<invalid>";
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    OS << "underlying objects: inter " << InterAssumedUnderlyingObjects.size()
+       << " objects, intra " << IntraAssumedUnderlyingObjects.size()
+       << " objects.\n";
+    if (!InterAssumedUnderlyingObjects.empty()) {
+      OS << "inter objects:\n";
+      for (auto *Obj : InterAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    if (!IntraAssumedUnderlyingObjects.empty()) {
+      OS << "intra objects:\n";
+      for (auto *Obj : IntraAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    return Str;
   }
 
   /// See AbstractAttribute::trackStatistics()
