@@ -13,6 +13,7 @@
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsMachineFlag.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -24,22 +25,6 @@ using namespace object;
 
 namespace llvm {
 namespace object {
-
-#define RETURN_IF_ERROR(X)                                                     \
-  if (auto EC = X)                                                             \
-    return EC;
-
-#define UNWRAP_REF_OR_RETURN(Name, Expr)                                       \
-  auto Name##OrErr = Expr;                                                     \
-  if (!Name##OrErr)                                                            \
-    return Name##OrErr.takeError();                                            \
-  const auto &Name = *Name##OrErr;
-
-#define UNWRAP_OR_RETURN(Name, Expr)                                           \
-  auto Name##OrErr = Expr;                                                     \
-  if (!Name##OrErr)                                                            \
-    return Name##OrErr.takeError();                                            \
-  auto Name = *Name##OrErr;
 
 const uint32_t MIN_HEADER_SIZE = 7 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
 
@@ -365,7 +350,7 @@ Error WindowsResourceParser::parse(WindowsResource *WR,
 
 Error WindowsResourceParser::parse(ResourceSectionRef &RSR, StringRef Filename,
                                    std::vector<std::string> &Duplicates) {
-  UNWRAP_REF_OR_RETURN(BaseTable, RSR.getBaseTable());
+  TAKE_OR_RETURN(BaseTable, RSR.getBaseTable());
   uint32_t Origin = InputFilenames.size();
   InputFilenames.push_back(std::string(Filename));
   std::vector<StringOrID> Context;
@@ -395,14 +380,14 @@ Error WindowsResourceParser::addChildren(TreeNode &Node,
 
   for (int i = 0; i < Table.NumberOfNameEntries + Table.NumberOfIDEntries;
        i++) {
-    UNWRAP_REF_OR_RETURN(Entry, RSR.getTableEntry(Table, i));
+    TAKE_OR_RETURN(Entry, RSR.getTableEntry(Table, i));
     TreeNode *Child;
 
     if (Entry.Offset.isSubDir()) {
 
       // Create a new subdirectory and recurse
       if (i < Table.NumberOfNameEntries) {
-        UNWRAP_OR_RETURN(NameString, RSR.getEntryNameString(Entry));
+        TAKE_OR_RETURN(NameString, RSR.getEntryNameString(Entry));
         Child = &Node.addNameChild(NameString, StringTable);
         Context.push_back(StringOrID(NameString));
       } else {
@@ -410,7 +395,7 @@ Error WindowsResourceParser::addChildren(TreeNode &Node,
         Context.push_back(StringOrID(Entry.Identifier.ID));
       }
 
-      UNWRAP_REF_OR_RETURN(NextTable, RSR.getEntrySubDir(Entry));
+      TAKE_OR_RETURN(NextTable, RSR.getEntrySubDir(Entry));
       Error E =
           addChildren(*Child, RSR, NextTable, Origin, Context, Duplicates);
       if (E)
@@ -425,14 +410,14 @@ Error WindowsResourceParser::addChildren(TreeNode &Node,
                                  "unexpected string key for data object");
 
       // Try adding a data leaf
-      UNWRAP_REF_OR_RETURN(DataEntry, RSR.getEntryData(Entry));
+      TAKE_OR_RETURN(DataEntry, RSR.getEntryData(Entry));
       TreeNode *Child;
       Context.push_back(StringOrID(Entry.Identifier.ID));
       bool Added = Node.addDataChild(Entry.Identifier.ID, Table.MajorVersion,
                                      Table.MinorVersion, Table.Characteristics,
                                      Origin, Data.size(), Child);
       if (Added) {
-        UNWRAP_OR_RETURN(Contents, RSR.getContents(DataEntry));
+        TAKE_OR_RETURN(Contents, RSR.getContents(DataEntry));
         Data.push_back(ArrayRef<uint8_t>(
             reinterpret_cast<const uint8_t *>(Contents.data()),
             Contents.size()));
