@@ -3572,6 +3572,29 @@ or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
 seq\_cst total orderings of other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
+.. _floatsem:
+
+Floating-Point Semantics
+------------------------
+
+LLVM floating-point types fall into two categories:
+
+- half, float, double, and fp128, which correspond to the binary16, binary32,
+  binary64, and binary128 formats described in the IEEE-754 specification.
+- The remaining types, which do not directly correspond to a standard IEEE
+  format.
+
+For types that do correspond to an IEEE format, LLVM IR float operations behave
+like the corresponding operations in IEEE-754, with two exceptions: LLVM makes
+:ref:`specific assumptions about the state of the floating-point environment
+<floatenv>` and it implements :ref:`different rules for operations that return
+NaN values <floatnan>`.
+
+This means that optimizations and backends cannot change the precision of these
+operations (unless there are fast-math flags), and frontends can rely on these
+operations deterministically providing perfectly rounded results as described
+in the standard (except when a NaN is returned).
+
 .. _floatenv:
 
 Floating-Point Environment
@@ -3608,10 +3631,11 @@ are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
 ``llvm.copysign``. These operations act directly on the underlying bit
 representation and never change anything except possibly for the sign bit.
 
-For floating-point math operations, unless specified otherwise, the following
-rules apply when a NaN value is returned: the result has a non-deterministic
-sign; the quiet bit and payload are non-deterministically chosen from the
-following set of options:
+Floating-point math operations that return a NaN are an exception from the
+general principle that LLVM implements IEEE-754 semantics. Unless specified
+otherwise, the following rules apply when a NaN value is returned: the result
+has a non-deterministic sign; the quiet bit and payload are
+non-deterministically chosen from the following set of options:
 
 - The quiet bit is set and the payload is all-zero. ("Preferred NaN" case)
 - The quiet bit is set and the payload is copied from any input operand that is
