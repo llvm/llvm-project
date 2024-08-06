@@ -417,10 +417,9 @@ private:
   /// Get the bytes that represent the .dynamic section.
   ///
   /// This function will fetch the data for the .dynamic section in an ELF file.
-  /// If the ELF file is loaded from a file on disk, it will use the PT_DYNAMIC
-  /// program header to extract the data and fall back to using the section
-  /// headers. If the ELF file is loaded from memory, it will use the PT_DYNAMIC
-  /// program header to get the information.
+  /// The PT_DYNAMIC program header will be used to extract the data and this
+  /// function will fall back to using the section headers if PT_DYNAMIC isn't
+  /// found.
   ///
   /// \return The bytes that represent the string table data or \c std::nullopt
   ///         if an error occured.
@@ -430,8 +429,8 @@ private:
   ///
   /// This function will fetch the data for the string table in an ELF file. If
   /// the ELF file is loaded from a file on disk, it will use the section
-  /// headers to extract the data. If the ELF file is loaded from memory, it
-  /// will use .dynamic entries to read the information.
+  /// headers to extract the data and fall back to using the DT_STRTAB and
+  /// DT_STRSZ .dynamic entries.
   ///
   /// \return The bytes that represent the string table data or \c std::nullopt
   ///         if an error occured.
