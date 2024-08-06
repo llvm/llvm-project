@@ -139,15 +139,15 @@ void hwasan_free(void *ptr, StackTrace *stack);
 void InstallAtExitHandler();
 
 #define GET_MALLOC_STACK_TRACE                                            \
-  BufferedStackTrace stack;                                               \
+  __attribute__((uninitialized)) BufferedStackTrace stack;                \
   if (hwasan_inited)                                                      \
     stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),         \
                  nullptr, common_flags()->fast_unwind_on_malloc,          \
                  common_flags()->malloc_context_size)
 
-#define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)              \
-  BufferedStackTrace stack;                              \
-  if (hwasan_inited)                                     \
+#define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)                \
+  __attribute__((uninitialized)) BufferedStackTrace stack; \
+  if (hwasan_inited)                                       \
     stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal)
 
 void HwasanTSDInit();
