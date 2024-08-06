@@ -7506,18 +7506,22 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   SDValue FunctionAddress = Op.getOperand(2);
   SDValue StaticChain = Op.getOperand(3);
 
-  // Store the given static chain in the trampoline buffer.
-  SDValue Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                             DAG.getConstant(StaticChainOffset, dl, MVT::i64));
-  OutChains[4] = DAG.getStore(Root, dl, StaticChain, Addr,
-                              MachinePointerInfo(TrmpAddr, StaticChainOffset));
-
-  // Store the given function address in the trampoline buffer.
-  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                     DAG.getConstant(FunctionAddressOffset, dl, MVT::i64));
-  OutChains[5] =
-      DAG.getStore(Root, dl, FunctionAddress, Addr,
-                   MachinePointerInfo(TrmpAddr, FunctionAddressOffset));
+  // Store the given static chain and function pointer in the trampoline buffer.
+  struct OffsetValuePair {
+    unsigned Offset;
+    SDValue Value;
+  } OffsetValues[] = {
+      {StaticChainOffset, StaticChain},
+      {FunctionAddressOffset, FunctionAddress},
+  };
+  for (auto [Idx, OffsetValue] : llvm::enumerate(OffsetValues)) {
+    SDValue Addr =
+        DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                    DAG.getConstant(OffsetValue.Offset, dl, MVT::i64));
+    OutChains[Idx + 4] =
+        DAG.getStore(Root, dl, OffsetValue.Value, Addr,
+                     MachinePointerInfo(TrmpAddr, OffsetValue.Offset));
+  }
 
   SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 
