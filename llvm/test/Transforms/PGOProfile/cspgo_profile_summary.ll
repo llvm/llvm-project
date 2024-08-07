@@ -66,10 +66,10 @@ for.end:
   ret void
 }
 ; PGOSUMMARY-LABEL: @bar
-; PGOSUMMARY: %even.odd = select i1 %tobool{{[0-9]*}}, ptr @even, ptr @odd
+; PGOSUMMARY: br i1 %tobool, label %if.else, label %if.then
 ; PGOSUMMARY-SAME: !prof ![[BW_PGO_BAR:[0-9]+]]
 ; CSPGOSUMMARY-LABEL: @bar
-; CSPGOSUMMARY: %even.odd = select i1 %tobool{{[0-9]*}}, ptr @even, ptr @odd
+; CSPGOSUMMARY: br i1 %tobool, label %if.else, label %if.then
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR:[0-9]+]]
 
 define internal fastcc i32 @cond(i32 %i) {
@@ -102,9 +102,9 @@ for.end:
   ret void
 }
 ; CSPGOSUMMARY-LABEL: @foo
-; CSPGOSUMMARY: %even.odd.i = select i1 %tobool.i{{[0-9]*}}, ptr @even, ptr @odd
+; CSPGOSUMMARY: br i1 %tobool.i, label %if.else.i, label %if.then.i
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
-; CSPGOSUMMARY: %even.odd.i2 = select i1 %tobool.i{{[0-9]*}}, ptr @odd, ptr @even
+; CSPGOSUMMARY: br i1 %tobool.i, label %if.then.i2, label %if.else.i21
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
 
 declare dso_local i32 @bar_m(i32)

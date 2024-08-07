@@ -1932,7 +1932,8 @@ static bool replacingOperandWithVariableIsCheap(const Instruction *I,
 // PHI node (because an operand varies in each input block), add to PHIOperands.
 static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
-    DenseMap<const Use *, SmallVector<Value *, 4>> &PHIOperands) {
+    DenseMap<const Use *, SmallVector<Value *, 4>> &PHIOperands,
+    SmallVectorImpl<int> &NeededPHIs) {
   // Prune out obviously bad instructions to move. Each instruction must have
   // the same number of uses, and we check later that the uses are consistent.
   std::optional<unsigned> NumUses;
@@ -1985,6 +1986,7 @@ static bool canSinkInstructions(
   // then the other phi operands must match the instructions from Insts. This
   // also has to hold true for any phi nodes that would be created as a result
   // of sinking. Both of these cases are represented by PhiOperands.
+  int NeededPHIsAdjustment = 0;
   for (const Use &U : I0->uses()) {
     auto It = PHIOperands.find(&U);
     if (It == PHIOperands.end())
@@ -1992,6 +1994,9 @@ static bool canSinkInstructions(
       return false;
     if (!equal(Insts, It->second))
       return false;
+    // If we sink this instruction, we're not going to need the phi for it
+    // anymore.
+    --NeededPHIsAdjustment;
   }
 
   // Because SROA can't handle speculating stores of selects, try not to sink
@@ -2060,8 +2065,16 @@ static bool canSinkInstructions(
       auto &Ops = PHIOperands[&I0->getOperandUse(OI)];
       for (auto *I : Insts)
         Ops.push_back(I->getOperand(OI));
+      ++NeededPHIsAdjustment;
     }
   }
+
+  // Allow void instructions to introduce phi.
+  if (NumUses == 0 && NeededPHIsAdjustment > 0)
+    --NeededPHIsAdjustment;
+
+  int OldNeededPHIs = NeededPHIs.empty() ? 0 : NeededPHIs.back();
+  NeededPHIs.push_back(OldNeededPHIs + NeededPHIsAdjustment);
   return true;
 }
 
@@ -2306,13 +2319,13 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
   }
 
   int ScanIdx = 0;
-  SmallPtrSet<Value*,4> InstructionsToSink;
+  // Number of new PHIs introduced if sinking the first N instructions.
+  SmallVector<int> NeededPHIs;
   LockstepReverseIterator LRI(UnconditionalPreds);
   while (LRI.isValid() &&
-         canSinkInstructions(*LRI, PHIOperands)) {
+         canSinkInstructions(*LRI, PHIOperands, NeededPHIs)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
                       << "\n");
-    InstructionsToSink.insert((*LRI).begin(), (*LRI).end());
     ++ScanIdx;
     --LRI;
   }
@@ -2327,82 +2340,12 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
-    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
-      unsigned NumPHIInsts = 0;
-      for (Use &U : (*LRI)[0]->operands()) {
-        auto It = PHIOperands.find(&U);
-        if (It != PHIOperands.end() && !all_of(It->second, [&](Value *V) {
-              return InstructionsToSink.contains(V);
-            })) {
-          ++NumPHIInsts;
-          // FIXME: this check is overly optimistic. We may end up not sinking
-          // said instruction, due to the very same profitability check.
-          // See @creating_too_many_phis in sink-common-code.ll.
-        }
-      }
-      LLVM_DEBUG(dbgs() << "SINK: #phi insts: " << NumPHIInsts << "\n");
-      return NumPHIInsts <= 1;
-    };
-
-    // We've determined that we are going to sink last ScanIdx instructions,
-    // and recorded them in InstructionsToSink. Now, some instructions may be
-    // unprofitable to sink. But that determination depends on the instructions
-    // that we are going to sink.
-
-    // First, forward scan: find the first instruction unprofitable to sink,
-    // recording all the ones that are profitable to sink.
-    // FIXME: would it be better, after we detect that not all are profitable.
-    // to either record the profitable ones, or erase the unprofitable ones?
-    // Maybe we need to choose (at runtime) the one that will touch least
-    // instrs?
-    LRI.reset();
-    int Idx = 0;
-    SmallPtrSet<Value *, 4> InstructionsProfitableToSink;
-    while (Idx < ScanIdx) {
-      if (!ProfitableToSinkInstruction(LRI)) {
-        // Too many PHIs would be created.
-        LLVM_DEBUG(
-            dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
+    for (; ScanIdx > 0; --ScanIdx) {
+      // Avoid increasing the overall number of phis. Note that we may still
+      // introduce extras phis when sinking void instructions, as they get a
+      // bonus when producing this count.
+      if (NeededPHIs[ScanIdx - 1] <= 0)
         break;
-      }
-      InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
-      --LRI;
-      ++Idx;
-    }
-
-    // If no instructions can be sunk, early-return.
-    if (Idx == 0)
-      return false;
-
-    // Did we determine that (only) some instructions are unprofitable to sink?
-    if (Idx < ScanIdx) {
-      // Okay, some instructions are unprofitable.
-      ScanIdx = Idx;
-      InstructionsToSink = InstructionsProfitableToSink;
-
-      // But, that may make other instructions unprofitable, too.
-      // So, do a backward scan, do any earlier instructions become
-      // unprofitable?
-      assert(
-          !ProfitableToSinkInstruction(LRI) &&
-          "We already know that the last instruction is unprofitable to sink");
-      ++LRI;
-      --Idx;
-      while (Idx >= 0) {
-        // If we detect that an instruction becomes unprofitable to sink,
-        // all earlier instructions won't be sunk either,
-        // so preemptively keep InstructionsProfitableToSink in sync.
-        // FIXME: is this the most performant approach?
-        for (auto *I : *LRI)
-          InstructionsProfitableToSink.erase(I);
-        if (!ProfitableToSinkInstruction(LRI)) {
-          // Everything starting with this instruction won't be sunk.
-          ScanIdx = Idx;
-          InstructionsToSink = InstructionsProfitableToSink;
-        }
-        ++LRI;
-        --Idx;
-      }
     }
 
     // If no instructions can be sunk, early-return.
@@ -2445,16 +2388,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
 
   // Now that we've analyzed all potential sinking candidates, perform the
   // actual sink. We iteratively sink the last non-terminator of the source
-  // blocks into their common successor unless doing so would require too
-  // many PHI instructions to be generated (currently only one PHI is allowed
-  // per sunk instruction).
-  //
-  // We can use InstructionsToSink to discount values needing PHI-merging that will
-  // actually be sunk in a later iteration. This allows us to be more
-  // aggressive in what we sink. This does allow a false positive where we
-  // sink presuming a later value will also be sunk, but stop half way through
-  // and never actually sink it which means we produce more PHIs than intended.
-  // This is unlikely in practice though.
+  // blocks into their common successor.
   int SinkIdx = 0;
   for (; SinkIdx != ScanIdx; ++SinkIdx) {
     LLVM_DEBUG(dbgs() << "SINK: Sink: "
