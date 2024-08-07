@@ -9,7 +9,7 @@
 
 // <span>
 
-// constexpr       reverse_iterator  rbegin() const noexcept;
+// constexpr       neverse_iterator  rbegin() const noexcept;
 // constexpr const_reverse_iterator crbegin() const noexcept; // since C++23
 
 #include <span>
