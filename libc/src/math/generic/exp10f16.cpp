@@ -25,11 +25,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static constexpr size_t N_EXP10F16_EXCEPTS = 5
-#ifndef LIBC_TARGET_CPU_HAS_FMA
-                                             + 3
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+static constexpr size_t N_EXP10F16_EXCEPTS = 5;
+#else
+static constexpr size_t N_EXP10F16_EXCEPTS = 8;
 #endif
-    ;
 
 static constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
     EXP10F16_EXCEPTS = {{
