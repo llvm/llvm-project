@@ -482,6 +482,11 @@ template <class It>
 three_way_contiguous_iterator(It) -> three_way_contiguous_iterator<It>;
 #endif // TEST_STD_VER > 17
 
+template <class Iter>
+TEST_CONSTEXPR Iter base(std::basic_const_iterator<Iter> i) {
+  return i.base();
+}
+
 template <class Iter> // ADL base() for everything else (including pointers)
 TEST_CONSTEXPR Iter base(Iter i) { return i; }
 

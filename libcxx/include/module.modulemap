@@ -1700,6 +1700,7 @@ module std_private_ranges_all                        [system] {
   export std_private_functional_perfect_forward
   export std_private_ranges_owning_view
 }
+module std_private_ranges_as_const_view              [system] { header "__ranges/as_const_view.h" }
 module std_private_ranges_as_rvalue_view             [system] { header "__ranges/as_rvalue_view.h" }
 module std_private_ranges_chunk_by_view              [system] { header "__ranges/chunk_by_view.h" }
 module std_private_ranges_common_view                [system] { header "__ranges/common_view.h" }

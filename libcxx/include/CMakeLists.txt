@@ -636,6 +636,7 @@ set(files
   __random/weibull_distribution.h
   __ranges/access.h
   __ranges/all.h
+  __ranges/as_const_view.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
