@@ -1633,7 +1633,6 @@ add_fp_unittest(
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
-    
 )
 
 add_fp_unittest(
