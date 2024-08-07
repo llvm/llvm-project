@@ -8,38 +8,38 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpC
 ; GCN-NEXT:    s_mov_b32 s1, exec_lo
 ; GCN-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GCN-NEXT:    s_mov_b32 m0, s0
-; GCN-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
-; GCN-NEXT:    lds_param_load v4, attr1.x wait_vdst:15
-; GCN-NEXT:    lds_param_load v5, attr1.y wait_vdst:15
-; GCN-NEXT:    lds_param_load v2, attr1.z wait_vdst:15
-; GCN-NEXT:    lds_param_load v7, attr1.w wait_vdst:15
-; GCN-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v3
-; GCN-NEXT:    v_interp_p10_f32 v6, v5, v0, v5 wait_exp:2
-; GCN-NEXT:    v_interp_p10_f32 v9, v2, v0, v2 wait_exp:1
-; GCN-NEXT:    v_interp_p10_f32 v8, v7, v0, v7 wait_exp:0
-; GCN-NEXT:    v_interp_p10_f32 v0, v4, v0, v4 wait_exp:7
+; GCN-NEXT:    v_mbcnt_lo_u32_b32 v6, -1, 0
+; GCN-NEXT:    lds_param_load v2, attr1.x wait_vdst:15
+; GCN-NEXT:    lds_param_load v3, attr1.y wait_vdst:15
+; GCN-NEXT:    lds_param_load v4, attr1.z wait_vdst:15
+; GCN-NEXT:    lds_param_load v5, attr1.w wait_vdst:15
+; GCN-NEXT:    v_mbcnt_hi_u32_b32 v6, -1, v6
+; GCN-NEXT:    v_interp_p10_f32 v7, v3, v0, v3 wait_exp:2
+; GCN-NEXT:    v_interp_p10_f32 v9, v4, v0, v4 wait_exp:1
+; GCN-NEXT:    v_interp_p10_f32 v8, v5, v0, v5 wait_exp:0
+; GCN-NEXT:    v_interp_p10_f32 v0, v2, v0, v2 wait_exp:7
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GCN-NEXT:    v_interp_p2_f32 v5, v5, v1, v6 wait_exp:7
-; GCN-NEXT:    v_interp_p2_f32 v2, v2, v1, v9 wait_exp:7
+; GCN-NEXT:    v_interp_p2_f32 v3, v3, v1, v7 wait_exp:7
+; GCN-NEXT:    v_interp_p2_f32 v4, v4, v1, v9 wait_exp:7
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GCN-NEXT:    v_interp_p2_f32 v7, v7, v1, v8 wait_exp:7
-; GCN-NEXT:    v_interp_p2_f32 v1, v4, v1, v0 wait_exp:7
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GCN-NEXT:    v_interp_p2_f32 v5, v5, v1, v8 wait_exp:7
+; GCN-NEXT:    v_interp_p2_f32 v1, v2, v1, v0 wait_exp:7
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GCN-NEXT:    v_mov_b32_dpp v3, v3 dpp8:[1,0,3,2,5,4,7,6]
 ; GCN-NEXT:    v_mov_b32_dpp v5, v5 dpp8:[1,0,3,2,5,4,7,6]
-; GCN-NEXT:    v_and_b32_e32 v3, 1, v3
-; GCN-NEXT:    v_mov_b32_dpp v7, v7 dpp8:[1,0,3,2,5,4,7,6]
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v5, v2, vcc_lo
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GCN-NEXT:    v_dual_cndmask_b32 v4, v2, v5 :: v_dual_cndmask_b32 v5, v1, v7
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v7, v1, vcc_lo
-; GCN-NEXT:    v_mov_b32_dpp v4, v4 dpp8:[1,0,3,2,5,4,7,6]
+; GCN-NEXT:    v_and_b32_e32 v6, 1, v6
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc_lo
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    v_dual_cndmask_b32 v2, v4, v3 :: v_dual_cndmask_b32 v3, v1, v5
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
+; GCN-NEXT:    v_mov_b32_dpp v2, v2 dpp8:[1,0,3,2,5,4,7,6]
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GCN-NEXT:    v_mov_b32_dpp v5, v5 dpp8:[1,0,3,2,5,4,7,6]
+; GCN-NEXT:    v_mov_b32_dpp v3, v3 dpp8:[1,0,3,2,5,4,7,6]
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1
 ; GCN-NEXT:    exp dual_src_blend0 v0, v1, off, off
-; GCN-NEXT:    exp dual_src_blend1 v4, v5, off, off done
+; GCN-NEXT:    exp dual_src_blend1 v2, v3, off, off done
 ; GCN-NEXT:    s_endpgm
 .entry:
   %InterpCenter.i0 = extractelement <2 x float> %InterpCenter, i64 0
