@@ -4698,7 +4698,22 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   // Enter the scope of this instantiation. We don't use
   // PushDeclContext because we don't have a scope.
   Sema::ContextRAII savedContext(*this, Decl);
+
+  FunctionDecl *Source = Proto->getExtProtoInfo().ExceptionSpec.SourceTemplate;
+  FunctionTemplateDecl *SourceTemplate = Source->getDescribedFunctionTemplate();
+  llvm::SmallDenseMap<clang::Decl *, clang::Decl *> InstTemplateParams;
+  if (CurrentInstantiationScope && SourceTemplate)
+    if (TemplateParameterList *TPL = SourceTemplate->getTemplateParameters())
+      for (NamedDecl *TemplateParam : *TPL)
+        if (auto *Found =
+                CurrentInstantiationScope->findInstantiationOf(TemplateParam))
+          if (auto *InstTemplateParam = Found->dyn_cast<clang::Decl *>())
+            InstTemplateParams[TemplateParam] = InstTemplateParam;
+
   LocalInstantiationScope Scope(*this);
+  for (auto [TemplateParam, InstTemplateParam] : InstTemplateParams) {
+    Scope.InstantiatedLocal(TemplateParam, InstTemplateParam);
+  }
 
   MultiLevelTemplateArgumentList TemplateArgs =
       getTemplateInstantiationArgs(Decl, Decl->getLexicalDeclContext(),
