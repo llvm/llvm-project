@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_spin_destroy.h"
@@ -14,7 +15,6 @@
 #include "src/pthread/pthread_spin_trylock.h"
 #include "src/pthread/pthread_spin_unlock.h"
 #include "test/IntegrationTest/test.h"
-#include <errno.h>
 #include <pthread.h>
 
 namespace {
