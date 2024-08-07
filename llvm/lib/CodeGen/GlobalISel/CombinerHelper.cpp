@@ -7443,19 +7443,14 @@ bool CombinerHelper::matchFoldAPlusC1MinusC2(const MachineInstr &MI,
   if (!MRI.hasOneNonDBGUse(Add->getReg(0)))
     return false;
 
-  std::optional<APInt> MaybeC2 = getIConstantVRegVal(Sub->getRHSReg(), MRI);
-  if (!MaybeC2)
-    return false;
-
-  std::optional<APInt> MaybeC1 = getIConstantVRegVal(Add->getRHSReg(), MRI);
-  if (!MaybeC1)
-    return false;
+  APInt C2 = getIConstantFromReg(Sub->getRHSReg(), MRI);
+  APInt C1 = getIConstantFromReg(Add->getRHSReg(), MRI);
 
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto Const = B.buildConstant(DstTy, *MaybeC1 - *MaybeC2);
+    auto Const = B.buildConstant(DstTy, C1 - C2);
     B.buildAdd(Dst, Add->getLHSReg(), Const);
   };
 
@@ -7471,19 +7466,14 @@ bool CombinerHelper::matchFoldC2MinusAPlusC1(const MachineInstr &MI,
   if (!MRI.hasOneNonDBGUse(Add->getReg(0)))
     return false;
 
-  std::optional<APInt> MaybeC2 = getIConstantVRegVal(Sub->getLHSReg(), MRI);
-  if (!MaybeC2)
-    return false;
-
-  std::optional<APInt> MaybeC1 = getIConstantVRegVal(Add->getRHSReg(), MRI);
-  if (!MaybeC1)
-    return false;
+  APInt C2 = getIConstantFromReg(Sub->getLHSReg(), MRI);
+  APInt C1 = getIConstantFromReg(Add->getRHSReg(), MRI);
 
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto Const = B.buildConstant(DstTy, *MaybeC2 - *MaybeC1);
+    auto Const = B.buildConstant(DstTy, C2 - C1);
     B.buildSub(Dst, Const, Add->getLHSReg());
   };
 
@@ -7499,19 +7489,14 @@ bool CombinerHelper::matchFoldAMinusC1MinusC2(const MachineInstr &MI,
   if (!MRI.hasOneNonDBGUse(Sub2->getReg(0)))
     return false;
 
-  std::optional<APInt> MaybeC2 = getIConstantVRegVal(Sub1->getRHSReg(), MRI);
-  if (!MaybeC2)
-    return false;
-
-  std::optional<APInt> MaybeC1 = getIConstantVRegVal(Sub2->getRHSReg(), MRI);
-  if (!MaybeC1)
-    return false;
+  APInt C2 = getIConstantFromReg(Sub1->getRHSReg(), MRI);
+  APInt C1 = getIConstantFromReg(Sub2->getRHSReg(), MRI);
 
   Register Dst = Sub1->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto Const = B.buildConstant(DstTy, *MaybeC1 + *MaybeC2);
+    auto Const = B.buildConstant(DstTy, C1 + C2);
     B.buildSub(Dst, Sub2->getLHSReg(), Const);
   };
 
@@ -7527,19 +7512,14 @@ bool CombinerHelper::matchFoldC1Minus2MinusC2(const MachineInstr &MI,
   if (!MRI.hasOneNonDBGUse(Sub2->getReg(0)))
     return false;
 
-  std::optional<APInt> MaybeC2 = getIConstantVRegVal(Sub1->getRHSReg(), MRI);
-  if (!MaybeC2)
-    return false;
-
-  std::optional<APInt> MaybeC1 = getIConstantVRegVal(Sub2->getLHSReg(), MRI);
-  if (!MaybeC1)
-    return false;
+  APInt C2 = getIConstantFromReg(Sub1->getRHSReg(), MRI);
+  APInt C1 = getIConstantFromReg(Sub2->getLHSReg(), MRI);
 
   Register Dst = Sub1->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto Const = B.buildConstant(DstTy, *MaybeC1 - *MaybeC2);
+    auto Const = B.buildConstant(DstTy, C1 - C2);
     B.buildSub(Dst, Const, Sub2->getRHSReg());
   };
 
@@ -7555,19 +7535,14 @@ bool CombinerHelper::matchFoldAMinusC1PlusC2(const MachineInstr &MI,
   if (!MRI.hasOneNonDBGUse(Sub->getReg(0)))
     return false;
 
-  std::optional<APInt> MaybeC2 = getIConstantVRegVal(Add->getRHSReg(), MRI);
-  if (!MaybeC2)
-    return false;
-
-  std::optional<APInt> MaybeC1 = getIConstantVRegVal(Sub->getRHSReg(), MRI);
-  if (!MaybeC1)
-    return false;
+  APInt C2 = getIConstantFromReg(Add->getRHSReg(), MRI);
+  APInt C1 = getIConstantFromReg(Sub->getRHSReg(), MRI);
 
   Register Dst = Add->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto Const = B.buildConstant(DstTy, *MaybeC2 - *MaybeC1);
+    auto Const = B.buildConstant(DstTy, C2 - C1);
     B.buildAdd(Dst, Sub->getLHSReg(), Const);
   };
 
