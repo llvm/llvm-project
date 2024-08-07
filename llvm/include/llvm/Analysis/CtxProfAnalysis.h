@@ -15,6 +15,35 @@
 #include <map>
 
 namespace llvm {
+
+class CtxProfAnalysis;
+
+/// The instrumented contextual profile, produced by the CtxProfAnalysis.
+class PGOContextualProfile {
+  std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
+
+public:
+  explicit PGOContextualProfile(PGOCtxProfContext::CallTargetMapTy &&Profiles)
+      : Profiles(std::move(Profiles)) {}
+  PGOContextualProfile() = default;
+  PGOContextualProfile(const PGOContextualProfile &) = delete;
+  PGOContextualProfile(PGOContextualProfile &&) = default;
+
+  operator bool() const { return Profiles.has_value(); }
+
+  const PGOCtxProfContext::CallTargetMapTy &profiles() const {
+    return *Profiles;
+  }
+
+  bool invalidate(Module &, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &) {
+    // Check whether the analysis has been explicitly invalidated. Otherwise,
+    // it's stateless and remains preserved.
+    auto PAC = PA.getChecker<CtxProfAnalysis>();
+    return !PAC.preservedWhenStateless();
+  }
+};
+
 class CtxProfAnalysis : public AnalysisInfoMixin<CtxProfAnalysis> {
   StringRef Profile;
 
@@ -22,23 +51,9 @@ public:
   static AnalysisKey Key;
   explicit CtxProfAnalysis(StringRef Profile) : Profile(Profile) {};
 
-  class Result {
-    std::optional<PGOContextualProfile::CallTargetMapTy> Profiles;
+  using Result = PGOContextualProfile;
 
-  public:
-    explicit Result(PGOContextualProfile::CallTargetMapTy &&Profiles)
-        : Profiles(std::move(Profiles)) {}
-    Result() = default;
-    Result(const Result &) = delete;
-    Result(Result &&) = default;
-
-    operator bool() const { return Profiles.has_value(); }
-    const PGOContextualProfile::CallTargetMapTy &profiles() const {
-      return *Profiles;
-    }
-  };
-
-  Result run(Module &M, ModuleAnalysisManager &MAM);
+  PGOContextualProfile run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 class CtxProfAnalysisPrinterPass

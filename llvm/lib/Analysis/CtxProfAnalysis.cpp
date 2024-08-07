@@ -24,7 +24,7 @@
 
 namespace llvm {
 namespace json {
-Value toJSON(const PGOContextualProfile &P) {
+Value toJSON(const PGOCtxProfContext &P) {
   Object Ret;
   Ret["Guid"] = P.guid();
   Ret["Counters"] = Array(P.counters());
@@ -49,7 +49,7 @@ Value toJSON(const PGOContextualProfile &P) {
   return Ret;
 }
 
-Value toJSON(const PGOContextualProfile::CallTargetMapTy &P) {
+Value toJSON(const PGOCtxProfContext::CallTargetMapTy &P) {
   Array Ret;
   for (const auto &[_, Ctx] : P)
     Ret.push_back(toJSON(Ctx));
