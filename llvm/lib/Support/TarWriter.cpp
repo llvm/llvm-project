@@ -23,9 +23,15 @@
 
 #include "llvm/Support/TarWriter.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <system_error>
+#include <utility>
 
 using namespace llvm;
 

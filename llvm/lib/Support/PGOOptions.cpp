@@ -8,6 +8,8 @@
 
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <assert.h>
+#include <utility>
 
 using namespace llvm;
 

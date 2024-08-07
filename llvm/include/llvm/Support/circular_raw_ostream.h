@@ -15,6 +15,8 @@
 #define LLVM_SUPPORT_CIRCULAR_RAW_OSTREAM_H
 
 #include "llvm/Support/raw_ostream.h"
+#include <stddef.h>
+#include <stdint.h>
 
 namespace llvm {
   /// circular_raw_ostream - A raw_ostream which *can* save its data

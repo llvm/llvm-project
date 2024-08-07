@@ -47,6 +47,10 @@
 #include <cstdint>
 #include <cstring>
 
+namespace llvm {
+template <typename T> class SmallVectorImpl;
+} // namespace llvm
+
 // The basic MD5 functions.
 
 // F and G are optimized compared to their RFC 1321 definitions for

@@ -16,16 +16,22 @@
 #ifndef LLVM_ADT_APFIXEDPOINT_H
 #define LLVM_ADT_APFIXEDPOINT_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <assert.h>
+#include <stdint.h>
+#include <string>
 
 namespace llvm {
 
 class APFloat;
 struct fltSemantics;
+template <typename T> class SmallVectorImpl;
 
 /// The fixed point semantics work similarly to fltSemantics. The width
 /// specifies the whole bit width of the underlying scaled integer (with padding

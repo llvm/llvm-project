@@ -8,6 +8,8 @@
 
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <assert.h>
+#include <stddef.h>
 
 using namespace llvm;
 

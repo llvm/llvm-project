@@ -15,10 +15,12 @@
 
 #include "llvm/Support/Error.h"
 #include <cstdint>
+#include <stddef.h>
 #include <string>
 #include <vector>
 
 namespace llvm {
+class StringRef;
 
 template <class InputBytes> std::string encodeBase64(InputBytes const &Bytes) {
   static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -7,10 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BinaryStreamReader.h"
-
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
+#include <stddef.h>
+
+namespace llvm {
+class BinaryStream;
+enum class endianness;
+} // namespace llvm
 
 using namespace llvm;
 

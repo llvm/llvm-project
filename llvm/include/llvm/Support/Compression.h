@@ -13,10 +13,12 @@
 #ifndef LLVM_SUPPORT_COMPRESSION_H
 #define LLVM_SUPPORT_COMPRESSION_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <stddef.h>
+#include <stdint.h>
 
 namespace llvm {
+template <typename T> class ArrayRef;
 template <typename T> class SmallVectorImpl;
 class Error;
 

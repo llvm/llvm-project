@@ -14,6 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ConvertEBCDIC.h"
+#include "llvm/ADT/SmallVector.h"
+#include <assert.h>
+#include <stddef.h>
 
 using namespace llvm;
 

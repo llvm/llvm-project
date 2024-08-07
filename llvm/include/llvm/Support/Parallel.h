@@ -9,18 +9,26 @@
 #ifndef LLVM_SUPPORT_PARALLEL_H
 #define LLVM_SUPPORT_PARALLEL_H
 
+#include "llvm-c/Error.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"
-
 #include <algorithm>
+#include <assert.h>
 #include <condition_variable>
 #include <functional>
+#include <iterator>
+#include <limits.h>
 #include <mutex>
+#include <stddef.h>
+#include <stdint.h>
+#include <vector>
 
 namespace llvm {
+template <typename Fn> class function_ref;
 
 namespace parallel {
 

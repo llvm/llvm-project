@@ -15,9 +15,8 @@
 #ifndef LLVM_SUPPORT_RANDOMNUMBERGENERATOR_H_
 #define LLVM_SUPPORT_RANDOMNUMBERGENERATOR_H_
 
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h" // Needed for uint64_t on Windows.
 #include <random>
+#include <stddef.h>
 #include <system_error>
 
 namespace llvm {

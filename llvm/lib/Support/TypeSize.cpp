@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TypeSize.h"
+#include "DebugOptions.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/WithColor.h"
-
-#include "DebugOptions.h"
 
 using namespace llvm;
 

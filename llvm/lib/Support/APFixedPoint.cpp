@@ -13,7 +13,9 @@
 
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
-
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cmath>
 
 namespace llvm {

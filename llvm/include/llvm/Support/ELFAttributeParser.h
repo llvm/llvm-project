@@ -11,15 +11,17 @@
 
 #include "ELFAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
-
 #include <optional>
+#include <stdint.h>
 #include <unordered_map>
 
 namespace llvm {
-class StringRef;
 class ScopedPrinter;
+enum class endianness;
+template <typename T> class SmallVectorImpl;
 
 class ELFAttributeParser {
   StringRef vendor;

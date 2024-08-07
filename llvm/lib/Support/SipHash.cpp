@@ -19,6 +19,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
+#include <stddef.h>
 
 using namespace llvm;
 using namespace support;

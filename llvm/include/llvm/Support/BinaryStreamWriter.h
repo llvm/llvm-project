@@ -21,6 +21,8 @@
 #include <utility>
 
 namespace llvm {
+class WritableBinaryStream;
+enum class endianness;
 
 /// Provides write only access to a subclass of `WritableBinaryStream`.
 /// Provides bounds checking and helpers for writing certain common data types

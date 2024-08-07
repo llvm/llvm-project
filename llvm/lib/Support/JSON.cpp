@@ -7,7 +7,9 @@
 //===---------------------------------------------------------------------===//
 
 #include "llvm/Support/JSON.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
@@ -16,7 +18,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
 #include <cerrno>
+#include <cstdlib>
 #include <optional>
+#include <string.h>
 
 namespace llvm {
 namespace json {

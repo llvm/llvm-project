@@ -29,14 +29,17 @@
 #define LLVM_SUPPORT_MD5_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Endian.h"
 #include <array>
 #include <cstdint>
+#include <utility>
 
 namespace llvm {
 
 template <unsigned N> class SmallString;
 template <typename T> class ArrayRef;
+template <typename T> class SmallVectorImpl;
 
 class MD5 {
 public:

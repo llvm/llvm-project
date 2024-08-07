@@ -17,8 +17,11 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include <algorithm>
+#include <assert.h>
 #include <string.h>
 
 using namespace llvm;

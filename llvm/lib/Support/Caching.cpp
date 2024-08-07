@@ -13,13 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Caching.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include <system_error>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
 #else
 #include <io.h>
 #endif

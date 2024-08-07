@@ -39,18 +39,22 @@
 #ifndef LLVM_SUPPORT_BALANCED_PARTITIONING_H
 #define LLVM_SUPPORT_BALANCED_PARTITIONING_H
 
-#include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
-
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 #include <random>
+#include <stdint.h>
 #include <vector>
 
 namespace llvm {
 
 class ThreadPoolInterface;
+class raw_ostream;
+
 /// A function with a set of utility nodes where it is beneficial to order two
 /// functions close together if they have similar utility nodes
 class BPFunctionNode {
