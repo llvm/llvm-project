@@ -19,8 +19,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 
-#include <iostream>
-
 namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(
     mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
@@ -32,7 +30,7 @@ mlir::LogicalResult runCIRToCIRPasses(
     bool enableMem2Reg) {
 
   mlir::PassManager pm(mlirCtx);
-  pm.addPass(mlir::createMergeCleanupsPass());
+  pm.addPass(mlir::createCIRSimplifyPass());
 
   // TODO(CIR): Make this actually propagate errors correctly. This is stubbed
   // in to get rebases going.

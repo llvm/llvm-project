@@ -26,7 +26,7 @@ std::unique_ptr<Pass> createLifetimeCheckPass(ArrayRef<StringRef> remark,
                                               ArrayRef<StringRef> hist,
                                               unsigned hist_limit,
                                               clang::ASTContext *astCtx);
-std::unique_ptr<Pass> createMergeCleanupsPass();
+std::unique_ptr<Pass> createCIRSimplifyPass();
 std::unique_ptr<Pass> createDropASTPass();
 std::unique_ptr<Pass> createSCFPreparePass();
 std::unique_ptr<Pass> createLoweringPreparePass();

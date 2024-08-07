@@ -155,28 +155,28 @@ int *inc_p(int *i) {
 
 void floats(float f) {
 // CHECK: cir.func @{{.+}}floats{{.+}}
-  +f; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.float, !cir.float
-  -f; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.float, !cir.float
+  f = +f; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.float, !cir.float
+  f = -f; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.float, !cir.float
   ++f; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.float, !cir.float
   --f; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.float, !cir.float
   f++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.float, !cir.float
   f--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.float, !cir.float
 
-  !f;
+  f = !f;
   // CHECK: %[[#F_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : !cir.float), !cir.bool
   // CHECK: = cir.unary(not, %[[#F_BOOL]]) : !cir.bool, !cir.bool
 }
 
 void doubles(double d) {
 // CHECK: cir.func @{{.+}}doubles{{.+}}
-  +d; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.double, !cir.double
-  -d; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.double, !cir.double
+  d = +d; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.double, !cir.double
+  d = -d; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.double, !cir.double
   ++d; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.double, !cir.double
   --d; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.double, !cir.double
   d++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : !cir.double, !cir.double
   d--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : !cir.double, !cir.double
 
-  !d;
+  d = !d;
   // CHECK: %[[#D_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : !cir.double), !cir.bool
   // CHECK: = cir.unary(not, %[[#D_BOOL]]) : !cir.bool, !cir.bool
 }
@@ -185,7 +185,7 @@ void pointers(int *p) {
 // CHECK: cir.func @{{[^ ]+}}pointers
   // CHECK: %[[#P:]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-  +p;
+  p = +p;
   // CHECK: cir.unary(plus, %{{.+}}) : !cir.ptr<!s32i>, !cir.ptr<!s32i>
 
   ++p;
@@ -205,7 +205,7 @@ void pointers(int *p) {
   // CHECK:  %[[#RES:]] = cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#DEC]] : !s32i), !cir.ptr<!s32i>
   // CHECK:  cir.store %[[#RES]], %[[#P]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-  !p;
+  bool p1 = !p;
   // %[[BOOLPTR:]] = cir.cast(ptr_to_bool, %15 : !cir.ptr<!s32i>), !cir.bool
   // cir.unary(not, %[[BOOLPTR]]) : !cir.bool, !cir.bool
 }
@@ -213,20 +213,20 @@ void pointers(int *p) {
 void chars(char c) {
 // CHECK: cir.func @{{.+}}chars{{.+}}
 
-  +c;
+  int c1 = +c;
   // CHECK: %[[#PROMO:]] = cir.cast(integral, %{{.+}} : !s8i), !s32i
   // CHECK: cir.unary(plus, %[[#PROMO]]) : !s32i, !s32i
-  -c;
+  int c2 = -c;
   // CHECK: %[[#PROMO:]] = cir.cast(integral, %{{.+}} : !s8i), !s32i
   // CHECK: cir.unary(minus, %[[#PROMO]]) : !s32i, !s32i
 
   // Chars can go through some integer promotion codegen paths even when not promoted.
-  ++c; // CHECK: cir.unary(inc, %7) : !s8i, !s8i
-  --c; // CHECK: cir.unary(dec, %9) : !s8i, !s8i
-  c++; // CHECK: cir.unary(inc, %11) : !s8i, !s8i
-  c--; // CHECK: cir.unary(dec, %13) : !s8i, !s8i
+  ++c; // CHECK: cir.unary(inc, %10) : !s8i, !s8i
+  --c; // CHECK: cir.unary(dec, %12) : !s8i, !s8i
+  c++; // CHECK: cir.unary(inc, %14) : !s8i, !s8i
+  c--; // CHECK: cir.unary(dec, %16) : !s8i, !s8i
 
-  !c;
+  bool c3 = !c;
   // CHECK: %[[#C_BOOL:]] = cir.cast(int_to_bool, %{{[0-9]+}} : !s8i), !cir.bool
   // CHECK: cir.unary(not, %[[#C_BOOL]]) : !cir.bool, !cir.bool
 }
