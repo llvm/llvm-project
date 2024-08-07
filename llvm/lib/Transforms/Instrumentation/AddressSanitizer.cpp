@@ -1885,10 +1885,6 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   }
 
   InstrumentationIRBuilder IRB(InsertBefore);
-  if (CLAsanDormant)
-    IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
-        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
-        InsertBefore, false));
 
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
 
@@ -1972,6 +1968,11 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
     TypeSize TypeStoreSize, bool IsWrite, Value *SizeArgument, bool UseCalls,
     uint32_t Exp, RuntimeCallInserter &RTCI) {
   InstrumentationIRBuilder IRB(InsertBefore);
+  if (CLAsanDormant)
+    IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
+        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
+        InsertBefore, false));
+
   Value *NumBits = IRB.CreateTypeSize(IntptrTy, TypeStoreSize);
   Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
 
