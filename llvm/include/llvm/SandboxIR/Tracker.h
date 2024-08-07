@@ -58,6 +58,7 @@ class LoadInst;
 class StoreInst;
 class Instruction;
 class Tracker;
+class AllocaInst;
 
 /// The base class for IR Change classes.
 class IRChangeBase {
@@ -255,6 +256,57 @@ public:
 #endif
 };
 
+class AllocaSetAllocatedType final : public IRChangeBase {
+  AllocaInst *Alloca;
+  Type *OrigType;
+
+public:
+  AllocaSetAllocatedType(AllocaInst *Alloca, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "AllocaSetAllocatedType";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class AllocaSetAlignment final : public IRChangeBase {
+  AllocaInst *Alloca;
+  Align OrigAlign;
+
+public:
+  AllocaSetAlignment(AllocaInst *Alloca, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "AllocaSetAlignment";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class AllocaSetUsedWithInAlloca final : public IRChangeBase {
+  AllocaInst *Alloca;
+  bool Orig;
+
+public:
+  AllocaSetUsedWithInAlloca(AllocaInst *Alloca, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "AllocaSetUsedWithInAlloca";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 class CallBrInstSetIndirectDest : public IRChangeBase {
   CallBrInst *CallBr;
   unsigned Idx;
@@ -326,6 +378,23 @@ public:
   }
   LLVM_DUMP_METHOD void dump() const final;
 #endif // NDEBUG
+};
+
+class CreateAndInsertInst final : public IRChangeBase {
+  Instruction *NewI = nullptr;
+
+public:
+  CreateAndInsertInst(Instruction *NewI, Tracker &Tracker)
+      : IRChangeBase(Tracker), NewI(NewI) {}
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "CreateAndInsertInst";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
 };
 
 /// The tracker collects all the change objects and implements the main API for
