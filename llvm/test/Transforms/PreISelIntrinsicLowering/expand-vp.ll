@@ -1,12 +1,12 @@
 ; Partial expansion cases (still VP with parameter expansions).
-; RUN: opt --expandvp --expandvp-override-evl-transform=Legal --expandvp-override-mask-transform=Legal -S < %s | FileCheck %s --check-prefix=LEGAL_LEGAL
-; RUN: opt --expandvp --expandvp-override-evl-transform=Discard --expandvp-override-mask-transform=Legal -S < %s | FileCheck %s --check-prefix=DISCARD_LEGAL
-; RUN: opt --expandvp --expandvp-override-evl-transform=Convert --expandvp-override-mask-transform=Legal -S < %s | FileCheck %s --check-prefix=CONVERT_LEGAL
+; RUN: opt -passes=pre-isel-intrinsic-lowering --expandvp-override-evl-transform=Legal --expandvp-override-mask-transform=Legal -S < %s | FileCheck %s --check-prefix=LEGAL_LEGAL
+; RUN: opt -passes=pre-isel-intrinsic-lowering --expandvp-override-evl-transform=Discard --expandvp-override-mask-transform=Legal -S < %s | FileCheck %s --check-prefix=DISCARD_LEGAL
+; RUN: opt -passes=pre-isel-intrinsic-lowering --expandvp-override-evl-transform=Convert --expandvp-override-mask-transform=Legal -S < %s | FileCheck %s --check-prefix=CONVERT_LEGAL
 ; Full expansion cases (all expanded to non-VP).
-; RUN: opt --expandvp --expandvp-override-evl-transform=Discard --expandvp-override-mask-transform=Convert -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
-; RUN: opt --expandvp -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
-; RUN: opt --expandvp --expandvp-override-evl-transform=Legal --expandvp-override-mask-transform=Convert -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
-; RUN: opt --expandvp --expandvp-override-evl-transform=Convert --expandvp-override-mask-transform=Convert -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
+; RUN: opt -passes=pre-isel-intrinsic-lowering --expandvp-override-evl-transform=Discard --expandvp-override-mask-transform=Convert -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
+; RUN: opt -passes=pre-isel-intrinsic-lowering -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
+; RUN: opt -passes=pre-isel-intrinsic-lowering --expandvp-override-evl-transform=Legal --expandvp-override-mask-transform=Convert -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
+; RUN: opt -passes=pre-isel-intrinsic-lowering --expandvp-override-evl-transform=Convert --expandvp-override-mask-transform=Convert -S < %s | FileCheck %s --check-prefix=ALL-CONVERT
 
 
 ; Fixed-width vectors
