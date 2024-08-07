@@ -1,9 +1,12 @@
 // RUN: %clangxx_nsan -O0 -g -DSOFTMAX=softmax %s -o %t
 // RUN: NSAN_OPTIONS=check_nan=true,halt_on_error=0,log2_max_relative_error=19 %run %t 2>&1 | FileCheck %s
+
 // RUN: %clangxx_nsan -O0 -g -DSOFTMAX=softmax %s -o %t
 // RUN: NSAN_OPTIONS=check_nan=true,halt_on_error=0,log2_max_relative_error=19 %run %t 2>&1 | FileCheck %s
+
 // RUN: %clangxx_nsan -O0 -g -DSOFTMAX=stable_softmax %s -o %t
 // RUN: NSAN_OPTIONS=check_nan=true,halt_on_error=0,log2_max_relative_error=19 %run %t 2>&1 
+
 // RUN: %clangxx_nsan -O0 -g -DSOFTMAX=stable_softmax %s -o %t
 // RUN: NSAN_OPTIONS=check_nan=true,halt_on_error=0,log2_max_relative_error=19 %run %t 2>&1
 
