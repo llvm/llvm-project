@@ -24,18 +24,15 @@ namespace llvm {
 class DXILFinalizeLinkage : public PassInfoMixin<DXILFinalizeLinkage> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
-
   static bool isRequired() { return true; }
 };
 
 class DXILFinalizeLinkageLegacy : public ModulePass {
-
 public:
   DXILFinalizeLinkageLegacy() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override;
 
   static char ID; // Pass identification.
-
-  bool runOnModule(Module &M) override;
 };
 } // namespace llvm
 
