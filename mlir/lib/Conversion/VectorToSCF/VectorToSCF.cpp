@@ -1125,8 +1125,8 @@ struct ScalableTransposeTransferWriteConversion
           ArrayRef<OpFoldResult>(*maskDims).drop_front());
     }
 
-    ValueRange initLoopArgs =
-        isTensorOp(writeOp) ? writeOp.getSource() : ValueRange{};
+    Value initDest = isTensorOp(writeOp) ? writeOp.getSource() : Value{};
+    ValueRange initLoopArgs = initDest ? initDest : ValueRange{};
     auto result = rewriter.create<scf::ForOp>(
         loc, lb, ub, step, initLoopArgs,
         [&](OpBuilder &b, Location loc, Value iv, ValueRange loopIterArgs) {
