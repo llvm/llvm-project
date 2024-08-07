@@ -796,7 +796,7 @@ functions:
       - type: long double
   - name: remainderf128
     standards:
-      - llvm_libc_ext
+      - stdc
     return_type: float128
     arguments:
       - type: float128
