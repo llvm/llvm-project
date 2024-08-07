@@ -1145,7 +1145,6 @@ Value *PHINode::removeIncomingValue(unsigned Idx) {
   auto &Tracker = Ctx.getTracker();
   if (Tracker.isTracking())
     Tracker.track(std::make_unique<PHIRemoveIncoming>(*this, Idx, Tracker));
-
   llvm::Value *LLVMV =
       cast<llvm::PHINode>(Val)->removeIncomingValue(Idx,
                                                     /*DeletePHIIfEmpty=*/false);
@@ -1176,6 +1175,27 @@ Value *PHINode::getIncomingValueForBlock(const BasicBlock *BB) const {
 Value *PHINode::hasConstantValue() const {
   llvm::Value *LLVMV = cast<llvm::PHINode>(Val)->hasConstantValue();
   return LLVMV != nullptr ? Ctx.getValue(LLVMV) : nullptr;
+}
+void PHINode::replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New) {
+  assert(New && Old && "Sandbox IR PHI node got a null basic block!");
+  for (unsigned Idx = 0, NumOps = cast<llvm::PHINode>(Val)->getNumOperands();
+       Idx != NumOps; ++Idx)
+    if (getIncomingBlock(Idx) == Old)
+      setIncomingBlock(Idx, New);
+}
+void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
+  // Avoid duplicate tracking by going through this->removeIncomingValue here at
+  // the expense of some performance. Copy PHI::removeIncomingValueIf more
+  // directly if performance becomes an issue.
+
+  // Removing the element at index X, moves the element previously at X + 1
+  // to X. Working from the end avoids complications from that.
+  unsigned Idx = getNumIncomingValues();
+  while (Idx > 0) {
+    if (Predicate(Idx - 1))
+      removeIncomingValue(Idx - 1);
+    --Idx;
+  }
 }
 
 static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {

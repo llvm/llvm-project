@@ -779,6 +779,15 @@ bb2:
   EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
 
+  // Check removeIncomingValueIf(FromBB1).
+  Ctx.save();
+  PHI->removeIncomingValueIf(
+      [&](unsigned Idx) { return PHI->getIncomingBlock(Idx) == BB1; });
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   // Check removeIncomingValue() remove all.
   Ctx.save();
   PHI->removeIncomingValue(0u);
