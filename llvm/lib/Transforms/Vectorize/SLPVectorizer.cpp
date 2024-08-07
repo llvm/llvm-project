@@ -6493,6 +6493,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
+  case Instruction::Freeze:
     return TreeEntry::Vectorize;
   case Instruction::GetElementPtr: {
     // We don't combine GEPs with complicated (nested) indexing.
@@ -7330,7 +7331,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::AShr:
     case Instruction::And:
     case Instruction::Or:
-    case Instruction::Xor: {
+    case Instruction::Xor:
+    case Instruction::Freeze: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of un/bin op.\n");
@@ -10118,6 +10120,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
+  case Instruction::Freeze:
+    return CommonCost;
   default:
     llvm_unreachable("Unknown instruction");
   }
@@ -13383,6 +13387,24 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
+      V = FinalShuffle(V, E, VecTy);
+
+      E->VectorizedValue = V;
+      ++NumVectorInstructions;
+
+      return V;
+    }
+    case Instruction::Freeze: {
+      setInsertPointAfterBundle(E);
+
+      Value *Op = vectorizeOperand(E, 0, PostponedPHIs);
+
+      if (E->VectorizedValue) {
+        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
+        return E->VectorizedValue;
+      }
+
+      Value *V = Builder.CreateFreeze(Op);
       V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;
