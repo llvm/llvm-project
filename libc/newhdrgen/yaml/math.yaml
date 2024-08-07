@@ -1545,19 +1545,19 @@ functions:
       - stdc
     return_type: double
     arguments:
-      - double *
+      - type: double *
   - name: getpayloadl
     standards:
       - stdc
     return_type: long double
     arguments:
-      - long double *
+      - type: long double *
   - name: getpayloadf
     standards:
       - stdc
     return_type: float
     arguments:
-      - float *     
+      - type: float *     
   - name: getpayloadf16
     standards:
       - stdc
