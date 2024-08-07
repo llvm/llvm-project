@@ -10,6 +10,7 @@
 #define LLDB_TARGET_STATISTICS_H
 
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringMap.h"
@@ -175,7 +176,7 @@ private:
 };
 
 /// A class that represents statistics for a since lldb_private::Target.
-class TargetStats {
+class TargetStats : public RealpathPrefixesStats {
 public:
   llvm::json::Value ToJSON(Target &target,
                            const lldb_private::StatisticsOptions &options);
@@ -184,8 +185,8 @@ public:
   void SetFirstPrivateStopTime();
   void SetFirstPublicStopTime();
   void IncreaseSourceMapDeduceCount();
-  void IncreaseSourceRealpathAttemptCount();
-  void IncreaseSourceRealpathCompatibleCount();
+  virtual void IncreaseSourceRealpathAttemptCount() override;
+  virtual void IncreaseSourceRealpathCompatibleCount() override;
 
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }

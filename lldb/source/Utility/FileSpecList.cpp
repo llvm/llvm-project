@@ -116,7 +116,7 @@ size_t SupportFileList::FindFileIndex(size_t start_idx,
 enum IsCompatibleResult {
   kNoMatch = 0,
   kOnlyFileMatch = 1,
-  kCompatible = 2,
+  kBothDirectoryAndFileMatch = 2,
 };
 
 IsCompatibleResult IsCompatible(const FileSpec &curr_file,
@@ -132,15 +132,15 @@ IsCompatibleResult IsCompatible(const FileSpec &curr_file,
     return IsCompatibleResult::kNoMatch;
 
   // Only compare the full name if the we were asked to and if the current
-  // file entry has the a directory. If it doesn't have a directory then we
-  // only compare the filename.
+  // file entry has a directory. If it doesn't have a directory then we only
+  // compare the filename.
   if (FileSpec::Equal(curr_file, file_spec, full)) {
-    return IsCompatibleResult::kCompatible;
+    return IsCompatibleResult::kBothDirectoryAndFileMatch;
   } else if (curr_file.IsRelative() || file_spec_relative) {
     llvm::StringRef curr_file_dir = curr_file.GetDirectory().GetStringRef();
     if (curr_file_dir.empty())
-      return IsCompatibleResult::kCompatible; // Basename match only for this
-                                              // file in the list
+      // Basename match only for this file in the list
+      return IsCompatibleResult::kBothDirectoryAndFileMatch;
 
     // Check if we have a relative path in our file list, or if "file_spec" is
     // relative, if so, check if either ends with the other.
@@ -158,7 +158,7 @@ IsCompatibleResult IsCompatible(const FileSpec &curr_file,
         file_spec_case_sensitive || curr_file.IsCaseSensitive();
     if (is_suffix(curr_file_dir, file_spec_dir, case_sensitive) ||
         is_suffix(file_spec_dir, curr_file_dir, case_sensitive))
-      return IsCompatibleResult::kCompatible;
+      return IsCompatibleResult::kBothDirectoryAndFileMatch;
   }
   return IsCompatibleResult::kOnlyFileMatch;
 }
@@ -174,7 +174,7 @@ size_t SupportFileList::FindCompatibleIndex(
     const FileSpec &curr_file = m_files[idx]->GetSpecOnly();
 
     IsCompatibleResult result = IsCompatible(curr_file, file_spec);
-    if (result == IsCompatibleResult::kCompatible)
+    if (result == IsCompatibleResult::kBothDirectoryAndFileMatch)
       return idx;
 
     if (realpath_prefixes && result == IsCompatibleResult::kOnlyFileMatch) {
@@ -182,7 +182,7 @@ size_t SupportFileList::FindCompatibleIndex(
               realpath_prefixes->ResolveSymlinks(curr_file)) {
         if (IsCompatible(*resolved_curr_file, file_spec)) {
           // Stats and logging.
-          if (Target *target = realpath_prefixes->GetTarget())
+          if (lldb::TargetSP target = realpath_prefixes->GetTarget())
             target->GetStatistics().IncreaseSourceRealpathCompatibleCount();
           Log *log = GetLog(LLDBLog::Source);
           LLDB_LOGF(log,

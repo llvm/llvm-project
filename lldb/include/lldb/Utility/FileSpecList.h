@@ -17,7 +17,6 @@
 #include <vector>
 
 namespace lldb_private {
-class RealpathPrefixes;
 class Stream;
 
 /// A list of support files for a CompileUnit.

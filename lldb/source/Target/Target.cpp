@@ -4360,7 +4360,7 @@ InlineStrategy TargetProperties::GetInlineStrategy() const {
 RealpathPrefixes TargetProperties::GetSourceRealpathPrefixes() const {
   const uint32_t idx = ePropertySourceRealpathPrefixes;
   auto prefixes = RealpathPrefixes(GetPropertyAtIndexAs<FileSpecList>(idx, {}));
-  prefixes.SetTarget(this->m_target);
+  prefixes.SetTarget(this->m_target->shared_from_this());
   return prefixes;
 }
 

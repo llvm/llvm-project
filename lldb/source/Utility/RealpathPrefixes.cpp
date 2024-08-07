@@ -18,7 +18,7 @@
 using namespace lldb_private;
 
 RealpathPrefixes::RealpathPrefixes(const FileSpecList &file_spec_list)
-    : m_fs(llvm::vfs::getRealFileSystem()), m_target(nullptr) {
+    : m_fs(llvm::vfs::getRealFileSystem()) {
   m_prefixes.reserve(file_spec_list.GetSize());
   for (const FileSpec &file_spec : file_spec_list) {
     m_prefixes.emplace_back(file_spec.GetPath());
@@ -43,8 +43,8 @@ RealpathPrefixes::ResolveSymlinks(const FileSpec &file_spec) const {
   for (const std::string &prefix : m_prefixes) {
     if (is_prefix(file_spec_path, prefix, file_spec.IsCaseSensitive())) {
       // Stats and logging.
-      if (m_target)
-        m_target->GetStatistics().IncreaseSourceRealpathAttemptCount();
+      if (lldb::TargetSP target = m_target.lock())
+        target->GetStatistics().IncreaseSourceRealpathAttemptCount();
       Log *log = GetLog(LLDBLog::Source);
       LLDB_LOGF(log, "Realpath'ing support file %s", file_spec_path.c_str());
 
