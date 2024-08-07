@@ -10,6 +10,7 @@
 #define LLVM_MC_MCOBJECTWRITER_H
 
 #include "llvm/MC/MCDirectives.h"
+#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -35,6 +36,9 @@ class MCObjectWriter {
 protected:
   // The list of linker options for LC_LINKER_OPTION.
   std::vector<std::vector<std::string>> LinkerOptions;
+
+  // Used to communicate Linker Optimization Hint information.
+  MCLOHContainer LOHContainer;
 
   /// List of declared file names
   SmallVector<std::pair<std::string, size_t>, 0> FileNames;
@@ -67,6 +71,8 @@ public:
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;
   }
+
+  MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   /// Perform any late binding of symbols (for example, to assign symbol
   /// indices for use when generating relocations).

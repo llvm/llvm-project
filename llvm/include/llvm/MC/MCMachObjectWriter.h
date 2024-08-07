@@ -165,9 +165,6 @@ private:
 
   /// @}
 
-  // Used to communicate Linker Optimization Hint information.
-  MCLOHContainer LOHContainer;
-
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
 
@@ -219,7 +216,6 @@ public:
     return SectionOrder;
   }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
-  MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
