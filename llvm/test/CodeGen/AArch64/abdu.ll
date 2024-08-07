@@ -409,6 +409,32 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
   ret i128 %sel
 }
 
+;
+; negative tests
+;
+
+define i64 @vector_legalized(i16 %a, i16 %b) {
+; CHECK-LABEL: vector_legalized:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    sub w8, w8, w1, uxth
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    cneg w8, w8, mi
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    ret
+  %ea = zext i16 %a to i32
+  %eb = zext i16 %b to i32
+  %s = sub i32 %ea, %eb
+  %ab = call i32 @llvm.abs.i32(i32 %s, i1 false)
+  %e = zext i32 %ab to i64
+  %red = call i64 @llvm.vector.reduce.add.v32i64(<32 x i64> zeroinitializer)
+  %z = add i64 %red, %e
+  ret i64 %z
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
