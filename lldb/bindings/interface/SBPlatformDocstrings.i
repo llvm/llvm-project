@@ -29,3 +29,15 @@ and executable type. If the architecture or executable type do not match,
 a suitable platform will be found automatically."
 
 ) lldb::SBPlatform;
+
+%feature("docstring", "
+Create a platform instance using a specific platform plugin name, debugger,
+script name and user-provided dictionary.
+
+:param platform_name: name of the platform plugin to use to create the platform
+:param debugger: debugger instance owning the platform
+:param script_name: name of the script class and module to use to create the platform
+:param dict: user-provided dictionary that can be used when instantiating a platform
+") lldb::SBPlatform (const char *, const lldb::SBDebugger&,
+                    const char *, const lldb::SBStructuredData&);
+

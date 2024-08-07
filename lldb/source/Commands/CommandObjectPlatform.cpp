@@ -28,6 +28,7 @@
 #include "lldb/Utility/State.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FormatAdapters.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -154,8 +155,11 @@ public:
             false) // Don't include the "--platform" option by passing false
   {
     m_option_group.Append(&m_platform_options, LLDB_OPT_SET_ALL, 1);
+    m_option_group.Append(&m_platform_options.GetScriptClassOptions(),
+                          LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
-    AddSimpleArgumentList(eArgTypePlatform);
+    CommandArgumentData platform_arg{eArgTypePlatform, eArgRepeatPlain};
+    m_arguments.push_back({platform_arg});
   }
 
   ~CommandObjectPlatformSelect() override = default;
@@ -180,7 +184,19 @@ protected:
             m_interpreter, ArchSpec(), select, error, platform_arch));
         if (platform_sp) {
           GetDebugger().GetPlatformList().SetSelectedPlatform(platform_sp);
+          OptionGroupPythonClassWithDict &script_class_opts =
+              m_platform_options.GetScriptClassOptions();
+          const ScriptedMetadata scripted_metadata(
+              script_class_opts.GetName(),
+              script_class_opts.GetStructuredData());
 
+          auto metadata = std::make_unique<PlatformMetadata>(GetDebugger(),
+                                                             scripted_metadata);
+          platform_sp->SetMetadata(std::move(metadata));
+          if (llvm::Error e = platform_sp->ReloadMetadata())
+            result.AppendErrorWithFormatv(
+                "platform couldn't reload metadata: {0}\n",
+                fmt_consume(std::move(e)));
           platform_sp->GetStatus(result.GetOutputStream());
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {

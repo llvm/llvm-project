@@ -82,6 +82,21 @@ lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
   return breakpoint.m_opaque_wp.lock();
 }
 
+lldb::DebuggerSP ScriptInterpreter::GetOpaqueTypeFromSBDebugger(
+    const lldb::SBDebugger &debugger) const {
+  return debugger.m_opaque_sp;
+}
+
+lldb::TargetSP ScriptInterpreter::GetOpaqueTypeFromSBTarget(
+    const lldb::SBTarget &target) const {
+  return target.m_opaque_sp;
+}
+
+lldb::ProcessSP ScriptInterpreter::GetOpaqueTypeFromSBProcess(
+    const lldb::SBProcess &process) const {
+  return process.m_opaque_wp.lock();
+}
+
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
     const lldb::SBAttachInfo &attach_info) const {
   return attach_info.m_opaque_sp;

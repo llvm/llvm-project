@@ -61,7 +61,11 @@ public:
   StructuredData::ObjectSP FetchThreadExtendedInfo() override;
 
 private:
-  void CheckInterpreterAndScriptObject() const;
+  void CheckInterpreterAndScriptObject() const {
+    assert(m_script_object_sp && "Invalid Script Object.");
+    assert(GetInterface() && "Invalid Scripted Thread Interface.");
+  }
+
   lldb::ScriptedThreadInterfaceSP GetInterface() const;
 
   ScriptedThread(const ScriptedThread &) = delete;

@@ -16,6 +16,7 @@
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
+class ScriptInterpreter;
 namespace python {
 class SWIGBridge;
 }
@@ -492,6 +493,7 @@ public:
 
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
+  friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
 
   SBDebugger(const lldb::DebuggerSP &debugger_sp);

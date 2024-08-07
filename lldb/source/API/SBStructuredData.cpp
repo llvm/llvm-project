@@ -86,7 +86,11 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
       StructuredData::ParseJSON(stream.GetData());
   m_impl_up->SetObjectSP(json_obj);
 
-  if (!json_obj || json_obj->GetType() != eStructuredDataTypeDictionary)
+  static constexpr StructuredDataType structured_data_record_type[] = {
+      eStructuredDataTypeArray, eStructuredDataTypeDictionary};
+
+  if (!json_obj ||
+      !llvm::is_contained(structured_data_record_type, json_obj->GetType()))
     error.SetErrorString("Invalid Syntax");
   return error;
 }
@@ -106,7 +110,7 @@ bool SBStructuredData::IsValid() const {
 SBStructuredData::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_impl_up->IsValid();
+  return m_impl_up && m_impl_up->IsValid();
 }
 
 void SBStructuredData::Clear() {

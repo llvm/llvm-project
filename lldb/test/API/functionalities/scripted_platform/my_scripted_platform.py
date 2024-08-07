@@ -6,19 +6,26 @@ from lldb.plugins.scripted_platform import ScriptedPlatform
 
 class MyScriptedPlatform(ScriptedPlatform):
     def __init__(self, exe_ctx, args):
-        self.processes = {}
+        super().__init__(exe_ctx, args)
 
-        proc = {}
-        proc["name"] = "a.out"
-        proc["arch"] = "arm64-apple-macosx"
-        proc["pid"] = 420
-        proc["parent"] = 42
-        proc["uid"] = 501
-        proc["gid"] = 20
-        self.processes[420] = proc
+        if args and args.GetType() == lldb.eStructuredDataTypeDictionary:
+            processes = args.GetValueForKey("processes")
+            for i in range(0, processes.GetSize()):
+                proc_info = processes.GetItemAtIndex(i)
+                proc = {}
+                proc["name"] = proc_info.GetValueForKey("name").GetStringValue(42)
+                proc["arch"] = proc_info.GetValueForKey("arch").GetStringValue(42)
+                proc["pid"] = proc_info.GetValueForKey("pid").GetIntegerValue()
+                proc["parent"] = proc_info.GetValueForKey("parent").GetIntegerValue()
+                proc["uid"] = proc_info.GetValueForKey("uid").GetIntegerValue()
+                proc["gid"] = proc_info.GetValueForKey("gid").GetIntegerValue()
+                self.processes[proc["pid"]] = proc
 
     def list_processes(self):
         return self.processes
+
+    def attach_to_process(self, attach_info, target, debugger, error):
+        return None
 
     def get_process_info(self, pid):
         return self.processes[pid]

@@ -230,6 +230,10 @@ ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef trip
   return HostInfo::GetAugmentedArchSpec(triple);
 }
 
+PlatformMetadata::PlatformMetadata(Debugger &debugger,
+                                   const ScriptedMetadata metadata)
+    : m_debugger(debugger), m_scripted_metadata(metadata) {}
+
 /// Default Constructor
 Platform::Platform(bool is_host)
     : m_is_host(is_host), m_os_version_set_while_connected(false),
@@ -238,7 +242,7 @@ Platform::Platform(bool is_host)
       m_rsync_prefix(), m_supports_ssh(false), m_ssh_opts(),
       m_ignores_remote_hostname(false), m_trap_handlers(),
       m_calculated_trap_handlers(false),
-      m_module_cache(std::make_unique<ModuleCache>()) {
+      m_module_cache(std::make_unique<ModuleCache>()), m_metadata() {
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p Platform::Platform()", static_cast<void *>(this));
 }
@@ -1282,6 +1286,10 @@ void Platform::SetLocalCacheDirectory(const char *local) {
 
 const char *Platform::GetLocalCacheDirectory() {
   return m_local_cache_directory.c_str();
+}
+
+void Platform::SetMetadata(std::unique_ptr<PlatformMetadata> metadata) {
+  m_metadata = std::move(metadata);
 }
 
 static constexpr OptionDefinition g_rsync_option_table[] = {

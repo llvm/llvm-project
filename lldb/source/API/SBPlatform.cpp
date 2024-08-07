@@ -15,6 +15,7 @@
 #include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBProcessInfoList.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
@@ -23,8 +24,10 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/Status.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 
 #include <functional>
@@ -297,6 +300,56 @@ SBPlatform::SBPlatform(const char *platform_name) {
   LLDB_INSTRUMENT_VA(this, platform_name);
 
   m_opaque_sp = Platform::Create(platform_name);
+}
+
+SBPlatform::SBPlatform(const char *platform_name, const SBDebugger &debugger,
+                       const char *script_name, const SBStructuredData &dict,
+                       SBError &error)
+    : SBPlatform(platform_name) {
+  LLDB_INSTRUMENT_VA(this, platform_name, debugger, script_name, dict);
+
+  if (!m_opaque_sp) {
+    error.SetErrorString("Invalid opaque pointer.");
+    return;
+  }
+
+  auto clear_opaque_ptr = llvm::make_scope_exit([this] { Clear(); });
+
+  if (!script_name) {
+    error.SetErrorString("Invalid script name argument.");
+    return;
+  }
+
+  if (!dict.IsValid()) {
+    error.SetErrorString("Invalid dictionary argument.");
+    return;
+  }
+
+  StructuredData::ObjectSP obj_sp = dict.m_impl_up->GetObjectSP();
+
+  if (!obj_sp) {
+    error.SetErrorString("Invalid dictionary argument.");
+    return;
+  }
+
+  StructuredData::DictionarySP dict_sp =
+      std::make_shared<StructuredData::Dictionary>(obj_sp);
+  if (!dict_sp || dict_sp->GetType() == lldb::eStructuredDataTypeInvalid) {
+    error.SetErrorString("Invalid dictionary argument.");
+    return;
+  }
+
+  const ScriptedMetadata scripted_metadata(script_name, dict_sp);
+
+  auto platform_metadata =
+      std::make_unique<PlatformMetadata>(debugger.ref(), scripted_metadata);
+  m_opaque_sp->SetMetadata(std::move(platform_metadata));
+  if (llvm::Error e = m_opaque_sp->ReloadMetadata()) {
+    const Status err(std::move(e));
+    error = SBError(err);
+  } else {
+    clear_opaque_ptr.release();
+  }
 }
 
 SBPlatform::SBPlatform(const SBPlatform &rhs) {

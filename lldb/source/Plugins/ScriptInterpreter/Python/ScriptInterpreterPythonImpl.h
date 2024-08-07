@@ -107,6 +107,8 @@ public:
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
+  lldb::ScriptedPlatformInterfaceUP CreateScriptedPlatformInterface() override;
+
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
