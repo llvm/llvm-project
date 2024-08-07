@@ -58,8 +58,7 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 } // namespace
 
 void ExpectNotRealtime(const char *intercepted_function_name) {
-  if (!__rtsan_is_initialized())
-    __rtsan_init();
+  __rtsan_ensure_initialized();
 
   __rtsan::GetContextForThisThread().ExpectNotRealtime(
       intercepted_function_name);

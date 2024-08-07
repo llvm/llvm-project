@@ -13,20 +13,13 @@
 #include <rtsan/rtsan_interceptors.h>
 
 #include "sanitizer_common/sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_mutex.h"
 
 using namespace __rtsan;
 using namespace __sanitizer;
 
+static StaticSpinMutex rtsan_inited_mutex;
 static atomic_uint8_t rtsan_initialized{0};
-static atomic_uint8_t rtsan_init_is_running{0};
-
-static void SetInitIsRunning(bool is_running) {
-  atomic_store(&rtsan_init_is_running, is_running, memory_order_release);
-}
-
-static bool IsInitRunning() {
-  return atomic_load(&rtsan_init_is_running, memory_order_acquire) == 1;
-}
 
 static void SetInitialized() {
   atomic_store(&rtsan_initialized, 1, memory_order_release);
@@ -35,16 +28,21 @@ static void SetInitialized() {
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
-  CHECK(!IsInitRunning());
+  InitializeInterceptors();
+  SetInitialized();
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_ensure_initialized() {
+  if (LIKELY(__rtsan_is_initialized()))
+    return;
+
+  SpinMutexLock lock(&rtsan_inited_mutex);
+
+  // Someone may have initialized us while we were waiting for the lock
   if (__rtsan_is_initialized())
     return;
 
-  SetInitIsRunning(true);
-
-  InitializeInterceptors();
-
-  SetInitIsRunning(false);
-  SetInitialized();
+  __rtsan_init();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE bool __rtsan_is_initialized() {
