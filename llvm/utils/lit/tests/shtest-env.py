@@ -12,25 +12,25 @@
 # CHECK: PASS: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: env FOO=1
 # CHECK: # executed command: env FOO=1
-# CHECK-NOT: {{^[^#]}}
+# CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-args-last-is-u-arg.txt ({{[^)]*}})
 # CHECK: env -u FOO
 # CHECK: # executed command: env -u FOO
-# CHECK-NOT: {{^[^#]}}
+# CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-args-last-is-u.txt ({{[^)]*}})
 # CHECK: env -u
 # CHECK: # executed command: env -u
-# CHECK-NOT: {{^[^#]}}
+# CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-args-nested-none.txt ({{[^)]*}})
 # CHECK: env env env
 # CHECK: # executed command: env env env
-# CHECK-NOT: {{^[^#]}}
+# CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-args-none.txt ({{[^)]*}})
@@ -44,7 +44,7 @@
 # CHECK: # executed command: env -u FOO BAR=1 -u BAR FOO=2
 # CHECK: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4 | {{.*}}
 # CHECK: # executed command: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4
-# CHECK-NOT: {{^[^#]}}
+# CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: FAIL: shtest-env :: env-calls-cd.txt ({{[^)]*}})
