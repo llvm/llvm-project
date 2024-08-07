@@ -178,11 +178,13 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
   if (!shardedDimsSizes.empty()) {
     for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
       if (innerSplitAxes.empty()) {
+#ifndef NDEBUG
         for (auto dimSz : shardedDimsSizes) {
           auto inAxis = dimSz % inShape.size();
           assert(inShape[inAxis] == dimSz || dimSz == ShapedType::kDynamic ||
                  inShape[inAxis] == ShapedType::kDynamic);
         }
+#endif // NDEBUG
       } else {
         // find sharded dims in sharded_dims_sizes with same static size on
         // all devices. Use kDynamic for dimensions with dynamic or non-uniform
