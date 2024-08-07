@@ -628,7 +628,9 @@ private:
                llvm::dbgs()
                << "  callee " << Callee.CDecl << " canonical "
                << CanonicalFunctionDecl(Callee.CDecl) << " redecls";
-               for (Decl *D : Callee.CDecl->redecls()) llvm::dbgs() << " " << D;
+               for (Decl *D
+                    : Callee.CDecl->redecls()) llvm::dbgs()
+               << " " << D;
 
                llvm::dbgs() << "\n";);
 
