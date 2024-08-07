@@ -418,8 +418,13 @@ public:
     return nullptr;
   }
 
+  /// Return an LLVM type that corresponds to a HLSL type
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
+
   // Set the Branch Protection Attributes of the Function accordingly to the
-  // BPI. Might remove attributes if contradicts with the pass request.
+  // BPI. Remove attributes that contradict with current BPI.
   static void
   setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                   llvm::Function &F);

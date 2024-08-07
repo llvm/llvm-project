@@ -1,0 +1,6 @@
+SECTIONS {
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x400000)); . = SEGMENT_START("text-segment", 0x400000) + SIZEOF_HEADERS;
+  .data : { *(.data)  *(.array) }
+  .text : { *(.text) }
+  .got  : { *(.got) *(.igot) }
+}
