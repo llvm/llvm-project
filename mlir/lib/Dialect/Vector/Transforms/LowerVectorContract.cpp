@@ -1307,7 +1307,7 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   Type opResType = op.getType();
   VectorType vecType = dyn_cast<VectorType>(opResType);
   if (vecType && vecType.isScalable()) {
-    // This should be sufficient to reject all cases with scalable vectors.
+    // Note - this is sufficient to reject all cases with scalable vectors.
     return failure();
   }
 
