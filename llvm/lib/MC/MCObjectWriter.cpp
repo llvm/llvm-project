@@ -28,6 +28,7 @@ void MCObjectWriter::reset() {
   LinkerOptions.clear();
   LOHContainer.reset();
   DataRegions.clear();
+  IndirectSymbols.clear();
 }
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(

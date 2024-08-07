@@ -41,6 +41,13 @@ public:
   };
 
 protected:
+  struct IndirectSymbolData {
+    MCSymbol *Symbol;
+    MCSection *Section;
+  };
+
+  std::vector<IndirectSymbolData> IndirectSymbols;
+
   std::vector<DataRegionData> DataRegions;
 
   // The list of linker options for LC_LINKER_OPTION.
@@ -79,6 +86,10 @@ public:
 
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;
+  }
+
+  std::vector<IndirectSymbolData> &getIndirectSymbols() {
+    return IndirectSymbols;
   }
 
   MCLOHContainer &getLOHContainer() { return LOHContainer; }
