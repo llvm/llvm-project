@@ -143,6 +143,12 @@ uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
       idx, g_thread_properties[idx].default_uint_value);
 }
 
+uint64_t ThreadProperties::GetSingleThreadPlanTimeout() const {
+  const uint32_t idx = ePropertySingleThreadPlanTimeout;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_thread_properties[idx].default_uint_value);
+}
+
 // Thread Event Data
 
 llvm::StringRef Thread::ThreadEventData::GetFlavorString() {
@@ -813,12 +819,17 @@ bool Thread::ShouldStop(Event *event_ptr) {
   // decide whether they still need to do more work.
 
   bool done_processing_current_plan = false;
-
   if (!current_plan->PlanExplainsStop(event_ptr)) {
     if (current_plan->TracerExplainsStop()) {
       done_processing_current_plan = true;
       should_stop = false;
     } else {
+      // Leaf plan that does not explain the stop should be popped.
+      // The plan should be push itself later again before resuming to stay
+      // as leaf.
+      if (current_plan->IsLeafPlan())
+        PopPlan();
+
       // If the current plan doesn't explain the stop, then find one that does
       // and let it handle the situation.
       ThreadPlan *plan_ptr = current_plan;
@@ -1715,6 +1726,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "instrumentation break";
   case eStopReasonProcessorTrace:
     return "processor trace";
+  case eStopReasonInterrupt:
+    return "async interrupt";
   }
 
   return "StopReason = " + std::to_string(reason);
