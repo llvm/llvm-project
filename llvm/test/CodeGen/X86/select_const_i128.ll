@@ -23,8 +23,8 @@ define i128 @select_eq_i128(ptr %a) {
 ; NDD-NEXT:    ptest %xmm0, %xmm0
 ; NDD-NEXT:    setne %al
 ; NDD-NEXT:    addq $-1, %rax
-; NDD-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; NDD-NEXT:    adcq $0, %rcx, %rdx
+; NDD-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
+; NDD-NEXT:    adcq $0, %rdx
 ; NDD-NEXT:    retq
   %1 = load i128, ptr %a, align 16
   %cmp = icmp eq i128 %1, 1

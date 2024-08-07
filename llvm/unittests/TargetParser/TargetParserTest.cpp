@@ -1591,7 +1591,7 @@ INSTANTIATE_TEST_SUITE_P(
              AArch64::AEK_RCPC,    AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
              AArch64::AEK_FP16FML, AArch64::AEK_SHA3,    AArch64::AEK_BF16,
              AArch64::AEK_I8MM,    AArch64::AEK_JSCVT,   AArch64::AEK_FCMA,
-             AArch64::AEK_PAUTH,   AArch64::AEK_PERFMON}),
+             AArch64::AEK_PAUTH,   AArch64::AEK_FPAC,    AArch64::AEK_PERFMON}),
         AArch64CPUTestParams(
             "apple-m2", "armv8.6-a",
             {AArch64::AEK_CRC,     AArch64::AEK_AES,     AArch64::AEK_SHA2,
@@ -1600,7 +1600,7 @@ INSTANTIATE_TEST_SUITE_P(
              AArch64::AEK_RCPC,    AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
              AArch64::AEK_FP16FML, AArch64::AEK_SHA3,    AArch64::AEK_BF16,
              AArch64::AEK_I8MM,    AArch64::AEK_JSCVT,   AArch64::AEK_FCMA,
-             AArch64::AEK_PAUTH,   AArch64::AEK_PERFMON}),
+             AArch64::AEK_PAUTH,   AArch64::AEK_FPAC,    AArch64::AEK_PERFMON}),
         AArch64CPUTestParams(
             "apple-a16", "armv8.6-a",
             {AArch64::AEK_CRC,     AArch64::AEK_AES,     AArch64::AEK_SHA2,
@@ -1609,7 +1609,8 @@ INSTANTIATE_TEST_SUITE_P(
              AArch64::AEK_RCPC,    AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
              AArch64::AEK_FP16FML, AArch64::AEK_SHA3,    AArch64::AEK_BF16,
              AArch64::AEK_I8MM,    AArch64::AEK_JSCVT,   AArch64::AEK_FCMA,
-             AArch64::AEK_PAUTH,   AArch64::AEK_PERFMON, AArch64::AEK_HCX}),
+             AArch64::AEK_PAUTH,   AArch64::AEK_FPAC,    AArch64::AEK_PERFMON,
+             AArch64::AEK_HCX}),
         AArch64CPUTestParams(
             "apple-m3", "armv8.6-a",
             {AArch64::AEK_CRC,     AArch64::AEK_AES,     AArch64::AEK_SHA2,
@@ -1618,7 +1619,8 @@ INSTANTIATE_TEST_SUITE_P(
              AArch64::AEK_RCPC,    AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
              AArch64::AEK_FP16FML, AArch64::AEK_SHA3,    AArch64::AEK_BF16,
              AArch64::AEK_I8MM,    AArch64::AEK_JSCVT,   AArch64::AEK_FCMA,
-             AArch64::AEK_PAUTH,   AArch64::AEK_PERFMON, AArch64::AEK_HCX}),
+             AArch64::AEK_PAUTH,   AArch64::AEK_FPAC,    AArch64::AEK_PERFMON,
+             AArch64::AEK_HCX}),
         AArch64CPUTestParams(
             "apple-a17", "armv8.6-a",
             {AArch64::AEK_CRC,     AArch64::AEK_AES,     AArch64::AEK_SHA2,
@@ -1627,7 +1629,8 @@ INSTANTIATE_TEST_SUITE_P(
              AArch64::AEK_RCPC,    AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
              AArch64::AEK_FP16FML, AArch64::AEK_SHA3,    AArch64::AEK_BF16,
              AArch64::AEK_I8MM,    AArch64::AEK_JSCVT,   AArch64::AEK_FCMA,
-             AArch64::AEK_PAUTH,   AArch64::AEK_PERFMON, AArch64::AEK_HCX}),
+             AArch64::AEK_PAUTH,   AArch64::AEK_FPAC,    AArch64::AEK_PERFMON,
+             AArch64::AEK_HCX}),
         AArch64CPUTestParams("apple-m4", "armv9.2-a",
                              {AArch64::AEK_CRC,       AArch64::AEK_AES,
                               AArch64::AEK_SHA2,      AArch64::AEK_SHA3,
@@ -1637,10 +1640,10 @@ INSTANTIATE_TEST_SUITE_P(
                               AArch64::AEK_DOTPROD,   AArch64::AEK_FP16,
                               AArch64::AEK_FP16FML,   AArch64::AEK_BF16,
                               AArch64::AEK_I8MM,      AArch64::AEK_JSCVT,
-                              AArch64::AEK_FCMA,      AArch64::AEK_PAUTH,
+                              AArch64::AEK_PAUTH,     AArch64::AEK_FPAC,
+                              AArch64::AEK_FCMA,      AArch64::AEK_PERFMON,
                               AArch64::AEK_SME,       AArch64::AEK_SME2,
-                              AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64,
-                              AArch64::AEK_PERFMON}),
+                              AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64}),
         AArch64CPUTestParams("exynos-m3", "armv8-a",
                              {AArch64::AEK_CRC, AArch64::AEK_AES,
                               AArch64::AEK_SHA2, AArch64::AEK_FP,
@@ -2005,7 +2008,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_CPA,          AArch64::AEK_PAUTHLR,
       AArch64::AEK_TLBIW,        AArch64::AEK_JSCVT,
       AArch64::AEK_FCMA,         AArch64::AEK_FP8,
-
+      AArch64::AEK_SVEB16B16,
   };
 
   std::vector<StringRef> Features;
@@ -2037,6 +2040,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+spe"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ras"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-b16b16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
@@ -2188,6 +2192,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"lse", "nolse", "+lse", "-lse"},
       {"rdm", "nordm", "+rdm", "-rdm"},
       {"sve", "nosve", "+sve", "-sve"},
+      {"sve-b16b16", "nosve-b16b16", "+sve-b16b16", "-sve-b16b16"},
       {"sve2", "nosve2", "+sve2", "-sve2"},
       {"sve2-aes", "nosve2-aes", "+sve2-aes", "-sve2-aes"},
       {"sve2-sm4", "nosve2-sm4", "+sve2-sm4", "-sve2-sm4"},
