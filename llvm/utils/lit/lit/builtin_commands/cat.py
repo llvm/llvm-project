@@ -50,8 +50,8 @@ def convertTextNotation(data, options):
 
 def main(argv):
     arguments = argv[1:]
-    short_options = "ve"
-    long_options = ["show-nonprinting"]
+    short_options = "eEv"
+    long_options = ["show-ends", "show-nonprinting"]
     enabled_options = Options(show_ends=False, show_nonprinting=False)
     convert_text = False
 
@@ -65,7 +65,7 @@ def main(argv):
         if option == "-v" or option == "--show-nonprinting" or option == "-e":
             enabled_options.show_nonprinting = True
             convert_text = True
-        if option == "-e":
+        if option == "-E" or option == "--show-ends" or option == "-e":
             enabled_options.show_ends = True
             convert_text = True
 
