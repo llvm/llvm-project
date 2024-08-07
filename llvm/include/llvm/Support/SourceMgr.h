@@ -15,9 +15,20 @@
 #ifndef LLVM_SUPPORT_SOURCEMGR_H
 #define LLVM_SUPPORT_SOURCEMGR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include <algorithm>
+#include <assert.h>
+#include <iterator>
+#include <memory>
+#include <stddef.h>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {

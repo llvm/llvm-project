@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/StringSaver.h"
-
 #include "llvm/ADT/SmallString.h"
+#include <string.h>
+#include <utility>
 
 using namespace llvm;
 

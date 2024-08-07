@@ -27,9 +27,10 @@
 #define LLVM_ADT_STATISTIC_H
 
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <memory>
+#include <stdint.h>
+#include <utility>
 #include <vector>
 
 // Determine whether statistics should be enabled. We must do it here rather

@@ -11,10 +11,11 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <memory>
+#include <stdint.h>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
 namespace llvm {

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -18,26 +19,37 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <new>
 #include <optional>
+#include <stdint.h>
 #include <string>
 #include <system_error>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
 
 class VersionTuple;
+enum class endianness;
+template <typename T, T> struct SameType;
 
 namespace yaml {
+struct Hex16;
+struct Hex32;
+struct Hex64;
+struct Hex8;
 
 enum class NodeKind : uint8_t {
   Scalar,

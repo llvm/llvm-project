@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
+#include <string>
 
 namespace llvm {
 class TarWriter {

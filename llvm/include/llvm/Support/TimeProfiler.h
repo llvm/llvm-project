@@ -78,10 +78,12 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Error.h"
+#include <string>
 
 namespace llvm {
 
 class raw_pwrite_stream;
+class StringRef;
 
 struct TimeTraceMetadata {
   std::string Detail;

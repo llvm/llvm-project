@@ -9,10 +9,15 @@
 #ifndef LLVM_SUPPORT_HEXAGONATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_HEXAGONATTRIBUTEPARSER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/HexagonAttributes.h"
+#include <stdint.h>
 
 namespace llvm {
+class ScopedPrinter;
+
 class HexagonAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     HexagonAttrs::AttrType Attribute;

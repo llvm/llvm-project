@@ -15,11 +15,13 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-
 #include <atomic>
 #include <fcntl.h>
 #include <functional>
-#include <thread>
+#include <string.h>
+#include <sys/types.h>
+#include <system_error>
+#include <utility>
 
 #ifndef _WIN32
 #include <poll.h>

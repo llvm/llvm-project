@@ -19,16 +19,18 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
 #include <new>
 #include <sys/types.h>
 #include <system_error>
+#include <utility>
+
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
 #else

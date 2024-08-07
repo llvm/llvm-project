@@ -12,6 +12,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include <assert.h>
+#include <cstring>
+#include <inttypes.h>
+#include <system_error>
 
 using namespace llvm;
 

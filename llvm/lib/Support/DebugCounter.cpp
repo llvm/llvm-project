@@ -1,9 +1,13 @@
 #include "llvm/Support/DebugCounter.h"
-
 #include "DebugOptions.h"
-
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
+#include <stddef.h>
 
 using namespace llvm;
 

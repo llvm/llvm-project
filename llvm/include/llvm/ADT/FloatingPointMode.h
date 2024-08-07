@@ -16,8 +16,12 @@
 #define LLVM_ADT_FLOATINGPOINTMODE_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
+#include <stdint.h>
+#include <string>
+#include <tuple>
 
 namespace llvm {
 

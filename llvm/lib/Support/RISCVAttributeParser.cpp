@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/RISCVAttributeParser.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/DataExtractor.h"
+#include <string>
 
 using namespace llvm;
 

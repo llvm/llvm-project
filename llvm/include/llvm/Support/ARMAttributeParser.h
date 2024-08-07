@@ -13,6 +13,7 @@
 #include "ELFAttributeParser.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <stdint.h>
 
 namespace llvm {
 

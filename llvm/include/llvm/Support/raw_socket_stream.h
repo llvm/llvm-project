@@ -14,11 +14,15 @@
 #ifndef LLVM_SUPPORT_RAW_SOCKET_STREAM_H
 #define LLVM_SUPPORT_RAW_SOCKET_STREAM_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include <atomic>
 #include <chrono>
+#include <memory>
+#include <stdint.h>
+#include <string>
 
 namespace llvm {
 

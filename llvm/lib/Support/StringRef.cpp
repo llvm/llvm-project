@@ -9,11 +9,15 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/edit_distance.h"
 #include "llvm/Support/Error.h"
 #include <bitset>
+#include <limits.h>
 
 using namespace llvm;
 

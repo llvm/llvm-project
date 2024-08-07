@@ -13,11 +13,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <system_error>
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
+
 namespace ConverterEBCDIC {
 std::error_code convertToEBCDIC(StringRef Source,
                                 SmallVectorImpl<char> &Result);

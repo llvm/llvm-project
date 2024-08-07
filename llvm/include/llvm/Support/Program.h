@@ -17,14 +17,21 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include <chrono>
 #include <optional>
+#include <stdint.h>
+#include <string>
+#include <sys/types.h>
 #include <system_error>
 
 namespace llvm {
 class BitVector;
+class raw_ostream;
+
 namespace sys {
+namespace fs {
+enum OpenFlags : unsigned int;
+} // namespace fs
 
   /// This is the OS-specific separator for PATH like environment variables:
   // a colon on Unix or a semicolon on Windows.

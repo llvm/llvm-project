@@ -30,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <vector>
 

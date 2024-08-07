@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_ERROR_H
 
 #include "llvm-c/Error.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/AlignOf.h"
@@ -24,8 +25,8 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstdint>
 #include <cstdlib>
+#include <errno.h>
 #include <functional>
 #include <memory>
 #include <new>

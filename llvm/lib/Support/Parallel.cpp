@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
-
 #include <atomic>
 #include <deque>
 #include <future>
+#include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 llvm::ThreadPoolStrategy llvm::parallel::strategy;

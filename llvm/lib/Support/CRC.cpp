@@ -19,9 +19,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CRC.h"
-
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 
 using namespace llvm;
 
@@ -83,7 +82,9 @@ uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
 
 #else
 
+#include <zconf.h>
 #include <zlib.h>
+
 uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
   // Zlib's crc32() only takes a 32-bit length, so we have to iterate for larger
   // sizes. One could use crc32_z() instead, but that's a recent (2017) addition

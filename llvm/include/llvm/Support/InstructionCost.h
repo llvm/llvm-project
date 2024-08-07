@@ -21,6 +21,7 @@
 #include "llvm/Support/MathExtras.h"
 #include <limits>
 #include <optional>
+#include <stdint.h>
 
 namespace llvm {
 

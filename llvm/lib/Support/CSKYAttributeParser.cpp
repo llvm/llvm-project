@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CSKYAttributeParser.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
+#include <string>
+#include <system_error>
 
 using namespace llvm;
 

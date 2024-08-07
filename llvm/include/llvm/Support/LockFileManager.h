@@ -9,12 +9,13 @@
 #define LLVM_SUPPORT_LOCKFILEMANAGER_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include <optional>
+#include <string>
 #include <system_error>
 #include <utility> // for std::pair
 
 namespace llvm {
-class StringRef;
 
 /// Class that manages the creation of a lock file to aid
 /// implicit coordination between different processes.

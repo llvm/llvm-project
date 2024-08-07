@@ -15,9 +15,14 @@
 #define LLVM_SUPPORT_MSP430ATTRIBUTEPARSER_H
 
 #include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MSP430Attributes.h"
+#include <array>
+#include <stdint.h>
 
 namespace llvm {
+class ScopedPrinter;
+
 class MSP430AttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     MSP430Attrs::AttrType Attribute;

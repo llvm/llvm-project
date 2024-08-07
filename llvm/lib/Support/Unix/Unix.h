@@ -18,11 +18,11 @@
 //===          is guaranteed to work on all UNIX variants.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <assert.h>
 #include <cerrno>
 #include <cstdio>

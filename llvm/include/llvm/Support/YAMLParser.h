@@ -54,6 +54,7 @@ namespace llvm {
 class MemoryBufferRef;
 class raw_ostream;
 class Twine;
+template <typename T> class SmallVectorImpl;
 
 namespace yaml {
 

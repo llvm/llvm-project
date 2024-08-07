@@ -13,8 +13,12 @@
 
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
+#include <initializer_list>
+#include <stdint.h>
 
 using namespace llvm;
 

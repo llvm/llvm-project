@@ -20,6 +20,7 @@
 #include "xray-registry.h"
 
 #include "xray-color-helper.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/XRay/Trace.h"

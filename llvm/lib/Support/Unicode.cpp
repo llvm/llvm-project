@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Unicode.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/UnicodeCharRanges.h"
+#include <stddef.h>
 
 namespace llvm {
 namespace sys {

@@ -9,15 +9,23 @@
 #ifndef LLVM_SUPPORT_FILECOLLECTOR_H
 #define LLVM_SUPPORT_FILECOLLECTOR_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <memory>
 #include <mutex>
 #include <string>
+#include <system_error>
+#include <utility>
 
 namespace llvm {
 class FileCollectorFileSystem;
 class Twine;
+template <typename T> class SmallVectorImpl;
 
 class FileCollectorBase {
 public:

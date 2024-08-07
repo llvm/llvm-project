@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/DivisionByConstantInfo.h"
+#include <assert.h>
+#include <utility>
 
 using namespace llvm;
 

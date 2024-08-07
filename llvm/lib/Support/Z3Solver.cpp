@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/NativeFormatting.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMTAPI.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -17,6 +18,8 @@ using namespace llvm;
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include <set>
+#include <z3.h>
 
 #include <set>
 

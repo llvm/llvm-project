@@ -7,9 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <system_error>
 
 using namespace llvm;
 using namespace llvm::ELFAttrs;

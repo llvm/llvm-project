@@ -16,18 +16,22 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <sys/types.h>
 #include <system_error>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 
+class APInt;
 class Duration;
 class formatv_object_base;
 class format_object_base;
@@ -35,6 +39,8 @@ class FormattedString;
 class FormattedNumber;
 class FormattedBytes;
 template <class T> class [[nodiscard]] Expected;
+class raw_string_ostream;
+class raw_svector_ostream;
 
 namespace sys {
 namespace fs {

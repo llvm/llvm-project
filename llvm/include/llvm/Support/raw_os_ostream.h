@@ -15,6 +15,8 @@
 
 #include "llvm/Support/raw_ostream.h"
 #include <iosfwd>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace llvm {
 
