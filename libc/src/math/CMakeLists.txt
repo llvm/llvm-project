@@ -116,6 +116,7 @@ add_math_entrypoint_object(exp2m1f)
 
 add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
+add_math_entrypoint_object(exp10f16)
 
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
@@ -274,6 +275,7 @@ add_math_entrypoint_object(fromfpxf128)
 
 add_math_entrypoint_object(getpayload)
 add_math_entrypoint_object(getpayloadf)
+add_math_entrypoint_object(getpayloadl)
 add_math_entrypoint_object(getpayloadf16)
 add_math_entrypoint_object(getpayloadf128)
 

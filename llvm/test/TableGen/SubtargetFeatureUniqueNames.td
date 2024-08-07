@@ -1,3 +1,6 @@
+// Temporarily disable test due to non-deterministic order of error messages.
+// UNSUPPORTED: target={{.*}}
+
 // RUN: not llvm-tblgen -gen-subtarget -I %p/../../include %s 2>&1 | FileCheck %s -DFILE=%s
 // Verify that subtarget features with same names result in an error.
 

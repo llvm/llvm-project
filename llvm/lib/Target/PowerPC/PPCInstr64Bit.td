@@ -1014,12 +1014,14 @@ def POPCNTB8 : XForm_11<31, 122, (outs g8rc:$RA), (ins g8rc:$RST),
                         [(set i64:$RA, (int_ppc_popcntb i64:$RST))]>;
 
 def CDTBCD8 : XForm_11<31, 282, (outs g8rc:$RA), (ins g8rc:$RST),
-                       "cdtbcd $RA, $RST", IIC_IntGeneral, []>;
+                       "cdtbcd $RA, $RST", IIC_IntGeneral,
+                       [(set i64:$RA, (int_ppc_cdtbcdd i64:$RST))]>;
 def CBCDTD8 : XForm_11<31, 314, (outs g8rc:$RA), (ins g8rc:$RST),
-                       "cbcdtd $RA, $RST", IIC_IntGeneral, []>;
-
+                       "cbcdtd $RA, $RST", IIC_IntGeneral,
+                       [(set i64:$RA, (int_ppc_cbcdtdd i64:$RST))]>;
 def ADDG6S8 : XOForm_1<31, 74, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
-                       "addg6s $RT, $RA, $RB", IIC_IntGeneral, []>;
+                       "addg6s $RT, $RA, $RB", IIC_IntGeneral,
+                       [(set i64:$RT, (int_ppc_addg6sd i64:$RA, i64:$RB))]>;
 }
 
 defm DIVD  : XOForm_1rcr<31, 489, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
