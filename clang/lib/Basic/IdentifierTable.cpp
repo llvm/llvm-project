@@ -210,11 +210,7 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     // reasons as well.
     return LangOpts.CPlusPlus ? KS_Unknown : KS_Enabled;
   case KEYNOOPENCL:
-    // The disable behavior for this is handled in getKeywordStatus.
-    return KS_Unknown;
   case KEYNOMS18:
-    // The disable behavior for this is handled in getKeywordStatus.
-    return KS_Unknown;
   case KEYNOZOS:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
