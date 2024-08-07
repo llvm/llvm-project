@@ -20,6 +20,7 @@
 #endif // CHAR_BIT
 
 #ifndef MB_LEN_MAX
+// Represents a single UTF-32 wide character in the default locale.
 #define MB_LEN_MAX 4
 #endif // MB_LEN_MAX
 
