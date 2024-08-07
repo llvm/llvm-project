@@ -1468,7 +1468,8 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                       !con(!if(HasMatrixScale, (ins VCSrc_b32_Lo256:$scale_src0, VCSrc_b32_Lo256:$scale_src1),
                                                (ins)),
                            (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt),
-                           !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale),
+                           !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale,
+                                                    MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse),
                                                (ins))),
                       (ins));
   dag Clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
@@ -1488,7 +1489,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                              !eq(IndexType, 16) : "$index_key_16bit");
   string MatrxFMTAsm = !if(HasMatrxFMT, !if(HasMatrixScale, ", $scale_src0, $scale_src1", "")#
                                         "$matrix_a_fmt$matrix_b_fmt"#
-                                        !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale", ""),
+                                        !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale$matrix_a_reuse$matrix_b_reuse", ""),
                                         "");
   string ClampAsm = !if(HasClamp, "$clamp", "");
   string NegAsm = !cond(!and(NegLoAny, NegHiAny)             : "$neg_lo$neg_hi",
@@ -1555,9 +1556,12 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag MatrixFMTOutPat = !if(HasMatrxFMT, (ins i32:$matrix_a_fmt, i32:$matrix_b_fmt), (ins));
   dag Src2InlineInPat = !con(!if(IsC_IMod1, (ins (VOP3PModsNegAbs i32:$src2_modifiers)), (ins)), (ins (Src2VT (WMMAVISrc Src2VT:$src2))));
   dag Src2InlineOutPat = !con(!if(IsIUXF32, (ins), !if(IsC_IMod1,  (ins i32:$src2_modifiers), (ins (i32 8)))), (ins Src2VT:$src2));
-  dag MatrixScaleInPat = !if(HasMatrixScale, (ins timm:$matrix_a_scale, i32:$scale_src0, timm:$matrix_b_scale, i32:$scale_src1), (ins));
+  dag MatrixScaleInPat = !if(HasMatrixScale, (ins timm:$matrix_a_scale, i32:$scale_src0,
+                                                  timm:$matrix_b_scale, i32:$scale_src1,
+                                                  timm:$matrix_a_reuse, timm:$matrix_b_reuse),
+                                             (ins));
   dag MatrixScaleOutSrcPat = !if(HasMatrixScale, (ins i32:$scale_src0, i32:$scale_src1), (ins));
-  dag MatrixScaleOutModPat = !if(HasMatrixScale, (ins i32:$matrix_a_scale, i32:$matrix_b_scale), (ins));
+  dag MatrixScaleOutModPat = !if(HasMatrixScale, (ins i32:$matrix_a_scale, i32:$matrix_b_scale, i1:$matrix_a_reuse, i1:$matrix_b_reuse), (ins));
 
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, ClampPat);
   dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
@@ -1711,8 +1715,9 @@ def VOP_WMMA_LD_SCALE : VOP3P_Profile<VOPProfile<[untyped, i32, i32, untyped]>> 
   let HasNeg = 0;
   let Src0RC64 = VCSrc_b32_Lo256;
   let Src1RC64 = VCSrc_b32_Lo256;
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale);
-  let AsmVOP3P = " $src0, $src1$matrix_a_scale$matrix_b_scale";
+  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale,
+                   MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse);
+  let AsmVOP3P = " $src0, $src1$matrix_a_scale$matrix_b_scale$matrix_a_reuse$matrix_b_reuse";
 }
 
 let WaveSizePredicate = isWave32 in {
@@ -2042,8 +2047,8 @@ class VOP3PX2e <bits<7> op, VOP3PWMMA_Profile P> : Enc128, VOP3Pe_Base {
   let Inst{10-8} = 0; // neg_hi
   let Inst{11} = matrix_a_scale{0}; // scale_op_sel(0)
   let Inst{12} = matrix_a_scale{1}; // scale_op_sel(1)
-  let Inst{13} = matrix_a_scale{2}; // scale_op_sel(2)
-  let Inst{14} = matrix_b_scale{2}; // scale_op_sel_hi(2)
+  let Inst{13} = matrix_a_reuse;    // scale_op_sel(2)
+  let Inst{14} = matrix_b_reuse;    // scale_op_sel_hi(2)
   let Inst{15} = 0; // scale_clamp
   let Inst{31-16} = 0b1100110000110101; //X2ENCODING
   let Inst{40-32} = scale_src0;

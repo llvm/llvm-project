@@ -178,6 +178,8 @@ public:
     ImmTyMatrixBFMT,
     ImmTyMatrixAScale,
     ImmTyMatrixBScale,
+    ImmTyMatrixAReuse,
+    ImmTyMatrixBReuse,
     ImmTyScaleSel,
     ImmTyByteSel,
   };
@@ -421,6 +423,8 @@ public:
   bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
   bool isMatrixAScale() const { return isImmTy(ImmTyMatrixAScale); }
   bool isMatrixBScale() const { return isImmTy(ImmTyMatrixBScale); }
+  bool isMatrixAReuse() const { return isImmTy(ImmTyMatrixAReuse); }
+  bool isMatrixBReuse() const { return isImmTy(ImmTyMatrixBReuse); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
   bool isDppFI() const { return isImmTy(ImmTyDppFI); }
@@ -1189,6 +1193,8 @@ public:
     case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
     case ImmTyMatrixAScale: OS << "ImmTyMatrixAScale"; break;
     case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
+    case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
+    case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
     }
@@ -9327,6 +9333,14 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     addOptionalImmOperand(Inst, Operands, OptIdx,
                           AMDGPUOperand::ImmTyMatrixBScale, 0);
   }
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_a_reuse))
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixAReuse, 0);
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_b_reuse))
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixBReuse, 0);
 
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);
   if (NegLoIdx != -1)

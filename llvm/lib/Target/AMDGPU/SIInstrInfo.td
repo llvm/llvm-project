@@ -1233,6 +1233,9 @@ def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
 def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 
+def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
+def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
+
 def ScaleSel : NamedIntOperand<i8, "scale_sel"> {
   let Validator = "isUInt<3>";
 }
