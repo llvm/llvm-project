@@ -18,6 +18,8 @@ class Options:
 
 
 def convertTextNotation(data, options):
+    assert options.show_ends or options.show_nonprinting
+
     newdata = StringIO()
     if isinstance(data, str):
         data = bytearray(data.encode())
@@ -37,12 +39,11 @@ def convertTextNotation(data, options):
             if intval < 32:
                 newdata.write("^")
                 newdata.write(chr(intval + 64))
+                continue
             elif intval == 127:
                 newdata.write("^?")
-            else:
-                newdata.write(chr(intval))
-        else:
-            newdata.write(chr(intval))
+                continue
+        newdata.write(chr(intval))
 
     return newdata.getvalue().encode()
 
