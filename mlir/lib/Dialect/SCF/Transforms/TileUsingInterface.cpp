@@ -1251,9 +1251,9 @@ static FailureOr<OpResult> getRealProducerFromExtractSliceOp(
 ///
 /// If `%2 = scf.for` is given without specific prediction function, this
 /// function will return three nest loops: %0 + %1 + %2.
-static SmallVector<LoopLikeOpInterface> getOuterNestLoopsWhile(
-    LoopLikeOpInterface loop,
-    const std::function<LogicalResult(LoopLikeOpInterface)> &pred) {
+static SmallVector<LoopLikeOpInterface>
+getOuterNestLoopsWhile(LoopLikeOpInterface loop,
+                       function_ref<LogicalResult(LoopLikeOpInterface)> pred) {
   SmallVector<LoopLikeOpInterface> nestLoops = {loop};
   auto outerLoop = dyn_cast<LoopLikeOpInterface>(loop->getParentOp());
   while (outerLoop && succeeded(pred(outerLoop))) {
@@ -1262,6 +1262,21 @@ static SmallVector<LoopLikeOpInterface> getOuterNestLoopsWhile(
   }
   // sorted from outer to inner
   return {nestLoops.rbegin(), nestLoops.rend()};
+}
+
+/// Check if it is the ForOp that yield the result of inner loop
+static LogicalResult isForOpYieldResultOfInnerLoop(LoopLikeOpInterface loop) {
+  if (auto forOp = dyn_cast<scf::ForOp>(loop.getOperation())) {
+    Block::OpListType &opsInLoopBody = forOp.getBody()->getOperations();
+    for (auto &&[index, op] : llvm::enumerate(opsInLoopBody)) {
+      // If the orderIndex of inner loop is the last second one before the
+      // yieldOp of ForOp, the given loop must yield the result of inner loop.
+      if (isa<LoopLikeOpInterface>(op)) {
+        return success((index + 2) == opsInLoopBody.size());
+      }
+    }
+  }
+  return failure();
 }
 
 /// Enhanced version for basic implementation of fusing producer, which can deal
@@ -1282,10 +1297,10 @@ std::optional<scf::SCFFuseProducerOfSliceResult>
 mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
                                       Operation *candidateSliceOp) {
   SmallVector<tensor::ExtractSliceOp> backwardSlice;
-  if (failed(
-          getRealProducerFromExtractSliceOp(candidateSliceOp, backwardSlice))) {
+  FailureOr<OpResult> realProducer =
+      getRealProducerFromExtractSliceOp(candidateSliceOp, backwardSlice);
+  if (failed(realProducer))
     return std::nullopt;
-  }
 
   std::optional<scf::SCFFuseProducerOfSliceResult> fuseProducerResult;
   // reverse from outer to inner
@@ -1294,14 +1309,18 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   for (auto &&[index, sliceOp] : llvm::enumerate(backwardSlice)) {
     // get nest loops between next candidate sliceOp and tiled producer.
     auto whileProducerOutOfLoopBlock =
-        [&fuseProducerResult](LoopLikeOpInterface loop) -> LogicalResult {
-      if (fuseProducerResult) {
-        Block &body = loop->getRegion(0).front();
-        if (fuseProducerResult->tiledAndFusedProducer.getDefiningOp()
-                ->getBlock() == &body)
-          return failure();
-      }
-      return success();
+        [&fuseProducerResult,
+         &realProducer](LoopLikeOpInterface loop) -> LogicalResult {
+      // ensure that all surrounding outer loops are just yielding the result of
+      // the inner loops.
+      if (failed(isForOpYieldResultOfInnerLoop(loop)))
+        return failure();
+      Operation *originalOp =
+          fuseProducerResult
+              ? fuseProducerResult->tiledAndFusedProducer.getDefiningOp()
+              : realProducer->getDefiningOp();
+      Block &body = loop->getRegion(0).front();
+      return success(originalOp->getBlock() != &body);
     };
     SmallVector<LoopLikeOpInterface> outerLoops =
         getOuterNestLoopsWhile(sliceOp->getParentOfType<LoopLikeOpInterface>(),
