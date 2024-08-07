@@ -11,6 +11,7 @@ find_library(CUDA_RUNTIME_LIBRARY cuda HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTOR
 
 add_flang_library(CufRuntime
   allocator.cpp
+  descriptor.cpp
 )
 target_link_libraries(CufRuntime
   PRIVATE
