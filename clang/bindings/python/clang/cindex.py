@@ -270,6 +270,14 @@ class SourceLocation(Structure):
             self._data = (f, int(l.value), int(c.value), int(o.value))
         return self._data
 
+    def __le__(self, other):
+        if self.line < other.line:
+            return True
+        if self.line == other.line and self.column <= other.column:
+            return True
+        # when self.line > other.line
+        return False
+
     @staticmethod
     def from_position(tu, file, line, column):
         """
@@ -383,22 +391,7 @@ class SourceRange(Structure):
         ):
             # same file name
             return False
-        # same file, in between lines
-        if self.start.line < other.line < self.end.line:
-            return True
-        # between columns in one-liner range
-        elif self.start.line == other.line == self.end.line:
-            if self.start.column <= other.column <= self.end.column:
-                return True
-        elif self.start.line == other.line:
-            # same file first line
-            if self.start.column <= other.column:
-                return True
-        elif other.line == self.end.line:
-            # same file last line
-            if other.column <= self.end.column:
-                return True
-        return False
+        return self.start <= other <= self.end
 
     def __repr__(self):
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
