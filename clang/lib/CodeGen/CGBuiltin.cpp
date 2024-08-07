@@ -3691,6 +3691,28 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
                                              /*EmittedE=*/nullptr, IsDynamic));
   }
+  case Builtin::BI__builtin_get_counted_by: {
+    llvm::Value *Result = nullptr;
+
+    if (const MemberExpr *ME =
+            dyn_cast<MemberExpr>(E->getArg(0)->IgnoreImpCasts())) {
+      bool IsFlexibleArrayMember = ME->isFlexibleArrayMemberLike(
+              getContext(), getLangOpts().getStrictFlexArraysLevel(),
+              /*IgnoreTemplateOrMacroSubstitution=*/false);
+
+      // TODO: Probably have to handle horrible casting crap here.
+
+      // FIXME: Emit a diagnostic?
+      if (!ME->HasSideEffects(getContext()) && IsFlexibleArrayMember &&
+          ME->getMemberDecl()->getType()->isCountAttributedType()) {
+        const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = FindCountedByField(FAMDecl))
+          Result = GetCountedByFieldExprGEP(ME, FAMDecl, CountFD);
+      }
+    }
+
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
     // FIXME: Technically these constants should of type 'int', yes?
