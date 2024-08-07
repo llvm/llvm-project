@@ -246,8 +246,12 @@ func.func @contract_broadcast_would_have_no_reduction_dim_pair(%arg0 : vector<1x
 
 
 //===----------------------------------------------------------------------===//
+// [Pattern: ReorderCastOpsOnBroadcast]
+//
 // Reorder casting ops and vector ops. The casting ops have almost identical
 // pattern, so only arith.extsi op is tested.
+//
+// TODO: Potential duplication with sink-vector-broadcast.mlir
 //===----------------------------------------------------------------------===//
 
 // -----
@@ -272,6 +276,11 @@ func.func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// [Pattern: ReorderElementwiseOpsOnTranspose]
+//
+// TODO: Potential duplication with sink-vector-broadcast.mlir
+//===----------------------------------------------------------------------===//
 func.func @transpose_extsi(%a : vector<4x2xi8>) -> vector<2x4xi32> {
   // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<4x2xi8> to vector<4x2xi32>
   // CHECK: vector.transpose %[[EXT]], [1, 0] : vector<4x2xi32> to vector<2x4xi32>
@@ -282,6 +291,7 @@ func.func @transpose_extsi(%a : vector<4x2xi8>) -> vector<2x4xi32> {
 
 //===----------------------------------------------------------------------===//
 // Reorder elementwise ops and vector ops.
+// TODO: Potential duplication with sink-vector-broadcast.mlir
 //===----------------------------------------------------------------------===//
 
 // -----
