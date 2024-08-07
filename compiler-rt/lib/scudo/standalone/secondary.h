@@ -65,9 +65,7 @@ template <typename Config> static Header *getHeader(const void *Ptr) {
 
 } // namespace LargeBlock
 
-static inline void unmap(MemMapT &MemMap) {
-  MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
-}
+static inline void unmap(MemMapT &MemMap) { MemMap.unmap(); }
 
 namespace {
 
