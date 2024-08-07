@@ -1504,6 +1504,12 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    return true;
+  }
+
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1526,6 +1532,11 @@ inline bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    return true;
+  }
 
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;

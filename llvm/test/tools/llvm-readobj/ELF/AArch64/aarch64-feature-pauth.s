@@ -89,7 +89,7 @@ end:
 # RUN: llvm-readobj --notes gnu-1-0.o | \
 # RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x1 (baremetal)" -DVERSION=0x0 %s
 
-#--- gnu-0x10000002-85.s
+#--- gnu-0x10000002-0.s
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -101,19 +101,19 @@ begin:
   .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
   .long 16          // Data size
   .quad 0x10000002  // PAuth ABI platform
-  .quad 85          // PAuth ABI version
+  .quad 0           // PAuth ABI version
   .p2align 3        // Align to 8 byte for 64 bit
 end:
 
-# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-85.s -o gnu-0x10000002-85.o
-# RUN: llvm-readelf --notes gnu-0x10000002-85.o | \
+# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-0.s -o gnu-0x10000002-0.o
+# RUN: llvm-readelf --notes gnu-0x10000002-0.o | \
 # RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" \
-# RUN:   -DVERSION="0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini)" %s
-# RUN: llvm-readobj --notes gnu-0x10000002-85.o | \
+# RUN:   -DVERSION="0x0 (!PointerAuthIntrinsics, !PointerAuthCalls, !PointerAuthReturns, !PointerAuthAuthTraps, !PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, !PointerAuthInitFini, !PointerAuthInitFiniAddressDiscrimination, !PointerAuthELFGOT)" %s
+# RUN: llvm-readobj --notes gnu-0x10000002-0.o | \
 # RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" \
-# RUN:   -DVERSION="0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini)" %s
+# RUN:   -DVERSION="0x0 (!PointerAuthIntrinsics, !PointerAuthCalls, !PointerAuthReturns, !PointerAuthAuthTraps, !PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, !PointerAuthInitFini, !PointerAuthInitFiniAddressDiscrimination, !PointerAuthELFGOT)" %s
 
-#--- gnu-0x10000002-128.s
+#--- gnu-0x10000002-341.s
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -125,15 +125,87 @@ begin:
   .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
   .long 16          // Data size
   .quad 0x10000002  // PAuth ABI platform
-  .quad 128         // PAuth ABI version
+  .quad 341          // PAuth ABI version
   .p2align 3        // Align to 8 byte for 64 bit
 end:
 
-# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-128.s -o gnu-0x10000002-128.o
-# RUN: llvm-readelf --notes gnu-0x10000002-128.o | \
-# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" -DVERSION="0x80 (unknown)" %s
-# RUN: llvm-readobj --notes gnu-0x10000002-128.o | \
-# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" -DVERSION="0x80 (unknown)" %s
+# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-341.s -o gnu-0x10000002-341.o
+# RUN: llvm-readelf --notes gnu-0x10000002-341.o | \
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   -DVERSION="0x155 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, !PointerAuthInitFiniAddressDiscrimination, PointerAuthELFGOT)" %s
+# RUN: llvm-readobj --notes gnu-0x10000002-341.o | \
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   -DVERSION="0x155 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, !PointerAuthInitFiniAddressDiscrimination, PointerAuthELFGOT)" %s
+
+#--- gnu-0x10000002-170.s
+.section ".note.gnu.property", "a"
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
+  .p2align 3
+begin:
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 0x10000002  // PAuth ABI platform
+  .quad 170         // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
+end:
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-170.s -o gnu-0x10000002-170.o
+# RUN: llvm-readelf --notes gnu-0x10000002-170.o | \
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   -DVERSION="0xaa (!PointerAuthIntrinsics, PointerAuthCalls, !PointerAuthReturns, PointerAuthAuthTraps, !PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, !PointerAuthInitFini, PointerAuthInitFiniAddressDiscrimination, !PointerAuthELFGOT)" %s
+# RUN: llvm-readobj --notes gnu-0x10000002-170.o | \
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   -DVERSION="0xaa (!PointerAuthIntrinsics, PointerAuthCalls, !PointerAuthReturns, PointerAuthAuthTraps, !PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, !PointerAuthInitFini, PointerAuthInitFiniAddressDiscrimination, !PointerAuthELFGOT)" %s
+
+#--- gnu-0x10000002-511.s
+.section ".note.gnu.property", "a"
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
+  .p2align 3
+begin:
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 0x10000002  // PAuth ABI platform
+  .quad 511         // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
+end:
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-511.s -o gnu-0x10000002-511.o
+# RUN: llvm-readelf --notes gnu-0x10000002-511.o | \
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   -DVERSION="0x1ff (PointerAuthIntrinsics, PointerAuthCalls, PointerAuthReturns, PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, PointerAuthInitFiniAddressDiscrimination, PointerAuthELFGOT)" %s
+# RUN: llvm-readobj --notes gnu-0x10000002-511.o | \
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" \
+# RUN:   -DVERSION="0x1ff (PointerAuthIntrinsics, PointerAuthCalls, PointerAuthReturns, PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, PointerAuthInitFiniAddressDiscrimination, PointerAuthELFGOT)" %s
+
+#--- gnu-0x10000002-512.s
+.section ".note.gnu.property", "a"
+  .long 4           // Name length is always 4 ("GNU")
+  .long end - begin // Data length
+  .long 5           // Type: NT_GNU_PROPERTY_TYPE_0
+  .asciz "GNU"      // Name
+  .p2align 3
+begin:
+  # PAuth ABI property note
+  .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+  .long 16          // Data size
+  .quad 0x10000002  // PAuth ABI platform
+  .quad 512         // PAuth ABI version
+  .p2align 3        // Align to 8 byte for 64 bit
+end:
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu gnu-0x10000002-512.s -o gnu-0x10000002-512.o
+# RUN: llvm-readelf --notes gnu-0x10000002-512.o | \
+# RUN:   FileCheck --check-prefix=ELF -DPLATFORM="0x10000002 (llvm_linux)" -DVERSION="0x200 (unknown)" %s
+# RUN: llvm-readobj --notes gnu-0x10000002-512.o | \
+# RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" -DVERSION="0x200 (unknown)" %s
 
 #--- gnu-short.s
 .section ".note.gnu.property", "a"
