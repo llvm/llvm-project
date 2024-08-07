@@ -287,7 +287,7 @@ void dr261(void) {
    * but we fold it as a constant expression anyway as a GNU extension.
    */
   enum e2 {
-    ex2 = __INT_MAX__ + (0, 1) /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+    ex2 = __INT_MAX__ + (0, 1) /* expected-warning {{expression is not an integer constant expression because of arithmetic overflow; folding it to a constant is a GNU extension}}
                                   expected-note {{value 2147483648 is outside the range of representable values of type 'int'}}
                                   expected-warning {{left operand of comma operator has no effect}}
                                 */

@@ -74,6 +74,14 @@ def err_expr_not_ice : Error<
 def ext_expr_not_ice : Extension<
   "expression is not an %select{integer|integral}0 constant expression; "
   "folding it to a constant is a GNU extension">, InGroup<GNUFoldingConstant>;
+def ext_expr_ice_overflow : Extension<
+  "expression is not an integer constant expression "
+  "because of arithmetic overflow; folding it to a constant is a GNU "
+  "extension">, InGroup<GNUFoldingConstant>;
+def ext_expr_ice_overflow_cxx : Extension<
+  "expression is not an integral constant expression "
+  "because of arithmetic overflow">,
+  InGroup<DiagGroup<"constant-overflow">>, DefaultError, SFINAEFailure;
 def err_typecheck_converted_constant_expression : Error<
   "value of type %0 is not implicitly convertible to %1">;
 def err_typecheck_converted_constant_expression_disallowed : Error<

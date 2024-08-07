@@ -16913,6 +16913,13 @@ Sema::VerifyICEDiagnoser::diagnoseFold(Sema &S, SourceLocation Loc) {
   return S.Diag(Loc, diag::ext_expr_not_ice) << S.LangOpts.CPlusPlus;
 }
 
+Sema::SemaDiagnosticBuilder
+Sema::VerifyICEDiagnoser::diagnoseOverflow(Sema &S, SourceLocation Loc) {
+  if (S.LangOpts.CPlusPlus)
+    return S.Diag(Loc, diag::ext_expr_ice_overflow_cxx);
+  return S.Diag(Loc, diag::ext_expr_ice_overflow);
+}
+
 ExprResult
 Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
                                       VerifyICEDiagnoser &Diagnoser,
@@ -17031,6 +17038,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     }
 
     Diagnoser.diagnoseFold(*this, DiagLoc) << E->getSourceRange();
+
     for (const PartialDiagnosticAt &Note : Notes)
       Diag(Note.first, Note.second);
     
@@ -17045,8 +17053,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   // not a constant expression as a side-effect.
   bool Folded =
       E->EvaluateAsRValue(EvalResult, Context, /*isConstantContext*/ true) &&
-      EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
-      (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
+      EvalResult.Val.isInt() && !EvalResult.HasSideEffects;
 
   if (!isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);
@@ -17079,7 +17086,10 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     return ExprError();
   }
 
-  Diagnoser.diagnoseFold(*this, DiagLoc) << E->getSourceRange();
+  if (EvalResult.HasUndefinedBehavior)
+    Diagnoser.diagnoseOverflow(*this, DiagLoc) << E->getSourceRange();
+  else
+    Diagnoser.diagnoseFold(*this, DiagLoc) << E->getSourceRange();
   for (const PartialDiagnosticAt &Note : Notes)
     Diag(Note.first, Note.second);
 
