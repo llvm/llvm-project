@@ -30,10 +30,8 @@ static llvm::cl::opt<bool> PtrauthEmitWrapperGlobals(
 
 /// Given a pointer-authentication schema, return a concrete "other"
 /// discriminator for it.
-llvm::ConstantInt *
-CodeGenModule::getPointerAuthOtherDiscriminator(const PointerAuthSchema &Schema,
-                                                GlobalDecl Decl,
-                                                QualType Type) {
+llvm::ConstantInt *CodeGenModule::getPointerAuthOtherDiscriminator(
+    const PointerAuthSchema &Schema, GlobalDecl Decl, QualType Type) {
   switch (Schema.getOtherDiscrimination()) {
   case PointerAuthSchema::Discrimination::None:
     return nullptr;
@@ -87,7 +85,8 @@ CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl Declaration) {
 /// function type.
 CGPointerAuthInfo CodeGenModule::getFunctionPointerAuthInfo(QualType T) {
   const auto &Schema = getCodeGenOpts().PointerAuth.FunctionPointers;
-  if (!Schema) return CGPointerAuthInfo();
+  if (!Schema)
+    return CGPointerAuthInfo();
 
   assert(!Schema.isAddressDiscriminated() &&
          "function pointers cannot use address-specific discrimination");
