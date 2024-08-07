@@ -158,11 +158,6 @@ public:
   /// converted result in MFB.
   static bool isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB);
 
-  /// Check if the given module flag metadata represents a valid module flag,
-  /// and store the flag behavior, the key string and the value metadata.
-  static bool isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
-                                MDString *&Key, Metadata *&Val);
-
   struct ModuleFlagEntry {
     ModFlagBehavior Behavior;
     MDString *Key;
@@ -502,7 +497,7 @@ public:
 
   /// Return the first NamedMDNode in the module with the specified name. This
   /// method returns null if a NamedMDNode with the specified name is not found.
-  NamedMDNode *getNamedMetadata(const Twine &Name) const;
+  NamedMDNode *getNamedMetadata(StringRef Name) const;
 
   /// Return the named MDNode in the module with the specified name. This method
   /// returns a new NamedMDNode if a NamedMDNode with the specified name is not
