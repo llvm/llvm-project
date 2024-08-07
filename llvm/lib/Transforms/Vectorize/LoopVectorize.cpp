@@ -8170,8 +8170,6 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   // builder. At this point we generate the predication tree. There may be
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
-  // TODO: At the moment the first mask is always skipped, but it would be
-  // better to skip the most expensive mask.
   SmallVector<VPValue *, 2> OperandsWithMask;
 
   for (unsigned In = 0; In < NumIncoming; In++) {
@@ -8184,8 +8182,6 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
              "Distinct incoming values with one having a full mask");
       break;
     }
-    if (In == 0)
-      continue;
     OperandsWithMask.push_back(EdgeMask);
   }
   return new VPBlendRecipe(Phi, OperandsWithMask);
