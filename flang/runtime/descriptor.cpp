@@ -162,14 +162,7 @@ RT_API_ATTRS int Descriptor::Allocate() {
     elementBytes = raw_.elem_len = 0;
   }
   std::size_t byteSize{Elements() * elementBytes};
-
-  // Force default allocator in device code.
-#ifdef RT_DEVICE_COMPILATION
-  AllocFct alloc{allocatorRegistry.GetAllocator(kDefaultAllocator)};
-#else
-  AllocFct alloc{allocatorRegistry.GetAllocator(GetAllocIdx())};
-#endif
-
+  AllocFct alloc{allocatorRegistry.GetAllocator(GetNormalizedAllocIdx())};
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
@@ -215,12 +208,7 @@ RT_API_ATTRS int Descriptor::Deallocate() {
   if (!descriptor.base_addr) {
     return CFI_ERROR_BASE_ADDR_NULL;
   } else {
-    // Force default deallocator in device code.
-#ifdef RT_DEVICE_COMPILATION
-    FreeFct free{allocatorRegistry.GetDeallocator(kDefaultAllocator)};
-#else
-    FreeFct free{allocatorRegistry.GetDeallocator(GetAllocIdx())};
-#endif
+    FreeFct free{allocatorRegistry.GetDeallocator(GetNormalizedAllocIdx())};
     free(descriptor.base_addr);
     descriptor.base_addr = nullptr;
     return CFI_SUCCESS;
