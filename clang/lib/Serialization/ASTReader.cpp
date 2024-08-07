@@ -6104,7 +6104,7 @@ bool ASTReader::ParseDiagnosticOptions(const RecordData &Record, StringRef Modul
   for (unsigned N = Record[Idx++]; N; --N)
     DiagOpts->Remarks.push_back(ReadString(Record, Idx));
 
-  return Listener.ReadDiagnosticOptions(DiagOpts, Filename, Complain);
+  return Listener.ReadDiagnosticOptions(DiagOpts, ModuleFilename, Complain);
 }
 
 bool ASTReader::ParseFileSystemOptions(const RecordData &Record, bool Complain,
