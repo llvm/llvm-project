@@ -7,101 +7,101 @@ enums: []
 objects: []
 functions:
   - name: feclearexcept
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: fetestexcept
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: fetestexceptflag
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const fexcept_t *
       - type: int
   - name: feraiseexcept
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: fesetround
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: fegetround
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments: []
   - name: fegetenv
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: fenv_t *
   - name: fesetenv
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const fenv_t *
   - name: fegetexceptflag
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: fexcept_t *
       - type: int
   - name: fesetexcept
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: fesetexceptflag
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const fexcept_t *
       - type: int
   - name: feholdexcept
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: fenv_t *
   - name: feupdateenv
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const fenv_t *
   - name: fedisableexcept
-    standards: 
+    standards:
       - GNUExtensions
-    return_type: int 
-    arguments: 
-      - type: int 
+    return_type: int
+    arguments:
+      - type: int
     guard: null
   - name: feenableexcept
-    standards: 
+    standards:
       - GNUExtensions
-    return_type: int 
+    return_type: int
     arguments:
       - type: int
     attributes: []
   - name: fegetexcept
-    standards: 
+    standards:
       - GNUExtensions
     return_type: int
     arguments: []

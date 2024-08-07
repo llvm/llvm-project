@@ -1725,7 +1725,8 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
   // preferable because it allows the C2 << Y expression to be hoisted out of a
   // loop if Y is invariant and X is not.
   if (Shift->hasOneUse() && C1.isZero() && Cmp.isEquality() &&
-      !Shift->isArithmeticShift() && !isa<Constant>(Shift->getOperand(0))) {
+      !Shift->isArithmeticShift() &&
+      ((!IsShl && C2.isOne()) || !isa<Constant>(Shift->getOperand(0)))) {
     // Compute C2 << Y.
     Value *NewShift =
         IsShl ? Builder.CreateLShr(And->getOperand(1), Shift->getOperand(1))
@@ -3528,6 +3529,52 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
       Constant *NotBOC = ConstantExpr::getNot(cast<Constant>(BOp1));
       Value *And = Builder.CreateAnd(BOp0, NotBOC);
       return new ICmpInst(Pred, And, NotBOC);
+    }
+    // (icmp eq (or (select cond, 0, NonZero), Other), 0)
+    //  -> (and cond, (icmp eq Other, 0))
+    // (icmp ne (or (select cond, NonZero, 0), Other), 0)
+    //  -> (or cond, (icmp ne Other, 0))
+    Value *Cond, *TV, *FV, *Other, *Sel;
+    if (C.isZero() &&
+        match(BO,
+              m_OneUse(m_c_Or(m_CombineAnd(m_Value(Sel),
+                                           m_Select(m_Value(Cond), m_Value(TV),
+                                                    m_Value(FV))),
+                              m_Value(Other))))) {
+      const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
+      // Easy case is if eq/ne matches whether 0 is trueval/falseval.
+      if (Pred == ICmpInst::ICMP_EQ
+              ? (match(TV, m_Zero()) && isKnownNonZero(FV, Q))
+              : (match(FV, m_Zero()) && isKnownNonZero(TV, Q))) {
+        Value *Cmp = Builder.CreateICmp(
+            Pred, Other, Constant::getNullValue(Other->getType()));
+        return BinaryOperator::Create(
+            Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or, Cmp,
+            Cond);
+      }
+      // Harder case is if eq/ne matches whether 0 is falseval/trueval. In this
+      // case we need to invert the select condition so we need to be careful to
+      // avoid creating extra instructions.
+      // (icmp ne (or (select cond, 0, NonZero), Other), 0)
+      //  -> (or (not cond), (icmp ne Other, 0))
+      // (icmp eq (or (select cond, NonZero, 0), Other), 0)
+      //  -> (and (not cond), (icmp eq Other, 0))
+      //
+      // Only do this if the inner select has one use, in which case we are
+      // replacing `select` with `(not cond)`. Otherwise, we will create more
+      // uses. NB: Trying to freely invert cond doesn't make sense here, as if
+      // cond was freely invertable, the select arms would have been inverted.
+      if (Sel->hasOneUse() &&
+          (Pred == ICmpInst::ICMP_EQ
+               ? (match(FV, m_Zero()) && isKnownNonZero(TV, Q))
+               : (match(TV, m_Zero()) && isKnownNonZero(FV, Q)))) {
+        Value *NotCond = Builder.CreateNot(Cond);
+        Value *Cmp = Builder.CreateICmp(
+            Pred, Other, Constant::getNullValue(Other->getType()));
+        return BinaryOperator::Create(
+            Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or, Cmp,
+            NotCond);
+      }
     }
     break;
   }

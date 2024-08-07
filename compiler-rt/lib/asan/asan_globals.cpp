@@ -530,10 +530,9 @@ void __asan_before_dynamic_init(const char *module_name) {
 // was to `__asan_after_dynamic_init`, as it will unpoison all global preparing
 // program for `main` execution. To run `__asan_after_dynamic_init` later, we
 // will register in `.init_array`.
-static bool allow_after_dynamic_init SANITIZER_GUARDED_BY(mu_for_globals) =
-    false;
+bool allow_after_dynamic_init SANITIZER_GUARDED_BY(mu_for_globals) = false;
 
-static void __attribute__((used)) AfterDynamicInit(void) {
+static void UnpoisonBeforeMain(void) {
   {
     Lock lock(&mu_for_globals);
     if (allow_after_dynamic_init)
@@ -550,7 +549,7 @@ static void __attribute__((used)) AfterDynamicInit(void) {
 // optimization. However, correctness should not be affected, as after the first
 // call all subsequent `__asan_after_dynamic_init` will be allowed.
 __attribute__((section(".init_array.65537"), used)) static void (
-    *asan_after_init_array)(void) = AfterDynamicInit;
+    *asan_after_init_array)(void) = UnpoisonBeforeMain;
 #else
 // Allow all `__asan_after_dynamic_init` if `AfterDynamicInit` is not set.
 // Compiler still generates `__asan_{before,after}_dynamic_init`in pairs, and

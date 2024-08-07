@@ -36,6 +36,7 @@ static_library("Analysis") {
     "ConstantFolding.cpp",
     "ConstraintSystem.cpp",
     "CostModel.cpp",
+    "CtxProfAnalysis.cpp",
     "CycleAnalysis.cpp",
     "DDG.cpp",
     "DDGPrinter.cpp",
