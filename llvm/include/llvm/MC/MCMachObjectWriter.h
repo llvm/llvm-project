@@ -86,12 +86,6 @@ public:
 
 class MachObjectWriter : public MCObjectWriter {
 public:
-  struct DataRegionData {
-    MachO::DataRegionType Kind;
-    MCSymbol *Start;
-    MCSymbol *End;
-  };
-
   // A Major version of 0 indicates that no version information was supplied
   // and so the corresponding load command should not be emitted.
   using VersionInfoType = struct {
@@ -145,8 +139,6 @@ private:
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
   std::vector<IndirectSymbolData> IndirectSymbols;
   DenseMap<const MCSection *, unsigned> IndirectSymBase;
-
-  std::vector<DataRegionData> DataRegions;
 
   SectionAddrMap SectionAddress;
 
@@ -211,7 +203,6 @@ public:
   std::vector<IndirectSymbolData> &getIndirectSymbols() {
     return IndirectSymbols;
   }
-  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }

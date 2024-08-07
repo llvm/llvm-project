@@ -27,6 +27,7 @@ void MCObjectWriter::reset() {
   CGProfile.clear();
   LinkerOptions.clear();
   LOHContainer.reset();
+  DataRegions.clear();
 }
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(

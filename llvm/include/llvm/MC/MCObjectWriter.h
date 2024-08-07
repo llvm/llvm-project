@@ -33,7 +33,16 @@ class MCValue;
 /// MCAssembler instance, which contains all the symbol and section data which
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
+public:
+  struct DataRegionData {
+    unsigned Kind;
+    MCSymbol *Start;
+    MCSymbol *End;
+  };
+
 protected:
+  std::vector<DataRegionData> DataRegions;
+
   // The list of linker options for LC_LINKER_OPTION.
   std::vector<std::vector<std::string>> LinkerOptions;
 
@@ -73,6 +82,8 @@ public:
   }
 
   MCLOHContainer &getLOHContainer() { return LOHContainer; }
+
+  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
 
   /// Perform any late binding of symbols (for example, to assign symbol
   /// indices for use when generating relocations).
