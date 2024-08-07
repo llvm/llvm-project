@@ -29,19 +29,15 @@ namespace Fortran::tools {
 
   // Figure out if we can support F128: see
   // flang/runtime/Float128Math/math-entries.h
-  // clang-format off
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
   // we can use libquadmath wrappers
   constexpr bool f128Support = true;
-#else
-  #if LDBL_MANT_DIG == 113
+#elif LDBL_MANT_DIG == 113
   // we can use libm wrappers
   constexpr bool f128Support = true;
-  #else
+#else
   constexpr bool f128Support = false;
-  #endif // LDBL_MANT_DIG
-#endif // FLANG_RUNTIME_F128_MATH_LIB
-  // clang-format on
+#endif
 
   if constexpr (!f128Support)
     targetCharacteristics.DisableType(Fortran::common::TypeCategory::Real, 16);
