@@ -1898,7 +1898,7 @@ functions:
     return_type: float128
     arguments:
       - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT12
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fmaxf128
     standards:
       - stdc
