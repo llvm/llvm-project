@@ -8316,6 +8316,7 @@ cc_library(
         ":FuncToSPIRV",
         ":IR",
         ":IndexToSPIRV",
+        ":MemRefToSPIRV",
         ":Pass",
         ":Rewrite",
         ":SCFToSPIRV",
