@@ -292,6 +292,9 @@ private:
 ///
 static llvm::Expected<bool>
 sdkSupportsBuiltinModules(lldb_private::Target &target) {
+#ifndef __APPLE__
+  return false;
+#else
   auto arch_spec = target.GetArchitecture();
   auto const &triple = arch_spec.GetTriple();
   auto module_sp = target.GetExecutableModule();
@@ -323,6 +326,7 @@ sdkSupportsBuiltinModules(lldb_private::Target &target) {
     return llvm::createStringError("Couldn't find Darwin SDK info.");
 
   return XcodeSDK::SDKSupportsBuiltinModules(triple, maybe_sdk->getVersion());
+#endif
 }
 
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
@@ -609,6 +613,7 @@ static void SetupLangOpts(CompilerInstance &compiler,
 
 static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
                                          lldb_private::Target &target) {
+  Log *log = GetLog(LLDBLog::Expressions);
   LangOptions &lang_opts = compiler.getLangOpts();
   lang_opts.Modules = true;
   // We want to implicitly build modules.
@@ -625,7 +630,14 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
   lang_opts.GNUMode = true;
   lang_opts.GNUKeywords = true;
   lang_opts.CPlusPlus11 = true;
-  lang_opts.BuiltinHeadersInSystemModules = !sdkSupportsBuiltinModules(target);
+
+  auto supported_or_err = sdkSupportsBuiltinModules(target);
+  if (supported_or_err)
+    lang_opts.BuiltinHeadersInSystemModules = !*supported_or_err;
+  else
+    LLDB_LOG_ERROR(log, supported_or_err.takeError(),
+                   "Failed to determine BuiltinHeadersInSystemModules when "
+                   "setting up import-std-module: {0}");
 
   // The Darwin libc expects this macro to be set.
   lang_opts.GNUCVersion = 40201;
