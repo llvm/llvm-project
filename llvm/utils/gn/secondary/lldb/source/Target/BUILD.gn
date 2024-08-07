@@ -85,6 +85,7 @@ static_library("Target") {
     "ThreadPlanCallUserExpression.cpp",
     "ThreadPlanRunToAddress.cpp",
     "ThreadPlanShouldStopHere.cpp",
+    "ThreadPlanSingleThreadTimeout.cpp",
     "ThreadPlanStack.cpp",
     "ThreadPlanStepInRange.cpp",
     "ThreadPlanStepInstruction.cpp",

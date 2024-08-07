@@ -841,3 +841,20 @@ namespace VariadicCallOperator {
   }
   constexpr int A = foo();
 }
+
+namespace DefinitionLoc {
+
+  struct NonConstexprCopy {
+    constexpr NonConstexprCopy() = default;
+    NonConstexprCopy(const NonConstexprCopy &);
+    constexpr NonConstexprCopy(NonConstexprCopy &&) = default;
+
+    int n = 42;
+  };
+
+  NonConstexprCopy::NonConstexprCopy(const NonConstexprCopy &) = default; // both-note {{here}}
+
+  constexpr NonConstexprCopy ncc1 = NonConstexprCopy(NonConstexprCopy());
+  constexpr NonConstexprCopy ncc2 = ncc1; // both-error {{constant expression}} \
+                                          // both-note {{non-constexpr constructor}}
+}
