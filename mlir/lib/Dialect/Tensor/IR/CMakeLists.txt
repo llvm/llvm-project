@@ -9,6 +9,7 @@ set(LLVM_OPTIONAL_SOURCES
 add_mlir_dialect_library(MLIRTensorDialect
   TensorDialect.cpp
   TensorOps.cpp
+  ShardingInterfaceImpl.cpp
   ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
