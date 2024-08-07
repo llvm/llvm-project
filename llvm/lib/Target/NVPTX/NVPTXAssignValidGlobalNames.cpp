@@ -39,7 +39,7 @@ public:
 
   /// Clean up the name to remove symbols invalid in PTX.
   std::string cleanUpName(StringRef Name);
-  
+
   /// Clean up the debug symbols.
   void cleanUpDebugSymbols(Module &M);
 };
@@ -95,7 +95,7 @@ std::string NVPTXAssignValidGlobalNames::cleanUpName(StringRef Name) {
 
 void NVPTXAssignValidGlobalNames::cleanUpDebugSymbols(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  
+
   for (Function &F : M.functions()) {
     if (DISubprogram *SP = F.getSubprogram()) {
       auto CleanedName = cleanUpName(SP->getLinkageName());
@@ -113,20 +113,12 @@ void NVPTXAssignValidGlobalNames::cleanUpDebugSymbols(Module &M) {
       auto CleanedName = cleanUpName(GVMD->getLinkageName());
       if (!CleanedName.empty()) {
         DIGlobalVariable *NewGVMD = DIGlobalVariable::get(
-          Ctx,
-          GVMD->getScope(),
-          GVMD->getName(),
-          CleanedName, // Use the cleaned name as StringRef
-          GVMD->getFile(),
-          GVMD->getLine(),
-          GVMD->getType(),
-          GVMD->isLocalToUnit(),
-          GVMD->isDefinition(),
-          GVMD->getStaticDataMemberDeclaration(),
-          GVMD->getTemplateParams(),
-          GVMD->getAlignInBits(),
-          GVMD->getAnnotations()
-        );
+            Ctx, GVMD->getScope(), GVMD->getName(),
+            CleanedName, // Use the cleaned name as StringRef
+            GVMD->getFile(), GVMD->getLine(), GVMD->getType(),
+            GVMD->isLocalToUnit(), GVMD->isDefinition(),
+            GVMD->getStaticDataMemberDeclaration(), GVMD->getTemplateParams(),
+            GVMD->getAlignInBits(), GVMD->getAnnotations());
         GVMD->replaceAllUsesWith(NewGVMD);
       }
     }
