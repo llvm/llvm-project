@@ -3411,6 +3411,8 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   return LT.first;
 }
 
+// This function returns gather/scatter overhead either from
+// user-provided value or specialized values per-target from \p ST.
 static unsigned getSVEGatherScatterOverhead(unsigned Opcode, const AArch64Subtarget* ST) {
   assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
           "Should be called on only load or stores.");
@@ -3457,8 +3459,6 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
       getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind,
                       {TTI::OK_AnyValue, TTI::OP_None}, I);
   // Add on an overhead cost for using gathers/scatters.
-  // TODO: At the moment this is applied unilaterally for all CPUs, but at some
-  // point we may want a per-CPU overhead.
   MemOpCost *= getSVEGatherScatterOverhead(Opcode, ST);
   return LT.first * MemOpCost * getMaxNumElements(LegalVF);
 }

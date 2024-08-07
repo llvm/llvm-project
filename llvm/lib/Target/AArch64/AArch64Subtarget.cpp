@@ -234,8 +234,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseV2:
+    // Specialize cost for Neoverse-V2.
     ScatterOverhead = 13;
-  LLVM_FALLTHROUGH;
+    LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
   case NeoverseV3:
