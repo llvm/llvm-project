@@ -4337,6 +4337,15 @@ public:
                                        SourceLocation NewLoc,
                                        SourceLocation OldLoc);
 
+  /// Inline checks from the start of maybeAddDeclWithEffects, to
+  /// minimize performance impact on code not using effects.
+  template <class FuncOrBlockDecl>
+  void maybeAddDeclWithEffects(FuncOrBlockDecl *D) {
+    if (Context.hasAnyFunctionEffects())
+      if (FunctionEffectsRef FX = D->getFunctionEffects(); !FX.empty())
+        maybeAddDeclWithEffects(D, FX);
+  }
+
   /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
   void maybeAddDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
 

@@ -15679,9 +15679,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
-  if (Context.hasAnyFunctionEffects())
-    if (const auto FX = FD->getFunctionEffects(); !FX.empty())
-      maybeAddDeclWithEffects(FD, FX);
+  maybeAddDeclWithEffects(FD);
 
   return D;
 }
