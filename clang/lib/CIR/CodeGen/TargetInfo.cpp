@@ -241,7 +241,7 @@ public:
   void computeInfo(CIRGenFunctionInfo &FI) const override {
     // The logic is same as in DefaultABIInfo with an exception on the kernel
     // arguments handling.
-    llvm::CallingConv::ID CC = FI.getCallingConvention();
+    mlir::cir::CallingConv CC = FI.getCallingConvention();
 
     bool cxxabiHit = getCXXABI().classifyReturnType(FI);
     assert(!cxxabiHit && "C++ ABI not considered");
@@ -249,7 +249,7 @@ public:
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
     for (auto &I : FI.arguments()) {
-      if (CC == llvm::CallingConv::SPIR_KERNEL) {
+      if (CC == mlir::cir::CallingConv::SpirKernel) {
         I.info = classifyKernelArgumentType(I.type);
       } else {
         I.info = classifyArgumentType(I.type);
@@ -277,8 +277,8 @@ public:
         mlir::cir::AddressSpaceAttr::Kind::offload_private);
   }
 
-  unsigned getOpenCLKernelCallingConv() const override {
-    return llvm::CallingConv::SPIR_KERNEL;
+  mlir::cir::CallingConv getOpenCLKernelCallingConv() const override {
+    return mlir::cir::CallingConv::SpirKernel;
   }
 };
 
