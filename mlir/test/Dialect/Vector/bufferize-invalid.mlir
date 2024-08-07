@@ -6,3 +6,12 @@ func.func @mask(%t0: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vect
   %0 = vector.mask %m0 { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @mask_scalable(
+func.func @mask_scalable(%t0: tensor<?xf32>, %val: vector<[16]xf32>, %idx: index, %m0: vector<[16]xi1>) -> tensor<?xf32> {
+  // expected-error @+1 {{'vector.mask' op body must bufferize in-place}}
+  %0 = vector.mask %m0 { vector.transfer_write %val, %t0[%idx] : vector<[16]xf32>, tensor<?xf32> } : vector<[16]xi1> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
