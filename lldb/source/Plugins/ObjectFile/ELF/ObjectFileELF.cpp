@@ -3817,9 +3817,9 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
         // the section.
         if (Section *dynstr =
                 section_list->FindSectionByID(header->sh_link).get()) {
-        DataExtractor data;
+          DataExtractor data;
           if (ReadSectionData(dynstr, data))
-          return data;
+            return data;
         }
       }
     }
@@ -3850,8 +3850,8 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
       DataExtractor data;
       addr.GetSection()->GetSectionData(data);
       return DataExtractor(data,
-                            strtab->d_ptr - addr.GetSection()->GetFileOffset(),
-                            strsz->d_val);
+                           strtab->d_ptr - addr.GetSection()->GetFileAddress(),
+                           strsz->d_val);
     }
   }
   return std::nullopt;
