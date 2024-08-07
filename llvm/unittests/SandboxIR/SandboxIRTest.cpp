@@ -2041,9 +2041,7 @@ bb3:
 TEST_F(SandboxIRTest, UnreachableInst) {
   parseIR(C, R"IR(
 define void @foo() {
-  call void @llvm.donothing()
   unreachable
-  ret void
 }
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
@@ -2051,19 +2049,17 @@ define void @foo() {
   sandboxir::Function *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
   auto It = BB->begin();
-  auto *CallInst = dyn_cast<sandboxir::CallInst>(&*It++);
   auto *UI = cast<sandboxir::UnreachableInst>(&*It++);
 
   EXPECT_EQ(UI->getNumSuccessors(), 0u);
   EXPECT_EQ(UI->getNumOfIRInstrs(), 1u);
   // Check create(InsertBefore)
   sandboxir::UnreachableInst *NewUI =
-      sandboxir::UnreachableInst::create(/*InsertBefore=*/CallInst, Ctx);
-  EXPECT_NE(NewUI, nullptr);
-  EXPECT_EQ(NewUI->getParent(), BB);
+      sandboxir::UnreachableInst::create(/*InsertBefore=*/UI, Ctx);
+  EXPECT_EQ(NewUI->getNextNode(), UI);
   // Check create(InsertAtEnd)
   sandboxir::UnreachableInst *NewUIEnd =
       sandboxir::UnreachableInst::create(/*InsertAtEnd=*/BB, Ctx);
-  EXPECT_NE(NewUIEnd, nullptr);
   EXPECT_EQ(NewUIEnd->getParent(), BB);
+  EXPECT_EQ(NewUIEnd->getNextNode(), nullptr);
 }
