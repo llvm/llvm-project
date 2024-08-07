@@ -1,5 +1,4 @@
-
-// RUN: %clang_cc1 -triple s390x-ibm-zos -fzos-extensions -emit-llvm < %s | FileCheck %s --check-prefix=PTR32-ZOS
+// RUN: %clang_cc1 -triple s390x-ibm-zos -emit-llvm < %s | FileCheck %s --check-prefix=PTR32-ZOS
 // RUN: %clang_cc1 -triple s390x-ibm-linux -fzos-extensions -emit-llvm < %s | FileCheck %s --check-prefix=PTR32-LINUX
 // RUN: %clang_cc1 -triple s390x-linux-gnu -fzos-extensions -emit-llvm < %s | FileCheck %s --check-prefix=PTR32-LINUX
 

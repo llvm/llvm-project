@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple s390x-ibm-zos -fzos-extensions -emit-llvm -O2 < %s | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -triple s390x-ibm-zos -emit-llvm -O2 < %s | FileCheck %s --check-prefix=X64
 
 #define PSA_PTR 0x00
 #define PSAAOLD 0x224
