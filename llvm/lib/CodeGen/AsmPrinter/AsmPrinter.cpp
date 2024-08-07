@@ -2771,7 +2771,7 @@ void AsmPrinter::emitJumpTableInfo() {
       emitJumpTableEntry(MJTI, MBB, JTI);
   }
 
-  if (EmitJumpTableSizesSection && !JT.empty()) {
+  if (EmitJumpTableSizesSection && TM.getTargetTriple().isOSBinFormatELF() && !JT.empty()) {
     MCSymbolELF *LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
     int Flags = F.hasComdat() ? ELF::SHF_GROUP : 0;
     StringRef GroupName = F.hasComdat() ? F.getComdat()->getName() : "";
