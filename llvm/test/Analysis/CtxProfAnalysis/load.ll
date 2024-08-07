@@ -1,3 +1,5 @@
+; REQUIRES: x86_64-linux
+
 ; RUN: split-file %s %t
 ; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
 ; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
