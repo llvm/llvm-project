@@ -918,6 +918,18 @@ public:
   }
 };
 
+static mlir::LLVM::LLVMStructType
+getLLVMLandingPadStructTy(mlir::ConversionPatternRewriter &rewriter) {
+  // Create the landing pad type: struct { ptr, i32 }
+  mlir::MLIRContext *ctx = rewriter.getContext();
+  auto llvmPtr = mlir::LLVM::LLVMPointerType::get(ctx);
+  llvm::SmallVector<mlir::Type> structFields;
+  structFields.push_back(llvmPtr);
+  structFields.push_back(rewriter.getI32Type());
+
+  return mlir::LLVM::LLVMStructType::getLiteral(ctx, structFields);
+}
+
 class CIREhInflightOpLowering
     : public mlir::OpConversionPattern<mlir::cir::EhInflightOp> {
 public:
@@ -927,15 +939,7 @@ public:
   matchAndRewrite(mlir::cir::EhInflightOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
-    // Create the landing pad type: struct { ptr, i32 }
-    mlir::MLIRContext *ctx = rewriter.getContext();
-    auto llvmPtr = mlir::LLVM::LLVMPointerType::get(ctx);
-    llvm::SmallVector<mlir::Type> structFields;
-    structFields.push_back(llvmPtr);
-    structFields.push_back(rewriter.getI32Type());
-
-    auto llvmLandingPadStructTy =
-        mlir::LLVM::LLVMStructType::getLiteral(ctx, structFields);
+    auto llvmLandingPadStructTy = getLLVMLandingPadStructTy(rewriter);
     mlir::ArrayAttr symListAttr = op.getSymTypeListAttr();
     mlir::SmallVector<mlir::Value, 4> symAddrs;
 
@@ -3671,6 +3675,33 @@ public:
   }
 };
 
+class CIRResumeOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ResumeOp> {
+public:
+  using OpConversionPattern<mlir::cir::ResumeOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ResumeOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // %lpad.val = insertvalue { ptr, i32 } poison, ptr %exception_ptr, 0
+    // %lpad.val2 = insertvalue { ptr, i32 } %lpad.val, i32 %selector, 1
+    // resume { ptr, i32 } %lpad.val2
+    SmallVector<int64_t> slotIdx = {0};
+    SmallVector<int64_t> selectorIdx = {1};
+    auto llvmLandingPadStructTy = getLLVMLandingPadStructTy(rewriter);
+    mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(
+        op.getLoc(), llvmLandingPadStructTy);
+
+    mlir::Value slot = rewriter.create<mlir::LLVM::InsertValueOp>(
+        op.getLoc(), poison, adaptor.getExceptionPtr(), slotIdx);
+    mlir::Value selector = rewriter.create<mlir::LLVM::InsertValueOp>(
+        op.getLoc(), slot, adaptor.getTypeId(), selectorIdx);
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ResumeOp>(op, selector);
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter,
                                          mlir::DataLayout &dataLayout) {
@@ -3709,7 +3740,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRSqrtOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
       CIRFModOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering, CIRPowOpLowering,
       CIRClearCacheOpLowering, CIRUndefOpLowering, CIREhTypeIdOpLowering,
-      CIRCatchParamOpLowering>(converter, patterns.getContext());
+      CIRCatchParamOpLowering, CIRResumeOpLowering>(converter,
+                                                    patterns.getContext());
 }
 
 namespace {

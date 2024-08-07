@@ -93,9 +93,12 @@ module @"try-catch.cpp" attributes {cir.lang = #cir.lang<cxx>, cir.sob = #cir.si
     // LLVM: call void @__cxa_end_catch()
     cir.br ^bb10
   ^bb9(%38: !cir.ptr<!void>, %39: !u32i):
-    cir.br ^bb10
-    // TODO: support resume.
-    //   cir.resume
+    // LLVM: %[[RESUME_EH:.*]] = phi ptr
+    // LLVM: %[[RESUME_SEL:.*]] = phi i32
+    // LLVM: %[[RES0:.*]] = insertvalue { ptr, i32 } poison, ptr %[[RESUME_EH]], 0
+    // LLVM: %[[RES1:.*]] = insertvalue { ptr, i32 } %[[RES0]], i32 %[[RESUME_SEL]], 1
+    // LLVM: resume { ptr, i32 } %[[RES1]]
+    cir.resume %38, %39
   ^bb10:
     %40 = cir.load %3 : !cir.ptr<!u64i>, !u64i
     cir.store %40, %0 : !u64i, !cir.ptr<!u64i>
