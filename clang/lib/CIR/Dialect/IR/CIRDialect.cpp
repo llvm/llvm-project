@@ -536,10 +536,10 @@ bool isIntOrBoolCast(mlir::cir::CastOp op) {
 }
 
 Value tryFoldCastChain(CastOp op) {
-  CastOp head = op, tail = op;  
+  CastOp head = op, tail = op;
 
   while(op) {
-    if (!isIntOrBoolCast(op))  
+    if (!isIntOrBoolCast(op))
       break;
     head = op;
     op = dyn_cast_or_null<CastOp>(head.getSrc().getDefiningOp());
@@ -564,10 +564,10 @@ Value tryFoldCastChain(CastOp op) {
   return {};
 }
 
-OpFoldResult CastOp::fold(FoldAdaptor adaptor) {  
+OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   if (getSrc().getType() == getResult().getType()) {
     switch (getKind()) {
-    case mlir::cir::CastKind::integral: {    
+    case mlir::cir::CastKind::integral: {
       // TODO: for sign differences, it's possible in certain conditions to
       // create a new attribute that's capable of representing the source.
       SmallVector<mlir::OpFoldResult, 1> foldResults;
@@ -579,7 +579,7 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     case mlir::cir::CastKind::bitcast:
     case mlir::cir::CastKind::address_space: {
       return getSrc();
-    }  
+    }
     default:
       return {};
     }
@@ -592,15 +592,15 @@ static bool isBoolNot(mlir::cir::UnaryOp op) {
          op.getKind() == mlir::cir::UnaryOpKind::Not;
 }
 
-/*  This folder simplifies the sequential boolean not operations.
-    For instance, the next two unary operations will be eliminated:
-    
-    ```mlir
-    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
-    %2 = cir.unary(not, %1) : !cir.bool, !cir.bool
-    ```
-    
-    and the argument of the first one (%0) will be used instead. */
+// This folder simplifies the sequential boolean not operations.
+// For instance, the next two unary operations will be eliminated:
+//
+// ```mlir
+// %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+// %2 = cir.unary(not, %1) : !cir.bool, !cir.bool
+// ```
+//
+// and the argument of the first one (%0) will be used instead.
 OpFoldResult UnaryOp::fold(FoldAdaptor adaptor) {
   if (isBoolNot(*this))
     if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
