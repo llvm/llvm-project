@@ -1065,8 +1065,9 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
     Assumes all devices hold tensors with same-sized halo data as specified
     by `dynamic/static_halo_sizes`.
 
-    `mesh_axes` specifies the tensor axes along which the halo data is updated.
-    Currently each tensor dim can be sharded along a single mesh axis only.
+    `mesh_axes` specifies for each tensor axis along which mesh axis its halo
+    data is updated. Currently each tensor dim can be sharded along a single
+    mesh axis only.
 
     Optionally resizes to new halo sizes `target_halo_sizes`.
   }];
