@@ -185,10 +185,10 @@ public:
 
   struct BinOpInfo {
     mlir::Location Loc;
-    mlir::Value LHS;
-    mlir::Value RHS;
-    QualType Ty; // Computation Type.
-    FPOptions FPFeatures;
+    mlir::Value LHS{};
+    mlir::Value RHS{};
+    QualType Ty{}; // Computation Type.
+    FPOptions FPFeatures{};
   };
 
   BinOpInfo buildBinOps(const BinaryOperator *E,
@@ -765,8 +765,6 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
     return mlir::cir::ComplexRangeKind::Basic;
   case LangOptions::CX_None:
     return mlir::cir::ComplexRangeKind::None;
-  default:
-    llvm_unreachable("unknown ComplexRangeKind");
   }
 }
 

@@ -389,7 +389,6 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 
   case Type::Builtin: {
     switch (cast<BuiltinType>(Ty)->getKind()) {
-    case BuiltinType::WasmExternRef:
     case BuiltinType::SveBoolx2:
     case BuiltinType::SveBoolx4:
     case BuiltinType::SveCount:
@@ -579,6 +578,16 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
         assert(0 && "not implemented");
         break;
       }
+#define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
+  case BuiltinType::Id: {                                                      \
+    llvm_unreachable("NYI");                                                   \
+  } break;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
+                               SingletonId)                                    \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:

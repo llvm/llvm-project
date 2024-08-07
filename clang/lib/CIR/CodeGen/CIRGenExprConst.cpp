@@ -1804,7 +1804,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     unsigned NumElements = Value.getVectorLength();
     SmallVector<mlir::Attribute, 16> Elts;
     Elts.reserve(NumElements);
-    for (int i = 0; i < NumElements; ++i) {
+    for (unsigned i = 0; i < NumElements; ++i) {
       auto C = tryEmitPrivateForMemory(Value.getVectorElt(i), ElementType);
       if (!C)
         return {};

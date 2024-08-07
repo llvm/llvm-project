@@ -32,16 +32,6 @@ using ABIArgInfo = ::cir::ABIArgInfo;
 namespace mlir {
 namespace cir {
 
-namespace {
-
-// FIXME(cir): Create a custom rewriter class to abstract this away.
-Value createBitcast(Value Src, Type Ty, LowerFunction &LF) {
-  return LF.getRewriter().create<CastOp>(Src.getLoc(), Ty, CastKind::bitcast,
-                                         Src);
-}
-
-} // namespace
-
 // FIXME(cir): Pass SrcFn and NewFn around instead of having then as attributes.
 LowerFunction::LowerFunction(LowerModule &LM, PatternRewriter &rewriter,
                              FuncOp srcFn, FuncOp newFn)

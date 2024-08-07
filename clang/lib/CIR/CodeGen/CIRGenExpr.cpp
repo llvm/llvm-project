@@ -788,7 +788,7 @@ void CIRGenFunction::buildStoreThroughExtVectorComponentLValue(RValue Src,
       // When the vector size is odd and .odd or .hi is used, the last element
       // of the Elts constant array will be one past the size of the vector.
       // Ignore the last element here, if it is greater than the mask size.
-      if (getAccessedFieldNo(NumSrcElts - 1, Elts) == Mask.size())
+      if ((unsigned)getAccessedFieldNo(NumSrcElts - 1, Elts) == Mask.size())
         NumSrcElts--;
 
       // modify when what gets shuffled in
