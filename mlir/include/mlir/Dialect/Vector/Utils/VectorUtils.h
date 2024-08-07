@@ -120,7 +120,7 @@ inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
   };
 }
 
-/// Returns an iterator over the dims (inc scalability) of a VectorType.
+/// Returns a range over the dims (size and scalability) of a VectorType.
 inline auto getDims(VectorType vType) {
   return llvm::zip_equal(vType.getShape(), vType.getScalableDims());
 }
