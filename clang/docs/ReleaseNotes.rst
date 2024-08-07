@@ -75,6 +75,9 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- Allow single element access of GCC vector/ext_vector_type object to be 
+  constant expression. Supports the `V.xyzw` syntax and other tidbits 
+  as seen in OpenCL. Selecting multiple elements is left as a future work.
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -166,6 +169,7 @@ Bug Fixes in This Version
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
 - Fixed a failed assertion when checking required literal types in C context. (#GH101304).
+- Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -190,6 +194,7 @@ Bug Fixes to C++ Support
 - Fix init-capture packs having a size of one before being instantiated. (#GH63677)
 - Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
   (#GH99877).
+- Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -332,6 +337,9 @@ OpenMP Support
 Improvements
 ^^^^^^^^^^^^
 - Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
+
+- `num_teams` now accepts multiple expressions when it is used along in ``target teams ompx_bare`` construct.
+  This allows the target region to be launched with multi-dim grid on GPUs.
 
 Additional Information
 ======================

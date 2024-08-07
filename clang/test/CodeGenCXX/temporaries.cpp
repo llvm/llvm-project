@@ -64,6 +64,26 @@ namespace RefTempSubobject {
   constexpr const SelfReferential &sr = SelfReferential();
 }
 
+namespace Vector {
+  typedef __attribute__((vector_size(16))) int vi4a;
+  typedef __attribute__((ext_vector_type(4))) int vi4b;
+  struct S {
+    vi4a v;
+    vi4b w;
+  };
+
+  int &&r = S().v[1];
+  // CHECK: @_ZGRN6Vector1rE_ = internal global i32 0, align 4
+  // CHECK: @_ZN6Vector1rE = constant ptr @_ZGRN6Vector1rE_, align 8
+
+  int &&s = S().w[1];
+  // CHECK: @_ZGRN6Vector1sE_ = internal global i32 0, align 4
+  // CHECK: @_ZN6Vector1sE = constant ptr @_ZGRN6Vector1sE_, align 8
+
+  int &&t = S().w.y;
+  // CHECK: @_ZGRN6Vector1tE_ = internal global i32 0, align 4
+  // CHECK: @_ZN6Vector1tE = constant ptr @_ZGRN6Vector1tE_, align 8
+}
 struct A {
   A();
   ~A();
@@ -663,27 +683,6 @@ namespace Bitfield {
   // CHECK: call void @_ZN8Bitfield1SD1
   // CHECK: store ptr @_ZGRN8Bitfield1rE_, ptr @_ZN8Bitfield1rE, align 8
   int &&r = S().a;
-}
-
-namespace Vector {
-  typedef __attribute__((vector_size(16))) int vi4a;
-  typedef __attribute__((ext_vector_type(4))) int vi4b;
-  struct S {
-    vi4a v;
-    vi4b w;
-  };
-  // CHECK: alloca
-  // CHECK: extractelement
-  // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1rE_
-  // CHECK: store ptr @_ZGRN6Vector1rE_, ptr @_ZN6Vector1rE,
-  int &&r = S().v[1];
-
-  // CHECK: alloca
-  // CHECK: extractelement
-  // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1sE_
-  // CHECK: store ptr @_ZGRN6Vector1sE_, ptr @_ZN6Vector1sE,
-  int &&s = S().w[1];
-  int &&ss = S().w.y;
 }
 
 namespace ImplicitTemporaryCleanup {
