@@ -509,8 +509,8 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) const {
 ///  * 1-D `vector<axT>` remains as is while,
 ///  * n>1 `vector<ax...xkxT>` convert via an (n-1)-D array type to
 ///    `!llvm.array<ax...array<jxvector<kxT>>>`.
-/// Returns failure for n-D scalable vector types as LLVM does not support
-/// arrays of scalable vectors.
+/// As LLVM supports arrays of scalable vectors, this method will also convert
+/// n-D scalable vectors provided that only the trailing dim is scalable.
 FailureOr<Type> LLVMTypeConverter::convertVectorType(VectorType type) const {
   auto elementType = convertType(type.getElementType());
   if (!elementType)
@@ -521,7 +521,9 @@ FailureOr<Type> LLVMTypeConverter::convertVectorType(VectorType type) const {
                                     type.getScalableDims().back());
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");
-  // Only the trailing dimension can be scalable.
+  // For n-D vector types for which a _non-trailing_ dim is scalable,
+  // return a failure. Supporting such cases would require LLVM
+  // to support something akin "scalable arrays" of vectors.
   if (llvm::is_contained(type.getScalableDims().drop_back(), true))
     return failure();
   auto shape = type.getShape();

@@ -150,8 +150,8 @@ entry:
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32-16 x vscale], Type: Variable, Align: 16, Size: vscale x 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-40-16 x vscale], Type: Variable, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: VariableSized, Align: 1, Size: 0
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: VariableSized, Align: 1, Size: 0
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-16 x vscale], Type: VariableSized, Align: 1, Size: 0
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-16 x vscale], Type: VariableSized, Align: 1, Size: 0
 
 define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: csr_d8_allocnxv4i32i32f64_vla:
