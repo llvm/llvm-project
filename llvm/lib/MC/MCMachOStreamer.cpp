@@ -129,7 +129,7 @@ public:
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
     if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-      getWriter().getCGProfile().push_back({From, To, Count});
+      getMCObjectWriter().getCGProfile().push_back({From, To, Count});
   }
 
   void finishImpl() override;
@@ -277,8 +277,8 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
 
 void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                                             bool PtrAuthKernelABIVersion) {
-  getWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
-  getWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
+  getMCObjectWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
+  getMCObjectWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
@@ -518,7 +518,7 @@ void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
 
 void MCMachOStreamer::finalizeCGProfile() {
   MCAssembler &Asm = getAssembler();
-  MCObjectWriter &W = getWriter();
+  MCObjectWriter &W = getMCObjectWriter();
   if (W.getCGProfile().empty())
     return;
   for (auto &E : W.getCGProfile()) {
