@@ -697,20 +697,6 @@ bool PPCTargetInfo::initFeatureMap(
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mprivileged" << CPU;
     return false;
   }
-
-  if (llvm::is_contained(FeaturesVec, "-hard-float")) {
-    Features["altivec"] = false;
-    Features["vsx"] = false;
-    Features["direct-move"] = false;
-    Features["power8-vector"] = false;
-    Features["power9-vector"] = false;
-    Features["paired-vector-memops"] = false;
-    Features["power10-vector"] = false;
-    Features["float128"] = false;
-    Features["mma"] = false;
-    Features["crypto"] = false;
-  }
-
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 
@@ -802,11 +788,14 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
       Features["efpu2"] = false;
     // If we're disabling altivec or vsx go ahead and disable all of the vsx
     // features.
-    if ((Name == "altivec") || (Name == "vsx"))
+    if ((Name == "altivec") || (Name == "vsx") || (Name == "hard-float")) {
+      if (Name != "vsx")
+        Features["altivec"] = Features["crypto"] = false;
       Features["vsx"] = Features["direct-move"] = Features["power8-vector"] =
           Features["float128"] = Features["power9-vector"] =
               Features["paired-vector-memops"] = Features["mma"] =
                   Features["power10-vector"] = false;
+    }
     if (Name == "power8-vector")
       Features["power9-vector"] = Features["paired-vector-memops"] =
           Features["mma"] = Features["power10-vector"] = false;
