@@ -113,6 +113,8 @@ public:
 
   void emitFunctionEntryLabel() override;
 
+  void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
+
   void LowerJumpTableDest(MCStreamer &OutStreamer, const MachineInstr &MI);
 
   void LowerHardenedBRJumpTable(const MachineInstr &MI);
@@ -1280,6 +1282,23 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
   }
 }
 
+void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
+                                       const Constant *CV) {
+  if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV))
+    if (CPA->hasAddressDiscriminator() &&
+        !CPA->hasSpecialAddressDiscriminator(
+            ConstantPtrAuth::AddrDiscriminator_CtorsDtors))
+      report_fatal_error(
+          "unexpected address discrimination value for ctors/dtors entry, only "
+          "'ptr inttoptr (i64 1 to ptr)' is allowed");
+  // If we have signed pointers in xxstructors list, they'll be lowered to @AUTH
+  // MCExpr's via AArch64AsmPrinter::lowerConstantPtrAuth. It does not look at
+  // actual address discrimination value and only checks
+  // hasAddressDiscriminator(), so it's OK to leave special address
+  // discrimination value here.
+  AsmPrinter::emitXXStructor(DL, CV);
+}
+
 void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
                                         const GlobalAlias &GA) {
   if (auto F = dyn_cast_or_null<Function>(GA.getAliasee())) {
@@ -2142,6 +2161,10 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   };
 
   const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
+  const bool IsELFSignedGOT = MI.getParent()
+                                  ->getParent()
+                                  ->getInfo<AArch64FunctionInfo>()
+                                  ->hasELFSignedGOT();
   MachineOperand GAOp = MI.getOperand(0);
   const uint64_t KeyC = MI.getOperand(1).getImm();
   assert(KeyC <= AArch64PACKey::LAST &&
@@ -2158,9 +2181,16 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   // Emit:
   // target materialization:
   // - via GOT:
-  //     adrp x16, :got:target
-  //     ldr x16, [x16, :got_lo12:target]
-  //     add offset to x16 if offset != 0
+  //   - unsigned GOT:
+  //       adrp x16, :got:target
+  //       ldr x16, [x16, :got_lo12:target]
+  //       add offset to x16 if offset != 0
+  //   - ELF signed GOT:
+  //       adrp x17, :got:target
+  //       add x17, x17, :got_auth_lo12:target
+  //       ldr x16, [x17]
+  //       aut{i|d}a x16, x17
+  //       add offset to x16 if offset != 0
   //
   // - direct:
   //     adrp x16, target
@@ -2203,13 +2233,40 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   MCInstLowering.lowerOperand(GAMOLo, GAMCLo);
 
   EmitAndIncrement(
-      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
+      MCInstBuilder(AArch64::ADRP)
+          .addReg(IsGOTLoad && IsELFSignedGOT ? AArch64::X17 : AArch64::X16)
+          .addOperand(GAMCHi));
 
   if (IsGOTLoad) {
-    EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X16)
-                         .addOperand(GAMCLo));
+    if (IsELFSignedGOT) {
+      EmitAndIncrement(MCInstBuilder(AArch64::ADDXri)
+                           .addReg(AArch64::X17)
+                           .addReg(AArch64::X17)
+                           .addOperand(GAMCLo)
+                           .addImm(0));
+
+      EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
+                           .addReg(AArch64::X16)
+                           .addReg(AArch64::X17)
+                           .addImm(0));
+
+      assert(GAOp.isGlobal());
+      assert(GAOp.getGlobal()->getValueType() != nullptr);
+      unsigned AuthOpcode = GAOp.getGlobal()->getValueType()->isFunctionTy()
+                                ? AArch64::AUTIA
+                                : AArch64::AUTDA;
+
+      EmitAndIncrement(MCInstBuilder(AuthOpcode)
+                           .addReg(AArch64::X16)
+                           .addReg(AArch64::X16)
+                           .addReg(AArch64::X17));
+
+    } else {
+      EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
+                           .addReg(AArch64::X16)
+                           .addReg(AArch64::X16)
+                           .addOperand(GAMCLo));
+    }
   } else {
     EmitAndIncrement(MCInstBuilder(AArch64::ADDXri)
                          .addReg(AArch64::X16)

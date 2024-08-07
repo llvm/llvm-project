@@ -27,8 +27,6 @@
 #include <vector>
 
 using namespace clang;
-
-using namespace clang;
 using namespace clang::interp;
 
 static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
@@ -630,7 +628,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
       S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+
+      if (DiagDecl->getDefinition())
+        S.Note(DiagDecl->getDefinition()->getLocation(),
+               diag::note_declared_at);
+      else
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
     }
   } else {
     S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
@@ -837,6 +840,12 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   assert(Desc->isRecord());
   const Record *R = Desc->ElemRecord;
   assert(R);
+
+  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_destroy);
+    return false;
+  }
 
   // Fields.
   for (const Record::Field &Field : llvm::reverse(R->fields())) {

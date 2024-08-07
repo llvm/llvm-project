@@ -239,6 +239,12 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                        FeatureStdExtZbb],
                                       SiFiveX280TuneFeatures>;
 
+defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
+                                 TuneConditionalCompressedMoveFusion,
+                                 TuneLUIADDIFusion,
+                                 TuneAUIPCADDIFusion,
+                                 FeaturePostRAScheduler];
+
 def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
@@ -266,11 +272,26 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                        FeatureStdExtZfhmin,
                                        FeatureUnalignedScalarMem,
                                        FeatureUnalignedVectorMem],
-                                      [TuneNoDefaultUnroll,
-                                       TuneConditionalCompressedMoveFusion,
-                                       TuneLUIADDIFusion,
-                                       TuneAUIPCADDIFusion,
-                                       FeaturePostRAScheduler]>;
+                                      SiFiveP400TuneFeatures>;
+
+def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
+                                      !listconcat(RVA22U64Features,
+                                      [FeatureStdExtV,
+                                       FeatureStdExtZifencei,
+                                       FeatureStdExtZihintntl,
+                                       FeatureStdExtZvl128b,
+                                       FeatureStdExtZvbb,
+                                       FeatureStdExtZvknc,
+                                       FeatureStdExtZvkng,
+                                       FeatureStdExtZvksc,
+                                       FeatureStdExtZvksg,
+                                       FeatureVendorXSiFivecdiscarddlone,
+                                       FeatureVendorXSiFivecflushdlone,
+                                       FeatureUnalignedScalarMem,
+                                       FeatureUnalignedVectorMem]),
+                                      !listconcat(SiFiveP400TuneFeatures,
+                                                  [TuneNoSinkSplatOperands])>;
+
 
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       [Feature64Bit,
@@ -350,6 +371,31 @@ def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
                                                FeatureStdExtZifencei,
                                                FeatureStdExtM,
                                                FeatureStdExtA,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR4_RV32 : RISCVProcessorModel<"syntacore-scr4-rv32",
+                                              NoSchedModel,
+                                              [Feature32Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR4_RV64 : RISCVProcessorModel<"syntacore-scr4-rv64",
+                                              NoSchedModel,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
                                                FeatureStdExtC],
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 

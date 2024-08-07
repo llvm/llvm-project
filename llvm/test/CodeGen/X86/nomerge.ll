@@ -68,9 +68,9 @@ define void @nomerge_trap(i32 %i) {
 ; CHECK:      # %bb.1: # %entry
 ; CHECK:      # %bb.2: # %if.then
 ; CHECK-NEXT: ud2
-; CHECK-NEXT: LBB1_3: # %if.then2
+; CHECK-NEXT: LBB{{.*}}: # %if.then2
 ; CHECK-NEXT: ud2
-; CHECK-NEXT: .LBB1_4: # %if.end3
+; CHECK-NEXT: .LBB{{.*}}: # %if.end3
 ; CHECK-NEXT: ud2
 entry:
   switch i32 %i, label %if.end3 [
@@ -99,9 +99,9 @@ define void @nomerge_debugtrap(i32 %i) {
 ; CHECK:      # %bb.1: # %entry
 ; CHECK:      # %bb.2: # %if.then
 ; CHECK-NEXT: int3
-; CHECK-NEXT: LBB2_3: # %if.then2
+; CHECK-NEXT: LBB{{.*}}: # %if.then2
 ; CHECK-NEXT: int3
-; CHECK-NEXT: .LBB2_4: # %if.end3
+; CHECK-NEXT: .LBB{{.*}}: # %if.end3
 ; CHECK-NEXT: int3
 entry:
   switch i32 %i, label %if.end3 [
@@ -128,9 +128,9 @@ define void @nomerge_named_debugtrap(i32 %i) {
 ; CHECK:      # %bb.1: # %entry
 ; CHECK:      # %bb.2: # %if.then
 ; CHECK-NEXT: callq trap_func@PLT
-; CHECK-NEXT: LBB3_3: # %if.then2
+; CHECK-NEXT: LBB{{.*}}: # %if.then2
 ; CHECK-NEXT: callq trap_func@PLT
-; CHECK-NEXT: .LBB3_4: # %if.end3
+; CHECK-NEXT: .LBB{{.*}}: # %if.end3
 ; CHECK-NEXT: callq trap_func@PLT
 entry:
   switch i32 %i, label %if.end3 [

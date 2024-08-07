@@ -37,11 +37,17 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+
+- The type trait builtin ``__is_nullptr`` has been removed, since it has very
+  few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
+  which GCC supports as well.
 
 ABI Changes in This Version
 ---------------------------
@@ -69,6 +75,9 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- Allow single element access of GCC vector/ext_vector_type object to be 
+  constant expression. Supports the `V.xyzw` syntax and other tidbits 
+  as seen in OpenCL. Selecting multiple elements is left as a future work.
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -100,6 +109,9 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+Non-comprehensive list of changes in this release
+-------------------------------------------------
 
 New Compiler Flags
 ------------------
@@ -144,6 +156,9 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
 
 - -Wdangling-assignment-gsl is enabled by default.
+- Clang now does a better job preserving the template arguments as written when specializing concepts.
+- Clang now always preserves the template arguments as written used
+  to specialize template type aliases.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -156,6 +171,8 @@ Bug Fixes in This Version
 
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
+- Fixed a failed assertion when checking required literal types in C context. (#GH101304).
+- Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -172,6 +189,15 @@ Bug Fixes to C++ Support
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
 - Fix a crash when checking the initialzier of an object that was initialized
   with a string literal. (#GH82167)
+- Fix a crash when matching template template parameters with templates which have
+  parameters of different class type. (#GH101394)
+- Clang now correctly recognizes the correct context for parameter
+  substitutions in concepts, so it doesn't incorrectly complain of missing
+  module imports in those situations. (#GH60336)
+- Fix init-capture packs having a size of one before being instantiated. (#GH63677)
+- Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
+  (#GH99877).
+- Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -215,6 +241,10 @@ X86 Support
   removed. Any uses of these removed functions should migrate to the
   functions defined by the ``*mmintrin.h`` headers. A mapping can be
   found in the file ``clang/www/builtins.py``.
+
+- Support ISA of ``AVX10.2``.
+  * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
+  ``*_(mask(z)))_minmax_s[s|d|h]``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -301,9 +331,18 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
 
 OpenMP Support
 --------------
+- Added support for 'omp assume' directive.
+
+Improvements
+^^^^^^^^^^^^
+- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
+
+- `num_teams` now accepts multiple expressions when it is used along in ``target teams ompx_bare`` construct.
+  This allows the target region to be launched with multi-dim grid on GPUs.
 
 Additional Information
 ======================

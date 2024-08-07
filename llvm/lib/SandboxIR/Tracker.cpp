@@ -204,6 +204,46 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
+AllocaSetAllocatedType::AllocaSetAllocatedType(AllocaInst *Alloca,
+                                               Tracker &Tracker)
+    : IRChangeBase(Tracker), Alloca(Alloca),
+      OrigType(Alloca->getAllocatedType()) {}
+
+void AllocaSetAllocatedType::revert() { Alloca->setAllocatedType(OrigType); }
+
+#ifndef NDEBUG
+void AllocaSetAllocatedType::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+AllocaSetAlignment::AllocaSetAlignment(AllocaInst *Alloca, Tracker &Tracker)
+    : IRChangeBase(Tracker), Alloca(Alloca), OrigAlign(Alloca->getAlign()) {}
+
+void AllocaSetAlignment::revert() { Alloca->setAlignment(OrigAlign); }
+
+#ifndef NDEBUG
+void AllocaSetAlignment::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+AllocaSetUsedWithInAlloca::AllocaSetUsedWithInAlloca(AllocaInst *Alloca,
+                                                     Tracker &Tracker)
+    : IRChangeBase(Tracker), Alloca(Alloca),
+      Orig(Alloca->isUsedWithInAlloca()) {}
+
+void AllocaSetUsedWithInAlloca::revert() { Alloca->setUsedWithInAlloca(Orig); }
+
+#ifndef NDEBUG
+void AllocaSetUsedWithInAlloca::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 CallBrInstSetDefaultDest::CallBrInstSetDefaultDest(CallBrInst *CallBr,
                                                    Tracker &Tracker)
     : IRChangeBase(Tracker), CallBr(CallBr) {
@@ -235,6 +275,35 @@ void CallBrInstSetIndirectDest::dump() const {
 }
 #endif
 
+SetVolatile::SetVolatile(Instruction *I, Tracker &Tracker)
+    : IRChangeBase(Tracker) {
+  if (auto *Load = dyn_cast<LoadInst>(I)) {
+    WasVolatile = Load->isVolatile();
+    StoreOrLoad = Load;
+  } else if (auto *Store = dyn_cast<StoreInst>(I)) {
+    WasVolatile = Store->isVolatile();
+    StoreOrLoad = Store;
+  } else {
+    llvm_unreachable("Expected LoadInst or StoreInst");
+  }
+}
+
+void SetVolatile::revert() {
+  if (auto *Load = StoreOrLoad.dyn_cast<LoadInst *>()) {
+    Load->setVolatile(WasVolatile);
+  } else if (auto *Store = StoreOrLoad.dyn_cast<StoreInst *>()) {
+    Store->setVolatile(WasVolatile);
+  } else {
+    llvm_unreachable("Expected LoadInst or StoreInst");
+  }
+}
+#ifndef NDEBUG
+void SetVolatile::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 MoveInstr::MoveInstr(Instruction *MovedI, Tracker &Tracker)
     : IRChangeBase(Tracker), MovedI(MovedI) {
   if (auto *NextI = MovedI->getNextNode())
@@ -254,6 +323,27 @@ void MoveInstr::revert() {
 
 #ifndef NDEBUG
 void MoveInstr::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void InsertIntoBB::revert() { InsertedI->removeFromParent(); }
+
+InsertIntoBB::InsertIntoBB(Instruction *InsertedI, Tracker &Tracker)
+    : IRChangeBase(Tracker), InsertedI(InsertedI) {}
+
+#ifndef NDEBUG
+void InsertIntoBB::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void CreateAndInsertInst::revert() { NewI->eraseFromParent(); }
+
+#ifndef NDEBUG
+void CreateAndInsertInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }

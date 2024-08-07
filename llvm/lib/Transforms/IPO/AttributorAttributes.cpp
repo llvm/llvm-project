@@ -1325,20 +1325,20 @@ struct AAPointerInfoImpl
 
         const auto *FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
             QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+        if (FnReachabilityAA) {
+          // Without going backwards in the call tree, can we reach the access
+          // from the least dominating write. Do not allow to pass the
+          // instruction itself either.
+          bool Inserted = ExclusionSet.insert(&I).second;
 
-        // Without going backwards in the call tree, can we reach the access
-        // from the least dominating write. Do not allow to pass the instruction
-        // itself either.
-        bool Inserted = ExclusionSet.insert(&I).second;
+          if (!FnReachabilityAA->instructionCanReach(
+                  A, *LeastDominatingWriteInst,
+                  *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
+            WriteChecked = true;
 
-        if (!FnReachabilityAA ||
-            !FnReachabilityAA->instructionCanReach(
-                A, *LeastDominatingWriteInst,
-                *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
-          WriteChecked = true;
-
-        if (Inserted)
-          ExclusionSet.erase(&I);
+          if (Inserted)
+            ExclusionSet.erase(&I);
+        }
       }
 
       if (ReadChecked && WriteChecked)
@@ -11874,14 +11874,24 @@ struct AAUnderlyingObjectsImpl
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
-    return std::string("UnderlyingObjects ") +
-           (isValidState()
-                ? (std::string("inter #") +
-                   std::to_string(InterAssumedUnderlyingObjects.size()) +
-                   " objs" + std::string(", intra #") +
-                   std::to_string(IntraAssumedUnderlyingObjects.size()) +
-                   " objs")
-                : "<invalid>");
+    if (!isValidState())
+      return "<invalid>";
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    OS << "underlying objects: inter " << InterAssumedUnderlyingObjects.size()
+       << " objects, intra " << IntraAssumedUnderlyingObjects.size()
+       << " objects.\n";
+    if (!InterAssumedUnderlyingObjects.empty()) {
+      OS << "inter objects:\n";
+      for (auto *Obj : InterAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    if (!IntraAssumedUnderlyingObjects.empty()) {
+      OS << "intra objects:\n";
+      for (auto *Obj : IntraAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    return Str;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -12491,6 +12501,8 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   void initialize(Attributor &A) override {
     assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
            "Associated value is not a pointer");
+    if (getAssociatedType()->getPointerAddressSpace())
+      indicateOptimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
