@@ -29,9 +29,7 @@ template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
       : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P, VD),
-        OldGlobalDecl(Ctx->GlobalDecl),
         OldInitializingDecl(Ctx->InitializingDecl) {
-    Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
     Ctx->InitializingDecl = VD;
     Ctx->InitStack.push_back(InitLink::Decl(VD));
   }
@@ -41,14 +39,12 @@ public:
   }
 
   ~DeclScope() {
-    this->Ctx->GlobalDecl = OldGlobalDecl;
     this->Ctx->InitializingDecl = OldInitializingDecl;
     this->Ctx->InitStack.pop_back();
   }
 
 private:
   Program::DeclScope Scope;
-  bool OldGlobalDecl;
   const ValueDecl *OldInitializingDecl;
 };
 
@@ -339,6 +335,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!PointeeType.isNull()) {
       if (std::optional<PrimType> T = classify(PointeeType))
         Desc = P.createDescriptor(SubExpr, *T);
+      else
+        Desc = P.createDescriptor(SubExpr, PointeeType.getTypePtr(),
+                                  std::nullopt, true, false,
+                                  /*IsMutable=*/false, nullptr);
     }
     return this->emitNull(classifyPrim(CE->getType()), Desc, CE);
   }
@@ -2265,7 +2265,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // the temporary is explicitly static, create a global variable.
   std::optional<PrimType> SubExprT = classify(SubExpr);
   bool IsStatic = E->getStorageDuration() == SD_Static;
-  if (GlobalDecl || IsStatic) {
+  if (IsStatic) {
     std::optional<unsigned> GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
@@ -3161,10 +3161,11 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
   if (!E->isExpressibleAsConstantInitializer())
-    return this->emitInvalid(E);
+    return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(E->getSubExpr());
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>

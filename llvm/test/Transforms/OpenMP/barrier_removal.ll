@@ -332,28 +332,28 @@ define void @pos_priv_mem() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_priv_mem
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(5), ptr @GPtr5, align 4
-; CHECK-NEXT:    [[LOC:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[LOC:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @PG1, align 4
-; CHECK-NEXT:    store i32 [[A]], ptr [[LOC]], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr addrspace(5) [[LOC]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = load i32, ptr addrspacecast (ptr addrspace(5) @PG2 to ptr), align 4
 ; CHECK-NEXT:    [[ARGC:%.*]] = addrspacecast ptr addrspace(5) [[ARG]] to ptr
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ARGC]], align 4
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[LOC]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[LOC]], align 4
 ; CHECK-NEXT:    store i32 [[V]], ptr @PG1, align 4
 ; CHECK-NEXT:    ret void
 ;
   %arg = load ptr addrspace(5), ptr @GPtr5
-  %loc = alloca i32
+  %loc = alloca i32, addrspace(5)
   %a = load i32, ptr @PG1
   call void @aligned_barrier()
-  store i32 %a, ptr %loc
+  store i32 %a, ptr addrspace(5) %loc
   %PG2c = addrspacecast ptr addrspace(5) @PG2 to ptr
   %b = load i32, ptr %PG2c
   call void @aligned_barrier()
   %argc = addrspacecast ptr addrspace(5) %arg to ptr
   store i32 %b, ptr %argc
   call void @aligned_barrier()
-  %v = load i32, ptr %loc
+  %v = load i32, ptr addrspace(5) %loc
   store i32 %v, ptr @PG1
   call void @aligned_barrier()
   ret void
