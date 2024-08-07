@@ -41,14 +41,16 @@ struct GPUFuncOpLoweringOptions {
   /// The address space to use declaring workgroup memory.
   unsigned workgroupAddrSpace;
 
-  /// The attribute name to use instead of `gpu.kernel`.
+  /// The attribute name to use instead of `gpu.kernel`. Null if no attribute
+  /// should be used.
   StringAttr kernelAttributeName;
-  /// The attribute name to to set block size
+  /// The attribute name to to set block size. Null if no attribute should be
+  /// used.
   StringAttr kernelBlockSizeAttributeName;
 
-  /// The calling convention to use for kernel functions
+  /// The calling convention to use for kernel functions.
   LLVM::CConv kernelCallingConvention = LLVM::CConv::C;
-  /// The calling convention to use for non-kernel functions
+  /// The calling convention to use for non-kernel functions.
   LLVM::CConv nonKernelCallingConvention = LLVM::CConv::C;
 
   /// Whether to encode workgroup attributions as additional arguments instead
@@ -79,9 +81,11 @@ private:
   /// The address space to use declaring workgroup memory.
   unsigned workgroupAddrSpace;
 
-  /// The attribute name to use instead of `gpu.kernel`.
+  /// The attribute name to use instead of `gpu.kernel`. Null if no attribute
+  /// should be used.
   StringAttr kernelAttributeName;
-  /// The attribute name to to set block size
+  /// The attribute name to to set block size. Null if no attribute should be
+  /// used.
   StringAttr kernelBlockSizeAttributeName;
 
   /// The calling convention to use for kernel functions
