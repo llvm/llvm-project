@@ -2806,7 +2806,8 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
     return false;
 
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
-  if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative())
+  if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
+      BO0->hasNUsesOrMore(3))
     return false;
 
   // Transform: "(LV op C1) op C2" ==> "LV op (C1 op C2)"
