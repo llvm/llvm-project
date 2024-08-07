@@ -125,6 +125,7 @@ set(sources
   dot-product.cpp
   edit-input.cpp
   edit-output.cpp
+  engine.cpp
   environment.cpp
   exceptions.cpp
   execute.cpp
@@ -193,6 +194,7 @@ set(supported_files
   dot-product.cpp
   edit-input.cpp
   edit-output.cpp
+  engine.cpp
   environment.cpp
   extrema.cpp
   external-unit.cpp
