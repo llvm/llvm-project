@@ -40,8 +40,9 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
                                 : Context.LongLongTy))
       return getNaturalAlignIndirect(Ty);
 
-  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, CoerceTy)
-                                            : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CoerceTy)
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
