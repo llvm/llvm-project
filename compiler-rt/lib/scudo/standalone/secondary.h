@@ -823,7 +823,11 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     Cache.store(Options, H->CommitBase, H->CommitSize,
                 reinterpret_cast<uptr>(H + 1), H->MemMap);
   } else {
-    unmap(H->MemMap);
+    // Note that the `H->MemMap` is stored on the pages managed by itself. Take
+    // over the ownership before unmap() so that any operation along with
+    // unmap() won't touch inaccessible pages.
+    MemMapT MemMap = H->MemMap;
+    unmap(MemMap);
   }
 }
 
