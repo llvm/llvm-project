@@ -870,24 +870,31 @@ def ContinueOp : CIR_Op<"continue", [Terminator]> {
 // Resume
 //===----------------------------------------------------------------------===//
 
-def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator]> {
+def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator,
+                                 AttrSizedOperandSegments]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
-    The `cir.resume` operation terminates a region on `cir.catch`, "resuming"
-    or continuing the unwind process.
+    The `cir.resume` operation handles an uncaught exception scenario and
+    behaves in two different modes:
 
-    Examples:
-    ```mlir
-    cir.catch ... {
-      ...
-      fallback { cir.resume };
-    }
+    - As the terminator of a `CatchUnwind` region of `cir.try`, where it
+    does not receive any arguments (implied from the `cir.try` scope), or
+    - The terminator of a regular basic block without an enclosing `cir.try`
+    operation, where it requires an `exception_ptr` and a `type_id`.
+
+    The `rethrow` attribute is used to denote rethrowing behavior for the
+    resume operation (versus default terminaton).
     ```
   }];
 
-  let arguments = (ins UnitAttr:$rethrow);
+  let arguments = (ins Optional<VoidPtr>:$exception_ptr,
+                       Optional<UInt32>:$type_id,
+                       UnitAttr:$rethrow);
   let assemblyFormat = [{
-    (`rethrow` $rethrow^)? attr-dict
+    ($rethrow^)?
+    ($exception_ptr^)?
+    (`,` $type_id^)?
+    attr-dict
   }];
 }
 

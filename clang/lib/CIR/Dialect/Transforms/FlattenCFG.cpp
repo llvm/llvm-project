@@ -227,6 +227,11 @@ public:
                        mlir::Block *unwindBlock) const {
     assert(&r.front() == &r.back() && "only one block expected");
     rewriter.mergeBlocks(&r.back(), unwindBlock);
+    auto resume = dyn_cast<mlir::cir::ResumeOp>(unwindBlock->getTerminator());
+    assert(resume && "expected 'cir.resume'");
+    rewriter.setInsertionPointToEnd(unwindBlock);
+    rewriter.replaceOpWithNewOp<mlir::cir::ResumeOp>(
+        resume, unwindBlock->getArgument(0), unwindBlock->getArgument(1));
   }
 
   void buildAllCase(mlir::PatternRewriter &rewriter, mlir::Region &r,

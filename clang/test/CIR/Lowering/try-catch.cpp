@@ -51,8 +51,8 @@ unsigned long long tc() {
     z = 99;
     (void)msg[0];
   }
-  // CIR_FLAT: ^[[BB_RESUME]](%[[RESUME_SEL:.*]]: !u32i
-  // CIR_FLAT:   cir.resume
+  // CIR_FLAT: ^[[BB_RESUME]](%[[RESUME_EH:.*]]: !cir.ptr<!void> loc({{.*}}), %[[RESUME_SEL:.*]]: !u32i
+  // CIR_FLAT:   cir.resume %[[RESUME_EH]], %[[RESUME_SEL]]
 
   // CIR_FLAT: ^[[AFTER_TRY]]:
   // CIR_FLAT: cir.load

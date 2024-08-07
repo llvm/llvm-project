@@ -274,10 +274,13 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
   // anything on the EH stack which needs our help.
   const char *RethrowName = Personality.CatchallRethrowFn;
   if (RethrowName != nullptr && !isCleanup) {
+    // FIXME(cir): upon testcase this should just add the 'rethrow' attribute
+    // to mlir::cir::ResumeOp below.
     llvm_unreachable("NYI");
   }
 
-  getBuilder().create<mlir::cir::ResumeOp>(tryOp.getLoc());
+  getBuilder().create<mlir::cir::ResumeOp>(tryOp.getLoc(), mlir::Value{},
+                                           mlir::Value{});
   getBuilder().restoreInsertionPoint(ip);
   return resumeBlock;
 }
