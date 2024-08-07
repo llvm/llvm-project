@@ -1140,3 +1140,285 @@ body:             |
     SI_RETURN implicit $sgpr7, implicit $sgpr8
 
 ...
+
+---
+name: s_add_i32__identity_sgpr__fi_offset0__kernel
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 32, alignment: 16 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  isEntryFunction: true
+body:             |
+  bb.0:
+    liveins: $sgpr8
+
+    ; MUBUFW64-LABEL: name: s_add_i32__identity_sgpr__fi_offset0__kernel
+    ; MUBUFW64: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: {{  $}}
+    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; MUBUFW32-LABEL: name: s_add_i32__identity_sgpr__fi_offset0__kernel
+    ; MUBUFW32: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: {{  $}}
+    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW64-LABEL: name: s_add_i32__identity_sgpr__fi_offset0__kernel
+    ; FLATSCRW64: liveins: $sgpr8
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW32-LABEL: name: s_add_i32__identity_sgpr__fi_offset0__kernel
+    ; FLATSCRW32: liveins: $sgpr8
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr8
+    renamable $sgpr8 = S_ADD_I32 $sgpr8, %stack.0, implicit-def dead $scc
+    SI_RETURN implicit $sgpr8
+
+...
+
+---
+name: s_add_i32__fi_offset0__identity_sgpr__kernel
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 32, alignment: 16 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  isEntryFunction: true
+body:             |
+  bb.0:
+    liveins: $sgpr8
+
+    ; MUBUFW64-LABEL: name: s_add_i32__fi_offset0__identity_sgpr__kernel
+    ; MUBUFW64: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: {{  $}}
+    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; MUBUFW32-LABEL: name: s_add_i32__fi_offset0__identity_sgpr__kernel
+    ; MUBUFW32: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: {{  $}}
+    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW64-LABEL: name: s_add_i32__fi_offset0__identity_sgpr__kernel
+    ; FLATSCRW64: liveins: $sgpr8
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW32-LABEL: name: s_add_i32__fi_offset0__identity_sgpr__kernel
+    ; FLATSCRW32: liveins: $sgpr8
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 0, implicit-def dead $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr8
+    renamable $sgpr8 = S_ADD_I32 $sgpr8, %stack.0, implicit-def dead $scc
+    SI_RETURN implicit $sgpr8
+
+...
+
+---
+name: s_add_i32__identity_sgpr__fi_offset32__kernel
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 32, alignment: 16 }
+  - { id: 1, size: 64, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  isEntryFunction: true
+body:             |
+  bb.0:
+    liveins: $sgpr8
+
+    ; MUBUFW64-LABEL: name: s_add_i32__identity_sgpr__fi_offset32__kernel
+    ; MUBUFW64: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: {{  $}}
+    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; MUBUFW32-LABEL: name: s_add_i32__identity_sgpr__fi_offset32__kernel
+    ; MUBUFW32: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: {{  $}}
+    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW64-LABEL: name: s_add_i32__identity_sgpr__fi_offset32__kernel
+    ; FLATSCRW64: liveins: $sgpr8
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW32-LABEL: name: s_add_i32__identity_sgpr__fi_offset32__kernel
+    ; FLATSCRW32: liveins: $sgpr8
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr8
+    renamable $sgpr8 = S_ADD_I32 $sgpr8, %stack.1, implicit-def dead $scc
+    SI_RETURN implicit $sgpr8
+
+...
+
+---
+name: s_add_i32__fi_offset32__identity_sgpr__kernel
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 32, alignment: 16 }
+  - { id: 1, size: 64, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  isEntryFunction: true
+body:             |
+  bb.0:
+    liveins: $sgpr8
+
+    ; MUBUFW64-LABEL: name: s_add_i32__fi_offset32__identity_sgpr__kernel
+    ; MUBUFW64: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: {{  $}}
+    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; MUBUFW32-LABEL: name: s_add_i32__fi_offset32__identity_sgpr__kernel
+    ; MUBUFW32: liveins: $sgpr8, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: {{  $}}
+    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW64-LABEL: name: s_add_i32__fi_offset32__identity_sgpr__kernel
+    ; FLATSCRW64: liveins: $sgpr8
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW32-LABEL: name: s_add_i32__fi_offset32__identity_sgpr__kernel
+    ; FLATSCRW32: liveins: $sgpr8
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr8
+    renamable $sgpr8 = S_ADD_I32 $sgpr8, %stack.1, implicit-def dead $scc
+    SI_RETURN implicit $sgpr8
+
+...
+
+
+---
+name: s_add_i32__identity_sgpr__fi_offset0
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 32, alignment: 16 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr8
+
+    ; MUBUFW64-LABEL: name: s_add_i32__identity_sgpr__fi_offset0
+    ; MUBUFW64: liveins: $sgpr8
+    ; MUBUFW64-NEXT: {{  $}}
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, $sgpr8, implicit-def dead $scc
+    ; MUBUFW64-NEXT: renamable $sgpr8 = COPY $sgpr8
+    ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; MUBUFW32-LABEL: name: s_add_i32__identity_sgpr__fi_offset0
+    ; MUBUFW32: liveins: $sgpr8
+    ; MUBUFW32-NEXT: {{  $}}
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_LSHR_B32 $sgpr32, 5, implicit-def dead $scc
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, $sgpr8, implicit-def dead $scc
+    ; MUBUFW32-NEXT: renamable $sgpr8 = COPY $sgpr8
+    ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW64-LABEL: name: s_add_i32__identity_sgpr__fi_offset0
+    ; FLATSCRW64: liveins: $sgpr8
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr32, $sgpr8, implicit-def dead $scc
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = COPY $sgpr8
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW32-LABEL: name: s_add_i32__identity_sgpr__fi_offset0
+    ; FLATSCRW32: liveins: $sgpr8
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr32, $sgpr8, implicit-def dead $scc
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = COPY $sgpr8
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr8
+    renamable $sgpr8 = S_ADD_I32 $sgpr8, %stack.0, implicit-def dead $scc
+    SI_RETURN implicit $sgpr8
+
+...
+
+---
+name: s_add_i32__fi_offset32__identity_sgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 32, alignment: 16 }
+  - { id: 1, size: 64, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr8
+
+    ; MUBUFW64-LABEL: name: s_add_i32__fi_offset32__identity_sgpr
+    ; MUBUFW64: liveins: $sgpr8
+    ; MUBUFW64-NEXT: {{  $}}
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, $sgpr8, implicit-def dead $scc
+    ; MUBUFW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; MUBUFW32-LABEL: name: s_add_i32__fi_offset32__identity_sgpr
+    ; MUBUFW32: liveins: $sgpr8
+    ; MUBUFW32-NEXT: {{  $}}
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_LSHR_B32 $sgpr32, 5, implicit-def dead $scc
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, $sgpr8, implicit-def dead $scc
+    ; MUBUFW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW64-LABEL: name: s_add_i32__fi_offset32__identity_sgpr
+    ; FLATSCRW64: liveins: $sgpr8
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr32, $sgpr8, implicit-def dead $scc
+    ; FLATSCRW64-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr8
+    ;
+    ; FLATSCRW32-LABEL: name: s_add_i32__fi_offset32__identity_sgpr
+    ; FLATSCRW32: liveins: $sgpr8
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr32, $sgpr8, implicit-def dead $scc
+    ; FLATSCRW32-NEXT: renamable $sgpr8 = S_ADD_I32 $sgpr8, 32, implicit-def dead $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr8
+    renamable $sgpr8 = S_ADD_I32 $sgpr8, %stack.1, implicit-def dead $scc
+    SI_RETURN implicit $sgpr8
+
+...
