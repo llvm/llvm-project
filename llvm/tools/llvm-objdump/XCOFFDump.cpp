@@ -48,9 +48,7 @@ private:
   void setWidth(unsigned W) { Width = W; };
 };
 
-void XCOFFDumper::printPrivateHeaders() {
-  printFileHeader();
-}
+void XCOFFDumper::printPrivateHeaders() { printFileHeader(); }
 
 FormattedString XCOFFDumper::formatName(StringRef Name) {
   return FormattedString(Name, Width, FormattedString::JustifyLeft);
