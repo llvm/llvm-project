@@ -1,18 +1,18 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fptrauth-init-fini    \
+// RUN: %clang -mllvm -ptrauth-emit-wrapper-globals=0 -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fptrauth-init-fini    \
 // RUN:   -S -emit-llvm %s -o - | FileCheck --check-prefix=SIGNED %s
 
-// RUN: %clang -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fptrauth-init-fini    \
+// RUN: %clang -mllvm -ptrauth-emit-wrapper-globals=0 -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fptrauth-init-fini    \
 // RUN:   -fptrauth-init-fini-address-discrimination -S -emit-llvm %s -o - | FileCheck --check-prefix=ADDRDISC %s
 
-// RUN: %clang -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fno-ptrauth-init-fini \
+// RUN: %clang -mllvm -ptrauth-emit-wrapper-globals=0 -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fno-ptrauth-init-fini \
 // RUN:   -S -emit-llvm %s -o - | FileCheck --check-prefix=UNSIGNED %s
 
-// RUN: %clang -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fptrauth-init-fini-address-discrimination \
+// RUN: %clang -mllvm -ptrauth-emit-wrapper-globals=0 -target aarch64-elf -march=armv8.3-a+pauth -fptrauth-calls -fptrauth-init-fini-address-discrimination \
 // RUN:   -S -emit-llvm %s -o - | FileCheck --check-prefix=UNSIGNED %s
 
-// RUN: %clang -target aarch64-elf -march=armv8.3-a+pauth                 -fptrauth-init-fini    \
+// RUN: %clang -mllvm -ptrauth-emit-wrapper-globals=0 -target aarch64-elf -march=armv8.3-a+pauth                 -fptrauth-init-fini    \
 // RUN:   -S -emit-llvm %s -o - | FileCheck --check-prefix=UNSIGNED %s
 
 // SIGNED: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr ptrauth (ptr @foo, i32 0, i64 55764), ptr null }]
