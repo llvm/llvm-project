@@ -3738,8 +3738,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (const Expr *Ptr = MemberExprVisitor().Visit(E->getArg(0))) {
       const MemberExpr *ME = cast<MemberExpr>(Ptr);
       bool IsFlexibleArrayMember = ME->isFlexibleArrayMemberLike(
-              getContext(), getLangOpts().getStrictFlexArraysLevel(),
-              /*IgnoreTemplateOrMacroSubstitution=*/false);
+          getContext(), getLangOpts().getStrictFlexArraysLevel(),
+          /*IgnoreTemplateOrMacroSubstitution=*/false);
 
       if (!ME->HasSideEffects(getContext()) && IsFlexibleArrayMember &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
