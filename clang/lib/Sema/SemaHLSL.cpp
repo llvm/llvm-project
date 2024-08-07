@@ -520,7 +520,17 @@ getHLSLResourceClassAttrFromEitherDecl(VarDecl *VD,
     const CXXRecordDecl *TheRecordDecl = getRecordDeclFromVarDecl(VD);
     if (!TheRecordDecl)
       return nullptr;
+
+    // the resource class attr could be on the record decl itself or on one of
+    // its fields (the resource handle, most commonly)
     const auto *Attr = TheRecordDecl->getAttr<HLSLResourceClassAttr>();
+    if (!Attr) {
+      for (auto *FD : TheRecordDecl->fields()) {
+        Attr = FD->getAttr<HLSLResourceClassAttr>();
+        if (Attr)
+          break;
+      }
+    }
     return Attr;
   } else if (CBufferOrTBuffer) {
     const auto *Attr = CBufferOrTBuffer->getAttr<HLSLResourceClassAttr>();
@@ -538,7 +548,17 @@ getHLSLResourceAttrFromEitherDecl(VarDecl *VD,
     const CXXRecordDecl *TheRecordDecl = getRecordDeclFromVarDecl(VD);
     if (!TheRecordDecl)
       return nullptr;
+
+    // the resource attr could be on the record decl itself or on one of
+    // its fields (the resource handle, most commonly)
     const auto *Attr = TheRecordDecl->getAttr<HLSLResourceAttr>();
+    if (!Attr) {
+      for (auto *FD : TheRecordDecl->fields()) {
+        Attr = FD->getAttr<HLSLResourceAttr>();
+        if (Attr)
+          break;
+      }
+    }
     return Attr;
   } else if (CBufferOrTBuffer) {
     const auto *Attr = CBufferOrTBuffer->getAttr<HLSLResourceAttr>();
@@ -572,6 +592,13 @@ void traverseType(QualType TheQualTy, RegisterBindingFlags &Flags) {
     auto TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
     TheRecordDecl = TheRecordDecl->getCanonicalDecl();
     const auto *Attr = TheRecordDecl->getAttr<HLSLResourceClassAttr>();
+    if (!Attr) {
+      for (auto *FD : TheRecordDecl->fields()) {
+        Attr = FD->getAttr<HLSLResourceClassAttr>();
+        if (Attr)
+          break;
+      }
+    }
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
     switch (DeclResourceClass) {
     case llvm::hlsl::ResourceClass::SRV:

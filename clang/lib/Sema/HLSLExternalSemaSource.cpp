@@ -500,12 +500,9 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
-  Decl =
-      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
-          .annotateHLSLResource(ResourceClass::UAV, ResourceKind::TypedBuffer,
-                                /*IsROV=*/false)
-          .Record;
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
@@ -518,8 +515,6 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
           .addSimpleTemplateParams(*SemaPtr, {"element_type"})
-          .annotateHLSLResource(ResourceClass::UAV, ResourceKind::TypedBuffer,
-                                /*IsROV=*/true)
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
