@@ -6,7 +6,7 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/A.cppm \
-// RUN:   -o %t/A.pcm -fskip-odr-check-in-gmf
+// RUN:   -o %t/A.pcm -fskip-odr-check-in-gmf -fmodule-related-to-pch
 // RUN: %clang_cc1 -std=c++20 -DDIFF -x c++-header %t/foo.h \
 // RUN:   -emit-pch -o %t/foo.pch -fskip-odr-check-in-gmf
 // RUN: %clang_cc1 -std=c++20 %t/B.cppm -fmodule-file=A=%t/A.pcm -include-pch \
