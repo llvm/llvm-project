@@ -43,9 +43,10 @@ class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 
 def C : I32EnumAttrCase<"C", 1, "c">;
 def CXX : I32EnumAttrCase<"CXX", 2, "cxx">;
+def OpenCLC : I32EnumAttrCase<"OpenCLC", 3, "opencl_c">;
 
 def SourceLanguage : I32EnumAttr<"SourceLanguage", "Source language", [
-  C, CXX
+  C, CXX, OpenCLC
 ]> {
   let cppNamespace = "::mlir::cir";
   let genSpecializedAttr = 0;

@@ -3048,6 +3048,9 @@ mlir::cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() {
   using CIRLang = mlir::cir::SourceLanguage;
   auto opts = getLangOpts();
 
+  if (opts.OpenCL && !opts.OpenCLCPlusPlus)
+    return CIRLang::OpenCLC;
+
   if (opts.CPlusPlus || opts.CPlusPlus11 || opts.CPlusPlus14 ||
       opts.CPlusPlus17 || opts.CPlusPlus20 || opts.CPlusPlus23 ||
       opts.CPlusPlus26)
