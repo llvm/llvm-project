@@ -2760,7 +2760,7 @@ void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
     // Get the lowest numbered register for each class that actually needs
     // to be saved.
     MCPhysReg Cand = CSRegs[i];
-    if (!SavedRegs.test(Cand) || Cand == PPC::X2)
+    if (!SavedRegs.test(Cand))
       continue;
     if (PPC::GPRCRegClass.contains(Cand) && Cand < LowestGPR)
       LowestGPR = Cand;

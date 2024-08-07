@@ -442,8 +442,9 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 bool PPCRegisterInfo::isAsmClobberable(const MachineFunction &MF,
                                        MCRegister PhysReg) const {
-  // The counter registers are always reserved, but they are asm clobberable.
-  if (PhysReg == PPC::CTR || PhysReg == PPC::CTR8)
+  // CTR and LR registers are always reserved, but they are asm clobberable.
+  if (PhysReg == PPC::CTR || PhysReg == PPC::CTR8 || PhysReg == PPC::LR ||
+      PhysReg == PPC::LR)
     return true;
 
   return !getReservedRegs(MF).test(PhysReg);
