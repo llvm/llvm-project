@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file This file contains ......TODO HEKOTA
-//===----------------------------------------------------------------------===//
 
 #include "DXILFinalizeLinkage.h"
 #include "DirectX.h"

@@ -5,6 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// DXILFinalizeLinkage pass updates the linkage of functions to make sure only
+/// shader entry points and exported functions are visible from the module (have
+/// program linkage). All other functions will be updated to have internal
+/// linkage.
+///
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_TARGET_DIRECTX_DXILFINALIZELINKAGE_H
 #define LLVM_TARGET_DIRECTX_DXILFINALIZELINKAGE_H
 
