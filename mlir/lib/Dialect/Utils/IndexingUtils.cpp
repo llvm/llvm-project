@@ -332,6 +332,40 @@ mlir::computeLinearIndex(OpFoldResult sourceOffset,
 }
 
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
+mlir::computeInclusiveLinearIndex(OpFoldResult sourceOffset,
+                                  ArrayRef<OpFoldResult> strides,
+                                  ArrayRef<OpFoldResult> indices) {
+  assert(strides.size() == indices.size());
+  auto sourceRank = static_cast<unsigned>(strides.size());
+
+  // Hold the affine symbols and values for the computation of the offset.
+  SmallVector<OpFoldResult> values(2 * sourceRank + 1);
+  SmallVector<AffineExpr> symbols(2 * sourceRank + 1);
+
+  bindSymbolsList(getContext(sourceOffset), MutableArrayRef{symbols});
+  AffineExpr expr = symbols.front();
+  values[0] = sourceOffset;
+
+  for (unsigned i = 0; i < sourceRank; ++i) {
+    // Compute the stride.
+    OpFoldResult origStride = strides[i];
+
+    // Build up the computation of the offset.
+    unsigned baseIdxForDim = 1 + 2 * i;
+    unsigned subOffsetForDim = baseIdxForDim;
+    unsigned origStrideForDim = baseIdxForDim + 1;
+    AffineExpr dimSize = symbols[subOffsetForDim];
+    AffineExpr stride = symbols[origStrideForDim];
+    // Subtract 1 from the dimension size to get the inclusive bound
+    expr = expr + (dimSize - 1) * stride;
+    values[subOffsetForDim] = indices[i];
+    values[origStrideForDim] = origStride;
+  }
+
+  return {expr, values};
+}
+
+std::pair<AffineExpr, SmallVector<OpFoldResult>>
 mlir::computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<int64_t> strides,
                          ArrayRef<Value> indices) {
   return computeLinearIndex(

@@ -179,6 +179,16 @@ Value computeLinearIndex(OpBuilder &builder, Location loc, OpFoldResult offset,
   return getValueOrCreateConstantIndexOp(builder, loc, index);
 }
 
+Value computeInclusiveLinearIndex(OpBuilder &builder, Location loc,
+                                  OpFoldResult offset,
+                                  ArrayRef<OpFoldResult> strides,
+                                  ArrayRef<OpFoldResult> indices) {
+  auto [expr, values] = computeInclusiveLinearIndex(offset, strides, indices);
+  auto index =
+      affine::makeComposedFoldedAffineApply(builder, loc, expr, values);
+  return getValueOrCreateConstantIndexOp(builder, loc, index);
+}
+
 /// Returns two Values representing the bounds of the provided strided layout
 /// metadata. The bounds are returned as a half open interval -- [low, high).
 std::pair<Value, Value> computeLinearBounds(OpBuilder &builder, Location loc,
@@ -189,6 +199,17 @@ std::pair<Value, Value> computeLinearBounds(OpBuilder &builder, Location loc,
   auto indices = getAsIndexOpFoldResult(builder.getContext(), zeros);
   auto lowerBound = computeLinearIndex(builder, loc, offset, strides, indices);
   auto upperBound = computeLinearIndex(builder, loc, offset, strides, sizes);
+  return {lowerBound, upperBound};
+}
+
+std::pair<Value, Value> computeLinearInclusiveBounds(
+    OpBuilder &builder, Location loc, OpFoldResult offset,
+    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> sizes) {
+  auto zeros = SmallVector<int64_t>(sizes.size(), 0);
+  auto indices = getAsIndexOpFoldResult(builder.getContext(), zeros);
+  auto lowerBound = computeLinearIndex(builder, loc, offset, strides, indices);
+  auto upperBound =
+      computeInclusiveLinearIndex(builder, loc, offset, strides, sizes);
   return {lowerBound, upperBound};
 }
 
@@ -203,8 +224,20 @@ std::pair<Value, Value> computeLinearBounds(OpBuilder &builder, Location loc,
   return computeLinearBounds(builder, loc, offset, strides, sizes);
 }
 
+/// Returns two Values representing the bounds of the memref. The bounds are
+/// returned as a half open interval -- [low, high].
+std::pair<Value, Value>
+computeLinearInclusiveBounds(OpBuilder &builder, Location loc,
+                             TypedValue<BaseMemRefType> memref) {
+  auto runtimeMetadata = builder.create<ExtractStridedMetadataOp>(loc, memref);
+  auto offset = runtimeMetadata.getConstifiedMixedOffset();
+  auto strides = runtimeMetadata.getConstifiedMixedStrides();
+  auto sizes = runtimeMetadata.getConstifiedMixedSizes();
+  return computeLinearInclusiveBounds(builder, loc, offset, strides, sizes);
+}
+
 /// Verifies that the linear bounds of a reinterpret_cast op are within the
-/// linear bounds of the base memref: low >= baseLow && high <= baseHigh
+/// linear bounds of the base memref: low >= baseLow && high <= baseHigh.
 struct ReinterpretCastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           ReinterpretCastOpInterface, ReinterpretCastOp> {
@@ -218,10 +251,11 @@ struct ReinterpretCastOpInterface
     builder.setInsertionPointAfter(op);
 
     // Compute the linear bounds of the base memref
-    auto [baseLow, baseHigh] = computeLinearBounds(builder, loc, baseMemref);
+    auto [baseLow, baseHigh] =
+        computeLinearInclusiveBounds(builder, loc, baseMemref);
 
     // Compute the linear bounds of the resulting memref
-    auto [low, high] = computeLinearBounds(builder, loc, resultMemref);
+    auto [low, high] = computeLinearInclusiveBounds(builder, loc, resultMemref);
 
     // Check low >= baseLow
     auto geLow = builder.createOrFold<arith::CmpIOp>(
