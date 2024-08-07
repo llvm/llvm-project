@@ -527,9 +527,11 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // Forward all of the `--offload-opt` and similar options to the device.
   if (linkerSupportsLTO(Args)) {
-    for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
+    for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm)) {
+      CmdArgs.push_back(Args.MakeArgString("-Xlinker"));
       CmdArgs.push_back(
-          Args.MakeArgString("-Wl,--plugin-opt=" + StringRef(Arg->getValue())));
+          Args.MakeArgString("--plugin-opt=" + StringRef(Arg->getValue())));
+    }
   }
 
   if (!Triple.isNVPTX())
@@ -571,9 +573,11 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   }
 
   // Pass on -mllvm options to the linker invocation.
-  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
+  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm)) {
+    CmdArgs.push_back(Args.MakeArgString("-Xlinker"));
     CmdArgs.push_back(
-        Args.MakeArgString("-Wl,-mllvm=" + StringRef(Arg->getValue())));
+        Args.MakeArgString("-mllvm=" + StringRef(Arg->getValue())));
+  }
 
   if (Args.hasArg(OPT_debug))
     CmdArgs.push_back("-g");
