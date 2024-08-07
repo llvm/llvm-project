@@ -100,8 +100,6 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
 
           FunctionSpec<"powi", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"powif", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
-
-
       ]
   >;
 
