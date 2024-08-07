@@ -2866,6 +2866,16 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_512_Align2RegClassID:
   case AMDGPU::VReg_512_Lo256_Align2RegClassID:
     return 512;
+  case AMDGPU::SGPR_576RegClassID:
+  case AMDGPU::SReg_576RegClassID:
+  case AMDGPU::VReg_576RegClassID:
+  case AMDGPU::AReg_576RegClassID:
+  case AMDGPU::VReg_576_Align2RegClassID:
+  case AMDGPU::AReg_576_Align2RegClassID:
+  case AMDGPU::AV_576RegClassID:
+  case AMDGPU::AV_576_Align2RegClassID:
+  case AMDGPU::VReg_576_Lo256_Align2RegClassID:
+    return 576;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
   case AMDGPU::VReg_1024RegClassID:

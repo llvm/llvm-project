@@ -5994,6 +5994,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::SI_INDIRECT_SRC_V11:
   case AMDGPU::SI_INDIRECT_SRC_V12:
   case AMDGPU::SI_INDIRECT_SRC_V16:
+  case AMDGPU::SI_INDIRECT_SRC_V18:
   case AMDGPU::SI_INDIRECT_SRC_V32:
     return emitIndirectSrc(MI, *BB, *getSubtarget());
   case AMDGPU::SI_INDIRECT_DST_V1:
@@ -6005,6 +6006,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::SI_INDIRECT_DST_V11:
   case AMDGPU::SI_INDIRECT_DST_V12:
   case AMDGPU::SI_INDIRECT_DST_V16:
+  case AMDGPU::SI_INDIRECT_DST_V18:
   case AMDGPU::SI_INDIRECT_DST_V32:
     return emitIndirectDst(MI, *BB, *getSubtarget());
   case AMDGPU::SI_KILL_F32_COND_IMM_PSEUDO:

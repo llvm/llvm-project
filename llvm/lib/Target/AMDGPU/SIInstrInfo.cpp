@@ -1422,6 +1422,8 @@ SIInstrInfo::getIndirectGPRIDXPseudo(unsigned VecSize,
       return get(AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V12);
     if (VecSize <= 512) // 64 bytes
       return get(AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V16);
+    if (VecSize <= 576) // 72 bytes
+      return get(AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V18);
     if (VecSize <= 1024) // 128 bytes
       return get(AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V32);
 
@@ -1450,6 +1452,8 @@ SIInstrInfo::getIndirectGPRIDXPseudo(unsigned VecSize,
     return get(AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V12);
   if (VecSize <= 512) // 64 bytes
     return get(AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V16);
+  if (VecSize <= 576) // 72 bytes
+    return get(AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V18);
   if (VecSize <= 1024) // 128 bytes
     return get(AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32);
 
@@ -1479,6 +1483,8 @@ static unsigned getIndirectVGPRWriteMovRelPseudoOpc(unsigned VecSize) {
     return AMDGPU::V_INDIRECT_REG_WRITE_MOVREL_B32_V12;
   if (VecSize <= 512) // 64 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_MOVREL_B32_V16;
+  if (VecSize <= 576) // 72 bytes
+    return AMDGPU::V_INDIRECT_REG_WRITE_MOVREL_B32_V18;
   if (VecSize <= 1024) // 128 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_MOVREL_B32_V32;
 
@@ -1508,6 +1514,8 @@ static unsigned getIndirectSGPRWriteMovRelPseudo32(unsigned VecSize) {
     return AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V12;
   if (VecSize <= 512) // 64 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V16;
+  if (VecSize <= 576) // 72 bytes
+    return AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V18;
   if (VecSize <= 1024) // 128 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V32;
 
@@ -1575,6 +1583,8 @@ static unsigned getSGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_S384_SAVE;
   case 64:
     return AMDGPU::SI_SPILL_S512_SAVE;
+  case 72:
+    return AMDGPU::SI_SPILL_S576_SAVE;
   case 128:
     return AMDGPU::SI_SPILL_S1024_SAVE;
   default:
@@ -1610,6 +1620,8 @@ static unsigned getVGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_V384_SAVE;
   case 64:
     return AMDGPU::SI_SPILL_V512_SAVE;
+  case 72:
+    return AMDGPU::SI_SPILL_V576_SAVE;
   case 128:
     return AMDGPU::SI_SPILL_V1024_SAVE;
   default:
@@ -1645,6 +1657,8 @@ static unsigned getAGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_A384_SAVE;
   case 64:
     return AMDGPU::SI_SPILL_A512_SAVE;
+  case 72:
+    return AMDGPU::SI_SPILL_A576_SAVE;
   case 128:
     return AMDGPU::SI_SPILL_A1024_SAVE;
   default:
@@ -1680,6 +1694,8 @@ static unsigned getAVSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_AV384_SAVE;
   case 64:
     return AMDGPU::SI_SPILL_AV512_SAVE;
+  case 72:
+    return AMDGPU::SI_SPILL_AV576_SAVE;
   case 128:
     return AMDGPU::SI_SPILL_AV1024_SAVE;
   default:
@@ -1801,6 +1817,8 @@ static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_S384_RESTORE;
   case 64:
     return AMDGPU::SI_SPILL_S512_RESTORE;
+  case 72:
+    return AMDGPU::SI_SPILL_S576_RESTORE;
   case 128:
     return AMDGPU::SI_SPILL_S1024_RESTORE;
   default:
@@ -1836,6 +1854,8 @@ static unsigned getVGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_V384_RESTORE;
   case 64:
     return AMDGPU::SI_SPILL_V512_RESTORE;
+  case 72:
+    return AMDGPU::SI_SPILL_V576_RESTORE;
   case 128:
     return AMDGPU::SI_SPILL_V1024_RESTORE;
   default:
@@ -1871,6 +1891,8 @@ static unsigned getAGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_A384_RESTORE;
   case 64:
     return AMDGPU::SI_SPILL_A512_RESTORE;
+  case 72:
+    return AMDGPU::SI_SPILL_A576_RESTORE;
   case 128:
     return AMDGPU::SI_SPILL_A1024_RESTORE;
   default:
@@ -1906,6 +1928,8 @@ static unsigned getAVSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_AV384_RESTORE;
   case 64:
     return AMDGPU::SI_SPILL_AV512_RESTORE;
+  case 72:
+    return AMDGPU::SI_SPILL_AV576_RESTORE;
   case 128:
     return AMDGPU::SI_SPILL_AV1024_RESTORE;
   default:
@@ -2338,6 +2362,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V11:
   case AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V12:
   case AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V16:
+  case AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V18:
   case AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B32_V32:
   case AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B64_V1:
   case AMDGPU::S_INDIRECT_REG_WRITE_MOVREL_B64_V2:
@@ -2385,6 +2410,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V11:
   case AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V12:
   case AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V16:
+  case AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V18:
   case AMDGPU::V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32: {
     assert(ST.useVGPRIndexMode());
     Register VecReg = MI.getOperand(0).getReg();
@@ -2429,6 +2455,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V11:
   case AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V12:
   case AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V16:
+  case AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V18:
   case AMDGPU::V_INDIRECT_REG_READ_GPR_IDX_B32_V32: {
     assert(ST.useVGPRIndexMode());
     Register Dst = MI.getOperand(0).getReg();
