@@ -4337,6 +4337,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpayloadl
+  SRCS
+    getpayloadl.cpp
+  HDRS
+    ../getpayloadl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   getpayloadf16
   SRCS
     getpayloadf16.cpp
