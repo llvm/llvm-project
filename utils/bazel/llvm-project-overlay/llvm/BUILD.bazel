@@ -2654,7 +2654,6 @@ cc_library(
         ":CodeGen",
         ":Core",
         ":Coroutines",
-        ":Demangle",
         ":HipStdPar",
         ":IPO",
         ":IRPrinter",
