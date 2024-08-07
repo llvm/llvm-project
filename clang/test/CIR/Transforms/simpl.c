@@ -8,7 +8,7 @@
       return -42; \
   } while(0)
 
-int foo(int* ptr) {  
+int foo(int* ptr) {
   CHECK_PTR(ptr);
 
   (*ptr)++;
@@ -29,7 +29,7 @@ int foo(int* ptr) {
 // BEFORE:  [[X10:%.*]] = cir.const #cir.int<0> : !s32i
 // BEFORE:  [[X11:%.*]] = cir.cast(integral, [[X10]] : !s32i), !s64i
 // BEFORE:  [[X12:%.*]] = cir.cast(int_to_bool, [[X9]] : !s64i), !cir.bool
-// BEFORE:  cir.if [[X12]] 
+// BEFORE:  cir.if [[X12]]
 
 // AFTER:   [[X0:%.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // AFTER:   [[X1:%.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>

@@ -14,13 +14,13 @@ include "mlir/Pass/PassBase.td"
 def CIRSimplify : Pass<"cir-simplify"> {
   let summary = "Performs CIR simplification";
   let description = [{
-    The pass rewrites CIR and removes some redundant operations.    
-    
+    The pass rewrites CIR and removes some redundant operations.
+
     For example, due to canonicalize pass is too aggressive for CIR when
     the pipeline is used for C/C++ analysis, this pass runs some rewrites
     for scopes, merging some blocks and eliminating unnecessary control-flow.
 
-    Also, the pass removes redundant and/or unneccessary cast and unary not 
+    Also, the pass removes redundant and/or unneccessary cast and unary not
     operation e.g.
     ```mlir
       %1 = cir.cast(bool_to_int, %0 : !cir.bool), !s32i
