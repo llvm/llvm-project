@@ -17,6 +17,7 @@
 #include <__ranges/const_access.h>
 #include <__ranges/empty_view.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/ref_view.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/is_specialization.h>
@@ -102,96 +103,138 @@ inline constexpr bool enable_borrowed_range<as_const_view<_Tp>> = enable_borrowe
 namespace views {
 namespace __as_const {
 
-template <class _Tp>
-concept __has_type = requires { typename _Tp::type; };
+template <class _Case>
+concept __case = requires { _Case::__impl; };
 
-template <class _Tp>
+template <class _Range>
+struct __already_constant_case {};
+template <class _Range>
+  requires constant_range<all_t<_Range>>
+struct __already_constant_case<_Range> {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __impl(_Range& __range)
+    noexcept(noexcept(views::all(std::forward<_Range>(__range))))
+    -> decltype(views::all(std::forward<_Range>(__range))) {
+    return views::all(std::forward<_Range>(__range));
+  }
+};
+
+template <class _Range, class _UType = std::remove_cvref_t<_Range>>
 struct __empty_view_case {};
-template <class _Tp>
-struct __empty_view_case<empty_view<_Tp>> {
-  using type = const _Tp;
+template <class _Range, class _XType>
+  requires (!__case<__already_constant_case<_Range>>)
+struct __empty_view_case<_Range, empty_view<_XType>> {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __impl(_Range&)
+    noexcept(noexcept(auto(views::empty<const _XType>)))
+      -> decltype(auto(views::empty<const _XType>)) {
+    return auto(views::empty<const _XType>);
+  }
 };
 
-template <class _Tp>
+template <class _Range, class _UType = std::remove_cvref_t<_Range>>
 struct __span_case {};
-template <class _Tp, size_t _Extent>
-struct __span_case<span<_Tp, _Extent>> {
-  using type = span<const _Tp, _Extent>;
+template <class _Range, class _XType, size_t _Extent>
+  requires (!__case<__already_constant_case<_Range>>)
+struct __span_case<_Range, span<_XType, _Extent>> {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __impl(_Range& __range)
+    noexcept(noexcept(span<const _XType, _Extent>(std::forward<_Range>(__range))))
+      -> decltype(span<const _XType, _Extent>(std::forward<_Range>(__range))) {
+    return span<const _XType, _Extent>(std::forward<_Range>(__range));
+  }
 };
 
-template <class _Tp>
+template <class _Range, class _UType = std::remove_cvref_t<_Range>>
 struct __ref_view_case {};
-template <class _Tp>
-  requires constant_range<const _Tp>
-struct __ref_view_case<ref_view<_Tp>> {
-  using type = const _Tp&;
+template <class _Range, class _XType>
+  requires (!__case<__already_constant_case<_Range>>) && constant_range<const _XType>
+struct __ref_view_case<_Range, ref_view<_XType>> {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __impl(_Range& __range)
+    noexcept(noexcept(ref_view(static_cast<const _XType&>(std::forward<_Range>(__range).base()))))
+    -> decltype(ref_view(static_cast<const _XType&>(std::forward<_Range>(__range).base()))) {
+      return ref_view(static_cast<const _XType&>(std::forward<_Range>(__range).base()));
+  }
 };
 
-template <class _Tp>
+template <class _Range, class _UType = std::remove_cvref_t<_Range>>
 struct __constant_range_case {};
-template <class _Tp>
-  requires constant_range<const _Tp> && (!view<_Tp>)
-struct __constant_range_case<_Tp> {
-  using type = const _Tp&;
+template <class _Range, class _UType>
+  requires(!__case<__already_constant_case<_Range>>)
+    && (!__case<__empty_view_case<_Range>>)
+    && (!__case<__span_case<_Range>>)
+    && (!__case<__ref_view_case<_Range>>)
+    && is_lvalue_reference_v<_Range>
+    && constant_range<const _UType>
+    && (!view<_UType>)
+struct __constant_range_case<_Range, _UType> {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __impl(_Range& __range)
+    noexcept(noexcept(ref_view(static_cast<const _UType&>(std::forward<_Range>(__range)))))
+      -> decltype(ref_view(static_cast<const _UType&>(std::forward<_Range>(__range)))) {
+    return ref_view(static_cast<const _UType&>(std::forward<_Range>(__range)));
+  }
+};
+
+template <class _Range>
+struct __otherwise_case {};
+template <class _Range>
+  requires (!__case<__already_constant_case<_Range>>)
+    && (!__case<__empty_view_case<_Range>>)
+    && (!__case<__span_case<_Range>>)
+    && (!__case<__ref_view_case<_Range>>)
+    && (!__case<__constant_range_case<_Range>>)
+struct __otherwise_case<_Range> {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __impl(_Range& __range)
+    noexcept(noexcept(as_const_view(std::forward<_Range>(__range))))
+      -> decltype(as_const_view(std::forward<_Range>(__range))) {
+    return as_const_view(std::forward<_Range>(__range));
+  }
 };
 
 struct __fn : __range_adaptor_closure<__fn> {
   // [range.as.const.overview]: the basic `constant_range` case
   template <class _Range>
-    requires constant_range<all_t<_Range>>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Range&& __range) noexcept(noexcept(views::all(std::forward<_Range>(__range))))
-      -> decltype(/*--------------------------*/ views::all(std::forward<_Range>(__range))) {
-    return /*---------------------------------*/ views::all(std::forward<_Range>(__range));
+  operator()(_Range&& __range) noexcept(noexcept(__already_constant_case<_Range>::__impl(__range)))
+      -> decltype(__already_constant_case<_Range>::__impl(__range)) {
+    return __already_constant_case<_Range>::__impl(__range);
   }
 
   // [range.as.const.overview]: the `empty_view` case
-  template <class _Range, class _UType = std::remove_cvref_t<_Range>>
-    requires(!constant_range<all_t<_Range>>) && __has_type<__empty_view_case<_UType>>
+  template <class _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Range&&) noexcept(noexcept(auto(views::empty<typename __empty_view_case<_UType>::type>)))
-      -> decltype(/*------------------*/ auto(views::empty<typename __empty_view_case<_UType>::type>)) {
-    return /*-------------------------*/ auto(views::empty<typename __empty_view_case<_UType>::type>);
+  operator()(_Range&& __range) noexcept(noexcept(__empty_view_case<_Range>::__impl(__range)))
+      -> decltype(__empty_view_case<_Range>::__impl(__range)) {
+    return __empty_view_case<_Range>::__impl(__range);
   }
 
   // [range.as.const.overview]: the `span` case
-  template <class _Range, class _UType = std::remove_cvref_t<_Range>>
-    requires(!constant_range<all_t<_Range>>) && __has_type<__span_case<_UType>>
+  template <class _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Range&& __range) noexcept(noexcept(typename __span_case<_UType>::type(std::forward<_UType>(__range))))
-      -> decltype(/*--------------------------*/ typename __span_case<_UType>::type(std::forward<_UType>(__range))) {
-    return /*---------------------------------*/ typename __span_case<_UType>::type(std::forward<_UType>(__range));
+  operator()(_Range&& __range) noexcept(noexcept(__span_case<_Range>::__impl(__range)))
+      -> decltype(__span_case<_Range>::__impl(__range)) {
+    return __span_case<_Range>::__impl(__range);
   }
 
   // [range.as.const.overview]: the `ref_view` case
-  template <class _Range, class _UType = std::remove_cvref_t<_Range>>
-    requires(!constant_range<all_t<_Range>>) && __has_type<__ref_view_case<_UType>>
+  template <class _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range) noexcept(
-      noexcept(ref_view(static_cast<typename __ref_view_case<_UType>::type>(__range.base()))))
-      -> decltype(/*--------------------------*/ ref_view(
-          static_cast<typename __ref_view_case<_UType>::type>(__range.base()))) {
-    return /*---------------------------------*/ ref_view(
-        static_cast<typename __ref_view_case<_UType>::type>(__range.base()));
+      noexcept(__ref_view_case<_Range>::__impl(__range)))
+      -> decltype(__ref_view_case<_Range>::__impl(__range)) {
+    return __ref_view_case<_Range>::__impl(__range);
   }
 
   // [range.as.const.overview]: the second `constant_range` case
-  template <class _Range, class _UType = std::remove_cvref_t<_Range>>
-    requires(!constant_range<all_t<_Range>>) && is_lvalue_reference_v<_Range> &&
-                __has_type<__constant_range_case<_UType>>
+  template <class _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range) noexcept(
-      noexcept(ref_view(static_cast<typename __constant_range_case<_UType>::type>(__range))))
-      -> decltype(/*--------------------------*/ ref_view(
-          static_cast<typename __constant_range_case<_UType>::type>(__range))) {
-    return /*---------------------------------*/ ref_view(
-        static_cast<typename __constant_range_case<_UType>::type>(__range));
+      noexcept(__constant_range_case<_Range>::__impl(__range)))
+      -> decltype(__constant_range_case<_Range>::__impl(__range)) {
+    return __constant_range_case<_Range>::__impl(__range);
   }
 
   // [range.as.const.overview]: otherwise
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Range&& __range) noexcept(noexcept(as_const_view(std::forward<_Range>(__range))))
-      -> decltype(/*--------------------------*/ as_const_view(std::forward<_Range>(__range))) {
-    return /*---------------------------------*/ as_const_view(std::forward<_Range>(__range));
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range)
+    noexcept(noexcept(__otherwise_case<_Range>::__impl(__range)))
+      -> decltype(__otherwise_case<_Range>::__impl(__range)) {
+    return __otherwise_case<_Range>::__impl(__range);
   }
 };
 

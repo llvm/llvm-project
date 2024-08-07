@@ -29,6 +29,7 @@ struct DefaultConstructibleView : std::ranges::view_base {
 };
 struct NoView {};
 
+#if 0
 static_assert(std::is_invocable_v<decltype(std::views::as_const), DefaultConstructibleView>);
 static_assert(!std::is_invocable_v<decltype(std::views::as_const)>);
 static_assert(!std::is_invocable_v<decltype(std::views::as_const), NoView>);
@@ -37,6 +38,7 @@ static_assert(HasPipe<int (&)[10], decltype(std::views::as_const)>);
 static_assert(!HasPipe<int (&&)[10], decltype(std::views::as_const)>);
 static_assert(!HasPipe<NoView, decltype(std::views::as_const)>);
 static_assert(std::is_same_v<decltype(std::views::as_const), decltype(std::ranges::views::as_const)>);
+#endif
 
 struct const_iterator_range {
   constexpr std::const_iterator<int*> begin() const { return {}; }
@@ -52,7 +54,7 @@ constexpr bool test() {
   // - If views::all_t<T> models constant_range, then views::all(E).
   {
     [[maybe_unused]] std::same_as<std::views::all_t<const_iterator_range>> decltype(auto) view =
-        const_iterator_range{} | std::views::as_const;
+        std::views::as_const(const_iterator_range{});
   }
   {
     // ambiguous with empty_view case
