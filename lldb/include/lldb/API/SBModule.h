@@ -296,6 +296,20 @@ public:
   /// Remove any global modules which are no longer needed.
   static void GarbageCollectAllocatedModules();
 
+  /// Set a callback which is called to find separate DWARF DWO debug info
+  /// files.
+  ///
+  /// This is useful when DWO files have been moved, or when the symbol file
+  /// contains relative paths to the DWO files.
+  ///
+  /// If the callback fails to
+  /// find the DWO file (`located_dwo_file_spec` is unset), then LLDB will fall
+  /// back to the default search locations. The callback will be cleared if
+  /// `nullptr` is set.
+  /// `comp_dir` may be `nullptr`.
+  static void SetLocateDwoCallback(lldb::SBModuleLocateDwoCallback callback,
+                                   void *baton);
+
 private:
   friend class SBAddress;
   friend class SBFrame;
