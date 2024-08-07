@@ -273,6 +273,10 @@ add_math_entrypoint_object(fromfpxl)
 add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
+add_math_entrypoint_object(fsub)
+add_math_entrypoint_object(fsubl)
+add_math_entrypoint_object(fsubf128)
+
 add_math_entrypoint_object(getpayload)
 add_math_entrypoint_object(getpayloadf)
 add_math_entrypoint_object(getpayloadl)
@@ -396,6 +400,7 @@ add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)
 add_math_entrypoint_object(remainderl)
 add_math_entrypoint_object(remainderf16)
+add_math_entrypoint_object(remainderf128)
 
 add_math_entrypoint_object(remquo)
 add_math_entrypoint_object(remquof)
