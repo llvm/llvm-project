@@ -162,11 +162,8 @@ define i32 @pr54735_slt_neg(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], -12
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[SUB]], 12
-; CHECK-NEXT:    [[ABSCOND:%.*]] = icmp sle i32 [[SUB]], 12
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[ABSCOND]], i32 [[NEG]], i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[ABS]]
+; CHECK-NEXT:    ret i32 [[NEG]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -194,11 +191,8 @@ define i32 @pr54735_sle_neg(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], -12
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[SUB]], 12
-; CHECK-NEXT:    [[ABSCOND:%.*]] = icmp sle i32 [[SUB]], 12
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[ABSCOND]], i32 [[NEG]], i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[ABS]]
+; CHECK-NEXT:    ret i32 [[NEG]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    ret i32 0
 ;
