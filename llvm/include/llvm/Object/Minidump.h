@@ -195,8 +195,7 @@ public:
     }
 
   private:
-    // This constructor will only happen after a validation check to see
-    // if the first descriptor is readable.
+    // This constructor expects that the first descriptor is readable.
     Memory64Iterator(ArrayRef<uint8_t> Storage,
                      ArrayRef<minidump::MemoryDescriptor_64> Descriptors)
         : Storage(Storage), Descriptors(Descriptors), IsEnd(false) {
