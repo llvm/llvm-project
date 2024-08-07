@@ -23,6 +23,8 @@
 static const lldb_private::RegisterInfo *
 GetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
+  //HH
+  case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return g_register_infos_ppc64le;
   default:
@@ -34,6 +36,8 @@ GetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
 static uint32_t
 GetRegisterInfoCount(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
+  //HitchHike
+  case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return static_cast<uint32_t>(sizeof(g_register_infos_ppc64le) /
                                  sizeof(g_register_infos_ppc64le[0]));

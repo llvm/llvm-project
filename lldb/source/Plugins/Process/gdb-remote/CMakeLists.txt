@@ -6,6 +6,11 @@ lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
 
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 set(LLDB_PLUGINS
   lldbPluginProcessUtility
 )

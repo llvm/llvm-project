@@ -6,6 +6,10 @@ if (HAVE_LIBPTHREAD)
   list(APPEND extra_libs pthread)
 endif ()
 
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_definitions("-D_AIX")
+  add_definitions("-D_ALL_SOURCE")
+endif()
 
 if(APPLE)
   configure_file(

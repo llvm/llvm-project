@@ -542,7 +542,6 @@ private:
   template <typename T> const T *sectionHeaderTable() const;
 
   size_t getFileHeaderSize() const;
-  size_t getSectionHeaderSize() const;
 
   const XCOFFSectionHeader32 *toSection32(DataRefImpl Ref) const;
   const XCOFFSectionHeader64 *toSection64(DataRefImpl Ref) const;
@@ -578,6 +577,9 @@ private:
   void checkSectionAddress(uintptr_t Addr, uintptr_t TableAddr) const;
 
 public:
+  size_t getSectionHeaderSize() const;
+  Expected<uintptr_t> getLoaderSectionAddress() const;
+
   static constexpr uint64_t InvalidRelocOffset =
       std::numeric_limits<uint64_t>::max();
 

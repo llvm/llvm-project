@@ -40,6 +40,113 @@ add_custom_target(lldb-sbapi-dwarf-enums
   DEPENDS ${sb_languages_file})
 set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegenning")
 
+if(CMAKE_SYSTEM_NAME MATCHES "AIX")
+add_lldb_library(liblldb STATIC ${option_framework}
+  SBAddress.cpp
+  SBAddressRange.cpp
+  SBAddressRangeList.cpp
+  SBAttachInfo.cpp
+  SBBlock.cpp
+  SBBreakpoint.cpp
+  SBBreakpointLocation.cpp
+  SBBreakpointName.cpp
+  SBBreakpointOptionCommon.cpp
+  SBBroadcaster.cpp
+  SBCommandInterpreter.cpp
+  SBCommandInterpreterRunOptions.cpp
+  SBCommandReturnObject.cpp
+  SBCommunication.cpp
+  SBCompileUnit.cpp
+  SBSaveCoreOptions.cpp
+  SBData.cpp
+  SBDebugger.cpp
+  SBDeclaration.cpp
+  SBEnvironment.cpp
+  SBError.cpp
+  SBEvent.cpp
+  SBExecutionContext.cpp
+  SBExpressionOptions.cpp
+  SBFileSpec.cpp
+  SBFile.cpp
+  SBFileSpecList.cpp
+  SBFormat.cpp
+  SBFrame.cpp
+  SBFunction.cpp
+  SBHostOS.cpp
+  SBInstruction.cpp
+  SBInstructionList.cpp
+  SBLanguageRuntime.cpp
+  SBLaunchInfo.cpp
+  SBLineEntry.cpp
+  SBListener.cpp
+  SBMemoryRegionInfo.cpp
+  SBMemoryRegionInfoList.cpp
+  SBModule.cpp
+  SBModuleSpec.cpp
+  SBPlatform.cpp
+  SBProcess.cpp
+  SBProcessInfo.cpp
+  SBProcessInfoList.cpp
+  SBQueue.cpp
+  SBQueueItem.cpp
+  SBReproducer.cpp
+  SBScriptObject.cpp
+  SBSection.cpp
+  SBSourceManager.cpp
+  SBStatisticsOptions.cpp
+  SBStream.cpp
+  SBStringList.cpp
+  SBStructuredData.cpp
+  SBSymbol.cpp
+  SBSymbolContext.cpp
+  SBSymbolContextList.cpp
+  SBTarget.cpp
+  SBThread.cpp
+  SBThreadCollection.cpp
+  SBThreadPlan.cpp
+  SBTrace.cpp
+  SBTraceCursor.cpp
+  SBType.cpp
+  SBTypeCategory.cpp
+  SBTypeEnumMember.cpp
+  SBTypeFilter.cpp
+  SBTypeFormat.cpp
+  SBTypeNameSpecifier.cpp
+  SBTypeSummary.cpp
+  SBTypeSynthetic.cpp
+  SBValue.cpp
+  SBValueList.cpp
+  SBVariablesOptions.cpp
+  SBWatchpoint.cpp
+  SBWatchpointOptions.cpp
+  SBUnixSignals.cpp
+  SystemInitializerFull.cpp
+  ${lldb_python_wrapper}
+  ${lldb_lua_wrapper}
+
+  DEPENDS
+    lldb-sbapi-dwarf-enums
+
+  LINK_LIBS
+    lldbBreakpoint
+    lldbCore
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbInitialization
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbVersion
+    ${LLDB_ALL_PLUGINS}
+  LINK_COMPONENTS
+    Support
+
+  ${option_install_prefix}
+)
+
+else()
 add_lldb_library(liblldb SHARED ${option_framework}
   SBAddress.cpp
   SBAddressRange.cpp
@@ -144,6 +251,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
 
   ${option_install_prefix}
 )
+endif()
 
 # lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
 # which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so

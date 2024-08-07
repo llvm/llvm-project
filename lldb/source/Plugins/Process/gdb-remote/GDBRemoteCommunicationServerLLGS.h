@@ -211,6 +211,8 @@ protected:
 
   PacketResult Handle_z(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_qLDXINFO(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_s(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qXfer(StringExtractorGDBRemote &packet);

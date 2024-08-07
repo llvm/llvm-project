@@ -347,7 +347,7 @@ bool SBBreakpointName::GetAutoContinue() {
   return bp_name->GetOptions().IsAutoContinue();
 }
 
-void SBBreakpointName::SetThreadID(tid_t tid) {
+void SBBreakpointName::SetThreadID(lldb::tid_t tid) {
   LLDB_INSTRUMENT_VA(this, tid);
 
   BreakpointName *bp_name = GetBreakpointName();
@@ -361,7 +361,7 @@ void SBBreakpointName::SetThreadID(tid_t tid) {
   UpdateName(*bp_name);
 }
 
-tid_t SBBreakpointName::GetThreadID() {
+lldb::tid_t SBBreakpointName::GetThreadID() {
   LLDB_INSTRUMENT_VA(this);
 
   BreakpointName *bp_name = GetBreakpointName();

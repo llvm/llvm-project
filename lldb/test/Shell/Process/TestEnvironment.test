@@ -3,7 +3,7 @@ UNSUPPORTED: lldb-repro
 
 The double quotes around "BAR" ensure we don't match the command.
 
-RUN: %clangxx_host -std=c++11 %p/Inputs/env.cpp -o %t
+RUN: %clangxx_host -std=c++11 -I/compgpfs/build/xlcit/rings/openxlC/aix/wyvern_dev/ring0/latest/opt/IBM/openxlC/17.1.2/include/c++/v1/ %p/Inputs/env.cpp -o %t
 RUN: %lldb %t -o 'process launch --environment FOO="BAR"' | FileCheck %s
 RUN: %lldb %t -o 'env FOO="BAR"' -o 'process launch' | FileCheck %s
 
