@@ -53,14 +53,6 @@ define void @wide_deinterleave4(ptr %src) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP15]], i64 4)
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP17]], i64 4)
-; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } poison, <vscale x 8 x i32> [[TMP12]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP19]], <vscale x 8 x i32> [[TMP14]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP20]], <vscale x 8 x i32> [[TMP16]], 2
-; CHECK-NEXT:    [[TMP22:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP21]], <vscale x 8 x i32> [[TMP18]], 3
-; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 2
-; CHECK-NEXT:    [[TMP26:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 3
 ; CHECK-NEXT:    ret void
 ;
   %load = load <vscale x 32 x i32>, ptr %src, align 4
@@ -123,14 +115,10 @@ define void @negative_deinterleave4_test(ptr %src) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP7]], i64 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP9]], i64 4)
-; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } poison, <vscale x 8 x i32> [[TMP8]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP11]], <vscale x 8 x i32> [[TMP10]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP12]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP12]], 1
-; CHECK-NEXT:    [[DEINTERLEAVE_HALF1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP13]])
-; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE_HALF1]], 0
-; CHECK-NEXT:    [[DEINTERLEAVE_HALF2:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP14]])
-; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE_HALF2]], 1
+; CHECK-NEXT:    [[DEINTERLEAVE_HALF1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP8]])
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE_HALF1]], 0
+; CHECK-NEXT:    [[DEINTERLEAVE_HALF2:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP10]])
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE_HALF2]], 1
 ; CHECK-NEXT:    ret void
 ;
   %load = load <vscale x 16 x i32>, ptr %src, align 4

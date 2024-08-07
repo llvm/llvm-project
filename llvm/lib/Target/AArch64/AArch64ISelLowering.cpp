@@ -16907,7 +16907,8 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool getDeinterleave2Values(
-    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues) {
+    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
+    SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!DI->hasNUses(2))
     return false;
   auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
@@ -16928,13 +16929,13 @@ bool getDeinterleave2Values(
     LLVM_DEBUG(dbgs() << "matching deinterleave2 failed\n");
     return false;
   }
+  // DeinterleavedValues will be replace by output of ld2
+  DeadInsts.insert(DeadInsts.end(), DeinterleavedValues.begin(), DeinterleavedValues.end());
   return true;
 }
 
 /*
-Diagram for DI tree.
-                  [LOAD]
-                    |
+DeinterleaveIntrinsic tree:
                    [DI]
                 /        \
          [Extr<0>]      [Extr<1>]
@@ -16944,15 +16945,14 @@ Diagram for DI tree.
     [Extr<0>][Extr<1>] [Extr<0>][Extr<1>]
         |       |         |         |
 roots:  A       C         B         D
-roots in correct order of DI4: A B C D.
-If there is a pattern matches the deinterleave tree above, then we can construct
-DI4 out of that pattern. This function tries to match the deinterleave tree
-pattern, and fetch the tree roots, so that in further steps they can be replaced
-by the output of DI4.
+roots in correct order of DI4 will be: A B C D.
+Returns true if `DI` is the top of an IR tree that represents a theoretical vector.deinterleave4 intrinsic.
+When true is returned, `DeinterleavedValues` vector is populated with the results such an intrinsic would return:
+(i.e. {A, B, C, D } = vector.deinterleave4(...))
 */
 bool getDeinterleave4Values(Value *DI,
                             SmallVectorImpl<Instruction *> &DeinterleavedValues,
-                            SmallVectorImpl<Instruction *> &DeadInstructions) {
+                            SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!DI->hasNUses(2))
     return false;
   auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
@@ -16960,7 +16960,7 @@ bool getDeinterleave4Values(Value *DI,
   if (!Extr1 || !Extr2)
     return false;
 
-  if (!Extr1->hasNUses(1) || !Extr2->hasNUses(1))
+  if (!Extr1->hasOneUse() || !Extr2->hasOneUse())
     return false;
   auto *DI1 = *(Extr1->user_begin());
   auto *DI2 = *(Extr2->user_begin());
@@ -16972,8 +16972,7 @@ bool getDeinterleave4Values(Value *DI,
   auto *C = dyn_cast<ExtractValueInst>(*(++DI1->user_begin()));
   auto *B = dyn_cast<ExtractValueInst>(*(DI2->user_begin()));
   auto *D = dyn_cast<ExtractValueInst>(*(++DI2->user_begin()));
-  // Make sure that the A,B,C,D are instructions of ExtractValue,
-  // before getting the extract index
+  // Make sure that the A,B,C and D are ExtractValue instructions before getting the extract index
   if (!A || !B || !C || !D)
     return false;
 
@@ -17004,35 +17003,35 @@ bool getDeinterleave4Values(Value *DI,
     return false;
   }
 
-  // These Values will not be used anymre,
+  // These Values will not be used anymore,
   // DI4 will be created instead of nested DI1 and DI2
-  DeadInstructions.push_back(cast<Instruction>(DI1));
-  DeadInstructions.push_back(cast<Instruction>(Extr1));
-  DeadInstructions.push_back(cast<Instruction>(DI2));
-  DeadInstructions.push_back(cast<Instruction>(Extr2));
+  DeadInsts.insert(DeadInsts.end(), DeinterleavedValues.begin(), DeinterleavedValues.end());
+  DeadInsts.push_back(cast<Instruction>(DI1));
+  DeadInsts.push_back(cast<Instruction>(Extr1));
+  DeadInsts.push_back(cast<Instruction>(DI2));
+  DeadInsts.push_back(cast<Instruction>(Extr2));
 
   return true;
 }
 
 bool getDeinterleavedValues(Value *DI,
                             SmallVectorImpl<Instruction *> &DeinterleavedValues,
-                            SmallVectorImpl<Instruction *> &DeadInstructions) {
-  if (getDeinterleave4Values(DI, DeinterleavedValues, DeadInstructions))
+                            SmallVectorImpl<Instruction *> &DeadInsts) {
+  if (getDeinterleave4Values(DI, DeinterleavedValues, DeadInsts))
     return true;
-  return getDeinterleave2Values(DI, DeinterleavedValues);
+  return getDeinterleave2Values(DI, DeinterleavedValues, DeadInsts);
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, LoadInst *LI) const {
+    IntrinsicInst *DI, LoadInst *LI, SmallVectorImpl<Instruction *> &DeadInsts) const {
   // Only deinterleave2 supported at present.
   if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
   SmallVector<Instruction *, 4> DeinterleavedValues;
-  SmallVector<Instruction *, 4> DeadInstructions;
   const DataLayout &DL = DI->getModule()->getDataLayout();
 
-  if (!getDeinterleavedValues(DI, DeinterleavedValues, DeadInstructions)) {
+  if (!getDeinterleavedValues(DI, DeinterleavedValues, DeadInsts)) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
   }
@@ -17042,13 +17041,17 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   VectorType *VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
 
   bool UseScalable;
-  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable)) {
+    DeadInsts.clear();
     return false;
+  }
 
   // TODO: Add support for using SVE instructions with fixed types later, using
   // the code from lowerInterleavedLoad to obtain the correct container type.
-  if (UseScalable && !VTy->isScalableTy())
+  if (UseScalable && !VTy->isScalableTy()) {
+    DeadInsts.clear();
     return false;
+  }
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
   VectorType *LdTy =
@@ -17066,10 +17069,9 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
         Builder.CreateVectorSplat(LdTy->getElementCount(), Builder.getTrue());
 
   Value *BaseAddr = LI->getPointerOperand();
-  Value *Result;
   if (NumLoads > 1) {
-    // Create multiple legal small ldN instead of a wide one.
-    SmallVector<Value *, 4> WideValues(Factor, (PoisonValue::get(VTy)));
+    // Create multiple legal small ldN.
+    SmallVector<Value *, 4> ExtractedLdValues(Factor, PoisonValue::get(VTy));
     for (unsigned I = 0; I < NumLoads; ++I) {
       Value *Offset = Builder.getInt64(I * Factor);
 
@@ -17082,53 +17084,45 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       Value *Idx =
           Builder.getInt64(I * LdTy->getElementCount().getKnownMinValue());
       for (unsigned J = 0; J < Factor; ++J) {
-        WideValues[J] = Builder.CreateInsertVector(
-            VTy, WideValues[J], Builder.CreateExtractValue(LdN, J), Idx);
+        ExtractedLdValues[J] = Builder.CreateInsertVector(
+            VTy, ExtractedLdValues[J], Builder.CreateExtractValue(LdN, J), Idx);
       }
+      LLVM_DEBUG(dbgs() << "LdN4 res: "; LdN->dump());
     }
-    if (Factor == 2)
-      Result = PoisonValue::get(StructType::get(VTy, VTy));
-    else
-      Result = PoisonValue::get(StructType::get(VTy, VTy, VTy, VTy));
-    // Construct the wide result out of the small results.
-    for (unsigned J = 0; J < Factor; ++J) {
-      Result = Builder.CreateInsertValue(Result, WideValues[J], J);
-    }
+    // Replcae output of deinterleave2 intrinsic by output of ldN2/ldN4
+    for (unsigned J = 0; J < Factor; ++J)
+      DeinterleavedValues[J]->replaceAllUsesWith(ExtractedLdValues[J]);
   } else {
+    Value *Result;
     if (UseScalable)
       Result = Builder.CreateCall(LdNFunc, {Pred, BaseAddr}, "ldN");
     else
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
+    // Replcae output of deinterleave2 intrinsic by output of ldN2/ldN4
+    for (unsigned I = 0; I < DeinterleavedValues.size(); I++) {
+      Value *NewExtract = Builder.CreateExtractValue(Result, I);
+      DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
+    }
   }
-  // Itereate over old deinterleaved values to replace it by
-  // the new values.
-  for (unsigned I = 0; I < DeinterleavedValues.size(); I++) {
-    Value *NewExtract = Builder.CreateExtractValue(Result, I);
-    DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
-    cast<Instruction>(DeinterleavedValues[I])->eraseFromParent();
-  }
-  for (auto &dead : DeadInstructions)
-    dead->eraseFromParent();
   return true;
 }
 
 /*
-Diagram for Interleave tree.
+InterleaveIntrinsic tree.
           A    C         B    D
            \  /           \  /
-       [Interleave]   [Interleave]
+           [II]           [II]
                  \     /
-               [Interleave]
-                    |
-                 [Store]
+                  [II]
+
 values in correct order of interleave4: A B C D.
-If there is a pattern matches the interleave tree above, then we can construct
-Interleave4 out of that pattern. This function tries to match the interleave
-tree pattern, and fetch the values that we want to interleave, so that in
-further steps they can be replaced by the output of Inteleave4.
+Returns true if `II` is the root of an IR tree that represents a theoretical vector.interleave4 intrinsic.
+When true is returned, `ValuesToInterleave` vector is populated with the inputs such an intrinsic would take:
+(i.e. vector.interleave4(A, B, C, D)).
 */
 bool getValuesToInterleave(Value *II,
-                           SmallVectorImpl<Value *> &ValuesToInterleave) {
+                           SmallVectorImpl<Value *> &ValuesToInterleave,
+                           SmallVectorImpl<Instruction *> &DeadInsts) {
   Value *A, *B, *C, *D;
   // Try to match interleave of Factor 4
   if (match(II, m_Interleave2(m_Interleave2(m_Value(A), m_Value(C)),
@@ -17137,6 +17131,11 @@ bool getValuesToInterleave(Value *II,
     ValuesToInterleave.push_back(B);
     ValuesToInterleave.push_back(C);
     ValuesToInterleave.push_back(D);
+    // intermediate II will not be needed anymore
+    Value *II1, *II2;
+    assert(match(II, m_Interleave2(m_Value(II1), m_Value(II2))) && "II tree is expected");
+    DeadInsts.push_back(cast<Instruction>(II1));
+    DeadInsts.push_back(cast<Instruction>(II2));
     return true;
   }
 
@@ -17151,13 +17150,13 @@ bool getValuesToInterleave(Value *II,
 }
 
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, StoreInst *SI) const {
+    IntrinsicInst *II, StoreInst *SI, SmallVectorImpl<Instruction *> &DeadInsts) const {
   // Only interleave2 supported at present.
   if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
   SmallVector<Value *, 4> ValuesToInterleave;
-  if (!getValuesToInterleave(II, ValuesToInterleave)) {
+  if (!getValuesToInterleave(II, ValuesToInterleave, DeadInsts)) {
     LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
     return false;
   }
@@ -17168,13 +17167,17 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
   const DataLayout &DL = II->getModule()->getDataLayout();
 
   bool UseScalable;
-  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable)) {
+    DeadInsts.clear();
     return false;
+  }
 
   // TODO: Add support for using SVE instructions with fixed types later, using
   // the code from lowerInterleavedStore to obtain the correct container type.
-  if (UseScalable && !VTy->isScalableTy())
+  if (UseScalable && !VTy->isScalableTy()) {
+    DeadInsts.clear();
     return false;
+  }
 
   unsigned NumStores = getNumInterleavedAccesses(VTy, DL, UseScalable);
 
