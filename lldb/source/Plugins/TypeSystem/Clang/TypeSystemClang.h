@@ -191,11 +191,11 @@ public:
   void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);
   void SetMetadataAsUserID(const clang::Type *type, lldb::user_id_t user_id);
 
-  void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
+  void SetMetadata(const clang::Decl *object, ClangASTMetadata meta_data);
 
-  void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
-  ClangASTMetadata *GetMetadata(const clang::Decl *object);
-  ClangASTMetadata *GetMetadata(const clang::Type *object);
+  void SetMetadata(const clang::Type *object, ClangASTMetadata meta_data);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Decl *object);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Type *object);
 
   void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
                               clang::AccessSpecifier access);
@@ -616,8 +616,9 @@ public:
   static clang::NamespaceDecl *
   DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc);
 
-  static ClangASTMetadata *DeclContextGetMetaData(const CompilerDeclContext &dc,
-                                                  const clang::Decl *object);
+  static std::optional<ClangASTMetadata>
+  DeclContextGetMetaData(const CompilerDeclContext &dc,
+                         const clang::Decl *object);
 
   static clang::ASTContext *
   DeclContextGetTypeSystemClang(const CompilerDeclContext &dc);

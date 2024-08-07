@@ -1396,6 +1396,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  exp2f16
+  SRCS
+    exp2f16.cpp
+  HDRS
+    ../exp2f16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   exp2m1f
   SRCS
     exp2m1f.cpp
@@ -3121,6 +3143,80 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  fdiv
+  SRCS
+    fdiv.cpp
+  HDRS
+    ../fdiv.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
+  fdivl
+  SRCS
+    fdivl.cpp
+  HDRS
+    ../fdivl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
+  fdivf128
+  SRCS
+    fdivf128.cpp
+  HDRS
+    ../fdivf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
+  ffma
+  SRCS
+    ffma.cpp
+  HDRS
+    ../ffma.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+add_entrypoint_object(
+  ffmal
+  SRCS
+    ffmal.cpp
+  HDRS
+    ../ffmal.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+add_entrypoint_object(
+  ffmaf128
+  SRCS
+    ffmaf128.cpp
+  HDRS
+    ../ffmaf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
 )
 
 add_entrypoint_object(

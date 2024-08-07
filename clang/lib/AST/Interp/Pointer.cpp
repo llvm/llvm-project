@@ -597,3 +597,30 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     return std::nullopt;
   return Result;
 }
+
+IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
+                                unsigned Offset) const {
+  if (!this->Desc)
+    return *this;
+  const Record *R = this->Desc->ElemRecord;
+  if (!R)
+    return *this;
+
+  const Record::Field *F = nullptr;
+  for (auto &It : R->fields()) {
+    if (It.Offset == Offset) {
+      F = &It;
+      break;
+    }
+  }
+  if (!F)
+    return *this;
+
+  const FieldDecl *FD = F->Decl;
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
+  unsigned FieldIndex = FD->getFieldIndex();
+  uint64_t FieldOffset =
+      ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
+          .getQuantity();
+  return IntPointer{this->Desc, FieldOffset};
+}

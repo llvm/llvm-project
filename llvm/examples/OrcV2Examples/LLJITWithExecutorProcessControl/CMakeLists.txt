@@ -10,3 +10,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(LLJITWithExecutorProcessControl
   LLJITWithExecutorProcessControl.cpp
   )
+
+export_executable_symbols(LLJITWithExecutorProcessControl)
