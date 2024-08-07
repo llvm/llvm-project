@@ -57,7 +57,6 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
   const uint64_t Flags = static_cast<uint64_t>(
       getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
   dxil::createEntryMD(M, Flags);
-  dxil::createExportsMD(M);
 
   return false;
 }
