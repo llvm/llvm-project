@@ -694,7 +694,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   gcspushm x30
 Lnogcs:
 #endif
-  ret                           // jump to pc
+  ret    x30                    // jump to pc
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
