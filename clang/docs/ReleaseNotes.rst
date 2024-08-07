@@ -166,6 +166,7 @@ Bug Fixes in This Version
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
 - Fixed a failed assertion when checking required literal types in C context. (#GH101304).
+- Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

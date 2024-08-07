@@ -1013,7 +1013,7 @@ void CodeGenVTables::RemoveHwasanMetadata(llvm::GlobalValue *GV) const {
 // the VTable does not need a relocation and move into rodata. A frequent
 // time this can occur is for classes that should be made public from a DSO
 // (like in libc++). For cases like these, we can make the vtable hidden or
-// private and create a public alias with the same visibility and linkage as
+// internal and create a public alias with the same visibility and linkage as
 // the original vtable type.
 void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                                  llvm::StringRef AliasNameRef) {
@@ -1050,15 +1050,18 @@ void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
   VTableAlias->setVisibility(VTable->getVisibility());
   VTableAlias->setUnnamedAddr(VTable->getUnnamedAddr());
 
-  // Both of these imply dso_local for the vtable.
+  // Both of these will now imply dso_local for the vtable.
   if (!VTable->hasComdat()) {
-    // If this is in a comdat, then we shouldn't make the linkage private due to
-    // an issue in lld where private symbols can be used as the key symbol when
-    // choosing the prevelant group. This leads to "relocation refers to a
-    // symbol in a discarded section".
-    VTable->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    VTable->setLinkage(llvm::GlobalValue::InternalLinkage);
   } else {
-    // We should at least make this hidden since we don't want to expose it.
+    // If a relocation targets an internal linkage symbol, MC will generate the
+    // relocation against the symbol's section instead of the symbol itself
+    // (see ELFObjectWriter::shouldRelocateWithSymbol). If an internal symbol is
+    // in a COMDAT section group, that section might be discarded, and then the
+    // relocation to that section will generate a linker error. We therefore
+    // make COMDAT vtables hidden instead of internal: they'll still not be
+    // public, but relocations will reference the symbol instead of the section
+    // and COMDAT deduplication will thus work as expected.
     VTable->setVisibility(llvm::GlobalValue::HiddenVisibility);
   }
 
