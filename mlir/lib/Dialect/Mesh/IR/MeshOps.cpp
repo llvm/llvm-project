@@ -1287,17 +1287,12 @@ void ShiftOp::getAsmResultNames(
 
 LogicalResult
 UpdateHaloOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  auto mesh = getMeshAndVerifyAxes(*this, symbolTable);
+  auto mesh = getMeshAndVerify(getOperation(), getMeshAttr(), symbolTable);
   if (failed(mesh)) {
     return failure();
   }
 
   return success();
-}
-
-void UpdateHaloOp::getAsmResultNames(
-    function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "update_halo");
 }
 
 //===----------------------------------------------------------------------===//

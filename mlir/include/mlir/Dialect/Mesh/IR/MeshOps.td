@@ -1051,10 +1051,9 @@ def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
   let hasCanonicalizer = 1;
 }
 
-def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
-    AllShapesMatch<["input", "result"]>,
-    AllElementTypesMatch<["input", "result"]>
-  ]> {
+def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
   let summary = "Update halo data.";
   let description = [{
     This operation updates halo regions of shards, e.g. if their sharding
@@ -1065,27 +1064,25 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
     Assumes all devices hold tensors with same-sized halo data as specified
     by `dynamic/static_halo_sizes`.
 
-    `mesh_axes` specifies for each tensor axis along which mesh axis its halo
-    data is updated. Currently each tensor dim can be sharded along a single
-    mesh axis only.
+    `split_axes` specifies for each tensor axis along which mesh axes its halo
+    data is updated.
 
     Optionally resizes to new halo sizes `target_halo_sizes`.
   }];
-  let arguments = !con(commonArgs, (ins
-    AnyNon0RankedTensor:$input,
+  let arguments = (ins
+    AnyNon0RankedMemRef:$input,
+    FlatSymbolRefAttr:$mesh,
+    Mesh_MeshAxesArrayAttr:$split_axes,
     Variadic<I64>:$dynamic_halo_sizes,
     DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_halo_sizes,
     DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$target_halo_sizes
-  ));
-  let results = (outs
-    AnyRankedTensor:$result
   );
   let assemblyFormat = [{
     $input `on` $mesh
-    (`mesh_axes` `=` $mesh_axes^)?
+    `split_axes` `=` $split_axes
     (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
     (`target_halo_sizes` `=` $target_halo_sizes^)?
-    attr-dict `:` type($input) `->` type($result)
+    attr-dict `:` type($input)
   }];
 }
 #endif // MLIR_DIALECT_MESH_IR_MESHOPS_TD
