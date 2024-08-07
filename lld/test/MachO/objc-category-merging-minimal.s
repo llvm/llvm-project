@@ -1,3 +1,6 @@
+# `-no_objc_relative_method_lists` needs to be explicitly added to this test to avoid crashing after `-objc_relative_method_lists` was made default.
+# TODO: Make this test compatible with default `-objc_relative_method_lists` and remove the `-no_objc_relative_method_lists` flag. Issue #101419
+
 # REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
@@ -9,7 +12,7 @@
 ## Create our main testing dylib - linking against the fake dylib above
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal.o merge_cat_minimal.s
 # RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_no_merge.dylib a64_fakedylib.dylib merge_cat_minimal.o
-# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o
+# RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o
 
 ## Now verify that the flag caused category merging to happen appropriatelly
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_no_merge.dylib | FileCheck %s --check-prefixes=NO_MERGE_CATS
@@ -17,7 +20,7 @@
 
 ############ Test merging multiple categories into the base class ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_base_class_minimal.o merge_base_class_minimal.s
-# RUN: %lld -arch arm64 -dylib -o merge_base_class_minimal_yes_merge.dylib -objc_category_merging merge_base_class_minimal.o merge_cat_minimal.o
+# RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o merge_base_class_minimal_yes_merge.dylib -objc_category_merging merge_base_class_minimal.o merge_cat_minimal.o
 # RUN: %lld -arch arm64 -dylib -o merge_base_class_minimal_no_merge.dylib merge_base_class_minimal.o merge_cat_minimal.o
 
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_minimal_no_merge.dylib  | FileCheck %s --check-prefixes=NO_MERGE_INTO_BASE
@@ -25,7 +28,7 @@
 
 ############ Test merging swift category into the base class ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o MyBaseClassSwiftExtension.o MyBaseClassSwiftExtension.s
-# RUN: %lld -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
+# RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_swift_minimal_yes_merge.dylib | FileCheck %s --check-prefixes=YES_MERGE_INTO_BASE_SWIFT
 
 #### Check merge categories enabled ###
