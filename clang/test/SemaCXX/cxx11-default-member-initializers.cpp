@@ -99,6 +99,25 @@ void TypeTest_Element_Test::TestBody() {
   &TestBody_got != expect; // expected-warning {{inequality comparison result unused}}
 }
 } //  namespace test_rebuild
+namespace test_rebuild2 {
+struct F {
+  int g;
+};
+struct H {};
+struct I {
+  I(const F &);
+  I(H);
+};
+struct L {
+  I i = I({.g = 0});
+};
+struct N : L {};
+
+void f() {
+  delete new L; // Ok
+  delete new N; // Ok
+}
+} // namespace test_rebuild2
 #endif // __cplusplus >= 201703L
 
 #if __cplusplus >= 202002L

@@ -5416,6 +5416,8 @@ struct EnsureImmediateInvocationInDefaultArgs
   EnsureImmediateInvocationInDefaultArgs(Sema &SemaRef)
       : TreeTransform(SemaRef) {}
 
+  bool AlwaysRebuild() { return true; }
+
   // Lambda can only have immediate invocations in the default
   // args of their parameters, which is transformed upon calling the closure.
   // The body is not a subexpression, so we have nothing to do.
