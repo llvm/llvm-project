@@ -357,12 +357,14 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                    \
   case Intrinsic::VPID:
 #include "llvm/IR/VPIntrinsics.def"
-      Changed |= forEachCall(F, [&](CallInst *CI) {
+      forEachCall(F, [&](CallInst *CI) {
         Function *Parent = CI->getParent()->getParent();
         const TargetTransformInfo &TTI = LookupTTI(*Parent);
         auto *VPI = cast<VPIntrinsic>(CI);
         return expandVectorPredicationIntrinsic(*VPI, TTI);
       });
+      // Not all intrinsics are removed, but the code is changed in any case.
+      Changed = true;
       break;
     case Intrinsic::objc_autorelease:
       Changed |= lowerObjCCall(F, "objc_autorelease");
