@@ -105,7 +105,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-lowering"
 
-static cl::opt<bool> DisableP10StoreForward("disable-p10-store-forward",
+static cl::opt<bool> DisableP10StoreForward(
+    "disable-p10-store-forward",
     cl::desc("disable P10 store forward-friendly conversion"), cl::Hidden,
     cl::init(false));
 
@@ -11503,23 +11504,21 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
       ValVT.getSizeInBits() <= 64) {
     Val = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Val);
     EVT ShiftAmountTy = getShiftAmountTy(MVT::i64, DAG.getDataLayout());
-    SDValue ShiftBy =
-        DAG.getConstant(64 - Op.getValueType().getScalarSizeInBits(),
-                        dl, ShiftAmountTy);
+    SDValue ShiftBy = DAG.getConstant(
+        64 - Op.getValueType().getScalarSizeInBits(), dl, ShiftAmountTy);
     Val = DAG.getNode(ISD::SHL, dl, MVT::i64, Val, ShiftBy);
-    SDValue Plus8 = DAG.getNode(ISD::ADD, dl, PtrVT, FIdx,
-                                DAG.getConstant(8, dl, PtrVT));
-    SDValue Store2 = DAG.getStore(DAG.getEntryNode(), dl, Val, Plus8,
-                                  MachinePointerInfo());
-    SDValue Store = DAG.getStore(Store2, dl, Val, FIdx,
-                                 MachinePointerInfo());
+    SDValue Plus8 =
+        DAG.getNode(ISD::ADD, dl, PtrVT, FIdx, DAG.getConstant(8, dl, PtrVT));
+    SDValue Store2 =
+        DAG.getStore(DAG.getEntryNode(), dl, Val, Plus8, MachinePointerInfo());
+    SDValue Store = DAG.getStore(Store2, dl, Val, FIdx, MachinePointerInfo());
     return DAG.getLoad(Op.getValueType(), dl, Store, FIdx,
                        MachinePointerInfo());
   }
 
   // Store the input value into Value#0 of the stack slot.
-  SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Val, FIdx,
-                               MachinePointerInfo());
+  SDValue Store =
+      DAG.getStore(DAG.getEntryNode(), dl, Val, FIdx, MachinePointerInfo());
   // Load it out.
   return DAG.getLoad(Op.getValueType(), dl, Store, FIdx, MachinePointerInfo());
 }
