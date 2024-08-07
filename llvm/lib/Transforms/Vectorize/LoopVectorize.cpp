@@ -6953,15 +6953,14 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
   return VectorizationFactor::Disabled();
 }
 
-std::optional<VectorizationFactor>
-LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
+void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
   CM.collectValuesToIgnore();
   CM.collectElementTypesForWidening();
 
   FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
-    return std::nullopt;
+    return;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM.blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
@@ -6995,11 +6994,11 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       if (!hasPlanWithVF(UserVF)) {
         LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << UserVF
                           << ".\n");
-        return std::nullopt;
+        return;
       }
 
       LLVM_DEBUG(printPlans(dbgs()));
-      return {{UserVF, 0, 0}};
+      return;
     } else
       reportVectorizationInfo("UserVF ignored because of invalid costs.",
                               "InvalidCost", ORE, OrigLoop);
@@ -7029,24 +7028,6 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
   LLVM_DEBUG(printPlans(dbgs()));
-  if (VPlans.empty())
-    return std::nullopt;
-  if (all_of(VPlans,
-             [](std::unique_ptr<VPlan> &P) { return P->hasScalarVFOnly(); }))
-    return VectorizationFactor::Disabled();
-
-  // Select the optimal vectorization factor according to the legacy cost-model.
-  // This is now only used to verify the decisions by the new VPlan-based
-  // cost-model and will be retired once the VPlan-based cost-model is
-  // stabilized.
-  VectorizationFactor VF = selectVectorizationFactor();
-  assert((VF.Width.isScalar() || VF.ScalarCost > 0) && "when vectorizing, the scalar cost must be non-zero.");
-  if (!hasPlanWithVF(VF.Width)) {
-    LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << VF.Width
-                      << ".\n");
-    return std::nullopt;
-  }
-  return VF;
 }
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
@@ -7217,11 +7198,13 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-ElementCount LoopVectorizationPlanner::getBestVF() {
+VectorizationFactor LoopVectorizationPlanner::getBestVF() {
+  if (VPlans.empty())
+    return VectorizationFactor::Disabled();
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return *FirstPlan.vectorFactors().begin();
+    return {*FirstPlan.vectorFactors().begin(), 0, 0};
 
   ElementCount ScalarVF = ElementCount::getFixed(1);
   assert(hasPlanWithVF(ScalarVF) &&
@@ -7229,6 +7212,7 @@ ElementCount LoopVectorizationPlanner::getBestVF() {
 
   // TODO: Compute scalar cost using VPlan-based cost model.
   InstructionCost ScalarCost = CM.expectedCost(ScalarVF);
+  LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ScalarCost << ".\n");
   VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
   VectorizationFactor BestFactor = ScalarFactor;
 
@@ -7262,7 +7246,19 @@ ElementCount LoopVectorizationPlanner::getBestVF() {
         ProfitableVFs.push_back(CurrentFactor);
     }
   }
-  return BestFactor.Width;
+
+#ifndef NDEBUG
+  // Select the optimal vectorization factor according to the legacy cost-model.
+  // This is now only used to verify the decisions by the new VPlan-based
+  // cost-model and will be retired once the VPlan-based cost-model is
+  // stabilized.
+  VectorizationFactor LegacyVF = selectVectorizationFactor();
+  assert(BestFactor.Width == LegacyVF.Width);
+  assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
+         "when vectorizing, the scalar cost must be non-zero.");
+#endif
+
+  return BestFactor;
 }
 
 VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
@@ -9883,20 +9879,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   unsigned UserIC = Hints.getInterleave();
 
   // Plan how to best vectorize, return the best VF and its cost.
-  std::optional<VectorizationFactor> MaybeVF = LVP.plan(UserVF, UserIC);
+  LVP.plan(UserVF, UserIC);
+  VectorizationFactor VF = LVP.getBestVF();
+  unsigned IC = 1;
 
   if (ORE->allowExtraAnalysis(LV_NAME))
     LVP.emitInvalidCostRemarks(ORE);
-
-  VectorizationFactor VF = VectorizationFactor::Disabled();
-  unsigned IC = 1;
 
   bool AddBranchWeights =
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
                            F->getDataLayout(), AddBranchWeights);
-  if (MaybeVF) {
-    VF = *MaybeVF;
+  if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = CM.selectInterleaveCount(VF.Width, VF.Cost);
 
@@ -9936,7 +9930,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VectorizeLoop = false;
   }
 
-  if (!MaybeVF && UserIC > 1) {
+  if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
     // Tell the user interleaving was avoided up-front, despite being explicitly
     // requested.
     LLVM_DEBUG(dbgs() << "LV: Ignoring UserIC, because vectorization and "
@@ -10018,11 +10012,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      ElementCount BestVF = LVP.getBestVF();
-      assert(BestVF.isScalar() &&
-             "VPlan cost model and legacy cost model disagreed");
-      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
-      LVP.executePlan(BestVF, IC, BestPlan, Unroller, DT, false);
+      VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
+      LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
         return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
@@ -10033,20 +10024,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
-      ElementCount BestVF = LVP.getBestVF();
-      LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << BestVF << "\n");
-      assert(VF.Width == BestVF &&
-             "VPlan cost model and legacy cost model disagreed");
-      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
+      VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
-          LVP.selectEpilogueVectorizationFactor(BestVF, IC);
+          LVP.selectEpilogueVectorizationFactor(VF.Width, IC);
       if (EpilogueVF.Width.isVector()) {
 
         // The first pass vectorizes the main loop and creates a scalar epilogue
         // to be vectorized by executing the plan (potentially with a different
         // factor) again shortly afterwards.
-        EpilogueLoopVectorizationInfo EPI(BestVF, IC, EpilogueVF.Width, 1);
+        EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
@@ -10141,10 +10128,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         if (!MainILV.areSafetyChecksAdded())
           DisableRuntimeUnroll = true;
       } else {
-        InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, BestVF,
+        InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                                VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
                                PSI, Checks);
-        LVP.executePlan(BestVF, IC, BestPlan, LB, DT, false);
+        LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
         // Add metadata to disable runtime unrolling a scalar loop when there

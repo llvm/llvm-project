@@ -354,9 +354,10 @@ public:
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
         IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
 
-  /// Plan how to best vectorize, return the best VF and its cost, or
-  /// std::nullopt if vectorization and interleaving should be avoided up front.
-  std::optional<VectorizationFactor> plan(ElementCount UserVF, unsigned UserIC);
+  /// Build VPlans for the specified \p UserVF and \p UserIC if they are
+  /// non-zero or all applicable candidate VFs otherwise. If vectorization and
+  /// interleaving should be avoided up-front, no plans are generated.
+  void plan(ElementCount UserVF, unsigned UserIC);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.
@@ -367,7 +368,7 @@ public:
 
   /// Return the most profitable vectorization factor. Also collect all
   /// profitable VFs in ProfitableVFs.
-  ElementCount getBestVF();
+  VectorizationFactor getBestVF();
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
