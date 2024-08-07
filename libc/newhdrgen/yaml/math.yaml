@@ -2206,7 +2206,7 @@ functions:
       - type: float128
       - type: int
       - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT128scalbln
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: scalbln
     standards: 
       - stdc
@@ -2238,7 +2238,7 @@ functions:
     guard: LIBC_HAS_TYPES_FLOAT16
   - name: scalblnf128
     standards:
-      - llvm_libc_ext
+      - stdc
     return_type: float128
     arguments:
       - type: float128

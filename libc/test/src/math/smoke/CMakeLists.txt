@@ -1633,6 +1633,7 @@ add_fp_unittest(
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
+    
 )
 
 add_fp_unittest(
@@ -3629,6 +3630,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbln
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3642,6 +3645,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalblnf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3655,6 +3660,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalblnl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3668,6 +3675,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalblnf16
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3681,6 +3690,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalblnf128
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3694,6 +3705,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbn
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3707,6 +3720,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3720,6 +3735,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3733,6 +3750,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnf16
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -3746,6 +3765,8 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnf128
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
