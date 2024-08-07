@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify %s
 // These are in a separate file because errors (e.g. incompatible attributes) currently prevent
 // the FXAnalysis pass from running at all.
 
@@ -78,6 +78,29 @@ void nb8()
 	// Make sure we verify lambdas
 	auto lambda = []() [[clang::nonblocking]] {
 		throw 42; // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
+	};
+}
+
+void nb8a() [[clang::nonblocking]]
+{
+	// A blocking lambda shouldn't make the outer function unsafe.
+	auto unsafeLambda = []() {
+		throw 42;
+	};
+}
+
+void nb8b() [[clang::nonblocking]]
+{
+	// An unsafe lambda capture makes the outer function unsafe.
+	auto unsafeCapture = [foo = new int]() { // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
+		delete foo;
+	};
+}
+
+void nb8c()
+{
+	// An unsafe lambda capture does not make the lambda unsafe.
+	auto unsafeCapture = [foo = new int]() [[clang::nonblocking]] {
 	};
 }
 
@@ -199,6 +222,24 @@ struct DerivedFromUnsafe : public Unsafe {
   DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::Unsafe'}}
   ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::~Unsafe'}}
 };
+
+// Contexts where there is no function call, no diagnostic.
+bool bad();
+
+template <bool>
+requires requires { bad(); }
+void g() [[clang::nonblocking]] {}
+
+void g() [[clang::nonblocking]] {
+    decltype(bad()) a; // doesn't generate a call so, OK
+    [[maybe_unused]] auto b = noexcept(bad());
+    [[maybe_unused]] auto c = sizeof(bad());
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wassume"
+    [[assume(bad())]]; // never evaluated, but maybe still semantically questionable?
+#pragma clang diagnostic pop
+}
+
 
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
