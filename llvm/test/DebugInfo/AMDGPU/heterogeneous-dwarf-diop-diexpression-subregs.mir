@@ -1,0 +1,90 @@
+# RUN: llc -O0 -x mir -mcpu=gfx900 -start-after=livedebugvalues -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s
+
+--- |
+  target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
+  target triple = "amdgcn-amd-amdhsa"
+
+  define void @kern() #0 !dbg !9 {
+    ret void, !dbg !16
+  }
+  attributes #0 = { convergent mustprogress noinline nounwind optnone "amdgpu-stack-objects" "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" "uniform-work-group-size"="false" }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
+  !llvm.ident = !{!8}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 19.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "t.cpp", directory: "/")
+  !2 = !{i32 1, !"amdhsa_code_object_version", i32 500}
+  !3 = !{i32 7, !"Dwarf Version", i32 5}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 8, !"PIC Level", i32 2}
+  !7 = !{i32 7, !"frame-pointer", i32 2}
+  !8 = !{!"clang version 19.0.0"}
+  !9 = distinct !DISubprogram(name: "kern", linkageName: "kern", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !12)
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{}
+  !12 = !{!17, !18, !19}
+  !13 = !DIBasicType(name: "i16", size: 16, encoding: DW_ATE_signed)
+  !14 = !DIBasicType(name: "i32", size: 32, encoding: DW_ATE_signed)
+  !15 = !DIBasicType(name: "i64", size: 64, encoding: DW_ATE_signed)
+  !16 = !DILocation(line: 1, column: 1, scope: !9)
+  !17 = !DILocalVariable(name: "s_lo16", scope: !9, file: !1, line: 1, type: !13)
+  !18 = !DILocalVariable(name: "s_hi16", scope: !9, file: !1, line: 1, type: !13)
+  !19 = !DILocalVariable(name: "s_s", scope: !9, file: !1, line: 1, type: !15)
+  !20 = !DILocalVariable(name: "v_lo16", scope: !9, file: !1, line: 1, type: !13)
+  !21 = !DILocalVariable(name: "v_hi16", scope: !9, file: !1, line: 1, type: !13)
+  !22 = !DILocalVariable(name: "v_v", scope: !9, file: !1, line: 1, type: !15)
+  !23 = !DILocalVariable(name: "with_frags", scope: !9, file: !1, line: 1, type: !15)
+  !24 = !DILocalVariable(name: "sgpr", scope: !9, file: !1, line: 1, type: !14)
+  !25 = !DILocalVariable(name: "vgpr", scope: !9, file: !1, line: 1, type: !14)
+
+...
+---
+name: kern
+body: |
+  bb.0:
+
+    ; CHECK: DW_AT_location (DW_OP_regx SGPR42, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK-NEXT: DW_AT_name ("s_lo16")
+    DBG_VALUE renamable $sgpr42_lo16, $noreg, !17, !DIExpression(DIOpArg(0, i16)), debug-location !16
+
+    ; CHECK: DW_AT_location (DW_OP_regx SGPR42, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK-NEXT: DW_AT_name ("s_hi16")
+    DBG_VALUE renamable $sgpr42_hi16, $noreg, !18, !DIExpression(DIOpArg(0, i16)), debug-location !16
+
+    ; CHECK: DW_AT_location (DW_OP_regx SGPR42, DW_OP_piece 0x4, DW_OP_regx SGPR43, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end)
+    ; CHECK-NEXT: DW_AT_name ("s_s")
+    DBG_VALUE renamable $sgpr42_sgpr43, $noreg, !19, !DIExpression(DIOpArg(0, i64)), debug-location !16
+
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK-NEXT: DW_AT_name ("v_lo16")
+    DBG_VALUE renamable $vgpr42_lo16, $noreg, !20, !DIExpression(DIOpArg(0, i16)), debug-location !16
+
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK-NEXT: DW_AT_name ("v_hi16")
+    DBG_VALUE renamable $vgpr42_hi16, $noreg, !21, !DIExpression(DIOpArg(0, i16)), debug-location !16
+
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_piece 0x4, DW_OP_regx VGPR43, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end)
+    ; CHECK-NEXT: DW_AT_name ("v_v")
+    DBG_VALUE renamable $vgpr42_vgpr43, $noreg, !22, !DIExpression(DIOpArg(0, i64)), debug-location !16
+
+    ; CHECK: DW_TAG_variable
+    ; CHECK-NEXT: DW_AT_location (indexed ({{.*}}) loclist = {{.*}}:
+    ; CHECK-NEXT:   [{{.*}}): DW_OP_lit0, DW_OP_regx SGPR50, DW_OP_piece 0x4, DW_OP_regx SGPR51, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end, DW_OP_swap, DW_OP_drop, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_regx SGPR52, DW_OP_piece 0x4, DW_OP_regx SGPR53, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end, DW_OP_swap, DW_OP_drop, DW_OP_piece 0x4)
+    ; CHECK-NEXT: DW_AT_name    ("with_frags")
+    DBG_VALUE renamable $sgpr50_sgpr51, $noreg, !23, !DIExpression(DIOpArg(0, i64), DIOpFragment(0, 32)), debug-location !16
+    DBG_VALUE renamable $sgpr52_sgpr53, $noreg, !23, !DIExpression(DIOpArg(0, i64), DIOpFragment(32, 32)), debug-location !16
+
+    ; CHECK: DW_AT_location (DW_OP_regx SGPR100)
+    ; CHECK-NEXT: DW_AT_name ("sgpr")
+    DBG_VALUE $sgpr100, $noreg, !24, !DIExpression(DIOpArg(0, i32)), debug-location !16
+
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR100)
+    ; CHECK-NEXT: ("vgpr")
+    DBG_VALUE $vgpr100, $noreg, !25, !DIExpression(DIOpArg(0, i32)), debug-location !16
+
+    S_ENDPGM 0, debug-location !16
+
+...

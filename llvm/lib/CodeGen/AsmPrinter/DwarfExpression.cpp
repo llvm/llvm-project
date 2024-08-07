@@ -736,18 +736,22 @@ void DwarfExpression::addExpression(DIExpression::NewElementsRef Expr,
   assert(!IsPoisonedExpr && "poisoned exprs should have old elements");
   this->ArgLocEntries = ArgLocEntries;
   this->TRI = TRI;
-  buildAST(Expr);
-  traverse(ASTRoot.get(), ValueKind::LocationDesc);
-  ASTRoot.reset();
-  this->TRI = nullptr;
-  this->ArgLocEntries = std::nullopt;
-
+  std::optional<DIOp::Fragment> FragOp;
   for (DIOp::Variant Op : Expr) {
     if (auto *Frag = std::get_if<DIOp::Fragment>(&Op)) {
-      addOpPiece(Frag->getBitSize());
+      FragOp = *Frag;
+      IsFragment = true;
       break;
     }
   }
+  buildAST(Expr);
+  traverse(ASTRoot.get(), ValueKind::LocationDesc);
+  if (FragOp)
+    addOpPiece(FragOp->getBitSize());
+  IsFragment = false;
+  ASTRoot.reset();
+  this->TRI = nullptr;
+  this->ArgLocEntries = std::nullopt;
 }
 
 /// add masking operations to stencil out a subregister.
@@ -946,11 +950,67 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
   }
 
   if (Entry.isLocation()) {
-    auto DWARFRegister = TRI->getDwarfRegNum(Entry.getLoc().getReg(), false);
-    if (DWARFRegister < 0) {
+    assert(DwarfRegs.empty() && "unconsumed registers?");
+    if (!addMachineReg(*TRI, Entry.getLoc().getReg())) {
+      DwarfRegs.clear();
       return std::nullopt;
     }
-    addReg(DWARFRegister);
+
+    // addMachineReg sets DwarfRegs and SubRegister{Size,Offset}InBits. Collect
+    // them here and reset the fields to avoid hitting any asserts.
+    decltype(DwarfRegs) Regs;
+    std::swap(Regs, DwarfRegs);
+    unsigned SubRegOffset = SubRegisterOffsetInBits;
+    unsigned SubRegSize = SubRegisterSizeInBits;
+    SubRegisterOffsetInBits = SubRegisterSizeInBits = 0;
+    if (SubRegOffset % 8 || SubRegSize % 8)
+      return std::nullopt;
+    SubRegOffset /= 8;
+    SubRegSize /= 8;
+
+    if (Regs.size() == 1) {
+      addReg(Regs[0].DwarfRegNo, Regs[0].Comment);
+
+      if (SubRegOffset) {
+        emitUserOp(dwarf::DW_OP_LLVM_USER_offset_uconst);
+        emitUnsigned(SubRegOffset);
+      }
+
+      if (SubRegSize) {
+        emitOp(dwarf::DW_OP_deref_size);
+        emitData1(SubRegSize);
+        return NewOpResult{Arg.getResultType(), ValueKind::Value};
+      }
+
+      return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+    }
+
+    assert(SubRegOffset == 0 && SubRegSize == 0 &&
+           "register piece cannot apply to multiple registers");
+
+    // When emitting fragments, the top element on the stack might be an
+    // incomplete composite. Push/drop a lit0 so that we don't add the registers
+    // to the larger composite.
+    if (IsFragment)
+      emitOp(dwarf::DW_OP_lit0);
+
+    unsigned RegSize = 0;
+    for (auto &Reg : Regs) {
+      if (Reg.SubRegSize % 8)
+        return std::nullopt;
+      RegSize += Reg.SubRegSize;
+      if (Reg.DwarfRegNo >= 0)
+        addReg(Reg.DwarfRegNo, Reg.Comment);
+      emitOp(dwarf::DW_OP_piece);
+      emitUnsigned(Reg.SubRegSize / 8);
+    }
+    emitUserOp(dwarf::DW_OP_LLVM_USER_piece_end);
+
+    if (IsFragment) {
+      emitOp(dwarf::DW_OP_swap);
+      emitOp(dwarf::DW_OP_drop);
+    }
+
     return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
   }
 

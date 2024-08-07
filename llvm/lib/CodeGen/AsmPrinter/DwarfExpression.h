@@ -361,6 +361,7 @@ public:
   // the expression lowers as expected. If the lowering is not supported, it
   // is terminated by a DW_OP_LLVM_undefined operation.
   bool IsImplemented = true;
+  bool IsFragment = false;
 
   /// Set when emitting a fragment/non-fragment expression that contains a
   /// DW_OP_LLVM_poison operation. This matters for correctness in the fragment
