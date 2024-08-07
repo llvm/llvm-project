@@ -6,8 +6,8 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -24,7 +24,8 @@
 using namespace clang;
 using namespace cir;
 
-mlir::cir::CallingConv CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
+mlir::cir::CallingConv
+CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
   switch (CC) {
   case CC_C:
     return mlir::cir::CallingConv::C;
@@ -389,7 +390,6 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 
   case Type::Builtin: {
     switch (cast<BuiltinType>(Ty)->getKind()) {
-    case BuiltinType::WasmExternRef:
     case BuiltinType::SveBoolx2:
     case BuiltinType::SveBoolx4:
     case BuiltinType::SveCount:
@@ -579,6 +579,15 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
         assert(0 && "not implemented");
         break;
       }
+#define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
+  case BuiltinType::Id: {                                                      \
+    llvm_unreachable("NYI");                                                   \
+  } break;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
