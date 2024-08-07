@@ -7215,6 +7215,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   // Reserve space for the linkage area on the stack.
   const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, Align(PtrByteSize));
+  uint64_t SaveStackPos = CCInfo.getStackSize();
+  bool SaveParams = MF.getFunction().hasFnAttribute("save-reg-params");
   CCInfo.AnalyzeFormalArguments(Ins, CC_AIX);
 
   SmallVector<SDValue, 8> MemOps;
@@ -7232,6 +7234,27 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     // the register.
     if (VA.isMemLoc() && VA.needsCustom() && ValVT.isFloatingPoint())
       continue;
+
+    if (SaveParams && VA.isRegLoc() && !Flags.isByVal() && !VA.needsCustom()) {
+      const TargetRegisterClass *RegClass = getRegClassForSVT(
+          LocVT.SimpleTy, IsPPC64, Subtarget.hasP8Vector(), Subtarget.hasVSX());
+      // On PPC64, debugger assumes extended 8-byte values are stored from GPR.
+      MVT SaveVT = RegClass == &PPC::G8RCRegClass ? MVT::i64 : LocVT;
+      const Register VReg = MF.addLiveIn(VA.getLocReg(), RegClass);
+      SDValue Parm = DAG.getCopyFromReg(Chain, dl, VReg, SaveVT);
+      int FI = MFI.CreateFixedObject(SaveVT.getStoreSize(), SaveStackPos, true);
+      SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
+      SDValue StoreReg = DAG.getStore(Chain, dl, Parm, FIN,
+                                      MachinePointerInfo(), Align(PtrByteSize));
+      SaveStackPos = alignTo(SaveStackPos + SaveVT.getStoreSize(), PtrByteSize);
+      MemOps.push_back(StoreReg);
+    }
+
+    if (SaveParams && (VA.isMemLoc() || Flags.isByVal()) && !VA.needsCustom()) {
+      unsigned StoreSize =
+          Flags.isByVal() ? Flags.getByValSize() : LocVT.getStoreSize();
+      SaveStackPos = alignTo(SaveStackPos + StoreSize, PtrByteSize);
+    }
 
     auto HandleMemLoc = [&]() {
       const unsigned LocSize = LocVT.getStoreSize();

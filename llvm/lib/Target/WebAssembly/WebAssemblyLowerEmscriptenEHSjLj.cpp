@@ -1689,7 +1689,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     }
   }
 
-  SmallDenseMap<BasicBlock *, SmallPtrSet<BasicBlock *, 4>, 4>
+  SmallDenseMap<BasicBlock *, SmallSetVector<BasicBlock *, 4>, 4>
       UnwindDestToNewPreds;
   for (auto *CI : LongjmpableCalls) {
     // Even if the callee function has attribute 'nounwind', which is true for

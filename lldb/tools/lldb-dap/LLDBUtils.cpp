@@ -110,6 +110,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonFork:
   case lldb::eStopReasonVFork:
   case lldb::eStopReasonVForkDone:
+  case lldb::eStopReasonInterrupt:
     return true;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:

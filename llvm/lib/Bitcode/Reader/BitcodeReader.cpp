@@ -2496,7 +2496,9 @@ Error BitcodeReader::parseTypeTableBody() {
       ResultTy = Type::getMetadataTy(Context);
       break;
     case bitc::TYPE_CODE_X86_MMX:   // X86_MMX
-      ResultTy = Type::getX86_MMXTy(Context);
+      // Deprecated: decodes as <1 x i64>
+      ResultTy =
+          llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
       break;
     case bitc::TYPE_CODE_X86_AMX:   // X86_AMX
       ResultTy = Type::getX86_AMXTy(Context);

@@ -98,6 +98,9 @@ namespace clang {
 #define GENERIC_IMAGE_TYPE(ImgType, Id)                                      \
     TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                          \
+    TST_##Name, // HLSL Intangible Types
+#include "clang/Basic/HLSLIntangibleTypes.def"
     TST_error // erroneous type
   };
 

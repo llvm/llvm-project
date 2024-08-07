@@ -53,8 +53,12 @@
 namespace llvm::sandboxir {
 
 class BasicBlock;
+class CallBrInst;
+class LoadInst;
+class StoreInst;
 class Instruction;
 class Tracker;
+class AllocaInst;
 
 /// The base class for IR Change classes.
 class IRChangeBase {
@@ -96,6 +100,64 @@ public:
   void dump(raw_ostream &OS) const final {
     dumpCommon(OS);
     OS << "UseSet";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHISetIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned Idx;
+  PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
+
+public:
+  enum class What {
+    Value,
+    Block,
+  };
+  PHISetIncoming(PHINode &PHI, unsigned Idx, What What, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHIRemoveIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned RemovedIdx;
+  Value *RemovedV;
+  BasicBlock *RemovedBB;
+
+public:
+  PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHIAddIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned Idx;
+
+public:
+  PHIAddIncoming(PHINode &PHI, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
   }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
@@ -177,6 +239,111 @@ public:
 #endif // NDEBUG
 };
 
+class CallBrInstSetDefaultDest : public IRChangeBase {
+  CallBrInst *CallBr;
+  BasicBlock *OrigDefaultDest;
+
+public:
+  CallBrInstSetDefaultDest(CallBrInst *CallBr, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "CallBrInstSetDefaultDest";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class AllocaSetAllocatedType final : public IRChangeBase {
+  AllocaInst *Alloca;
+  Type *OrigType;
+
+public:
+  AllocaSetAllocatedType(AllocaInst *Alloca, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "AllocaSetAllocatedType";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class AllocaSetAlignment final : public IRChangeBase {
+  AllocaInst *Alloca;
+  Align OrigAlign;
+
+public:
+  AllocaSetAlignment(AllocaInst *Alloca, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "AllocaSetAlignment";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class AllocaSetUsedWithInAlloca final : public IRChangeBase {
+  AllocaInst *Alloca;
+  bool Orig;
+
+public:
+  AllocaSetUsedWithInAlloca(AllocaInst *Alloca, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "AllocaSetUsedWithInAlloca";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class CallBrInstSetIndirectDest : public IRChangeBase {
+  CallBrInst *CallBr;
+  unsigned Idx;
+  BasicBlock *OrigIndirectDest;
+
+public:
+  CallBrInstSetIndirectDest(CallBrInst *CallBr, unsigned Idx, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "CallBrInstSetIndirectDest";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class SetVolatile : public IRChangeBase {
+  /// This holds the properties of whether LoadInst or StoreInst was volatile
+  bool WasVolatile;
+  /// This could either be StoreInst or LoadInst
+  PointerUnion<StoreInst *, LoadInst *> StoreOrLoad;
+
+public:
+  SetVolatile(Instruction *I, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "SetVolatile";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 class MoveInstr : public IRChangeBase {
   /// The instruction that moved.
   Instruction *MovedI;
@@ -195,6 +362,39 @@ public:
   }
   LLVM_DUMP_METHOD void dump() const final;
 #endif // NDEBUG
+};
+
+class InsertIntoBB final : public IRChangeBase {
+  Instruction *InsertedI = nullptr;
+
+public:
+  InsertIntoBB(Instruction *InsertedI, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "InsertIntoBB";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
+};
+
+class CreateAndInsertInst final : public IRChangeBase {
+  Instruction *NewI = nullptr;
+
+public:
+  CreateAndInsertInst(Instruction *NewI, Tracker &Tracker)
+      : IRChangeBase(Tracker), NewI(NewI) {}
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "CreateAndInsertInst";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
 };
 
 /// The tracker collects all the change objects and implements the main API for

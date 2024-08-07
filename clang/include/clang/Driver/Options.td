@@ -932,8 +932,9 @@ def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
-  HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
-  " or '-O3' to enable only conforming optimizations">;
+  HelpTextForVariants<[ClangOption, CC1Option],
+                      "Deprecated; use '-O3 -ffast-math' for the same behavior,"
+                      " or '-O3' to enable only conforming optimizations">;
 def P : Flag<["-"], "P">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Group<Preprocessor_Group>,
@@ -978,15 +979,15 @@ def Wsystem_headers_in_module_EQ : Joined<["-"], "Wsystem-headers-in-module=">,
   HelpText<"Enable -Wsystem-headers when building <module>">,
   MarshallingInfoStringVector<DiagnosticOpts<"SystemHeaderWarningsModules">>;
 def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>,
   Visibility<[ClangOption, CC1Option]>;
 defm invalid_constexpr : BoolWOption<"invalid-constexpr",
   LangOpts<"CheckConstexprFunctionBodies">,
   Default<!strconcat("!", cpp23.KeyPath)>,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [HelpHidden], [ClangOption, CC1Option], "Disable">,
+  PosFlag<SetTrue, [HelpHidden], [ClangOption, CC1Option], "Enable">,
   BothFlags<[], [ClangOption, CC1Option], " checking of constexpr function bodies for validity within a constant expression context">>;
 def Wl_COMMA : CommaJoined<["-"], "Wl,">, Visibility<[ClangOption, FlangOption]>,
   Flags<[LinkerInput, RenderAsInput]>,
@@ -1117,8 +1118,7 @@ def cl_single_precision_constant : Flag<["-"], "cl-single-precision-constant">, 
   MarshallingInfoFlag<LangOpts<"SinglePrecisionConstants">>;
 def cl_finite_math_only : Flag<["-"], "cl-finite-math-only">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"OpenCL only. Allow floating-point optimizations that assume arguments and results are not NaNs or +-Inf.">,
-  MarshallingInfoFlag<LangOpts<"CLFiniteMathOnly">>;
+  HelpText<"OpenCL only. Allow floating-point optimizations that assume arguments and results are not NaNs or +-Inf.">;
 def cl_kernel_arg_info : Flag<["-"], "cl-kernel-arg-info">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"OpenCL only. Generate kernel argument metadata.">,
@@ -1165,19 +1165,19 @@ def client__name : JoinedOrSeparate<["-"], "client_name">;
 def combine : Flag<["-", "--"], "combine">, Flags<[NoXarchOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
 def config : Joined<["--"], "config=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, MetaVarName<"<file>">,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, MetaVarName<"<file>">,
   HelpText<"Specify configuration file">;
-def : Separate<["--"], "config">, Alias<config>;
+def : Separate<["--"], "config">, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<config>;
 def no_default_config : Flag<["--"], "no-default-config">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable loading default configuration files">;
 def config_system_dir_EQ : Joined<["--"], "config-system-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"System directory for configuration files">;
 def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"User directory for configuration files">;
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
   Visibility<[ClangOption, CLOption]>;
@@ -2609,13 +2609,12 @@ defm approx_func : BoolFOption<"approx-func", LangOpts<"ApproxFunc">, DefaultFal
            "with an approximately equivalent calculation",
            [funsafe_math_optimizations.KeyPath]>,
    NegFlag<SetFalse, [], [ClangOption, CC1Option, FC1Option, FlangOption]>>;
-defm finite_math_only : BoolFOption<"finite-math-only",
-  LangOpts<"FiniteMathOnly">, DefaultFalse,
+defm finite_math_only : BoolOptionWithoutMarshalling<"f", "finite-math-only",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Allow floating-point optimizations that "
           "assume arguments and results are not NaNs or +-inf. This defines "
           "the \\_\\_FINITE\\_MATH\\_ONLY\\_\\_ preprocessor macro.",
-          [cl_finite_math_only.KeyPath, ffast_math.KeyPath]>,
+          [ffast_math.KeyPath]>,
   NegFlag<SetFalse>>;
 defm signed_zeros : BoolFOption<"signed-zeros",
   LangOpts<"NoSignedZero">, DefaultFalse,
@@ -3106,7 +3105,7 @@ def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Grou
   HelpText<"Specify the module user build path">,
   MarshallingInfoString<HeaderSearchOpts<"ModuleUserBuildPath">>;
 def fprebuilt_module_path : Joined<["-"], "fprebuilt-module-path=">, Group<i_Group>,
-  Flags<[]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[]>, Visibility<[ClangOption, CLOption, CC1Option]>,
   MetaVarName<"<directory>">,
   HelpText<"Specify the prebuilt module path">;
 defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
@@ -3115,11 +3114,11 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
 def fmodule_output_EQ : Joined<["-"], "fmodule-output=">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, CC1Option]>,
   MarshallingInfoString<FrontendOpts<"ModuleOutputPath">>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 
 defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
@@ -3303,8 +3302,10 @@ def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-sy
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
 def fmodule_header : Flag <["-"], "fmodule-header">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption]>,
   HelpText<"Build a C++20 Header Unit from a header">;
 def fmodule_header_EQ : Joined<["-"], "fmodule-header=">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption]>,
   MetaVarName<"<kind>">,
   HelpText<"Build a C++20 Header Unit from a header that should be found in the user (fmodule-header=user) or system (fmodule-header=system) search path.">;
 
@@ -3534,7 +3535,7 @@ def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
 def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
@@ -4255,11 +4256,13 @@ defm ptrauth_vtable_pointer_type_discrimination :
   OptInCC1FFlag<"ptrauth-vtable-pointer-type-discrimination", "Enable type discrimination of vtable pointers">;
 defm ptrauth_type_info_vtable_pointer_discrimination :
   OptInCC1FFlag<"ptrauth-type-info-vtable-pointer-discrimination", "Enable type and address discrimination of vtable pointer of std::type_info">;
-defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 defm ptrauth_function_pointer_type_discrimination : OptInCC1FFlag<"ptrauth-function-pointer-type-discrimination",
   "Enable type discrimination on C function pointers">;
 defm ptrauth_indirect_gotos : OptInCC1FFlag<"ptrauth-indirect-gotos",
   "Enable signing and authentication of indirect goto targets">;
+defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
+defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini-address-discrimination",
+  "Enable address discrimination of function pointers in init/fini arrays">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -5089,6 +5092,11 @@ def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
 } // let Flags = [TargetSpecific]
+def msave_reg_params : Flag<["-"], "msave-reg-params">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Save arguments passed by registers to ABI-defined stack positions">,
+  MarshallingInfoFlag<CodeGenOpts<"SaveRegParams">>;
 def mabi_EQ_quadword_atomics : Flag<["-"], "mabi=quadword-atomics">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.">,
@@ -5949,6 +5957,7 @@ def _output : Separate<["--"], "output">, Alias<o>;
 def _param : Separate<["--"], "param">, Group<CompileOnly_Group>;
 def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, CLOption]>,
   Group<Action_Group>, HelpText<"Only precompile the input">;
 def _prefix_EQ : Joined<["--"], "prefix=">, Alias<B>;
 def _prefix : Separate<["--"], "prefix">, Alias<B>;
@@ -6202,6 +6211,12 @@ def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group
 def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1 : Flag<["-"], "mavx10.1">, Alias<mavx10_1_256>;
 def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Alias<mno_avx10_1_256>;
+def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_2_256 : Flag<["-"], "mno-avx10.2-256">, Group<m_x86_AVX10_Features_Group>;
+def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_2_512 : Flag<["-"], "mno-avx10.2-512">, Group<m_x86_AVX10_Features_Group>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_256>;
+def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Alias<mno_avx10_2_256>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -7529,6 +7544,9 @@ def code_completion_brief_comments : Flag<["-"], "code-completion-brief-comments
 def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
   HelpText<"Include code completion results which require small fix-its.">,
   MarshallingInfoFlag<FrontendOpts<"CodeCompleteOpts.IncludeFixIts">>;
+def skip_function_bodies : Flag<["-"], "skip-function-bodies">,
+  HelpText<"Skip function bodies when possible">,
+  MarshallingInfoFlag<FrontendOpts<"SkipFunctionBodies">>;
 def disable_free : Flag<["-"], "disable-free">,
   HelpText<"Disable freeing of memory on exit">,
   MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
@@ -7807,10 +7825,10 @@ def mreassociate : Flag<["-"], "mreassociate">,
   MarshallingInfoFlag<LangOpts<"AllowFPReassoc">>, ImpliedByAnyOf<[funsafe_math_optimizations.KeyPath]>;
 def menable_no_nans : Flag<["-"], "menable-no-nans">,
   HelpText<"Allow optimization to assume there are no NaNs.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
-def menable_no_infinities : Flag<["-"], "menable-no-infs">,
+  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
+def menable_no_infs : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
+  MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
 
 def pic_level : Separate<["-"], "pic-level">,
   HelpText<"Value for __PIC__">,

@@ -2284,8 +2284,9 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     Register Dst = I.getOperand(0).getReg();
     auto *CV = ConstantDataVector::getSplat(
         MRI.getType(Dst).getNumElements(),
-        ConstantInt::get(Type::getIntNTy(Ctx, MRI.getType(Src).getSizeInBits()),
-                         ValAndVReg->Value));
+        ConstantInt::get(
+            Type::getIntNTy(Ctx, MRI.getType(Dst).getScalarSizeInBits()),
+            ValAndVReg->Value.trunc(MRI.getType(Dst).getScalarSizeInBits())));
     if (!emitConstantVector(Dst, CV, MIB, MRI))
       return false;
     I.eraseFromParent();
@@ -2844,7 +2845,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (OpFlags & AArch64II::MO_GOT) {
-      I.setDesc(TII.get(AArch64::LOADgot));
+      I.setDesc(TII.get(MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+                            ? AArch64::LOADgotAUTH
+                            : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
@@ -5614,7 +5617,8 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
   }
 
   if (CV->getSplatValue()) {
-    APInt DefBits = APInt::getSplat(DstSize, CV->getUniqueInteger());
+    APInt DefBits = APInt::getSplat(
+        DstSize, CV->getUniqueInteger().trunc(DstTy.getScalarSizeInBits()));
     auto TryMOVIWithBits = [&](APInt DefBits) -> MachineInstr * {
       MachineInstr *NewOp;
       bool Inv = false;

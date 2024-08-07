@@ -22,6 +22,7 @@
 
 namespace opts {
 extern llvm::cl::opt<bool> ProfileUseDFS;
+extern llvm::cl::opt<bool> ProfileUsePseudoProbes;
 } // namespace opts
 
 namespace llvm {
@@ -57,7 +58,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
                            const BoltAddressTranslation *BAT) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
-  const MCPseudoProbeDecoder *PseudoProbeDecoder = BC.getPseudoProbeDecoder();
+  const MCPseudoProbeDecoder *PseudoProbeDecoder =
+      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 

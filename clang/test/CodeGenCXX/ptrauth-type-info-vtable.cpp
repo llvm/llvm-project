@@ -4,7 +4,20 @@
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NODISC
 
+// RUN: %clang_cc1 -DENABLE_TID=0 -I%S -std=c++11 -triple=aarch64-linux-gnu \
+// RUN:   -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NODISC
+
 // RUN: %clang_cc1 -DENABLE_TID=1 -I%S -std=c++11 -triple=arm64e-apple-darwin \
+// RUN:   -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -fptrauth-type-info-vtable-pointer-discrimination \
+// RUN:   %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,DISC
+
+// RUN: %clang_cc1 -DENABLE_TID=1 -I%S -std=c++11 -triple=aarch64-linux-gnu \
 // RUN:   -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
@@ -64,7 +77,7 @@ TestStruct::~TestStruct(){}
 extern "C" void test_vtable(std::type_info* t) {
   t->test_method();
 }
-// NODISC: define void @test_vtable(ptr noundef %t)
+// NODISC: define{{.*}} void @test_vtable(ptr noundef %t)
 // NODISC: [[T_ADDR:%.*]] = alloca ptr, align 8
 // NODISC: store ptr %t, ptr [[T_ADDR]], align 8
 // NODISC: [[T:%.*]] = load ptr, ptr [[T_ADDR]], align 8
@@ -72,7 +85,7 @@ extern "C" void test_vtable(std::type_info* t) {
 // NODISC: [[CAST_VPTR:%.*]] = ptrtoint ptr [[VPTR]] to i64
 // NODISC: [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[CAST_VPTR]], i32 2, i64 0)
 
-// DISC: define void @test_vtable(ptr noundef %t)
+// DISC: define{{.*}} void @test_vtable(ptr noundef %t)
 // DISC: [[T_ADDR:%.*]] = alloca ptr, align 8
 // DISC: store ptr %t, ptr [[T_ADDR]], align 8
 // DISC: [[T:%.*]] = load ptr, ptr [[T_ADDR]], align 8

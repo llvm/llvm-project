@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
   uint64_t start = gpu::processor_clock();
   asm("" ::"r"(y), "llr"(start));
   uint32_t result = y;
-  asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result) :);
+  asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result));
   uint64_t stop = gpu::processor_clock();
   volatile auto storage = result;
   return stop - start;
@@ -57,7 +57,7 @@ template <typename F, typename T>
 
   // This inline assembly performs a no-op which forces the result to both be
   // used and prevents us from exiting this region before it's complete.
-  asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result) :);
+  asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result));
 
   // Obtain the current timestamp after running the calculation and force
   // ordering.
@@ -85,7 +85,7 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
 
   auto result = f(arg, arg2);
 
-  asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result) :);
+  asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result));
 
   uint64_t stop = gpu::processor_clock();
   gpu::memory_fence();

@@ -52,7 +52,6 @@ const Symbol *FindPointerComponent(const DeclTypeSpec &);
 const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
-const Symbol *FindFunctionResult(const Symbol &);
 const Symbol *FindOverriddenBinding(
     const Symbol &, bool &isInaccessibleDeferred);
 const Symbol *FindGlobal(const Symbol &);
@@ -262,7 +261,7 @@ std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
 SymbolVector OrderParameterDeclarations(const Symbol &);
 // Returns the complete list of derived type parameter names in the
 // order defined by 7.5.3.2.
-std::list<SourceName> OrderParameterNames(const Symbol &);
+SymbolVector OrderParameterNames(const Symbol &);
 
 // Return an existing or new derived type instance
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,

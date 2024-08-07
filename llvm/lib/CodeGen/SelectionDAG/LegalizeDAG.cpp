@@ -4336,6 +4336,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // targets where it is not needed.
     Results.push_back(Node->getOperand(0));
     break;
+  case ISD::LRINT:
+  case ISD::LLRINT: {
+    SDValue Arg = Node->getOperand(0);
+    EVT ArgVT = Arg.getValueType();
+    EVT ResVT = Node->getValueType(0);
+    SDLoc dl(Node);
+    SDValue RoundNode = DAG.getNode(ISD::FRINT, dl, ArgVT, Arg);
+    Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
+    break;
+  }
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:
