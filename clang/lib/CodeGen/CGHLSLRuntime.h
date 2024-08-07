@@ -124,7 +124,7 @@ public:
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
-  void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
+  void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
