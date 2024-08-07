@@ -96,7 +96,7 @@ public:
   /// constructs the compiler instance through the driver/toolchain. See \ref
   /// SetupImportStdModuleLangOpts
   ///
-  static bool SDKSupportsBuiltinModules(const llvm::Triple &triple,
+  static bool SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
                                         llvm::VersionTuple sdk_version);
 
   /// Return the canonical SDK name, such as "macosx" for the macOS SDK.

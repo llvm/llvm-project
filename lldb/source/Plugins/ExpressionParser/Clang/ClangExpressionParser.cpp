@@ -287,9 +287,6 @@ private:
 /// builtin modules in system headers. This is used to decide
 /// whether to pass -fbuiltin-headers-in-system-modules to
 /// the compiler instance when compiling the `std` module.
-///
-/// \param[in] target The target triple.
-///
 static llvm::Expected<bool>
 sdkSupportsBuiltinModules(lldb_private::Target &target) {
 #ifndef __APPLE__

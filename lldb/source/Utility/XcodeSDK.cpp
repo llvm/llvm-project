@@ -259,11 +259,11 @@ bool XcodeSDK::SupportsSwift() const {
   }
 }
 
-bool XcodeSDK::SDKSupportsBuiltinModules(const llvm::Triple &triple,
+bool XcodeSDK::SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
                                          llvm::VersionTuple sdk_version) {
   using namespace llvm;
 
-  switch (triple.getOS()) {
+  switch (target_triple.getOS()) {
   case Triple::OSType::MacOSX:
     return sdk_version >= VersionTuple(15U);
   case Triple::OSType::IOS:
