@@ -1001,8 +1001,14 @@ public:
 
 class CIRAllocaLowering
     : public mlir::OpConversionPattern<mlir::cir::AllocaOp> {
+  mlir::DataLayout const &dataLayout;
+
 public:
-  using OpConversionPattern<mlir::cir::AllocaOp>::OpConversionPattern;
+  CIRAllocaLowering(mlir::TypeConverter const &typeConverter,
+                    mlir::DataLayout const &dataLayout,
+                    mlir::MLIRContext *context)
+      : OpConversionPattern<mlir::cir::AllocaOp>(typeConverter, context),
+        dataLayout(dataLayout) {}
 
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::AllocaOp op, OpAdaptor adaptor,
@@ -1016,7 +1022,21 @@ public:
                   rewriter.getIntegerAttr(rewriter.getIndexType(), 1));
     auto elementTy = getTypeConverter()->convertType(op.getAllocaType());
     auto resultTy = getTypeConverter()->convertType(op.getResult().getType());
-    // TODO: Verification between the CIR alloca AS and the one from data layout
+    // Verification between the CIR alloca AS and the one from data layout.
+    {
+      auto resPtrTy = mlir::cast<mlir::LLVM::LLVMPointerType>(resultTy);
+      auto dlAllocaASAttr = mlir::cast_if_present<mlir::IntegerAttr>(
+          dataLayout.getAllocaMemorySpace());
+      // Absence means 0
+      // TODO: The query for the alloca AS should be done through CIRDataLayout
+      // instead to reuse the logic of interpret null attr as 0.
+      auto dlAllocaAS = dlAllocaASAttr ? dlAllocaASAttr.getInt() : 0;
+      if (dlAllocaAS != resPtrTy.getAddressSpace()) {
+        return op.emitError() << "alloca address space doesn't match the one "
+                                 "from the target data layout: "
+                              << dlAllocaAS;
+      }
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(
         op, resultTy, elementTy, size, op.getAlignmentAttr().getInt());
     return mlir::success();
@@ -3652,8 +3672,10 @@ public:
 };
 
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
-                                         mlir::TypeConverter &converter) {
+                                         mlir::TypeConverter &converter,
+                                         mlir::DataLayout &dataLayout) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
+  patterns.add<CIRAllocaLowering>(converter, dataLayout, patterns.getContext());
   patterns.add<
       CIRCmpOpLowering, CIRBitClrsbOpLowering, CIRBitClzOpLowering,
       CIRBitCtzOpLowering, CIRBitFfsOpLowering, CIRBitParityOpLowering,
@@ -3662,13 +3684,13 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRBrCondOpLowering, CIRPtrStrideOpLowering, CIRCallLowering,
       CIRTryCallLowering, CIREhInflightOpLowering, CIRUnaryOpLowering,
       CIRBinOpLowering, CIRBinOpOverflowOpLowering, CIRShiftOpLowering,
-      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
-      CIRFuncLowering, CIRCastOpLowering, CIRGlobalOpLowering,
-      CIRGetGlobalOpLowering, CIRComplexCreateOpLowering,
-      CIRComplexRealOpLowering, CIRComplexImagOpLowering,
-      CIRComplexRealPtrOpLowering, CIRComplexImagPtrOpLowering,
-      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
-      CIRBrOpLowering, CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
+      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRFuncLowering,
+      CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
+      CIRComplexCreateOpLowering, CIRComplexRealOpLowering,
+      CIRComplexImagOpLowering, CIRComplexRealPtrOpLowering,
+      CIRComplexImagPtrOpLowering, CIRVAStartLowering, CIRVAEndLowering,
+      CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
+      CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
       CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
       CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
       CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
@@ -3958,7 +3980,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(&getContext());
 
-  populateCIRToLLVMConversionPatterns(patterns, converter);
+  populateCIRToLLVMConversionPatterns(patterns, converter, dataLayout);
   mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
 
   mlir::ConversionTarget target(getContext());
