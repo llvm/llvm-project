@@ -1,0 +1,50 @@
+// RUN: cir-opt %s -cir-simplify -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+module {
+  cir.func @unary_not(%arg0: !cir.bool) -> !cir.bool {
+    %0 = cir.unary(not, %arg0) : !cir.bool, !cir.bool
+    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:  cir.func @unary_not(%arg0: !cir.bool) -> !cir.bool
+  // CHECK:     cir.return %arg0 : !cir.bool
+
+  cir.func @cast1(%arg0: !cir.bool) -> !cir.bool {
+    %0 = cir.cast(bool_to_int, %arg0 : !cir.bool), !s32i
+    %1 = cir.cast(int_to_bool, %0 : !s32i), !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:  cir.func @cast1(%arg0: !cir.bool) -> !cir.bool
+  // CHECK:     cir.return %arg0 : !cir.bool
+
+  cir.func @cast2(%arg0: !s32i) -> !cir.bool {
+    %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    %1 = cir.cast(bool_to_int, %0 : !cir.bool), !s32i
+    %2 = cir.cast(integral, %1 : !s32i), !s64i
+    %3 = cir.cast(int_to_bool, %2 : !s64i), !cir.bool
+    cir.return %3 : !cir.bool
+  }
+  // CHECK:  cir.func @cast2(%arg0: !s32i) -> !cir.bool
+  // CHECK:    %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+  // CHECK:    cir.return %0 : !cir.bool
+
+  cir.func @no_cast(%arg0: !s32i) -> !s64i {
+    %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    %1 = cir.cast(bool_to_int, %0 : !cir.bool), !s32i
+    %2 = cir.cast(integral, %1 : !s32i), !s64i
+    cir.return %2 : !s64i
+  }
+  // CHECK:  cir.func @no_cast(%arg0: !s32i) -> !s64i
+  // CHECK:    %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+  // CHECK:    %1 = cir.cast(bool_to_int, %0 : !cir.bool), !s32i
+  // CHECK:    %2 = cir.cast(integral, %1 : !s32i), !s64i
+  // CHECK:    cir.return %2 : !s64i
+
+}
+
+
+
+
+

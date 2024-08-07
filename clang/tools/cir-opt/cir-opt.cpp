@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     return cir::createConvertMLIRToLLVMPass();
   });
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
-    return mlir::createMergeCleanupsPass();
+    return mlir::createCIRSimplifyPass();
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
