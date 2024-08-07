@@ -1,4 +1,4 @@
-; RUN: opt -mtriple aarch64 -mcpu=neoverse-v2 -passes="print<cost-model>" -disable-output | FileCheck %s
+; RUN: opt -mtriple aarch64 -mcpu=neoverse-v2 -passes="print<cost-model>" -disable-output < %s 2>&1 | FileCheck %s
 ; CHECK: Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4f32
 
 define void @masked_scatter_nxv8f32_i64(<vscale x 4 x float> %data, <vscale x 4 x ptr> %b, <vscale x 4 x i64> %V) #0 {

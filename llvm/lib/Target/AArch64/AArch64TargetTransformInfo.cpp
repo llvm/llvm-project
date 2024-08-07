@@ -3411,26 +3411,21 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   return LT.first;
 }
 
-static unsigned getSVEGatherScatterOverhead(unsigned Opcode, AArch64Subtarget::ARMProcFamilyEnum ProcFamily) {
+static unsigned getSVEGatherScatterOverhead(unsigned Opcode, const AArch64Subtarget* ST) {
   assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
           "Should be called on only load or stores.");
-  return Opcode == Instruction::Load ? SVEGatherOverhead : SVEScatterOverhead;
-  unsigned Cost = 1;
   switch(Opcode) {
     case Instruction::Load:
-      Cost = SVEGatherOverhead;
+      return SVEGatherOverhead;
       break;
     case Instruction::Store:
-      if (ProcFamily == AArch64Subtarget::NeoverseV2) {
-        Cost = 13;
-      } else {
-        Cost = SVEScatterOverhead;
-      }
+      if (SVEScatterOverhead.getNumOccurrences() > 0)
+        return SVEScatterOverhead;
+      return ST->getScatterOverhead();
     break;
     default:
       llvm_unreachable("Shouldn't have reached here");
   }
-  return Cost;
 }
 
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
@@ -3464,7 +3459,7 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   // Add on an overhead cost for using gathers/scatters.
   // TODO: At the moment this is applied unilaterally for all CPUs, but at some
   // point we may want a per-CPU overhead.
-  MemOpCost *= getSVEGatherScatterOverhead(Opcode, ST->getProcFamily());
+  MemOpCost *= getSVEGatherScatterOverhead(Opcode, ST);
   return LT.first * MemOpCost * getMaxNumElements(LegalVF);
 }
 
