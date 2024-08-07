@@ -564,6 +564,8 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
 
+  bool isGSrcSimple() const { return isVCSrc_b32(); }
+
   bool isVCSrc_b32_Lo256() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32_Lo256RegClassID, MVT::i32);
   }
@@ -4795,7 +4797,11 @@ AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
                                           const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (Opc == V_SEND_VGPR_NEXT_B32_gfx13 || Opc == V_SEND_VGPR_PREV_B32_gfx13)
+  if (Opc == V_BPERMUTE_B32_gfx13 || Opc == V_MOV_2SRC_B64_gfx13 ||
+      Opc == V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32_gfx13 ||
+      Opc == V_PERMUTE_PAIR_BCAST_B32_gfx13 ||
+      Opc == V_PERMUTE_PAIR_GENSGPR_B32_gfx13 ||
+      Opc == V_SEND_VGPR_NEXT_B32_gfx13 || Opc == V_SEND_VGPR_PREV_B32_gfx13)
     return true;
 
   const MCRegisterInfo &MRI = *getMRI();
@@ -6763,11 +6769,12 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case AMDGPU::SRC_SHARED_BASE:
   case AMDGPU::SRC_SHARED_LIMIT_LO:
   case AMDGPU::SRC_SHARED_LIMIT:
+    return isGFX9Plus();
   case AMDGPU::SRC_PRIVATE_BASE_LO:
   case AMDGPU::SRC_PRIVATE_BASE:
   case AMDGPU::SRC_PRIVATE_LIMIT_LO:
   case AMDGPU::SRC_PRIVATE_LIMIT:
-    return isGFX9Plus();
+    return isGFX9Plus() && !isGFX13Plus();
   case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
     return isGFX9Plus() && !isGFX11Plus();
   case AMDGPU::TBA:

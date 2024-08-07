@@ -83,7 +83,7 @@ class VNBR_Pseudo<string opName, dag outs, dag regIns, string asmRegOps> :
 multiclass VNBR_Pseudopair {
   def NAME : VNBR_Pseudo<NAME, (outs GVGPR:$vdst, GVGPR:$vdst_refl),
                          (ins GVGPR:$vsrc), "$vdst, $vdst_refl, $vsrc">;
-  def _no_write : VNBR_Pseudo<NAME, (outs), (ins), "off, off, off">;
+  def _no_write : VNBR_Pseudo<NAME, (outs), (ins), " off, off, off">;
 }
 
 defm V_SEND_VGPR_NEXT_B32 : VNBR_Pseudopair;
@@ -95,7 +95,7 @@ defm V_SEND_VGPR_PREV_B32 : VNBR_Pseudopair;
 
 multiclass VNBR_Real_Base<GFXGen gen, VNBR_Pseudo ps> {
   def gen.Suffix : InstSI<ps.OutOperandList, ps.InOperandList,
-                          ps.Mnemonic#" "#ps.AsmOperands> {
+                          ps.Mnemonic#ps.AsmOperands> {
     let SubtargetPredicate = ps.SubtargetPredicate;
     let WaveSizePredicate = ps.WaveSizePredicate;
 

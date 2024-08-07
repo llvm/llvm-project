@@ -1274,6 +1274,15 @@ def GVGPR : RegisterOperand<VGPR_32_STAGING> {
   let PrintMethod = "printGVGPR";
 }
 
+def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
+  let EncoderMethod = "encodeGSrcSimple";
+  let DecoderMethod =
+    "[](MCInst &Inst, unsigned Val, uint64_t /*Addr*/, "
+    "const MCDisassembler *Decoder) { return addOperand(Inst, "
+    "static_cast<const AMDGPUDisassembler *>(Decoder)->decodeGSrcSimple(Val)); }";
+  let PrintMethod = "printGSrcSimple";
+}
+
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.

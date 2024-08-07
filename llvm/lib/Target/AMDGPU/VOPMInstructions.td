@@ -37,22 +37,17 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : Enc64 {
   bits<11> src1;
   bits<6> aux_data;
 
-  // TODO-GFX13: Inst{9-0} = vdst;
-  let Inst{7-0} = vdst{7-0};
+  let Inst{9-0} = vdst;
   let Inst{11-10} = ?;    // vdst_idx
   let Inst{13} = ?;       // supr
 
   let Inst{22-15} = op;
   let Inst{31-24} = 0xdc; // encoding
 
-  // TODO-GFX13: Inst{42-32} = src0;
-  let Inst{39-32} = src0{7-0};
-  let Inst{42} = src0{8};
+  let Inst{42-32} = src0;
   let Inst{44-43} = ?;    // src0_idx
 
-  // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{52-45} = !if(pfl.HasSrc1, src1{7-0}, ?);
-  let Inst{55} = !if(pfl.HasSrc1, src1{8}, ?);
+  let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = ?;    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
@@ -238,7 +233,9 @@ def IterationCnt {
 class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy, _HasAux, 0, 0, 0> {
   bit HasAux = _HasAux;
 
-  let Src1RC64 = !if(!eq(Src1VT, i64), SCSrc_b64, VSrc_f32);
+  let DstRC = GVGPR;
+  let Src0RC64 = GSrcSimple;
+  let Src1RC64 = !if(!eq(Src1VT, i64), SCSrc_b64, GSrcSimple);
   let Ins64 = !con((ins Src0RC64:$src0), !if(HasSrc1, (ins Src1RC64:$src1), (ins)), !if(HasAux, (ins AuxData:$aux_data), (ins)));
 
   string Src1Asm = !if(HasSrc1, ", $src1", "");
