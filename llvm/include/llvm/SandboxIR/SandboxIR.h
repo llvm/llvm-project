@@ -235,6 +235,7 @@ protected:
   friend class User;              // For getting `Val`.
   friend class Use;               // For getting `Val`.
   friend class SelectInst;        // For getting `Val`.
+  friend class InsertElementInst; // For getting `Val`.
   friend class BranchInst;        // For getting `Val`.
   friend class LoadInst;          // For getting `Val`.
   friend class StoreInst;         // For getting `Val`.
@@ -631,6 +632,7 @@ protected:
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
   friend class SelectInst;        // For getTopmostLLVMInstruction().
+  friend class InsertElementInst; // For getTopmostLLVMInstruction().
   friend class BranchInst;        // For getTopmostLLVMInstruction().
   friend class LoadInst;          // For getTopmostLLVMInstruction().
   friend class StoreInst;         // For getTopmostLLVMInstruction().
@@ -747,6 +749,48 @@ public:
 #ifndef NDEBUG
   void verify() const final {
     assert(isa<llvm::SelectInst>(Val) && "Expected SelectInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class InsertElementInst final : public Instruction {
+  /// Use Context::createInsertElementInst(). Don't call
+  /// the constructor directly.
+  InsertElementInst(llvm::Instruction *I, Context &Ctx)
+      : Instruction(ClassID::InsertElement, Opcode::InsertElement, I, Ctx) {}
+  InsertElementInst(ClassID SubclassID, llvm::Instruction *I, Context &Ctx)
+      : Instruction(SubclassID, Opcode::InsertElement, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  static Value *create(Value *Vec, Value *NewElt, Value *Idx,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Vec, Value *NewElt, Value *Idx,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::InsertElement;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+#ifndef NDEBUG
+  void verify() const final {}
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const InsertElementInst &SBGI) {
+    SBGI.dump(OS);
+    return OS;
   }
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
@@ -1845,6 +1889,8 @@ protected:
 
   SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
+  InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
+  friend InsertElementInst; // For createInsertElementInst()
   BranchInst *createBranchInst(llvm::BranchInst *I);
   friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
