@@ -505,6 +505,42 @@ define void @foo(i32 %arg) {
   Add0->insertBefore(Ret);
 }
 
+// TODO: Test multi-instruction patterns.
+TEST_F(TrackerTest, CreateAndInsertInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+  %ld = load i8, ptr %ptr, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *Ptr = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ret = &*It++;
+
+  Ctx.save();
+  // Check create(InsertBefore) with tracking enabled.
+  sandboxir::LoadInst *NewLd =
+      sandboxir::LoadInst::create(Ld->getType(), Ptr, Align(8),
+                                  /*InsertBefore=*/Ld, Ctx, "NewLd");
+  It = BB->begin();
+  EXPECT_EQ(&*It++, NewLd);
+  EXPECT_EQ(&*It++, Ld);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+  // Check revert().
+  Ctx.revert();
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Ld);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB->end());
+}
+
 TEST_F(TrackerTest, CallBaseSetters) {
   parseIR(C, R"IR(
 declare void @bar1(i8)
@@ -606,6 +642,51 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), OtherBB);
   Ctx.revert();
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
+}
+
+TEST_F(TrackerTest, AllocaInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  %alloca = alloca i32, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Alloca = cast<sandboxir::AllocaInst>(&*It++);
+
+  // Check setAllocatedType().
+  Ctx.save();
+  auto *OrigTy = Alloca->getAllocatedType();
+  auto *NewTy = Type::getInt64Ty(C);
+  EXPECT_NE(NewTy, OrigTy);
+  Alloca->setAllocatedType(NewTy);
+  EXPECT_EQ(Alloca->getAllocatedType(), NewTy);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->getAllocatedType(), OrigTy);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = Alloca->getAlign();
+  Align NewAlign(128);
+  EXPECT_NE(NewAlign, OrigAlign);
+  Alloca->setAlignment(NewAlign);
+  EXPECT_EQ(Alloca->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->getAlign(), OrigAlign);
+
+  // Check setUsedWithInAlloca().
+  Ctx.save();
+  auto OrigWIA = Alloca->isUsedWithInAlloca();
+  bool NewWIA = true;
+  EXPECT_NE(NewWIA, OrigWIA);
+  Alloca->setUsedWithInAlloca(NewWIA);
+  EXPECT_EQ(Alloca->isUsedWithInAlloca(), NewWIA);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->isUsedWithInAlloca(), OrigWIA);
 }
 
 TEST_F(TrackerTest, CallBrSetters) {
@@ -743,6 +824,15 @@ bb2:
   EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
 
+  // Check removeIncomingValueIf(FromBB1).
+  Ctx.save();
+  PHI->removeIncomingValueIf(
+      [&](unsigned Idx) { return PHI->getIncomingBlock(Idx) == BB1; });
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   // Check removeIncomingValue() remove all.
   Ctx.save();
   PHI->removeIncomingValue(0u);

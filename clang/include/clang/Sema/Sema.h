@@ -15071,9 +15071,6 @@ public:
   ///
   /// \param FD The FieldDecl to apply the attribute to
   /// \param E The count expression on the attribute
-  /// \param[out] Decls If the attribute is semantically valid \p Decls
-  ///             is populated with TypeCoupledDeclRefInfo objects, each
-  ///             describing Decls referred to in \p E.
   /// \param CountInBytes If true the attribute is from the "sized_by" family of
   ///                     attributes. If the false the attribute is from
   ///                     "counted_by" family of attributes.
@@ -15086,10 +15083,8 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(
-      FieldDecl *FD, Expr *E,
-      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls, bool CountInBytes,
-      bool OrNull);
+  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
+                                 bool OrNull);
 
   ///@}
 };
