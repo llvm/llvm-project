@@ -297,7 +297,7 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   if (Attribute == MCSA_IndirectSymbol) {
     // Note that we intentionally cannot use the symbol data here; this is
     // important for matching the string table that 'as' generates.
-    getWriter().getIndirectSymbols().push_back(
+    getMCObjectWriter().getIndirectSymbols().push_back(
         {Symbol, getCurrentSectionOnly()});
     return true;
   }
