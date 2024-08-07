@@ -111,6 +111,7 @@ public:
 protected:
   friend class SBAttachInfo;
   friend class SBLaunchInfo;
+  friend class SBPlatform;
   friend class SBDebugger;
   friend class SBTarget;
   friend class SBProcess;

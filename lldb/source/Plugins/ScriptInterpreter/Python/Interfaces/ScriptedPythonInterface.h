@@ -108,7 +108,7 @@ public:
               m_interpreter.GetDictionaryName());
       if (!dict.IsAllocated())
         return create_error(
-            llvm::formatv("Could not find interpreter dictionary: %s",
+            llvm::formatv("Could not find interpreter dictionary: {0}",
                           m_interpreter.GetDictionaryName()));
 
       auto init =
@@ -321,6 +321,14 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::DebuggerSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::TargetSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -454,6 +462,21 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
 template <>
 lldb::BreakpointSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::DebuggerSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DebuggerSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::TargetSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::ProcessSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ProcessSP>(
     python::PythonObject &p, Status &error);
 
 template <>

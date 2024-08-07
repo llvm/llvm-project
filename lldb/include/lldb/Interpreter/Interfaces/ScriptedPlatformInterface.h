@@ -24,14 +24,19 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) = 0;
 
+  virtual StructuredData::ArraySP GetSupportedArchitectures() { return {}; }
+
   virtual StructuredData::DictionarySP ListProcesses() { return {}; }
 
   virtual StructuredData::DictionarySP GetProcessInfo(lldb::pid_t) {
     return {};
   }
 
-  virtual Status AttachToProcess(lldb::ProcessAttachInfoSP attach_info) {
-    return Status("ScriptedPlatformInterface cannot attach to a process");
+  virtual lldb::ProcessSP
+  AttachToProcess(lldb::ProcessAttachInfoSP attach_info_sp,
+                  lldb::TargetSP target_sp, lldb::DebuggerSP debugger_sp,
+                  Status &error) {
+    return {};
   }
 
   virtual Status LaunchProcess(lldb::ProcessLaunchInfoSP launch_info) {

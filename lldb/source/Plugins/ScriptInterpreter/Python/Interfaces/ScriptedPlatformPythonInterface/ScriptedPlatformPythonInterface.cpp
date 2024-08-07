@@ -46,21 +46,29 @@ ScriptedPlatformPythonInterface::CreatePluginObject(
                                                      exe_ctx_ref_sp, sd_impl);
 }
 
+StructuredData::ArraySP
+ScriptedPlatformPythonInterface::GetSupportedArchitectures() {
+  Status error;
+  StructuredData::ArraySP arr =
+      Dispatch<StructuredData::ArraySP>("get_supported_architectures", error);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr,
+                                                    error))
+    return {};
+
+  return arr;
+}
+
 StructuredData::DictionarySP ScriptedPlatformPythonInterface::ListProcesses() {
   Status error;
-  StructuredData::DictionarySP dict_sp =
+  StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("list_processes", error);
 
-  if (!dict_sp || !dict_sp->IsValid() || error.Fail()) {
-    return ScriptedInterface::ErrorWithMessage<StructuredData::DictionarySP>(
-        LLVM_PRETTY_FUNCTION,
-        llvm::Twine("Null or invalid object (" +
-                    llvm::Twine(error.AsCString()) + llvm::Twine(")."))
-            .str(),
-        error);
-  }
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
+                                                    error))
+    return {};
 
-  return dict_sp;
+  return dict;
 }
 
 StructuredData::DictionarySP
@@ -81,16 +89,29 @@ ScriptedPlatformPythonInterface::GetProcessInfo(lldb::pid_t pid) {
   return dict_sp;
 }
 
-Status ScriptedPlatformPythonInterface::AttachToProcess(
-    ProcessAttachInfoSP attach_info) {
-  // FIXME: Pass `attach_info` to method call
-  return GetStatusFromMethod("attach_to_process");
+lldb::ProcessSP ScriptedPlatformPythonInterface::AttachToProcess(
+    lldb::ProcessAttachInfoSP attach_info_sp, lldb::TargetSP target_sp,
+    lldb::DebuggerSP debugger_sp, Status &error) {
+  Status py_error;
+  ProcessSP process_sp =
+      Dispatch<ProcessSP>("attach_to_process", py_error, attach_info_sp,
+                          target_sp, debugger_sp, error);
+
+  if (!process_sp || error.Fail()) {
+    return ScriptedInterface::ErrorWithMessage<ProcessSP>(
+        LLVM_PRETTY_FUNCTION,
+        llvm::Twine("Null or invalid object (" +
+                    llvm::Twine(error.AsCString()) + llvm::Twine(")."))
+            .str(),
+        error);
+  }
+
+  return process_sp;
 }
 
 Status ScriptedPlatformPythonInterface::LaunchProcess(
-    ProcessLaunchInfoSP launch_info) {
-  // FIXME: Pass `launch_info` to method call
-  return GetStatusFromMethod("launch_process");
+    ProcessLaunchInfoSP launch_info_sp) {
+  return GetStatusFromMethod("launch_process", launch_info_sp);
 }
 
 Status ScriptedPlatformPythonInterface::KillProcess(lldb::pid_t pid) {

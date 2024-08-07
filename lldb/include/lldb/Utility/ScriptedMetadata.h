@@ -15,8 +15,8 @@
 namespace lldb_private {
 class ScriptedMetadata {
 public:
-  ScriptedMetadata(llvm::StringRef class_name,
-                   StructuredData::DictionarySP dict_sp)
+  ScriptedMetadata(const llvm::StringRef class_name,
+                   const StructuredData::DictionarySP dict_sp)
       : m_class_name(class_name.data()), m_args_sp(dict_sp) {}
 
   ScriptedMetadata(const ProcessInfo &process_info) {

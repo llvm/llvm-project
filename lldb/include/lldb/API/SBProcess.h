@@ -17,6 +17,7 @@
 #include <cstdio>
 
 namespace lldb_private {
+class ScriptInterpreter;
 namespace python {
 class SWIGBridge;
 }
@@ -598,6 +599,7 @@ protected:
   friend class lldb_private::QueueImpl;
 
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   SBProcess(const lldb::ProcessSP &process_sp);
 

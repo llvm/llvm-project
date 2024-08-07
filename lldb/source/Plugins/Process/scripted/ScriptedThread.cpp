@@ -23,11 +23,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void ScriptedThread::CheckInterpreterAndScriptObject() const {
-  lldbassert(m_script_object_sp && "Invalid Script Object.");
-  lldbassert(GetInterface() && "Invalid Scripted Thread Interface.");
-}
-
 llvm::Expected<std::shared_ptr<ScriptedThread>>
 ScriptedThread::Create(ScriptedProcess &process,
                        StructuredData::Generic *script_object) {

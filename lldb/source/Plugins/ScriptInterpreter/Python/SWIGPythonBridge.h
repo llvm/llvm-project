@@ -255,6 +255,9 @@ public:
 };
 
 void *LLDBSWIGPython_CastPyObjectToSBData(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBDebugger(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBProcess(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);

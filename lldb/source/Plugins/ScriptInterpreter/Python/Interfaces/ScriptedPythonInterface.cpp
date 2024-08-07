@@ -93,6 +93,51 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
 }
 
 template <>
+lldb::DebuggerSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DebuggerSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBDebugger *sb_debugger = reinterpret_cast<lldb::SBDebugger *>(
+      python::LLDBSWIGPython_CastPyObjectToSBDebugger(p.get()));
+
+  if (!sb_debugger) {
+    error.SetErrorString("Couldn't cast lldb::SBDebugger to lldb::DebuggerSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBDebugger(*sb_debugger);
+}
+
+template <>
+lldb::TargetSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBTarget *sb_target = reinterpret_cast<lldb::SBTarget *>(
+      python::LLDBSWIGPython_CastPyObjectToSBTarget(p.get()));
+
+  if (!sb_target) {
+    error.SetErrorString("Couldn't cast lldb::SBTarget to lldb::TargetSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBTarget(*sb_target);
+}
+
+template <>
+lldb::ProcessSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ProcessSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBProcess *sb_process = reinterpret_cast<lldb::SBProcess *>(
+      python::LLDBSWIGPython_CastPyObjectToSBProcess(p.get()));
+
+  if (!sb_process) {
+    error.SetErrorString("Couldn't cast lldb::SBProcess to lldb::ProcessSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBProcess(*sb_process);
+}
+
+template <>
 lldb::BreakpointSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
     python::PythonObject &p, Status &error) {

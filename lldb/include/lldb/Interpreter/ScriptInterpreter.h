@@ -12,11 +12,14 @@
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBData.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
+#include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBTarget.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -548,6 +551,10 @@ public:
 
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
+  virtual lldb::ScriptedPlatformInterfaceUP CreateScriptedPlatformInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
     return {};
   }
@@ -562,10 +569,6 @@ public:
   }
 
   virtual lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() {
-    return {};
-  }
-
-  virtual lldb::ScriptedPlatformInterfaceUP GetScriptedPlatformInterface() {
     return {};
   }
 
@@ -585,6 +588,14 @@ public:
 
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
+
+  lldb::DebuggerSP
+  GetOpaqueTypeFromSBDebugger(const lldb::SBDebugger &debugger) const;
+
+  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
+
+  lldb::ProcessSP
+  GetOpaqueTypeFromSBProcess(const lldb::SBProcess &process) const;
 
   lldb::ProcessAttachInfoSP
   GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;

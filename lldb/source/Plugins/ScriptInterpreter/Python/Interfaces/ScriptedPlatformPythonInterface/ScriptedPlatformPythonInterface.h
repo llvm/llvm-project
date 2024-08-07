@@ -31,15 +31,19 @@ public:
 
   llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
     return llvm::SmallVector<llvm::StringLiteral>(
-        {"list_processes", "attach_to_process", "launch_process",
-         "kill_process"});
+        {"attach_to_process", "launch_process", "kill_process"});
   }
+
+  StructuredData::ArraySP GetSupportedArchitectures() override;
 
   StructuredData::DictionarySP ListProcesses() override;
 
   StructuredData::DictionarySP GetProcessInfo(lldb::pid_t) override;
 
-  Status AttachToProcess(lldb::ProcessAttachInfoSP attach_info) override;
+  lldb::ProcessSP AttachToProcess(lldb::ProcessAttachInfoSP attach_info_sp,
+                                  lldb::TargetSP target_sp,
+                                  lldb::DebuggerSP debugger_sp,
+                                  Status &error) override;
 
   Status LaunchProcess(lldb::ProcessLaunchInfoSP launch_info) override;
 

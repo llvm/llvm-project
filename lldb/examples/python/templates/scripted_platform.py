@@ -13,6 +13,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
     """
 
     processes = None
+    supported_archs = None
 
     @abstractmethod
     def __init__(self, exe_ctx, args):
@@ -23,9 +24,23 @@ class ScriptedPlatform(metaclass=ABCMeta):
             args (lldb.SBStructuredData): A Dictionary holding arbitrary
                 key/value pairs used by the scripted platform.
         """
-        processes = []
+        self.processes = {}
+        self.supported_archs = []
 
-    @abstractmethod
+    def get_supported_architectures(self):
+        """Get a list of supported architectures by this platform.
+
+        .. code-block:: python
+
+            supported_archs = [arch1, arch2, arch3, ...]
+
+        Returns:
+            List: The supported architectures represented as a list.
+                  The list can be empty, in which case the host platform
+                  supported architectures will be used.
+        """
+        return self.supported_archs
+
     def list_processes(self):
         """Get a list of processes that are running or that can be attached to on the platform.
 
@@ -48,7 +63,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
                 provide the parent process ID and the user and group IDs.
                 The dictionary can be empty.
         """
-        pass
+        return self.processes
 
     def get_process_info(self, pid):
         """Get the dictionary describing the process.
@@ -60,14 +75,17 @@ class ScriptedPlatform(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def attach_to_process(self, attach_info):
+    def attach_to_process(self, attach_info, target, debugger, error):
         """Attach to a process.
 
         Args:
             attach_info (lldb.SBAttachInfo): The information related to attach to a process.
+            target (lldb.SBTarget): The optional target that we are trying to attach to.
+            debugger (lldb.SBDebugger): The debugger instance.
+            error (lldb.SBError): A status object notifying if the attach succeeded.
 
         Returns:
-            lldb.SBError: A status object notifying if the attach succeeded.
+            lldb.SBProcess: The process that the platform attached to, or None.
         """
         pass
 

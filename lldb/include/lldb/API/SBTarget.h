@@ -25,6 +25,7 @@
 #include "lldb/API/SBWatchpointOptions.h"
 
 namespace lldb_private {
+class ScriptInterpreter;
 namespace python {
 class SWIGBridge;
 }
@@ -964,6 +965,7 @@ protected:
   friend class SBVariablesOptions;
 
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   // Constructors are private, use static Target::Create function to create an
   // instance of this class.
