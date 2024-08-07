@@ -1056,24 +1056,12 @@ constexpr static RISCVExtBit RISCVBitPositions[] = {
     {"zcf", 1, 5},        {"zcmop", 1, 6},
     {"zawrs", 1, 7}};
 
-int RISCVISAInfo::getRISCVFeaturesBitPosition(StringRef Ext) {
+std::pair<int, int> RISCVISAInfo::getRISCVFeaturesBitsInfo(StringRef Ext) {
   // Note that this code currently accepts mixed case extension names, but
   // does not handle extension versions at all.  That's probably fine because
   // there's only one extension version in the __riscv_feature_bits vector.
   for (auto E : RISCVBitPositions)
     if (E.ext.equals_insensitive(Ext))
-      return E.bitpos;
-  return -1;
-}
-
-// TODO: merge getRISCVFeaturesBitPosition and getRISCVFeaturesGroupID into
-// single function.
-int RISCVISAInfo::getRISCVFeaturesGroupID(StringRef Ext) {
-  // Note that this code currently accepts mixed case extension names, but
-  // does not handle extension versions at all.  That's probably fine because
-  // there's only one extension version in the __riscv_feature_bits vector.
-  for (auto E : RISCVBitPositions)
-    if (E.ext.equals_insensitive(Ext))
-      return E.groupid;
-  return -1;
+      return std::make_pair<int, int>(E.groupid, E.bitpos);
+  return std::make_pair<int, int>(-1, -1);
 }
