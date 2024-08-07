@@ -115,13 +115,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: floorf128
-    standards:
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT12
   - name: fmin
     standards:
       - stdc
@@ -1899,6 +1892,13 @@ functions:
       - type: float128
       - type: float128
     guards: LIBC_TYPES_HAS_FLOAT128
+  - name: floorf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT12
   - name: fmaxf128
     standards:
       - stdc
