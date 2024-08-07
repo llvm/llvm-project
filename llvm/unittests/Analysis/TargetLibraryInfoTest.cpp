@@ -500,12 +500,14 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @__cxa_guard_abort(%struct*)\n"
       "declare i32 @__cxa_guard_acquire(%struct*)\n"
       "declare void @__cxa_guard_release(%struct*)\n"
+      "declare void @__cxa_throw(ptr, ptr, ptr)\n"
 
       "declare i32 @atexit(void ()*)\n"
 
       "declare void @abort()\n"
       "declare void @exit(i32)\n"
       "declare void @_Exit(i32)\n"
+      "declare void @_ZSt9terminatev()\n"
 
       "declare i32 @__nvvm_reflect(i8*)\n"
 
