@@ -49,11 +49,109 @@ using namespace llvm;
 
 #ifdef _WIN32
 typedef pipe_t fd_t;
-#define kInvalidFD (LLDB_INVALID_PIPE)
+const fd_t kInvalidSharedFD = LLDB_INVALID_PIPE;
 #else
 typedef NativeSocket fd_t;
-#define kInvalidFD (Socket::kInvalidSocketValue)
+const fd_t kInvalidSharedFD = Socket::kInvalidSocketValue;
 #endif
+
+class SharedSocket {
+public:
+  // Used by the parent process.
+  SharedSocket(Connection *conn, Status &error) {
+    m_fd = kInvalidSharedFD;
+
+    const Socket *socket =
+        static_cast<const Socket *>(conn->GetReadObject().get());
+    if (socket == nullptr) {
+      error = Status("invalid conn socket");
+      return;
+    }
+
+#ifdef _WIN32
+    m_socket = socket->GetNativeSocket();
+
+    // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
+    error = m_socket_pipe.CreateNew(true);
+    if (error.Fail())
+      return;
+
+    m_fd = m_socket_pipe.GetReadPipe();
+#else
+    m_fd = socket->GetNativeSocket();
+    error = Status();
+#endif
+  }
+
+  // Used by the child process.
+  SharedSocket(fd_t fd) : m_fd(fd) {}
+
+  fd_t GetSendableFD() { return m_fd; }
+
+  Status CompleteSending(lldb::pid_t child_pid) {
+#ifdef _WIN32
+    // Transfer WSAPROTOCOL_INFO to the child process.
+    m_socket_pipe.CloseReadFileDescriptor();
+
+    WSAPROTOCOL_INFO protocol_info;
+    if (::WSADuplicateSocket(m_socket, child_pid, &protocol_info) ==
+        SOCKET_ERROR) {
+      int last_error = ::WSAGetLastError();
+      return Status("WSADuplicateSocket() failed, error: %d", last_error);
+    }
+
+    size_t num_bytes;
+    Status error =
+        m_socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
+                                       std::chrono::seconds(10), num_bytes);
+    if (error.Fail())
+      return error;
+    if (num_bytes != sizeof(protocol_info))
+      return Status("WriteWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes",
+                    num_bytes);
+#endif
+    return Status();
+  }
+
+  Status GetNativeSocket(NativeSocket &socket) {
+#ifdef _WIN32
+    socket = Socket::kInvalidSocketValue;
+    // Read WSAPROTOCOL_INFO from the parent process and create NativeSocket.
+    WSAPROTOCOL_INFO protocol_info;
+    {
+      Pipe socket_pipe(m_fd, LLDB_INVALID_PIPE);
+      size_t num_bytes;
+      Status error =
+          socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
+                                      std::chrono::seconds(10), num_bytes);
+      if (error.Fail())
+        return error;
+      if (num_bytes != sizeof(protocol_info)) {
+        return Status(
+            "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: % d bytes",
+            num_bytes);
+      }
+    }
+    socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
+                         FROM_PROTOCOL_INFO, &protocol_info, 0, 0);
+    if (socket == INVALID_SOCKET) {
+      return Status("WSASocket(FROM_PROTOCOL_INFO) failed: error %d",
+                    ::WSAGetLastError());
+    }
+    return Status();
+#else
+    socket = m_fd;
+    return Status();
+#endif
+  }
+
+private:
+#ifdef _WIN32
+  Pipe m_socket_pipe;
+  NativeSocket m_socket;
+#endif
+  fd_t m_fd;
+};
 
 static int g_debug = 0;
 static int g_verbose = 0;
@@ -71,7 +169,7 @@ static struct option g_long_options[] = {
     {"max-gdbserver-port", required_argument, nullptr, 'M'},
     {"socket-file", required_argument, nullptr, 'f'},
     {"server", no_argument, &g_server, 1},
-    {"fd", required_argument, nullptr, 'd'},
+    {"child-platform-fd", required_argument, nullptr, 2},
     {nullptr, 0, nullptr, 0}};
 
 #if defined(__APPLE__)
@@ -171,35 +269,18 @@ static Status spawn_process(const char *progname, Connection *conn,
                             const std::string &log_file,
                             const StringRef log_channels) {
   Status error;
-  const TCPSocket &tcpSocket =
-      static_cast<const TCPSocket &>(*conn->GetReadObject());
-  NativeSocket socket = tcpSocket.GetNativeSocket();
-
-  ProcessLaunchInfo launch_info;
-
-  fd_t fd;
-#ifdef _WIN32
-  // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
-  Pipe socket_pipe;
-  error = socket_pipe.CreateNew(true);
+  SharedSocket shared_socket(conn, error);
   if (error.Fail())
     return error;
 
-  // Seems it will not work anyway. ProcessLauncherWindows ignores FileActions.
-  // And it is necessary to pass HANDLE instead of FD on Widows.
-  launch_info.AppendCloseFileAction(socket_pipe.GetWriteFileDescriptor());
-
-  fd = socket_pipe.GetReadPipe();
-#else
-  fd = socket;
-#endif
+  ProcessLaunchInfo launch_info;
 
   FileSpec self_spec(progname, FileSpec::Style::native);
   launch_info.SetExecutableFile(self_spec, true);
   Args &self_args = launch_info.GetArguments();
   self_args.AppendArgument(llvm::StringRef("platform"));
-  self_args.AppendArgument(llvm::StringRef("--fd"));
-  self_args.AppendArgument(llvm::to_string(fd));
+  self_args.AppendArgument(llvm::StringRef("--child-platform-fd"));
+  self_args.AppendArgument(llvm::to_string(shared_socket.GetSendableFD()));
   if (gdb_port) {
     self_args.AppendArgument(llvm::StringRef("--gdbserver-port"));
     self_args.AppendArgument(llvm::to_string(gdb_port));
@@ -261,36 +342,11 @@ static Status spawn_process(const char *progname, Connection *conn,
     gdbserver_portmap.AssociatePortWithProcess(gdb_port, child_pid);
   }
 
-#ifdef _WIN32
-  // Transfer WSAPROTOCOL_INFO to the child process.
-  if (socket_pipe.CanRead())
-    socket_pipe.CloseReadFileDescriptor();
-  if (!socket_pipe.CanWrite()) {
-    Host::Kill(child_pid, SIGTERM);
-    return Status("cannot write to socket_pipe");
-  }
-
-  WSAPROTOCOL_INFO protocol_info;
-  if (::WSADuplicateSocket(socket, child_pid, &protocol_info) == SOCKET_ERROR) {
-    int last_error = ::WSAGetLastError();
-    Host::Kill(child_pid, SIGTERM);
-    return Status("WSADuplicateSocket() failed, error: %d", last_error);
-  }
-
-  size_t num_bytes;
-  error = socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
-                                       std::chrono::seconds(2), num_bytes);
+  error = shared_socket.CompleteSending(child_pid);
   if (error.Fail()) {
     Host::Kill(child_pid, SIGTERM);
     return error;
   }
-  if (num_bytes != sizeof(protocol_info)) {
-    Host::Kill(child_pid, SIGTERM);
-    return Status(
-        "socket_pipe.WriteWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes",
-        num_bytes);
-  }
-#endif
 
   return Status();
 }
@@ -314,7 +370,7 @@ int main_platform(int argc, char *argv[]) {
   StringRef
       log_channels; // e.g. "lldb process threads:gdb-remote default:linux all"
 
-  fd_t fd = kInvalidFD;
+  fd_t fd = kInvalidSharedFD;
 
   int min_gdbserver_port = 0;
   int max_gdbserver_port = 0;
@@ -399,7 +455,7 @@ int main_platform(int argc, char *argv[]) {
         max_gdbserver_port = portnum;
     } break;
 
-    case 'd': {
+    case 2: {
       uint64_t _fd;
       if (!llvm::to_integer(optarg, _fd)) {
         WithColor::error() << "invalid fd " << optarg << "\n";
@@ -431,7 +487,7 @@ int main_platform(int argc, char *argv[]) {
   }
 
   // Print usage and exit if no listening port is specified.
-  if (listen_host_port.empty() && fd == kInvalidFD)
+  if (listen_host_port.empty() && fd == kInvalidSharedFD)
     show_usage = true;
 
   if (show_usage || option_error) {
@@ -445,53 +501,21 @@ int main_platform(int argc, char *argv[]) {
   lldb_private::Args inferior_arguments;
   inferior_arguments.SetArguments(argc, const_cast<const char **>(argv));
 
-  if (fd != kInvalidFD) {
+  if (fd != kInvalidSharedFD) {
     // Child process will handle the connection and exit.
     Log *log = GetLog(LLDBLog::Platform);
     if (!listen_host_port.empty()) {
       LLDB_LOGF(log, "lldb-platform child: "
-                     "ambiguous parameters --listen and --fd");
+                     "ambiguous parameters --listen and --child-platform-fd");
       return socket_error;
     }
 
     NativeSocket socket;
-#ifdef _WIN32
-    // Read WSAPROTOCOL_INFO from the parent process and create NativeSocket.
-    WSAPROTOCOL_INFO protocol_info;
-    {
-      Pipe socket_pipe(fd, LLDB_INVALID_PIPE);
-
-      size_t num_bytes;
-      error = socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
-                                          std::chrono::seconds(2), num_bytes);
-      if (error.Fail()) {
-        LLDB_LOGF(log,
-                  "lldb-platform child: "
-                  "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: %s",
-                  error.AsCString());
-        return socket_error;
-      }
-      if (num_bytes != sizeof(protocol_info)) {
-        LLDB_LOGF(
-            log,
-            "lldb-platform child: "
-            "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes",
-            num_bytes);
-        return socket_error;
-      }
-    }
-    socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
-                         FROM_PROTOCOL_INFO, &protocol_info, 0, 0);
-    if (socket == INVALID_SOCKET) {
-      LLDB_LOGF(log,
-                "lldb-platform child: "
-                "WSASocket(FROM_PROTOCOL_INFO) failed: error %d",
-                ::WSAGetLastError());
+    error = SharedSocket(fd).GetNativeSocket(socket);
+    if (error.Fail()) {
+      LLDB_LOGF(log, "lldb-platform child: %s", error.AsCString());
       return socket_error;
     }
-#else
-    socket = fd;
-#endif
 
     Connection *conn =
         new ConnectionFileDescriptor(new TCPSocket(socket, true, false));
