@@ -1334,11 +1334,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           TypeSwitch<VPRecipeBase *, VPRecipeBase *>(CurRecipe)
               .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
                 VPValue *NewMask = GetNewMask(L->getMask());
-                return new VPWidenLoadEVLRecipe(*L, NewMask, EVL);
+                return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
               })
               .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
                 VPValue *NewMask = GetNewMask(S->getMask());
-                return new VPWidenStoreEVLRecipe(*S, NewMask, EVL);
+                return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
               })
               .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
                 unsigned Opcode = W->getOpcode();
@@ -1348,8 +1348,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 return new VPWidenEVLRecipe(W, EVL);
               })
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
-                return new VPReductionEVLRecipe(
-                    *Red, GetNewMask(Red->getCondOp()), EVL);
+                return new VPReductionEVLRecipe(*Red, EVL,
+                                                GetNewMask(Red->getCondOp()));
               })
               .Default([&](VPRecipeBase *R) { return nullptr; });
 

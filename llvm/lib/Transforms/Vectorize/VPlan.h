@@ -1431,7 +1431,15 @@ public:
     return R;
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenEVLSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Produce a widened instruction using the opcode and operands of the recipe,
   /// processing State.VF elements.
@@ -1450,6 +1458,8 @@ public:
 #endif
 };
 
+/// A recipe for widening operations with vector-predication intrinsics.with
+/// explicit vector length (EVL).
 class VPWidenEVLRecipe : public VPWidenRecipe {
   using VPRecipeWithIRFlags::transferFlags;
 
@@ -1467,7 +1477,7 @@ public:
   ~VPWidenEVLRecipe() override = default;
 
   VPWidenRecipe *clone() override final {
-    llvm_unreachable("VPWidenStoreEVLRecipe cannot be cloned");
+    llvm_unreachable("VPWidenEVLRecipe cannot be cloned");
     return nullptr;
   }
 
@@ -2319,7 +2329,7 @@ public:
 /// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
 class VPReductionEVLRecipe : public VPReductionRecipe {
 public:
-  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue *CondOp, VPValue &EVL)
+  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp)
       : VPReductionRecipe(
             VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
@@ -2635,7 +2645,7 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Mask, VPValue &EVL)
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {L.getAddr(), &EVL}, L.isConsecutive(),
                             L.isReverse(), L.getDebugLoc()),
@@ -2716,7 +2726,7 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Mask, VPValue &EVL)
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {S.getAddr(), S.getStoredValue(), &EVL},
                             S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
