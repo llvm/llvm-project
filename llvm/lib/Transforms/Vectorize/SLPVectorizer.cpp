@@ -10120,9 +10120,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
-  case Instruction::Freeze: {
+  case Instruction::Freeze:
     return CommonCost;
-  }
   default:
     llvm_unreachable("Unknown instruction");
   }
