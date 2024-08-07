@@ -204,6 +204,46 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
+AllocaSetAllocatedType::AllocaSetAllocatedType(AllocaInst *Alloca,
+                                               Tracker &Tracker)
+    : IRChangeBase(Tracker), Alloca(Alloca),
+      OrigType(Alloca->getAllocatedType()) {}
+
+void AllocaSetAllocatedType::revert() { Alloca->setAllocatedType(OrigType); }
+
+#ifndef NDEBUG
+void AllocaSetAllocatedType::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+AllocaSetAlignment::AllocaSetAlignment(AllocaInst *Alloca, Tracker &Tracker)
+    : IRChangeBase(Tracker), Alloca(Alloca), OrigAlign(Alloca->getAlign()) {}
+
+void AllocaSetAlignment::revert() { Alloca->setAlignment(OrigAlign); }
+
+#ifndef NDEBUG
+void AllocaSetAlignment::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+AllocaSetUsedWithInAlloca::AllocaSetUsedWithInAlloca(AllocaInst *Alloca,
+                                                     Tracker &Tracker)
+    : IRChangeBase(Tracker), Alloca(Alloca),
+      Orig(Alloca->isUsedWithInAlloca()) {}
+
+void AllocaSetUsedWithInAlloca::revert() { Alloca->setUsedWithInAlloca(Orig); }
+
+#ifndef NDEBUG
+void AllocaSetUsedWithInAlloca::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 CallBrInstSetDefaultDest::CallBrInstSetDefaultDest(CallBrInst *CallBr,
                                                    Tracker &Tracker)
     : IRChangeBase(Tracker), CallBr(CallBr) {
