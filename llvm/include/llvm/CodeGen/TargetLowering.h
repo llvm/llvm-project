@@ -3155,9 +3155,9 @@ public:
   ///
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
-  virtual bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                                LoadInst *LI,
-                                                SmallVectorImpl<Instruction *> &DeadInsts) const {
+  virtual bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *DI, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const {
     return false;
   }
 
@@ -3167,9 +3167,9 @@ public:
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
-  virtual bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                               StoreInst *SI,
-                                               SmallVectorImpl<Instruction *> &DeadInstructions) const {
+  virtual bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInstructions) const {
     return false;
   }
 

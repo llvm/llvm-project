@@ -518,7 +518,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   // We now have a target-specific store, so delete the old one.
   DeadInsts.push_back(SI);
   DeadInsts.push_back(II);
-  DeadInsts.insert(DeadInsts.end(), InterleaveDeadInsts.begin(), InterleaveDeadInsts.end());
+  DeadInsts.insert(DeadInsts.end(), InterleaveDeadInsts.begin(),
+                   InterleaveDeadInsts.end());
   return true;
 }
 

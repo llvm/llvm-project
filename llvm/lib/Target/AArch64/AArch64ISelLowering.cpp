@@ -16906,9 +16906,9 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
-bool getDeinterleave2Values(
-    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
-    SmallVectorImpl<Instruction *> &DeadInsts) {
+bool getDeinterleave2Values(Value *DI,
+                            SmallVectorImpl<Instruction *> &DeinterleavedValues,
+                            SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!DI->hasNUses(2))
     return false;
   auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
@@ -16930,7 +16930,8 @@ bool getDeinterleave2Values(
     return false;
   }
   // DeinterleavedValues will be replace by output of ld2
-  DeadInsts.insert(DeadInsts.end(), DeinterleavedValues.begin(), DeinterleavedValues.end());
+  DeadInsts.insert(DeadInsts.end(), DeinterleavedValues.begin(),
+                   DeinterleavedValues.end());
   return true;
 }
 
@@ -16946,9 +16947,10 @@ DeinterleaveIntrinsic tree:
         |       |         |         |
 roots:  A       C         B         D
 roots in correct order of DI4 will be: A B C D.
-Returns true if `DI` is the top of an IR tree that represents a theoretical vector.deinterleave4 intrinsic.
-When true is returned, `DeinterleavedValues` vector is populated with the results such an intrinsic would return:
-(i.e. {A, B, C, D } = vector.deinterleave4(...))
+Returns true if `DI` is the top of an IR tree that represents a theoretical
+vector.deinterleave4 intrinsic. When true is returned, `DeinterleavedValues`
+vector is populated with the results such an intrinsic would return: (i.e. {A,
+B, C, D } = vector.deinterleave4(...))
 */
 bool getDeinterleave4Values(Value *DI,
                             SmallVectorImpl<Instruction *> &DeinterleavedValues,
@@ -16972,7 +16974,8 @@ bool getDeinterleave4Values(Value *DI,
   auto *C = dyn_cast<ExtractValueInst>(*(++DI1->user_begin()));
   auto *B = dyn_cast<ExtractValueInst>(*(DI2->user_begin()));
   auto *D = dyn_cast<ExtractValueInst>(*(++DI2->user_begin()));
-  // Make sure that the A,B,C and D are ExtractValue instructions before getting the extract index
+  // Make sure that the A,B,C and D are ExtractValue instructions before getting
+  // the extract index
   if (!A || !B || !C || !D)
     return false;
 
@@ -17005,7 +17008,8 @@ bool getDeinterleave4Values(Value *DI,
 
   // These Values will not be used anymore,
   // DI4 will be created instead of nested DI1 and DI2
-  DeadInsts.insert(DeadInsts.end(), DeinterleavedValues.begin(), DeinterleavedValues.end());
+  DeadInsts.insert(DeadInsts.end(), DeinterleavedValues.begin(),
+                   DeinterleavedValues.end());
   DeadInsts.push_back(cast<Instruction>(DI1));
   DeadInsts.push_back(cast<Instruction>(Extr1));
   DeadInsts.push_back(cast<Instruction>(DI2));
@@ -17023,7 +17027,8 @@ bool getDeinterleavedValues(Value *DI,
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, LoadInst *LI, SmallVectorImpl<Instruction *> &DeadInsts) const {
+    IntrinsicInst *DI, LoadInst *LI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   // Only deinterleave2 supported at present.
   if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
@@ -17116,9 +17121,10 @@ InterleaveIntrinsic tree.
                   [II]
 
 values in correct order of interleave4: A B C D.
-Returns true if `II` is the root of an IR tree that represents a theoretical vector.interleave4 intrinsic.
-When true is returned, `ValuesToInterleave` vector is populated with the inputs such an intrinsic would take:
-(i.e. vector.interleave4(A, B, C, D)).
+Returns true if `II` is the root of an IR tree that represents a theoretical
+vector.interleave4 intrinsic. When true is returned, `ValuesToInterleave` vector
+is populated with the inputs such an intrinsic would take: (i.e.
+vector.interleave4(A, B, C, D)).
 */
 bool getValuesToInterleave(Value *II,
                            SmallVectorImpl<Value *> &ValuesToInterleave,
@@ -17133,7 +17139,8 @@ bool getValuesToInterleave(Value *II,
     ValuesToInterleave.push_back(D);
     // intermediate II will not be needed anymore
     Value *II1, *II2;
-    assert(match(II, m_Interleave2(m_Value(II1), m_Value(II2))) && "II tree is expected");
+    assert(match(II, m_Interleave2(m_Value(II1), m_Value(II2))) &&
+           "II tree is expected");
     DeadInsts.push_back(cast<Instruction>(II1));
     DeadInsts.push_back(cast<Instruction>(II2));
     return true;
@@ -17150,7 +17157,8 @@ bool getValuesToInterleave(Value *II,
 }
 
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, StoreInst *SI, SmallVectorImpl<Instruction *> &DeadInsts) const {
+    IntrinsicInst *II, StoreInst *SI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   // Only interleave2 supported at present.
   if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
