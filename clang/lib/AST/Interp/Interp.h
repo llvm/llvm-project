@@ -2712,7 +2712,7 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   }
 
   if (!FuncPtr.isValid())
-    return false;
+    return Invalid(S, OpPC);
 
   assert(F);
 
