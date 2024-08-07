@@ -747,6 +747,39 @@ void StoreInst::dump() const {
 }
 #endif // NDEBUG
 
+UnreachableInst *UnreachableInst::create(Instruction *InsertBefore,
+                                         Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(LLVMBefore);
+  llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
+  return Ctx.createUnreachableInst(NewUI);
+}
+
+UnreachableInst *UnreachableInst::create(BasicBlock *InsertAtEnd,
+                                         Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
+  return Ctx.createUnreachableInst(NewUI);
+}
+
+bool UnreachableInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::Unreachable;
+}
+
+#ifndef NDEBUG
+void UnreachableInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void UnreachableInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 ReturnInst *ReturnInst::createCommon(Value *RetVal, IRBuilder<> &Builder,
                                      Context &Ctx) {
   llvm::ReturnInst *NewRI;
@@ -1562,6 +1595,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Unreachable: {
+    auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
+    It->second = std::unique_ptr<UnreachableInst>(
+        new UnreachableInst(LLVMUnreachable, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -1618,6 +1657,12 @@ InvokeInst *Context::createInvokeInst(llvm::InvokeInst *I) {
 CallBrInst *Context::createCallBrInst(llvm::CallBrInst *I) {
   auto NewPtr = std::unique_ptr<CallBrInst>(new CallBrInst(I, *this));
   return cast<CallBrInst>(registerValue(std::move(NewPtr)));
+}
+
+UnreachableInst *Context::createUnreachableInst(llvm::UnreachableInst *UI) {
+  auto NewPtr =
+      std::unique_ptr<UnreachableInst>(new UnreachableInst(UI, *this));
+  return cast<UnreachableInst>(registerValue(std::move(NewPtr)));
 }
 
 GetElementPtrInst *
