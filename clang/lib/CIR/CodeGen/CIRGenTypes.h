@@ -126,8 +126,8 @@ public:
   bool isFuncTypeConvertible(const clang::FunctionType *FT);
   bool isFuncParamTypeConvertible(clang::QualType Ty);
 
-  /// Convert clang calling convention to LLVM calling convention.
-  unsigned ClangCallConvToCIRCallConv(clang::CallingConv CC);
+  /// Convert clang calling convention to CIR calling convention.
+  mlir::cir::CallingConv ClangCallConvToCIRCallConv(clang::CallingConv CC);
 
   /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
   /// qualification.

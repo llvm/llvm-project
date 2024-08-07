@@ -39,7 +39,7 @@ using namespace cir;
 using namespace clang;
 
 CIRGenFunctionInfo *CIRGenFunctionInfo::create(
-    unsigned cirCC, bool instanceMethod, bool chainCall,
+    mlir::cir::CallingConv cirCC, bool instanceMethod, bool chainCall,
     const FunctionType::ExtInfo &info,
     llvm::ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
     llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {

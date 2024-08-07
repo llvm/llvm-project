@@ -2,12 +2,12 @@
 #include "CIRGenCall.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
-#include "CallingConv.h"
 #include "TargetInfo.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -24,12 +24,14 @@
 using namespace clang;
 using namespace cir;
 
-unsigned CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
+mlir::cir::CallingConv CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
   switch (CC) {
   case CC_C:
-    return cir::CallingConv::C;
+    return mlir::cir::CallingConv::C;
   case CC_OpenCLKernel:
     return CGM.getTargetCIRGenInfo().getOpenCLKernelCallingConv();
+  case CC_SpirFunction:
+    return mlir::cir::CallingConv::SpirFunction;
   default:
     llvm_unreachable("No other calling conventions implemented.");
   }
@@ -761,7 +763,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   if (FI)
     return *FI;
 
-  unsigned CC = ClangCallConvToCIRCallConv(info.getCC());
+  mlir::cir::CallingConv CC = ClangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
   FI = CIRGenFunctionInfo::create(CC, instanceMethod, chainCall, info,

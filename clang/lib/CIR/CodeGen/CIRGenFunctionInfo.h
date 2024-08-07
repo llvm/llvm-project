@@ -88,11 +88,11 @@ class CIRGenFunctionInfo final
   typedef clang::FunctionProtoType::ExtParameterInfo ExtParameterInfo;
 
   /// The cir::CallingConv to use for this function (as specified by the user).
-  unsigned CallingConvention : 8;
+  mlir::cir::CallingConv CallingConvention : 8;
 
   /// The cir::CallingConv to actually use for this function, which may depend
   /// on the ABI.
-  unsigned EffectiveCallingConvention : 8;
+  mlir::cir::CallingConv EffectiveCallingConvention : 8;
 
   /// The clang::CallingConv that this was originally created with.
   unsigned ASTCallingConvention : 6;
@@ -150,7 +150,7 @@ class CIRGenFunctionInfo final
   CIRGenFunctionInfo() : Required(RequiredArgs::All) {}
 
 public:
-  static CIRGenFunctionInfo *create(unsigned cirCC, bool instanceMethod,
+  static CIRGenFunctionInfo *create(mlir::cir::CallingConv cirCC, bool instanceMethod,
                                     bool chainCall,
                                     const clang::FunctionType::ExtInfo &extInfo,
                                     llvm::ArrayRef<ExtParameterInfo> paramInfos,
@@ -252,7 +252,7 @@ public:
 
   /// getCallingConvention - REturn the user specified calling convention, which
   /// has been translated into a CIR CC.
-  unsigned getCallingConvention() const { return CallingConvention; }
+  mlir::cir::CallingConv getCallingConvention() const { return CallingConvention; }
 
   clang::CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
 
