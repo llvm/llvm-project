@@ -16,6 +16,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using testing::ElementsAre;
 using testing::Not;
 
 TEST(Type, GetTypeScopeAndBasename) {
@@ -65,6 +66,27 @@ MATCHER_P(MatchesWithStrictNamespaces, pattern, "") {
 }
 } // namespace
 
+TEST(Type, TypeQueryFlags) {
+  TypeQuery q("foo", e_none);
+  auto get = [](const TypeQuery &q) -> std::vector<bool> {
+    return {q.GetFindOne(), q.GetExactMatch(), q.GetModuleSearch(),
+            q.GetIgnoreModules(), q.GetStrictNamespaces()};
+  };
+  EXPECT_THAT(get(q), ElementsAre(false, false, false, false, false));
+
+  q.SetFindOne(true);
+  EXPECT_THAT(get(q), ElementsAre(true, false, false, false, false));
+
+  q.SetIgnoreModules(true);
+  EXPECT_THAT(get(q), ElementsAre(true, false, false, true, false));
+
+  q.SetStrictNamespaces(true);
+  EXPECT_THAT(get(q), ElementsAre(true, false, false, true, true));
+
+  q.SetIgnoreModules(false);
+  EXPECT_THAT(get(q), ElementsAre(true, false, false, false, true));
+}
+
 TEST(Type, CompilerContextPattern) {
   auto make_module = [](llvm::StringRef name) {
     return CompilerContext(CompilerContextKind::Module, ConstString(name));
@@ -107,6 +129,10 @@ TEST(Type, CompilerContextPattern) {
       (std::vector{make_module("A"), make_module("B"), make_class("C")}),
       Matches(
           std::vector{make_module("A"), make_module("B"), make_any_type("C")}));
+  EXPECT_THAT((std::vector{make_module("A"), make_module("B"),
+                           make_namespace(""), make_class("C")}),
+              Matches(std::vector{make_module("A"), make_module("B"),
+                                  make_any_type("C")}));
   EXPECT_THAT(
       (std::vector{make_module("A"), make_module("B"), make_enum("C2")}),
       Not(Matches(std::vector{make_module("A"), make_module("B"),
@@ -133,4 +159,12 @@ TEST(Type, CompilerContextPattern) {
   EXPECT_THAT((std::vector{make_namespace(""), make_namespace("NS"),
                            make_namespace(""), make_class("C")}),
               Matches(std::vector{make_namespace("NS"), make_class("C")}));
+  EXPECT_THAT(
+      (std::vector{make_namespace(""), make_namespace(""), make_namespace("NS"),
+                   make_namespace(""), make_namespace(""), make_class("C")}),
+      Matches(std::vector{make_namespace("NS"), make_class("C")}));
+  EXPECT_THAT((std::vector{make_module("A"), make_namespace("NS"),
+                           make_namespace(""), make_class("C")}),
+              MatchesIgnoringModules(
+                  std::vector{make_namespace("NS"), make_class("C")}));
 }
