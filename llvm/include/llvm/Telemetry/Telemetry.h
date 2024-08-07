@@ -5,13 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Defines the commom Telemetry framework.
-//
-//===----------------------------------------------------------------------===//
 
-#ifndef LVM_TELEMETRY_TELEMETRY_H
-#define LVM_TELEMETRY_TELEMETRY_H
+#ifndef LLVM_TELEMETRY_TELEMETRY_H
+#define LLVM_TELEMETRY_TELEMETRY_H
 
 #include <chrono>
 #include <ctime>
@@ -108,4 +104,4 @@ public:
 } // namespace telemetry
 } // namespace llvm
 
-#endif // LVM_TELEMETRY_TELEMETRY_H
+#endif // LLVM_TELEMETRY_TELEMETRY_H
