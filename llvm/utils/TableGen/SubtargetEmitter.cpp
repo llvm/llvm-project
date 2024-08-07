@@ -14,9 +14,11 @@
 #include "Common/CodeGenSchedule.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/PredicateExpander.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
@@ -31,8 +33,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <map>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -259,8 +259,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   llvm::sort(FeatureList, LessRecordFieldName());
 
-  // Check that there are no duplicate keys
-  std::set<StringRef> UniqueKeys;
+  // Check that there are no duplicate features.
+  DenseMap<StringRef, const Record *> UniqueFeatures;
 
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
@@ -291,9 +291,12 @@ unsigned SubtargetEmitter::FeatureKeyValues(
     OS << " },\n";
     ++NumFeatures;
 
-    if (!UniqueKeys.insert(CommandLineName).second)
-      PrintFatalError("Duplicate key in SubtargetFeatureKV: " +
-                      CommandLineName);
+    auto [It, Inserted] = UniqueFeatures.insert({CommandLineName, Feature});
+    if (!Inserted) {
+      PrintError(Feature, "Feature `" + CommandLineName + "` already defined.");
+      const Record *Previous = It->second;
+      PrintFatalNote(Previous, "Previous definition here.");
+    }
   }
 
   // End feature table
@@ -494,7 +497,7 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
   // operand cycles, and pipeline bypass tables. Then add the new Itinerary
   // object with computed offsets to the ProcItinLists result.
   unsigned StageCount = 1, OperandCycleCount = 1;
-  std::map<std::string, unsigned> ItinStageMap, ItinOperandMap;
+  StringMap<unsigned> ItinStageMap, ItinOperandMap;
   for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     // Add process itinerary to the list.
     std::vector<InstrItinerary> &ItinList = ProcItinLists.emplace_back();

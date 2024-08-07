@@ -1,3 +1,6 @@
+# `-no_objc_relative_method_lists` needs to be explicitly added to this test to avoid crashing after `-objc_relative_method_lists` was made default.
+# TODO: Make this test compatible with default `-objc_relative_method_lists` and remove the `-no_objc_relative_method_lists` flag. Issue #101419
+
 ; REQUIRES: aarch64
 
 ; Here we test that if we defined a protocol MyTestProtocol and also a category MyTestProtocol
@@ -5,7 +8,7 @@
 ; delete the 'MyTestProtocol' name
 
 ; RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o %T/erase-objc-name.o %s
-; RUN: %lld -arch arm64 -dylib -o %T/erase-objc-name.dylib %T/erase-objc-name.o -objc_category_merging
+; RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o %T/erase-objc-name.dylib %T/erase-objc-name.o -objc_category_merging
 ; RUN: llvm-objdump --objc-meta-data --macho %T/erase-objc-name.dylib | FileCheck %s --check-prefixes=MERGE_CATS
 
 ; === Check merge categories enabled ===

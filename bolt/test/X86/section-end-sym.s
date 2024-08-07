@@ -1,7 +1,7 @@
 ## Check that BOLT doesn't consider end-of-section symbols (e.g., _etext) as
 ## functions.
 
-# REQUIRES: x86_64-linux, asserts
+# REQUIRES: system-linux, asserts
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q
@@ -9,7 +9,7 @@
 # RUN:   | FileCheck %s
 
 # CHECK: considering symbol etext for function
-# CHECK-NEXT: rejecting as symbol points to end of its section
+# CHECK-NEXT: rejecting as symbol etext points to end of .text section
 # CHECK-NOT: Binary Function "etext{{.*}}" after building cfg
 
 
