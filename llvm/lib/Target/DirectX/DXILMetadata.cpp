@@ -335,7 +335,7 @@ void dxil::createExportsMD(Module &M) {
   for (auto &F : M.functions()) {
     if (!F.hasFnAttribute("hlsl.export"))
       continue;
-    
+
     Metadata *MDVals[2];
     MDVals[0] = ValueAsMetadata::get(&F);
     MDVals[1] = MDString::get(Ctx, F.getName());
