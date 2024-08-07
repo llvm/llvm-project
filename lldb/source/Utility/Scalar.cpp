@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 
+#include <cctype> // for std::isalpha
 #include <cinttypes>
 #include <cstdio>
 
@@ -646,7 +647,15 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     bool is_signed = encoding == eEncodingSint;
     bool is_negative = is_signed && str.consume_front("-");
     APInt integer;
-    if (str.getAsInteger(0, integer)) {
+    if (str.size() == 1 && std::isalpha(static_cast<unsigned char>(str[0]))) {
+      // We can represent single character as Scalar -
+      // this is useful when working with symbols in string
+      // NOTE: it is okay to consider char size as 8-bit since we only have
+      // `SetValueFrom C String` api, not the `C Wstring` or something like
+      // that. If we can ever get wide characters here - we have to modify this
+      // behaviour somehow.
+      integer = APInt(8, static_cast<uint64_t>(str[0]));
+    } else if (str.getAsInteger(0, integer)) {
       error.SetErrorStringWithFormatv(
           "'{0}' is not a valid integer string value", value_str);
       break;
