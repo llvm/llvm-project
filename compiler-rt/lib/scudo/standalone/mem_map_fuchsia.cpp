@@ -156,11 +156,13 @@ void MemMapFuchsia::unmapImpl(uptr Addr, uptr Size) {
     // the same operations in the opposite order.
     Status = _zx_handle_close(Vmo);
     CHECK_EQ(Status, ZX_OK);
-    Status = _zx_vmar_unmap(_zx_vmar_root_self(), Addr, Size);
-    CHECK_EQ(Status, ZX_OK);
+    Vmo = ZX_HANDLE_INVALID;
 
     MapAddr = WindowBase = WindowSize = 0;
-    Vmo = ZX_HANDLE_INVALID;
+
+    // NB: This instance is stored on the pages that will become unmapped.
+    Status = _zx_vmar_unmap(_zx_vmar_root_self(), Addr, Size);
+    CHECK_EQ(Status, ZX_OK);
   } else {
     // Unmap the subrange.
     Status = _zx_vmar_unmap(_zx_vmar_root_self(), Addr, Size);
