@@ -503,3 +503,15 @@ gpu.module @kernels {
     gpu.return
   }
 }
+
+// -----
+
+gpu.module @kernels {
+// CHECK-LABEL:   llvm.func spir_funccc @address_spaces(
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr<1>
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr<3>
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr
+  gpu.func @address_spaces(%arg0: memref<f32, #gpu.address_space<global>>, %arg1: memref<f32, #gpu.address_space<workgroup>>, %arg2: memref<f32, #gpu.address_space<private>>) {
+    gpu.return
+  }
+}
