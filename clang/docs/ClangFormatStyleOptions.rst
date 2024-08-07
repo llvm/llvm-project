@@ -5209,7 +5209,7 @@ the configuration (without a prefix: ``Auto``).
 
   Possible values:
 
-  * ``// clang-format on`` (in configuration: ``// clang-format on``)
+  * ``RCS_Never`` (in configuration: ``Never``)
     Leave comments untouched.
 
     .. code-block:: c++
@@ -5219,7 +5219,7 @@ the configuration (without a prefix: ``Auto``).
        /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
             * and a misaligned second line */
 
-  * ``// clang-format on`` (in configuration: ``// clang-format on``)
+  * ``RCS_IndentOnly`` (in configuration: ``IndentOnly``)
     Only apply indentation rules, moving comments left or right, without
     changing formatting inside the comments.
 
@@ -5230,7 +5230,7 @@ the configuration (without a prefix: ``Auto``).
        /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
         * and a misaligned second line */
 
-  * ``// clang-format on`` (in configuration: ``// clang-format on``)
+  * ``RCS_Always`` (in configuration: ``Always``)
     Apply indentation rules and re-flow long comments into new lines, trying
     to obey the ``ColumnLimit``.
 
