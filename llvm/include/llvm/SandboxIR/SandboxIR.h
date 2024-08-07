@@ -788,8 +788,8 @@ public:
 #ifndef NDEBUG
   void verify() const final {}
   friend raw_ostream &operator<<(raw_ostream &OS,
-                                 const InsertElementInst &SBGI) {
-    SBGI.dump(OS);
+                                 const InsertElementInst &IEI) {
+    IEI.dump(OS);
     return OS;
   }
   void dump(raw_ostream &OS) const override;
