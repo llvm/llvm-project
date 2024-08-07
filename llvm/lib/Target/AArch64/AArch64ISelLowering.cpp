@@ -6695,14 +6695,16 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
   // compact fills with 0s, so if our passthru is all 0s, do nothing here.
   if (HasPassthru && !ISD::isConstantSplatVectorAllZeros(Passthru.getNode())) {
     SDValue Offset = DAG.getNode(
-        ISD::ZERO_EXTEND, DL, MaskVT.changeVectorElementType(MVT::i32), Mask);
-    Offset = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, Offset);
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask, Mask);
+
+    SDValue IndexMask = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MaskVT,
+        DAG.getConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64),
+        DAG.getConstant(0, DL, MVT::i64), Offset);
+
     Compressed =
-        DAG.getNode(ISD::VP_MERGE, DL, VecVT,
-                    DAG.getSplatVector(MaskVT, DL,
-                                       DAG.getAllOnesConstant(
-                                           DL, MaskVT.getVectorElementType())),
-                    Compressed, Passthru, Offset);
+        DAG.getNode(ISD::VSELECT, DL, VecVT, IndexMask, Compressed, Passthru);
   }
 
   // Extracting from a legal SVE type before truncating produces better code.

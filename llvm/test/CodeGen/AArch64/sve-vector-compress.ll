@@ -245,12 +245,9 @@ define <vscale x 4 x i32> @test_compress_nxv4i32_with_passthru(<vscale x 4 x i32
 ; CHECK-LABEL: test_compress_nxv4i32_with_passthru:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.s
-; CHECK-NEXT:    index z2.s, #0, #1
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z3.s, w8
-; CHECK-NEXT:    cmphi p1.s, p1/z, z3.s, z2.s
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
     %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru)
     ret <vscale x 4 x i32> %out
@@ -269,13 +266,10 @@ define <vscale x 4 x i32> @test_compress_nxv4i32_with_const_passthru(<vscale x 4
 ; CHECK-LABEL: test_compress_nxv4i32_with_const_passthru:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.s
-; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmphi p1.s, p1/z, z2.s, z1.s
 ; CHECK-NEXT:    mov z1.s, #5 // =0x5
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
     %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> splat(i32 5))
     ret <vscale x 4 x i32> %out
