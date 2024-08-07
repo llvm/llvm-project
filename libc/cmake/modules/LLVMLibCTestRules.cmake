@@ -348,7 +348,7 @@ function(add_libc_fuzzer target_name)
 endfunction(add_libc_fuzzer)
 
 # Get libgcc_s to be used in hermetic and integration tests.
-if(NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
                   OUTPUT_VARIABLE LIBGCC_S_LOCATION)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)

@@ -1231,7 +1231,9 @@ struct SemiNCAInfo {
     doFullDFSWalk(DT, AlwaysDescend);
 
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN = NodeToTN.get();
+      if (!TN)
+        continue;
       const NodePtr BB = TN->getBlock();
 
       // Virtual root has a corresponding virtual CFG node.
@@ -1264,7 +1266,9 @@ struct SemiNCAInfo {
   // Running time: O(N).
   static bool VerifyLevels(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN = NodeToTN.get();
+      if (!TN)
+        continue;
       const NodePtr BB = TN->getBlock();
       if (!BB) continue;
 
@@ -1319,7 +1323,9 @@ struct SemiNCAInfo {
     // For each tree node verify if children's DFS numbers cover their parent's
     // DFS numbers with no gaps.
     for (const auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr Node = NodeToTN.second.get();
+      const TreeNodePtr Node = NodeToTN.get();
+      if (!Node)
+        continue;
 
       // Handle tree leaves.
       if (Node->isLeaf()) {
@@ -1432,7 +1438,9 @@ struct SemiNCAInfo {
   // the nodes it dominated previously will now become unreachable.
   bool verifyParentProperty(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN = NodeToTN.get();
+      if (!TN)
+        continue;
       const NodePtr BB = TN->getBlock();
       if (!BB || TN->isLeaf())
         continue;
@@ -1466,7 +1474,9 @@ struct SemiNCAInfo {
   // siblings will now still be reachable.
   bool verifySiblingProperty(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN = NodeToTN.get();
+      if (!TN)
+        continue;
       const NodePtr BB = TN->getBlock();
       if (!BB || TN->isLeaf())
         continue;

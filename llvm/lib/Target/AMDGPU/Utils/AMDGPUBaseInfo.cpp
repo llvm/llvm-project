@@ -385,15 +385,6 @@ struct SingleUseExceptionInfo {
   bool IsInvalidSingleUseProducer;
 };
 
-#if LLPC_BUILD_GFX12
-struct DPMACCInstructionInfo {
-  uint16_t Opcode;
-  bool IsDPMACCInstruction;
-};
-
-#define GET_DPMACCInstructionTable_DECL
-#define GET_DPMACCInstructionTable_IMPL
-#endif /* LLPC_BUILD_GFX12 */
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -638,13 +629,6 @@ bool isInvalidSingleUseProducerInst(unsigned Opc) {
   return Info && Info->IsInvalidSingleUseProducer;
 }
 
-#if LLPC_BUILD_GFX12
-bool isDPMACCInstruction(unsigned Opc) {
-  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
-  return Info && Info->IsDPMACCInstruction;
-}
-
-#endif /* LLPC_BUILD_GFX12 */
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
@@ -1121,11 +1105,6 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
-#if LLPC_BUILD_GFX12
-  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
-    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
-
-#endif /* LLPC_BUILD_GFX12 */
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1167,11 +1146,6 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
-#if LLPC_BUILD_GFX12
-  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
-    // On GFX12 we can allocate at most 8 blocks of VGPRs.
-    return 8 * getVGPRAllocGranule(STI);
-#endif /* LLPC_BUILD_GFX12 */
   return getAddressableNumArchVGPRs(STI);
 }
 
@@ -1684,12 +1658,6 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
   return encodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Name, Val, UsedOprMask,
                              STI);
 }
-#if LLPC_BUILD_GFX12
-
-unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
-
-unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
-#endif /* LLPC_BUILD_GFX12 */
 
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());

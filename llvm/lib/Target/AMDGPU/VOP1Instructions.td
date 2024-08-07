@@ -264,29 +264,16 @@ foreach vt = Reg32Types.types in {
 let isReMaterializable = 1 in {
 let SchedRW = [WriteDoubleCvt] in {
 // OMod clears exceptions when set in this instruction
-#ifdef LLPC_BUILD_GFX12
-let IsDPMACCInstruction = 1 in
-#endif /* LLPC_BUILD_GFX12 */
 defm V_CVT_I32_F64 : VOP1Inst <"v_cvt_i32_f64", VOP_I32_F64_SPECIAL_OMOD,  fp_to_sint>;
 
 let mayRaiseFPException = 0 in {
 defm V_CVT_F64_I32 : VOP1Inst <"v_cvt_f64_i32", VOP1_F64_I32, sint_to_fp>;
 }
 
-#ifdef LLPC_BUILD_GFX12
-let IsDPMACCInstruction = 1 in {
-#endif /* LLPC_BUILD_GFX12 */
 defm V_CVT_F32_F64 : VOP1Inst <"v_cvt_f32_f64", VOP_F32_F64,  fpround>;
-#ifdef LLPC_BUILD_GFX12
-#else /* LLPC_BUILD_GFX12 */
 defm V_CVT_F64_F32 : VOP1Inst <"v_cvt_f64_f32", VOP_F64_F32,  any_fpextend>;
-#endif /* LLPC_BUILD_GFX12 */
 // OMod clears exceptions when set in this instruction
 defm V_CVT_U32_F64 : VOP1Inst <"v_cvt_u32_f64", VOP_I32_F64_SPECIAL_OMOD,  fp_to_uint>;
-#ifdef LLPC_BUILD_GFX12
-} // IsDPMACCInstruction = 1
-defm V_CVT_F64_F32 : VOP1Inst <"v_cvt_f64_f32", VOP_F64_F32,  any_fpextend>;
-#endif /* LLPC_BUILD_GFX12 */
 
 let mayRaiseFPException = 0 in {
 defm V_CVT_F64_U32 : VOP1Inst <"v_cvt_f64_u32", VOP1_F64_I32, uint_to_fp>;
@@ -347,19 +334,11 @@ defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
 defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, int_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
-#ifdef LLPC_BUILD_GFX12
-let TRANS = 1, SchedRW = [WriteTrans64], IsDPMACCInstruction = 1 in {
-#else /* LLPC_BUILD_GFX12 */
 let TRANS = 1, SchedRW = [WriteTrans64] in {
-#endif /* LLPC_BUILD_GFX12 */
 defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64, AMDGPUrcp>;
 defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64, AMDGPUrsq>;
 defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, int_amdgcn_sqrt>;
-#ifdef LLPC_BUILD_GFX12
-} // End TRANS = 1, SchedRW = [WriteTrans64], IsDPMACCInstruction = 1
-#else /* LLPC_BUILD_GFX12 */
 } // End TRANS = 1, SchedRW = [WriteTrans64]
-#endif /* LLPC_BUILD_GFX12 */
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {
 defm V_SIN_F32 : VOP1Inst <"v_sin_f32", VOP_F32_F32, AMDGPUsin>;
@@ -372,21 +351,13 @@ defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32, AMDGPUffbh_u32>;
 defm V_FFBL_B32 : VOP1Inst <"v_ffbl_b32", VOP_I32_I32, AMDGPUffbl_b32>;
 defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, AMDGPUffbh_i32>;
 
-#ifdef LLPC_BUILD_GFX12
-let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
-#else /* LLPC_BUILD_GFX12 */
 let SchedRW = [WriteDoubleAdd] in {
-#endif /* LLPC_BUILD_GFX12 */
 defm V_FREXP_EXP_I32_F64 : VOP1Inst <"v_frexp_exp_i32_f64", VOP_I32_F64_SPECIAL_OMOD, int_amdgcn_frexp_exp>;
 defm V_FREXP_MANT_F64 : VOP1Inst <"v_frexp_mant_f64", VOP_F64_F64, int_amdgcn_frexp_mant>;
 let FPDPRounding = 1 in {
 defm V_FRACT_F64 : VOP1Inst <"v_fract_f64", VOP_F64_F64, AMDGPUfract>;
 } // End FPDPRounding = 1
-#ifdef LLPC_BUILD_GFX12
-} // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
-#else /* LLPC_BUILD_GFX12 */
 } // End SchedRW = [WriteDoubleAdd]
-#endif /* LLPC_BUILD_GFX12 */
 
 defm V_FREXP_EXP_I32_F32 : VOP1Inst <"v_frexp_exp_i32_f32", VOP_I32_F32, int_amdgcn_frexp_exp>;
 defm V_FREXP_MANT_F32 : VOP1Inst <"v_frexp_mant_f32", VOP_F32_F32, int_amdgcn_frexp_mant>;
@@ -492,20 +463,12 @@ let SubtargetPredicate = isGFX7GFX8GFX9 in {
 } // End SubtargetPredicate = isGFX7GFX8GFX9
 
 let SubtargetPredicate = isGFX7Plus in {
-#ifdef LLPC_BUILD_GFX12
-  let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
-#else /* LLPC_BUILD_GFX12 */
   let SchedRW = [WriteDoubleAdd] in {
-#endif /* LLPC_BUILD_GFX12 */
     defm V_TRUNC_F64 : VOP1Inst<"v_trunc_f64", VOP_F64_F64, ftrunc>;
     defm V_CEIL_F64  : VOP1Inst<"v_ceil_f64", VOP_F64_F64, fceil>;
     defm V_RNDNE_F64 : VOP1Inst<"v_rndne_f64", VOP_F64_F64, froundeven>;
     defm V_FLOOR_F64 : VOP1Inst<"v_floor_f64", VOP_F64_F64, ffloor>;
-#ifdef LLPC_BUILD_GFX12
-  } // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
-#else /* LLPC_BUILD_GFX12 */
   } // End SchedRW = [WriteDoubleAdd]
-#endif /* LLPC_BUILD_GFX12 */
 } // End SubtargetPredicate = isGFX7Plus
 } // End isReMaterializable = 1
 
@@ -981,10 +944,7 @@ multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
                                              string opName, string asmName> :
   VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
   VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
-#ifdef LLPC_BUILD_GFX12
-#else /* LLPC_BUILD_GFX12 */
 
-#endif /* LLPC_BUILD_GFX12 */
 
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX12Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
 defm V_CVT_F32_BF8      : VOP1_Real_FULL_with_name<GFX12Gen, 0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;

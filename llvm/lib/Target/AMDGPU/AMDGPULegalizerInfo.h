@@ -207,14 +207,6 @@ public:
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
-#if LLPC_BUILD_GFX12
-  bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
-                                        MachineIRBuilder &B) const;
-
-  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
-                                                  MachineIRBuilder &B) const;
-
-#endif /* LLPC_BUILD_GFX12 */
   bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
                       Intrinsic::ID IID) const;
 
