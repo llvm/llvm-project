@@ -60,7 +60,8 @@ DEF_INSTR(Cast,  OPCODES(\
                          OP(AddrSpaceCast) \
                          ),                 CastInst)
 DEF_INSTR(PHI,           OP(PHI),           PHINode)
-  
+DEF_INSTR(Unreachable,   OP(Unreachable),   UnreachableInst)
+
 // clang-format on
 #ifdef DEF_VALUE
 #undef DEF_VALUE

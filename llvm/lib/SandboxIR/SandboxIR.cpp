@@ -546,7 +546,8 @@ void SelectInst::dump() const {
 BranchInst *BranchInst::create(BasicBlock *IfTrue, Instruction *InsertBefore,
                                Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(cast<llvm::Instruction>(LLVMBefore));
   llvm::BranchInst *NewBr =
       Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
   return Ctx.createBranchInst(NewBr);
@@ -565,7 +566,8 @@ BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                                Value *Cond, Instruction *InsertBefore,
                                Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(LLVMBefore);
   llvm::BranchInst *NewBr =
       Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
                            cast<llvm::BasicBlock>(IfFalse->Val));
@@ -742,6 +744,39 @@ void StoreInst::dump(raw_ostream &OS) const {
 }
 
 void StoreInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+UnreachableInst *UnreachableInst::create(Instruction *InsertBefore,
+                                         Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(LLVMBefore);
+  llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
+  return Ctx.createUnreachableInst(NewUI);
+}
+
+UnreachableInst *UnreachableInst::create(BasicBlock *InsertAtEnd,
+                                         Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
+  return Ctx.createUnreachableInst(NewUI);
+}
+
+bool UnreachableInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::Unreachable;
+}
+
+#ifndef NDEBUG
+void UnreachableInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void UnreachableInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
@@ -1562,6 +1597,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Unreachable: {
+    auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
+    It->second = std::unique_ptr<UnreachableInst>(
+        new UnreachableInst(LLVMUnreachable, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -1618,6 +1659,12 @@ InvokeInst *Context::createInvokeInst(llvm::InvokeInst *I) {
 CallBrInst *Context::createCallBrInst(llvm::CallBrInst *I) {
   auto NewPtr = std::unique_ptr<CallBrInst>(new CallBrInst(I, *this));
   return cast<CallBrInst>(registerValue(std::move(NewPtr)));
+}
+
+UnreachableInst *Context::createUnreachableInst(llvm::UnreachableInst *UI) {
+  auto NewPtr =
+      std::unique_ptr<UnreachableInst>(new UnreachableInst(UI, *this));
+  return cast<UnreachableInst>(registerValue(std::move(NewPtr)));
 }
 
 GetElementPtrInst *

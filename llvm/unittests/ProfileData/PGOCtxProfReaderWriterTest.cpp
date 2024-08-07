@@ -64,7 +64,7 @@ public:
   const std::map<GUID, const ContextNode *> &roots() const { return Roots; }
 };
 
-void checkSame(const ContextNode &Raw, const PGOContextualProfile &Profile) {
+void checkSame(const ContextNode &Raw, const PGOCtxProfContext &Profile) {
   EXPECT_EQ(Raw.guid(), Profile.guid());
   ASSERT_EQ(Raw.counters_size(), Profile.counters().size());
   for (auto I = 0U; I < Raw.counters_size(); ++I)

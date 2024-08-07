@@ -1038,7 +1038,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID, &AACallEdges::ID,
        &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID});
+       &AAUnderlyingObjects::ID, &AAAddressSpace::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.Allowed = &Allowed;
@@ -1063,6 +1063,17 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
     } else if (CC == CallingConv::AMDGPU_KERNEL) {
       addPreloadKernArgHint(F, TM);
+    }
+
+    for (auto &I : instructions(F)) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*LI->getPointerOperand()));
+      }
+      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*SI->getPointerOperand()));
+      }
     }
   }
 

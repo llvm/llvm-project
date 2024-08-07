@@ -14043,12 +14043,19 @@ Value *BoUpSLP::vectorizeTree(
              "ExternallyUsedValues map or remain as scalar in vectorized "
              "instructions");
       if (auto *VecI = dyn_cast<Instruction>(Vec)) {
-        if (auto *PHI = dyn_cast<PHINode>(VecI))
-          Builder.SetInsertPoint(PHI->getParent(),
-                                 PHI->getParent()->getFirstNonPHIIt());
-        else
+        if (auto *PHI = dyn_cast<PHINode>(VecI)) {
+          if (PHI->getParent()->isLandingPad())
+            Builder.SetInsertPoint(
+                PHI->getParent(),
+                std::next(
+                    PHI->getParent()->getLandingPadInst()->getIterator()));
+          else
+            Builder.SetInsertPoint(PHI->getParent(),
+                                   PHI->getParent()->getFirstNonPHIIt());
+        } else {
           Builder.SetInsertPoint(VecI->getParent(),
                                  std::next(VecI->getIterator()));
+        }
       } else {
         Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
       }
@@ -14074,11 +14081,18 @@ Value *BoUpSLP::vectorizeTree(
             auto VecIt = VectorCasts.find(Key);
             if (VecIt == VectorCasts.end()) {
               IRBuilderBase::InsertPointGuard Guard(Builder);
-              if (auto *IVec = dyn_cast<PHINode>(Vec))
-                Builder.SetInsertPoint(
-                    IVec->getParent()->getFirstNonPHIOrDbgOrLifetime());
-              else if (auto *IVec = dyn_cast<Instruction>(Vec))
+              if (auto *IVec = dyn_cast<PHINode>(Vec)) {
+                if (IVec->getParent()->isLandingPad())
+                  Builder.SetInsertPoint(IVec->getParent(),
+                                         std::next(IVec->getParent()
+                                                       ->getLandingPadInst()
+                                                       ->getIterator()));
+                else
+                  Builder.SetInsertPoint(
+                      IVec->getParent()->getFirstNonPHIOrDbgOrLifetime());
+              } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
                 Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
+              }
               Vec = Builder.CreateIntCast(
                   Vec,
                   getWidenedType(
@@ -17250,27 +17264,23 @@ public:
       // Try to handle shuffled extractelements.
       if (S.getOpcode() == Instruction::ExtractElement && !S.isAltShuffle() &&
           I + 1 < E) {
-        InstructionsState NextS = getSameOpcode(ReducedVals[I + 1], TLI);
-        if (NextS.getOpcode() == Instruction::ExtractElement &&
-            !NextS.isAltShuffle()) {
-          SmallVector<Value *> CommonCandidates(Candidates);
-          for (Value *RV : ReducedVals[I + 1]) {
-            Value *RdxVal = TrackedVals.find(RV)->second;
-            // Check if the reduction value was not overriden by the
-            // extractelement instruction because of the vectorization and
-            // exclude it, if it is not compatible with other values.
-            if (auto *Inst = dyn_cast<Instruction>(RdxVal))
-              if (!NextS.getOpcode() || !NextS.isOpcodeOrAlt(Inst))
-                continue;
-            CommonCandidates.push_back(RdxVal);
-            TrackedToOrig.try_emplace(RdxVal, RV);
-          }
-          SmallVector<int> Mask;
-          if (isFixedVectorShuffle(CommonCandidates, Mask)) {
-            ++I;
-            Candidates.swap(CommonCandidates);
-            ShuffledExtracts = true;
-          }
+        SmallVector<Value *> CommonCandidates(Candidates);
+        for (Value *RV : ReducedVals[I + 1]) {
+          Value *RdxVal = TrackedVals.find(RV)->second;
+          // Check if the reduction value was not overriden by the
+          // extractelement instruction because of the vectorization and
+          // exclude it, if it is not compatible with other values.
+          auto *Inst = dyn_cast<ExtractElementInst>(RdxVal);
+          if (!Inst)
+            continue;
+          CommonCandidates.push_back(RdxVal);
+          TrackedToOrig.try_emplace(RdxVal, RV);
+        }
+        SmallVector<int> Mask;
+        if (isFixedVectorShuffle(CommonCandidates, Mask)) {
+          ++I;
+          Candidates.swap(CommonCandidates);
+          ShuffledExtracts = true;
         }
       }
 
@@ -18592,6 +18602,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       return true;
     if (V1->getType()->getTypeID() > V2->getType()->getTypeID())
       return false;
+    if (V1->getType()->getScalarSizeInBits() <
+        V2->getType()->getScalarSizeInBits())
+      return true;
+    if (V1->getType()->getScalarSizeInBits() >
+        V2->getType()->getScalarSizeInBits())
+      return false;
     ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
     ArrayRef<Value *> Opcodes2 = PHIToOpcodes[V2];
     if (Opcodes1.size() < Opcodes2.size())
@@ -19004,6 +19020,12 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       return true;
     if (V->getPointerOperandType()->getTypeID() >
         V2->getPointerOperandType()->getTypeID())
+      return false;
+    if (V->getValueOperand()->getType()->getScalarSizeInBits() <
+        V2->getValueOperand()->getType()->getScalarSizeInBits())
+      return true;
+    if (V->getValueOperand()->getType()->getScalarSizeInBits() >
+        V2->getValueOperand()->getType()->getScalarSizeInBits())
       return false;
     // UndefValues are compatible with all other values.
     if (isa<UndefValue>(V->getValueOperand()) ||
