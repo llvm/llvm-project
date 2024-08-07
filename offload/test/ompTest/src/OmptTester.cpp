@@ -7,6 +7,9 @@
 
 using namespace omptest;
 
+// Global Logger instance
+extern logging::Logger *Log;
+
 // Callback handler, which receives and relays OMPT callbacks
 extern OmptCallbackHandler *Handler;
 
@@ -33,6 +36,7 @@ static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 static bool UseEMICallbacks = false;
 static bool UseTracing = false;
 static bool RunAsTestSuite = false;
+static bool ColoredLog = false;
 
 // OMPT entry point handles
 static ompt_set_trace_ompt_t ompt_set_trace_ompt = 0;
@@ -366,6 +370,7 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   UseEMICallbacks = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_EMI");
   UseTracing = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_TRACING");
   RunAsTestSuite = getBoolEnvironmentVariable("OMPTEST_RUN_AS_TESTSUITE");
+  ColoredLog = getBoolEnvironmentVariable("OMPTEST_LOG_COLORED");
 
   register_ompt_callback(ompt_callback_thread_begin);
   register_ompt_callback(ompt_callback_thread_end);
@@ -402,6 +407,9 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
     register_ompt_callback(ompt_callback_target_map);
   }
 
+  // Construct global logger instance
+  logging::Logger::get(logging::Level::WARNING, std::cerr, ColoredLog);
+
   // Construct & subscribe the reporter, so it will be notified of events
   EventReporter = new OmptEventReporter();
   OmptCallbackHandler::get().subscribe(EventReporter);
@@ -415,8 +423,10 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
 void ompt_finalize(ompt_data_t *tool_data) {
   assert(Handler && "Callback handler should be present at this point");
   assert(EventReporter && "EventReporter should be present at this point");
+  assert(Log && "Logger should be present at this point");
   delete Handler;
   delete EventReporter;
+  delete Log;
 }
 
 #ifdef __cplusplus

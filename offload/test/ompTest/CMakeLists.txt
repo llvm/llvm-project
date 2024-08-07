@@ -17,6 +17,7 @@ set(OMPTEST_HEADERS
   ./include/AssertMacros.h
   ./include/InternalEvent.h
   ./include/InternalEventCommon.h
+  ./include/Logging.h
   ./include/OmptAliases.h
   ./include/OmptAsserter.h
   ./include/OmptAssertEvent.h
@@ -31,6 +32,7 @@ add_library(omptest
   ${OMPTEST_HEADERS}
   ./src/InternalEvent.cpp
   ./src/InternalEventOperators.cpp
+  ./src/Logging.cpp
   ./src/OmptAsserter.cpp
   ./src/OmptAssertEvent.cpp
   ./src/OmptCallbackHandler.cpp

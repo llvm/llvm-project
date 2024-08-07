@@ -1,5 +1,5 @@
-#ifndef OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTASSERTEVENT_H
-#define OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTASSERTEVENT_H
+#ifndef OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTASSERTEVENT_H
+#define OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTASSERTEVENT_H
 
 #include "InternalEvent.h"
 #include "omp-tools.h"
@@ -12,6 +12,8 @@
 namespace omptest{
 
 enum class ObserveState { generated, always, never };
+
+const char *to_string(ObserveState State);
 
 struct OmptAssertEvent {
 

@@ -3,6 +3,20 @@
 
 using namespace omptest;
 
+const char *omptest::to_string(ObserveState State) {
+  switch (State) {
+  case ObserveState::generated:
+    return "generated";
+  case ObserveState::always:
+    return "always";
+  case ObserveState::never:
+    return "never";
+  default:
+    assert(false && "Requested string representation for unknown ObserveState");
+    return "UNKNOWN";
+  }
+}
+
 OmptAssertEvent::OmptAssertEvent(const std::string &Name,
                                  const std::string &Group,
                                  const ObserveState &Expected,

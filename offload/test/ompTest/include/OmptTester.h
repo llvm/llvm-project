@@ -1,7 +1,8 @@
-#ifndef OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTTESTER_H
-#define OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTTESTER_H
+#ifndef OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTTESTER_H
+#define OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTTESTER_H
 
 #include "AssertMacros.h"
+#include "Logging.h"
 #include "OmptAliases.h"
 #include "OmptAssertEvent.h"
 #include "OmptAsserter.h"

@@ -386,15 +386,15 @@ void OmptCallbackHandler::handleSyncRegion(ompt_sync_region_t Kind,
                                            const void *CodeptrRA) {
   if (RecordAndReplay) {
     recordEvent(OmptAssertEvent::SyncRegion(
-        "Sync Region", "", ObserveState::generated, Kind, Endpoint,
-        ParallelData, TaskData, CodeptrRA));
+        "SyncRegion", "", ObserveState::generated, Kind, Endpoint, ParallelData,
+        TaskData, CodeptrRA));
     return;
   }
 
   for (const auto &S : Subscribers)
     S->notify(OmptAssertEvent::SyncRegion(
-        "Sync Region", "", ObserveState::generated, Kind, Endpoint,
-        ParallelData, TaskData, CodeptrRA));
+        "SyncRegion", "", ObserveState::generated, Kind, Endpoint, ParallelData,
+        TaskData, CodeptrRA));
 }
 
 void OmptCallbackHandler::handleDispatch(ompt_data_t *ParallelData,

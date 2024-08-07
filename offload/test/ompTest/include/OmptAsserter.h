@@ -1,5 +1,5 @@
-#ifndef OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTASSERTER_H
-#define OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTASSERTER_H
+#ifndef OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTASSERTER_H
+#define OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTASSERTER_H
 
 #include "OmptAssertEvent.h"
 
@@ -82,14 +82,6 @@ public:
   /// Implemented in subclasses to implement what should actually be done with
   /// the notification.
   virtual void notifyImpl(omptest::OmptAssertEvent &&AE) = 0;
-
-  /// Report an error for a single event.
-  void reportError(const omptest::OmptAssertEvent &OffendingEvent,
-                   const std::string &Message);
-
-  void reportError(const omptest::OmptAssertEvent &AwaitedEvent,
-                   const omptest::OmptAssertEvent &OffendingEvent,
-                   const std::string &Message);
 
   /// Get the number of currently remaining events, with: ObserveState::always.
   virtual size_t getRemainingEventCount() = 0;
