@@ -203,11 +203,11 @@ void MCMachOStreamer::emitDataRegion(MachO::DataRegionType Kind) {
   MCSymbol *Start = getContext().createTempSymbol();
   emitLabel(Start);
   // Record the region for the object writer to use.
-  getWriter().getDataRegions().push_back({Kind, Start, nullptr});
+  getMCObjectWriter().getDataRegions().push_back({Kind, Start, nullptr});
 }
 
 void MCMachOStreamer::emitDataRegionEnd() {
-  auto &Regions = getWriter().getDataRegions();
+  auto &Regions = getMCObjectWriter().getDataRegions();
   assert(!Regions.empty() && "Mismatched .end_data_region!");
   auto &Data = Regions.back();
   assert(!Data.End && "Mismatched .end_data_region!");
