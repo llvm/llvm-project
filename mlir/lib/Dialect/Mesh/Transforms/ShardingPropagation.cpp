@@ -108,15 +108,16 @@ operator<<(llvm::raw_ostream &stream, ReshardingRquirementKind v) {
 // specific shardings. For example, mustShardings = [shard0, None] and
 // optionalShardings = [None, shard1], the result will be [[shard0, shard1],
 // [shard0, None]]
-static SmallVector<std::vector<MeshSharding>>
-getOrderedPossibleShardingAttrs(ArrayRef<MeshSharding> mustShardings,
-                                ArrayRef<MeshSharding> optionalShardings) {
-  SmallVector<std::vector<MeshSharding>> allShardingAttrs;
-  std::vector<MeshSharding> curShardingAttrs;
+static SmallVector<SmallVector<MeshShardingAttr>>
+getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
+                                ArrayRef<MeshShardingAttr> optionalShardings) {
+  SmallVector<SmallVector<MeshShardingAttr>> allShardingAttrs;
+  SmallVector<MeshShardingAttr> curShardingAttrs;
 
   std::function<void(size_t)> dfsCreateShardingAttrs = [&](size_t i) {
     if (i == mustShardings.size()) {
-      allShardingAttrs.push_back(std::vector<MeshSharding>(curShardingAttrs));
+      allShardingAttrs.push_back(
+          SmallVector<MeshShardingAttr>(curShardingAttrs));
       return;
     }
 
@@ -131,13 +132,13 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshSharding> mustShardings,
       curShardingAttrs.push_back(optionalShardings[i]);
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
-      curShardingAttrs.push_back({});
+      curShardingAttrs.push_back(nullptr);
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
       return;
     }
 
-    curShardingAttrs.push_back({});
+    curShardingAttrs.push_back(nullptr);
     dfsCreateShardingAttrs(i + 1);
     curShardingAttrs.pop_back();
   };
@@ -157,7 +158,8 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshSharding> mustShardings,
 // 3. All other cases. Resharding is required for operands/results with
 //   annotation targeting explicitly this operation.
 ReshardingRquirementKind getReshardingRquirementKind(
-    Operation *op, const std::vector<MeshSharding> &operandAndResultShardings) {
+    Operation *op,
+    const SmallVector<MeshShardingAttr> &operandAndResultShardings) {
   ReshardingRquirementKind res = ReshardingRquirementKind::NO_RESHARDING;
 
   size_t operandsCount = op->getOperands().size();
@@ -174,7 +176,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
     if (!shardOp) {
       continue;
     }
-    bool needsResharding = sharding != shardOp.getSharding();
+    bool needsResharding = shardOp.getShardAttr() != sharding;
     bool isExplicitAnnotationForThisOp = shardOp.getAnnotateForUsers();
     if (needsResharding) {
       if (isExplicitAnnotationForThisOp) {
@@ -192,7 +194,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
       if (!shardOp) {
         continue;
       }
-      bool needsResharding = sharding != shardOp.getSharding();
+      bool needsResharding = shardOp.getShardAttr() != sharding;
       bool isExplicitAnnotationForThisOp = !shardOp.getAnnotateForUsers();
       if (needsResharding) {
         if (isExplicitAnnotationForThisOp) {
@@ -216,13 +218,14 @@ ReshardingRquirementKind getReshardingRquirementKind(
 // 3. Resharding of existing explicit sharding annotations for this op.
 static FailureOr<ShardingOption> selectShardingOption(
     ShardingInterface shardingOp,
-    ArrayRef<std::vector<MeshSharding>> possibleOperandShardingAttrs,
-    ArrayRef<std::vector<MeshSharding>> possibleResultShardingAttrs) {
+    ArrayRef<SmallVector<MeshShardingAttr>> possibleOperandShardingAttrs,
+    ArrayRef<SmallVector<MeshShardingAttr>> possibleResultShardingAttrs) {
   SmallVector<std::tuple<ShardingOption, ReshardingRquirementKind>>
       shardingOptionsAndReshardingRequirements;
 
-  for (ArrayRef<MeshSharding> resultShardings : possibleResultShardingAttrs) {
-    for (ArrayRef<MeshSharding> operandShardings :
+  for (ArrayRef<MeshShardingAttr> resultShardings :
+       possibleResultShardingAttrs) {
+    for (ArrayRef<MeshShardingAttr> operandShardings :
          possibleOperandShardingAttrs) {
       FailureOr<ShardingOption> shardingOption =
           shardingOp.getShardingOption(operandShardings, resultShardings);
@@ -234,14 +237,14 @@ static FailureOr<ShardingOption> selectShardingOption(
       // They may be missing some annotations.
       // Whatever is returned by getShardingAnnotations is exactly what the op
       // needs.
-      FailureOr<std::vector<MeshSharding>> operandAndResultShardings =
+      FailureOr<SmallVector<MeshShardingAttr>> operandAndResultShardings =
           shardingOp.getShardingAnnotations(*shardingOption);
       if (failed(operandAndResultShardings)) {
         return failure();
       }
 
-      // LLVM_DEBUG(DBGS() << "operandAndResultShardings = "
-      //                   << *operandAndResultShardings << "\n";);
+      LLVM_DEBUG(DBGS() << "operandAndResultShardings = "
+                        << *operandAndResultShardings << "\n";);
 
       ReshardingRquirementKind reshardingRquirement =
           getReshardingRquirementKind(shardingOp, *operandAndResultShardings);
@@ -282,8 +285,7 @@ static FailureOr<ShardingOption> selectShardingOption(
 // a `mesh.shard` operation for all remaining operands and results that do not
 // have sharding annotations.
 static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
-  if (op->hasTrait<OpTrait::IsTerminator>() ||
-      llvm::isa<mesh::ShardOp, mesh::ShardingOp>(op))
+  if (op->hasTrait<OpTrait::IsTerminator>() || llvm::isa<mesh::ShardOp>(op))
     return success();
 
   ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);
@@ -292,14 +294,14 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
     return failure();
   }
 
-  // collect MeshSharding from results
-  std::vector<MeshSharding> allowConflictsResultShardings;
+  // collect MeshShardingAttr from results
+  SmallVector<MeshShardingAttr> allowConflictsResultShardings;
   allowConflictsResultShardings.resize(op->getNumResults());
-  std::vector<MeshSharding> resultMustShardings;
+  SmallVector<MeshShardingAttr> resultMustShardings;
   resultMustShardings.resize(op->getNumResults());
   for (OpResult result : op->getResults()) {
-    FailureOr<std::pair<bool, MeshSharding>> maybeShardAttr =
-        getMeshSharding(result);
+    FailureOr<std::pair<bool, MeshShardingAttr>> maybeShardAttr =
+        getMeshShardingAttr(result);
     if (failed(maybeShardAttr))
       continue;
     if (!maybeShardAttr->first)
@@ -309,14 +311,14 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
           maybeShardAttr->second;
   }
 
-  // collect MeshSharding from operands
-  std::vector<MeshSharding> allowConflictsOperandShardings;
+  // collect MeshShardingAttr from operands
+  SmallVector<MeshShardingAttr> allowConflictsOperandShardings;
   allowConflictsOperandShardings.resize(op->getNumOperands());
-  std::vector<MeshSharding> operandMustShardings;
+  SmallVector<MeshShardingAttr> operandMustShardings;
   operandMustShardings.resize(op->getNumOperands());
   for (OpOperand &opOperand : op->getOpOperands()) {
-    FailureOr<std::pair<bool, MeshSharding>> maybeShardAttr =
-        getMeshSharding(opOperand);
+    FailureOr<std::pair<bool, MeshShardingAttr>> maybeShardAttr =
+        getMeshShardingAttr(opOperand);
     if (failed(maybeShardAttr))
       continue;
 
@@ -329,10 +331,10 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   }
 
   // try to get the sharding option
-  SmallVector<std::vector<MeshSharding>> possibleOperandShardingAttrs =
+  SmallVector<SmallVector<MeshShardingAttr>> possibleOperandShardingAttrs =
       getOrderedPossibleShardingAttrs(operandMustShardings,
                                       allowConflictsOperandShardings);
-  SmallVector<std::vector<MeshSharding>> possibleResultShardingAttrs =
+  SmallVector<SmallVector<MeshShardingAttr>> possibleResultShardingAttrs =
       getOrderedPossibleShardingAttrs(resultMustShardings,
                                       allowConflictsResultShardings);
   FailureOr<ShardingOption> shardingOption = selectShardingOption(
