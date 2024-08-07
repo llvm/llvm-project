@@ -196,8 +196,9 @@ ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
-  bool IsTransparentUnion;
-  Ty = useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
+  llvm::Type *CoerceTy = nullptr;
+  Ty = useFirstFieldIfTransparentUnion(Ty, getContext(), getVMContext(),
+                                       &CoerceTy);
 
   if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
@@ -218,14 +219,8 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign*/ TyAlign > CCAlign);
   }
 
-  if (isPromotableTypeForABI(Ty))
-    return (IsTransparentUnion
-                ? ABIArgInfo::getExtend(
-                      Ty, llvm::IntegerType::get(getVMContext(),
-                                                 getContext().getTypeSize(Ty)))
-                : ABIArgInfo::getExtend(Ty));
-
-  return (ABIArgInfo::getDirect());
+  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, CoerceTy)
+                                     : ABIArgInfo::getDirect());
 }
 
 CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
@@ -343,10 +338,7 @@ public:
       : DefaultABIInfo(CGT), IsSoftFloatABI(SoftFloatABI),
         IsRetSmallStructInRegABI(RetSmallStructInRegABI) {}
 
-  bool isPromotableTypeForABI(QualType Ty) const;
-
   ABIArgInfo classifyReturnType(QualType RetTy) const;
-  ABIArgInfo classifyArgumentType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!getCXXABI().classifyReturnType(FI))
@@ -401,37 +393,6 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   if (AlignTy)
     return CharUnits::fromQuantity(AlignTy->isVectorType() ? 16 : 4);
   return CharUnits::fromQuantity(4);
-}
-
-// Return true if the ABI requires Ty to be passed sign- or zero-
-// extended to 32 bits.
-bool
-PPC32_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
-  // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
-
-  // Promotable integer types are required to be promoted by the ABI.
-  if (isPromotableIntegerTypeForABI(Ty))
-    return true;
-
-  if (const auto *EIT = Ty->getAs<BitIntType>())
-    if (EIT->getNumBits() < 32)
-      return true;
-
-  return false;
-}
-
-ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
-  bool IsTransparentUnion;
-  Ty = useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
-
-  if (IsTransparentUnion && isPromotableTypeForABI(Ty))
-    return (ABIArgInfo::getExtend(
-        Ty,
-        llvm::IntegerType::get(getVMContext(), getContext().getTypeSize(Ty))));
-
-  return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
@@ -863,8 +824,9 @@ bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateSmallEnough(
 
 ABIArgInfo
 PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
-  bool IsTransparentUnion;
-  Ty = useFirstFieldIfTransparentUnion(Ty, IsTransparentUnion);
+  llvm::Type *CoerceType = nullptr;
+  Ty = useFirstFieldIfTransparentUnion(Ty, getContext(), getVMContext(),
+                                       &CoerceType);
 
   if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
@@ -933,14 +895,8 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign=*/TyAlign > ABIAlign);
   }
 
-  if (isPromotableTypeForABI(Ty))
-    return (IsTransparentUnion
-                ? ABIArgInfo::getExtend(
-                      Ty, llvm::IntegerType::get(getVMContext(),
-                                                 getContext().getTypeSize(Ty)))
-                : ABIArgInfo::getExtend(Ty));
-
-  return ABIArgInfo::getDirect();
+  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, CoerceType)
+                                     : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo

@@ -66,8 +66,10 @@ bool classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
                         const ABIInfo &Info);
 
 // For transparent union types, return the type of the first element.
-// Set TU to true if Ty given was a transparent union and to false otherwise.
-QualType useFirstFieldIfTransparentUnion(QualType Ty, bool &TU);
+// Set CoerceType to the integer type of the first union element.
+QualType useFirstFieldIfTransparentUnion(QualType Ty, ASTContext &Context,
+                                         llvm::LLVMContext &LLVMContext,
+                                         llvm::Type **CoerceType);
 
 /// Pass transparent unions as if they were the type of the first element. Sema
 /// should ensure that all elements of the union have the same "machine type".
