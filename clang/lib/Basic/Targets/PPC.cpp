@@ -786,8 +786,8 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   } else {
     if (Name == "spe")
       Features["efpu2"] = false;
-    // If we're disabling altivec or vsx go ahead and disable all of the vsx
-    // features.
+    // If we're disabling altivec, hard-float, or vsx go ahead and disable all
+    // of the vsx features.
     if ((Name == "altivec") || (Name == "vsx") || (Name == "hard-float")) {
       if (Name != "vsx")
         Features["altivec"] = Features["crypto"] = false;
