@@ -1122,7 +1122,7 @@ def WorkgroupAttributionAttr
   }];
   let parameters = (ins "IntegerAttr":$num_elements,
                         "TypeAttr":$element_type);
-  let assemblyFormat = "`<` $num_elements `,` $element_type`>`";
+  let assemblyFormat = "`<` $num_elements `,` $element_type `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

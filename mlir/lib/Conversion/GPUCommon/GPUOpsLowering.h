@@ -42,9 +42,9 @@ struct GPUFuncOpLoweringOptions {
   unsigned workgroupAddrSpace;
 
   /// The attribute name to use instead of `gpu.kernel`.
-  std::optional<StringAttr> kernelAttributeName = std::nullopt;
+  StringAttr kernelAttributeName;
   /// The attribute name to to set block size
-  std::optional<StringAttr> kernelBlockSizeAttributeName = std::nullopt;
+  StringAttr kernelBlockSizeAttributeName;
 
   /// The calling convention to use for kernel functions
   LLVM::CConv kernelCallingConvention = LLVM::CConv::C;
@@ -80,9 +80,9 @@ private:
   unsigned workgroupAddrSpace;
 
   /// The attribute name to use instead of `gpu.kernel`.
-  std::optional<StringAttr> kernelAttributeName;
+  StringAttr kernelAttributeName;
   /// The attribute name to to set block size
-  std::optional<StringAttr> kernelBlockSizeAttributeName;
+  StringAttr kernelBlockSizeAttributeName;
 
   /// The calling convention to use for kernel functions
   LLVM::CConv kernelCallingConvention;

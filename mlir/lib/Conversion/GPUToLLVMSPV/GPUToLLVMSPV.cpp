@@ -362,7 +362,7 @@ void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
       typeConverter,
       GPUFuncOpLoweringOptions{
           privateAddressSpace, localAddressSpace,
-          /*kernelAttributeName=*/std::nullopt, kernelBlockSizeAttributeName,
+          /*kernelAttributeName=*/{}, kernelBlockSizeAttributeName,
           LLVM::CConv::SPIR_KERNEL, LLVM::CConv::SPIR_FUNC,
           /*encodeWorkgroupAttributionsAsArguments=*/true});
 }

@@ -153,11 +153,10 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   // latter is expected by gpu.launch_func.
   if (gpuFuncOp.isKernel()) {
     if (kernelAttributeName)
-      attributes.emplace_back(*kernelAttributeName, rewriter.getUnitAttr());
+      attributes.emplace_back(kernelAttributeName, rewriter.getUnitAttr());
     // Set the dialect-specific block size attribute if there is one.
-    if (kernelBlockSizeAttributeName.has_value() && knownBlockSize) {
-      attributes.emplace_back(kernelBlockSizeAttributeName.value(),
-                              knownBlockSize);
+    if (kernelBlockSizeAttributeName && knownBlockSize) {
+      attributes.emplace_back(kernelBlockSizeAttributeName, knownBlockSize);
     }
   }
   LLVM::CConv callingConvention = gpuFuncOp.isKernel()
