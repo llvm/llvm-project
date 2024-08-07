@@ -74,6 +74,8 @@ class Remark(yaml.YAMLObject):
 
     @classmethod
     def demangle(cls, name):
+        if cls.demangler_proc is None:
+            return name  # Return the original name if demangler is not available
         with cls.demangler_lock:
             cls.demangler_proc.stdin.write((name + "\n").encode("utf-8"))
             cls.demangler_proc.stdin.flush()
@@ -299,7 +301,7 @@ def get_remarks(input_file, filter_=None):
             filter_e = re.compile(filter_)
         for remark in docs:
             remark.canonicalize()
-            # Avoid remarks withoug debug location or if they are duplicated
+            # Avoid remarks without debug location or if they are duplicated
             if not hasattr(remark, "DebugLoc") or remark.key in all_remarks:
                 continue
 
