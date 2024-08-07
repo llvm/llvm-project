@@ -47,10 +47,16 @@ set(LLVM_TARGETS_TO_BUILD Native CACHE STRING "")
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 
 set(STAGE1_PROJECTS "clang")
+
+# Building Flang on Windows requires compiler-rt, so we need to build it in
+# stage1.
 set(STAGE1_RUNTIMES "compiler-rt")
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
+  if (NOT "compiler-rt" IN_LIST STAGE1_RUNTIMES)
+    list(APPEND STAGE1_PROJECTS "compiler-rt")
+  endif()
   set(CLANG_BOOTSTRAP_TARGETS
     generate-profdata
     stage2-package
