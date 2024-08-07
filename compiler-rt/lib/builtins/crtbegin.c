@@ -8,6 +8,10 @@
 
 #include <stddef.h>
 
+#ifndef __has_feature
+# define __has_feature(x) 0
+#endif
+
 #if __has_feature(ptrauth_init_fini)
 #include <ptrauth.h>
 #endif
