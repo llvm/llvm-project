@@ -3947,7 +3947,6 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     }
   }
 
-
   // Try to optimize the call if possible, we require DataLayout for most of
   // this.  None of these calls are seen as possibly dead so go ahead and
   // delete the instruction now.

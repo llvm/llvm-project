@@ -1965,8 +1965,9 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 }
 
 Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
-                            const TargetLibraryInfo *TLI, LibFunc SizeFeedbackNewFunc,
-                            uint8_t HotCold) {
+                                         const TargetLibraryInfo *TLI,
+                                         LibFunc SizeFeedbackNewFunc,
+                                         uint8_t HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
@@ -1974,13 +1975,13 @@ Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
 
   // __sized_ptr_t struct return type { void*, size_t }
-  llvm::StructType* SizedPtrT = llvm::StructType::get(M->getContext(),
-            {B.getPtrTy(), Num->getType()});
-  FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT,
-                                               Num->getType(), B.getInt8Ty());
+  llvm::StructType *SizedPtrT =
+      llvm::StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func =
+      M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, Name);
-  // Setting the name makes the tests easier to read. 
+  // Setting the name makes the tests easier to read.
   CI->setName("sized_ptr");
 
   if (const Function *F =
@@ -1990,9 +1991,11 @@ Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
   return CI;
 }
 
-Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
-                            const TargetLibraryInfo *TLI, LibFunc SizeFeedbackNewFunc,
-                            uint8_t HotCold) {
+Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                                IRBuilderBase &B,
+                                                const TargetLibraryInfo *TLI,
+                                                LibFunc SizeFeedbackNewFunc,
+                                                uint8_t HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
@@ -2000,13 +2003,13 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align, IRBuil
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
 
   // __sized_ptr_t struct return type { void*, size_t }
-  llvm::StructType* SizedPtrT = llvm::StructType::get(M->getContext(),
-            {B.getPtrTy(), Num->getType()});
-  FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT,
-                                               Num->getType(), Align->getType(), B.getInt8Ty());
+  llvm::StructType *SizedPtrT =
+      llvm::StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
+                                               Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, Name);
-  // Setting the name makes the tests easier to read. 
+  // Setting the name makes the tests easier to read.
   CI->setName("sized_ptr");
 
   if (const Function *F =
