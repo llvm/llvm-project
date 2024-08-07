@@ -175,6 +175,10 @@ MinidumpFile::getMemory64List(Error &Err) const {
   if (!Descriptors)
     return Descriptors.takeError();
 
+  if (!Descriptors->empty() &&
+      ListHeader->BaseRVA + Descriptors->front().DataSize > getData().size())
+    return createEOFError();
+
   return make_range(
       FallibleMemory64Iterator::itr(
           Memory64Iterator::begin(getData(), *Descriptors, ListHeader->BaseRVA),

@@ -140,11 +140,8 @@ public:
     size_t Stride;
   };
 
-
-  /// Class the provides an iterator over the memory64 memory ranges. Ranges
-  /// are not validated before hand, and so any increment operation could fail.
-  /// For this reason, the iterator in it's initial state points to a default
-  /// initialized std::pair and should be advanced before dereferencing.
+  /// Class the provides an iterator over the memory64 memory ranges. Only the
+  /// the first descriptor is validated as readable beforehand.
   class Memory64Iterator {
   public:
     static Memory64Iterator
@@ -159,18 +156,18 @@ public:
     std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> Current;
 
     bool operator==(const Memory64Iterator &R) const {
-      return isEnd == R.isEnd;
+      return IsEnd == R.IsEnd;
     }
 
     bool operator!=(const Memory64Iterator &R) const { return !(*this == R); }
 
     const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> &
-    operator*() const {
+    operator*() {
       return Current;
     }
 
     const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> *
-    operator->() const {
+    operator&() {
       return &Current;
     }
 
@@ -190,29 +187,37 @@ public:
 
       ArrayRef<uint8_t> Content = Storage.slice(RVA, Descriptor.DataSize);
       Current = std::make_pair(Descriptor, Content);
-      RVA += Descriptor.DataSize;
       Index++;
+      RVA += Descriptor.DataSize;
       if (Index >= Descriptors.size())
-        isEnd = true;
+        IsEnd = true;
       return Error::success();
     }
 
   private:
+    // This constructor will only happen after a validation check to see
+    // if the first descriptor is readable.
     Memory64Iterator(ArrayRef<uint8_t> Storage,
                      ArrayRef<minidump::MemoryDescriptor_64> Descriptors,
                      uint64_t BaseRVA)
         : RVA(BaseRVA), Storage(Storage), Descriptors(Descriptors),
-          isEnd(false) {}
+          IsEnd(false) {
+      assert(Descriptors.size() > 0);
+      assert(Storage.size() >= BaseRVA + Descriptors.front().DataSize);
+      Current =
+          std::make_pair(Descriptors.front(),
+                         Storage.slice(BaseRVA, Descriptors.front().DataSize));
+    }
 
     Memory64Iterator()
         : RVA(0), Storage(ArrayRef<uint8_t>()),
-          Descriptors(ArrayRef<minidump::MemoryDescriptor_64>()), isEnd(true) {}
+          Descriptors(ArrayRef<minidump::MemoryDescriptor_64>()), IsEnd(true) {}
 
     size_t Index = 0;
     uint64_t RVA;
     ArrayRef<uint8_t> Storage;
     ArrayRef<minidump::MemoryDescriptor_64> Descriptors;
-    bool isEnd;
+    bool IsEnd;
   };
 
   using FallibleMemory64Iterator = llvm::fallible_iterator<Memory64Iterator>;
