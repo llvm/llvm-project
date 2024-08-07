@@ -20,27 +20,32 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#define DEBUG_TYPE "ctx_prof"
+
 namespace llvm {
 namespace json {
 Value toJSON(const PGOContextualProfile &P) {
   Object Ret;
   Ret["Guid"] = P.guid();
   Ret["Counters"] = Array(P.counters());
+  if (P.callsites().empty())
+    return Ret;
   auto AllCS =
       ::llvm::map_range(P.callsites(), [](const auto &P) { return P.first; });
   auto MaxIt = ::llvm::max_element(AllCS);
-  if (MaxIt != AllCS.end()) {
-    Array CSites;
-    // Iterate to, and including, the maximum index.
-    for (auto I = 0U; I <= *MaxIt; ++I) {
-      CSites.push_back(Array());
-      Array &Targets = *CSites.back().getAsArray();
-      if (P.hasCallsite(I))
-        for (const auto &[_, Ctx] : P.callsite(I))
-          Targets.push_back(toJSON(Ctx));
-    }
-    Ret["Callsites"] = std::move(CSites);
+  assert(MaxIt != AllCS.end() && "We should have a max value because the "
+                                 "callsites collection is not empty.");
+  Array CSites;
+  // Iterate to, and including, the maximum index.
+  for (auto I = 0U, Max = *MaxIt; I <= Max; ++I) {
+    CSites.push_back(Array());
+    Array &Targets = *CSites.back().getAsArray();
+    if (P.hasCallsite(I))
+      for (const auto &[_, Ctx] : P.callsite(I))
+        Targets.push_back(toJSON(Ctx));
   }
+  Ret["Callsites"] = std::move(CSites);
+
   return Ret;
 }
 
@@ -54,7 +59,6 @@ Value toJSON(const PGOContextualProfile::CallTargetMapTy &P) {
 } // namespace llvm
 
 using namespace llvm;
-#define DEBUG_TYPE "ctx_prof"
 
 AnalysisKey CtxProfAnalysis::Key;
 

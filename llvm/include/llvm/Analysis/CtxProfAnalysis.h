@@ -32,7 +32,7 @@ public:
     Result(const Result &) = delete;
     Result(Result &&) = default;
 
-    operator bool() const { return !!Profiles; }
+    operator bool() const { return Profiles.has_value(); }
     const PGOContextualProfile::CallTargetMapTy &profiles() const {
       return *Profiles;
     }
