@@ -4120,7 +4120,6 @@ add_entrypoint_object(
     ../scalblnf.h
   DEPENDS
     libc.hdr.float_macros
-    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
