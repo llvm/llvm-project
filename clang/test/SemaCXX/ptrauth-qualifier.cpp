@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c++11  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++11  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
 
 #define AQ __ptrauth(1,1,50)
 #define AQ2 __ptrauth(1,1,51)

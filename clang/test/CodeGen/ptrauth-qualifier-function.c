@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 %s       -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck --check-prefixes=CHECK,TYPE %s
+// RUN: %clang_cc1 %s       -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck --check-prefixes=CHECK,TYPE %s
 // RUN: %clang_cc1 %s       -triple arm64-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck --check-prefixes=CHECK,ZERO %s
+// RUN: %clang_cc1 %s       -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck --check-prefixes=CHECK,ZERO %s
 // RUN: %clang_cc1 -xc++ %s -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck --check-prefixes=CHECK,TYPE,CHECK-CXX %s
+// RUN: %clang_cc1 -xc++ %s -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck --check-prefixes=CHECK,TYPE,CHECK-CXX %s
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,7 +14,7 @@ void (* __ptrauth(0, 0, 42) f2ptr_42_discm)(int);
 void f(int);
 void (* const __ptrauth(0, 0, 42) f_const_ptr)(int) = &f;
 
-// CHECK-LABEL: define void @test_assign_to_qualified
+// CHECK-LABEL: define {{.*}}void @test_assign_to_qualified
 void test_assign_to_qualified() {
   f2ptr_42_discm = (void (*)(int))fptr;
 
@@ -46,7 +49,7 @@ void test_assign_to_qualified() {
   // CHECK-NEXT store void (i32)* [[FPTR10]], void (i32)** @f2ptr_42_discm
 }
 
-// CHECK-LABEL: define void @test_assign_from_qualified
+// CHECK-LABEL: define {{.*}}void @test_assign_from_qualified
 void test_assign_from_qualified() {
   fptr = (void (*)(void))f2ptr_42_discm;
 
@@ -81,7 +84,7 @@ void test_assign_from_qualified() {
   // CHECK-NEXT store void ()* [[FPTR10]], void ()** @f2ptr_42_discm
 }
 
-// CHECK-LABEL: define void @test_const_ptr_function_call()
+// CHECK-LABEL: define {{.*}}void @test_const_ptr_function_call()
 void test_const_ptr_function_call(void) {
   f_const_ptr(1);
 
@@ -94,7 +97,7 @@ void (* get_fptr(void))(int);
 void (* __ptrauth(0, 0, 42) f_const_ptr2)(int) = get_fptr();
 void (* const __ptrauth(0, 1, 43) &f_ref)(int) = f_const_ptr2;
 
-// CHECK-CXX-LABEL: define internal void @__cxx_global_var_init()
+// CHECK-CXX-LABEL: define {{.*}}internal void @__cxx_global_var_init()
 // CHECK-CXX: [[ENTRY:.*]]:
 // CHECK-CXX: %[[CALL:.*]] = call ptr @get_fptr()
 // CHECK-CXX: %[[V0:.*]] = icmp ne ptr %[[CALL]], null
@@ -110,7 +113,7 @@ void (* const __ptrauth(0, 1, 43) &f_ref)(int) = f_const_ptr2;
 // CHECK-CXX: %[[V4:.*]] = phi ptr [ null, %[[ENTRY]] ], [ %[[V3]], %[[RESIGN_NONNULL]] ]
 // CHECK-CXX: store ptr %[[V4]], ptr @f_const_ptr2, align 8
 
-// CHECK-CXX-LABEL: define internal void @__cxx_global_var_init.1()
+// CHECK-CXX-LABEL: define {{.*}}internal void @__cxx_global_var_init.1()
 // CHECK-CXX: [[ENTRY:.*]]:
 // CHECK-CXX: %[[V0:.*]] = load ptr, ptr @f_const_ptr2, align 8
 // CHECK-CXX: %[[V1:.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr @_ZGR5f_ref_ to i64), i64 43)
@@ -128,7 +131,7 @@ void (* const __ptrauth(0, 1, 43) &f_ref)(int) = f_const_ptr2;
 // CHECK-CXX: store ptr %[[V6]], ptr @_ZGR5f_ref_, align 8
 // CHECK-CXX: store ptr @_ZGR5f_ref_, ptr @f_ref, align 8
 
-// CHECK-CXX-LABEL: define void @test_const_ptr_ref_function_call()
+// CHECK-CXX-LABEL: define {{.*}}void @test_const_ptr_ref_function_call()
 void test_const_ptr_ref_function_call(void) {
   f_ref(1);
 

@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios \
 // RUN:   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -fblocks \
 // RUN:   %s -debug-info-kind=limited -o - | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu \
+// RUN:   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -fblocks \
+// RUN:   %s -debug-info-kind=limited -o - | FileCheck %s
 
 // Constant initializers for data pointers.
 extern int external_int;
