@@ -249,17 +249,11 @@
 #   error "__cpp_lib_ranges should have the value 202207L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_as_const
-#     error "__cpp_lib_ranges_as_const should be defined in c++23"
-#   endif
-#   if __cpp_lib_ranges_as_const != 202311L
-#     error "__cpp_lib_ranges_as_const should have the value 202311L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_as_const
-#     error "__cpp_lib_ranges_as_const should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_as_const
+#   error "__cpp_lib_ranges_as_const should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_as_const != 202311L
+#   error "__cpp_lib_ranges_as_const should have the value 202311L in c++23"
 # endif
 
 # ifndef __cpp_lib_ranges_as_rvalue
@@ -368,17 +362,11 @@
 #   error "__cpp_lib_ranges should have the value 202207L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_as_const
-#     error "__cpp_lib_ranges_as_const should be defined in c++26"
-#   endif
-#   if __cpp_lib_ranges_as_const != 202311L
-#     error "__cpp_lib_ranges_as_const should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_as_const
-#     error "__cpp_lib_ranges_as_const should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_as_const
+#   error "__cpp_lib_ranges_as_const should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_as_const != 202311L
+#   error "__cpp_lib_ranges_as_const should have the value 202311L in c++26"
 # endif
 
 # ifndef __cpp_lib_ranges_as_rvalue

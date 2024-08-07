@@ -1003,7 +1003,6 @@ feature_test_macros = [
                 "c++23": 202311  # DR P2836R1 std::basic_const_iterator should follow its underlying type’s convertibility
             },
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_as_rvalue",
