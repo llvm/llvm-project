@@ -77,7 +77,7 @@ add_object_library(
     thread.cpp
   DEPENDS
     .futex_utils
-    libc.config.linux.app_h
+    libc.config.app_h
     libc.include.sys_syscall
     libc.include.fcntl
     libc.src.errno.errno
