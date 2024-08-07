@@ -313,6 +313,10 @@ let Definition = "thread" in {
   def MaxBacktraceDepth: Property<"max-backtrace-depth", "UInt64">,
     DefaultUnsignedValue<600000>,
     Desc<"Maximum number of frames to backtrace.">;
+  def SingleThreadPlanTimeout: Property<"single-thread-plan-timeout", "UInt64">,
+    Global,
+    DefaultUnsignedValue<1000>,
+    Desc<"The time in milliseconds to wait for single thread ThreadPlan to move forward before resuming all threads to resolve any potential deadlock. Specify value 0 to disable timeout.">;
 }
 
 let Definition = "language" in {

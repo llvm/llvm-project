@@ -625,10 +625,6 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
-  std::string abi;
-  ArchSpec target_arch;
-  target_arch = target_sp->GetArchitecture();
-
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
   SetupTargetOpts(*m_compiler, *target_sp);

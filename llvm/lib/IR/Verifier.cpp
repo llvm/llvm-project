@@ -6329,6 +6329,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.threadlocal.address operand isThreadLocal() must be true");
     break;
   }
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cluster:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu:
+  case Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys: {
+    unsigned size = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(size == 128, " The only supported value for size operand is 128");
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
