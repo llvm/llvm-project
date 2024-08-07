@@ -12,6 +12,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaInternal.h"
@@ -88,119 +89,6 @@ static bool isNoexcept(const FunctionDecl *FD) {
     return true;
   return false;
 }
-
-#if 0
-/// A mutable set of FunctionEffect, for use in places where any conditions
-/// have been resolved or can be ignored.
-class EffectSet {
-  // This implementation optimizes footprint, since we hold one of these for
-  // every function visited, which, due to inference, can be many more functions
-  // than have declared effects.
-
-  template <typename T, typename SizeT, SizeT Capacity> struct FixedVector {
-    SizeT Count = 0;
-    T Items[Capacity] = {};
-
-    using value_type = T;
-
-    using iterator = T *;
-    using const_iterator = const T *;
-    iterator begin() { return &Items[0]; }
-    iterator end() { return &Items[Count]; }
-    const_iterator begin() const { return &Items[0]; }
-    const_iterator end() const { return &Items[Count]; }
-    const_iterator cbegin() const { return &Items[0]; }
-    const_iterator cend() const { return &Items[Count]; }
-
-    void insert(iterator I, const T &Value) {
-      assert(Count < Capacity);
-      iterator E = end();
-      if (I != E)
-        std::copy_backward(I, E, E + 1);
-      *I = Value;
-      ++Count;
-    }
-
-    void push_back(const T &Value) {
-      assert(Count < Capacity);
-      Items[Count++] = Value;
-    }
-  };
-
-  // As long as FunctionEffect is only 1 byte, and there are only 2 verifiable
-  // effects, this fixed-size vector with a capacity of 7 is more than
-  // sufficient and is only 8 bytes.
-  FixedVector<FunctionEffect, uint8_t, 7> Impl;
-
-public:
-  EffectSet() = default;
-  explicit EffectSet(FunctionEffectsRef FX) { insert(FX); }
-
-  operator ArrayRef<FunctionEffect>() const {
-    return ArrayRef(Impl.cbegin(), Impl.cend());
-  }
-
-  using iterator = const FunctionEffect *;
-  iterator begin() const { return Impl.cbegin(); }
-  iterator end() const { return Impl.cend(); }
-
-  void insert(const FunctionEffect &Effect) {
-    FunctionEffect *Iter = Impl.begin();
-    FunctionEffect *End = Impl.end();
-    // linear search; lower_bound is overkill for a tiny vector like this
-    for (; Iter != End; ++Iter) {
-      if (*Iter == Effect)
-        return;
-      if (Effect < *Iter)
-        break;
-    }
-    Impl.insert(Iter, Effect);
-  }
-  void insert(const EffectSet &Set) {
-    for (const FunctionEffect &Item : Set) {
-      // push_back because set is already sorted
-      Impl.push_back(Item);
-    }
-  }
-  void insert(FunctionEffectsRef FX) {
-    for (const FunctionEffectWithCondition &EC : FX) {
-      assert(EC.Cond.getCondition() ==
-             nullptr); // should be resolved by now, right?
-      // push_back because set is already sorted
-      Impl.push_back(EC.Effect);
-    }
-  }
-  bool contains(const FunctionEffect::Kind EK) const {
-    for (const FunctionEffect &E : Impl)
-      if (E.kind() == EK)
-        return true;
-    return false;
-  }
-
-  void dump(llvm::raw_ostream &OS) const;
-
-  static EffectSet difference(ArrayRef<FunctionEffect> LHS,
-                              ArrayRef<FunctionEffect> RHS) {
-    EffectSet Result;
-    std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                        std::back_inserter(Result.Impl));
-    return Result;
-  }
-};
-
-LLVM_DUMP_METHOD void EffectSet::dump(llvm::raw_ostream &OS) const {
-  OS << "Effects{";
-  bool First = true;
-  for (const FunctionEffect &Effect : *this) {
-    if (!First)
-      OS << ", ";
-    else
-      First = false;
-    OS << Effect.name();
-  }
-  OS << "}";
-}
-#endif
 
 // Transitory, more extended information about a callable, which can be a
 // function, block, function pointer, etc.
@@ -1095,6 +983,12 @@ private:
       return true;
     }
 
+    bool VisitSEHExceptStmt(SEHExceptStmt *Exc) {
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
+                                ViolationID::Catches, Exc->getExceptLoc());
+      return true;
+    }
+
     bool VisitCallExpr(CallExpr *Call) {
       LLVM_DEBUG(llvm::dbgs()
                      << "VisitCallExpr : "
@@ -1199,7 +1093,10 @@ private:
 
     bool TraverseLambdaExpr(LambdaExpr *Lambda) {
       // We override this so as the be able to skip traversal of the lambda's
-      // body. We have to explicitly traverse the captures.
+      // body. We have to explicitly traverse the captures. Why not return
+      // false from shouldVisitLambdaBody()? Because we need to visit a lambda's
+      // body when we are verifying the lambda itself; we only want to skip it
+      // in the context of the outer function.
       for (unsigned I = 0, N = Lambda->capture_size(); I < N; ++I)
         TraverseLambdaCapture(Lambda, Lambda->capture_begin() + I,
                               Lambda->capture_init_begin()[I]);
