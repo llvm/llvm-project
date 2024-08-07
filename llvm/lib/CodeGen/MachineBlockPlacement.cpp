@@ -3649,6 +3649,7 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
+  MPDT->updateBlockNumbers();
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {

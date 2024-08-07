@@ -3049,9 +3049,10 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
           MoveUse = Pos;
       }
       // We did not handle HW dependences in previous for loop,
-      // and we normally set Latency = 0 for Anti deps,
-      // so may have nodes in same cycle with Anti denpendent on HW regs.
-      else if (S.getKind() == SDep::Anti && stageScheduled(*I) == StageInst1) {
+      // and we normally set Latency = 0 for Anti/Output deps,
+      // so may have nodes in same cycle with Anti/Output dependent on HW regs.
+      else if ((S.getKind() == SDep::Anti || S.getKind() == SDep::Output) &&
+               stageScheduled(*I) == StageInst1) {
         OrderBeforeUse = true;
         if ((MoveUse == 0) || (Pos < MoveUse))
           MoveUse = Pos;
@@ -3060,7 +3061,9 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
     for (auto &P : SU->Preds) {
       if (P.getSUnit() != *I)
         continue;
-      if (P.getKind() == SDep::Order && stageScheduled(*I) == StageInst1) {
+      if ((P.getKind() == SDep::Order || P.getKind() == SDep::Anti ||
+           P.getKind() == SDep::Output) &&
+          stageScheduled(*I) == StageInst1) {
         OrderAfterDef = true;
         MoveDef = Pos;
       }

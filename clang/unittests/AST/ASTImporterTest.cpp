@@ -6738,6 +6738,23 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_TRUE(ToLambda);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ReturnTypeDeclaredInsideOfCXX11LambdaWithTrailingReturn) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+      void foo() {
+        (void) [] {
+          struct X {};
+          return X();
+        };
+      }
+      )",
+      Lang_CXX11, "", Lang_CXX11, "foo"); // c++11 only
+  auto *ToLambda = FirstDeclMatcher<LambdaExpr>().match(To, lambdaExpr());
+  EXPECT_TRUE(ToLambda);
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
   Decl *FromTU = getTuDecl(
       R"(
@@ -7571,6 +7588,25 @@ TEST_P(ImportAutoFunctions, ReturnWithSubstNonTypeTemplateParmExpr) {
       auto foo() { return array<N>(); }
 
       void bar() { foo<0>(); }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX17);
+
+  auto *FromBar = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("bar")));
+
+  auto *ToBar = Import(FromBar, Lang_CXX17);
+  EXPECT_TRUE(ToBar);
+}
+
+TEST_P(ImportAutoFunctions, ReturnWithUnaryTransformType) {
+  const char *Code =
+      R"(
+        enum E { E1 };
+
+        template<typename T>
+        auto foo(T v) { return static_cast<__underlying_type(T)>(v); }
+
+        bool bar() { return foo(E1); }
       )";
   Decl *FromTU = getTuDecl(Code, Lang_CXX17);
 
