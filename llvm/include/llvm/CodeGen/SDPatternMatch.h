@@ -561,8 +561,8 @@ inline BinaryOpc_match<LHS, RHS> m_Sub(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS> m_Mul(const LHS &L, const RHS &R) {
-  return BinaryOpc_match<LHS, RHS>(ISD::MUL, L, R);
+inline BinaryOpc_match<LHS, RHS, true> m_Mul(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::MUL, L, R);
 }
 
 template <typename LHS, typename RHS>
