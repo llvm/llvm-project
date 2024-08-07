@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -DLATE_PARSING_ENABLED -fexperimental-late-parse-attributes -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,immediate %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify=expected,late %s
 
 #define __sized_by(f)  __attribute__((sized_by(f)))
 
@@ -81,17 +81,12 @@ struct found_outside_of_struct {
   struct bar ** ptr __sized_by(global); // expected-error {{field 'global' in 'sized_by' not inside structure}}
 };
 
-#ifndef LATE_PARSING_ENABLED
 struct self_referrential {
   int bork;
-  struct bar *self[] __sized_by(self); // expected-error {{use of undeclared identifier 'self'}}
+  // immediate-error@+2{{use of undeclared identifier 'self'}}
+  // late-error@+1{{'sized_by' only applies to pointers; did you mean to use 'counted_by'?}}
+  struct bar *self[] __sized_by(self);
 };
-#else
-struct self_referrential {
-  int bork;
-  struct bar *self[] __sized_by(self); // expected-error {{'sized_by' only applies to pointers; did you mean to use 'counted_by'?}}
-};
-#endif
 
 struct non_int_size {
   double dbl_size;
