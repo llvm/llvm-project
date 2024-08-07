@@ -146,14 +146,11 @@ public:
   public:
     static Memory64Iterator
     begin(ArrayRef<uint8_t> Storage,
-          ArrayRef<minidump::MemoryDescriptor_64> Descriptors,
-          uint64_t BaseRVA) {
-      return Memory64Iterator(Storage, Descriptors, BaseRVA);
+          ArrayRef<minidump::MemoryDescriptor_64> Descriptors) {
+      return Memory64Iterator(Storage, Descriptors);
     }
 
     static Memory64Iterator end() { return Memory64Iterator(); }
-
-    std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> Current;
 
     bool operator==(const Memory64Iterator &R) const {
       return IsEnd == R.IsEnd;
@@ -167,29 +164,33 @@ public:
     }
 
     const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> *
-    operator&() {
+    operator->() {
       return &Current;
     }
 
     Error inc() {
-      if (Storage.size() == 0 || Descriptors.size() == 0)
-        return make_error<GenericBinaryError>("No Memory64List Stream",
-                                              object_error::parse_failed);
+      if (Storage.size() == 0 || Descriptors.size() == 0) {
+        IsEnd = true;
+        return Error::success();
+      }
 
-      if (Index >= Descriptors.size())
-        return createError("Can't read past of Memory64List Stream");
-
-      const minidump::MemoryDescriptor_64 &Descriptor = Descriptors[Index];
-      if (RVA + Descriptor.DataSize > Storage.size())
+      // Drop front gives us an array ref, so we need to call .front() as well.
+      const minidump::MemoryDescriptor_64 &Descriptor = Descriptors.front();
+      if (Descriptor.DataSize > Storage.size()) {
+        IsEnd = true;
         return make_error<GenericBinaryError>(
             "Memory64 Descriptor exceeds end of file.",
             object_error::unexpected_eof);
+      }
 
-      ArrayRef<uint8_t> Content = Storage.slice(RVA, Descriptor.DataSize);
+
+      ArrayRef<uint8_t> Content = Storage.take_front(Descriptor.DataSize);
       Current = std::make_pair(Descriptor, Content);
-      Index++;
-      RVA += Descriptor.DataSize;
-      if (Index >= Descriptors.size())
+
+      Storage = Storage.drop_front(Descriptor.DataSize);
+      Descriptors = Descriptors.drop_front();
+
+      if (Descriptors.empty())
         IsEnd = true;
       return Error::success();
     }
@@ -198,23 +199,22 @@ public:
     // This constructor will only happen after a validation check to see
     // if the first descriptor is readable.
     Memory64Iterator(ArrayRef<uint8_t> Storage,
-                     ArrayRef<minidump::MemoryDescriptor_64> Descriptors,
-                     uint64_t BaseRVA)
-        : RVA(BaseRVA), Storage(Storage), Descriptors(Descriptors),
+                     ArrayRef<minidump::MemoryDescriptor_64> Descriptors)
+        : Storage(Storage), Descriptors(Descriptors),
           IsEnd(false) {
-      assert(Descriptors.size() > 0);
-      assert(Storage.size() >= BaseRVA + Descriptors.front().DataSize);
-      Current =
-          std::make_pair(Descriptors.front(),
-                         Storage.slice(BaseRVA, Descriptors.front().DataSize));
+      assert(Descriptors.size() > 0 && Storage.size() >= Descriptors.front().DataSize);
+      minidump::MemoryDescriptor_64 Descriptor = Descriptors.front();
+      ArrayRef<uint8_t> Content = Storage.take_front(Descriptor.DataSize);
+      Current = std::make_pair(Descriptor, Content);
+      this->Descriptors = Descriptors.drop_front();
+      this->Storage = Storage.drop_front(Descriptor.DataSize);
     }
 
     Memory64Iterator()
-        : RVA(0), Storage(ArrayRef<uint8_t>()),
+        : Storage(ArrayRef<uint8_t>()),
           Descriptors(ArrayRef<minidump::MemoryDescriptor_64>()), IsEnd(true) {}
 
-    size_t Index = 0;
-    uint64_t RVA;
+    std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> Current;
     ArrayRef<uint8_t> Storage;
     ArrayRef<minidump::MemoryDescriptor_64> Descriptors;
     bool IsEnd;
@@ -226,7 +226,7 @@ public:
   /// content from the Memory64List stream. An error is returned if the file
   /// does not contain a Memory64List stream, or if the descriptor data is
   /// unreadable.
-  Expected<iterator_range<FallibleMemory64Iterator>>
+  iterator_range<FallibleMemory64Iterator>
   getMemory64List(Error &Err) const;
 
   /// Returns the list of descriptors embedded in the MemoryInfoList stream. The

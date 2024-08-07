@@ -529,22 +529,13 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
     return std::make_unique<MemoryListStream>(std::move(Ranges));
   }
   case StreamKind::Memory64List: {
-    // Error, unlike expected is true in failure state
     Error Err = Error::success();
-    // Explicit check on Err so that if we return due to getmemory64list
-    // getting an error, it's not destructed when unchecked.
+    auto Memory64List = File.getMemory64List(Err);
     if (Err)
       return Err;
-    auto ExpectedList = File.getMemory64List(Err);
-    if (!ExpectedList)
-      return ExpectedList.takeError();
     std::vector<Memory64ListStream::entry_type> Ranges;
-    for (auto It = ExpectedList->begin(); It != ExpectedList->end(); ++It) {
-      const auto Pair = *It;
-      if (!Err)
+    for (const auto &Pair : Memory64List) {
         Ranges.push_back({Pair.first, Pair.second});
-      else
-        break;
     }
 
     // If we don't have an error, or if any of the reads succeed, return ranges

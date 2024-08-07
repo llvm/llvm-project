@@ -353,7 +353,7 @@ Streams:
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
   object::MinidumpFile &File = **ExpectedFile;
 
-  ASSERT_THAT(1u, File.streams().size());
+  ASSERT_THAT(File.streams().size(), 1u);
 
   Error Err = Error::success();
   // Explicit Err check
@@ -367,21 +367,22 @@ Streams:
       *ExpectedMemoryList;
   auto Iterator = MemoryList.begin();
 
-  ++Iterator;
-  ASSERT_FALSE(Err);
+
 
   auto DescOnePair = *Iterator;
   const minidump::MemoryDescriptor_64 &DescOne = DescOnePair.first;
-  ASSERT_THAT(0x7FFFFFCF0818283u, DescOne.StartOfMemoryRange);
-  ASSERT_THAT(5u, DescOne.DataSize);
-
+  ASSERT_THAT(DescOne.StartOfMemoryRange, 0x7FFFFFCF0818283u);
+  ASSERT_THAT(DescOne.DataSize, 5u);
   ++Iterator;
   ASSERT_FALSE(Err);
 
   auto DescTwoPair = *Iterator;
   const minidump::MemoryDescriptor_64 &DescTwo = DescTwoPair.first;
-  ASSERT_THAT(0x7FFFFFFF0818283u, DescTwo.StartOfMemoryRange);
-  ASSERT_THAT(5u, DescTwo.DataSize);
+  ASSERT_THAT(DescTwo.StartOfMemoryRange, 0x7FFFFFFF0818283u);
+  ASSERT_THAT(DescTwo.DataSize, 5u);
+  ++Iterator;
+  ASSERT_FALSE(Err);
+
   const std::optional<ArrayRef<uint8_t>> ExpectedContent =
       File.getRawStream(StreamType::Memory64List);
   ASSERT_TRUE(ExpectedContent);
@@ -396,14 +397,14 @@ Streams:
 
   Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = DescOnePair.second;
   ASSERT_THAT_EXPECTED(DescOneExpectedContentSlice, Succeeded());
-  ASSERT_THAT(5u, DescOneExpectedContentSlice->size());
-  ASSERT_THAT(arrayRefFromStringRef("hello"), *DescOneExpectedContentSlice);
+  ASSERT_THAT(DescOneExpectedContentSlice->size(), 5u);
+  ASSERT_THAT(*DescOneExpectedContentSlice, arrayRefFromStringRef("hello"));
 
   Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = DescTwoPair.second;
   ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
-  ASSERT_THAT(arrayRefFromStringRef("world"), *DescTwoExpectedContentSlice);
+  ASSERT_THAT(*DescTwoExpectedContentSlice, arrayRefFromStringRef("world"));
 
-  ASSERT_TRUE(Iterator == MemoryList.end());
+  ASSERT_EQ(Iterator, MemoryList.end());
 }
 
 TEST(MinidumpYAML, MemoryRegion_DataSize_TooSmall) {
@@ -414,7 +415,7 @@ Streams:
   - Type:            Memory64List
     Memory Ranges:
       - Start of Memory Range: 0x7FFFFFCF0818283
-        Data Size: 4           1
+        Data Size:             1
         Content:               '68656c6c6f'
       - Start of Memory Range: 0x7FFFFFFF0818283
         Content:               '776f726c64'
