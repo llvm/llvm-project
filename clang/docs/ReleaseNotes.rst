@@ -110,6 +110,9 @@ C2y Feature Support
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+Non-comprehensive list of changes in this release
+-------------------------------------------------
+
 New Compiler Flags
 ------------------
 
