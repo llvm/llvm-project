@@ -991,6 +991,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp10
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   exp10f_test
   NEED_MPFR
   SUITE
@@ -1004,16 +1017,14 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- exp10_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   exp10_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.src.math.exp10
-   libc.src.__support.FPUtil.fp_bits
+  exp10f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10f16_test.cpp
+  DEPENDS
+    libc.src.math.exp10f16
 )
 
 add_fp_unittest(
