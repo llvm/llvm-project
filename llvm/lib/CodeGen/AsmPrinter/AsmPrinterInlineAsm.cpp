@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
@@ -50,10 +51,11 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
   SourceMgr &SrcMgr = *Context.getInlineSourceManager();
   std::vector<const MDNode *> &LocInfos = Context.getLocInfos();
 
+  DIScope *Scope = DbgLoc ? dyn_cast<DIScope>(DbgLoc->getScope()) : nullptr;
   std::unique_ptr<MemoryBuffer> Buffer;
   // The inline asm source manager will outlive AsmStr, so make a copy of the
   // string for SourceMgr to own.
-  Buffer = MemoryBuffer::getMemBufferCopy(AsmStr, "<inline asm>");
+  Buffer = MemoryBuffer::getMemBufferCopy(AsmStr, Scope ? Scope->getFilename() : "<inline asm>");
 
   // Tell SrcMgr about this buffer, it takes ownership of the buffer.
   unsigned BufNum = DbgLoc ? \
