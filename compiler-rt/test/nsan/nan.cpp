@@ -1,5 +1,5 @@
 // RUN: %clangxx_nsan -O0 -g %s -o %t
-// RUN: NSAN_OPTIONS=check_nan=true %run %t 2>&1 | FileCheck %s
+// RUN: NSAN_OPTIONS=check_nan=true,halt_on_error=0 %run %t 2>&1 | FileCheck %s
 
 #include <cmath>
 #include <cstdio>
