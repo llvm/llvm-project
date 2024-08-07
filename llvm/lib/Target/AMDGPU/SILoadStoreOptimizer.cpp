@@ -2117,6 +2117,9 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
     BaseLo = *Src0;
   }
 
+  if (!BaseLo.isReg())
+    return;
+
   Src0 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src0);
   Src1 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src1);
 
@@ -2128,6 +2131,9 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
 
   uint64_t Offset1 = Src1->getImm();
   BaseHi = *Src0;
+
+  if (!BaseHi.isReg())
+    return;
 
   Addr.Base.LoReg = BaseLo.getReg();
   Addr.Base.HiReg = BaseHi.getReg();
