@@ -30,6 +30,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -6482,6 +6483,45 @@ const FieldDecl *FindCountedByField(const FieldDecl *FD) {
   return dyn_cast<FieldDecl>(CountDecl);
 }
 
+namespace {
+
+/// MemberExprVisitor - Find the MemberExpr through all of the casts, array
+/// subscripts, and unary ops. This intentionally avoids all of them because
+/// we're interested only in the MemberExpr to check if it's a flexible array
+/// member.
+class MemberExprVisitor
+    : public ConstStmtVisitor<MemberExprVisitor, const Expr *> {
+public:
+  //===--------------------------------------------------------------------===//
+  //                            Visitor Methods
+  //===--------------------------------------------------------------------===//
+
+  const Expr *Visit(const Expr *E) {
+    return ConstStmtVisitor<MemberExprVisitor, const Expr *>::Visit(E);
+  }
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
+
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    return Visit(E->getBase());
+  }
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // anonymous namespace
+
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig, bool IsExecConfig,
@@ -6685,19 +6725,19 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   if (FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
       FDecl && FDecl->getBuiltinID() == Builtin::BI__builtin_get_counted_by) {
-    if (const MemberExpr *ME =
-            dyn_cast<MemberExpr>(ArgExprs[0]->IgnoreImpCasts())) {
+    if (const Expr *Ptr = MemberExprVisitor().Visit(ArgExprs[0])) {
+      const MemberExpr *ME = cast<MemberExpr>(Ptr);
       bool IsFlexibleArrayMember = ME->isFlexibleArrayMemberLike(
               Context, getLangOpts().getStrictFlexArraysLevel(),
               /*IgnoreTemplateOrMacroSubstitution=*/false);
 
-      // TODO: Probably have to handle horrible casting crap here.
-
-      // FIXME: Emit a diagnostic?
       if (!ME->HasSideEffects(Context) && IsFlexibleArrayMember &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
         if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
+          // The builtin returns a 'size_t *', however 'size_t' might not be
+          // the type of the count field. Thus we create an explicit c-style
+          // cast to ensure the proper types going forward.
           QualType PtrTy = Context.getPointerType(CountFD->getType());
           Result = CStyleCastExpr::Create(
               Context, PtrTy, VK_LValue, CK_BitCast, Result.get(), nullptr,
