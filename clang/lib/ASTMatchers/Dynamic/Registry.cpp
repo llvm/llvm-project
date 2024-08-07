@@ -125,6 +125,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER_OVERLOAD(equals);
 
   REGISTER_REGEX_MATCHER(isExpansionInFileMatching);
+  REGISTER_REGEX_MATCHER(matchesString);
   REGISTER_REGEX_MATCHER(matchesName);
   REGISTER_REGEX_MATCHER(matchesSelector);
 
