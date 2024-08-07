@@ -1651,9 +1651,9 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     break;
   }
 
-    It->second = std::unique_ptr<OpaqueInst>(
-        new OpaqueInst(cast<llvm::Instruction>(LLVMV), *this));
-    return It->second.get();
+  It->second = std::unique_ptr<OpaqueInst>(
+      new OpaqueInst(cast<llvm::Instruction>(LLVMV), *this));
+  return It->second.get();
 }
 
 BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
