@@ -14,7 +14,6 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "CGCall.h"
-#include "clang/AST/StableHash.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -56,11 +55,6 @@ llvm::ConstantInt *CodeGenModule::getPointerAuthOtherDiscriminator(
 uint16_t CodeGen::getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
                                                   QualType FunctionType) {
   return CGM.getContext().getPointerAuthTypeDiscriminator(FunctionType);
-}
-
-/// Compute an ABI-stable hash of the given string.
-uint64_t CodeGen::computeStableStringHash(StringRef string) {
-  return clang::getStableStringHash(string);
 }
 
 uint16_t CodeGen::getPointerAuthDeclDiscriminator(CodeGenModule &CGM,

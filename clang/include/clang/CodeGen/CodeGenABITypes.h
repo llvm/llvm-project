@@ -106,13 +106,6 @@ llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 unsigned getLLVMFieldNumber(CodeGenModule &CGM,
                             const RecordDecl *RD, const FieldDecl *FD);
 
-/// Compute a stable hash of the given string.
-///
-/// The exact algorithm is the little-endian interpretation of the
-/// non-doubled (i.e. 64-bit) result of applying a SipHash-2-4 using
-/// a specific key value which can be found in the source.
-uint64_t computeStableStringHash(StringRef string);
-
 /// Return a declaration discriminator for the given global decl.
 uint16_t getPointerAuthDeclDiscriminator(CodeGenModule &CGM, GlobalDecl GD);
 

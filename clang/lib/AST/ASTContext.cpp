@@ -40,7 +40,6 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/StableHash.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/TemplateBase.h"
