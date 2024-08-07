@@ -551,9 +551,7 @@ static void UnpoisonBeforeMain(void) {
 __attribute__((section(".init_array.65537"), used)) static void (
     *asan_after_init_array)(void) = UnpoisonBeforeMain;
 #else
-// Allow all `__asan_after_dynamic_init` if `AfterDynamicInit` is not set.
-// Compiler still generates `__asan_{before,after}_dynamic_init`in pairs, and
-// it's guaranteed that `__asan_after_dynamic_init` will be the last.
+// Incremental poisoning is disabled, unpoison globals immediately.
 static constexpr bool allow_after_dynamic_init = true;
 #endif  // SANITIZER_CAN_USE_PREINIT_ARRAY
 
