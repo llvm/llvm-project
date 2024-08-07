@@ -4,18 +4,13 @@
 define void @test(ptr noalias %a, ptr %b) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i32 64
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[A1:%.*]] = load i64, ptr [[PA1]], align 8
-; CHECK-NEXT:    [[A2:%.*]] = load i32, ptr [[PA2]], align 4
 ; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i32 64
-; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 1
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[B1:%.*]] = load i64, ptr [[PB1]], align 8
-; CHECK-NEXT:    [[B2:%.*]] = load i32, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 4
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i64 [[B1]], [[A1]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[B2]], [[A2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret void
 ;
   %pa1 = getelementptr inbounds i64, ptr %a, i32 64
