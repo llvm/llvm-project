@@ -183,7 +183,6 @@ public:
             object_error::unexpected_eof);
       }
 
-
       ArrayRef<uint8_t> Content = Storage.take_front(Descriptor.DataSize);
       Current = std::make_pair(Descriptor, Content);
 
@@ -200,9 +199,9 @@ public:
     // if the first descriptor is readable.
     Memory64Iterator(ArrayRef<uint8_t> Storage,
                      ArrayRef<minidump::MemoryDescriptor_64> Descriptors)
-        : Storage(Storage), Descriptors(Descriptors),
-          IsEnd(false) {
-      assert(Descriptors.size() > 0 && Storage.size() >= Descriptors.front().DataSize);
+        : Storage(Storage), Descriptors(Descriptors), IsEnd(false) {
+      assert(Descriptors.size() > 0 &&
+             Storage.size() >= Descriptors.front().DataSize);
       minidump::MemoryDescriptor_64 Descriptor = Descriptors.front();
       ArrayRef<uint8_t> Content = Storage.take_front(Descriptor.DataSize);
       Current = std::make_pair(Descriptor, Content);
@@ -226,8 +225,7 @@ public:
   /// content from the Memory64List stream. An error is returned if the file
   /// does not contain a Memory64List stream, or if the descriptor data is
   /// unreadable.
-  iterator_range<FallibleMemory64Iterator>
-  getMemory64List(Error &Err) const;
+  iterator_range<FallibleMemory64Iterator> getMemory64List(Error &Err) const;
 
   /// Returns the list of descriptors embedded in the MemoryInfoList stream. The
   /// descriptors provide properties (e.g. permissions) of interesting regions

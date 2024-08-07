@@ -535,7 +535,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
       return Err;
     std::vector<Memory64ListStream::entry_type> Ranges;
     for (const auto &Pair : Memory64List) {
-        Ranges.push_back({Pair.first, Pair.second});
+      Ranges.push_back({Pair.first, Pair.second});
     }
 
     // If we don't have an error, or if any of the reads succeed, return ranges

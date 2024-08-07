@@ -367,8 +367,6 @@ Streams:
       *ExpectedMemoryList;
   auto Iterator = MemoryList.begin();
 
-
-
   auto DescOnePair = *Iterator;
   const minidump::MemoryDescriptor_64 &DescOne = DescOnePair.first;
   ASSERT_THAT(DescOne.StartOfMemoryRange, 0x7FFFFFCF0818283u);

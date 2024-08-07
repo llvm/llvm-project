@@ -156,9 +156,13 @@ MinidumpFile::create(MemoryBufferRef Source) {
       new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap)));
 }
 
-static iterator_range<MinidumpFile::FallibleMemory64Iterator> makeEmptyRange(Error &Err) {
-    return make_range(llvm::object::MinidumpFile::FallibleMemory64Iterator::itr(llvm::object::MinidumpFile::Memory64Iterator::end(), Err),
-                      llvm::object::MinidumpFile::FallibleMemory64Iterator::end(llvm::object::MinidumpFile::Memory64Iterator::end()));
+static iterator_range<MinidumpFile::FallibleMemory64Iterator>
+makeEmptyRange(Error &Err) {
+  return make_range(
+      llvm::object::MinidumpFile::FallibleMemory64Iterator::itr(
+          llvm::object::MinidumpFile::Memory64Iterator::end(), Err),
+      llvm::object::MinidumpFile::FallibleMemory64Iterator::end(
+          llvm::object::MinidumpFile::Memory64Iterator::end()));
 }
 
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
@@ -192,9 +196,9 @@ MinidumpFile::getMemory64List(Error &Err) const {
     return makeEmptyRange(Err);
   }
 
-  return make_range(
-      FallibleMemory64Iterator::itr(
-          Memory64Iterator::begin(getData().slice(ListHeader->BaseRVA), *Descriptors),
-          Err),
-      FallibleMemory64Iterator::end(Memory64Iterator::end()));
+  return make_range(FallibleMemory64Iterator::itr(
+                        Memory64Iterator::begin(
+                            getData().slice(ListHeader->BaseRVA), *Descriptors),
+                        Err),
+                    FallibleMemory64Iterator::end(Memory64Iterator::end()));
 }
