@@ -78,9 +78,12 @@ public:
     MCObjectStreamer::reset();
   }
 
-  MachObjectWriter &getWriter() {
-    return static_cast<MachObjectWriter &>(getAssembler().getWriter());
-  }
+  // This function is commented out downstream because it is unsafe to use a
+  // MachObjectWriter in the McMachOStreamer which may hold a MachOCASWriter
+  // instead.
+  // MachObjectWriter &getWriter() {
+  //   return static_cast<MachObjectWriter &>(getAssembler().getWriter());
+  // }
 
   MCObjectWriter &getMCObjectWriter() {
     return static_cast<MCObjectWriter &>(getAssembler().getWriter());
