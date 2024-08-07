@@ -1042,12 +1042,12 @@ static bool shouldAdhocSignByDefault(Architecture arch, PlatformType platform) {
          platform == PLATFORM_XROS_SIMULATOR;
 }
 
-template <unsigned long N>
+template <std::size_t N>
 using MinVersions = std::array<std::pair<PlatformType, VersionTuple>, N>;
 
 /// Returns true if the platform is greater than the min version.
 /// Returns false if the platform does not exist.
-template <unsigned long N>
+template <std::size_t N>
 static bool greaterEqMinVersion(const MinVersions<N> &minVersions,
                                 bool ignoreSimulator) {
   PlatformType platform = config->platformInfo.target.Platform;
