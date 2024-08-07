@@ -11,6 +11,7 @@
 #include<vector>
 #include<algorithm>
 #include<cmath>
+
 // unstable softmax
 template <typename T>
 __attribute__((noinline)) void softmax(std::vector<T> &values) {
