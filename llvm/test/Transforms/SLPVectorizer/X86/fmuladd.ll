@@ -48,18 +48,12 @@ define void @fmuladd_2f64() #0 {
 
 define void @fmuladd_2f64_freeze() #0 {
 ; CHECK-LABEL: @fmuladd_2f64_freeze(
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr @srcA64, align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcA64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[B0:%.*]] = load double, ptr @srcB64, align 8
-; CHECK-NEXT:    [[B1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcB64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[C0:%.*]] = load double, ptr @srcC64, align 8
-; CHECK-NEXT:    [[C1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcC64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[FMULADD0:%.*]] = call double @llvm.fmuladd.f64(double [[A0]], double [[B0]], double [[C0]])
-; CHECK-NEXT:    [[FMULADD1:%.*]] = call double @llvm.fmuladd.f64(double [[A1]], double [[B1]], double [[C1]])
-; CHECK-NEXT:    [[FREEZE0:%.*]] = freeze double [[FMULADD0]]
-; CHECK-NEXT:    [[FREEZE1:%.*]] = freeze double [[FMULADD1]]
-; CHECK-NEXT:    store double [[FREEZE0]], ptr @dst64, align 8
-; CHECK-NEXT:    store double [[FREEZE1]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @srcA64, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @srcB64, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr @srcC64, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <2 x double> [[TMP4]]
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr @dst64, align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load double, ptr @srcA64, align 8
