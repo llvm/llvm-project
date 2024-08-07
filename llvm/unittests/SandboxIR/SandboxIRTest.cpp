@@ -1475,6 +1475,147 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   EXPECT_EQ(NewGEP2->getNextNode(), nullptr);
 }
 
+TEST_F(SandboxIRTest, AllocaInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+  %allocaScalar = alloca i32, align 1024
+  %allocaArray = alloca i32, i32 42
+  ret void
+}
+)IR");
+  DataLayout DL(M.get());
+  llvm::Function &LLVMF = *M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMAllocaScalar = cast<llvm::AllocaInst>(&*LLVMIt++);
+  auto *LLVMAllocaArray = cast<llvm::AllocaInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *AllocaScalar = cast<sandboxir::AllocaInst>(&*It++);
+  auto *AllocaArray = cast<sandboxir::AllocaInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check isArrayAllocation().
+  EXPECT_EQ(AllocaScalar->isArrayAllocation(),
+            LLVMAllocaScalar->isArrayAllocation());
+  EXPECT_EQ(AllocaArray->isArrayAllocation(),
+            LLVMAllocaArray->isArrayAllocation());
+  // Check getArraySize().
+  EXPECT_EQ(AllocaScalar->getArraySize(),
+            Ctx.getValue(LLVMAllocaScalar->getArraySize()));
+  EXPECT_EQ(AllocaArray->getArraySize(),
+            Ctx.getValue(LLVMAllocaArray->getArraySize()));
+  // Check getType().
+  EXPECT_EQ(AllocaScalar->getType(), LLVMAllocaScalar->getType());
+  EXPECT_EQ(AllocaArray->getType(), LLVMAllocaArray->getType());
+  // Check getAddressSpace().
+  EXPECT_EQ(AllocaScalar->getAddressSpace(),
+            LLVMAllocaScalar->getAddressSpace());
+  EXPECT_EQ(AllocaArray->getAddressSpace(), LLVMAllocaArray->getAddressSpace());
+  // Check getAllocationSize().
+  EXPECT_EQ(AllocaScalar->getAllocationSize(DL),
+            LLVMAllocaScalar->getAllocationSize(DL));
+  EXPECT_EQ(AllocaArray->getAllocationSize(DL),
+            LLVMAllocaArray->getAllocationSize(DL));
+  // Check getAllocationSizeInBits().
+  EXPECT_EQ(AllocaScalar->getAllocationSizeInBits(DL),
+            LLVMAllocaScalar->getAllocationSizeInBits(DL));
+  EXPECT_EQ(AllocaArray->getAllocationSizeInBits(DL),
+            LLVMAllocaArray->getAllocationSizeInBits(DL));
+  // Check getAllocatedType().
+  EXPECT_EQ(AllocaScalar->getAllocatedType(),
+            LLVMAllocaScalar->getAllocatedType());
+  EXPECT_EQ(AllocaArray->getAllocatedType(),
+            LLVMAllocaArray->getAllocatedType());
+  // Check setAllocatedType().
+  auto *OrigType = AllocaScalar->getAllocatedType();
+  auto *NewType = PointerType::get(C, 0);
+  EXPECT_NE(NewType, OrigType);
+  AllocaScalar->setAllocatedType(NewType);
+  EXPECT_EQ(AllocaScalar->getAllocatedType(), NewType);
+  AllocaScalar->setAllocatedType(OrigType);
+  EXPECT_EQ(AllocaScalar->getAllocatedType(), OrigType);
+  // Check getAlign().
+  EXPECT_EQ(AllocaScalar->getAlign(), LLVMAllocaScalar->getAlign());
+  EXPECT_EQ(AllocaArray->getAlign(), LLVMAllocaArray->getAlign());
+  // Check setAlignment().
+  Align OrigAlign = AllocaScalar->getAlign();
+  Align NewAlign(16);
+  EXPECT_NE(NewAlign, OrigAlign);
+  AllocaScalar->setAlignment(NewAlign);
+  EXPECT_EQ(AllocaScalar->getAlign(), NewAlign);
+  AllocaScalar->setAlignment(OrigAlign);
+  EXPECT_EQ(AllocaScalar->getAlign(), OrigAlign);
+  // Check isStaticAlloca().
+  EXPECT_EQ(AllocaScalar->isStaticAlloca(), LLVMAllocaScalar->isStaticAlloca());
+  EXPECT_EQ(AllocaArray->isStaticAlloca(), LLVMAllocaArray->isStaticAlloca());
+  // Check isUsedWithInAlloca(), setUsedWithInAlloca().
+  EXPECT_EQ(AllocaScalar->isUsedWithInAlloca(),
+            LLVMAllocaScalar->isUsedWithInAlloca());
+  bool OrigUsedWithInAlloca = AllocaScalar->isUsedWithInAlloca();
+  bool NewUsedWithInAlloca = true;
+  EXPECT_NE(NewUsedWithInAlloca, OrigUsedWithInAlloca);
+  AllocaScalar->setUsedWithInAlloca(NewUsedWithInAlloca);
+  EXPECT_EQ(AllocaScalar->isUsedWithInAlloca(), NewUsedWithInAlloca);
+  AllocaScalar->setUsedWithInAlloca(OrigUsedWithInAlloca);
+  EXPECT_EQ(AllocaScalar->isUsedWithInAlloca(), OrigUsedWithInAlloca);
+
+  auto *Ty = Type::getInt32Ty(C);
+  unsigned AddrSpace = 42;
+  auto *PtrTy = PointerType::get(C, AddrSpace);
+  auto *ArraySize = sandboxir::Constant::createInt(Ty, 43, Ctx);
+  {
+    // Check create() WhereIt, WhereBB.
+    auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
+        Ty, AddrSpace, /*WhereIt=*/Ret->getIterator(),
+        /*WhereBB=*/Ret->getParent(), Ctx, ArraySize, "NewAlloca1"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
+    // Check getType().
+    EXPECT_EQ(NewI->getType(), PtrTy);
+    // Check getArraySize().
+    EXPECT_EQ(NewI->getArraySize(), ArraySize);
+    // Check getAddrSpace().
+    EXPECT_EQ(NewI->getAddressSpace(), AddrSpace);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertBefore.
+    auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
+        Ty, AddrSpace, /*InsertBefore=*/Ret, Ctx, ArraySize, "NewAlloca2"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
+    // Check getType().
+    EXPECT_EQ(NewI->getType(), PtrTy);
+    // Check getArraySize().
+    EXPECT_EQ(NewI->getArraySize(), ArraySize);
+    // Check getAddrSpace().
+    EXPECT_EQ(NewI->getAddressSpace(), AddrSpace);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
+        Ty, AddrSpace, /*InsertAtEnd=*/BB, Ctx, ArraySize, "NewAlloca3"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
+    // Check getType().
+    EXPECT_EQ(NewI->getType(), PtrTy);
+    // Check getArraySize().
+    EXPECT_EQ(NewI->getArraySize(), ArraySize);
+    // Check getAddrSpace().
+    EXPECT_EQ(NewI->getAddressSpace(), AddrSpace);
+    // Check instr position.
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+  }
+}
+
 TEST_F(SandboxIRTest, CastInst) {
   parseIR(C, R"IR(
 define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
