@@ -860,7 +860,7 @@ public:
   MemoryDef *MemDef;
   Instruction *DefInst;
   DSEState &State;
-  SmallVector<MemoryLocationWrapper, 1> DefinedLocations;
+  std::optional<MemoryLocationWrapper> DefinedLocation = std::nullopt;
 };
 
 struct DSEState {
@@ -2193,15 +2193,14 @@ MemoryDefWrapper::MemoryDefWrapper(MemoryDef *MemDef, DSEState &State)
 
   if (isMemTerminatorInst(DefInst, State.TLI)) {
     if (auto KillingLoc = State.getLocForTerminator(DefInst)) {
-      DefinedLocations.push_back(
+      DefinedLocation.emplace(
           MemoryLocationWrapper(KillingLoc->first, State, MemDef));
     }
     return;
   }
 
   if (auto KillingLoc = State.getLocForWrite(DefInst)) {
-    DefinedLocations.push_back(
-        MemoryLocationWrapper(*KillingLoc, State, MemDef));
+    DefinedLocation.emplace(MemoryLocationWrapper(*KillingLoc, State, MemDef));
   }
 }
 
@@ -2245,7 +2244,7 @@ ChangeStateEnum MemoryLocationWrapper::eliminateDeadDefs() {
       continue;
     }
     MemoryDefWrapper DeadDefWrapper(cast<MemoryDef>(DeadAccess), State);
-    MemoryLocationWrapper &DeadLoc = DeadDefWrapper.DefinedLocations.front();
+    MemoryLocationWrapper &DeadLoc = *DeadDefWrapper.DefinedLocation;
     LLVM_DEBUG(dbgs() << " (" << *DeadDefWrapper.DefInst << ")\n");
     ToCheck.insert(DeadLoc.GetDefiningAccess());
     NumGetDomMemoryDefPassed++;
@@ -2316,7 +2315,7 @@ ChangeStateEnum MemoryLocationWrapper::eliminateDeadDefs() {
 }
 
 bool MemoryDefWrapper::eliminateDeadDefs() {
-  if (DefinedLocations.empty()) {
+  if (!DefinedLocation.has_value()) {
     LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
                       << *DefInst << "\n");
     return false;
@@ -2324,8 +2323,7 @@ bool MemoryDefWrapper::eliminateDeadDefs() {
   LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs killed by " << *MemDef
                     << " (" << *DefInst << ")\n");
 
-  assert(DefinedLocations.size() == 1 && "Expected a single defined location");
-  auto &KillingLoc = DefinedLocations.front();
+  auto &KillingLoc = *DefinedLocation;
   ChangeStateEnum ChangeState = KillingLoc.eliminateDeadDefs();
   bool Shortend = ChangeState == ChangeStateEnum::PartiallyDeleteByNonMemTerm;
 
