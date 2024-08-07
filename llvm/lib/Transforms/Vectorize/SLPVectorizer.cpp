@@ -9865,11 +9865,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::AShr:
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::Freeze: {
+  case Instruction::Xor: {
     auto GetScalarCost = [&](unsigned Idx) {
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
-      unsigned OpIdx = isa<UnaryOperator>(VI) || isa<FreezeInst>(VI) ? 0 : 1;
+      unsigned OpIdx = isa<UnaryOperator>(VI) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(VI->getOperand(0));
       TTI::OperandValueInfo Op2Info =
           TTI::getOperandInfo(VI->getOperand(OpIdx));
@@ -9888,7 +9887,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return CommonCost;
         }
       }
-      unsigned OpIdx = isa<UnaryOperator>(VL0) || isa<FreezeInst>(VL0) ? 0 : 1;
+      unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
       return TTI->getArithmeticInstrCost(ShuffleOrOp, VecTy, CostKind, Op1Info,
@@ -10120,6 +10119,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return VecCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
+  }
+  case Instruction::Freeze: {
+    return CommonCost;
   }
   default:
     llvm_unreachable("Unknown instruction");
