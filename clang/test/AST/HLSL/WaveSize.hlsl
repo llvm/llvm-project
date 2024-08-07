@@ -19,7 +19,10 @@
 
 // CHECK-LABLE:FunctionDecl 0x{{[0-9a-f]+}} <{{.*}}> w2 'void ()'
 // CHECK:HLSLWaveSizeAttr 0x{{[0-9a-f]+}} <{{.*}}> 8 128 64
+// Duplicate WaveSize attribute will be ignored.
+// CHECK-NOT:HLSLWaveSizeAttr 0x{{[0-9a-f]+}} <{{.*}}> 8 128 64
  [numthreads(8,8,1)]
+ [WaveSize(8, 128, 64)]
  [WaveSize(8, 128, 64)]
  void w2() {
  }

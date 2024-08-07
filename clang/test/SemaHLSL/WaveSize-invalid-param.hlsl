@@ -99,3 +99,13 @@ void e12() {
 [WaveSize]
 void e13() {
 }
+
+
+[shader("compute")]
+[numthreads(1,1,1)]
+// expected-error@+1 {{'WaveSize' attribute parameters do not match the previous declaration}}
+[WaveSize(8)]
+// expected-note@+1 {{conflicting attribute is here}}
+[WaveSize(16)]
+void e14() {
+}
