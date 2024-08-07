@@ -31,8 +31,12 @@ LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
     Value dimSize;
   };
 
-  // Check for any dims that could be (partially) false before doing the more
-  // expensive value bounds computations.
+  // Loop over the CreateMaskOp operands and collect unknown dims (i.e. dims
+  // that are not obviously constant). If any constant dimension is not all-true
+  // bail out early (as this transform only trying to resolve all-true masks).
+  // This avoids doing value-bounds anaylis in cases like:
+  // `%mask = vector.create_mask %dynamicValue, %c2 : vector<8x4xi1>`
+  // ...where it is known the mask is not all-true by looking at `%c2`.
   SmallVector<UnknownMaskDim> unknownDims;
   for (auto [i, dimSize] : llvm::enumerate(createMaskOp.getOperands())) {
     if (auto intSize = getConstantIntValue(dimSize)) {

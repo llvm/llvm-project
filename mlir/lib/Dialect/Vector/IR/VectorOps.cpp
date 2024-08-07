@@ -5899,15 +5899,20 @@ public:
       maskTypeDimScalableFlags = rankZeroScalableDims;
     }
 
+    // Determine if this CreateMaskOp can be folded to a ConstantMaskOp and
+    // collect the `constantDims` (for the ConstantMaskOp).
     SmallVector<int64_t, 4> constantDims;
     for (auto [i, dimSize] : llvm::enumerate(createMaskOp.getOperands())) {
       if (auto intSize = getConstantIntValue(dimSize)) {
-        // Non scalable dims can have any value. Scalable dims can only be zero.
-        if (intSize >= 0 && maskTypeDimScalableFlags[i])
+        // Constant value.
+        // If the mask dim is non-scalable this can be any value.
+        // If the mask dim is scalable only zero (all-false) is supported.
+        if (maskTypeDimScalableFlags[i] && intSize >= 0)
           return failure();
         constantDims.push_back(*intSize);
       } else if (auto vscaleMultiplier = getConstantVscaleMultiplier(dimSize)) {
-        // Scalable dims must be all-true.
+        // Constant vscale multiple (e.g. 4 x vscale).
+        // Must be all-true to fold to a ConstantMask.
         if (vscaleMultiplier < maskTypeDimSizes[i])
           return failure();
         constantDims.push_back(*vscaleMultiplier);
