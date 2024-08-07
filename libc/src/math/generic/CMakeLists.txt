@@ -4113,19 +4113,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  scalblnl
-  SRCS
-    scalblnl.cpp
-  HDRS
-    ../scalblnl.h
-  DEPENDS
-    libc.hdr.float_macros
-    libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O3
-)
-
-add_entrypoint_object(
   scalblnf
   SRCS
     scalblnf.cpp
@@ -4134,6 +4121,19 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.float_macros
     libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  scalblnl
+  SRCS
+    scalblnl.cpp
+  HDRS
+    ../scalblnl.h
+  DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
