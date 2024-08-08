@@ -16710,12 +16710,13 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
-  PHINode *Loaded = Builder.CreatePHI(ValTy, 3, "loaded.phi");
+  PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
   Loaded->addIncoming(LoadedShared, SharedBB);
   Loaded->addIncoming(LoadedPrivate, PrivateBB);
   Loaded->addIncoming(LoadedGlobal, GlobalBB);
   Builder.CreateBr(ExitBB);
 
+  Loaded->takeName(AI);
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
