@@ -285,19 +285,32 @@ public:
         .Attach(doConcurrentSourcePosition_, GetEnclosingDoMsg());
   }
 
-  // C1139: call to impure procedure and ...
-  // C1141: cannot call ieee_get_flag, ieee_[gs]et_halting_mode
-  // It's not necessary to check the ieee_get* procedures because they're
-  // not pure, and impure procedures are caught by checks for constraint C1139
+  // C1145, C1146: cannot call ieee_[gs]et_flag, ieee_[gs]et_halting_mode,
+  // ieee_[gs]et_status, ieee_set_rounding_mode, or ieee_set_underflow_mode
   void Post(const parser::ProcedureDesignator &procedureDesignator) {
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
-      if (name->symbol &&
-          fromScope(*name->symbol, "__fortran_ieee_exceptions"s)) {
-        if (name->source == "ieee_set_halting_mode") {
-          SayWithDo(context_, currentStatementSourcePosition_,
-              "IEEE_SET_HALTING_MODE is not allowed in DO "
-              "CONCURRENT"_err_en_US,
-              doConcurrentSourcePosition_);
+      if (name->symbol) {
+        const Symbol &ultimate{name->symbol->GetUltimate()};
+        const Scope &scope{ultimate.owner()};
+        if (const Symbol * module{scope.IsModule() ? scope.symbol() : nullptr};
+            module &&
+            (module->name() == "__fortran_ieee_arithmetic" ||
+                module->name() == "__fortran_ieee_exceptions")) {
+          std::string s{ultimate.name().ToString()};
+          static constexpr const char *badName[]{"ieee_get_flag",
+              "ieee_set_flag", "ieee_get_halting_mode", "ieee_set_halting_mode",
+              "ieee_get_status", "ieee_set_status", "ieee_set_rounding_mode",
+              "ieee_set_underflow_mode", nullptr};
+          for (std::size_t j{0}; badName[j]; ++j) {
+            if (s.find(badName[j]) != s.npos) {
+              context_
+                  .Say(name->source,
+                      "'%s' may not be called in DO CONCURRENT"_err_en_US,
+                      badName[j])
+                  .Attach(doConcurrentSourcePosition_, GetEnclosingDoMsg());
+              break;
+            }
+          }
         }
       }
     }
@@ -318,15 +331,6 @@ public:
   }
 
 private:
-  bool fromScope(const Symbol &symbol, const std::string &moduleName) {
-    if (symbol.GetUltimate().owner().IsModule() &&
-        symbol.GetUltimate().owner().GetName().value().ToString() ==
-            moduleName) {
-      return true;
-    }
-    return false;
-  }
-
   std::set<parser::Label> labels_;
   parser::CharBlock currentStatementSourcePosition_;
   SemanticsContext &context_;
