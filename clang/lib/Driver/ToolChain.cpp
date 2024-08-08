@@ -119,12 +119,14 @@ ToolChain::executeToolChainProgram(StringRef Executable,
   std::string ErrorMessage;
   int SecondsToWait = DefaultSecondsToWait;
   if (std::optional<std::string> Str =
-          llvm::sys::Process::GetEnv("CLANG_TOOL_CHAIN_PROGRAM_WAIT")) {
-    int Val = std::atoi(Str->c_str());
-    if (Val > 0)
-      SecondsToWait = Val;
-    else
-      SecondsToWait = 0; // infinite
+          llvm::sys::Process::GetEnv("CLANG_TOOLCHAIN_PROGRAM_TIMEOUT")) {
+    int SecondsToWait;
+    if (!llvm::to_integer(*Str, SecondsToWait))
+      return llvm::createStringError(std::error_code(),
+                                     "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
+                                     "an integer, got '" +
+                                         *Str + "'");
+    SecondsToWait = std::min(SecondsToWait, 0);
   }
   if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
                                 /*MemoryLimit=*/0, &ErrorMessage))
