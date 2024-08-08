@@ -57,7 +57,6 @@ const fd_t kInvalidSharedFD = Socket::kInvalidSocketValue;
 
 class SharedSocket {
 public:
-  // Used by the parent process.
   SharedSocket(Connection *conn, Status &error) {
     m_fd = kInvalidSharedFD;
 
@@ -82,9 +81,6 @@ public:
     error = Status();
 #endif
   }
-
-  // Used by the child process.
-  SharedSocket(fd_t fd) : m_fd(fd) {}
 
   fd_t GetSendableFD() { return m_fd; }
 
@@ -113,13 +109,13 @@ public:
     return Status();
   }
 
-  Status GetNativeSocket(NativeSocket &socket) {
+  static Status GetNativeSocket(fd_t fd, NativeSocket &socket) {
 #ifdef _WIN32
     socket = Socket::kInvalidSocketValue;
     // Read WSAPROTOCOL_INFO from the parent process and create NativeSocket.
     WSAPROTOCOL_INFO protocol_info;
     {
-      Pipe socket_pipe(m_fd, LLDB_INVALID_PIPE);
+      Pipe socket_pipe(fd, LLDB_INVALID_PIPE);
       size_t num_bytes;
       Status error =
           socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
@@ -140,7 +136,7 @@ public:
     }
     return Status();
 #else
-    socket = m_fd;
+    socket = fd;
     return Status();
 #endif
   }
@@ -306,9 +302,6 @@ static Status spawn_process(const char *progname, Connection *conn,
   launch_info.SetMonitorProcessCallback(&spawn_process_reaped);
 
   // Copy the current environment.
-  // WSASocket(FROM_PROTOCOL_INFO) will fail in the child process
-  // with the error WSAEPROVIDERFAILEDINIT if the SystemRoot is missing
-  // in the environment.
   launch_info.GetEnvironment() = Host::GetEnvironment();
 
   launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
@@ -511,7 +504,7 @@ int main_platform(int argc, char *argv[]) {
     }
 
     NativeSocket socket;
-    error = SharedSocket(fd).GetNativeSocket(socket);
+    error = SharedSocket::GetNativeSocket(fd, socket);
     if (error.Fail()) {
       LLDB_LOGF(log, "lldb-platform child: %s", error.AsCString());
       return socket_error;
