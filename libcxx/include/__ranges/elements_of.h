@@ -34,7 +34,7 @@ struct elements_of {
   _LIBCPP_NO_UNIQUE_ADDRESS _Range range;
   _LIBCPP_NO_UNIQUE_ADDRESS _Allocator allocator = _Allocator();
 
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && _LIBCPP_CLANG_VER < 1600
+#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
   // This explicit constructor is required because AppleClang 15 hasn't implemented P0960R3.
   _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(_Range __range, _Allocator __alloc = _Allocator())
       : range(std::move(__range)), allocator(std::move(__alloc)) {}
@@ -42,7 +42,7 @@ struct elements_of {
 };
 
 template <class _Range, class _Allocator = allocator<byte>>
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && _LIBCPP_CLANG_VER < 1600
+#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
 // This explicit constraint is required because AppleClang 15 might not deduce the correct type for `_Range` without it.
   requires range<_Range&&>
 #  endif
