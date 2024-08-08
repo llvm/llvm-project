@@ -146,7 +146,8 @@ void CIRSimplifyPass::runOnOperation() {
   getOperation()->walk([&](Operation *op) {
     // CastOp here is to perform a manual `fold` in
     // applyOpPatternsAndFold
-    if (isa<BrOp, BrCondOp, ScopeOp, SwitchOp, CastOp, TryOp, UnaryOp>(op))
+    if (isa<BrOp, BrCondOp, ScopeOp, SwitchOp, CastOp, TryOp, UnaryOp,
+            ComplexCreateOp, ComplexRealOp, ComplexImagOp>(op))
       ops.push_back(op);
   });
 

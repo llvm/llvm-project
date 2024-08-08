@@ -124,6 +124,14 @@ void cir::CIRDialect::initialize() {
   addInterfaces<CIROpAsmDialectInterface>();
 }
 
+Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
+                                                mlir::Attribute value,
+                                                mlir::Type type,
+                                                mlir::Location loc) {
+  return builder.create<mlir::cir::ConstantOp>(
+      loc, type, mlir::cast<mlir::TypedAttr>(value));
+}
+
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
@@ -344,7 +352,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<mlir::cir::IntAttr, mlir::cir::FPAttr>(attrType)) {
+  if (mlir::isa<mlir::cir::IntAttr, mlir::cir::FPAttr, mlir::cir::ComplexAttr>(
+          attrType)) {
     auto at = cast<TypedAttr>(attrType);
     if (at.getType() != opType) {
       return op->emitOpError("result type (")
@@ -748,6 +757,26 @@ LogicalResult ComplexCreateOp::verify() {
   return success();
 }
 
+OpFoldResult ComplexCreateOp::fold(FoldAdaptor adaptor) {
+  auto real = adaptor.getReal();
+  auto imag = adaptor.getImag();
+
+  if (!real || !imag)
+    return nullptr;
+
+  // When both of real and imag are constants, we can fold the operation into an
+  // `cir.const #cir.complex` operation.
+
+  auto realAttr = mlir::cast<mlir::TypedAttr>(real);
+  auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
+  assert(realAttr.getType() == imagAttr.getType() &&
+         "real part and imag part should be of the same type");
+
+  auto complexTy =
+      mlir::cir::ComplexType::get(getContext(), realAttr.getType());
+  return mlir::cir::ComplexAttr::get(complexTy, realAttr, imagAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // ComplexRealOp and ComplexImagOp
 //===----------------------------------------------------------------------===//
@@ -760,12 +789,28 @@ LogicalResult ComplexRealOp::verify() {
   return success();
 }
 
+OpFoldResult ComplexRealOp::fold(FoldAdaptor adaptor) {
+  auto input =
+      mlir::cast_if_present<mlir::cir::ComplexAttr>(adaptor.getOperand());
+  if (input)
+    return input.getReal();
+  return nullptr;
+}
+
 LogicalResult ComplexImagOp::verify() {
   if (getType() != getOperand().getType().getElementTy()) {
     emitOpError() << "cir.complex.imag result type does not match operand type";
     return failure();
   }
   return success();
+}
+
+OpFoldResult ComplexImagOp::fold(FoldAdaptor adaptor) {
+  auto input =
+      mlir::cast_if_present<mlir::cir::ComplexAttr>(adaptor.getOperand());
+  if (input)
+    return input.getImag();
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
