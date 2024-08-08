@@ -95,8 +95,11 @@ public:
     return {};
   }
   void store(UNUSED Options Options, UNUSED uptr CommitBase,
-             UNUSED uptr CommitSize, UNUSED uptr BlockBegin, MemMapT MemMap) {
-    unmap(MemMap);
+             UNUSED uptr CommitSize, UNUSED uptr BlockBegin,
+             UNUSED MemMapT MemMap) {
+    // This should never be called since canCache always returns false.
+    UNREACHABLE(
+        "It is not valid to call store on MapAllocatorNoCache objects.");
   }
 
   bool canCache(UNUSED uptr Size) { return false; }
