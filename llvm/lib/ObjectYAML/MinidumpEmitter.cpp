@@ -147,8 +147,15 @@ static size_t layout(BlobAllocator &File, MinidumpYAML::Memory64ListStream &S) {
 
   // Save the new offset for the stream size.
   size_t DataEnd = File.tell();
-  for (auto &E : S.Entries)
+  for (auto &E : S.Entries) {
     File.allocateBytes(E.Content);
+    if (E.Entry.DataSize > E.Content.binary_size()) {
+      size_t Padding = E.Entry.DataSize - E.Content.binary_size();
+      File.allocateCallback(Padding, [Padding](raw_ostream &OS) {
+        OS << std::string(Padding, '\0');
+      });
+    }
+  }
 
   return DataEnd;
 }

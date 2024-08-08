@@ -189,8 +189,6 @@ public:
       Storage = Storage.drop_front(Descriptor.DataSize);
       Descriptors = Descriptors.drop_front();
 
-      if (Descriptors.empty())
-        IsEnd = true;
       return Error::success();
     }
 

@@ -156,28 +156,21 @@ MinidumpFile::create(MemoryBufferRef Source) {
       new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap)));
 }
 
-static iterator_range<MinidumpFile::FallibleMemory64Iterator>
-makeEmptyRange(Error &Err) {
-  return make_range(
-      llvm::object::MinidumpFile::FallibleMemory64Iterator::itr(
-          llvm::object::MinidumpFile::Memory64Iterator::end(), Err),
-      llvm::object::MinidumpFile::FallibleMemory64Iterator::end(
-          llvm::object::MinidumpFile::Memory64Iterator::end()));
-}
-
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
 MinidumpFile::getMemory64List(Error &Err) const {
+  ErrorAsOutParameter ErrAsOutParam(&Err);
+  auto end = FallibleMemory64Iterator::end(Memory64Iterator::end());
   Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
   if (!ListHeader) {
     Err = ListHeader.takeError();
-    return makeEmptyRange(Err);
+    return make_range(end, end);
   }
 
   std::optional<ArrayRef<uint8_t>> Stream =
       getRawStream(StreamType::Memory64List);
   if (!Stream) {
     Err = createError("No such stream");
-    return makeEmptyRange(Err);
+    return make_range(end, end);
   }
 
   Expected<ArrayRef<minidump::MemoryDescriptor_64>> Descriptors =
@@ -187,13 +180,13 @@ MinidumpFile::getMemory64List(Error &Err) const {
 
   if (!Descriptors) {
     Err = Descriptors.takeError();
-    return makeEmptyRange(Err);
+    return make_range(end, end);
   }
 
   if (!Descriptors->empty() &&
       ListHeader->BaseRVA + Descriptors->front().DataSize > getData().size()) {
     Err = createError("Memory64List header RVA out of range");
-    return makeEmptyRange(Err);
+    return make_range(end, end);
   }
 
   return make_range(FallibleMemory64Iterator::itr(

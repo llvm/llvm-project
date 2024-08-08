@@ -531,19 +531,14 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   case StreamKind::Memory64List: {
     Error Err = Error::success();
     auto Memory64List = File.getMemory64List(Err);
-    if (Err)
-      return Err;
     std::vector<Memory64ListStream::entry_type> Ranges;
     for (const auto &Pair : Memory64List) {
       Ranges.push_back({Pair.first, Pair.second});
     }
 
-    // If we don't have an error, or if any of the reads succeed, return ranges
-    // this would also work if we have no descriptors.
-    if (!Err || Ranges.size() > 0)
-      return std::make_unique<Memory64ListStream>(std::move(Ranges));
-
-    return Err;
+    if (Err)
+      return Err;
+    return std::make_unique<Memory64ListStream>(std::move(Ranges));
   }
   case StreamKind::ModuleList: {
     auto ExpectedList = File.getModuleList();
