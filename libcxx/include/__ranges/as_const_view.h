@@ -23,6 +23,7 @@
 #include <__type_traits/is_specialization.h>
 #include <__utility/auto_cast.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <cstddef>
 #include <span>
 
