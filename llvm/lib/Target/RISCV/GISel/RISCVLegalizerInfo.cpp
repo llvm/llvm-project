@@ -473,7 +473,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
   if (ST.hasStdExtZbb())
-    AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
+    AbsActions.customFor({sXLen}).minScalar(0, sXLen);
   AbsActions.lower();
 
   auto &MinMaxActions =
