@@ -6403,12 +6403,13 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     }
 
     if (any_of(VL, [&SourceVectors](Value *V) {
-          if (SourceVectors.contains(V))
-            return !V->hasOneUse();
           // The last InsertElement can have multiple uses.
-          return false;
-        }))
+          return SourceVectors.contains(V) && !V->hasOneUse();
+        })) {
+      LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement vectors with "
+                           "multiple uses.\n");
       return TreeEntry::NeedToGather;
+    }
 
     return TreeEntry::Vectorize;
   }
