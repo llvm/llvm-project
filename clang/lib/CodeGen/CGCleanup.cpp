@@ -295,8 +295,7 @@ void EHScopeStack::Cleanup::anchor() {}
 static void createStoreInstBefore(llvm::Value *value, Address addr,
                                   llvm::BasicBlock::iterator beforeInst,
                                   CodeGenFunction &CGF) {
-  auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF),
-                                   beforeInst);
+  auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF), beforeInst);
   store->setAlignment(addr.getAlignment().getAsAlign());
 }
 
@@ -337,8 +336,8 @@ static void ResolveAllBranchFixups(CodeGenFunction &CGF,
     // entry which we're currently popping.
     if (Fixup.OptimisticBranchBlock == nullptr) {
       createStoreInstBefore(CGF.Builder.getInt32(Fixup.DestinationIndex),
-                            CGF.getNormalCleanupDestSlot(), Fixup.InitialBranch->getIterator(),
-                            CGF);
+                            CGF.getNormalCleanupDestSlot(),
+                            Fixup.InitialBranch->getIterator(), CGF);
       Fixup.InitialBranch->setSuccessor(0, CleanupEntry);
     }
 
@@ -962,11 +961,12 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       for (unsigned I = FixupDepth, E = EHStack.getNumBranchFixups();
            I < E; ++I) {
         BranchFixup &Fixup = EHStack.getBranchFixup(I);
-        if (!Fixup.Destination) continue;
+        if (!Fixup.Destination)
+          continue;
         if (!Fixup.OptimisticBranchBlock) {
           createStoreInstBefore(Builder.getInt32(Fixup.DestinationIndex),
-                                getNormalCleanupDestSlot(), Fixup.InitialBranch->getIterator(),
-                                *this);
+                                getNormalCleanupDestSlot(),
+                                Fixup.InitialBranch->getIterator(), *this);
           Fixup.InitialBranch->setSuccessor(0, NormalEntry);
         }
         Fixup.OptimisticBranchBlock = NormalExit;
@@ -1141,7 +1141,8 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
 
   // Store the index at the start.
   llvm::ConstantInt *Index = Builder.getInt32(Dest.getDestIndex());
-  createStoreInstBefore(Index, getNormalCleanupDestSlot(), BI->getIterator(), *this);
+  createStoreInstBefore(Index, getNormalCleanupDestSlot(), BI->getIterator(),
+                        *this);
 
   // Adjust BI to point to the first cleanup block.
   {
