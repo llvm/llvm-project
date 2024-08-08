@@ -78,15 +78,8 @@ public:
     MCObjectStreamer::reset();
   }
 
-  // This function is commented out downstream because it is unsafe to use a
-  // MachObjectWriter in the McMachOStreamer which may hold a MachOCASWriter
-  // instead.
-  // MachObjectWriter &getWriter() {
-  //   return static_cast<MachObjectWriter &>(getAssembler().getWriter());
-  // }
-
-  MCObjectWriter &getMCObjectWriter() {
-    return static_cast<MCObjectWriter &>(getAssembler().getWriter());
+  MachObjectWriter &getWriter() {
+    return static_cast<MachObjectWriter &>(getAssembler().getWriter());
   }
 
   /// @name MCStreamer Interface
@@ -127,12 +120,12 @@ public:
   }
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override {
-    getMCObjectWriter().getLOHContainer().addDirective(Kind, Args);
+    getWriter().getLOHContainer().addDirective(Kind, Args);
   }
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
     if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-      getMCObjectWriter().getCGProfile().push_back({From, To, Count});
+      getWriter().getCGProfile().push_back({From, To, Count});
   }
 
   void finishImpl() override;
@@ -206,11 +199,11 @@ void MCMachOStreamer::emitDataRegion(MachO::DataRegionType Kind) {
   MCSymbol *Start = getContext().createTempSymbol();
   emitLabel(Start);
   // Record the region for the object writer to use.
-  getMCObjectWriter().getDataRegions().push_back({Kind, Start, nullptr});
+  getWriter().getDataRegions().push_back({Kind, Start, nullptr});
 }
 
 void MCMachOStreamer::emitDataRegionEnd() {
-  auto &Regions = getMCObjectWriter().getDataRegions();
+  auto &Regions = getWriter().getDataRegions();
   assert(!Regions.empty() && "Mismatched .end_data_region!");
   auto &Data = Regions.back();
   assert(!Data.End && "Mismatched .end_data_region!");
@@ -229,13 +222,13 @@ void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   case MCAF_Code32: return; // Change parsing mode; no-op here.
   case MCAF_Code64: return; // Change parsing mode; no-op here.
   case MCAF_SubsectionsViaSymbols:
-    getMCObjectWriter().setSubsectionsViaSymbols(true);
+    getWriter().setSubsectionsViaSymbols(true);
     return;
   }
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
-  getMCObjectWriter().getLinkerOptions().push_back(Options);
+  getWriter().getLinkerOptions().push_back(Options);
 }
 
 void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
@@ -261,27 +254,27 @@ void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
 void MCMachOStreamer::emitVersionMin(MCVersionMinType Kind, unsigned Major,
                                      unsigned Minor, unsigned Update,
                                      VersionTuple SDKVersion) {
-  getMCObjectWriter().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
+  getWriter().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                        unsigned Minor, unsigned Update,
                                        VersionTuple SDKVersion) {
-  getMCObjectWriter().setBuildVersion((MachO::PlatformType)Platform, Major,
-                                      Minor, Update, SDKVersion);
+  getWriter().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
+                              Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
-  getMCObjectWriter().setTargetVariantBuildVersion(
-      (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
+  getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
+                                           Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                                             bool PtrAuthKernelABIVersion) {
-  getMCObjectWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
-  getMCObjectWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
+  getWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
+  getWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
@@ -300,7 +293,7 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   if (Attribute == MCSA_IndirectSymbol) {
     // Note that we intentionally cannot use the symbol data here; this is
     // important for matching the string table that 'as' generates.
-    getMCObjectWriter().getIndirectSymbols().push_back(
+    getWriter().getIndirectSymbols().push_back(
         {Symbol, getCurrentSectionOnly()});
     return true;
   }
@@ -521,7 +514,7 @@ void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
 
 void MCMachOStreamer::finalizeCGProfile() {
   MCAssembler &Asm = getAssembler();
-  MCObjectWriter &W = getMCObjectWriter();
+  MCObjectWriter &W = getWriter();
   if (W.getCGProfile().empty())
     return;
   for (auto &E : W.getCGProfile()) {
