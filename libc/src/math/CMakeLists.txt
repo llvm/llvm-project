@@ -431,6 +431,7 @@ add_math_entrypoint_object(scalbnf128)
 
 add_math_entrypoint_object(setpayload)
 add_math_entrypoint_object(setpayloadf)
+add_math_entrypoint_object(setpayloadl)
 add_math_entrypoint_object(setpayloadf16)
 add_math_entrypoint_object(setpayloadf128)
 
