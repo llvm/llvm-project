@@ -1982,6 +1982,7 @@ DeclResult Sema::CheckClassTemplate(
   }
 
   if (PrevClassTemplate) {
+    #if 0
     // Ensure that the template parameter lists are compatible. Skip this check
     // for a friend in a dependent context: the template parameter list itself
     // could be dependent.
@@ -1994,6 +1995,7 @@ DeclResult Sema::CheckClassTemplate(
             PrevClassTemplate->getTemplateParameters(), /*Complain=*/true,
             TPL_TemplateMatch))
       return true;
+    #endif
 
     // C++ [temp.class]p4:
     //   In a redeclaration, partial specialization, explicit
@@ -2043,23 +2045,6 @@ DeclResult Sema::CheckClassTemplate(
     Diag(PrevDecl->getLocation(), diag::note_previous_definition);
     return true;
   }
-
-  // Check the template parameter list of this declaration, possibly
-  // merging in the template parameter list from the previous class
-  // template declaration. Skip this check for a friend in a dependent
-  // context, because the template parameter list might be dependent.
-  if (!(TUK == TagUseKind::Friend && CurContext->isDependentContext()) &&
-      CheckTemplateParameterList(
-          TemplateParams,
-          PrevClassTemplate ? GetTemplateParameterList(PrevClassTemplate)
-                            : nullptr,
-          (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
-           SemanticContext->isDependentContext())
-              ? TPC_ClassTemplateMember
-          : TUK == TagUseKind::Friend ? TPC_FriendClassTemplate
-                                      : TPC_ClassTemplate,
-          SkipBody))
-    Invalid = true;
 
   if (SS.isSet()) {
     // If the name of the template was qualified, we must be defining the
@@ -2128,6 +2113,30 @@ DeclResult Sema::CheckClassTemplate(
   // Set the lexical context of these templates
   NewClass->setLexicalDeclContext(CurContext);
   NewTemplate->setLexicalDeclContext(CurContext);
+
+
+  if (ShouldAddRedecl && PrevClassTemplate && !TemplateParameterListsAreEqual(
+      NewTemplate, TemplateParams,
+      PrevClassTemplate, PrevClassTemplate->getTemplateParameters(),
+      /*Complain=*/true, TPL_TemplateMatch))
+    return true;
+
+
+  // Check the template parameter list of this declaration, possibly
+  // merging in the template parameter list from the previous class
+  // template declaration. Skip this check for a friend in a dependent
+  // context, because the template parameter list might be dependent.
+  if (ShouldAddRedecl && CheckTemplateParameterList(
+      TemplateParams,
+      PrevClassTemplate ? GetTemplateParameterList(PrevClassTemplate)
+                        : nullptr,
+      (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
+       SemanticContext->isDependentContext())
+          ? TPC_ClassTemplateMember
+      : TUK == TagUseKind::Friend ? TPC_FriendClassTemplate
+                                  : TPC_ClassTemplate,
+      SkipBody))
+    Invalid = true;
 
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip))
     NewClass->startDefinition();
@@ -11138,7 +11147,7 @@ private:
   template<typename TemplDecl>
   void checkTemplate(TemplDecl *TD) {
     if (TD->getMostRecentDecl()->isMemberSpecialization()) {
-      if (!CheckMemberSpecialization(TD))
+      if (!CheckMemberSpecialization(TD->getMostRecentDecl()))
         diagnose(TD->getMostRecentDecl(), false);
     }
   }

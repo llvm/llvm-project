@@ -802,8 +802,15 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
 
   // A list of template arguments for transforming the require-clause of F.
   // It must contain the entire set of template argument lists.
-  MultiLevelTemplateArgumentList ArgsForBuildingRC;
+  MultiLevelTemplateArgumentList ArgsForBuildingRC =
+      SemaRef.getTemplateInstantiationArgs(
+        F, F->getLexicalDeclContext(),
+        /*Final=*/false, /*Innermost=*/TemplateArgsForBuildingRC,
+        /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr,
+        /*ForConstraintInstantiation=*/true);;
   ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
+  #if 0
   ArgsForBuildingRC.addOuterTemplateArguments(TemplateArgsForBuildingRC);
   // For 2), if the underlying deduction guide F is nested in a class template,
   // we need the entire template argument list, as the constraint AST in the
@@ -846,6 +853,8 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     for (auto It : OuterLevelArgs)
       ArgsForBuildingRC.addOuterTemplateArguments(It.Args);
   }
+  #endif
+
 
   ExprResult E = SemaRef.SubstExpr(RC, ArgsForBuildingRC);
   if (E.isInvalid())

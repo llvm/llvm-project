@@ -385,12 +385,10 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
 
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
   #else
-  if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
-    Result.addOuterTemplateArguments(
-        const_cast<FunctionTemplateDecl *>(FTD),
-        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
-        /*Final=*/false);
-  }
+  Result.addOuterTemplateArguments(
+      const_cast<FunctionTemplateDecl *>(FTD),
+      const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
+      /*Final=*/false);
 
   if (FTD->isMemberSpecialization())
     return Response::Done();
@@ -399,6 +397,24 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
     return Response::ChangeDecl(FTD->getLexicalDeclContext());
   return Response::UseNextDecl(FTD);
   #endif
+}
+
+Response HandleClassTemplateDecl(const ClassTemplateDecl *CTD,
+                                    MultiLevelTemplateArgumentList &Result) {
+  #if 0
+  Result.addOuterTemplateArguments(
+      const_cast<ClassTemplateDecl *>(CTD),
+      const_cast<ClassTemplateDecl *>(CTD)->getInjectedTemplateArgs(),
+      /*Final=*/false);
+
+  if (CTD->isMemberSpecialization())
+    return Response::Done();
+
+  if (CTD->getFriendObjectKind())
+    return Response::ChangeDecl(CTD->getLexicalDeclContext());
+  return Response::UseNextDecl(CTD);
+  #endif
+  return Response::ChangeDecl(CTD->getLexicalDeclContext());
 }
 
 Response HandleRecordDecl(Sema &SemaRef, const CXXRecordDecl *Rec,
@@ -539,7 +555,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     } else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(CurDecl)) {
       R = HandleFunctionTemplateDecl(FTD, Result);
     } else if (const auto *CTD = dyn_cast<ClassTemplateDecl>(CurDecl)) {
-      R = Response::ChangeDecl(CTD->getLexicalDeclContext());
+      R = HandleClassTemplateDecl(CTD, Result);
     } else if (!isa<DeclContext>(CurDecl)) {
       R = Response::DontClearRelativeToPrimaryNextDecl(CurDecl);
       if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl)) {

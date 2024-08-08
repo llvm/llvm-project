@@ -2888,7 +2888,7 @@ void ASTDeclReader::mergeRedeclarableTemplate(RedeclarableTemplateDecl *D,
   // If we merged the template with a prior declaration chain, merge the
   // common pointer.
   // FIXME: Actually merge here, don't just overwrite.
-  D->Common = D->getCanonicalDecl()->Common;
+  D->Common.setPointer(D->getCanonicalDecl()->Common.getPointer());
 }
 
 /// "Cast" to type T, asserting if we don't have an implicit conversion.
