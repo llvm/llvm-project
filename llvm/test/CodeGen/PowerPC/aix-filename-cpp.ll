@@ -7,5 +7,5 @@ source_filename = "1.cpp"
 
 ; OBJ: Name: .file
 ; OBJ: Source Language ID: TB_CPLUSPLUS (0x9)
-; OBJ: CPU Version ID: TCPU_COM (0x3)
+; OBJ: CPU Version ID: TCPU_PWR7 (0x18)
 ; OBJ: Name: 1.cpp

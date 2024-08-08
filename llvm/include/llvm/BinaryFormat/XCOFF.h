@@ -359,7 +359,7 @@ enum CFileCpuId : uint8_t {
   TCPU_PWR9 = 26,
   TCPU_PWR10 = 27,
 
-  TCPU_PWRX = 224   ///< RS2 implementation of POWER architecture.
+  TCPU_PWRX = 224 ///< RS2 implementation of POWER architecture.
 };
 
 enum SymbolAuxType : uint8_t {

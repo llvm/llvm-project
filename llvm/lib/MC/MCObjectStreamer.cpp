@@ -801,7 +801,7 @@ void MCObjectStreamer::emitFileDirective(StringRef Filename,
 }
 
 void MCObjectStreamer::emitMachineDirective(StringRef CPU) {
-  getAssembler().setCPU(CPU.data());
+  getAssembler().getWriter().setCPU(CPU);
 }
 
 void MCObjectStreamer::emitAddrsig() {

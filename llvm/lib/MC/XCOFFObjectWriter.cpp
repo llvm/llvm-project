@@ -1184,7 +1184,7 @@ void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm) {
     else
       LangID = XCOFF::TB_CPLUSPLUS;
 
-    uint8_t CpuID = XCOFF::getCpuID(Asm.getCPU());
+    uint8_t CpuID = XCOFF::getCpuID(CPUType);
 
     int NumberOfFileAuxEntries = 1;
     if (!Vers.empty())

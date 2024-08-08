@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 
 using namespace llvm;
 
@@ -108,29 +109,29 @@ StringRef XCOFF::getNameForTracebackTableLanguageId(
 }
 #undef LANG_CASE
 
-XCOFF::CFileCpuId XCOFF::getCpuID(StringRef CPU) {
+XCOFF::CFileCpuId XCOFF::getCpuID(StringRef CPUName) {
+  StringRef CPU = PPC::normalizeCPUName(CPUName);
   return StringSwitch<XCOFF::CFileCpuId>(CPU)
-      .Case("generic", XCOFF::TCPU_COM)
+      .Cases("generic", "COM", XCOFF::TCPU_COM)
       .Case("601", XCOFF::TCPU_601)
       .Cases("602", "603", "603e", "603ev", XCOFF::TCPU_603)
       .Cases("604", "604e", XCOFF::TCPU_604)
       .Case("620", XCOFF::TCPU_620)
       .Case("970", XCOFF::TCPU_970)
-      .Cases("pwr3", "power3", "pwr4", "power4", "COM", "630", "G3", "G4", "G5",
-             XCOFF::TCPU_COM)
-      .Cases("pwr5", "power5", "PWR5", XCOFF::TCPU_PWR5)
-      .Cases("pwr5x", "power5x", "PWR5X", XCOFF::TCPU_PWR5X)
-      .Cases("pwr6", "power6", "PWR6", XCOFF::TCPU_PWR6)
-      .Cases("pwr6x", "power6x", "PWR6E", XCOFF::TCPU_PWR6E)
-      .Cases("pwr7", "power7", "PWR7", XCOFF::TCPU_PWR7)
-      .Cases("pwr8", "power8", "PWR8", XCOFF::TCPU_PWR8)
-      .Cases("pwr9", "power9", "PWR9", XCOFF::TCPU_PWR9)
-      .Cases("pwr10", "power10", "PWR10", XCOFF::TCPU_PWR10)
-      .Cases("ppc", "ppc32", "ppc64", "PPC64", "powerpc", "powerpc64",
-             XCOFF::TCPU_COM)
-      .Cases("ppc64le", "powerpc64le", XCOFF::TCPU_PWR8)
-      .Cases("any", "ANY", XCOFF::TCPU_ANY)
+      .Cases("a2", "g3", "g4", "g5", "e500", XCOFF::TCPU_COM)
+      .Cases("pwr3", "pwr4", XCOFF::TCPU_COM)
+      .Cases("pwr5", "PWR5", XCOFF::TCPU_PWR5)
+      .Cases("pwr5x", "PWR5X", XCOFF::TCPU_PWR5X)
+      .Cases("pwr6", "PWR6", XCOFF::TCPU_PWR6)
+      .Cases("pwr6x", "PWR6E", XCOFF::TCPU_PWR6E)
+      .Cases("pwr7", "PWR7", XCOFF::TCPU_PWR7)
+      .Cases("pwr8", "PWR8", XCOFF::TCPU_PWR8)
+      .Cases("pwr9", "PWR9", XCOFF::TCPU_PWR9)
+      .Cases("pwr10", "PWR10", XCOFF::TCPU_PWR10)
+      .Cases("ppc", "PPC", "ppc32", "ppc64", XCOFF::TCPU_COM)
+      .Case("ppc64le", XCOFF::TCPU_PWR8)
       .Case("future", XCOFF::TCPU_PWR10)
+      .Cases("any", "ANY", XCOFF::TCPU_ANY)
       .Default(XCOFF::TCPU_INVALID);
 }
 

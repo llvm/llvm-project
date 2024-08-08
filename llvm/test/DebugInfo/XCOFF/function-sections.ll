@@ -38,7 +38,7 @@ entry:
 !14 = !DILocation(line: 8, column: 3, scope: !13)
 
 ; CHECK:               .file   "1.c"
-; CHECK-NEXT:          .machine "COM"
+; CHECK-NEXT:          .machine "PWR7"
 ; CHECK-NEXT:          .csect ..text..[PR],5
 ; CHECK-NEXT:          .rename ..text..[PR],""
 ; CHECK-NEXT:          .csect .foo[PR],5

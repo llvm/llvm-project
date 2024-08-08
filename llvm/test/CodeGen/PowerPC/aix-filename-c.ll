@@ -7,7 +7,7 @@
 
 source_filename = "1.c"
 
-; ASM:      .file   "1.c",,"{{.*}}LLVM{{.*}}"
+; ASM:      .file   "1.c",,"LLVM{{.*}}"
 ; ASM-NEXT: .machine   "PWR9"
 ; ASM-NEXT: .csect ..text..[PR],5
 ; ASM-NEXT: .rename	..text..[PR],""
@@ -28,7 +28,7 @@ source_filename = "1.c"
 ; OBJ32-NEXT:   }
 ; OBJ32-NEXT:   File Auxiliary Entry {
 ; OBJ32-NEXT:     Index: 2
-; OBJ32-NEXT:     Name: {{.*}}LLVM{{.*}}
+; OBJ32-NEXT:     Name: LLVM
 ; OBJ32-NEXT:     Type: XFT_CV (0x2)
 ; OBJ32-NEXT:   }
 ; OBJ32-NEXT: }
@@ -50,7 +50,7 @@ source_filename = "1.c"
 ; OBJ64-NEXT:   }
 ; OBJ64-NEXT:   File Auxiliary Entry {
 ; OBJ64-NEXT:     Index: 2
-; OBJ64-NEXT:     Name: {{.*}}LLVM{{.*}}
+; OBJ64-NEXT:     Name: LLVM
 ; OBJ64-NEXT:     Type: XFT_CV (0x2)
 ; OBJ64-NEXT:     Auxiliary Type: AUX_FILE (0xFC)
 ; OBJ64-NEXT:   }
