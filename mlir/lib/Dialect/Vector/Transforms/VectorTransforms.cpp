@@ -1771,6 +1771,14 @@ struct DropUnitDimsFromTransposeOp final
       newPerm.push_back(idx - droppedDimsBefore[idx]);
     }
 
+    // Fixup for `newPerm`. The `sourceTypeWithoutUnitDims` could be vector<1xT>
+    // type when the dimensions are unit dimensions. In this case, the newPerm
+    // should be [0].
+    if (sourceTypeWithoutUnitDims.getRank() == 1 &&
+        sourceTypeWithoutUnitDims.getShape()[0] == 1 && newPerm.empty()) {
+      newPerm.push_back(0);
+    }
+
     Location loc = op.getLoc();
     // Drop the unit dims via shape_cast.
     auto dropDimsShapeCast = rewriter.create<vector::ShapeCastOp>(
