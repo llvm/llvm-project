@@ -5,6 +5,7 @@
 
 program test
   integer, device :: a(10)
+  integer, unified :: u(10)
   integer :: b(10)
   integer :: i
   print*,i
@@ -18,3 +19,4 @@ end
 
 ! CHECK-NOT: fir.global internal @_QFEa {data_attr = #cuf.cuda<device>} : !fir.array<10xi32> {{{$}}
 ! CHECK: fir.global internal @_QFEb : !fir.array<10xi32> {{{$}}
+! CHECK: fir.global internal @_QFEu {data_attr = #cuf.cuda<unified>} : !fir.array<10xi32>
