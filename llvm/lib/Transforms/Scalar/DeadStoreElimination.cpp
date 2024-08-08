@@ -806,6 +806,38 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
   return false;
 }
 
+// A memory location wrapper that represents a MemoryLocation, `MemLoc`,
+// defined by `MemDef`.
+class MemoryLocationWrapper {
+public:
+  MemoryLocationWrapper(MemoryLocation MemLoc, MemoryDef *MemDef)
+      : MemLoc(MemLoc), MemDef(MemDef) {
+    assert(MemLoc.Ptr && "MemLoc should be not null");
+    UnderlyingObject = getUnderlyingObject(MemLoc.Ptr);
+    DefInst = MemDef->getMemoryInst();
+  }
+
+  MemoryAccess *GetDefiningAccess() const {
+    return MemDef->getDefiningAccess();
+  }
+
+  MemoryLocation MemLoc;
+  const Value *UnderlyingObject;
+  MemoryDef *MemDef;
+  Instruction *DefInst;
+};
+
+// A memory def wrapper that represents a MemoryDef and the MemoryLocation(s)
+// defined by this MemoryDef.
+class MemoryDefWrapper {
+public:
+  MemoryDefWrapper(MemoryDef *MemDef, std::optional<MemoryLocation> MemLoc) {
+    if (MemLoc.has_value())
+      DefinedLocation = MemoryLocationWrapper(*MemLoc, MemDef);
+  }
+  std::optional<MemoryLocationWrapper> DefinedLocation = std::nullopt;
+};
+
 struct DSEState {
   Function &F;
   AliasAnalysis &AA;
@@ -861,72 +893,6 @@ struct DSEState {
 
   /// Dead instructions to be removed at the end of DSE.
   SmallVector<Instruction *> ToRemove;
-
-  enum class ChangeStateEnum : uint8_t {
-    NoChange,
-    DeleteByMemTerm,
-    CompleteDeleteByNonMemTerm,
-    PartiallyDeleteByNonMemTerm,
-  };
-
-  // A memory location wrapper that represents a MemoryLocation, `MemLoc`,
-  // defined by `MemDef`.
-  class MemoryLocationWrapper {
-  public:
-    MemoryLocationWrapper(MemoryLocation MemLoc, DSEState &State,
-                          MemoryDef *MemDef)
-        : MemLoc(MemLoc), State(State), MemDef(MemDef) {
-      assert(MemLoc.Ptr && "MemLoc should be not null");
-      UnderlyingObject = getUnderlyingObject(MemLoc.Ptr);
-      DefInst = MemDef->getMemoryInst();
-    }
-
-    // Try to eliminate dead defs killed by this MemoryLocation and return the
-    // change state.
-    ChangeStateEnum eliminateDeadDefs();
-
-    MemoryAccess *GetDefiningAccess() const {
-      return MemDef->getDefiningAccess();
-    }
-
-    MemoryLocation MemLoc;
-    const Value *UnderlyingObject;
-    DSEState &State;
-    MemoryDef *MemDef;
-    Instruction *DefInst;
-  };
-
-  // A memory def wrapper that represents a MemoryDef and the MemoryLocation(s)
-  // defined by this MemoryDef.
-  class MemoryDefWrapper {
-  public:
-    MemoryDefWrapper(MemoryDef *MemDef, DSEState &State)
-        : MemDef(MemDef), State(State) {
-      DefInst = MemDef->getMemoryInst();
-
-      if (State.isMemTerminatorInst(DefInst)) {
-        if (auto KillingLoc = State.getLocForTerminator(DefInst)) {
-          DefinedLocation.emplace(
-              MemoryLocationWrapper(KillingLoc->first, State, MemDef));
-        }
-        return;
-      }
-
-      if (auto KillingLoc = State.getLocForWrite(DefInst)) {
-        DefinedLocation.emplace(
-            MemoryLocationWrapper(*KillingLoc, State, MemDef));
-      }
-    }
-
-    // Try to eliminate dead defs killed by this MemoryDef and return the
-    // change state.
-    bool eliminateDeadDefs();
-
-    MemoryDef *MemDef;
-    Instruction *DefInst;
-    DSEState &State;
-    std::optional<MemoryLocationWrapper> DefinedLocation = std::nullopt;
-  };
 
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
@@ -1183,6 +1149,15 @@ struct DSEState {
       return MemoryLocation::getForDest(CB, TLI);
 
     return MemoryLocation::getOrNone(I);
+  }
+
+  std::optional<MemoryLocation> getLocForInst(Instruction *I) {
+    if (isMemTerminatorInst(I)) {
+      if (auto Loc = getLocForTerminator(I)) {
+        return Loc->first;
+      }
+    }
+    return getLocForWrite(I);
   }
 
   /// Assuming this instruction has a dead analyzable write, can we delete
@@ -2202,24 +2177,39 @@ struct DSEState {
     }
     return MadeChange;
   }
+
+  enum class ChangeStateEnum : uint8_t {
+    NoChange,
+    DeleteByMemTerm,
+    CompleteDeleteByNonMemTerm,
+    PartiallyDeleteByNonMemTerm,
+  };
+  // Try to eliminate dead defs killed by `KillingLocWrapper` and return the
+  // change state.
+  ChangeStateEnum eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper);
+
+  // Try to eliminate dead defs killed by `KillingDefWrapper` and return the
+  // change state.
+  bool eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper);
 };
 
-DSEState::ChangeStateEnum DSEState::MemoryLocationWrapper::eliminateDeadDefs() {
+DSEState::ChangeStateEnum
+DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
   ChangeStateEnum ChangeState = ChangeStateEnum::NoChange;
   unsigned ScanLimit = MemorySSAScanLimit;
   unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
   unsigned PartialLimit = MemorySSAPartialStoreLimit;
   // Worklist of MemoryAccesses that may be killed by KillingDef.
   SmallSetVector<MemoryAccess *, 8> ToCheck;
-  ToCheck.insert(GetDefiningAccess());
+  ToCheck.insert(KillingLocWrapper.GetDefiningAccess());
 
   // Check if MemoryAccesses in the worklist are killed by KillingDef.
   for (unsigned I = 0; I < ToCheck.size(); I++) {
     MemoryAccess *Current = ToCheck[I];
-    if (State.SkipStores.count(Current))
+    if (SkipStores.count(Current))
       continue;
-    std::optional<MemoryAccess *> MaybeDeadAccess = State.getDomMemoryDef(
-        *this, Current, ScanLimit, WalkerStepLimit, PartialLimit);
+    std::optional<MemoryAccess *> MaybeDeadAccess = getDomMemoryDef(
+        KillingLocWrapper, Current, ScanLimit, WalkerStepLimit, PartialLimit);
 
     if (!MaybeDeadAccess) {
       LLVM_DEBUG(dbgs() << "  finished walk\n");
@@ -2237,27 +2227,29 @@ DSEState::ChangeStateEnum DSEState::MemoryLocationWrapper::eliminateDeadDefs() {
         // We only consider incoming MemoryAccesses that come before the
         // MemoryPhi. Otherwise we could discover candidates that do not
         // strictly dominate our starting def.
-        if (State.PostOrderNumbers[IncomingBlock] >
-            State.PostOrderNumbers[PhiBlock])
+        if (PostOrderNumbers[IncomingBlock] > PostOrderNumbers[PhiBlock])
           ToCheck.insert(IncomingAccess);
       }
       continue;
     }
-    MemoryDefWrapper DeadDefWrapper(cast<MemoryDef>(DeadAccess), State);
-    MemoryLocationWrapper &DeadLoc = *DeadDefWrapper.DefinedLocation;
-    LLVM_DEBUG(dbgs() << " (" << *DeadDefWrapper.DefInst << ")\n");
-    ToCheck.insert(DeadLoc.GetDefiningAccess());
+    MemoryDefWrapper DeadDefWrapper(
+        cast<MemoryDef>(DeadAccess),
+        getLocForInst(cast<MemoryDef>(DeadAccess)->getMemoryInst()));
+    MemoryLocationWrapper &DeadLocWrapper = *DeadDefWrapper.DefinedLocation;
+    LLVM_DEBUG(dbgs() << " (" << *DeadLocWrapper.DefInst << ")\n");
+    ToCheck.insert(DeadLocWrapper.GetDefiningAccess());
     NumGetDomMemoryDefPassed++;
 
     if (!DebugCounter::shouldExecute(MemorySSACounter))
       continue;
-    if (State.isMemTerminatorInst(DefInst)) {
-      if (!(UnderlyingObject == DeadLoc.UnderlyingObject))
+    if (isMemTerminatorInst(KillingLocWrapper.DefInst)) {
+      if (!(KillingLocWrapper.UnderlyingObject ==
+            DeadLocWrapper.UnderlyingObject))
         continue;
       LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
-                        << *DeadDefWrapper.DefInst << "\n  KILLER: " << *DefInst
-                        << '\n');
-      State.deleteDeadInstruction(DeadDefWrapper.DefInst);
+                        << *DeadLocWrapper.DefInst << "\n  KILLER: "
+                        << *KillingLocWrapper.DefInst << '\n');
+      deleteDeadInstruction(DeadLocWrapper.DefInst);
       ++NumFastStores;
       ChangeState = ChangeStateEnum::DeleteByMemTerm;
     } else {
@@ -2265,26 +2257,28 @@ DSEState::ChangeStateEnum DSEState::MemoryLocationWrapper::eliminateDeadDefs() {
       int64_t KillingOffset = 0;
       int64_t DeadOffset = 0;
       OverwriteResult OR =
-          State.isOverwrite(DefInst, DeadDefWrapper.DefInst, MemLoc,
-                            DeadLoc.MemLoc, KillingOffset, DeadOffset);
+          isOverwrite(KillingLocWrapper.DefInst, DeadLocWrapper.DefInst,
+                      KillingLocWrapper.MemLoc, DeadLocWrapper.MemLoc,
+                      KillingOffset, DeadOffset);
       if (OR == OW_MaybePartial) {
-        auto Iter = State.IOLs.insert(
-            std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
-                DeadDefWrapper.DefInst->getParent(), InstOverlapIntervalsTy()));
+        auto Iter =
+            IOLs.insert(std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
+                DeadLocWrapper.DefInst->getParent(), InstOverlapIntervalsTy()));
         auto &IOL = Iter.first->second;
-        OR = isPartialOverwrite(MemLoc, DeadLoc.MemLoc, KillingOffset,
-                                DeadOffset, DeadDefWrapper.DefInst, IOL);
+        OR = isPartialOverwrite(KillingLocWrapper.MemLoc, DeadLocWrapper.MemLoc,
+                                KillingOffset, DeadOffset,
+                                DeadLocWrapper.DefInst, IOL);
       }
       if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
-        auto *DeadSI = dyn_cast<StoreInst>(DeadDefWrapper.DefInst);
-        auto *KillingSI = dyn_cast<StoreInst>(DefInst);
+        auto *DeadSI = dyn_cast<StoreInst>(DeadLocWrapper.DefInst);
+        auto *KillingSI = dyn_cast<StoreInst>(KillingLocWrapper.DefInst);
         // We are re-using tryToMergePartialOverlappingStores, which requires
         // DeadSI to dominate KillingSI.
         // TODO: implement tryToMergeParialOverlappingStores using MemorySSA.
-        if (DeadSI && KillingSI && State.DT.dominates(DeadSI, KillingSI)) {
+        if (DeadSI && KillingSI && DT.dominates(DeadSI, KillingSI)) {
           if (Constant *Merged = tryToMergePartialOverlappingStores(
-                  KillingSI, DeadSI, KillingOffset, DeadOffset, State.DL,
-                  State.BatchAA, &State.DT)) {
+                  KillingSI, DeadSI, KillingOffset, DeadOffset, DL, BatchAA,
+                  &DT)) {
 
             // Update stored value of earlier store to merged constant.
             DeadSI->setOperand(0, Merged);
@@ -2293,9 +2287,9 @@ DSEState::ChangeStateEnum DSEState::MemoryLocationWrapper::eliminateDeadDefs() {
 
             // Remove killing store and remove any outstanding overlap
             // intervals for the updated store.
-            State.deleteDeadInstruction(KillingSI);
-            auto I = State.IOLs.find(DeadSI->getParent());
-            if (I != State.IOLs.end())
+            deleteDeadInstruction(KillingSI);
+            auto I = IOLs.find(DeadSI->getParent());
+            if (I != IOLs.end())
               I->second.erase(DeadSI);
             break;
           }
@@ -2303,9 +2297,9 @@ DSEState::ChangeStateEnum DSEState::MemoryLocationWrapper::eliminateDeadDefs() {
       }
       if (OR == OW_Complete) {
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
-                          << *DeadDefWrapper.DefInst
+                          << *DeadLocWrapper.DefInst
                           << "\n  KILLER: " << *DefInst << '\n');
-        State.deleteDeadInstruction(DeadDefWrapper.DefInst);
+        deleteDeadInstruction(DeadLocWrapper.DefInst);
         ++NumFastStores;
         ChangeState = ChangeStateEnum::CompleteDeleteByNonMemTerm;
       }
@@ -2314,8 +2308,8 @@ DSEState::ChangeStateEnum DSEState::MemoryLocationWrapper::eliminateDeadDefs() {
   return ChangeState;
 }
 
-bool DSEState::MemoryDefWrapper::eliminateDeadDefs() {
-  if (!DefinedLocation.has_value()) {
+bool DSEState::eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper) {
+  if (!KillingDefWrapper.DefinedLocation.has_value()) {
     LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
                       << *DefInst << "\n");
     return false;
@@ -2323,24 +2317,25 @@ bool DSEState::MemoryDefWrapper::eliminateDeadDefs() {
   LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs killed by " << *MemDef
                     << " (" << *DefInst << ")\n");
 
-  auto &KillingLoc = *DefinedLocation;
-  ChangeStateEnum ChangeState = KillingLoc.eliminateDeadDefs();
+  auto &KillingLocWrapper = *KillingDefWrapper.DefinedLocation;
+  ChangeStateEnum ChangeState = eliminateDeadDefs(KillingLocWrapper);
   bool Shortend = ChangeState == ChangeStateEnum::PartiallyDeleteByNonMemTerm;
 
   // Check if the store is a no-op.
-  if (!Shortend && State.storeIsNoop(MemDef, KillingLoc.UnderlyingObject)) {
+  if (!Shortend && storeIsNoop(KillingLocWrapper.MemDef,
+                               KillingLocWrapper.UnderlyingObject)) {
     LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *DefInst
                       << '\n');
-    State.deleteDeadInstruction(DefInst);
+    deleteDeadInstruction(KillingLocWrapper.DefInst);
     NumRedundantStores++;
     return true;
   }
   // Can we form a calloc from a memset/malloc pair?
-  if (!Shortend &&
-      State.tryFoldIntoCalloc(MemDef, KillingLoc.UnderlyingObject)) {
+  if (!Shortend && tryFoldIntoCalloc(KillingLocWrapper.MemDef,
+                                     KillingLocWrapper.UnderlyingObject)) {
     LLVM_DEBUG(dbgs() << "DSE: Remove memset after forming calloc:\n"
-                      << "  DEAD: " << *DefInst << '\n');
-    State.deleteDeadInstruction(DefInst);
+                      << "  DEAD: " << *KillingLocWrapper.DefInst << '\n');
+    deleteDeadInstruction(KillingLocWrapper.DefInst);
     return true;
   }
   return ChangeState != ChangeStateEnum::NoChange;
@@ -2358,8 +2353,9 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     if (State.SkipStores.count(KillingDef))
       continue;
 
-    DSEState::MemoryDefWrapper KillingDefWrapper(KillingDef, State);
-    MadeChange |= KillingDefWrapper.eliminateDeadDefs();
+    MemoryDefWrapper KillingDefWrapper(
+        KillingDef, State.getLocForInst(KillingDef->getMemoryInst()));
+    MadeChange |= State.eliminateDeadDefs(KillingDefWrapper);
   }
 
   if (EnablePartialOverwriteTracking)
