@@ -200,4 +200,9 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
   EXPECT_EQ(InstrumentingFS->NumStatusCalls, 3u);
   DepFS.exists("/cache/a.pcm");
   EXPECT_EQ(InstrumentingFS->NumStatusCalls, 4u);
+
+  DepFS.resetBypassedPathPrefix();
+  DepFS.exists("/cache/a.pcm");
+  DepFS.exists("/cache/a.pcm");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 5u);
 }
