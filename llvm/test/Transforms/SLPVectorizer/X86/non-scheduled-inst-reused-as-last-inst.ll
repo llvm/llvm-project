@@ -4,26 +4,6 @@
 ; RUN: -slp-skip-early-profitability-check < %s | FileCheck %s --check-prefixes=FORCED
 
 define void @foo() {
-; CHECK-LABEL: define void @foo() {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label [[BB1:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, [[BB:%.*]] ], [ [[TMP6:%.*]], [[BB4:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[SHL]], i32 0
-; CHECK-NEXT:    [[TMP6]] = or <2 x i32> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i64 null(i32 [[TMP7]])
-; CHECK-NEXT:    br label [[BB4]]
-; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1
-; CHECK-NEXT:    br i1 false, label [[BB5:%.*]], label [[BB1]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[PHI6:%.*]] = phi i32 [ [[SHL]], [[BB4]] ]
-; CHECK-NEXT:    [[PHI7:%.*]] = phi i32 [ [[TMP8]], [[BB4]] ]
-; CHECK-NEXT:    ret void
-;
 ; FORCED-LABEL: define void @foo() {
 ; FORCED-NEXT:  bb:
 ; FORCED-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 0, i32 0
@@ -43,6 +23,26 @@ define void @foo() {
 ; FORCED:       bb5:
 ; FORCED-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP4]], [[BB4]] ]
 ; FORCED-NEXT:    ret void
+;
+; CHECK-LABEL: define void @foo() {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, [[BB:%.*]] ], [ [[TMP6:%.*]], [[BB4:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[SHL]], i32 0
+; CHECK-NEXT:    [[TMP6]] = or <2 x i32> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i64 null(i32 [[TMP7]])
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1
+; CHECK-NEXT:    br i1 false, label [[BB5:%.*]], label [[BB1]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[PHI6:%.*]] = phi i32 [ [[SHL]], [[BB4]] ]
+; CHECK-NEXT:    [[PHI7:%.*]] = phi i32 [ [[TMP8]], [[BB4]] ]
+; CHECK-NEXT:    ret void
 ;
 bb:
   br label %bb1
