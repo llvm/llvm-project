@@ -1615,7 +1615,6 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                 Value *DormantAsanFlag) {
   // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
   // if the data is properly aligned.
-
   Instruction *InsertPoint = InsertBefore;
   if (CLAsanDormant) {
     InstrumentationIRBuilder IRB(InsertPoint);
@@ -1882,7 +1881,6 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   }
 
   InstrumentationIRBuilder IRB(InsertBefore);
-
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
 
   if (UseCalls && ClOptimizeCallbacks) {
