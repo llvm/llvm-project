@@ -1205,7 +1205,7 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
         // Insert a bitcast of `h3` so that we retain a ref edge to it.
         (void)CastInst::CreatePointerCast(
             &H3F, PointerType::getUnqual(H2F.getContext()), "dummy",
-            &*H2F.begin()->begin());
+            H2F.begin()->begin());
 
         // Now update the call graph.
         auto &NewC =
@@ -1251,7 +1251,7 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
         assert(H3F.getName() == "h3" && "Wrong called function!");
         H2F.begin()->begin()->eraseFromParent();
         // And insert a call to `h3`.
-        (void)CallInst::Create(&H3F, {}, "", &*H2F.begin()->begin());
+        (void)CallInst::Create(&H3F, {}, "", H2F.begin()->begin());
 
         // Now update the call graph.
         auto &NewC =
@@ -1359,7 +1359,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses0) {
         ASSERT_NE(FnH3, nullptr);
 
         // And insert a call to `h1`, `h2`, and `h3`.
-        Instruction *IP = &FnH2->getEntryBlock().front();
+        BasicBlock::iterator IP = FnH2->getEntryBlock().begin();
         (void)CallInst::Create(FnH1, {}, "", IP);
         (void)CallInst::Create(FnH2, {}, "", IP);
         (void)CallInst::Create(FnH3, {}, "", IP);
@@ -1396,7 +1396,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses1) {
     ASSERT_NE(FnH3, nullptr);
 
     // And insert a call to `h1`, `h2`, and `h3`.
-    Instruction *IP = &FnH2->getEntryBlock().front();
+    BasicBlock::iterator IP = FnH2->getEntryBlock().begin();
     (void)CallInst::Create(FnH1, {}, "", IP);
     (void)CallInst::Create(FnH2, {}, "", IP);
     (void)CallInst::Create(FnH3, {}, "", IP);
@@ -1429,7 +1429,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses2) {
         ASSERT_NE(FnH2, nullptr);
 
         // And insert a call to `h2`
-        Instruction *IP = &FnF->getEntryBlock().front();
+        BasicBlock::iterator IP = FnF->getEntryBlock().begin();
         (void)CallInst::Create(FnH2, {}, "", IP);
 
         auto &FN = *llvm::find_if(
@@ -1460,7 +1460,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses3) {
     ASSERT_NE(FnH2, nullptr);
 
     // And insert a call to `h2`
-    Instruction *IP = &FnF->getEntryBlock().front();
+    BasicBlock::iterator IP = FnF->getEntryBlock().begin();
     (void)CallInst::Create(FnH2, {}, "", IP);
 
     auto &FN = *llvm::find_if(
@@ -1492,7 +1492,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses4) {
         ReturnInst::Create(FnewF->getContext(), BB);
 
         // And insert a call to `newF`
-        Instruction *IP = &FnF->getEntryBlock().front();
+        BasicBlock::iterator IP = FnF->getEntryBlock().begin();
         (void)CallInst::Create(FnewF, {}, "", IP);
 
         // Use the CallGraphUpdater to update the call graph for the new
@@ -1536,7 +1536,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses5) {
     CGU.initialize(CG, C, AM, UR);
 
     // And insert a call to `newF`
-    Instruction *IP = &FnF->getEntryBlock().front();
+    BasicBlock::iterator IP = FnF->getEntryBlock().begin();
     (void)CallInst::Create(FnewF, {}, "", IP);
 
     auto &FN = *llvm::find_if(
@@ -1569,7 +1569,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses6) {
         ASSERT_NE(FnH3, nullptr);
 
         // And insert a call to `h1`, `h2`, and `h3`.
-        Instruction *IP = &FnH2->getEntryBlock().front();
+        BasicBlock::iterator IP = FnH2->getEntryBlock().begin();
         (void)CallInst::Create(FnH1, {}, "", IP);
         (void)CallInst::Create(FnH2, {}, "", IP);
         (void)CallInst::Create(FnH3, {}, "", IP);
@@ -1600,7 +1600,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses7) {
         ASSERT_NE(FnH2, nullptr);
 
         // And insert a call to `h2`
-        Instruction *IP = &FnF->getEntryBlock().front();
+        BasicBlock::iterator IP = FnF->getEntryBlock().begin();
         (void)CallInst::Create(FnH2, {}, "", IP);
 
         // Use the CallGraphUpdater to update the call graph for the new
@@ -1690,7 +1690,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses10) {
         ASSERT_NE(FnH3, nullptr);
 
         // And insert a call to `h1`, and `h3`.
-        Instruction *IP = &FnH1->getEntryBlock().front();
+        BasicBlock::iterator IP = FnH1->getEntryBlock().begin();
         (void)CallInst::Create(FnH1, {}, "", IP);
         (void)CallInst::Create(FnH3, {}, "", IP);
 
@@ -1763,11 +1763,11 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions1) {
           // 2. Insert a ref edge from 'f' to 'f'.
           (void)CastInst::CreatePointerCast(
               &F, PointerType::getUnqual(F.getContext()), "f.ref",
-              &F.getEntryBlock().front());
+              F.getEntryBlock().begin());
           // 3. Insert a ref edge from 'f' to 'g'.
           (void)CastInst::CreatePointerCast(
               G, PointerType::getUnqual(F.getContext()), "g.ref",
-              &F.getEntryBlock().front());
+              F.getEntryBlock().begin());
 
           CG.addSplitFunction(F, *G);
 
@@ -1827,9 +1827,9 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
       (void)ReturnInst::Create(G2->getContext(), G2BB);
 
       // Add 'f -> g1' call edge.
-      (void)CallInst::Create(G1, {}, "", &F.getEntryBlock().front());
+      (void)CallInst::Create(G1, {}, "", F.getEntryBlock().begin());
       // Add 'f -> g2' call edge.
-      (void)CallInst::Create(G2, {}, "", &F.getEntryBlock().front());
+      (void)CallInst::Create(G2, {}, "", F.getEntryBlock().begin());
 
       CG.addSplitFunction(F, *G1);
       CG.addSplitFunction(F, *G2);
@@ -1853,11 +1853,11 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
       // Add 'f -> h1' ref edge.
       (void)CastInst::CreatePointerCast(H1,
                                         PointerType::getUnqual(F.getContext()),
-                                        "h1.ref", &F.getEntryBlock().front());
+                                        "h1.ref", F.getEntryBlock().begin());
       // Add 'f -> h2' ref edge.
       (void)CastInst::CreatePointerCast(H2,
                                         PointerType::getUnqual(F.getContext()),
-                                        "h2.ref", &F.getEntryBlock().front());
+                                        "h2.ref", F.getEntryBlock().begin());
 
       CG.addSplitRefRecursiveFunctions(F, SmallVector<Function *, 2>({H1, H2}));
 
@@ -1980,7 +1980,8 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewNonTrivialCallEdge) {
       ASSERT_TRUE(F3 != nullptr);
 
       // Create call from f1 to f3.
-      (void)CallInst::Create(F3, {}, "", F.getEntryBlock().getTerminator());
+      (void)CallInst::Create(F3, {}, "",
+                             F.getEntryBlock().getTerminator()->getIterator());
 
       ASSERT_NO_FATAL_FAILURE(
           updateCGAndAnalysisManagerForCGSCCPass(CG, C, *N, AM, UR, FAM))
