@@ -6419,6 +6419,16 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return TreeEntry::NeedToGather;
     }
 
+    if (any_of(VL, [&SourceVectors](Value *V) {
+          // The last InsertElement can have multiple uses.
+          return SourceVectors.contains(V) && !V->hasOneUse();
+        })) {
+      assert(SLPReVec && "Only supported by REVEC.");
+      LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement vectors with "
+                           "multiple uses.\n");
+      return TreeEntry::NeedToGather;
+    }
+
     return TreeEntry::Vectorize;
   }
   case Instruction::Load: {
