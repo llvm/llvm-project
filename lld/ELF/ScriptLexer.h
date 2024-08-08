@@ -25,10 +25,12 @@ protected:
     StringRef s, filename;
     const char *begin = nullptr;
     size_t lineNumber = 1;
+    // True if the script is opened as an absolute path under the --sysroot
+    // directory.
+    bool isUnderSysroot = false;
+
     Buffer() = default;
-    Buffer(MemoryBufferRef mb)
-        : s(mb.getBuffer()), filename(mb.getBufferIdentifier()),
-          begin(mb.getBufferStart()) {}
+    Buffer(MemoryBufferRef mb);
   };
   // The current buffer and parent buffers due to INCLUDE.
   Buffer curBuf;

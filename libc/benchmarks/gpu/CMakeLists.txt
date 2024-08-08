@@ -22,6 +22,8 @@ function(add_benchmark benchmark_name)
       ${BENCHMARK_LINK_LIBRARIES}
     DEPENDS
       libc.src.stdio.printf
+      libc.src.stdlib.srand
+      libc.src.stdlib.rand
       ${BENCHMARK_DEPENDS}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
     COMPILE_OPTIONS
@@ -52,13 +54,17 @@ add_unittest_framework_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.array
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.types
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.fixedvector
     libc.src.time.clock
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.benchmarks.gpu.timing.timing
     libc.src.stdio.printf
 )

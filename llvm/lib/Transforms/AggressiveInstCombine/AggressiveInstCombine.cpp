@@ -135,13 +135,10 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   if (!DT.dominates(ShVal0, TermI) || !DT.dominates(ShVal1, TermI))
     return false;
 
-  ICmpInst::Predicate Pred;
   BasicBlock *PhiBB = Phi.getParent();
-  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(ShAmt), m_ZeroInt()),
+  if (!match(TermI, m_Br(m_SpecificICmp(CmpInst::ICMP_EQ, m_Specific(ShAmt),
+                                        m_ZeroInt()),
                          m_SpecificBB(PhiBB), m_SpecificBB(FunnelBB))))
-    return false;
-
-  if (Pred != CmpInst::ICMP_EQ)
     return false;
 
   IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());

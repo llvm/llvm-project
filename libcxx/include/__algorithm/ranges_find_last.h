@@ -72,8 +72,7 @@ __find_last_impl(_Iter __first, _Sent __last, _Pred __pred, _Proj& __proj) {
   }
 }
 
-namespace __find_last {
-struct __fn {
+struct __find_last {
   template <class _Type>
   struct __op {
     const _Type& __value;
@@ -97,10 +96,8 @@ struct __fn {
     return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Type>{__value}, __proj);
   }
 };
-} // namespace __find_last
 
-namespace __find_last_if {
-struct __fn {
+struct __find_last_if {
   template <class _Pred>
   struct __op {
     _Pred& __pred;
@@ -127,10 +124,8 @@ struct __fn {
     return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Pred>{__pred}, __proj);
   }
 };
-} // namespace __find_last_if
 
-namespace __find_last_if_not {
-struct __fn {
+struct __find_last_if_not {
   template <class _Pred>
   struct __op {
     _Pred& __pred;
@@ -157,12 +152,11 @@ struct __fn {
     return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Pred>{__pred}, __proj);
   }
 };
-} // namespace __find_last_if_not
 
 inline namespace __cpo {
-inline constexpr auto find_last        = __find_last::__fn{};
-inline constexpr auto find_last_if     = __find_last_if::__fn{};
-inline constexpr auto find_last_if_not = __find_last_if_not::__fn{};
+inline constexpr auto find_last        = __find_last{};
+inline constexpr auto find_last_if     = __find_last_if{};
+inline constexpr auto find_last_if_not = __find_last_if_not{};
 } // namespace __cpo
 } // namespace ranges
 

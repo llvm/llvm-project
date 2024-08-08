@@ -857,6 +857,7 @@ defm FMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmopa", 0b0, 0b0, nxv8f16, int_aarch
 defm FMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmops", 0b0, 0b1, nxv8f16, int_aarch64_sme_mops>;
 }
 
+// SME2 ZA-targeting non-widening BFloat16 instructions
 let Predicates = [HasSME2, HasB16B16] in {
 defm BFADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfadd", 0b1100, MatrixOp16, ZZ_h_mul_r, nxv8bf16,    int_aarch64_sme_add_za16_vg1x2>;
 defm BFADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfadd", 0b1100, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16,  int_aarch64_sme_add_za16_vg1x4>;
@@ -877,6 +878,12 @@ defm BFMLS_VG4_M4ZZ  : sme2_dot_mla_add_sub_array_vg4_single<"bfmls", 0b1111101,
 defm BFMLS_VG2_M2Z2Z : sme2_dot_mla_add_sub_array_vg2_multi<"bfmls", 0b1100011, MatrixOp16, ZZ_h_mul_r, nxv8bf16, int_aarch64_sme_fmls_vg1x2>;
 defm BFMLS_VG4_M4Z4Z : sme2_dot_mla_add_sub_array_vg4_multi<"bfmls", 0b1100011, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16, int_aarch64_sme_fmls_vg1x4>;
 
+defm BFMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmopa", 0b1, 0b0, nxv8bf16, int_aarch64_sme_mopa>;
+defm BFMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmops", 0b1, 0b1, nxv8bf16, int_aarch64_sme_mops>;
+}
+
+// SME2 Z-targeting non-widening BFloat16 instructions
+let Predicates = [HasSME2, HasSVEB16B16] in {
 defm BFMAX_VG2_2ZZ  : sme2p1_bf_max_min_vector_vg2_single<"bfmax", 0b0010000>;
 defm BFMAX_VG4_4ZZ  : sme2p1_bf_max_min_vector_vg4_single<"bfmax", 0b0010000>;
 defm BFMAX_VG2_2Z2Z : sme2p1_bf_max_min_vector_vg2_multi<"bfmax",  0b0010000>;
@@ -899,9 +906,6 @@ defm BFMINNM_VG4_4Z2Z : sme2p1_bf_max_min_vector_vg4_multi<"bfminnm",  0b0010011
 
 defm BFCLAMP_VG2_2ZZZ: sme2p1_bfclamp_vector_vg2_multi<"bfclamp">;
 defm BFCLAMP_VG4_4ZZZ: sme2p1_bfclamp_vector_vg4_multi<"bfclamp">;
-
-defm BFMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmopa", 0b1, 0b0, nxv8bf16, int_aarch64_sme_mopa>;
-defm BFMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmops", 0b1, 0b1, nxv8bf16, int_aarch64_sme_mops>;
 }
 
 let Predicates = [HasSME2, HasFP8] in {

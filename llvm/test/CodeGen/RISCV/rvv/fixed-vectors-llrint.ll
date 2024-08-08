@@ -11,7 +11,7 @@ define <1 x i64> @llrint_v1i64_v1f32(<1 x float> %x) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vfmv.f.s fa0, v8
 ; RV32-NEXT:    call llrintf
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -23,10 +23,10 @@ define <1 x i64> @llrint_v1i64_v1f32(<1 x float> %x) {
 ;
 ; RV64-LABEL: llrint_v1i64_v1f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vfmv.f.s fa5, v8
 ; RV64-NEXT:    fcvt.l.s a0, fa5
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    ret
   %a = call <1 x i64> @llvm.llrint.v1i64.v1f32(<1 x float> %x)
@@ -47,7 +47,7 @@ define <2 x i64> @llrint_v2i64_v2f32(<2 x float> %x) {
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vfmv.f.s fa0, v8
 ; RV32-NEXT:    call llrintf
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma

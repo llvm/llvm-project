@@ -4,6 +4,25 @@
 ; RUN: -slp-skip-early-profitability-check < %s | FileCheck %s --check-prefixes=FORCED
 
 define i64 @foo() {
+; CHECK-LABEL: define i64 @foo() {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ADD:%.*]], [[BB3]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[TMP9:%.*]], [[BB3]] ]
+; CHECK-NEXT:    ret i64 0
+; CHECK:       bb3:
+; CHECK-NEXT:    [[PHI5:%.*]] = phi i64 [ 0, [[BB:%.*]] ], [ 0, [[BB3]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, [[BB]] ], [ [[TMP7:%.*]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[ADD]] = add i64 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 0
+; CHECK-NEXT:    [[TMP9]] = or i64 [[PHI5]], 0
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP7]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[ADD]], i32 0
+; CHECK-NEXT:    br i1 false, label [[BB3]], label [[BB1:%.*]]
+;
 ; FORCED-LABEL: define i64 @foo() {
 ; FORCED-NEXT:  bb:
 ; FORCED-NEXT:    br label [[BB3:%.*]]
@@ -24,25 +43,6 @@ define i64 @foo() {
 ; FORCED-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
 ; FORCED-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP9]], 0
 ; FORCED-NEXT:    br i1 false, label [[BB3]], label [[BB1:%.*]]
-;
-; CHECK-LABEL: define i64 @foo() {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label [[BB3:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ADD:%.*]], [[BB3]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i64 [ [[TMP9:%.*]], [[BB3]] ]
-; CHECK-NEXT:    ret i64 0
-; CHECK:       bb3:
-; CHECK-NEXT:    [[PHI5:%.*]] = phi i64 [ 0, [[BB:%.*]] ], [ 0, [[BB3]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, [[BB]] ], [ [[TMP7:%.*]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
-; CHECK-NEXT:    [[ADD]] = add i64 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 0
-; CHECK-NEXT:    [[TMP9]] = or i64 [[PHI5]], 0
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP7]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[ADD]], i32 0
-; CHECK-NEXT:    br i1 false, label [[BB3]], label [[BB1:%.*]]
 ;
 bb:
   br label %bb3

@@ -154,6 +154,17 @@ add_perf_binary(
 )
 
 add_perf_binary(
+  exp10f16_perf
+  SRCS
+    exp10f16_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.exp10f16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
   exp2f_perf
   SRCS
     exp2f_perf.cpp
@@ -165,12 +176,34 @@ add_perf_binary(
 )
 
 add_perf_binary(
+  exp2f16_perf
+  SRCS
+    exp2f16_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.exp2f16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
   expf_perf
   SRCS
     expf_perf.cpp
   DEPENDS
     .single_input_single_output_diff
     libc.src.math.expf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  expf16_perf
+  SRCS
+    expf16_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.expf16
   COMPILE_OPTIONS
     -fno-builtin
 )

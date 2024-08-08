@@ -3389,6 +3389,7 @@ td_library(
     srcs = ["include/mlir/Dialect/NVGPU/IR/NVGPU.td"],
     includes = ["include"],
     deps = [
+        ":InferTypeOpInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
 )
@@ -3477,6 +3478,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":GPUDialect",
         ":IR",
+        ":InferTypeOpInterface",
         ":LLVMDialect",
         ":NVGPUIncGen",
         ":SideEffectInterfaces",
@@ -11211,6 +11213,7 @@ cc_library(
         ":AffineDialect",
         ":Analysis",
         ":ArithDialect",
+	":ArithUtils",
         ":AsmParser",
         ":BufferizationDialect",
         ":BufferizationTransforms",

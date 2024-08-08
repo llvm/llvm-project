@@ -86,7 +86,7 @@ createSparcMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 
 static MCTargetStreamer *
 createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  return new SparcTargetELFStreamer(S);
+  return new SparcTargetELFStreamer(S, STI);
 }
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,

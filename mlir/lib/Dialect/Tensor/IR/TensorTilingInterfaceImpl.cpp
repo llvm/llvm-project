@@ -126,8 +126,8 @@ struct PackOpTiling
     // The tiling is applied on interchanged dimensions. We have to undo the
     // interchange to map sizes and offsets to the original input.
     int64_t inputRank = packOp.getSourceRank();
-    SmallVector<OpFoldResult> origOffsets(offsets.begin(), offsets.end());
-    SmallVector<OpFoldResult> origSizes(sizes.begin(), sizes.end());
+    SmallVector<OpFoldResult> origOffsets(offsets);
+    SmallVector<OpFoldResult> origSizes(sizes);
     applyPermToRange(origOffsets, origSizes,
                      invertPermutationVector(packOp.getOuterDimsPerm()));
 
@@ -486,9 +486,8 @@ struct UnPackOpTiling
     // The tiling is applied on interchanged dimensions. We have to undo the
     // interchange to map sizes and offsets to the original input.
     int64_t outputRank = unPackOp.getDestRank();
-    SmallVector<OpFoldResult> origOffsets(destOffsets.begin(),
-                                          destOffsets.end());
-    SmallVector<OpFoldResult> origSizes(destSizes.begin(), destSizes.end());
+    SmallVector<OpFoldResult> origOffsets(destOffsets);
+    SmallVector<OpFoldResult> origSizes(destSizes);
     applyPermToRange(origOffsets, origSizes,
                      invertPermutationVector(unPackOp.getOuterDimsPerm()));
 

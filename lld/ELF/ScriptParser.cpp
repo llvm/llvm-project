@@ -48,22 +48,12 @@ namespace {
 class ScriptParser final : ScriptLexer {
 public:
   ScriptParser(MemoryBufferRef mb) : ScriptLexer(mb) {
-    // Initialize IsUnderSysroot
-    if (config->sysroot == "")
-      return;
-    StringRef path = mb.getBufferIdentifier();
-    for (; !path.empty(); path = sys::path::parent_path(path)) {
-      if (!sys::fs::equivalent(config->sysroot, path))
-        continue;
-      isUnderSysroot = true;
-      return;
-    }
   }
 
   void readLinkerScript();
   void readVersionScript();
   void readDynamicList();
-  void readDefsym(StringRef name);
+  void readDefsym();
 
 private:
   void addFile(StringRef path);
@@ -97,6 +87,8 @@ private:
   OutputDesc *readOverlaySectionDescription();
   OutputDesc *readOutputSectionDescription(StringRef outSec);
   SmallVector<SectionCommand *, 0> readOverlay();
+  SectionClassDesc *readSectionClassDescription();
+  StringRef readSectionClassName();
   SmallVector<StringRef, 0> readOutputSectionPhdrs();
   std::pair<uint64_t, uint64_t> readInputSectionFlags();
   InputSectionDescription *readInputSectionDescription(StringRef tok);
@@ -134,9 +126,6 @@ private:
 
   std::pair<SmallVector<SymbolVersion, 0>, SmallVector<SymbolVersion, 0>>
   readSymbols();
-
-  // True if a script being read is in the --sysroot directory.
-  bool isUnderSysroot = false;
 
   // If we are currently parsing a PROVIDE|PROVIDE_HIDDEN command,
   // then this member is set to the PROVIDE symbol name.
@@ -296,9 +285,12 @@ void ScriptParser::readLinkerScript() {
   }
 }
 
-void ScriptParser::readDefsym(StringRef name) {
+void ScriptParser::readDefsym() {
   if (errorCount())
     return;
+  inExpr = true;
+  StringRef name = readName();
+  expect("=");
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
@@ -319,7 +311,7 @@ void ScriptParser::readNoCrossRefs(bool to) {
 }
 
 void ScriptParser::addFile(StringRef s) {
-  if (isUnderSysroot && s.starts_with("/")) {
+  if (curBuf.isUnderSysroot && s.starts_with("/")) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
     if (sys::fs::exists(path))
@@ -615,6 +607,33 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   return v;
 }
 
+SectionClassDesc *ScriptParser::readSectionClassDescription() {
+  StringRef name = readSectionClassName();
+  SectionClassDesc *desc = make<SectionClassDesc>(name);
+  if (!script->sectionClasses.insert({CachedHashStringRef(name), desc}).second)
+    setError("section class '" + name + "' already defined");
+  expect("{");
+  while (auto tok = till("}")) {
+    if (tok == "(" || tok == ")") {
+      setError("expected filename pattern");
+    } else if (peek() == "(") {
+      InputSectionDescription *isd = readInputSectionDescription(tok);
+      if (!isd->classRef.empty())
+        setError("section class '" + name + "' references class '" +
+                 isd->classRef + "'");
+      desc->sc.commands.push_back(isd);
+    }
+  }
+  return desc;
+}
+
+StringRef ScriptParser::readSectionClassName() {
+  expect("(");
+  StringRef name = unquote(next());
+  expect(")");
+  return name;
+}
+
 void ScriptParser::readOverwriteSections() {
   expect("{");
   while (auto tok = till("}"))
@@ -629,7 +648,12 @@ void ScriptParser::readSections() {
       for (SectionCommand *cmd : readOverlay())
         v.push_back(cmd);
       continue;
-    } else if (tok == "INCLUDE") {
+    }
+    if (tok == "CLASS") {
+      v.push_back(readSectionClassDescription());
+      continue;
+    }
+    if (tok == "INCLUDE") {
       readInclude();
       continue;
     }
@@ -832,8 +856,14 @@ ScriptParser::readInputSectionDescription(StringRef tok) {
     expect("(");
     if (consume("INPUT_SECTION_FLAGS"))
       std::tie(withFlags, withoutFlags) = readInputSectionFlags();
-    InputSectionDescription *cmd =
-        readInputSectionRules(next(), withFlags, withoutFlags);
+
+    tok = next();
+    InputSectionDescription *cmd;
+    if (tok == "CLASS")
+      cmd = make<InputSectionDescription>(StringRef{}, withFlags, withoutFlags,
+                                          readSectionClassName());
+    else
+      cmd = readInputSectionRules(tok, withFlags, withoutFlags);
     expect(")");
     script->keptSections.push_back(cmd);
     return cmd;
@@ -842,6 +872,9 @@ ScriptParser::readInputSectionDescription(StringRef tok) {
     std::tie(withFlags, withoutFlags) = readInputSectionFlags();
     tok = next();
   }
+  if (tok == "CLASS")
+    return make<InputSectionDescription>(StringRef{}, withFlags, withoutFlags,
+                                         readSectionClassName());
   return readInputSectionRules(tok, withFlags, withoutFlags);
 }
 
@@ -961,8 +994,12 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
       std::tie(withFlags, withoutFlags) = readInputSectionFlags();
       tok = till("");
     }
-    osd->osec.commands.push_back(
-        readInputSectionRules(tok, withFlags, withoutFlags));
+    if (tok == "CLASS")
+      osd->osec.commands.push_back(make<InputSectionDescription>(
+          StringRef{}, withFlags, withoutFlags, readSectionClassName()));
+    else
+      osd->osec.commands.push_back(
+          readInputSectionRules(tok, withFlags, withoutFlags));
   }
   osd->osec.phdrs = readOutputSectionPhdrs();
   return osd;
@@ -1867,7 +1904,4 @@ void elf::readDynamicList(MemoryBufferRef mb) {
   ScriptParser(mb).readDynamicList();
 }
 
-void elf::readDefsym(StringRef name, MemoryBufferRef mb) {
-  llvm::TimeTraceScope timeScope("Read defsym input", name);
-  ScriptParser(mb).readDefsym(name);
-}
+void elf::readDefsym(MemoryBufferRef mb) { ScriptParser(mb).readDefsym(); }

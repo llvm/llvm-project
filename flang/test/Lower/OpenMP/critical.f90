@@ -59,11 +59,8 @@ subroutine parallel_critical_privatization()
 
   !CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFparallel_critical_privatizationEi"}
   !CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]] {uniq_name = "_QFparallel_critical_privatizationEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  !CHECK: omp.parallel {
-  !CHECK:   %[[PRIV_I:.*]] = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFparallel_critical_privatizationEi"}
+  !CHECK: omp.parallel private(@{{.*}} %[[I_DECL]]#0 -> %[[PRIV_I:.*]] : !fir.ref<i32>) {
   !CHECK:   %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFparallel_critical_privatizationEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  !CHECK:   %[[TEMP:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
-  !CHECK:   hlfir.assign %[[TEMP]] to %[[PRIV_I_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
   !$omp parallel default(firstprivate)
     !CHECK: omp.critical {
     !$omp critical
