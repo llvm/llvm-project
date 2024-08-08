@@ -873,12 +873,11 @@ private:
   void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
 
   /// Emit a blob of inline asm to the output streamer.
-  void
-  emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
-                const MCTargetOptions &MCOptions,
-                const MDNode *LocMDNode = nullptr,
-                InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT,
-                const DebugLoc *DbgLoc = nullptr) const;
+  void emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                     const MCTargetOptions &MCOptions,
+                     const MDNode *LocMDNode = nullptr,
+                     InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT,
+                     const DebugLoc *DbgLoc = nullptr) const;
 
   /// This method formats and emits the specified machine instruction that is an
   /// inline asm.
@@ -886,8 +885,7 @@ private:
 
   /// Add inline assembly info to the diagnostics machinery, so we can
   /// emit file and position info. Returns SrcMgr memory buffer position.
-  unsigned addInlineAsmDiagBuffer(StringRef AsmStr,
-                                  const MDNode *LocMDNode,
+  unsigned addInlineAsmDiagBuffer(StringRef AsmStr, const MDNode *LocMDNode,
                                   const DebugLoc *DbgLoc) const;
 
   //===------------------------------------------------------------------===//

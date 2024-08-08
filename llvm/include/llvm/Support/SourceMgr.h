@@ -148,9 +148,8 @@ public:
                               SMLoc IncludeLoc) {
     return AddNewSourceBuffer(std::move(F), 0, 0, IncludeLoc);
   }
-  unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
-                              unsigned Line, unsigned Col,
-                              SMLoc IncludeLoc) {
+  unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F, unsigned Line,
+                              unsigned Col, SMLoc IncludeLoc) {
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
