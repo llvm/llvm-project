@@ -262,6 +262,7 @@ protected:
       SmallVector<std::unique_ptr<DomTreeNodeBase<NodeT>>>;
   DomTreeNodeStorageTy DomTreeNodes;
   // For graphs where blocks don't have numbers, create a numbering here.
+  // TODO: use an empty struct with [[no_unique_address]] in C++20.
   std::conditional_t<!GraphHasNodeNumbers<NodeT *>,
                      DenseMap<const NodeT *, unsigned>, std::tuple<>>
       NodeNumberMap;
