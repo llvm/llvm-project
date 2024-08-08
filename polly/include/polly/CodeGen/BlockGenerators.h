@@ -170,14 +170,6 @@ protected:
   /// @}
 
 public:
-  /// Change the function that code is emitted into.
-  void switchGeneratedFunc(Function *GenFn, DominatorTree *GenDT,
-                           LoopInfo *GenLI, ScalarEvolution *GenSE) {
-    this->GenDT = GenDT;
-    this->GenLI = GenLI;
-    this->GenSE = GenSE;
-  }
-
   /// Map to resolve scalar dependences for PHI operands and scalars.
   ///
   /// When translating code that contains scalar dependences as they result from
@@ -310,6 +302,10 @@ public:
 
   /// Split @p BB to create a new one we can use to clone @p BB in.
   BasicBlock *splitBB(BasicBlock *BB);
+
+  /// Change the function that code is emitted into.
+  void switchGeneratedFunc(Function *GenFn, DominatorTree *GenDT,
+                           LoopInfo *GenLI, ScalarEvolution *GenSE);
 
   /// Copy the given basic block.
   ///

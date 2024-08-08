@@ -47,6 +47,18 @@ IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,
   OverflowState = (OTMode == OT_ALWAYS) ? Builder.getFalse() : nullptr;
 }
 
+void IslExprBuilder::switchGeneratedFunc(llvm::Function *GenFn,
+                                         llvm::DominatorTree *GenDT,
+                                         llvm::LoopInfo *GenLI,
+                                         llvm::ScalarEvolution *GenSE) {
+  assert(GenFn == GenDT->getRoot()->getParent());
+  assert(GenLI->getTopLevelLoops().empty() ||
+         GenFn == GenLI->getTopLevelLoops().front()->getHeader()->getParent());
+  this->GenDT = GenDT;
+  this->GenLI = GenLI;
+  this->GenSE = GenSE;
+}
+
 void IslExprBuilder::setTrackOverflow(bool Enable) {
   // If potential overflows are tracked always or never we ignore requests
   // to change the behavior.

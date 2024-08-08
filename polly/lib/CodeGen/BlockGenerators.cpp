@@ -432,6 +432,17 @@ BasicBlock *BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB,
   return CopyBB;
 }
 
+void BlockGenerator::switchGeneratedFunc(Function *GenFn, DominatorTree *GenDT,
+                                         LoopInfo *GenLI,
+                                         ScalarEvolution *GenSE) {
+  assert(GenFn == GenDT->getRoot()->getParent());
+  assert(GenLI->getTopLevelLoops().empty() ||
+         GenFn == GenLI->getTopLevelLoops().front()->getHeader()->getParent());
+  this->GenDT = GenDT;
+  this->GenLI = GenLI;
+  this->GenSE = GenSE;
+}
+
 void BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB, BasicBlock *CopyBB,
                             ValueMapT &BBMap, LoopToScevMapT &LTS,
                             isl_id_to_ast_expr *NewAccesses) {

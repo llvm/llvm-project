@@ -126,12 +126,7 @@ public:
 
   /// Change the function that code is emitted into.
   void switchGeneratedFunc(llvm::Function *GenFn, llvm::DominatorTree *GenDT,
-                           llvm::LoopInfo *GenLI,
-                           llvm::ScalarEvolution *GenSE) {
-    this->GenDT = GenDT;
-    this->GenLI = GenLI;
-    this->GenSE = GenSE;
-  }
+                           llvm::LoopInfo *GenLI, llvm::ScalarEvolution *GenSE);
 
   /// Create LLVM-IR for an isl_ast_expr[ession].
   ///
