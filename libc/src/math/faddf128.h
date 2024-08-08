@@ -9,7 +9,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-
 #ifndef LLVM_LIBC_SRC_MATH_FADDF128_H
 #define LLVM_LIBC_SRC_MATH_FADDF128_H
 
