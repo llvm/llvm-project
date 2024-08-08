@@ -293,10 +293,10 @@ void CodeGenFunction::initFullExprCleanupWithFlag(RawAddress ActiveFlag) {
 void EHScopeStack::Cleanup::anchor() {}
 
 static void createStoreInstBefore(llvm::Value *value, Address addr,
-                                  llvm::Instruction *beforeInst,
+                                  llvm::BasicBlock::iterator beforeInst,
                                   CodeGenFunction &CGF) {
   auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF),
-                                   beforeInst->getIterator());
+                                   beforeInst);
   store->setAlignment(addr.getAlignment().getAsAlign());
 }
 
@@ -337,7 +337,7 @@ static void ResolveAllBranchFixups(CodeGenFunction &CGF,
     // entry which we're currently popping.
     if (Fixup.OptimisticBranchBlock == nullptr) {
       createStoreInstBefore(CGF.Builder.getInt32(Fixup.DestinationIndex),
-                            CGF.getNormalCleanupDestSlot(), Fixup.InitialBranch,
+                            CGF.getNormalCleanupDestSlot(), Fixup.InitialBranch->getIterator(),
                             CGF);
       Fixup.InitialBranch->setSuccessor(0, CleanupEntry);
     }
@@ -965,7 +965,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
         if (!Fixup.Destination) continue;
         if (!Fixup.OptimisticBranchBlock) {
           createStoreInstBefore(Builder.getInt32(Fixup.DestinationIndex),
-                                getNormalCleanupDestSlot(), Fixup.InitialBranch,
+                                getNormalCleanupDestSlot(), Fixup.InitialBranch->getIterator(),
                                 *this);
           Fixup.InitialBranch->setSuccessor(0, NormalEntry);
         }
@@ -1141,7 +1141,7 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
 
   // Store the index at the start.
   llvm::ConstantInt *Index = Builder.getInt32(Dest.getDestIndex());
-  createStoreInstBefore(Index, getNormalCleanupDestSlot(), BI, *this);
+  createStoreInstBefore(Index, getNormalCleanupDestSlot(), BI->getIterator(), *this);
 
   // Adjust BI to point to the first cleanup block.
   {
@@ -1260,7 +1260,7 @@ static void SetupCleanupBlockActivation(CodeGenFunction &CGF,
     if (CGF.isInConditionalBranch()) {
       CGF.setBeforeOutermostConditional(value, var, CGF);
     } else {
-      createStoreInstBefore(value, var, dominatingIP, CGF);
+      createStoreInstBefore(value, var, dominatingIP->getIterator(), CGF);
     }
   }
 

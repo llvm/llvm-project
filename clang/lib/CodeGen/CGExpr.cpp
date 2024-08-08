@@ -121,7 +121,7 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
     Alloca = Builder.CreateAlloca(Ty, ArraySize, Name);
   else
     Alloca = new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
-                                  ArraySize, Name, AllocaInsertPt);
+                                  ArraySize, Name, AllocaInsertPt->getIterator());
   if (Allocas) {
     Allocas->Add(Alloca);
   }
