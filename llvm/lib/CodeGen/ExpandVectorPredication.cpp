@@ -210,10 +210,9 @@ public:
   CachingVPExpander(const TargetTransformInfo &TTI)
       : TTI(TTI), UsingTTIOverrides(anyExpandVPOverridesSet()) {}
 
-  /// Applies the legalization strategy for this intrinsic. Returns true
-  /// if any change happened as part of executing the legalization strategy.
-  /// Returns false if the intrinsic is legal.
-  bool expandVectorPredication(VPIntrinsic &VPI);
+  /// Expand llvm.vp.* intrinsics as requested by \p TTI.
+  /// Returns the details of the expansion.
+  VPExpansionDetails expandVectorPredication(VPIntrinsic &VPI);
 };
 
 //// CachingVPExpander {
@@ -815,12 +814,12 @@ CachingVPExpander::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return VPStrat;
 }
 
-/// Expand llvm.vp.* intrinsics as requested by \p TTI.
-bool CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
+VPExpansionDetails
+CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
   auto Strategy = getVPLegalizationStrategy(VPI);
   sanitizeStrategy(VPI, Strategy);
 
-  bool Changed = false;
+  VPExpansionDetails Changed = VPExpansionDetails::IntrinsicUnchanged;
 
   // Transform the EVL parameter.
   switch (Strategy.EVLParamStrategy) {
@@ -828,12 +827,12 @@ bool CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
     break;
   case VPLegalization::Discard:
     if (discardEVLParameter(VPI))
-      Changed = true;
+      Changed = VPExpansionDetails::IntrinsicUpdated;
     break;
   case VPLegalization::Convert:
     if (auto [NewVPI, Folded] = foldEVLIntoMask(VPI); Folded) {
       (void)NewVPI;
-      Changed = true;
+      Changed = VPExpansionDetails::IntrinsicUpdated;
       ++NumFoldedVL;
     }
     break;
@@ -848,7 +847,7 @@ bool CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
   case VPLegalization::Convert:
     if (Value *V = expandPredication(VPI); V != &VPI) {
       ++NumLoweredVPOps;
-      Changed = true;
+      Changed = VPExpansionDetails::IntrinsicReplaced;
     }
     break;
   }
@@ -857,7 +856,8 @@ bool CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
 }
 } // namespace
 
-bool llvm::expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
-                                            const TargetTransformInfo &TTI) {
+VPExpansionDetails
+llvm::expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
+                                       const TargetTransformInfo &TTI) {
   return CachingVPExpander(TTI).expandVectorPredication(VPI);
 }
