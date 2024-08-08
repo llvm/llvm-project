@@ -1781,6 +1781,16 @@ static void printConstant(OpAsmPrinter &p, Attribute value) {
   p.printAttribute(value);
 }
 
+static ParseResult parseGlobalOpAddrSpace(OpAsmParser &p,
+                                          AddressSpaceAttr &addrSpaceAttr) {
+  return parseAddrSpaceAttribute(p, addrSpaceAttr);
+}
+
+static void printGlobalOpAddrSpace(OpAsmPrinter &p, GlobalOp op,
+                                   AddressSpaceAttr addrSpaceAttr) {
+  printAddrSpaceAttribute(p, addrSpaceAttr);
+}
+
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
                                              TypeAttr type, Attribute initAttr,
                                              mlir::Region &ctorRegion,
@@ -1954,6 +1964,7 @@ LogicalResult GlobalOp::verify() {
 void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                      StringRef sym_name, Type sym_type, bool isConstant,
                      cir::GlobalLinkageKind linkage,
+                     cir::AddressSpaceAttr addrSpace,
                      function_ref<void(OpBuilder &, Location)> ctorBuilder,
                      function_ref<void(OpBuilder &, Location)> dtorBuilder) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
@@ -1967,6 +1978,9 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   ::mlir::cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
   odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
+
+  if (addrSpace)
+    odsState.addAttribute(getAddrSpaceAttrName(odsState.name), addrSpace);
 
   Region *ctorRegion = odsState.addRegion();
   if (ctorBuilder) {

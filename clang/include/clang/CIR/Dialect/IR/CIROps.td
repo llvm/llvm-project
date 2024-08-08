@@ -2157,6 +2157,7 @@ def GlobalOp : CIR_Op<"global",
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
+                       OptionalAttr<AddressSpaceAttr>:$addr_space,
                        OptionalAttr<TLSModel>:$tls_model,
                        // Note this can also be a FlatSymbolRefAttr
                        OptionalAttr<AnyAttr>:$initial_value,
@@ -2175,6 +2176,7 @@ def GlobalOp : CIR_Op<"global",
        (`comdat` $comdat^)?
        ($tls_model^)?
        (`dsolocal` $dsolocal^)?
+       (`addrspace` `(` custom<GlobalOpAddrSpace>($addr_space)^ `)`)?
        $sym_name
        custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value, $ctorRegion, $dtorRegion)
        attr-dict
@@ -2202,6 +2204,7 @@ def GlobalOp : CIR_Op<"global",
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
             "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+      CArg<"cir::AddressSpaceAttr", "{}">:$addrSpace,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "nullptr">:$ctorBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",

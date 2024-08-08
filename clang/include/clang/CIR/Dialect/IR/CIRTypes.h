@@ -183,6 +183,11 @@ bool isFPOrFPVectorTy(mlir::Type);
 } // namespace cir
 } // namespace mlir
 
+mlir::ParseResult parseAddrSpaceAttribute(mlir::AsmParser &p,
+                                          mlir::Attribute &addrSpaceAttr);
+void printAddrSpaceAttribute(mlir::AsmPrinter &p,
+                             mlir::Attribute addrSpaceAttr);
+
 //===----------------------------------------------------------------------===//
 // CIR Dialect Tablegen'd Types
 //===----------------------------------------------------------------------===//

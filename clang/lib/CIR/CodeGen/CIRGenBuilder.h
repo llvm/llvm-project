@@ -655,10 +655,12 @@ public:
   [[nodiscard]] mlir::cir::GlobalOp
   createGlobal(mlir::ModuleOp module, mlir::Location loc, mlir::StringRef name,
                mlir::Type type, bool isConst,
-               mlir::cir::GlobalLinkageKind linkage) {
+               mlir::cir::GlobalLinkageKind linkage,
+               mlir::cir::AddressSpaceAttr addrSpace = {}) {
     mlir::OpBuilder::InsertionGuard guard(*this);
     setInsertionPointToStart(module.getBody());
-    return create<mlir::cir::GlobalOp>(loc, name, type, isConst, linkage);
+    return create<mlir::cir::GlobalOp>(loc, name, type, isConst, linkage,
+                                       addrSpace);
   }
 
   /// Creates a versioned global variable. If the symbol is already taken, an ID
@@ -667,7 +669,8 @@ public:
   [[nodiscard]] mlir::cir::GlobalOp
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
                         mlir::StringRef name, mlir::Type type, bool isConst,
-                        mlir::cir::GlobalLinkageKind linkage) {
+                        mlir::cir::GlobalLinkageKind linkage,
+                        mlir::cir::AddressSpaceAttr addrSpace = {}) {
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
     if (unsigned version = GlobalsVersioning[name.str()]++)
@@ -675,7 +678,8 @@ public:
     else
       uniqueName = name.str();
 
-    return createGlobal(module, loc, uniqueName, type, isConst, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConst, linkage,
+                        addrSpace);
   }
 
   mlir::Value createGetGlobal(mlir::cir::GlobalOp global,
