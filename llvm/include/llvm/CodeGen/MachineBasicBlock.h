@@ -1304,6 +1304,9 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   }
 };
 
+static_assert(GraphHasNodeNumbers<MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
+
 template <> struct GraphTraits<const MachineBasicBlock *> {
   using NodeRef = const MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::const_succ_iterator;
@@ -1317,6 +1320,9 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
     return BB->getNumber();
   }
 };
+
+static_assert(GraphHasNodeNumbers<const MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 // Provide specializations of GraphTraits to be able to treat a
 // MachineFunction as a graph of MachineBasicBlocks and to walk it
@@ -1341,6 +1347,9 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
   }
 };
 
+static_assert(GraphHasNodeNumbers<Inverse<MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
+
 template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   using NodeRef = const MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::const_pred_iterator;
@@ -1357,6 +1366,9 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
     return BB->getNumber();
   }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 // These accessors are handy for sharing templated code between IR and MIR.
 inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }

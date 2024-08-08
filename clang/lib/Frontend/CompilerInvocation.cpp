@@ -3650,6 +3650,11 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_ftrigraphs);
   }
 
+  if (T.isOSzOS() && !Opts.ZOSExt)
+    GenerateArg(Consumer, OPT_fno_zos_extensions);
+  else if (Opts.ZOSExt)
+    GenerateArg(Consumer, OPT_fzos_extensions);
+
   if (Opts.Blocks && !(Opts.OpenCL && Opts.OpenCLVersion == 200))
     GenerateArg(Consumer, OPT_fblocks);
 
@@ -4050,6 +4055,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       T.isOSzOS();
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
+
+  Opts.ZOSExt =
+      Args.hasFlag(OPT_fzos_extensions, OPT_fno_zos_extensions, T.isOSzOS());
 
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
