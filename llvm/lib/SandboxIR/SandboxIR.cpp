@@ -546,7 +546,8 @@ void SelectInst::dump() const {
 BranchInst *BranchInst::create(BasicBlock *IfTrue, Instruction *InsertBefore,
                                Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(cast<llvm::Instruction>(LLVMBefore));
   llvm::BranchInst *NewBr =
       Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
   return Ctx.createBranchInst(NewBr);
@@ -565,7 +566,8 @@ BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                                Value *Cond, Instruction *InsertBefore,
                                Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(LLVMBefore);
   llvm::BranchInst *NewBr =
       Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
                            cast<llvm::BasicBlock>(IfFalse->Val));
