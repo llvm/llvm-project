@@ -93,20 +93,13 @@ LLVM_LIBC_FUNCTION(float16, expm1f16, (float16 x)) {
       if (x_bits.is_inf())
         return FPBits::one(Sign::NEG).get_val();
 
-      fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_INEXACT);
-
-      switch (fputil::quick_get_round()) {
-      case FE_UPWARD:
-      case FE_TOWARDZERO:
-        return static_cast<float16>(-0x1.ffcp-1);
-      case FE_TONEAREST:
-        if (x_u > 0xc828U)
-          return FPBits::one(Sign::NEG).get_val();
-        return static_cast<float16>(-0x1.ffcp-1);
-      default:
-        return FPBits::one(Sign::NEG).get_val();
-      }
+      // When x > -0x1.0ap+3, round(expm1(x), HP, RN) = -1.
+      if (x_u > 0xc828U)
+        return fputil::round_result_slightly_up(
+            FPBits::one(Sign::NEG).get_val());
+      // When x <= -0x1.0ap+3, round(expm1(x), HP, RN) = -0x1.ffcp-1.
+      return fputil::round_result_slightly_down(
+          static_cast<float16>(-0x1.ffcp-1));
     }
 
     // When 0 < |x| <= 2^(-3).
