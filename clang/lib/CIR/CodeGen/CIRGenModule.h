@@ -702,6 +702,9 @@ public:
                             const FunctionDecl *FD = nullptr,
                             CIRGenFunction *CGF = nullptr);
 
+  /// Emits OpenCL specific Metadata e.g. OpenCL version.
+  void buildOpenCLMetadata();
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;

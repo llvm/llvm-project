@@ -2768,6 +2768,16 @@ void CIRGenModule::Release() {
     // TODO: buildModuleLinkOptions
   }
 
+  // Emit OpenCL specific module metadata: OpenCL/SPIR version.
+  if (langOpts.CUDAIsDevice && getTriple().isSPIRV())
+    llvm_unreachable("CUDA SPIR-V NYI");
+  if (langOpts.OpenCL) {
+    buildOpenCLMetadata();
+    // Emit SPIR version.
+    if (getTriple().isSPIR())
+      llvm_unreachable("SPIR target NYI");
+  }
+
   // TODO: FINISH THE REST OF THIS
 }
 
@@ -3234,4 +3244,18 @@ void CIRGenModule::genKernelArgMetadata(mlir::cir::FuncOp Fn,
     if (shouldEmitArgName)
       llvm_unreachable("NYI HIPSaveKernelArgName");
   }
+}
+
+void CIRGenModule::buildOpenCLMetadata() {
+  // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
+  // opencl.ocl.version named metadata node.
+  // C++ for OpenCL has a distinct mapping for versions compatibile with OpenCL.
+  unsigned version = langOpts.getOpenCLCompatibleVersion();
+  unsigned major = version / 100;
+  unsigned minor = (version % 100) / 10;
+
+  auto clVersionAttr =
+      mlir::cir::OpenCLVersionAttr::get(builder.getContext(), major, minor);
+
+  theModule->setAttr("cir.cl.version", clVersionAttr);
 }
