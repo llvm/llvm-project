@@ -2932,6 +2932,43 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fsub
+  SRCS
+    fsub.cpp
+  HDRS
+    ../fsub.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsubl
+  SRCS
+    fsubl.cpp
+  HDRS
+    ../fsubl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsubf128
+  SRCS
+    fsubf128.cpp
+  HDRS
+    ../fsubf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sqrt
   SRCS
     sqrt.cpp
@@ -3084,6 +3121,19 @@ add_entrypoint_object(
     remainderf16.cpp
   HDRS
     ../remainderf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.division_and_remainder_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  remainderf128
+  SRCS
+    remainderf128.cpp
+  HDRS
+    ../remainderf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.division_and_remainder_operations
