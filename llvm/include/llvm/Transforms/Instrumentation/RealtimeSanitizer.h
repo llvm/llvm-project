@@ -31,9 +31,6 @@ public:
   PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 
   static bool isRequired() { return true; }
-
-private:
-  RealtimeSanitizerOptions Options{};
 };
 
 } // namespace llvm
