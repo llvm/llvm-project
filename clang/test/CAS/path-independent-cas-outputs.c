@@ -44,9 +44,9 @@
 
 // Baseline to check we got expected outputs.
 // RUN: %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -MMD -MT dependencies -MF %t/t.d --serialize-diagnostics %t/t.dia
-// RUN: env LLVM_CACHE_CAS_PATH=%t/a/cas %clang-cache \
+// RUN: env LLVM_CACHE_CAS_PATH=%t/a/cas CLANG_CACHE_DISABLE_MCCAS=1 %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/a/t1.o -MMD -MT dependencies -MF %t/a/t1.d --serialize-diagnostics %t/a/t1.dia
-// RUN: env LLVM_CACHE_CAS_PATH=%t/b/cas %clang-cache \
+// RUN: env LLVM_CACHE_CAS_PATH=%t/b/cas CLANG_CACHE_DISABLE_MCCAS=1 %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/b/t2.o -MMD -MT dependencies -MF %t/b/t2.d --serialize-diagnostics %t/b/t2.dia
 
 // RUN: diff %t/a/t1.o %t/b/t2.o

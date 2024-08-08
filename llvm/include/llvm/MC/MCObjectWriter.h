@@ -9,8 +9,6 @@
 #ifndef LLVM_MC_MCOBJECTWRITER_H
 #define LLVM_MC_MCOBJECTWRITER_H
 
-#include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -33,29 +31,7 @@ class MCValue;
 /// MCAssembler instance, which contains all the symbol and section data which
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
-public:
-  struct DataRegionData {
-    unsigned Kind;
-    MCSymbol *Start;
-    MCSymbol *End;
-  };
-
 protected:
-  struct IndirectSymbolData {
-    MCSymbol *Symbol;
-    MCSection *Section;
-  };
-
-  std::vector<IndirectSymbolData> IndirectSymbols;
-
-  std::vector<DataRegionData> DataRegions;
-
-  // The list of linker options for LC_LINKER_OPTION.
-  std::vector<std::vector<std::string>> LinkerOptions;
-
-  // Used to communicate Linker Optimization Hint information.
-  MCLOHContainer LOHContainer;
-
   /// List of declared file names
   SmallVector<std::pair<std::string, size_t>, 0> FileNames;
   // XCOFF specific: Optional compiler version.
@@ -83,18 +59,6 @@ public:
 
   /// \name High-Level API
   /// @{
-
-  std::vector<std::vector<std::string>> &getLinkerOptions() {
-    return LinkerOptions;
-  }
-
-  std::vector<IndirectSymbolData> &getIndirectSymbols() {
-    return IndirectSymbols;
-  }
-
-  MCLOHContainer &getLOHContainer() { return LOHContainer; }
-
-  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
 
   /// Perform any late binding of symbols (for example, to assign symbol
   /// indices for use when generating relocations).
@@ -152,12 +116,8 @@ public:
   SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
 
   // Mach-O specific: Whether .subsections_via_symbols is enabled.
-  virtual bool getSubsectionsViaSymbols() const {
-    return SubsectionsViaSymbols;
-  }
-  virtual void setSubsectionsViaSymbols(bool Value) {
-    SubsectionsViaSymbols = Value;
-  }
+  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
+  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
 
   /// Write the object file and returns the number of bytes written.
   ///
@@ -166,22 +126,6 @@ public:
   /// generated.
   virtual uint64_t writeObject(MCAssembler &Asm) = 0;
 
-  virtual void setVersionMin(MCVersionMinType Type, unsigned Major,
-                             unsigned Minor, unsigned Update,
-                             VersionTuple SDKVersion = VersionTuple()) {}
-  virtual void setBuildVersion(unsigned Platform, unsigned Major,
-                               unsigned Minor, unsigned Update,
-                               VersionTuple SDKVersion = VersionTuple()) {}
-
-  virtual void setTargetVariantBuildVersion(unsigned Platform, unsigned Major,
-                                            unsigned Minor, unsigned Update,
-                                            VersionTuple SDKVersion) {}
-  virtual std::optional<unsigned> getPtrAuthABIVersion() const {
-    return std::nullopt;
-  }
-  virtual void setPtrAuthABIVersion(unsigned V) {}
-  virtual bool getPtrAuthKernelABIVersion() const { return false; }
-  virtual void setPtrAuthKernelABIVersion(bool V) {}
   /// @}
 };
 
