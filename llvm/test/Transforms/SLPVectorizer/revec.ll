@@ -124,3 +124,26 @@ entry:
   store <8 x i1> %6, ptr %7, align 1
   ret void
 }
+
+define void @test5(ptr %ptr0, ptr %ptr1) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr i8, ptr null, i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> <ptr null, ptr null, ptr undef, ptr undef>, ptr [[GETELEMENTPTR0]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> [[TMP0]], ptr null, i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x ptr> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> <ptr poison, ptr null, ptr null, ptr null>, ptr [[PTR0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[PTR1:%.*]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <4 x ptr> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %getelementptr0 = getelementptr i8, ptr null, i64 0
+  %0 = insertelement <4 x ptr> <ptr null, ptr null, ptr undef, ptr undef>, ptr %getelementptr0, i32 2
+  %1 = insertelement <4 x ptr> %0, ptr null, i32 3
+  %2 = icmp ult <4 x ptr> zeroinitializer, %1
+  %3 = insertelement <4 x ptr> <ptr poison, ptr null, ptr null, ptr null>, ptr %ptr0, i32 0
+  %4 = insertelement <4 x ptr> %1, ptr %ptr1, i32 3
+  %5 = icmp ult <4 x ptr> %3, %4
+  ret void
+}
