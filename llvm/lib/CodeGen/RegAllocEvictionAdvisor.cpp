@@ -44,6 +44,10 @@ static cl::opt<bool> EnableLocalReassignment(
              "may be compile time intensive"),
     cl::init(false));
 
+#ifdef LLVM_HAVE_TFLITE
+extern cl::opt<std::string> ModelUnderTraining;
+#endif // #ifdef LLVM_HAVE_TFLITE
+
 namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
     "regalloc-eviction-max-interference-cutoff", cl::Hidden,
@@ -85,6 +89,14 @@ private:
     if (NotAsRequested)
       M.getContext().emitError("Requested regalloc eviction advisor analysis "
                                "could not be created. Using default");
+
+#ifdef LLVM_HAVE_TFLITE
+    if (!ModelUnderTraining.empty())
+      M.getContext().emitError(
+          "A model has been passed in, but the default eviction advisor "
+          "analysis was requested. The model will not be used.");
+#endif // #ifdef LLVM_HAVE_TFLITE
+
     return RegAllocEvictionAdvisorAnalysis::doInitialization(M);
   }
   const bool NotAsRequested;
