@@ -346,6 +346,12 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
     MetadataTracking::OwnerTy Owner = Pair.second.first;
     if (!Owner)
       continue;
+    // Check for MetadataAsValue.
+    if (isa<MetadataAsValue *>(Owner)) {
+      cast<MetadataAsValue *>(Owner)->handleChangedMetadata(
+          ValueAsMetadata::get(UndefValue::get(C.getType())));
+      continue;
+    }
     if (!isa<Metadata *>(Owner))
       continue;
     auto *OwnerMD = dyn_cast_if_present<MDNode>(cast<Metadata *>(Owner));
