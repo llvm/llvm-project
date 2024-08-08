@@ -38,8 +38,10 @@ TEST_F(LlvmLibcCospifTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcCospifTest, SpecificBitPatterns) {
-  constexpr int N = 36;
+  constexpr int N = 38;
   constexpr uint32_t INPUTS[N] = {
+      0x3f00'0000U, // x = 0.5
+      0x461d'd600U, // x = 10101.5
       0x3f06'0a92U, // x = pi/6
       0x3f3a'dc51U, // x = 0x1.75b8a2p-1f
       0x3f49'0fdbU, // x = pi/4
@@ -108,13 +110,12 @@ TEST_F(LlvmLibcCospifTest, SDCOMP_26094) {
   }
 }
 
-// sinpi(-n) = -0.0
-// sinpi(+n) = +0.0
+// sinpi(+n + 0.5) = sinpi(-n + 0.5) = +0.0
 TEST_F(LlvmLibcCospifTest, SignedZeros) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(100.5f));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::cospif(-100.5f));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(-100.5f));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(45678.5f));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::cospif(-45678.5f));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(-45678.5f));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(8000000.5f));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::cospif(-8000000.5f));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::cospif(-8000000.5f));
 }

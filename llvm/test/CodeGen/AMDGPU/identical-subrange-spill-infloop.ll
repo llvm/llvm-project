@@ -35,8 +35,8 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    ; implicit-def: $vgpr4 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_load_dwordx4 s[28:31], s[4:5], 0x0
-; CHECK-NEXT:    s_movk_i32 s4, 0x130
-; CHECK-NEXT:    s_mov_b32 s5, s24
+; CHECK-NEXT:    s_movk_i32 s20, 0x130
+; CHECK-NEXT:    s_mov_b32 s21, s24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_writelane_b32 v4, s36, 0
 ; CHECK-NEXT:    v_writelane_b32 v4, s37, 1
@@ -49,7 +49,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v4, s44, 8
 ; CHECK-NEXT:    v_writelane_b32 v4, s45, 9
 ; CHECK-NEXT:    v_writelane_b32 v4, s46, 10
-; CHECK-NEXT:    s_load_dwordx16 s[4:19], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx16 s[4:19], s[20:21], 0x0
 ; CHECK-NEXT:    v_writelane_b32 v4, s47, 11
 ; CHECK-NEXT:    v_writelane_b32 v4, s48, 12
 ; CHECK-NEXT:    v_writelane_b32 v4, s49, 13
@@ -78,17 +78,17 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v4, s13, 25
 ; CHECK-NEXT:    v_writelane_b32 v4, s14, 26
 ; CHECK-NEXT:    v_writelane_b32 v4, s15, 27
-; CHECK-NEXT:    v_writelane_b32 v4, s16, 28
 ; CHECK-NEXT:    v_writelane_b32 v8, s52, 18
-; CHECK-NEXT:    v_writelane_b32 v4, s17, 29
+; CHECK-NEXT:    v_writelane_b32 v4, s16, 28
 ; CHECK-NEXT:    v_writelane_b32 v8, s53, 19
-; CHECK-NEXT:    v_writelane_b32 v4, s18, 30
+; CHECK-NEXT:    v_writelane_b32 v4, s17, 29
 ; CHECK-NEXT:    v_writelane_b32 v8, s54, 20
-; CHECK-NEXT:    v_writelane_b32 v4, s19, 31
-; CHECK-NEXT:    s_mov_b32 s4, 48
-; CHECK-NEXT:    s_mov_b32 s5, s24
+; CHECK-NEXT:    v_writelane_b32 v4, s18, 30
+; CHECK-NEXT:    s_mov_b32 s26, 48
+; CHECK-NEXT:    s_mov_b32 s27, s24
 ; CHECK-NEXT:    v_writelane_b32 v8, s55, 21
-; CHECK-NEXT:    s_load_dwordx8 s[4:11], s[4:5], 0x0
+; CHECK-NEXT:    v_writelane_b32 v4, s19, 31
+; CHECK-NEXT:    s_load_dwordx8 s[4:11], s[26:27], 0x0
 ; CHECK-NEXT:    v_writelane_b32 v8, s56, 22
 ; CHECK-NEXT:    v_writelane_b32 v8, s57, 23
 ; CHECK-NEXT:    v_writelane_b32 v8, s58, 24
@@ -107,15 +107,15 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v8, s65, 31
 ; CHECK-NEXT:    v_writelane_b32 v4, s9, 37
 ; CHECK-NEXT:    v_writelane_b32 v8, s66, 32
-; CHECK-NEXT:    s_movk_i32 s26, 0x1f0
-; CHECK-NEXT:    s_movk_i32 s28, 0x2f0
-; CHECK-NEXT:    s_mov_b32 s27, s24
+; CHECK-NEXT:    s_movk_i32 s28, 0x1f0
+; CHECK-NEXT:    s_movk_i32 s30, 0x2f0
 ; CHECK-NEXT:    s_mov_b32 s29, s24
+; CHECK-NEXT:    s_mov_b32 s31, s24
 ; CHECK-NEXT:    v_writelane_b32 v4, s10, 38
 ; CHECK-NEXT:    v_writelane_b32 v8, s67, 33
 ; CHECK-NEXT:    v_writelane_b32 v4, s11, 39
-; CHECK-NEXT:    s_load_dwordx16 s[52:67], s[26:27], 0x0
-; CHECK-NEXT:    s_load_dwordx16 s[4:19], s[28:29], 0x0
+; CHECK-NEXT:    s_load_dwordx16 s[52:67], s[28:29], 0x0
+; CHECK-NEXT:    s_load_dwordx16 s[4:19], s[30:31], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; CHECK-NEXT:    s_xor_b64 s[24:25], vcc, -1

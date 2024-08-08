@@ -95,15 +95,12 @@ unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
 }
 
 void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType =
-      hasType(pointerType(pointee(matchers::isSimpleChar())));
   if (!PrintfLikeFunctions.empty())
     Finder->addMatcher(
         unusedReturnValue(
             callExpr(argumentCountAtLeast(1),
                      hasArgument(0, stringLiteral(isOrdinary())),
                      callee(functionDecl(unless(cxxMethodDecl()),
-                                         hasParameter(0, CharPointerType),
                                          matchers::matchesAnyListedName(
                                              PrintfLikeFunctions))
                                 .bind("func_decl")))
@@ -116,7 +113,6 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
             callExpr(argumentCountAtLeast(2),
                      hasArgument(1, stringLiteral(isOrdinary())),
                      callee(functionDecl(unless(cxxMethodDecl()),
-                                         hasParameter(1, CharPointerType),
                                          matchers::matchesAnyListedName(
                                              FprintfLikeFunctions))
                                 .bind("func_decl")))

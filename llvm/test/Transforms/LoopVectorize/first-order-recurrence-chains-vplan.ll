@@ -43,10 +43,12 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
+; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]> = resume-phi vp<[[RESUME_2]]>, ir<33>
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>
-; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2]]>
+; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1_P]]>
+; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2_P]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -113,11 +115,14 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
+; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]> = resume-phi vp<[[RESUME_2]]>, ir<33>
+; CHECK-NEXT:    EMIT vp<[[RESUME_3_P:%.*]]> = resume-phi vp<[[RESUME_3]]>, ir<33>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>
-; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2]]>
-; CHECK-NEXT: Live-out i16 %for.3 = vp<[[RESUME_3]]>
+; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1_P]]>
+; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2_P]]>
+; CHECK-NEXT: Live-out i16 %for.3 = vp<[[RESUME_3_P]]>
 ; CHECK-NEXT: }
 ;
 entry:

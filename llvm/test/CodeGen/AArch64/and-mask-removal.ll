@@ -549,3 +549,33 @@ define i64 @test_2_selects(i8 zeroext %a) {
 }
 
 declare i8 @llvm.usub.sat.i8(i8, i8) #0
+
+define i64 @and0xffffffff(i64 %a) nounwind ssp {
+; CHECK-LABEL: and0xffffffff:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov w0, w0
+; CHECK-NEXT:    ret
+entry:
+  %b = and i64 %a, u0xffffffff
+  ret i64 %b
+}
+
+define i64 @and0xfffffff0(i64 %a) nounwind ssp {
+; CHECK-LABEL: and0xfffffff0:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    and x0, x0, #0xfffffff0
+; CHECK-NEXT:    ret
+entry:
+  %b = and i64 %a, u0xfffffff0
+  ret i64 %b
+}
+
+define i64 @and0x7fffffff(i64 %a) nounwind ssp {
+; CHECK-LABEL: and0x7fffffff:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    and x0, x0, #0x7fffffff
+; CHECK-NEXT:    ret
+entry:
+  %b = and i64 %a, u0x7fffffff
+  ret i64 %b
+}

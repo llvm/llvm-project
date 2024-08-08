@@ -63,6 +63,9 @@
 ;; give both memprof and pgo metadata.
 ; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
 
+;; Check that the total sizes are reported if requested.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+
 ; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
@@ -330,6 +333,18 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[C9]] = !{i64 -5747251260480066785}
 ; MEMPROF: ![[C10]] = !{i64 2061451396820446691}
 ; MEMPROF: ![[C11]] = !{i64 1544787832369987002}
+
+;; For non-context sensitive allocations that get attributes we emit a message
+;; with the allocation hash, type, and size in bytes.
+; TOTALSIZES: Total size for allocation with location hash 6792096022461663180 and single alloc type notcold: 10
+; TOTALSIZES: Total size for allocation with location hash 15737101490731057601 and single alloc type cold: 10
+;; For context sensitive allocations the size in bytes is included on the MIB
+;; metadata.
+; TOTALSIZES: !"cold", i64 10}
+; TOTALSIZES: !"cold", i64 10}
+; TOTALSIZES: !"notcold", i64 10}
+; TOTALSIZES: !"cold", i64 20}
+; TOTALSIZES: !"notcold", i64 10}
 
 
 ; MEMPROFNOCOLINFO: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }

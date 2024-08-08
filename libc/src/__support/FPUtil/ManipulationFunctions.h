@@ -21,9 +21,10 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -258,7 +259,7 @@ LIBC_INLINE constexpr T nextupdown(T x) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"

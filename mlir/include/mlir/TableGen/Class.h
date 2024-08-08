@@ -129,8 +129,7 @@ public:
                   ArrayRef<MethodParameter> parameters)
       : MethodSignature(std::forward<RetTypeT>(retType),
                         std::forward<NameT>(name),
-                        SmallVector<MethodParameter>(parameters.begin(),
-                                                     parameters.end())) {}
+                        SmallVector<MethodParameter>(parameters)) {}
   /// Create a method signature with a return type, a method name, and a
   /// variadic list of parameters.
   template <typename RetTypeT, typename NameT, typename... Parameters>

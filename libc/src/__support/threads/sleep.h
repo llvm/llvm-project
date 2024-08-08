@@ -10,8 +10,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_SLEEP_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
@@ -31,6 +32,6 @@ LIBC_INLINE void sleep_briefly() {
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_SLEEP_H

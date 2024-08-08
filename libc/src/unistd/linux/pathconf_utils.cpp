@@ -14,6 +14,7 @@
 #include "hdr/unistd_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 
@@ -27,7 +28,7 @@
 #endif
 #include <linux/magic.h> // For common FS magics
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 long filesizebits(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
@@ -124,4 +125,4 @@ long pathconfig(const statfs_utils::LinuxStatFs &s, int name) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

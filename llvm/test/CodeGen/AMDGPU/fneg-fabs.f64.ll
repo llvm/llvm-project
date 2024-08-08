@@ -5,8 +5,8 @@
 define amdgpu_kernel void @fneg_fabs_fadd_f64(ptr addrspace(1) %out, double %x, double %y) {
 ; SI-LABEL: fneg_fabs_fadd_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0xd
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20,8 +20,8 @@ define amdgpu_kernel void @fneg_fabs_fadd_f64(ptr addrspace(1) %out, double %x, 
 ;
 ; VI-LABEL: fneg_fabs_fadd_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
@@ -40,7 +40,7 @@ define amdgpu_kernel void @fneg_fabs_fadd_f64(ptr addrspace(1) %out, double %x, 
 define amdgpu_kernel void @v_fneg_fabs_fadd_f64(ptr addrspace(1) %out, ptr addrspace(1) %xptr, ptr addrspace(1) %yptr) {
 ; SI-LABEL: v_fneg_fabs_fadd_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -52,7 +52,7 @@ define amdgpu_kernel void @v_fneg_fabs_fadd_f64(ptr addrspace(1) %out, ptr addrs
 ;
 ; VI-LABEL: v_fneg_fabs_fadd_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
@@ -73,8 +73,8 @@ define amdgpu_kernel void @v_fneg_fabs_fadd_f64(ptr addrspace(1) %out, ptr addrs
 define amdgpu_kernel void @fneg_fabs_fmul_f64(ptr addrspace(1) %out, double %x, double %y) {
 ; SI-LABEL: fneg_fabs_fmul_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0xd
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -88,8 +88,8 @@ define amdgpu_kernel void @fneg_fabs_fmul_f64(ptr addrspace(1) %out, double %x, 
 ;
 ; VI-LABEL: fneg_fabs_fmul_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
@@ -108,7 +108,7 @@ define amdgpu_kernel void @fneg_fabs_fmul_f64(ptr addrspace(1) %out, double %x, 
 define amdgpu_kernel void @fneg_fabs_free_f64(ptr addrspace(1) %out, i64 %in) {
 ; SI-LABEL: fneg_fabs_free_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_bitset1_b32 s3, 31
@@ -122,7 +122,7 @@ define amdgpu_kernel void @fneg_fabs_free_f64(ptr addrspace(1) %out, i64 %in) {
 ;
 ; VI-LABEL: fneg_fabs_free_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_or_b32 s0, s3, 0x80000000
@@ -174,8 +174,8 @@ define amdgpu_kernel void @fneg_fabs_fn_free_f64(ptr addrspace(1) %out, i64 %in)
 define amdgpu_kernel void @fneg_fabs_f64(ptr addrspace(1) %out, [8 x i32], double %in) {
 ; SI-LABEL: fneg_fabs_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x13
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x13
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_bitset1_b32 s5, 31
@@ -187,14 +187,14 @@ define amdgpu_kernel void @fneg_fabs_f64(ptr addrspace(1) %out, [8 x i32], doubl
 ;
 ; VI-LABEL: fneg_fabs_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x4c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x4c
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bitset1_b32 s3, 31
-; VI-NEXT:    v_mov_b32_e32 v3, s1
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    s_bitset1_b32 s1, 31
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
   %fabs = call double @llvm.fabs.f64(double %in)
@@ -206,8 +206,8 @@ define amdgpu_kernel void @fneg_fabs_f64(ptr addrspace(1) %out, [8 x i32], doubl
 define amdgpu_kernel void @fneg_fabs_v2f64(ptr addrspace(1) %out, <2 x double> %in) {
 ; SI-LABEL: fneg_fabs_v2f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0xd
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_bitset1_b32 s7, 31
@@ -222,8 +222,8 @@ define amdgpu_kernel void @fneg_fabs_v2f64(ptr addrspace(1) %out, <2 x double> %
 ;
 ; VI-LABEL: fneg_fabs_v2f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x34
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_or_b32 s2, s7, 0x80000000
 ; VI-NEXT:    s_or_b32 s3, s5, 0x80000000
@@ -244,8 +244,8 @@ define amdgpu_kernel void @fneg_fabs_v2f64(ptr addrspace(1) %out, <2 x double> %
 define amdgpu_kernel void @fneg_fabs_v4f64(ptr addrspace(1) %out, <4 x double> %in) {
 ; SI-LABEL: fneg_fabs_v4f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x11
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x11
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -267,8 +267,8 @@ define amdgpu_kernel void @fneg_fabs_v4f64(ptr addrspace(1) %out, <4 x double> %
 ;
 ; VI-LABEL: fneg_fabs_v4f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x44
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x44
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_bitset1_b32 s7, 31
 ; VI-NEXT:    s_bitset1_b32 s5, 31

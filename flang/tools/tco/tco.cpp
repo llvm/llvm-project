@@ -58,6 +58,9 @@ static cl::opt<std::string> targetTriple("target",
 static cl::opt<std::string>
     targetCPU("target-cpu", cl::desc("specify a target CPU"), cl::init(""));
 
+static cl::opt<std::string> tuneCPU("tune-cpu", cl::desc("specify a tune CPU"),
+                                    cl::init(""));
+
 static cl::opt<std::string>
     targetFeatures("target-features", cl::desc("specify the target features"),
                    cl::init(""));
@@ -113,6 +116,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::setTargetTriple(*owningRef, targetTriple);
   fir::setKindMapping(*owningRef, kindMap);
   fir::setTargetCPU(*owningRef, targetCPU);
+  fir::setTuneCPU(*owningRef, tuneCPU);
   fir::setTargetFeatures(*owningRef, targetFeatures);
   // tco is a testing tool, so it will happily use the target independent
   // data layout if none is on the module.

@@ -9,7 +9,7 @@ define void @memmove_p1_p4_sz16_align_4_4(ptr addrspace(1) align 4 %dst, ptr add
 ; CHECK-LABEL: memmove_p1_p4_sz16_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[6:7], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
@@ -27,8 +27,8 @@ define void @memmove_p1_p4_sz31_align_4_4(ptr addrspace(1) align 4 %dst, ptr add
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    global_load_ubyte v9, v2, s[4:5] offset:30
-; CHECK-NEXT:    s_load_dwordx8 s[4:11], s[4:5], 0x0
+; CHECK-NEXT:    global_load_ubyte v9, v2, s[6:7] offset:30
+; CHECK-NEXT:    s_load_dwordx8 s[4:11], s[6:7], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
@@ -53,7 +53,7 @@ define void @memmove_p1_p4_sz32_align_4_4(ptr addrspace(1) align 4 %dst, ptr add
 ; CHECK-LABEL: memmove_p1_p4_sz32_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_load_dwordx8 s[4:11], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx8 s[4:11], s[6:7], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s8
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s9

@@ -135,6 +135,8 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = [],
         traits
       )
     )> {
+  list<OpenMP_Clause> clauseList = clauses;
+
   // Aggregate `arguments` fields of all clauses into a single dag, to be used
   // by operations to populate their `arguments` field.
   defvar argsFilteredClauses =

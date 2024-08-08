@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "startup/linux/do_start.h"
@@ -18,7 +19,7 @@
 // Source documentation:
 // https://github.com/ARM-software/abi-aa/tree/main/sysvabi64
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -94,4 +95,4 @@ bool set_thread_ptr(uintptr_t val) {
 #endif
   return true;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

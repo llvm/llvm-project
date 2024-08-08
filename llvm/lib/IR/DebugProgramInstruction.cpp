@@ -371,6 +371,10 @@ bool DbgVariableRecord::isKillLocation() const {
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
+std::optional<DbgVariableFragmentInfo> DbgVariableRecord::getFragment() const {
+  return getExpression()->getFragmentInfo();
+}
+
 std::optional<uint64_t> DbgVariableRecord::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
@@ -487,7 +491,7 @@ void DbgVariableRecord::setAssignId(DIAssignID *New) {
 
 void DbgVariableRecord::setKillAddress() {
   resetDebugValue(
-      1, ValueAsMetadata::get(UndefValue::get(getAddress()->getType())));
+      1, ValueAsMetadata::get(PoisonValue::get(getAddress()->getType())));
 }
 
 bool DbgVariableRecord::isKillAddress() const {

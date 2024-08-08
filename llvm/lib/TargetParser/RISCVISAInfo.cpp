@@ -80,8 +80,7 @@ static void PrintExtension(StringRef Name, StringRef Version,
          << Description << "\n";
 }
 
-void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
-
+void RISCVISAInfo::printSupportedExtensions(StringMap<StringRef> &DescMap) {
   outs() << "All available -march extensions for RISC-V\n\n";
   PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
@@ -114,6 +113,45 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
 
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";
+}
+
+void RISCVISAInfo::printEnabledExtensions(
+    bool IsRV64, std::set<StringRef> &EnabledFeatureNames,
+    StringMap<StringRef> &DescMap) {
+  outs() << "Extensions enabled for the given RISC-V target\n\n";
+  PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
+
+  RISCVISAUtils::OrderedExtensionMap FullExtMap;
+  RISCVISAUtils::OrderedExtensionMap ExtMap;
+  for (const auto &E : SupportedExtensions)
+    if (EnabledFeatureNames.count(E.Name) != 0) {
+      FullExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+      ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+    }
+  for (const auto &E : ExtMap) {
+    std::string Version =
+        std::to_string(E.second.Major) + "." + std::to_string(E.second.Minor);
+    PrintExtension(E.first, Version, DescMap[E.first]);
+  }
+
+  outs() << "\nExperimental extensions\n";
+  ExtMap.clear();
+  for (const auto &E : SupportedExperimentalExtensions) {
+    StringRef Name(E.Name);
+    if (EnabledFeatureNames.count("experimental-" + Name.str()) != 0) {
+      FullExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+      ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+    }
+  }
+  for (const auto &E : ExtMap) {
+    std::string Version =
+        std::to_string(E.second.Major) + "." + std::to_string(E.second.Minor);
+    PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
+  }
+
+  unsigned XLen = IsRV64 ? 64 : 32;
+  if (auto ISAString = RISCVISAInfo::createFromExtMap(XLen, FullExtMap))
+    outs() << "\nISA String: " << ISAString.get()->toString() << "\n";
 }
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
@@ -393,6 +431,17 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
     Error += "." + MinorStr.str();
   Error += " for extension '" + Ext.str() + "'";
   return getError(Error);
+}
+
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+RISCVISAInfo::createFromExtMap(unsigned XLen,
+                               const RISCVISAUtils::OrderedExtensionMap &Exts) {
+  assert(XLen == 32 || XLen == 64);
+  std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
+
+  ISAInfo->Exts = Exts;
+
+  return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
@@ -677,6 +726,7 @@ Error RISCVISAInfo::checkDependency() {
   bool HasI = Exts.count("i") != 0;
   bool HasC = Exts.count("c") != 0;
   bool HasF = Exts.count("f") != 0;
+  bool HasD = Exts.count("d") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
@@ -710,8 +760,7 @@ Error RISCVISAInfo::checkDependency() {
     return getError(
         "'zvknhb' requires 'v' or 'zve64*' extension to also be specified");
 
-  if ((HasZcmt || Exts.count("zcmp")) && Exts.count("d") &&
-      (HasC || Exts.count("zcd")))
+  if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
     return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
                     "' extension is incompatible with '" +
                     (HasC ? "c" : "zcd") +
@@ -727,6 +776,17 @@ Error RISCVISAInfo::checkDependency() {
   if (Exts.count("zabha") && !(Exts.count("a") || Exts.count("zaamo")))
     return getError(
         "'zabha' requires 'a' or 'zaamo' extension to also be specified");
+
+  if (Exts.count("xwchc") != 0) {
+    if (XLen != 32)
+      return getError("'Xwchc' is only supported for 'rv32'");
+
+    if (HasD)
+      return getError("'D' and 'Xwchc' extensions are incompatible");
+
+    if (Exts.count("zcb") != 0)
+      return getError("'Xwchc' and 'Zcb' extensions are incompatible");
+  }
 
   return Error::success();
 }
@@ -959,4 +1019,44 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
 
   return isExperimentalExtension(Name) ? "experimental-" + Name.str()
                                        : Name.str();
+}
+
+struct RISCVExtBit {
+  const StringLiteral ext;
+  uint8_t bitpos;
+};
+
+/// Maps extensions with assigned bit positions within group 0 of
+/// __riscv_features_bits to their respective bit position.  At the
+/// moment all extensions are within group 0.
+constexpr static RISCVExtBit RISCVGroup0BitPositions[] = {
+    {"a", 0},          {"c", 2},
+    {"d", 3},          {"f", 5},
+    {"i", 8},          {"m", 12},
+    {"v", 21},         {"zacas", 26},
+    {"zba", 27},       {"zbb", 28},
+    {"zbc", 29},       {"zbkb", 30},
+    {"zbkc", 31},      {"zbkx", 32},
+    {"zbs", 33},       {"zfa", 34},
+    {"zfh", 35},       {"zfhmin", 36},
+    {"zicboz", 37},    {"zicond", 38},
+    {"zihintntl", 39}, {"zihintpause", 40},
+    {"zknd", 41},      {"zkne", 42},
+    {"zknh", 43},      {"zksed", 44},
+    {"zksh", 45},      {"zkt", 46},
+    {"ztso", 47},      {"zvbb", 48},
+    {"zvbc", 49},      {"zvfh", 50},
+    {"zvfhmin", 51},   {"zvkb", 52},
+    {"zvkg", 53},      {"zvkned", 54},
+    {"zvknha", 55},    {"zvknhb", 56},
+    {"zvksed", 57},    {"zvksh", 58},
+    {"zvkt", 59}};
+int RISCVISAInfo::getRISCVFeaturesBitPosition(StringRef Ext) {
+  // Note that this code currently accepts mixed case extension names, but
+  // does not handle extension versions at all.  That's probably fine because
+  // there's only one extension version in the __riscv_feature_bits vector.
+  for (auto E : RISCVGroup0BitPositions)
+    if (E.ext.equals_insensitive(Ext))
+      return E.bitpos;
+  return -1;
 }

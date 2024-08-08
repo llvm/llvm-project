@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-windows -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=MSABI  --check-prefix=CHECK-VPTR-MS
 // RUN: %clang_cc1 -std=c++11 -triple arm64e-ios-13 -emit-llvm -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM --check-prefix=CHECK-PTRAUTH
+// RUN: %clang_cc1 -std=c++11 -triple aarch64-unknown-linux -emit-llvm -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM --check-prefix=CHECK-PTRAUTH
+
 struct T {
   virtual ~T() {}
   virtual int v() { return 1; }
@@ -29,7 +31,7 @@ int get_v(T* t) {
   // CHECK-NULL: load ptr, ptr {{.*}}
 
   // CHECK-PTRAUTH: [[CAST_VTABLE:%.*]] = ptrtoint ptr %vtable to i64
-  // CHECK-PTRAUTH: [[STRIPPED_VTABLE:%.*]] = call i64 @llvm.ptrauth.strip(i64 [[CAST_VTABLE]], i32 0), !nosanitize !2
+  // CHECK-PTRAUTH: [[STRIPPED_VTABLE:%.*]] = call i64 @llvm.ptrauth.strip(i64 [[CAST_VTABLE]], i32 0), !nosanitize
   // CHECK-PTRAUTH: [[STRIPPED_PTR:%.*]] = inttoptr i64 [[STRIPPED_VTABLE]] to ptr
   // CHECK-PTRAUTH: [[STRIPPED_INT:%.*]] = ptrtoint ptr [[STRIPPED_PTR]] to i64
   // Make sure authed vtable pointer feeds into hashing
