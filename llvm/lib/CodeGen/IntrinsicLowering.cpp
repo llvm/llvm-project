@@ -29,8 +29,12 @@ using namespace llvm;
 CallInst *IntrinsicLowering::ReplaceCallWith(const char *NewFn, CallInst *CI,
                                              ArrayRef<Value *> Args,
                                              Type *RetTy) {
-  if (!LowerExternalFunctionCalls)
-    return nullptr;
+  if (!AllowLibraryFunctionCalls) {
+    report_fatal_error(
+        "Trying to lower a call to '" + CI->getCalledFunction()->getName() +
+        "' to a call to an external function '" + NewFn +
+        "', but intrinsic lowering was configured to not allow such lowering.");
+  }
 
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
@@ -43,8 +47,7 @@ CallInst *IntrinsicLowering::ReplaceCallWith(const char *NewFn, CallInst *CI,
       M->getOrInsertFunction(NewFn, FunctionType::get(RetTy, ParamTys, false));
 
   IRBuilder<> Builder(CI->getParent(), CI->getIterator());
-  SmallVector<Value *, 8> ArgVals(Args);
-  CallInst *NewCI = Builder.CreateCall(FCache, ArgVals);
+  CallInst *NewCI = Builder.CreateCall(FCache, Args);
   NewCI->setName(CI->getName());
   if (!CI->use_empty())
     CI->replaceAllUsesWith(NewCI);
@@ -205,9 +208,6 @@ void IntrinsicLowering::ReplaceFPIntrinsicWithCall(CallInst *CI,
                                                    const char *Fname,
                                                    const char *Dname,
                                                    const char *LDname) {
-  if (!LowerExternalFunctionCalls)
-    return;
-
   SmallVector<Value *> Args{CI->args()};
   switch (CI->getArgOperand(0)->getType()->getTypeID()) {
   default: llvm_unreachable("Invalid type in intrinsic");
@@ -356,9 +356,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     Ops[0] = CI->getArgOperand(0);
     Ops[1] = CI->getArgOperand(1);
     Ops[2] = Size;
-    SmallVector<Value *> Args;
-    Args.append(Ops, Ops + 3);
-    ReplaceCallWith("memcpy", CI, Args, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memcpy", CI, {Ops, Ops + 3}, CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::memmove: {
@@ -369,9 +367,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     Ops[0] = CI->getArgOperand(0);
     Ops[1] = CI->getArgOperand(1);
     Ops[2] = Size;
-    SmallVector<Value *> Args;
-    Args.append(Ops, Ops + 3);
-    ReplaceCallWith("memmove", CI, Args, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memmove", CI, {Ops, Ops + 3}, CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::memset: {
@@ -386,9 +382,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
                                    Type::getInt32Ty(Context),
                                    /* isSigned */ false);
     Ops[2] = Size;
-    SmallVector<Value *> Args;
-    Args.append(Ops, Ops + 3);
-    ReplaceCallWith("memset", CI, Args, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memset", CI, {Ops, Ops + 3}, CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::sqrt: {
