@@ -16114,6 +16114,39 @@ static bool isBFloat2(Type *Ty) {
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isBFloatTy();
 }
 
+/// \return true if atomicrmw integer ops work for the type.
+static bool isAtomicRMWLegalIntTy(Type *Ty) {
+  if (auto *IT = dyn_cast<IntegerType>(Ty)) {
+    unsigned BW = IT->getBitWidth();
+    return BW == 32 || BW == 64;
+  }
+
+  return false;
+}
+
+/// \return true if this atomicrmw xchg type can be selected.
+static bool isAtomicRMWLegalXChgTy(const AtomicRMWInst *RMW) {
+  Type *Ty = RMW->getType();
+  if (isAtomicRMWLegalIntTy(Ty))
+    return true;
+
+  if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
+    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    unsigned BW = DL.getPointerSizeInBits(PT->getAddressSpace());
+    return BW == 32 || BW == 64;
+  }
+
+  if (Ty->isFloatTy() || Ty->isDoubleTy())
+    return true;
+
+  if (FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty)) {
+    return VT->getNumElements() == 2 &&
+           VT->getElementType()->getPrimitiveSizeInBits() == 16;
+  }
+
+  return false;
+}
+
 /// \returns true if it's valid to emit a native instruction for \p RMW, based
 /// on the properties of the target memory.
 static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
@@ -16142,6 +16175,14 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
       .getValueAsBool();
 }
 
+/// \return Action to perform on AtomicRMWInsts for integer operations.
+static TargetLowering::AtomicExpansionKind
+atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
+  return isAtomicRMWLegalIntTy(RMW->getType())
+             ? TargetLowering::AtomicExpansionKind::None
+             : TargetLowering::AtomicExpansionKind::CmpXChg;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
@@ -16161,7 +16202,22 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       SSID == SyncScope::System ||
       SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
 
-  switch (RMW->getOperation()) {
+  auto Op = RMW->getOperation();
+  switch (Op) {
+  case AtomicRMWInst::Xchg: {
+    // PCIe supports add and xchg for system atomics.
+    return isAtomicRMWLegalXChgTy(RMW)
+               ? TargetLowering::AtomicExpansionKind::None
+               : TargetLowering::AtomicExpansionKind::CmpXChg;
+
+    // PCIe supports add and xchg for system atomics.
+    return atomicSupportedIfLegalIntType(RMW);
+  }
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+    return atomicSupportedIfLegalIntType(RMW);
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor: {
@@ -16173,7 +16229,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         return AtomicExpansionKind::Expand;
     }
 
-    break;
+    return atomicSupportedIfLegalIntType(RMW);
   }
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
@@ -16335,13 +16391,16 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (HasSystemScope)
         return AtomicExpansionKind::CmpXChg;
     }
-    break;
+
+    return atomicSupportedIfLegalIntType(RMW);
   }
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FSub:
   default:
-    break;
+    return AtomicExpansionKind::CmpXChg;
   }
 
-  return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
+  llvm_unreachable("covered atomicrmw op switch");
 }
 
 TargetLowering::AtomicExpansionKind
