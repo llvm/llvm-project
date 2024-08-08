@@ -523,6 +523,114 @@ LogicalResult CastOp::verify() {
       return emitOpError() << "requires two types differ in addrspace only";
     return success();
   }
+  case cir::CastKind::float_to_complex: {
+    if (!mlir::isa<mlir::cir::CIRFPTypeInterface>(srcType))
+      return emitOpError() << "requires !cir.float type for source";
+    auto resComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(resType);
+    if (!resComplexTy)
+      return emitOpError() << "requires !cir.complex type for result";
+    if (srcType != resComplexTy.getElementTy())
+      return emitOpError() << "requires source type match result element type";
+    return success();
+  }
+  case cir::CastKind::int_to_complex: {
+    if (!mlir::isa<mlir::cir::IntType>(srcType))
+      return emitOpError() << "requires !cir.int type for source";
+    auto resComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(resType);
+    if (!resComplexTy)
+      return emitOpError() << "requires !cir.complex type for result";
+    if (srcType != resComplexTy.getElementTy())
+      return emitOpError() << "requires source type match result element type";
+    return success();
+  }
+  case cir::CastKind::float_complex_to_real: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy)
+      return emitOpError() << "requires !cir.complex type for source";
+    if (!mlir::isa<mlir::cir::CIRFPTypeInterface>(resType))
+      return emitOpError() << "requires !cir.float type for result";
+    if (srcComplexTy.getElementTy() != resType)
+      return emitOpError() << "requires source element type match result type";
+    return success();
+  }
+  case cir::CastKind::int_complex_to_real: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy)
+      return emitOpError() << "requires !cir.complex type for source";
+    if (!mlir::isa<mlir::cir::IntType>(resType))
+      return emitOpError() << "requires !cir.int type for result";
+    if (srcComplexTy.getElementTy() != resType)
+      return emitOpError() << "requires source element type match result type";
+    return success();
+  }
+  case cir::CastKind::float_complex_to_bool: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy ||
+        !mlir::isa<mlir::cir::CIRFPTypeInterface>(srcComplexTy.getElementTy()))
+      return emitOpError()
+             << "requires !cir.complex<!cir.float> type for source";
+    if (!mlir::isa<mlir::cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
+  }
+  case cir::CastKind::int_complex_to_bool: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy ||
+        !mlir::isa<mlir::cir::IntType>(srcComplexTy.getElementTy()))
+      return emitOpError()
+             << "requires !cir.complex<!cir.float> type for source";
+    if (!mlir::isa<mlir::cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
+  }
+  case cir::CastKind::float_complex: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy ||
+        !mlir::isa<mlir::cir::CIRFPTypeInterface>(srcComplexTy.getElementTy()))
+      return emitOpError()
+             << "requires !cir.complex<!cir.float> type for source";
+    auto resComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(resType);
+    if (!resComplexTy ||
+        !mlir::isa<mlir::cir::CIRFPTypeInterface>(resComplexTy.getElementTy()))
+      return emitOpError()
+             << "requires !cir.complex<!cir.float> type for result";
+    return success();
+  }
+  case cir::CastKind::float_complex_to_int_complex: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy ||
+        !mlir::isa<mlir::cir::CIRFPTypeInterface>(srcComplexTy.getElementTy()))
+      return emitOpError()
+             << "requires !cir.complex<!cir.float> type for source";
+    auto resComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(resType);
+    if (!resComplexTy ||
+        !mlir::isa<mlir::cir::IntType>(resComplexTy.getElementTy()))
+      return emitOpError() << "requires !cir.complex<!cir.int> type for result";
+    return success();
+  }
+  case cir::CastKind::int_complex: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy ||
+        !mlir::isa<mlir::cir::IntType>(srcComplexTy.getElementTy()))
+      return emitOpError() << "requires !cir.complex<!cir.int> type for source";
+    auto resComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(resType);
+    if (!resComplexTy ||
+        !mlir::isa<mlir::cir::IntType>(resComplexTy.getElementTy()))
+      return emitOpError() << "requires !cir.complex<!cir.int> type for result";
+    return success();
+  }
+  case cir::CastKind::int_complex_to_float_complex: {
+    auto srcComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(srcType);
+    if (!srcComplexTy ||
+        !mlir::isa<mlir::cir::IntType>(srcComplexTy.getElementTy()))
+      return emitOpError() << "requires !cir.complex<!cir.int> type for source";
+    auto resComplexTy = mlir::dyn_cast<mlir::cir::ComplexType>(resType);
+    if (!resComplexTy ||
+        !mlir::isa<mlir::cir::CIRFPTypeInterface>(resComplexTy.getElementTy()))
+      return emitOpError()
+             << "requires !cir.complex<!cir.float> type for result";
+    return success();
+  }
   }
 
   llvm_unreachable("Unknown CastOp kind?");
@@ -577,7 +685,9 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
       return {};
     }
     case mlir::cir::CastKind::bitcast:
-    case mlir::cir::CastKind::address_space: {
+    case mlir::cir::CastKind::address_space:
+    case mlir::cir::CastKind::float_complex:
+    case mlir::cir::CastKind::int_complex: {
       return getSrc();
     }
     default:

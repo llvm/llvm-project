@@ -59,6 +59,22 @@ public:
     return create<mlir::cir::ConstantOp>(loc, attr.getType(), attr);
   }
 
+  // Creates constant null value for integral type ty.
+  mlir::cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
+    return create<mlir::cir::ConstantOp>(loc, ty, getZeroInitAttr(ty));
+  }
+
+  mlir::cir::ConstantOp getBool(bool state, mlir::Location loc) {
+    return create<mlir::cir::ConstantOp>(loc, getBoolTy(),
+                                         getCIRBoolAttr(state));
+  }
+  mlir::cir::ConstantOp getFalse(mlir::Location loc) {
+    return getBool(false, loc);
+  }
+  mlir::cir::ConstantOp getTrue(mlir::Location loc) {
+    return getBool(true, loc);
+  }
+
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }
@@ -110,12 +126,16 @@ public:
       return mlir::cir::FPAttr::getZero(fltType);
     if (auto fltType = mlir::dyn_cast<mlir::cir::DoubleType>(ty))
       return mlir::cir::FPAttr::getZero(fltType);
+    if (auto fltType = mlir::dyn_cast<mlir::cir::FP16Type>(ty))
+      return mlir::cir::FPAttr::getZero(fltType);
+    if (auto fltType = mlir::dyn_cast<mlir::cir::BF16Type>(ty))
+      return mlir::cir::FPAttr::getZero(fltType);
     if (auto complexType = mlir::dyn_cast<mlir::cir::ComplexType>(ty))
       return getZeroAttr(complexType);
     if (auto arrTy = mlir::dyn_cast<mlir::cir::ArrayType>(ty))
       return getZeroAttr(arrTy);
     if (auto ptrTy = mlir::dyn_cast<mlir::cir::PointerType>(ty))
-      return getConstPtrAttr(ptrTy, 0);
+      return getConstNullPtrAttr(ptrTy);
     if (auto structTy = mlir::dyn_cast<mlir::cir::StructType>(ty))
       return getZeroAttr(structTy);
     if (mlir::isa<mlir::cir::BoolType>(ty)) {
@@ -546,6 +566,11 @@ public:
         mlir::IntegerAttr::get(mlir::IntegerType::get(t.getContext(), 64), v);
     return mlir::cir::ConstPtrAttr::get(
         getContext(), mlir::cast<mlir::cir::PointerType>(t), val);
+  }
+
+  mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
+    assert(mlir::isa<mlir::cir::PointerType>(t) && "expected cir.ptr");
+    return getConstPtrAttr(t, 0);
   }
 
   // Creates constant nullptr for pointer type ty.
