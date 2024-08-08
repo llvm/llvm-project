@@ -26,6 +26,7 @@ class TestingConfig(object):
             "SYSTEMROOT",
             "TERM",
             "CLANG",
+            "CLANG_TOOL_CHAIN_PROGRAM_WAIT",
             "LLDB",
             "LD_PRELOAD",
             "LLVM_SYMBOLIZER_PATH",

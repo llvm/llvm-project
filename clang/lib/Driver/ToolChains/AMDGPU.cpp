@@ -899,7 +899,8 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("amdgpu-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
+  auto StdoutOrErr = executeToolChainProgram(Program,
+                                             /*DefaultSecondsToWait=*/10);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
