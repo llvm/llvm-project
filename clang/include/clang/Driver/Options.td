@@ -3105,7 +3105,7 @@ def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Grou
   HelpText<"Specify the module user build path">,
   MarshallingInfoString<HeaderSearchOpts<"ModuleUserBuildPath">>;
 def fprebuilt_module_path : Joined<["-"], "fprebuilt-module-path=">, Group<i_Group>,
-  Flags<[]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[]>, Visibility<[ClangOption, CLOption, CC1Option]>,
   MetaVarName<"<directory>">,
   HelpText<"Specify the prebuilt module path">;
 defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
@@ -3114,11 +3114,11 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
 def fmodule_output_EQ : Joined<["-"], "fmodule-output=">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, CC1Option]>,
   MarshallingInfoString<FrontendOpts<"ModuleOutputPath">>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 
 defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
@@ -3302,8 +3302,10 @@ def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-sy
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
 def fmodule_header : Flag <["-"], "fmodule-header">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption]>,
   HelpText<"Build a C++20 Header Unit from a header">;
 def fmodule_header_EQ : Joined<["-"], "fmodule-header=">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption]>,
   MetaVarName<"<kind>">,
   HelpText<"Build a C++20 Header Unit from a header that should be found in the user (fmodule-header=user) or system (fmodule-header=system) search path.">;
 
@@ -5505,7 +5507,7 @@ def no__dead__strip__inits__and__terms : Flag<["-"], "no_dead_strip_inits_and_te
 def nobuiltininc : Flag<["-"], "nobuiltininc">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   Group<IncludePath_Group>,
-  HelpText<"Disable builtin #include directories">,
+  HelpText<"Disable builtin #include directories only">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"UseBuiltinIncludes">>;
 def nogpuinc : Flag<["-"], "nogpuinc">, Group<IncludePath_Group>,
   HelpText<"Do not add include paths for CUDA/HIP and"
@@ -5532,8 +5534,10 @@ def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
 def nostartfiles : Flag<["-"], "nostartfiles">, Group<Link_Group>;
 def nostdinc : Flag<["-"], "nostdinc">,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Group<IncludePath_Group>;
-def nostdlibinc : Flag<["-"], "nostdlibinc">, Group<IncludePath_Group>;
+  Visibility<[ClangOption, CLOption, DXCOption]>, Group<IncludePath_Group>,
+  HelpText<"Disable both standard system #include directories and builtin #include directores">;
+def nostdlibinc : Flag<["-"], "nostdlibinc">, Group<IncludePath_Group>,
+  HelpText<"Disable standard system #include directories only">;
 def nostdincxx : Flag<["-"], "nostdinc++">, Visibility<[ClangOption, CC1Option]>,
   Group<IncludePath_Group>,
   HelpText<"Disable standard #include directories for the C++ standard library">,
@@ -5955,6 +5959,7 @@ def _output : Separate<["--"], "output">, Alias<o>;
 def _param : Separate<["--"], "param">, Group<CompileOnly_Group>;
 def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, CLOption]>,
   Group<Action_Group>, HelpText<"Only precompile the input">;
 def _prefix_EQ : Joined<["--"], "prefix=">, Alias<B>;
 def _prefix : Separate<["--"], "prefix">, Alias<B>;

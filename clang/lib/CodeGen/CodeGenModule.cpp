@@ -1218,11 +1218,12 @@ void CodeGenModule::Release() {
           (LangOpts.PointerAuthInitFini
            << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI) |
           (LangOpts.PointerAuthInitFiniAddressDiscrimination
-           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC);
-      static_assert(
-          AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC ==
-              AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
-          "Update when new enum items are defined");
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC) |
+          (LangOpts.PointerAuthELFGOT
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT);
+      static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT ==
+                        AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
+                    "Update when new enum items are defined");
       if (PAuthABIVersion != 0) {
         getModule().addModuleFlag(llvm::Module::Error,
                                   "aarch64-elf-pauthabi-platform",

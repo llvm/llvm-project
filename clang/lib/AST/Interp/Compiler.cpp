@@ -480,19 +480,25 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       }
     }
 
+    auto maybeNegate = [&]() -> bool {
+      if (CE->getCastKind() == CK_BooleanToSignedIntegral)
+        return this->emitNeg(*ToT, CE);
+      return true;
+    };
+
     if (ToT == PT_IntAP)
-      return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
+      return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE) &&
+             maybeNegate();
     if (ToT == PT_IntAPS)
-      return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE);
+      return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE) &&
+             maybeNegate();
 
     if (FromT == ToT)
       return true;
     if (!this->emitCast(*FromT, *ToT, CE))
       return false;
 
-    if (CE->getCastKind() == CK_BooleanToSignedIntegral)
-      return this->emitNeg(*ToT, CE);
-    return true;
+    return maybeNegate();
   }
 
   case CK_PointerToBoolean:
@@ -3161,10 +3167,11 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
   if (!E->isExpressibleAsConstantInitializer())
-    return this->emitInvalid(E);
+    return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(E->getSubExpr());
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>

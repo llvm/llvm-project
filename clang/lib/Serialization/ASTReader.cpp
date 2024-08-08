@@ -104,6 +104,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -3924,6 +3925,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           DelayedDeleteExprs.push_back(IsArrayForm);
         }
       }
+      break;
+
+    case VTABLES_TO_EMIT:
+      if (F.Kind == MK_MainFile ||
+          getContext().getLangOpts().BuildingPCHWithObjectFile)
+        for (unsigned I = 0, N = Record.size(); I != N;)
+          VTablesToEmit.push_back(ReadDeclID(F, Record, I));
       break;
 
     case IMPORTED_MODULES:
@@ -8121,6 +8129,10 @@ void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
     Consumer->HandleInterestingDecl(DeclGroupRef(D));
 }
 
+void ASTReader::PassVTableToConsumer(CXXRecordDecl *RD) {
+  Consumer->HandleVTable(RD);
+}
+
 void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
   this->Consumer = Consumer;
 
@@ -10596,7 +10608,7 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   }
   case llvm::omp::OMPC_num_teams:
-    C = new (Context) OMPNumTeamsClause();
+    C = OMPNumTeamsClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_thread_limit:
     C = new (Context) OMPThreadLimitClause();
@@ -11418,8 +11430,15 @@ void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   VisitOMPClauseWithPreInit(C);
-  C->setNumTeams(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for ([[maybe_unused]] auto _ : llvm::seq<unsigned>(NumVars)) {
+    (void)_;
+    Vars.push_back(Record.readSubExpr());
+  }
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
