@@ -169,7 +169,7 @@ def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setComposite",
       (ins "bool":$val), [{}], [{
-        if(val)
+        if (val)
           $_op->setDiscardableAttr("omp.composite", mlir::UnitAttr::get($_op->getContext()));
         else
           $_op->removeDiscardableAttr("omp.composite");
