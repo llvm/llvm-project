@@ -94,7 +94,7 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
     Value *Stride = II->getArgOperand(PtrOperandNo + 1);
     // Use the pointer alignment as the element alignment if the stride is a
     // multiple of the pointer alignment. Otherwise, the element alignment
-    // should be the greatest of common divisor of pointer alignment and stride.
+    // should be the greatest common divisor of pointer alignment and stride.
     // For simplicity, just consider unalignment for elements.
     unsigned PointerAlign = Alignment.valueOrOne().value();
     if (!isa<ConstantInt>(Stride) ||
