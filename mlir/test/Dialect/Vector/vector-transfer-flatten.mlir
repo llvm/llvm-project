@@ -741,7 +741,7 @@ func.func @transpose_with_all_unit_dims(%vec: vector<1x1x1xf32>) -> vector<1x1x1
   %res = vector.transpose %vec, [0, 2, 1] : vector<1x1x1xf32> to vector<1x1x1xf32>
   return %res : vector<1x1x1xf32>
 }
-// The `vec` is returned because there are other flattening patterns fold
+// The `vec` is returned because there are other flattening patterns that fold
 // vector.shape_cast ops away.
 // CHECK-LABEL: func.func @transpose_with_all_unit_dims
 // CHECK-SAME:      %[[VEC:.[a-zA-Z0-9]+]]
