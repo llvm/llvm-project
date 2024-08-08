@@ -1179,6 +1179,30 @@ public:
       attr = rewriter.getFloatAttr(
           typeConverter->convertType(op.getType()),
           mlir::cast<mlir::cir::FPAttr>(op.getValue()).getValue());
+    } else if (auto complexTy =
+                   mlir::dyn_cast<mlir::cir::ComplexType>(op.getType())) {
+      auto complexAttr = mlir::cast<mlir::cir::ComplexAttr>(op.getValue());
+      auto complexElemTy = complexTy.getElementTy();
+      auto complexElemLLVMTy = typeConverter->convertType(complexElemTy);
+
+      mlir::Attribute components[2];
+      if (mlir::isa<mlir::cir::IntType>(complexElemTy)) {
+        components[0] = rewriter.getIntegerAttr(
+            complexElemLLVMTy,
+            mlir::cast<mlir::cir::IntAttr>(complexAttr.getReal()).getValue());
+        components[1] = rewriter.getIntegerAttr(
+            complexElemLLVMTy,
+            mlir::cast<mlir::cir::IntAttr>(complexAttr.getImag()).getValue());
+      } else {
+        components[0] = rewriter.getFloatAttr(
+            complexElemLLVMTy,
+            mlir::cast<mlir::cir::FPAttr>(complexAttr.getReal()).getValue());
+        components[1] = rewriter.getFloatAttr(
+            complexElemLLVMTy,
+            mlir::cast<mlir::cir::FPAttr>(complexAttr.getImag()).getValue());
+      }
+
+      attr = rewriter.getArrayAttr(components);
     } else if (mlir::isa<mlir::cir::PointerType>(op.getType())) {
       // Optimize with dedicated LLVM op for null pointers.
       if (mlir::isa<mlir::cir::ConstPtrAttr>(op.getValue())) {

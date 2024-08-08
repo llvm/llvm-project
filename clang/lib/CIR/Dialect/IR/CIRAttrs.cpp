@@ -363,6 +363,26 @@ LogicalResult cir::FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult ComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  mlir::cir::ComplexType type,
+                                  mlir::TypedAttr real, mlir::TypedAttr imag) {
+  auto elemTy = type.getElementTy();
+  if (real.getType() != elemTy) {
+    emitError() << "type of the real part does not match the complex type";
+    return failure();
+  }
+  if (imag.getType() != elemTy) {
+    emitError() << "type of the imaginary part does not match the complex type";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CmpThreeWayInfoAttr definitions
 //===----------------------------------------------------------------------===//
 
