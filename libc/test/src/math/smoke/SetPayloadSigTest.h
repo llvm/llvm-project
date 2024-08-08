@@ -40,7 +40,7 @@ public:
     default_snan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 1 +
                                                   FPBits::EXP_BIAS);
     T default_snan_payload = default_snan_payload_bits.get_val();
-    
+
     EXPECT_EQ(1, func(&res, default_snan_payload));
   }
 
