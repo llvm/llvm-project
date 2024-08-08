@@ -756,12 +756,9 @@ public:
 };
 
 class InsertElementInst final : public Instruction {
-  /// Use Context::createInsertElementInst(). Don't call
-  /// the constructor directly.
+  /// Use Context::createInsertElementInst() instead.
   InsertElementInst(llvm::Instruction *I, Context &Ctx)
       : Instruction(ClassID::InsertElement, Opcode::InsertElement, I, Ctx) {}
-  InsertElementInst(ClassID SubclassID, llvm::Instruction *I, Context &Ctx)
-      : Instruction(SubclassID, Opcode::InsertElement, I, Ctx) {}
   friend class Context; // For accessing the constructor in
                         // create*()
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
@@ -781,12 +778,19 @@ public:
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::InsertElement;
   }
+  static bool isValidOperands(const Value *Vec, const Value *NewElt,
+                              const Value *Idx) {
+    return llvm::InsertElementInst::isValidOperands(Vec->Val, NewElt->Val,
+                                                    Idx->Val);
+  }
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
   unsigned getNumOfIRInstrs() const final { return 1u; }
 #ifndef NDEBUG
-  void verify() const final {}
+  void verify() const final {
+    assert(isa<llvm::InsertElementInst>(Val) && "Expected InsertElementInst");
+  }
   friend raw_ostream &operator<<(raw_ostream &OS,
                                  const InsertElementInst &IEI) {
     IEI.dump(OS);
