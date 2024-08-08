@@ -968,23 +968,11 @@ void ELFWriter::writeSectionHeader(const MCAssembler &Asm) {
     auto SectionHasFlag = [&](uint64_t Flag) -> bool {
       return Section->getFlags() & Flag;
     };
-    auto SectionIsType = [&](uint64_t Type) -> bool {
-      return Section->getType() == Type;
-    };
 
-    if (SectionIsType(ELF::SHT_STRTAB)) {
-      stats::StrtabBytes += Size;
-    } else if (SectionIsType(ELF::SHT_SYMTAB)) {
-      stats::SymtabBytes += Size;
-    } else if (SectionIsType(ELF::SHT_DYNSYM)) {
-      stats::DynsymBytes += Size;
-    } else if (SectionIsType(ELF::SHT_REL) || SectionIsType(ELF::SHT_RELA) ||
-               SectionIsType(ELF::SHT_RELR) || SectionIsType(ELF::SHT_CREL)) {
-      stats::RelocationBytes += Size;
-    } else if (SectionIsType(ELF::SHT_X86_64_UNWIND)) {
-      stats::UnwindBytes += Size;
-    } else if (Section->getName().starts_with(".debug")) {
+    if (Section->getName().starts_with(".debug")) {
       stats::DebugBytes += Size;
+    } else if (Section->getName().starts_with(".eh_frame")) {
+      stats::UnwindBytes += Size;
     } else if (SectionHasFlag(ELF::SHF_ALLOC)) {
       if (SectionHasFlag(ELF::SHF_EXECINSTR)) {
         stats::AllocTextBytes += Size;
@@ -994,7 +982,25 @@ void ELFWriter::writeSectionHeader(const MCAssembler &Asm) {
         stats::AllocROBytes += Size;
       }
     } else {
-      stats::OtherBytes += Size;
+      switch (Section->getType()) {
+      case ELF::SHT_STRTAB:
+        stats::StrtabBytes += Size;
+        break;
+      case ELF::SHT_SYMTAB:
+        stats::SymtabBytes += Size;
+        break;
+      case ELF::SHT_DYNSYM:
+        stats::DynsymBytes += Size;
+        break;
+      case ELF::SHT_REL:
+      case ELF::SHT_RELA:
+      case ELF::SHT_CREL:
+        stats::RelocationBytes += Size;
+        break;
+      default:
+        stats::OtherBytes += Size;
+        break;
+      }
     }
 
     writeSection(GroupSymbolIndex, Offsets.first, Size, *Section);
