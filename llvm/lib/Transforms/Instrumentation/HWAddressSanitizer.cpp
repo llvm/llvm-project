@@ -339,16 +339,14 @@ private:
                                  LoopInfo *LI);
   bool ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE, MemIntrinsic *MI);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
-  bool instrumentMemAccess(InterestingMemoryOperand &O, DomTreeUpdater &DTU,
-                           LoopInfo *LI);
+  bool instrumentMemAccess(MemoryRefInfo &O, DomTreeUpdater &DTU, LoopInfo *LI);
   bool ignoreAccessWithoutRemark(Instruction *Inst, Value *Ptr);
   bool ignoreAccess(OptimizationRemarkEmitter &ORE, Instruction *Inst,
                     Value *Ptr);
 
-  void getInterestingMemoryOperands(
-      OptimizationRemarkEmitter &ORE, Instruction *I,
-      const TargetLibraryInfo &TLI,
-      SmallVectorImpl<InterestingMemoryOperand> &Interesting);
+  void getMemoryRefInfos(OptimizationRemarkEmitter &ORE, Instruction *I,
+                         const TargetLibraryInfo &TLI,
+                         SmallVectorImpl<MemoryRefInfo> &Interesting);
 
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
@@ -814,10 +812,9 @@ bool HWAddressSanitizer::ignoreAccess(OptimizationRemarkEmitter &ORE,
   return Ignored;
 }
 
-void HWAddressSanitizer::getInterestingMemoryOperands(
+void HWAddressSanitizer::getMemoryRefInfos(
     OptimizationRemarkEmitter &ORE, Instruction *I,
-    const TargetLibraryInfo &TLI,
-    SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
+    const TargetLibraryInfo &TLI, SmallVectorImpl<MemoryRefInfo> &Interesting) {
   // Skip memory accesses inserted by another instrumentation.
   if (I->hasMetadata(LLVMContext::MD_nosanitize))
     return;
@@ -1088,7 +1085,7 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   MI->eraseFromParent();
 }
 
-bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O,
+bool HWAddressSanitizer::instrumentMemAccess(MemoryRefInfo &O,
                                              DomTreeUpdater &DTU,
                                              LoopInfo *LI) {
   Value *Addr = O.getPtr();
@@ -1577,7 +1574,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
 
-  SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
+  SmallVector<MemoryRefInfo, 16> OperandsToInstrument;
   SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
   SmallVector<Instruction *, 8> LandingPadVec;
   const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
@@ -1591,7 +1588,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
       LandingPadVec.push_back(&Inst);
 
-    getInterestingMemoryOperands(ORE, &Inst, TLI, OperandsToInstrument);
+    getMemoryRefInfos(ORE, &Inst, TLI, OperandsToInstrument);
 
     if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
       if (!ignoreMemIntrinsic(ORE, MI))

@@ -18,7 +18,6 @@
 // RUN:     -emit-llvm -o - | FileCheck %t/layer1.cppm
 // RUN: %clang_cc1 -std=c++20 %t/layer2.cppm -triple %itanium_abi_triple -emit-llvm  \
 // RUN:     -fmodule-file=foo:layer1=%t/foo-layer1.pcm -o - | FileCheck %t/layer2.cppm
-// XFAIL: *
 
 //--- layer1.cppm
 export module foo:layer1;

@@ -911,8 +911,7 @@ public:
   /// of \p Flags.
   MCSymbol *registerNameAtAddress(StringRef Name, uint64_t Address,
                                   uint64_t Size, uint16_t Alignment,
-                                  unsigned Flags = 0,
-                                  BinarySection *Section = NULL);
+                                  unsigned Flags = 0);
 
   /// Return BinaryData registered at a given \p Address or nullptr if no
   /// global symbol was registered at the location.
