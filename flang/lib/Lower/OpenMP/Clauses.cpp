@@ -936,7 +936,7 @@ NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntExpr
   List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
-                           /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
   return NumTeams{/*List=*/v};
 }
 
