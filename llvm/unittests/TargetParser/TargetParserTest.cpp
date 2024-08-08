@@ -2482,8 +2482,14 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve2-sm4", "nosve2"}, {}, {"sve2", "sve2-sm4"}},
 
         // sve-b16b16 -> {sme-b16b16}
-        {AArch64::ARMV8A, {"nosve-b16b16", "sme-b16b16"}, {"sve-b16b16", "sme-b16b16"}, {}},
-        {AArch64::ARMV8A, {"sme-b16b16", "nosve-b16b16"}, {}, {"sve-b16b16", "sme-b16b16"}},
+        {AArch64::ARMV8A,
+         {"nosve-b16b16", "sme-b16b16"},
+         {"sve-b16b16", "sme-b16b16"},
+         {}},
+        {AArch64::ARMV8A,
+         {"sme-b16b16", "nosve-b16b16"},
+         {},
+         {"sve-b16b16", "sme-b16b16"}},
 
         // sme -> {sme2, sme-f16f16, sme-f64f64, sme-i16i64, sme-fa64}
         {AArch64::ARMV8A, {"nosme", "sme2"}, {"sme", "sme2"}, {}},
