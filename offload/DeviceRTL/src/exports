@@ -34,3 +34,5 @@ pow
 sin
 cos
 atan2f
+
+abs
