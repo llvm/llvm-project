@@ -1,4 +1,4 @@
-//===-- Definition of the type time_t, for use during the libc build ------===//
+//===-- Unittests for ddivl -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_TIME_T_H
-#define LLVM_LIBC_TYPES_TIME_T_H
+#include "DivTest.h"
 
-#ifdef LIBC_TYPES_TIME_T_IS_32_BIT
-#include "time_t_32.h"
-#else
-#include "time_t_64.h"
-#endif
+#include "src/math/ddivl.h"
 
-#endif // LLVM_LIBC_TYPES_TIME_T_H
+LIST_DIV_TESTS(double, long double, LIBC_NAMESPACE::ddivl)

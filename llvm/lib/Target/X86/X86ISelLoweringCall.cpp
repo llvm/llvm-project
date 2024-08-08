@@ -2450,6 +2450,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }();
   assert(Mask && "Missing call preserved mask for calling convention");
 
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getFrameRegister(MF)))
+    X86Info->setFPClobberedByCall(true);
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getBaseRegister()))
+    X86Info->setBPClobberedByCall(true);
+
   // If this is an invoke in a 32-bit function using a funclet-based
   // personality, assume the function clobbers all registers. If an exception
   // is thrown, the runtime will not restore CSRs.

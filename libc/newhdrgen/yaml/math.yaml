@@ -2352,3 +2352,10 @@ functions:
     arguments:
       - type: long double
       - type: int *
+  - name: ddivl
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: long double
