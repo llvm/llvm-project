@@ -149,12 +149,12 @@ public:
   typedef T Func(T);
 
   template <size_t N = 1>
-  static uint64_t run_perf_in_range(Func f, int min_exp, int max_exp) {
+  static uint64_t run_throughput_in_range(Func f, int min_exp, int max_exp) {
     cpp::array<T, N> inputs;
     for (size_t i = 0; i < N; ++i)
       inputs[i] = get_rand_input<T>(min_exp, max_exp);
 
-    uint64_t total_time = LIBC_NAMESPACE::latency(f, inputs);
+    uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs);
 
     return total_time / N;
   }

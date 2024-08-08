@@ -21,8 +21,8 @@
 // easily register NVPTX benchmarks.
 #define BM_RANDOM_INPUT(Func, MIN_EXP, MAX_EXP, N)                             \
   []() {                                                                       \
-    return LIBC_NAMESPACE::benchmarks::MathPerf<double>::run_perf_in_range<N>( \
-        Func, MIN_EXP, MAX_EXP);                                               \
+    return LIBC_NAMESPACE::benchmarks::MathPerf<                               \
+        double>::run_throughput_in_range<N>(Func, MIN_EXP, MAX_EXP);           \
   }
 
 #define BENCH(Name, Func, MIN_EXP, MAX_EXP)                                    \
