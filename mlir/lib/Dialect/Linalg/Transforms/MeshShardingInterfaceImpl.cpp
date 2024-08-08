@@ -43,7 +43,7 @@ namespace mlir::linalg {
 
 using MeshAxis = mesh::MeshAxis;
 using ReductionKind = mesh::ReductionKind;
-using MeshSharding = mesh::MeshSharding;
+using MeshShardingAttr = mesh::MeshShardingAttr;
 using ShardingArray = mesh::ShardingArray;
 using MeshOp = mesh::MeshOp;
 
@@ -102,18 +102,19 @@ static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
   return getReductionKind(reductionOp.value());
 }
 
-static MeshOp getMesh(Operation *op, ArrayRef<MeshSharding> operandShardings,
-                      ArrayRef<MeshSharding> resultShardings,
+static MeshOp getMesh(Operation *op,
+                      ArrayRef<MeshShardingAttr> operandShardings,
+                      ArrayRef<MeshShardingAttr> resultShardings,
                       SymbolTableCollection &symbolTable) {
-  for (MeshSharding sharding : operandShardings) {
+  for (MeshShardingAttr sharding : operandShardings) {
     if (sharding) {
-      return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
+      return mesh::getMesh(op, sharding.getMesh(), symbolTable);
     }
   }
 
-  for (MeshSharding sharding : resultShardings) {
+  for (MeshShardingAttr sharding : resultShardings) {
     if (sharding) {
-      return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
+      return mesh::getMesh(op, sharding.getMesh(), symbolTable);
     }
   }
 
@@ -184,7 +185,7 @@ static SmallVector<Value> createDestinationPassingStyleInitOperands(
 
 static void createAllReduceForResultWithoutPartialSharding(
     Value unshardedLinalgOpResult, ArrayRef<MeshAxis> opReductionMeshAxes,
-    MeshSharding resultSharding, ReductionKind reductionKind,
+    MeshShardingAttr resultSharding, ReductionKind reductionKind,
     IRMapping &spmdizationMap, ImplicitLocOpBuilder &builder) {
   SmallVector<MeshAxis> allReduceMeshAxes;
   llvm::copy_if(opReductionMeshAxes, std::back_inserter(allReduceMeshAxes),
@@ -198,14 +199,14 @@ static void createAllReduceForResultWithoutPartialSharding(
 
   Value spmdizedLinalgOpResult = spmdizationMap.lookup(unshardedLinalgOpResult);
   Value reducedValue = builder.create<mesh::AllReduceOp>(
-      spmdizedLinalgOpResult, resultSharding.getMesh(), allReduceMeshAxes,
-      reductionKind);
+      spmdizedLinalgOpResult, resultSharding.getMesh().getValue(),
+      allReduceMeshAxes, reductionKind);
   spmdizationMap.map(unshardedLinalgOpResult, reducedValue);
 }
 
 static void createAllReduceForResultsWithoutPartialShardings(
     LinalgOp unshardedOp, ArrayRef<MeshAxis> opReductionMeshAxes,
-    ArrayRef<MeshSharding> resultShardings, IRMapping &spmdizationMap,
+    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
     ImplicitLocOpBuilder &builder) {
   ReductionKind reductionKind = getReductionKindOfLinalgOp(unshardedOp);
   for (auto [unshardedLinalgOpResult, resultSharding] :
@@ -218,8 +219,8 @@ static void createAllReduceForResultsWithoutPartialShardings(
 
 static void spmdizeLinalgOpWithShardedReduction(
     LinalgOp op, ArrayRef<Value> spmdizedOperands,
-    ArrayRef<MeshSharding> operandShardings,
-    ArrayRef<MeshSharding> resultShardings,
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings,
     ArrayRef<utils::IteratorType> loopIteratorTypes,
     ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators,
     IRMapping &spmdizationMap, SymbolTableCollection &symbolTable,
@@ -292,8 +293,8 @@ struct StructuredOpShardingInterface
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshSharding> operandShardings,
-                        ArrayRef<MeshSharding> resultShardings,
+                        ArrayRef<MeshShardingAttr> operandShardings,
+                        ArrayRef<MeshShardingAttr> resultShardings,
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
