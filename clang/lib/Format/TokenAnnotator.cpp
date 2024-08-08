@@ -5664,6 +5664,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
+    case FormatStyle::RCPS_OwnLineWithBrace:
     case FormatStyle::RCPS_WithFollowing:
       return true;
     default:
@@ -5682,12 +5683,15 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
            (Style.BreakTemplateDeclarations == FormatStyle::BTDS_Leave &&
             Right.NewlinesBefore > 0);
   }
-  if (Left.ClosesRequiresClause && Right.isNot(tok::semi) &&
-      Right.isNot(tok::l_brace)) {
+  if (Left.ClosesRequiresClause && Right.isNot(tok::semi)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithPreceding:
       return true;
+    case FormatStyle::RCPS_OwnLineWithBrace:
+      if (Right.isNot(tok::l_brace))
+        return true;
+      break;
     default:
       break;
     }

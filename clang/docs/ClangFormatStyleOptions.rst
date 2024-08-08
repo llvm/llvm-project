@@ -5379,22 +5379,47 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``RCPS_OwnLine`` (in configuration: ``OwnLine``)
-    Always put the ``requires`` clause on its own line.
+    Always put the ``requires`` clause on its own line (possibly followed by
+    a semicolon).
 
     .. code-block:: c++
 
       template <typename T>
-      requires C<T>
+        requires C<T>
       struct Foo {...
 
       template <typename T>
-      requires C<T>
+      void bar(T t)
+        requires C<T>;
+
+      template <typename T>
+        requires C<T>
       void bar(T t) {...
 
       template <typename T>
       void baz(T t)
-      requires C<T>
+        requires C<T>
       {...
+
+  * ``RCPS_OwnLineWithBrace`` (in configuration: ``OwnLineWithBrace``)
+    As with ``OwnLine``, except, unless otherwise prohibited, place a
+    following open brace (of a function definition) to follow on the same
+    line.
+
+    .. code-block:: c++
+
+      void bar(T t)
+        requires C<T> {
+        return;
+      }
+
+      void bar(T t)
+        requires C<T> {}
+
+      template <typename T>
+        requires C<T>
+      void baz(T t) {
+        ...
 
   * ``RCPS_WithPreceding`` (in configuration: ``WithPreceding``)
     Try to put the clause together with the preceding part of a declaration.
