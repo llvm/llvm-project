@@ -5898,8 +5898,7 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     llvm_unreachable("unexpected counted_by family attribute");
   }
 
-  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
-  if (S.CheckCountedByAttrOnField(FD, CountExpr, Decls, CountInBytes, OrNull))
+  if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
     return;
 
   QualType CAT = S.BuildCountAttributedArrayOrPointerType(
@@ -5992,7 +5991,7 @@ static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Warn if the return type is not a pointer or reference type.
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     QualType RetTy = FD->getReturnType();
-    if (!RetTy->isPointerType() && !RetTy->isReferenceType()) {
+    if (!RetTy->isPointerOrReferenceType()) {
       S.Diag(AL.getLoc(), diag::warn_declspec_allocator_nonpointer)
           << AL.getRange() << RetTy;
       return;

@@ -269,6 +269,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
 
+  Tokens = annotate("template <typename T>\n"
+                    "enable_if_t<is_integral_v<T>, bool> // comment\n"
+                    "operator~(T &a);");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::amp, TT_PointerOrReference);
+
   Tokens = annotate("template <enable_if_t<foo && !bar>* = nullptr> void f();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
@@ -733,6 +739,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("func((void (*)())&a);");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
+  EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[10], tok::amp, TT_UnaryOperator);
 
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");

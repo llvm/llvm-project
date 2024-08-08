@@ -104,6 +104,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1051,10 +1052,10 @@ IdentifierID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) 
   return Reader.getGlobalIdentifierID(F, RawID >> 1);
 }
 
-static void markIdentifierFromAST(ASTReader &Reader, IdentifierInfo &II) {
+static void markIdentifierFromAST(ASTReader &Reader, IdentifierInfo &II,
+                                  bool IsModule) {
   if (!II.isFromAST()) {
     II.setIsFromAST();
-    bool IsModule = Reader.getPreprocessor().getCurrentModule() != nullptr;
     if (isInterestingIdentifier(Reader, II, IsModule))
       II.setChangedSinceDeserialization();
   }
@@ -1080,7 +1081,8 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     II = &Reader.getIdentifierTable().getOwn(k);
     KnownII = II;
   }
-  markIdentifierFromAST(Reader, *II);
+  bool IsModule = Reader.getPreprocessor().getCurrentModule() != nullptr;
+  markIdentifierFromAST(Reader, *II, IsModule);
   Reader.markIdentifierUpToDate(II);
 
   IdentifierID ID = Reader.getGlobalIdentifierID(F, RawID);
@@ -3023,8 +3025,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
     case METADATA: {
       if (Record[0] != VERSION_MAJOR && !DisableValidation) {
         if ((ClientLoadCapabilities & ARR_VersionMismatch) == 0)
-          Diag(Record[0] < VERSION_MAJOR? diag::err_pch_version_too_old
-                                        : diag::err_pch_version_too_new);
+          Diag(Record[0] < VERSION_MAJOR ? diag::err_ast_file_version_too_old
+                                         : diag::err_ast_file_version_too_new)
+              << moduleKindForDiagnostic(F.Kind) << F.FileName;
         return VersionMismatch;
       }
 
@@ -3037,7 +3040,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           return OutOfDate;
 
         if (!AllowASTWithCompilerErrors) {
-          Diag(diag::err_pch_with_compiler_errors);
+          Diag(diag::err_ast_file_with_compiler_errors)
+              << moduleKindForDiagnostic(F.Kind) << F.FileName;
           return HadErrors;
         }
       }
@@ -3060,7 +3064,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       StringRef ASTBranch = Blob;
       if (StringRef(CurBranch) != ASTBranch && !DisableValidation) {
         if ((ClientLoadCapabilities & ARR_VersionMismatch) == 0)
-          Diag(diag::err_pch_different_branch) << ASTBranch << CurBranch;
+          Diag(diag::err_ast_file_different_branch)
+              << moduleKindForDiagnostic(F.Kind) << F.FileName << ASTBranch
+              << CurBranch;
         return VersionMismatch;
       }
       break;
@@ -3921,6 +3927,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
 
+    case VTABLES_TO_EMIT:
+      if (F.Kind == MK_MainFile ||
+          getContext().getLangOpts().BuildingPCHWithObjectFile)
+        for (unsigned I = 0, N = Record.size(); I != N;)
+          VTablesToEmit.push_back(ReadDeclID(F, Record, I));
+      break;
+
     case IMPORTED_MODULES:
       if (!F.isModule()) {
         // If we aren't loading a module (which has its own exports), make
@@ -4543,7 +4556,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
 
       // Mark this identifier as being from an AST file so that we can track
       // whether we need to serialize it.
-      markIdentifierFromAST(*this, *II);
+      markIdentifierFromAST(*this, *II, /*IsModule=*/true);
 
       // Associate the ID with the identifier so that the writer can reuse it.
       auto ID = Trait.ReadIdentifierID(Data + KeyDataLen.first);
@@ -4827,7 +4840,8 @@ ASTReader::ReadASTCore(StringRef FileName,
     case AST_BLOCK_ID:
       if (!HaveReadControlBlock) {
         if ((ClientLoadCapabilities & ARR_VersionMismatch) == 0)
-          Diag(diag::err_pch_version_too_old);
+          Diag(diag::err_ast_file_version_too_old)
+              << moduleKindForDiagnostic(Type) << FileName;
         return VersionMismatch;
       }
 
@@ -7433,6 +7447,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");
@@ -8108,6 +8127,10 @@ void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
     PassObjCImplDeclToConsumer(ImplD, Consumer);
   else
     Consumer->HandleInterestingDecl(DeclGroupRef(D));
+}
+
+void ASTReader::PassVTableToConsumer(CXXRecordDecl *RD) {
+  Consumer->HandleVTable(RD);
 }
 
 void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
@@ -8961,7 +8984,8 @@ IdentifierInfo *ASTReader::DecodeIdentifierInfo(IdentifierID ID) {
     auto Key = Trait.ReadKey(Data, KeyDataLen.first);
     auto &II = PP.getIdentifierTable().get(Key);
     IdentifiersLoaded[Index] = &II;
-    markIdentifierFromAST(*this,  II);
+    bool IsModule = getPreprocessor().getCurrentModule() != nullptr;
+    markIdentifierFromAST(*this, II, IsModule);
     if (DeserializationListener)
       DeserializationListener->IdentifierRead(ID, &II);
   }
@@ -10456,6 +10480,28 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_acq_rel:
     C = new (Context) OMPAcqRelClause();
     break;
+  case llvm::omp::OMPC_absent: {
+    unsigned NumKinds = Record.readInt();
+    C = OMPAbsentClause::CreateEmpty(Context, NumKinds);
+    break;
+  }
+  case llvm::omp::OMPC_holds:
+    C = new (Context) OMPHoldsClause();
+    break;
+  case llvm::omp::OMPC_contains: {
+    unsigned NumKinds = Record.readInt();
+    C = OMPContainsClause::CreateEmpty(Context, NumKinds);
+    break;
+  }
+  case llvm::omp::OMPC_no_openmp:
+    C = new (Context) OMPNoOpenMPClause();
+    break;
+  case llvm::omp::OMPC_no_openmp_routines:
+    C = new (Context) OMPNoOpenMPRoutinesClause();
+    break;
+  case llvm::omp::OMPC_no_parallelism:
+    C = new (Context) OMPNoParallelismClause();
+    break;
   case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
@@ -10562,7 +10608,7 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   }
   case llvm::omp::OMPC_num_teams:
-    C = new (Context) OMPNumTeamsClause();
+    C = OMPNumTeamsClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_thread_limit:
     C = new (Context) OMPThreadLimitClause();
@@ -10855,6 +10901,40 @@ void OMPClauseReader::VisitOMPFailClause(OMPFailClause *C) {
   OpenMPClauseKind CKind = Record.readEnum<OpenMPClauseKind>();
   C->setFailParameter(CKind);
 }
+
+void OMPClauseReader::VisitOMPAbsentClause(OMPAbsentClause *C) {
+  unsigned Count = C->getDirectiveKinds().size();
+  C->setLParenLoc(Record.readSourceLocation());
+  llvm::SmallVector<OpenMPDirectiveKind, 4> DKVec;
+  DKVec.reserve(Count);
+  for (unsigned I = 0; I < Count; I++) {
+    DKVec.push_back(Record.readEnum<OpenMPDirectiveKind>());
+  }
+  C->setDirectiveKinds(DKVec);
+}
+
+void OMPClauseReader::VisitOMPHoldsClause(OMPHoldsClause *C) {
+  C->setExpr(Record.readExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPContainsClause(OMPContainsClause *C) {
+  unsigned Count = C->getDirectiveKinds().size();
+  C->setLParenLoc(Record.readSourceLocation());
+  llvm::SmallVector<OpenMPDirectiveKind, 4> DKVec;
+  DKVec.reserve(Count);
+  for (unsigned I = 0; I < Count; I++) {
+    DKVec.push_back(Record.readEnum<OpenMPDirectiveKind>());
+  }
+  C->setDirectiveKinds(DKVec);
+}
+
+void OMPClauseReader::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
+
+void OMPClauseReader::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseReader::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
@@ -11350,8 +11430,15 @@ void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   VisitOMPClauseWithPreInit(C);
-  C->setNumTeams(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for ([[maybe_unused]] auto _ : llvm::seq<unsigned>(NumVars)) {
+    (void)_;
+    Vars.push_back(Record.readSubExpr());
+  }
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {

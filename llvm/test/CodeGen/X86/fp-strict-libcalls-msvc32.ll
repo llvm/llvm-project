@@ -180,12 +180,15 @@ define float @tan(float %x) #0 {
 define float @acos(float %x) #0 {
 ; CHECK-LABEL: acos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl   %eax
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    calll _acosf
-; CHECK-NEXT:    popl    %eax
+; CHECK-NEXT:    calll _acos
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %result = call float @llvm.experimental.constrained.acos.f32(float %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %result
@@ -194,12 +197,15 @@ define float @acos(float %x) #0 {
 define float @asin(float %x) #0 {
 ; CHECK-LABEL: asin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl   %eax
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    calll _asinf
-; CHECK-NEXT:    popl    %eax
+; CHECK-NEXT:    calll _asin
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %result = call float @llvm.experimental.constrained.asin.f32(float %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %result
@@ -208,12 +214,15 @@ define float @asin(float %x) #0 {
 define float @atan(float %x) #0 {
 ; CHECK-LABEL: atan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl   %eax
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    calll _atanf
-; CHECK-NEXT:    popl    %eax
+; CHECK-NEXT:    calll _atan
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %result = call float @llvm.experimental.constrained.atan.f32(float %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %result
@@ -222,12 +231,15 @@ define float @atan(float %x) #0 {
 define float @cosh(float %x) #0 {
 ; CHECK-LABEL: cosh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl   %eax
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    calll _coshf
-; CHECK-NEXT:    popl    %eax
+; CHECK-NEXT:    calll _cosh
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %result = call float @llvm.experimental.constrained.cosh.f32(float %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %result
@@ -236,26 +248,31 @@ define float @cosh(float %x) #0 {
 define float @sinh(float %x) #0 {
 ; CHECK-LABEL: sinh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl   %eax
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    calll _sinhf
-; CHECK-NEXT:    popl    %eax
+; CHECK-NEXT:    calll _sinh
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %result = call float @llvm.experimental.constrained.sinh.f32(float %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %result
 }
 
 define float @tanh(float %x) #0 {
-; CHECK-LABEL: tanh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl   %eax
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    calll _tanhf
-; CHECK-NEXT:    popl    %eax
+; CHECK-NEXT:    calll _tanh
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %result = call float @llvm.experimental.constrained.tanh.f32(float %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %result

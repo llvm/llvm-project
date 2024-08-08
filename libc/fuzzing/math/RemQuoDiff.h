@@ -34,13 +34,13 @@ void RemQuoDiff(RemQuoFunc<T> func1, RemQuoFunc<T> func2, const uint8_t *data,
   LIBC_NAMESPACE::fputil::FPBits<T> bits1(remainder1);
   LIBC_NAMESPACE::fputil::FPBits<T> bits2(remainder2);
 
-  if (bit1.is_nan()) {
-    if (!bit2.is_nan())
+  if (bits1.is_nan()) {
+    if (!bits2.is_nan())
       __builtin_trap();
     return;
   }
 
-  if (bit1.is_inf() != bit2.is_inf())
+  if (bits1.is_inf() != bits2.is_inf())
     __builtin_trap();
 
   // Compare only the 3 LS bits of the quotient.

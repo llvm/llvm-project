@@ -11,19 +11,19 @@ enums: []
 objects: []
 functions:
   - name: sched_get_priority_max
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: sched_get_priority_min
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: sched_getaffinity
-    standards: 
+    standards:
       - GNUExtensions
     return_type: int
     arguments:
@@ -31,14 +31,14 @@ functions:
       - type: size_t
       - type: cpu_set_t *
   - name: sched_getparam
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: pid_t
       - type: struct sched_param *
   - name: sched_getscheduler
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -46,14 +46,14 @@ functions:
       - type: int
       - type: const struct sched_param *
   - name: sched_rr_get_interval
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: pid_t
       - type: struct timespec *
   - name: sched_setaffinity
-    standards: 
+    standards:
       - GNUExtensions
     return_type: int
     arguments:
@@ -61,26 +61,26 @@ functions:
       - type: size_t
       - type: const cpu_set_t *
   - name: sched_setparam
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: pid_t
       - type: const struct sched_param *
   - name: sched_setscheduler
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: pid_t
   - name: sched_yield
-    standards: 
-      - POSIX 
+    standards:
+      - POSIX
     return_type: int
-    arguments: 
+    arguments:
       - type: void
   - name: __sched_getcpucount
-    standards: 
+    standards:
       - llvm_libc_ext
     return_type: int
     arguments:

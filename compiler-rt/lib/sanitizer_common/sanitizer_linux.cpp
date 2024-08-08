@@ -33,11 +33,15 @@
 // For mips64, syscall(__NR_stat) fills the buffer in the 'struct kernel_stat'
 // format. Struct kernel_stat is defined as 'struct stat' in asm/stat.h. To
 // access stat from asm/stat.h, without conflicting with definition in
-// sys/stat.h, we use this trick.
-#  if SANITIZER_MIPS64
+// sys/stat.h, we use this trick.  sparc64 is similar, using
+// syscall(__NR_stat64) and struct kernel_stat64.
+#  if SANITIZER_LINUX && (SANITIZER_MIPS64 || SANITIZER_SPARC64)
 #    include <asm/unistd.h>
 #    include <sys/types.h>
 #    define stat kernel_stat
+#    if SANITIZER_SPARC64
+#      define stat64 kernel_stat64
+#    endif
 #    if SANITIZER_GO
 #      undef st_atime
 #      undef st_mtime
@@ -48,6 +52,7 @@
 #    endif
 #    include <asm/stat.h>
 #    undef stat
+#    undef stat64
 #  endif
 
 #  include <dlfcn.h>
@@ -147,6 +152,8 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 
 #  if SANITIZER_FREEBSD
 #    define SANITIZER_USE_GETENTROPY 1
+extern "C" void *__sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
+                            off_t offset);
 #  endif
 
 namespace __sanitizer {
@@ -213,14 +220,16 @@ ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 #    if !SANITIZER_S390
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                    u64 offset) {
-#      if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
+#      if SANITIZER_FREEBSD
+  return (uptr)__sys_mmap(addr, length, prot, flags, fd, offset);
+#      elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return internal_syscall(SYSCALL(mmap), (uptr)addr, length, prot, flags, fd,
                           offset);
 #      else
   // mmap2 specifies file offset in 4096-byte units.
   CHECK(IsAligned(offset, 4096));
   return internal_syscall(SYSCALL(mmap2), addr, length, prot, flags, fd,
-                          offset / 4096);
+                          (OFF_T)(offset / 4096));
 #      endif
 }
 #    endif  // !SANITIZER_S390
@@ -285,8 +294,7 @@ uptr internal_ftruncate(fd_t fd, uptr size) {
   return res;
 }
 
-#    if (!SANITIZER_LINUX_USES_64BIT_SYSCALLS || SANITIZER_SPARC) && \
-        SANITIZER_LINUX
+#    if !SANITIZER_LINUX_USES_64BIT_SYSCALLS && SANITIZER_LINUX
 static void stat64_to_stat(struct stat64 *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = in->st_dev;
@@ -327,7 +335,12 @@ static void statx_to_stat(struct statx *in, struct stat *out) {
 }
 #    endif
 
-#    if SANITIZER_MIPS64
+#    if SANITIZER_MIPS64 || SANITIZER_SPARC64
+#      if SANITIZER_MIPS64
+typedef struct kernel_stat kstat_t;
+#      else
+typedef struct kernel_stat64 kstat_t;
+#      endif
 // Undefine compatibility macros from <sys/stat.h>
 // so that they would not clash with the kernel_stat
 // st_[a|m|c]time fields
@@ -345,7 +358,7 @@ static void statx_to_stat(struct statx *in, struct stat *out) {
 #        undef st_mtime_nsec
 #        undef st_ctime_nsec
 #      endif
-static void kernel_stat_to_stat(struct kernel_stat *in, struct stat *out) {
+static void kernel_stat_to_stat(kstat_t *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = in->st_dev;
   out->st_ino = in->st_ino;
@@ -391,6 +404,12 @@ uptr internal_stat(const char *path, void *buf) {
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
+#      elif SANITIZER_SPARC64
+  kstat_t buf64;
+  int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
+                             (uptr)&buf64, 0);
+  kernel_stat_to_stat(&buf64, (struct stat *)buf);
+  return res;
 #      else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
@@ -423,6 +442,12 @@ uptr internal_lstat(const char *path, void *buf) {
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
+#      elif SANITIZER_SPARC64
+  kstat_t buf64;
+  int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
+                             (uptr)&buf64, AT_SYMLINK_NOFOLLOW);
+  kernel_stat_to_stat(&buf64, (struct stat *)buf);
+  return res;
 #      else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
@@ -442,8 +467,14 @@ uptr internal_fstat(fd_t fd, void *buf) {
 #    if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
 #      if SANITIZER_MIPS64
   // For mips64, fstat syscall fills buffer in the format of kernel_stat
-  struct kernel_stat kbuf;
+  kstat_t kbuf;
   int res = internal_syscall(SYSCALL(fstat), fd, &kbuf);
+  kernel_stat_to_stat(&kbuf, (struct stat *)buf);
+  return res;
+#      elif SANITIZER_LINUX && SANITIZER_SPARC64
+  // For sparc64, fstat64 syscall fills buffer in the format of kernel_stat64
+  kstat_t kbuf;
+  int res = internal_syscall(SYSCALL(fstat64), fd, &kbuf);
   kernel_stat_to_stat(&kbuf, (struct stat *)buf);
   return res;
 #      elif SANITIZER_LINUX && defined(__loongarch__)
@@ -826,10 +857,16 @@ uptr internal_sigaltstack(const void *ss, void *oss) {
   return internal_syscall(SYSCALL(sigaltstack), (uptr)ss, (uptr)oss);
 }
 
+extern "C" pid_t __fork(void);
+
 int internal_fork() {
 #    if SANITIZER_LINUX
 #      if SANITIZER_S390
   return internal_syscall(SYSCALL(clone), 0, SIGCHLD);
+#      elif SANITIZER_SPARC
+  // The clone syscall interface on SPARC differs massively from the rest,
+  // so fall back to __fork.
+  return __fork();
 #      else
   return internal_syscall(SYSCALL(clone), SIGCHLD, 0);
 #      endif
@@ -2324,29 +2361,33 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
-#  if defined(__x86_64__)
+#  if SANITIZER_LINUX && SANITIZER_GLIBC || SANITIZER_NETBSD
+#    if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
          RegName,
-#    if SANITIZER_LINUX
+#      if SANITIZER_LINUX
          ctx->uc_mcontext.gregs[RegNum]
-#    elif SANITIZER_NETBSD
+#      elif SANITIZER_NETBSD
          ctx->uc_mcontext.__gregs[RegNum]
-#    endif
+#      endif
   );
-#  elif defined(__i386__)
+#    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName,
-#    if SANITIZER_LINUX
+#      if SANITIZER_LINUX
          ctx->uc_mcontext.gregs[RegNum]
-#    elif SANITIZER_NETBSD
+#      elif SANITIZER_NETBSD
          ctx->uc_mcontext.__gregs[RegNum]
-#    endif
+#      endif
   );
-#  elif defined(__arm__)
+#    elif defined(__arm__)
   Printf("%s%s = 0x%08zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
-#  elif defined(__aarch64__)
+#    elif defined(__aarch64__)
   Printf("%s%s = 0x%016zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
+#    else
+  (void)RegName;
+#    endif
 #  else
   (void)RegName;
 #  endif
@@ -2463,6 +2504,8 @@ void SignalContext::DumpAllRegisters(void *context) {
 #    else
   (void)ucontext;
 #    endif
+#  else
+  (void)ucontext;
 #  endif
   // FIXME: Implement this for other OSes and architectures.
 }

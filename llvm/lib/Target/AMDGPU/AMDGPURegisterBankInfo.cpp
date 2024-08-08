@@ -3739,17 +3739,28 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (MI.isCopy() || MI.getOpcode() == AMDGPU::G_FREEZE) {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+
     // The default logic bothers to analyze impossible alternative mappings. We
     // want the most straightforward mapping, so just directly handle this.
-    const RegisterBank *DstBank = getRegBank(MI.getOperand(0).getReg(), MRI,
-                                             *TRI);
-    const RegisterBank *SrcBank = getRegBank(MI.getOperand(1).getReg(), MRI,
-                                             *TRI);
+    const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI);
+    const RegisterBank *SrcBank = getRegBank(SrcReg, MRI, *TRI);
     assert(SrcBank && "src bank should have been assigned already");
+
+    // For COPY between a physical reg and an s1, there is no type associated so
+    // we need to take the virtual register's type as a hint on how to interpret
+    // s1 values.
+    if (!SrcReg.isVirtual() && !DstBank &&
+        MRI.getType(DstReg) == LLT::scalar(1))
+      DstBank = &AMDGPU::VCCRegBank;
+    else if (!DstReg.isVirtual() && MRI.getType(SrcReg) == LLT::scalar(1))
+      DstBank = &AMDGPU::VCCRegBank;
+
     if (!DstBank)
       DstBank = SrcBank;
 
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+    unsigned Size = getSizeInBits(DstReg, MRI, *TRI);
     if (MI.getOpcode() != AMDGPU::G_FREEZE &&
         cannotCopy(*DstBank, *SrcBank, TypeSize::getFixed(Size)))
       return getInvalidInstructionMapping();
@@ -4060,18 +4071,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FCONSTANT:
   case AMDGPU::G_CONSTANT:
   case AMDGPU::G_GLOBAL_VALUE:
+  case AMDGPU::G_FRAME_INDEX:
   case AMDGPU::G_BLOCK_ADDR:
   case AMDGPU::G_READSTEADYCOUNTER:
   case AMDGPU::G_READCYCLECOUNTER: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
-    break;
-  }
-  case AMDGPU::G_FRAME_INDEX: {
-    // TODO: This should be the same as other constants, but eliminateFrameIndex
-    // currently assumes VALU uses.
-    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
     break;
   }
   case AMDGPU::G_DYN_STACKALLOC: {

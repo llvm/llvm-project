@@ -1628,7 +1628,9 @@ public:
       const Value *Mask = Args[3];
       const Value *EVL = Args[4];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
-      Align Alignment = I->getParamAlign(1).valueOrOne();
+      Type *EltTy = cast<VectorType>(Data->getType())->getElementType();
+      Align Alignment =
+          I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getStridedMemoryOpCost(Instruction::Store,
                                              Data->getType(), Ptr, VarMask,
                                              Alignment, CostKind, I);
@@ -1638,7 +1640,9 @@ public:
       const Value *Mask = Args[2];
       const Value *EVL = Args[3];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
-      Align Alignment = I->getParamAlign(0).valueOrOne();
+      Type *EltTy = cast<VectorType>(RetTy)->getElementType();
+      Align Alignment =
+          I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
                                              VarMask, Alignment, CostKind, I);
     }
@@ -2131,61 +2135,29 @@ public:
       return Cost;
     }
     case Intrinsic::smax:
+      ISD = ISD::SMAX;
+      break;
     case Intrinsic::smin:
+      ISD = ISD::SMIN;
+      break;
     case Intrinsic::umax:
-    case Intrinsic::umin: {
-      // minmax(X,Y) = select(icmp(X,Y),X,Y)
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-      bool IsUnsigned = IID == Intrinsic::umax || IID == Intrinsic::umin;
-      CmpInst::Predicate Pred =
-          IsUnsigned ? CmpInst::ICMP_UGT : CmpInst::ICMP_SGT;
-      InstructionCost Cost = 0;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                          Pred, CostKind);
-      return Cost;
-    }
+      ISD = ISD::UMAX;
+      break;
+    case Intrinsic::umin:
+      ISD = ISD::UMIN;
+      break;
     case Intrinsic::sadd_sat:
-    case Intrinsic::ssub_sat: {
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-
-      Type *OpTy = StructType::create({RetTy, CondTy});
-      Intrinsic::ID OverflowOp = IID == Intrinsic::sadd_sat
-                                     ? Intrinsic::sadd_with_overflow
-                                     : Intrinsic::ssub_with_overflow;
-      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
-
-      // SatMax -> Overflow && SumDiff < 0
-      // SatMin -> Overflow && SumDiff >= 0
-      InstructionCost Cost = 0;
-      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
-                                    nullptr, ScalarizationCostPassed);
-      Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          Pred, CostKind);
-      Cost += 2 * thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
-                                              CondTy, Pred, CostKind);
-      return Cost;
-    }
+      ISD = ISD::SADDSAT;
+      break;
+    case Intrinsic::ssub_sat:
+      ISD = ISD::SSUBSAT;
+      break;
     case Intrinsic::uadd_sat:
-    case Intrinsic::usub_sat: {
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-
-      Type *OpTy = StructType::create({RetTy, CondTy});
-      Intrinsic::ID OverflowOp = IID == Intrinsic::uadd_sat
-                                     ? Intrinsic::uadd_with_overflow
-                                     : Intrinsic::usub_with_overflow;
-
-      InstructionCost Cost = 0;
-      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
-                                    nullptr, ScalarizationCostPassed);
-      Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      Cost +=
-          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
-      return Cost;
-    }
+      ISD = ISD::UADDSAT;
+      break;
+    case Intrinsic::usub_sat:
+      ISD = ISD::USUBSAT;
+      break;
     case Intrinsic::smul_fix:
     case Intrinsic::umul_fix: {
       unsigned ExtSize = RetTy->getScalarSizeInBits() * 2;
@@ -2351,20 +2323,83 @@ public:
       return (LT.first * 2);
     }
 
-    // If we can't lower fmuladd into an FMA estimate the cost as a floating
-    // point mul followed by an add.
-    if (IID == Intrinsic::fmuladd)
+    switch (IID) {
+    case Intrinsic::fmuladd: {
+      // If we can't lower fmuladd into an FMA estimate the cost as a floating
+      // point mul followed by an add.
+
       return thisT()->getArithmeticInstrCost(BinaryOperator::FMul, RetTy,
                                              CostKind) +
              thisT()->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy,
                                              CostKind);
-    if (IID == Intrinsic::experimental_constrained_fmuladd) {
+    }
+    case Intrinsic::experimental_constrained_fmuladd: {
       IntrinsicCostAttributes FMulAttrs(
         Intrinsic::experimental_constrained_fmul, RetTy, Tys);
       IntrinsicCostAttributes FAddAttrs(
         Intrinsic::experimental_constrained_fadd, RetTy, Tys);
       return thisT()->getIntrinsicInstrCost(FMulAttrs, CostKind) +
              thisT()->getIntrinsicInstrCost(FAddAttrs, CostKind);
+    }
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+    case Intrinsic::umin:
+    case Intrinsic::umax: {
+      // minmax(X,Y) = select(icmp(X,Y),X,Y)
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      bool IsUnsigned = IID == Intrinsic::umax || IID == Intrinsic::umin;
+      CmpInst::Predicate Pred =
+          IsUnsigned ? CmpInst::ICMP_UGT : CmpInst::ICMP_SGT;
+      InstructionCost Cost = 0;
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          Pred, CostKind);
+      return Cost;
+    }
+    case Intrinsic::sadd_sat:
+    case Intrinsic::ssub_sat: {
+      // Assume a default expansion.
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+
+      Type *OpTy = StructType::create({RetTy, CondTy});
+      Intrinsic::ID OverflowOp = IID == Intrinsic::sadd_sat
+                                     ? Intrinsic::sadd_with_overflow
+                                     : Intrinsic::ssub_with_overflow;
+      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
+
+      // SatMax -> Overflow && SumDiff < 0
+      // SatMin -> Overflow && SumDiff >= 0
+      InstructionCost Cost = 0;
+      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
+                                    nullptr, ScalarizationCostPassed);
+      Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          Pred, CostKind);
+      Cost += 2 * thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
+                                              CondTy, Pred, CostKind);
+      return Cost;
+    }
+    case Intrinsic::uadd_sat:
+    case Intrinsic::usub_sat: {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+
+      Type *OpTy = StructType::create({RetTy, CondTy});
+      Intrinsic::ID OverflowOp = IID == Intrinsic::uadd_sat
+                                     ? Intrinsic::uadd_with_overflow
+                                     : Intrinsic::usub_with_overflow;
+
+      InstructionCost Cost = 0;
+      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
+                                    nullptr, ScalarizationCostPassed);
+      Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
+      Cost +=
+          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      return Cost;
+    }
+    default:
+      break;
     }
 
     // Else, assume that we need to scalarize this intrinsic. For math builtins

@@ -109,6 +109,7 @@
 // CHECK-NEXT: Naked (SubjectMatchRule_function)
 // CHECK-NEXT: NoBuiltin (SubjectMatchRule_function)
 // CHECK-NEXT: NoCommon (SubjectMatchRule_variable)
+// CHECK-NEXT: NoConvergent (SubjectMatchRule_function)
 // CHECK-NEXT: NoDebug (SubjectMatchRule_type_alias, SubjectMatchRule_hasType_functionType, SubjectMatchRule_objc_method, SubjectMatchRule_variable_not_is_parameter)
 // CHECK-NEXT: NoDestroy (SubjectMatchRule_variable)
 // CHECK-NEXT: NoDuplicate (SubjectMatchRule_function)
