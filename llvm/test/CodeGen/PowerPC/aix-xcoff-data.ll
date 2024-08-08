@@ -45,8 +45,9 @@
 
 ; CHECK-NOT: .toc
 
-; CHECK:  .file
-; CHECK-NEXT:      .csect ..text..[PR],5
+; CHECK:      .file
+; CHECK-NEXT: .machine "COM"
+; CHECK-NEXT: .csect ..text..[PR],5
 
 ; CHECK:      .csect .data[RW],5
 ; CHECK-NEXT: .globl  ivar
@@ -212,8 +213,7 @@
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
-; SYMS32-NEXT:   CPU Version ID: TCPU_COM (0x3)
-; SYMS64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
+; SYMS-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; SYMS-NEXT:     StorageClass: C_FILE (0x67)
 ; SYMS-NEXT:     NumberOfAuxEntries: 2
 ; SYMS-NEXT:     File Auxiliary Entry {
@@ -224,7 +224,7 @@
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:     File Auxiliary Entry {
 ; SYMS-NEXT:       Index: 2
-; SYMS-NEXT:       Name: LLVM
+; SYMS-NEXT:       Name: {{.*}}LLVM{{.*}}
 ; SYMS-NEXT:       Type: XFT_CV (0x2)
 ; SYMS64-NEXT:     Auxiliary Type: AUX_FILE (0xFC)
 ; SYMS-NEXT:     }
