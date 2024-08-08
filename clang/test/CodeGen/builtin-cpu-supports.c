@@ -280,7 +280,7 @@ int test_ppc(int a) {
 // CHECK-RV32-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 8
 // CHECK-RV32-NEXT:    br i1 [[TMP11]], label [[IF_THEN5:%.*]], label [[IF_END:%.*]]
 // CHECK-RV32:       if.then5:
-// CHECK-RV32-NEXT:    store i32 11, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    store i32 13, ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    br label [[RETURN]]
 // CHECK-RV32:       if.end:
 // CHECK-RV32-NEXT:    br label [[IF_END6:%.*]]
@@ -331,7 +331,7 @@ int test_ppc(int a) {
 // CHECK-RV64-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 8
 // CHECK-RV64-NEXT:    br i1 [[TMP11]], label [[IF_THEN5:%.*]], label [[IF_END:%.*]]
 // CHECK-RV64:       if.then5:
-// CHECK-RV64-NEXT:    store i32 11, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    store i32 13, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    br label [[RETURN]]
 // CHECK-RV64:       if.end:
 // CHECK-RV64-NEXT:    br label [[IF_END6:%.*]]
@@ -355,7 +355,7 @@ int test_riscv(int a) {
   else if (__builtin_cpu_supports("v"))
     return 11;
   else if (__builtin_cpu_supports("zcb"))
-    return 11;
+    return 13;
   return 0;
 }
 #endif
