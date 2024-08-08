@@ -1062,6 +1062,6 @@ std::pair<int, int> RISCVISAInfo::getRISCVFeaturesBitsInfo(StringRef Ext) {
   // there's only one extension version in the __riscv_feature_bits vector.
   for (auto E : RISCVBitPositions)
     if (E.ext.equals_insensitive(Ext))
-      return std::make_pair<int, int>(E.groupid, E.bitpos);
-  return std::make_pair<int, int>(-1, -1);
+      return std::make_pair(E.groupid, E.bitpos);
+  return std::make_pair(-1, -1);
 }
