@@ -213,7 +213,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.faddl
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
