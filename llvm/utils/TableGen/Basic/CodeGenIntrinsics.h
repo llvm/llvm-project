@@ -14,6 +14,7 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENINTRINSICS_H
 
 #include "SDNodeProperties.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ModRef.h"
 #include <string>
@@ -140,7 +141,7 @@ struct CodeGenIntrinsic {
 
   /// Goes through all IntrProperties that have IsDefault
   /// value set and sets the property.
-  void setDefaultProperties(Record *R, std::vector<Record *> DefaultProperties);
+  void setDefaultProperties(Record *R, ArrayRef<Record *> DefaultProperties);
 
   /// Helper function to set property \p Name to true;
   void setProperty(Record *R);
@@ -154,7 +155,7 @@ struct CodeGenIntrinsic {
 
   bool isParamImmArg(unsigned ParamIdx) const;
 
-  CodeGenIntrinsic(Record *R, std::vector<Record *> DefaultProperties);
+  CodeGenIntrinsic(Record *R, ArrayRef<Record *> DefaultProperties);
 };
 
 class CodeGenIntrinsicTable {

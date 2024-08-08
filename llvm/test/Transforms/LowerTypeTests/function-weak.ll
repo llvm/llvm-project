@@ -36,9 +36,9 @@ define zeroext i1 @check_f() {
 entry:
 ; CHECK: [[CMP:%.*]] = icmp ne ptr @f, null
 ; CHECK: [[SEL:%.*]] = select i1 [[CMP]], ptr @[[JT:.*]], ptr null
-; CHECK: [[CMP2:%.*]] = icmp ne ptr [[SEL]], null
-; CHECK: ret i1 [[CMP2]]
-  ret i1 icmp ne (ptr @f, ptr null)
+; CHECK: [[PTI:%.*]] = ptrtoint ptr [[SEL]] to i1
+; CHECK: ret i1 [[PTI]]
+  ret i1 ptrtoint (ptr @f to i1)
 }
 
 ; CHECK: define void @call_f() {
@@ -53,13 +53,13 @@ define void @struct() {
 ; CHECK-LABEL: define void @struct() {
 ; CHECK: [[CMP:%.*]] = icmp ne ptr @f, null
 ; CHECK: [[SEL:%.*]] = select i1 [[CMP]], ptr @.cfi.jumptable, ptr null
-; CHECK-NEXT: [[CMP2:%.*]] = icmp ne ptr [[SEL]], null
-; CHECK-NEXT: [[IV:%.*]] = insertvalue { i1, i8 } poison, i1 [[CMP2]], 0
+; CHECK-NEXT: [[PTI:%.*]] = ptrtoint ptr [[SEL]] to i1
+; CHECK-NEXT: [[IV:%.*]] = insertvalue { i1, i8 } poison, i1 [[PTI]], 0
 ; CHECK-NEXT: [[IV2:%.*]] = insertvalue { i1, i8 } [[IV]], i8 0, 1
 ; CHECK-NEXT: %x = extractvalue { i1, i8 } [[IV2]], 0
 
 entry:
-  %x = extractvalue { i1, i8 } { i1 icmp ne (ptr @f, ptr null), i8 0 }, 0
+  %x = extractvalue { i1, i8 } { i1 ptrtoint (ptr @f to i1), i8 0 }, 0
   ret void
 }
 

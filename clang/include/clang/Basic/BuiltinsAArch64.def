@@ -49,6 +49,7 @@ BUILTIN(__builtin_arm_wfe, "v", "")
 BUILTIN(__builtin_arm_wfi, "v", "")
 BUILTIN(__builtin_arm_sev, "v", "")
 BUILTIN(__builtin_arm_sevl, "v", "")
+BUILTIN(__builtin_arm_chkfeat, "WUiWUi", "")
 
 // Like __builtin_trap but provide an 16-bit immediate reason code (which goes into `brk #N`).
 BUILTIN(__builtin_arm_trap, "vUIs", "nr")
@@ -72,7 +73,7 @@ TARGET_BUILTIN(__builtin_arm_stg, "vv*", "t", "mte")
 TARGET_BUILTIN(__builtin_arm_subp, "Uiv*v*", "t", "mte")
 
 // SME state function
-BUILTIN(__builtin_arm_get_sme_state, "vULi*ULi*", "n")
+BUILTIN(__builtin_arm_get_sme_state, "vWUi*WUi*", "n")
 
 // Memory Operations
 TARGET_BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "", "mte,mops")
@@ -135,6 +136,10 @@ TARGET_BUILTIN(__builtin_arm_ld64b, "vvC*WUi*", "n", "ls64")
 TARGET_BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n", "ls64")
 TARGET_BUILTIN(__builtin_arm_st64bv, "WUiv*WUiC*", "n", "ls64")
 TARGET_BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n", "ls64")
+
+// Armv9.3-A Guarded Control Stack
+TARGET_BUILTIN(__builtin_arm_gcspopm, "WUiWUi", "n", "gcs")
+TARGET_BUILTIN(__builtin_arm_gcsss, "vC*vC*", "n", "gcs")
 
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
@@ -290,7 +295,9 @@ TARGET_HEADER_BUILTIN(_CountLeadingZeros64, "UiULLi", "nh", INTRIN_H, ALL_MS_LAN
 TARGET_HEADER_BUILTIN(_CountOneBits, "UiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_CountOneBits64, "UiULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(__prefetch, "vv*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__prefetch, "vvC*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__hlt, "UiUi.", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef LANGBUILTIN

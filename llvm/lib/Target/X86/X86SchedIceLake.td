@@ -440,11 +440,11 @@ def : WriteRes<WriteVecInsertLd, [ICXPort5,ICXPort23]> {
 }
 def: InstRW<[WriteVecInsertLd], (instregex "(V?)MOV(H|L)(PD|PS)rm")>;
 
-def : WriteRes<WriteVecExtract, [ICXPort0,ICXPort5]> {
+def : WriteRes<WriteVecExtract, [ICXPort0,ICXPort15]> {
   let Latency = 3;
   let NumMicroOps = 2;
 }
-def : WriteRes<WriteVecExtractSt, [ICXPort49,ICXPort5,ICXPort78]> {
+def : WriteRes<WriteVecExtractSt, [ICXPort49,ICXPort15,ICXPort78]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
@@ -620,11 +620,11 @@ def : WriteRes<WriteNop, []>;
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : ICXWriteResPair<WriteFHAdd,  [ICXPort5,ICXPort015], 6, [2,1], 3, 6>;
-defm : ICXWriteResPair<WriteFHAddY, [ICXPort5,ICXPort015], 6, [2,1], 3, 7>;
+defm : ICXWriteResPair<WriteFHAdd,  [ICXPort5,ICXPort01], 6, [2,1], 3, 6>;
+defm : ICXWriteResPair<WriteFHAddY, [ICXPort5,ICXPort01], 6, [2,1], 3, 7>;
 defm : ICXWriteResPair<WritePHAdd,  [ICXPort5,ICXPort05],  3, [2,1], 3, 5>;
-defm : ICXWriteResPair<WritePHAddX, [ICXPort5,ICXPort015], 3, [2,1], 3, 6>;
-defm : ICXWriteResPair<WritePHAddY, [ICXPort5,ICXPort015], 3, [2,1], 3, 7>;
+defm : ICXWriteResPair<WritePHAddX, [ICXPort15,ICXPort015], 3, [2,1], 3, 6>;
+defm : ICXWriteResPair<WritePHAddY, [ICXPort15,ICXPort015], 3, [2,1], 3, 7>;
 
 // Remaining instrs.
 
@@ -879,6 +879,13 @@ def ICXWriteResGroup34 : SchedWriteRes<[ICXPort0,ICXPort0156]> {
 }
 def: InstRW<[ICXWriteResGroup34], (instrs FNSTSW16r)>;
 
+def ICXWriteResGroup36 : SchedWriteRes<[ICXPort0,ICXPort5]> {
+  let Latency = 3;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [1,1];
+}
+def: InstRW<[ICXWriteResGroup36], (instregex "(V?)EXTRACTPS(Z?)rr")>;
+
 def ICXWriteResGroup37 : SchedWriteRes<[ICXPort0,ICXPort5]> {
   let Latency = 3;
   let NumMicroOps = 3;
@@ -886,7 +893,7 @@ def ICXWriteResGroup37 : SchedWriteRes<[ICXPort0,ICXPort5]> {
 }
 def: InstRW<[ICXWriteResGroup37], (instregex "MMX_PH(ADD|SUB)SWrr")>;
 
-def ICXWriteResGroup38 : SchedWriteRes<[ICXPort5,ICXPort01]> {
+def ICXWriteResGroup38 : SchedWriteRes<[ICXPort15,ICXPort01]> {
   let Latency = 3;
   let NumMicroOps = 3;
   let ReleaseAtCycles = [2,1];
@@ -1021,6 +1028,13 @@ def: InstRW<[ICXWriteResGroup51], (instregex "VEXPANDPD(Z|Z128|Z256)rr",
                                              "VPMOVUSQD(Z|Z128|Z256)rr",
                                              "VPMOVUSWB(Z|Z128|Z256)rr",
                                              "VPMOVWB(Z|Z128|Z256)rr")>;
+
+def ICXWriteResGroup53 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
+  let Latency = 2;
+  let NumMicroOps = 3;
+  let ReleaseAtCycles = [1,1,1];
+}
+def: InstRW<[ICXWriteResGroup53], (instregex "(V?)EXTRACTPS(Z?)mr")>;
 
 def ICXWriteResGroup54 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
   let Latency = 4;
@@ -1739,13 +1753,13 @@ def ICXWriteResGroup137 : SchedWriteRes<[ICXPort23,ICXPort01]> {
 def: InstRW<[ICXWriteResGroup137], (instregex "MMX_CVT(T?)PS2PIrm",
                                               "(V?)CVTPS2PDrm")>;
 
-def ICXWriteResGroup143 : SchedWriteRes<[ICXPort5,ICXPort01,ICXPort23]> {
+def ICXWriteResGroup143 : SchedWriteRes<[ICXPort15,ICXPort01,ICXPort23]> {
   let Latency = 9;
   let NumMicroOps = 4;
   let ReleaseAtCycles = [2,1,1];
 }
-def: InstRW<[ICXWriteResGroup143], (instregex "(V?)PHADDSWrm",
-                                              "(V?)PHSUBSWrm")>;
+def: InstRW<[ICXWriteResGroup143], (instrs PHADDSWrm, VPHADDSWrm,
+                                           PHSUBSWrm, VPHSUBSWrm)>;
 
 def ICXWriteResGroup146 : SchedWriteRes<[ICXPort1,ICXPort6,ICXPort23,ICXPort0156]> {
   let Latency = 9;
@@ -1842,7 +1856,7 @@ def: InstRW<[ICXWriteResGroup151], (instregex "VEXPANDPDZ128rm(b?)",
                                               "VPEXPANDDZ128rm(b?)",
                                               "VPEXPANDQZ128rm(b?)")>;
 
-def ICXWriteResGroup154 : SchedWriteRes<[ICXPort5,ICXPort01,ICXPort23]> {
+def ICXWriteResGroup154 : SchedWriteRes<[ICXPort15,ICXPort01,ICXPort23]> {
   let Latency = 10;
   let NumMicroOps = 4;
   let ReleaseAtCycles = [2,1,1];

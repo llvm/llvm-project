@@ -16,6 +16,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -38,22 +39,13 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return {true, false}; // non-leaf
   // The function should be signed in the following situations:
   // - sign-return-address=all
   // - sign-return-address=non-leaf and the functions spills the LR
-  if (!F.hasFnAttribute("sign-return-address")) {
-    const Module &M = *F.getParent();
-    if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-            M.getModuleFlag("sign-return-address"))) {
-      if (Sign->getZExtValue()) {
-        if (const auto *All = mdconst::extract_or_null<ConstantInt>(
-                M.getModuleFlag("sign-return-address-all")))
-          return {true, All->getZExtValue()};
-        return {true, false};
-      }
-    }
+  if (!F.hasFnAttribute("sign-return-address"))
     return {false, false};
-  }
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
   if (Scope == "none")
@@ -67,10 +59,9 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
 }
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return true;
   if (!F.hasFnAttribute("sign-return-address-key")) {
-    if (const auto *BKey = mdconst::extract_or_null<ConstantInt>(
-            F.getParent()->getModuleFlag("sign-return-address-with-bkey")))
-      return BKey->getZExtValue();
     if (STI.getTargetTriple().isOSWindows())
       return true;
     return false;
@@ -82,6 +73,29 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key == "b_key";
 }
 
+// Determine if we need to treat pointers in GOT as signed (as described in
+// https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#appendix-signed-got)
+// based on PAuth core info encoded as "aarch64-elf-pauthabi-platform" and
+// "aarch64-elf-pauthabi-version" module flags. Currently, only
+// AARCH64_PAUTH_PLATFORM_LLVM_LINUX platform supports signed GOT with
+// AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT bit in version value set.
+static bool hasELFSignedGOTHelper(const Function &F,
+                                  const AArch64Subtarget *STI) {
+  if (!Triple(STI->getTargetTriple()).isOSBinFormatELF())
+    return false;
+  const Module *M = F.getParent();
+  const auto *PAP = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("aarch64-elf-pauthabi-platform"));
+  if (!PAP || PAP->getZExtValue() != ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX)
+    return false;
+  const auto *PAV = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("aarch64-elf-pauthabi-version"));
+  if (!PAV)
+    return false;
+  return PAV->getZExtValue() &
+         (1 << ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT);
+}
+
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                                          const AArch64Subtarget *STI) {
   // If we already know that the function doesn't have a redzone, set
@@ -90,27 +104,13 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     HasRedZone = false;
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
+  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
-  // BTI/PAuthLR may be set either on the function or the module. Set Bool from
-  // either the function attribute or module attribute, depending on what is
-  // set.
-  // Note: the module attributed is numeric (0 or 1) but the function attribute
-  // is stringy ("true" or "false").
-  auto TryFnThenModule = [&](StringRef AttrName, bool &Bool) {
-    if (F.hasFnAttribute(AttrName)) {
-      const StringRef V = F.getFnAttribute(AttrName).getValueAsString();
-      assert(V.equals_insensitive("true") || V.equals_insensitive("false"));
-      Bool = V.equals_insensitive("true");
-    } else if (const auto *ModVal = mdconst::extract_or_null<ConstantInt>(
-                   F.getParent()->getModuleFlag(AttrName))) {
-      Bool = ModVal->getZExtValue();
-    }
-  };
-
-  TryFnThenModule("branch-target-enforcement", BranchTargetEnforcement);
-  TryFnThenModule("branch-protection-pauth-lr", BranchProtectionPAuthLR);
+  // BTI/PAuthLR are set on the function attribute.
+  BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
+  BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the
@@ -196,12 +196,14 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
     const MachineFunction &MF) const {
   if (!NeedsAsyncDwarfUnwindInfo) {
     const Function &F = MF.getFunction();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     //  The check got "minsize" is because epilogue unwind info is not emitted
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.
-    NeedsAsyncDwarfUnwindInfo = needsDwarfUnwindInfo(MF) &&
-                                F.getUWTableKind() == UWTableKind::Async &&
-                                !F.hasMinSize();
+    NeedsAsyncDwarfUnwindInfo =
+        needsDwarfUnwindInfo(MF) &&
+        ((F.getUWTableKind() == UWTableKind::Async && !F.hasMinSize()) ||
+         AFI->hasStreamingModeChanges());
   }
   return *NeedsAsyncDwarfUnwindInfo;
 }

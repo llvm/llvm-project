@@ -2027,6 +2027,12 @@ template <typename L, typename R> bool equal(L &&LRange, R &&RRange) {
                     adl_end(RRange));
 }
 
+template <typename L, typename R, typename BinaryPredicate>
+bool equal(L &&LRange, R &&RRange, BinaryPredicate P) {
+  return std::equal(adl_begin(LRange), adl_end(LRange), adl_begin(RRange),
+                    adl_end(RRange), P);
+}
+
 /// Returns true if all elements in Range are equal or when the Range is empty.
 template <typename R> bool all_equal(R &&Range) {
   auto Begin = adl_begin(Range);
@@ -2058,12 +2064,6 @@ void erase_if(Container &C, UnaryPredicate P) {
 template <typename Container, typename ValueType>
 void erase(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
-}
-
-template <typename Container, typename ValueType>
-LLVM_DEPRECATED("Use erase instead", "erase")
-void erase_value(Container &C, ValueType V) {
-  erase(C, V);
 }
 
 /// Wrapper function to append range `R` to container `C`.
@@ -2366,7 +2366,7 @@ public:
   detail::index_iterator end() const { return {End}; }
 };
 
-/// Given two or more input ranges, returns a new range whose values are are
+/// Given two or more input ranges, returns a new range whose values are
 /// tuples (A, B, C, ...), such that A is the 0-based index of the item in the
 /// sequence, and B, C, ..., are the values from the original input ranges. All
 /// input ranges are required to have equal lengths. Note that the returned

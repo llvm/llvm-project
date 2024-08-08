@@ -88,6 +88,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
+extern cl::opt<bool> ProfileUsePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
@@ -613,8 +614,6 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
         if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
           report_error("cannot create output data file", EC);
     }
-    PrintProgramStats PPS(BAT);
-    BC.logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(BC));
   }
 
   return Error::success();
@@ -2300,6 +2299,9 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
   yaml::bolt::BinaryProfile BP;
 
+  const MCPseudoProbeDecoder *PseudoProbeDecoder =
+      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+
   // Fill out the header info.
   BP.Header.Version = 1;
   BP.Header.FileName = std::string(BC.getFilename());
@@ -2351,11 +2353,11 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
 
-      for (auto &&[Idx, YamlBB] : llvm::enumerate(YamlBF.Blocks))
-        YamlBB.Index = Idx;
-
-      for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
-        YamlBF.Blocks[BI->second.getBBIndex()].Hash = BI->second.getBBHash();
+      for (auto &&[Entry, YamlBB] : llvm::zip(BlockMap, YamlBF.Blocks)) {
+        const auto &Block = Entry.second;
+        YamlBB.Hash = Block.Hash;
+        YamlBB.Index = Block.Index;
+      }
 
       // Lookup containing basic block offset and index
       auto getBlock = [&BlockMap](uint32_t Offset) {
@@ -2365,7 +2367,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           exit(1);
         }
         --BlockIt;
-        return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
+        return std::pair(BlockIt->first, BlockIt->second.Index);
       };
 
       for (const BranchInfo &BI : Branches.Data) {
@@ -2399,6 +2401,33 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         }
         const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
+      }
+      if (PseudoProbeDecoder) {
+        if ((YamlBF.GUID = BF->getGUID())) {
+          const MCPseudoProbeFuncDesc *FuncDesc =
+              PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
+          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+        }
+        // Fetch probes belonging to all fragments
+        const AddressProbesMap &ProbeMap =
+            PseudoProbeDecoder->getAddress2ProbesMap();
+        BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
+        Fragments.insert(BF);
+        for (const BinaryFunction *F : Fragments) {
+          const uint64_t FuncAddr = F->getAddress();
+          const auto &FragmentProbes =
+              llvm::make_range(ProbeMap.lower_bound(FuncAddr),
+                               ProbeMap.lower_bound(FuncAddr + F->getSize()));
+          for (const auto &[OutputAddress, Probes] : FragmentProbes) {
+            const uint32_t InputOffset = BAT->translate(
+                FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
+            const unsigned BlockIndex = getBlock(InputOffset).second;
+            for (const MCDecodedPseudoProbe &Probe : Probes)
+              YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
+                  yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
+                                              Probe.getType()});
+          }
+        }
       }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,

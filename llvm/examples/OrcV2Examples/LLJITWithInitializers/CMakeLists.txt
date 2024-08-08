@@ -11,5 +11,3 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(LLJITWithInitializers
   LLJITWithInitializers.cpp
   )
-
-export_executable_symbols(LLJITWithInitializers)

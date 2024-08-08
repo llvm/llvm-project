@@ -323,19 +323,3 @@ JITEngine::process(const __tgt_device_image &Image,
 
   return &Image;
 }
-
-Expected<bool> JITEngine::checkBitcodeImage(StringRef Buffer) const {
-  TimeTraceScope TimeScope("Check bitcode image");
-
-  assert(identify_magic(Buffer) == file_magic::bitcode &&
-         "Input is not bitcode");
-
-  LLVMContext Context;
-  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Buffer, ""), Context,
-                                          /*ShouldLazyLoadMetadata=*/true);
-  if (!ModuleOrErr)
-    return ModuleOrErr.takeError();
-  Module &M = **ModuleOrErr;
-
-  return Triple(M.getTargetTriple()).getArch() == TT.getArch();
-}

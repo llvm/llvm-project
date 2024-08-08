@@ -219,9 +219,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // whatever runtime the debug info says the object pointer belongs to.  Do
     // that here.
 
-    ClangASTMetadata *metadata =
-        TypeSystemClang::DeclContextGetMetaData(decl_context, function_decl);
-    if (metadata && metadata->HasObjectPtr()) {
+    if (std::optional<ClangASTMetadata> metadata =
+            TypeSystemClang::DeclContextGetMetaData(decl_context,
+                                                    function_decl);
+        metadata && metadata->HasObjectPtr()) {
       lldb::LanguageType language = metadata->GetObjectPtrLanguage();
       if (language == lldb::eLanguageTypeC_plus_plus) {
         if (m_enforce_valid_object) {
@@ -697,21 +698,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   }
   if (!parse_success)
     return false;
-
-  if (exe_ctx.GetProcessPtr() && execution_policy == eExecutionPolicyTopLevel) {
-    Status static_init_error =
-        m_parser->RunStaticInitializers(m_execution_unit_sp, exe_ctx);
-
-    if (!static_init_error.Success()) {
-      const char *error_cstr = static_init_error.AsCString();
-      if (error_cstr && error_cstr[0])
-        diagnostic_manager.Printf(lldb::eSeverityError, "%s\n", error_cstr);
-      else
-        diagnostic_manager.PutString(lldb::eSeverityError,
-                                     "couldn't run static initializers\n");
-      return false;
-    }
-  }
 
   if (m_execution_unit_sp) {
     bool register_execution_unit = false;

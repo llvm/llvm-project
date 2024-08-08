@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
+#include "Sections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -366,20 +367,8 @@ uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
 }
 
 bool macho::isCodeSection(const InputSection *isec) {
-  uint32_t type = sectionType(isec->getFlags());
-  if (type != S_REGULAR && type != S_COALESCED)
-    return false;
-
-  uint32_t attr = isec->getFlags() & SECTION_ATTRIBUTES_USR;
-  if (attr == S_ATTR_PURE_INSTRUCTIONS)
-    return true;
-
-  if (isec->getSegName() == segment_names::text)
-    return StringSwitch<bool>(isec->getName())
-        .Cases(section_names::textCoalNt, section_names::staticInit, true)
-        .Default(false);
-
-  return false;
+  return sections::isCodeSection(isec->getName(), isec->getSegName(),
+                                 isec->getFlags());
 }
 
 bool macho::isCfStringSection(const InputSection *isec) {

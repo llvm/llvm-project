@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -14,28 +12,22 @@
 
 // void swap(unique_lock& u);
 
-#include <mutex>
 #include <cassert>
+#include <mutex>
 
 #include "test_macros.h"
+#include "../types.h"
 
-struct mutex
-{
-    void lock() {}
-    void unlock() {}
-};
+MyMutex m;
 
-mutex m;
-
-int main(int, char**)
-{
-    std::unique_lock<mutex> lk1(m);
-    std::unique_lock<mutex> lk2;
-    lk1.swap(lk2);
-    assert(lk1.mutex() == nullptr);
-    assert(lk1.owns_lock() == false);
-    assert(lk2.mutex() == &m);
-    assert(lk2.owns_lock() == true);
+int main(int, char**) {
+  std::unique_lock<MyMutex> lk1(m);
+  std::unique_lock<MyMutex> lk2;
+  lk1.swap(lk2);
+  assert(lk1.mutex() == nullptr);
+  assert(lk1.owns_lock() == false);
+  assert(lk2.mutex() == &m);
+  assert(lk2.owns_lock() == true);
 
   return 0;
 }

@@ -74,8 +74,11 @@ SmallVector<Value> makeRegionIsolatedFromAbove(
 /// elimination, as well as some other DCE. This function returns success if any
 /// of the regions were simplified, failure otherwise. The provided rewriter is
 /// used to notify callers of operation and block deletion.
+/// Structurally similar blocks will be merged if the `mergeBlock` argument is
+/// true. Note this can lead to merged blocks with extra arguments.
 LogicalResult simplifyRegions(RewriterBase &rewriter,
-                              MutableArrayRef<Region> regions);
+                              MutableArrayRef<Region> regions,
+                              bool mergeBlocks = true);
 
 /// Erase the unreachable blocks within the provided regions. Returns success
 /// if any blocks were erased, failure otherwise.

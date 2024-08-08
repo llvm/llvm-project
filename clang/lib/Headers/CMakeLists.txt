@@ -147,18 +147,22 @@ set(x86_files
   amxcomplexintrin.h
   amxfp16intrin.h
   amxintrin.h
+  avx10_2_512minmaxintrin.h
+  avx10_2_512niintrin.h
+  avx10_2_512satcvtintrin.h
+  avx10_2minmaxintrin.h
+  avx10_2niintrin.h
+  avx10_2satcvtintrin.h
   avx2intrin.h
   avx512bf16intrin.h
   avx512bitalgintrin.h
   avx512bwintrin.h
   avx512cdintrin.h
   avx512dqintrin.h
-  avx512erintrin.h
   avx512fintrin.h
   avx512fp16intrin.h
   avx512ifmaintrin.h
   avx512ifmavlintrin.h
-  avx512pfintrin.h
   avx512vbmi2intrin.h
   avx512vbmiintrin.h
   avx512vbmivlintrin.h
@@ -320,8 +324,10 @@ set(ppc_wrapper_files
 set(openmp_wrapper_files
   openmp_wrappers/math.h
   openmp_wrappers/cmath
-  openmp_wrappers/complex.h
+  # Due to a bug in CMake, `complex` must be before `complex.h`
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/26058
   openmp_wrappers/complex
+  openmp_wrappers/complex.h
   openmp_wrappers/__clang_openmp_device_functions.h
   openmp_wrappers/complex_cmath.h
   openmp_wrappers/new
@@ -445,14 +451,14 @@ endforeach( f )
 function(add_header_target target_name file_list)
   add_library(${target_name} INTERFACE ${file_list})
   set_target_properties(${target_name} PROPERTIES
-    FOLDER "Misc"
+    FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 endfunction()
 
 # The catch-all clang-resource-headers target
 add_library(clang-resource-headers INTERFACE ${out_files})
 set_target_properties("clang-resource-headers" PROPERTIES
-  FOLDER "Misc"
+  FOLDER "Clang/Resources"
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 add_dependencies("clang-resource-headers"
                  "core-resource-headers"

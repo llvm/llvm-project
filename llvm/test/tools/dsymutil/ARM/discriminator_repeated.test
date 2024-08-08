@@ -1,0 +1,51 @@
+; The input at Inputs/discriminator_repeated.arm64.* were
+; produced by compiling
+;
+;    void loop(int X, int Y, unsigned int **A, unsigned int **B, unsigned int **C) {
+;      for (int i = 0; i < X; i++)
+;        for (int j = 0; j < Y; j++)
+;          C[i][j] += A[i][j] + B[i][j];
+;    }
+;
+; with -g -fdebug-info-for-profiling -O2.
+
+RUN: dsymutil --flat --linker=classic -o - --oso-prepend-path %p/../Inputs \
+RUN:  --verify-dwarf=none %p/../Inputs/discriminator_repeated.arm64.dylib \
+RUN:  | llvm-dwarfdump -debug-line - | FileCheck %s
+
+RUN: dsymutil --flat --linker=parallel -o - --oso-prepend-path %p/../Inputs \
+RUN:  --verify-dwarf=none %p/../Inputs/discriminator_repeated.arm64.dylib \
+RUN:  | llvm-dwarfdump -debug-line - | FileCheck %s
+
+CHECK:      Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000000003e8c      2      3      0   0             2       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000000003e94      0      3      0   0             0       0
+CHECK-NEXT: 0x0000000000003e98      2     21      0   0             2       0
+CHECK-NEXT: 0x0000000000003ea0      2      3      0   0             2       0
+CHECK-NEXT: 0x0000000000003eac      2     27      0   0             4       0
+CHECK-NEXT: 0x0000000000003eb0      2      3      0   0             2       0
+CHECK-NEXT: 0x0000000000003eb8      3      5      0   0             2       0  is_stmt
+CHECK-NEXT: 0x0000000000003ec0      0      5      0   0             0       0
+CHECK-NEXT: 0x0000000000003ecc      3      5      0   0             2       0
+CHECK-NEXT: 0x0000000000003ed4      0      5      0   0             0       0
+CHECK-NEXT: 0x0000000000003ed8      3      5      0   0             0       0
+CHECK-NEXT: 0x0000000000003eec      4     18      0   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000000003ef0      4     28      0   0             0       0
+CHECK-NEXT: 0x0000000000003ef4      4     15      0   0             0       0
+CHECK-NEXT: 0x0000000000003ef8      4     26      0   0             0       0
+CHECK-NEXT: 0x0000000000003efc      4     15      0   0             0       0
+CHECK-NEXT: 0x0000000000003f04      3     23      0   0             2       0  is_stmt
+CHECK-NEXT: 0x0000000000003f08      3      5      0   0             2       0
+CHECK-NEXT: 0x0000000000003f10      0      5      0   0             0       0
+CHECK-NEXT: 0x0000000000003f14      3      5      0   0             2       0
+CHECK-NEXT: 0x0000000000003f3c      3      5      0   0             0       0
+CHECK-NEXT: 0x0000000000003f4c      4     18      0   0            65       0  is_stmt
+CHECK-NEXT: 0x0000000000003f54      4     28      0   0            65       0
+CHECK-NEXT: 0x0000000000003f5c      4     26      0   0            65       0
+CHECK-NEXT: 0x0000000000003f6c      4     15      0   0            65       0
+CHECK-NEXT: 0x0000000000003f8c      3     29      0   0          4100       0  is_stmt
+CHECK-NEXT: 0x0000000000003f94      0     29      0   0             0       0
+CHECK-NEXT: 0x0000000000003f98      3      5      0   0          4098       0
+CHECK-NEXT: 0x0000000000003fa4      5      1      0   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000000003fa8      5      1      0   0             0       0  is_stmt end_sequence

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
 
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/integer_literals.h"
 #include "test/UnitTest/FEnvSafeTest.h"

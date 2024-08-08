@@ -389,8 +389,8 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 define dso_local i64 @load_ga_8() nounwind {
 ; RV32I-LABEL: load_ga_8:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, %hi(ga_8)
-; RV32I-NEXT:    addi a1, a0, %lo(ga_8)
+; RV32I-NEXT:    lui a1, %hi(ga_8)
+; RV32I-NEXT:    addi a1, a1, %lo(ga_8)
 ; RV32I-NEXT:    lw a0, 8(a1)
 ; RV32I-NEXT:    lw a1, 12(a1)
 ; RV32I-NEXT:    ret

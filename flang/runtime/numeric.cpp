@@ -117,13 +117,13 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
 template <typename T>
 inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedLogicalKind(
     T x) {
-  if (x <= 2) {
+  if (x <= 8) {
     return 1;
-  } else if (x <= 4) {
+  } else if (x <= 16) {
     return 2;
-  } else if (x <= 9) {
+  } else if (x <= 32) {
     return 4;
-  } else if (x <= 18) {
+  } else if (x <= 64) {
     return 8;
   }
   return -1;
@@ -314,6 +314,27 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Ceiling16_16)(
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
+#endif
+
+CppTypeFor<TypeCategory::Real, 4> RTDEF(ErfcScaled4)(
+    CppTypeFor<TypeCategory::Real, 4> x) {
+  return ErfcScaled(x);
+}
+CppTypeFor<TypeCategory::Real, 8> RTDEF(ErfcScaled8)(
+    CppTypeFor<TypeCategory::Real, 8> x) {
+  return ErfcScaled(x);
+}
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTDEF(ErfcScaled10)(
+    CppTypeFor<TypeCategory::Real, 10> x) {
+  return ErfcScaled(x);
+}
+#endif
+#if LDBL_MANT_DIG == 113
+CppTypeFor<TypeCategory::Real, 16> RTDEF(ErfcScaled16)(
+    CppTypeFor<TypeCategory::Real, 16> x) {
+  return ErfcScaled(x);
+}
 #endif
 
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent4_4)(

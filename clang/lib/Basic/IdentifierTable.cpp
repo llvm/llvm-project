@@ -81,49 +81,49 @@ IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
 // Constants for TokenKinds.def
 namespace {
 
-  enum TokenKey : unsigned {
-    KEYC99        = 0x1,
-    KEYCXX        = 0x2,
-    KEYCXX11      = 0x4,
-    KEYGNU        = 0x8,
-    KEYMS         = 0x10,
-    BOOLSUPPORT   = 0x20,
-    KEYALTIVEC    = 0x40,
-    KEYNOCXX      = 0x80,
-    KEYBORLAND    = 0x100,
-    KEYOPENCLC    = 0x200,
-    KEYC23        = 0x400,
-    KEYNOMS18     = 0x800,
-    KEYNOOPENCL   = 0x1000,
-    WCHARSUPPORT  = 0x2000,
-    HALFSUPPORT   = 0x4000,
-    CHAR8SUPPORT  = 0x8000,
-    KEYOBJC       = 0x10000,
-    KEYZVECTOR    = 0x20000,
-    KEYCOROUTINES = 0x40000,
-    KEYMODULES    = 0x80000,
-    KEYCXX20      = 0x100000,
-    KEYOPENCLCXX  = 0x200000,
-    KEYMSCOMPAT   = 0x400000,
-    KEYSYCL       = 0x800000,
-    KEYCUDA       = 0x1000000,
-    KEYHLSL       = 0x2000000,
-    KEYFIXEDPOINT = 0x4000000,
-    KEYMAX        = KEYFIXEDPOINT, // The maximum key
-    KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-    KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
-             ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
-  };
+enum TokenKey : unsigned {
+  KEYC99 = 0x1,
+  KEYCXX = 0x2,
+  KEYCXX11 = 0x4,
+  KEYGNU = 0x8,
+  KEYMS = 0x10,
+  BOOLSUPPORT = 0x20,
+  KEYALTIVEC = 0x40,
+  KEYNOCXX = 0x80,
+  KEYBORLAND = 0x100,
+  KEYOPENCLC = 0x200,
+  KEYC23 = 0x400,
+  KEYNOMS18 = 0x800,
+  KEYNOOPENCL = 0x1000,
+  WCHARSUPPORT = 0x2000,
+  HALFSUPPORT = 0x4000,
+  CHAR8SUPPORT = 0x8000,
+  KEYOBJC = 0x10000,
+  KEYZVECTOR = 0x20000,
+  KEYCOROUTINES = 0x40000,
+  KEYMODULES = 0x80000,
+  KEYCXX20 = 0x100000,
+  KEYOPENCLCXX = 0x200000,
+  KEYMSCOMPAT = 0x400000,
+  KEYSYCL = 0x800000,
+  KEYCUDA = 0x1000000,
+  KEYHLSL = 0x2000000,
+  KEYFIXEDPOINT = 0x4000000,
+  KEYMAX = KEYFIXEDPOINT, // The maximum key
+  KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
+  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 &
+           ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
+};
 
-  /// How a keyword is treated in the selected standard. This enum is ordered
-  /// intentionally so that the value that 'wins' is the most 'permissive'.
-  enum KeywordStatus {
-    KS_Unknown,     // Not yet calculated. Used when figuring out the status.
-    KS_Disabled,    // Disabled
-    KS_Future,      // Is a keyword in future standard
-    KS_Extension,   // Is an extension
-    KS_Enabled,     // Enabled
-  };
+/// How a keyword is treated in the selected standard. This enum is ordered
+/// intentionally so that the value that 'wins' is the most 'permissive'.
+enum KeywordStatus {
+  KS_Unknown,   // Not yet calculated. Used when figuring out the status.
+  KS_Disabled,  // Disabled
+  KS_Future,    // Is a keyword in future standard
+  KS_Extension, // Is an extension
+  KS_Enabled,   // Enabled
+};
 
 } // namespace
 
@@ -425,8 +425,8 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   // collisions (if there were, the switch below would complain about duplicate
   // case values).  Note that this depends on 'if' being null terminated.
 
-#define HASH(LEN, FIRST, THIRD) \
-  (LEN << 5) + (((FIRST-'a') + (THIRD-'a')) & 31)
+#define HASH(LEN, FIRST, THIRD)                                                \
+  (LEN << 6) + (((FIRST - 'a') - (THIRD - 'a')) & 63)
 #define CASE(LEN, FIRST, THIRD, NAME) \
   case HASH(LEN, FIRST, THIRD): \
     return memcmp(Name, #NAME, LEN) ? tok::pp_not_keyword : tok::pp_ ## NAME
@@ -441,6 +441,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 4, 'e', 's', else);
   CASE( 4, 'l', 'n', line);
   CASE( 4, 's', 'c', sccs);
+  CASE( 5, 'e', 'b', embed);
   CASE( 5, 'e', 'd', endif);
   CASE( 5, 'e', 'r', error);
   CASE( 5, 'i', 'e', ident);

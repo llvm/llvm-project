@@ -116,11 +116,11 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
-    "RISCVFoldMasks.cpp",
     "RISCVFrameLowering.cpp",
     "RISCVGatherScatterLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
     "RISCVISelLowering.cpp",
+    "RISCVIndirectBranchTracking.cpp",
     "RISCVInsertReadWriteCSR.cpp",
     "RISCVInsertVSETVLI.cpp",
     "RISCVInsertWriteVXRM.cpp",
@@ -138,6 +138,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVTargetMachine.cpp",
     "RISCVTargetObjectFile.cpp",
     "RISCVTargetTransformInfo.cpp",
+    "RISCVVectorPeephole.cpp",
   ]
 }
 

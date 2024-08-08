@@ -1,7 +1,3 @@
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Linux")
-  return()
-endif()
-
 set(supported_targets x86_64 aarch64 ppc64 ppc64le s390x)
 if(NOT ${CMAKE_SYSTEM_PROCESSOR} IN_LIST supported_targets)
   message(STATUS "Not building ${machine} NextGen offloading plugin")

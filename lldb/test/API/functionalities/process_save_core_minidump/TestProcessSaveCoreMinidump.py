@@ -132,8 +132,13 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 stacks_to_sp_map,
             )
 
+            options = lldb.SBSaveCoreOptions()
+            core_sb_stack_spec = lldb.SBFileSpec(core_sb_stack)
+            options.SetOutputFile(core_sb_stack_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreStackOnly)
             # validate saving via SBProcess
-            error = process.SaveCore(core_sb_stack, "minidump", lldb.eSaveCoreStackOnly)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_stack))
             self.verify_core_file(
@@ -144,7 +149,12 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 stacks_to_sp_map,
             )
 
-            error = process.SaveCore(core_sb_dirty, "minidump", lldb.eSaveCoreDirtyOnly)
+            options = lldb.SBSaveCoreOptions()
+            core_sb_dirty_spec = lldb.SBFileSpec(core_sb_dirty)
+            options.SetOutputFile(core_sb_dirty_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreDirtyOnly)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_dirty))
             self.verify_core_file(
@@ -157,7 +167,12 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
             # Minidump can now save full core files, but they will be huge and
             # they might cause this test to timeout.
-            error = process.SaveCore(core_sb_full, "minidump", lldb.eSaveCoreFull)
+            options = lldb.SBSaveCoreOptions()
+            core_sb_full_spec = lldb.SBFileSpec(core_sb_full)
+            options.SetOutputFile(core_sb_full_spec)
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreFull)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_full))
             self.verify_core_file(

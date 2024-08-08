@@ -68,11 +68,11 @@
 # RELR-EMPTY:
 # RELR-NEXT: Relocation section '.relr.auth.dyn' at offset 0x[[ADDR2]] contains 5 entries:
 # RELR-NEXT: Index: Entry Address Symbolic Address
-# RELR-NEXT: 0000: 0000000000030440 0000000000030440 $d.0
-# RELR-NEXT: 0001: 000000000000000f 0000000000030448 $d.0 + 0x8
-# RELR-NEXT:  0000000000030450 $d.0 + 0x10
-# RELR-NEXT:  0000000000030458 $d.0 + 0x18
-# RELR-NEXT: 0002: 0000000000030492 0000000000030492 $d.0 + 0x52
+# RELR-NEXT: 0000: 0000000000030440 0000000000030440 $d
+# RELR-NEXT: 0001: 000000000000000f 0000000000030448 $d + 0x8
+# RELR-NEXT:  0000000000030450 $d + 0x10
+# RELR-NEXT:  0000000000030458 $d + 0x18
+# RELR-NEXT: 0002: 0000000000030492 0000000000030492 $d + 0x52
 
 # HEX:      Hex dump of section '.test':
 # HEX-NEXT: 0x00030440 01000000 2a000020 42040300 2b000000
@@ -180,6 +180,8 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 empty-rela.s -o empty-rela.o
 # RUN: ld.lld -pie -z pack-relative-relocs empty-rela.o -o empty-rela
 # RUN: llvm-readelf -S -d -r empty-rela | FileCheck --check-prefixes=EMPTY-RELA %s
+# RUN: ld.lld -r -z pack-relative-relocs empty-rela.o -o empty-rela.ro
+# RUN: llvm-readelf -S empty-rela.ro | FileCheck --check-prefixes=EMPTY-RELA-RO %s
 
 # EMPTY-RELA:      Section Headers:
 # EMPTY-RELA-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
@@ -199,7 +201,9 @@
 # EMPTY-RELA-EMPTY:
 # EMPTY-RELA-NEXT: Relocation section '.relr.auth.dyn' at offset {{.+}} contains 1 entries:
 # EMPTY-RELA-NEXT: Index: Entry Address Symbolic Address
-# EMPTY-RELA-NEXT: 0000: 0000000000030310 0000000000030310 $d.0
+# EMPTY-RELA-NEXT: 0000: 0000000000030310 0000000000030310 $d
+
+# EMPTY-RELA-RO-NOT: .rela.dyn
 
 .section .test, "aw"
 .p2align 3

@@ -1499,8 +1499,7 @@ void PatternToMatch::getPredicateRecords(
   // Sort so that different orders get canonicalized to the same string.
   llvm::sort(PredicateRecs, LessRecord());
   // Remove duplicate predicates.
-  PredicateRecs.erase(std::unique(PredicateRecs.begin(), PredicateRecs.end()),
-                      PredicateRecs.end());
+  PredicateRecs.erase(llvm::unique(PredicateRecs), PredicateRecs.end());
 }
 
 /// getPredicateCheck - Return a single string containing all of this

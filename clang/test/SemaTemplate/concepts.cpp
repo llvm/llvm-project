@@ -836,13 +836,13 @@ struct Parent {
 static_assert(Parent<void>::TakesUnary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesUnary'}}
 // expected-note@#UNARY{{because 'decltype(0ULL)' (aka 'unsigned long long') does not satisfy 'C'}}
-// expected-note@#61777_C{{because 'sizeof(unsigned long long) == 4' (8 == 4) evaluated to false}}
+// expected-note@#61777_C{{because 'sizeof(decltype(0ULL)) == 4' (8 == 4) evaluated to false}}
 static_assert(Parent<void>::TakesUnary<int, 0uLL>::i == 0);
 
 static_assert(Parent<int>::TakesBinary<int, 0>::i == 0);
 // expected-error@+3{{constraints not satisfied for class template 'TakesBinary'}}
 // expected-note@#BINARY{{because 'C2<decltype(0ULL), int>' evaluated to false}}
-// expected-note@#61777_C2{{because 'sizeof(unsigned long long) == sizeof(int)' (8 == 4) evaluated to false}}
+// expected-note@#61777_C2{{because 'sizeof(decltype(0ULL)) == sizeof(int)' (8 == 4) evaluated to false}}
 static_assert(Parent<int>::TakesBinary<int, 0ULL>::i == 0);
 }
 
@@ -1121,4 +1121,26 @@ template <typename> concept c = b<>;
 template <typename d> concept f = c< d >;
 template <f> struct e; // expected-note {{}}
 template <f d> struct e<d>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
+}
+
+
+namespace constrained_variadic {
+template <typename T = int>
+struct S {
+    void f(); // expected-note {{candidate}}
+    void f(...) requires true;   // expected-note {{candidate}}
+
+    void g(...);  // expected-note {{candidate}}
+    void g() requires true;  // expected-note {{candidate}}
+
+    consteval void h(...);
+    consteval void h(...) requires true {};
+};
+
+int test() {
+    S{}.f(); // expected-error{{call to member function 'f' is ambiguous}}
+    S{}.g(); // expected-error{{call to member function 'g' is ambiguous}}
+    S{}.h();
+}
+
 }

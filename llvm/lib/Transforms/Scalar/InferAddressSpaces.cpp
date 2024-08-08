@@ -369,13 +369,13 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
                                                       Value *OldV,
                                                       Value *NewV) const {
   Module *M = II->getParent()->getParent()->getParent();
-
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::objectsize: {
+  Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::objectsize:
+  case Intrinsic::masked_load: {
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {DestTy, SrcTy});
+    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {DestTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
@@ -386,18 +386,26 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_gather: {
     Type *RetTy = II->getType();
     Type *NewPtrTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {RetTy, NewPtrTy});
+    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {RetTy, NewPtrTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
   }
+  case Intrinsic::masked_store:
   case Intrinsic::masked_scatter: {
     Type *ValueTy = II->getOperand(0)->getType();
     Type *NewPtrTy = NewV->getType();
     Function *NewDecl =
         Intrinsic::getDeclaration(M, II->getIntrinsicID(), {ValueTy, NewPtrTy});
     II->setArgOperand(1, NewV);
+    II->setCalledFunction(NewDecl);
+    return true;
+  }
+  case Intrinsic::prefetch:
+  case Intrinsic::is_constant: {
+    Function *NewDecl =
+        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {NewV->getType()});
+    II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
   }
@@ -422,10 +430,22 @@ void InferAddressSpacesImpl::collectRewritableIntrinsicOperands(
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
+  case Intrinsic::is_constant: {
+    Value *Ptr = II->getArgOperand(0);
+    if (Ptr->getType()->isPtrOrPtrVectorTy()) {
+      appendsFlatAddressExpressionToPostorderStack(Ptr, PostorderStack,
+                                                   Visited);
+    }
+
+    break;
+  }
+  case Intrinsic::masked_load:
   case Intrinsic::masked_gather:
+  case Intrinsic::prefetch:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
+  case Intrinsic::masked_store:
   case Intrinsic::masked_scatter:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(1),
                                                  PostorderStack, Visited);
@@ -642,6 +662,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(I->getType(), AS);
     auto *NewI = new AddrSpaceCastInst(I, NewPtrTy);
     NewI->insertAfter(I);
+    NewI->setDebugLoc(I->getDebugLoc());
     return NewI;
   }
 
@@ -821,7 +842,7 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
 }
 
 bool InferAddressSpacesImpl::run(Function &F) {
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   if (AssumeDefaultIsFlatAddressSpace)
     FlatAddrSpace = 0;
@@ -1010,25 +1031,22 @@ static bool isSimplePointerUseValidToReplace(const TargetTransformInfo &TTI,
                                              Use &U, unsigned AddrSpace) {
   User *Inst = U.getUser();
   unsigned OpNo = U.getOperandNo();
-  bool VolatileIsAllowed = false;
-  if (auto *I = dyn_cast<Instruction>(Inst))
-    VolatileIsAllowed = TTI.hasVolatileVariant(I, AddrSpace);
 
   if (auto *LI = dyn_cast<LoadInst>(Inst))
     return OpNo == LoadInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !LI->isVolatile());
+           (!LI->isVolatile() || TTI.hasVolatileVariant(LI, AddrSpace));
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
     return OpNo == StoreInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !SI->isVolatile());
+           (!SI->isVolatile() || TTI.hasVolatileVariant(SI, AddrSpace));
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
     return OpNo == AtomicRMWInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !RMW->isVolatile());
+           (!RMW->isVolatile() || TTI.hasVolatileVariant(RMW, AddrSpace));
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
     return OpNo == AtomicCmpXchgInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !CmpX->isVolatile());
+           (!CmpX->isVolatile() || TTI.hasVolatileVariant(CmpX, AddrSpace));
 
   return false;
 }
@@ -1232,7 +1250,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
         // If V is used as the pointer operand of a compatible memory operation,
         // sets the pointer operand to NewV. This replacement does not change
         // the element type, so the resultant load/store is still valid.
-        CurUser->replaceUsesOfWith(V, NewV);
+        U.set(NewV);
         continue;
       }
 

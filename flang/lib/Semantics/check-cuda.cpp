@@ -307,6 +307,25 @@ private:
       WarnOnIoStmt(source);
     }
   }
+  template <typename A>
+  void ErrorIfHostSymbol(const A &expr, const parser::CharBlock &source) {
+    for (const Symbol &sym : CollectCudaSymbols(expr)) {
+      if (const auto *details =
+              sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+        if (details->IsArray() &&
+            (!details->cudaDataAttr() ||
+                (details->cudaDataAttr() &&
+                    *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                    *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
+                    *details->cudaDataAttr() !=
+                        common::CUDADataAttr::Unified))) {
+          context_.Say(source,
+              "Host array '%s' cannot be present in CUF kernel"_err_en_US,
+              sym.name());
+        }
+      }
+    }
+  }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
@@ -348,6 +367,19 @@ private:
             },
             [&](const common::Indirection<parser::IfStmt> &x) {
               Check(x.value());
+            },
+            [&](const common::Indirection<parser::AssignmentStmt> &x) {
+              if (IsCUFKernelDo) {
+                const evaluate::Assignment *assign{
+                    semantics::GetAssignment(x.value())};
+                if (assign) {
+                  ErrorIfHostSymbol(assign->lhs, source);
+                  ErrorIfHostSymbol(assign->rhs, source);
+                }
+              }
+              if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
+                context_.Say(source, std::move(*msg));
+              }
             },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
@@ -475,21 +507,21 @@ static void CheckReduce(
         auto cat{type->category()};
         bool isOk{false};
         switch (op) {
-        case parser::AccReductionOperator::Operator::Plus:
-        case parser::AccReductionOperator::Operator::Multiply:
-        case parser::AccReductionOperator::Operator::Max:
-        case parser::AccReductionOperator::Operator::Min:
+        case parser::ReductionOperator::Operator::Plus:
+        case parser::ReductionOperator::Operator::Multiply:
+        case parser::ReductionOperator::Operator::Max:
+        case parser::ReductionOperator::Operator::Min:
           isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
           break;
-        case parser::AccReductionOperator::Operator::Iand:
-        case parser::AccReductionOperator::Operator::Ior:
-        case parser::AccReductionOperator::Operator::Ieor:
+        case parser::ReductionOperator::Operator::Iand:
+        case parser::ReductionOperator::Operator::Ior:
+        case parser::ReductionOperator::Operator::Ieor:
           isOk = cat == TypeCategory::Integer;
           break;
-        case parser::AccReductionOperator::Operator::And:
-        case parser::AccReductionOperator::Operator::Or:
-        case parser::AccReductionOperator::Operator::Eqv:
-        case parser::AccReductionOperator::Operator::Neqv:
+        case parser::ReductionOperator::Operator::And:
+        case parser::ReductionOperator::Operator::Or:
+        case parser::ReductionOperator::Operator::Eqv:
+        case parser::ReductionOperator::Operator::Neqv:
           isOk = cat == TypeCategory::Logical;
           break;
         }
@@ -548,8 +580,8 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
     return;
   }
 
-  int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
-  int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
+  int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
+  int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
   // legal.

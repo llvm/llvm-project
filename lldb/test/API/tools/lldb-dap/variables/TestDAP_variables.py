@@ -394,14 +394,12 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, locals)
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_variables_setVariable_evaluate(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=False
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_variables_setVariable_evaluate_with_descriptive_summaries(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=True
@@ -603,12 +601,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 self.assertEqual(scope.get("presentationHint"), "registers")
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_and_evaluate_expansion(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_and_evaluate_expansion_with_descriptive_summaries(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=True)
 
@@ -664,17 +660,14 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_children, children)
 
     @skipIfWindows
-    @skipIfRemote
     def test_indexedVariables(self):
         self.do_test_indexedVariables(enableSyntheticChildDebugging=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_indexedVariables_with_raw_child_for_synthetics(self):
         self.do_test_indexedVariables(enableSyntheticChildDebugging=True)
 
     @skipIfWindows
-    @skipIfRemote
     def test_registers(self):
         """
         Test that registers whose byte size is the size of a pointer on
@@ -748,7 +741,6 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
     @no_debug_info_test
     @skipIfWindows
-    @skipIfRemote
     def test_value_format(self):
         """
         Test that toggle variables value format between decimal and hexical works.

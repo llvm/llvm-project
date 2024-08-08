@@ -287,7 +287,7 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
   static constexpr llvm::StringLiteral k_zip_separator("!/");
   size_t pos = source_file.find(k_zip_separator);
   if (pos != std::string::npos)
-    source_file = source_file.substr(0, pos);
+    source_file.resize(pos);
 
   Status error;
   AdbClientUP adb(GetAdbClient(error));

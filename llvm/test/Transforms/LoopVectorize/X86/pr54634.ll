@@ -19,7 +19,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(10) [[TMP5]], i64 0, i32 1
 ; CHECK-NEXT:    [[DOTUNPACK2:%.*]] = load i64, ptr addrspace(10) [[DOTELT1]], align 8, !tbaa [[TBAA8]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 28
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 60
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP2]])
@@ -118,7 +118,7 @@ L44:                                              ; preds = %L26
   ret ptr addrspace(10) null
 }
 
-attributes #0 = { "target-cpu"="skylake-avx512" "target-features"="+xsaves,+xsavec,+prfchw,+lzcnt,+sahf,+pku,+avx512vl,+avx512bw,+avx512cd,+clwb,+clflushopt,+adx,+avx512dq,+avx512f,+bmi2,+avx2,+bmi,+fsgsbase,+f16c,+avx,+xsave,+aes,+popcnt,+movbe,+sse4.2,+sse4.1,+cx16,+fma,+ssse3,+pclmul,+sse3,-rdrnd,-rtm,-rdseed,-avx512ifma,-avx512pf,-avx512er,-sha,-prefetchwt1,-avx512vbmi,-waitpkg,-avx512vbmi2,-shstk,-gfni,-vaes,-vpclmulqdq,-avx512vnni,-avx512bitalg,-avx512vpopcntdq,-rdpid,-cldemote,-movdiri,-movdir64b,-enqcmd,-avx512vp2intersect,-serialize,-tsxldtrk,-pconfig,-amx-bf16,-amx-tile,-amx-int8,-sse4a,-xop,-lwp,-fma4,-tbm,-mwaitx,-xsaveopt,-clzero,-wbnoinvd,-avx512bf16,-ptwrite,+sse2,+mmx,+fxsr,+64bit,+cx8" }
+attributes #0 = { "target-cpu"="skylake-avx512" "target-features"="+xsaves,+xsavec,+prfchw,+lzcnt,+sahf,+pku,+avx512vl,+avx512bw,+avx512cd,+clwb,+clflushopt,+adx,+avx512dq,+avx512f,+bmi2,+avx2,+bmi,+fsgsbase,+f16c,+avx,+xsave,+aes,+popcnt,+movbe,+sse4.2,+sse4.1,+cx16,+fma,+ssse3,+pclmul,+sse3,-rdrnd,-rtm,-rdseed,-avx512ifma,-avx512pf,-sha,-avx512vbmi,-waitpkg,-avx512vbmi2,-shstk,-gfni,-vaes,-vpclmulqdq,-avx512vnni,-avx512bitalg,-avx512vpopcntdq,-rdpid,-cldemote,-movdiri,-movdir64b,-enqcmd,-avx512vp2intersect,-serialize,-tsxldtrk,-pconfig,-amx-bf16,-amx-tile,-amx-int8,-sse4a,-xop,-lwp,-fma4,-tbm,-mwaitx,-xsaveopt,-clzero,-wbnoinvd,-avx512bf16,-ptwrite,+sse2,+mmx,+fxsr,+64bit,+cx8" }
 attributes #1 = { inaccessiblemem_or_argmemonly }
 attributes #2 = { allocsize(1) }
 

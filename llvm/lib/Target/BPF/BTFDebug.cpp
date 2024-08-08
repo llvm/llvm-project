@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -1489,11 +1490,34 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     }
 
     // Calculate symbol size
-    const DataLayout &DL = Global.getParent()->getDataLayout();
+    const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
     DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,
         Asm->getSymbol(&Global), Size);
+
+    if (Global.hasInitializer())
+      processGlobalInitializer(Global.getInitializer());
+  }
+}
+
+/// Process global variable initializer in pursuit for function
+/// pointers. Add discovered (extern) functions to BTF. Some (extern)
+/// functions might have been missed otherwise. Every symbol needs BTF
+/// info when linking with bpftool. Primary use case: "static"
+/// initialization of BPF maps.
+///
+/// struct {
+///   __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+///   ...
+/// } prog_map SEC(".maps") = { .values = { extern_func } };
+///
+void BTFDebug::processGlobalInitializer(const Constant *C) {
+  if (auto *Fn = dyn_cast<Function>(C))
+    processFuncPrototypes(Fn);
+  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+    for (unsigned I = 0, N = CA->getNumOperands(); I < N; ++I)
+      processGlobalInitializer(CA->getOperand(I));
   }
 }
 

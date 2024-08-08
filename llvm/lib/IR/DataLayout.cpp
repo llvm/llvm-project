@@ -835,7 +835,6 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     // layout.
     return Align(PowerOf2Ceil(BitWidth / 8));
   }
-  case Type::X86_MMXTyID:
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinValue();
@@ -864,11 +863,6 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
 Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
-}
-
-/// TODO: Remove this function once the transition to Align is over.
-uint64_t DataLayout::getPrefTypeAlignment(Type *Ty) const {
-  return getPrefTypeAlign(Ty).value();
 }
 
 Align DataLayout::getPrefTypeAlign(Type *Ty) const {

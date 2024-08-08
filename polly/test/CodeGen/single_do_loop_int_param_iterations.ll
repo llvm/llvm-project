@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s
 ; XFAIL: *
 
 ;define N 20

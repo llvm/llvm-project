@@ -21,6 +21,7 @@ set( LLVM_LINK_COMPONENTS
 # Support plugins.
 if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)
+  set(export_symbols EXPORT_SYMBOLS_FOR_PLUGINS)
 endif()
 
 add_clang_tool(clang
@@ -35,6 +36,7 @@ add_clang_tool(clang
   ARMTargetParserTableGen
   AArch64TargetParserTableGen
   ${support_plugins}
+  ${export_symbols}
   GENERATE_DRIVER
   )
 
@@ -52,11 +54,6 @@ if(WIN32 AND NOT CYGWIN)
   # Prevent versioning if the buildhost is targeting for Win32.
 else()
   set_target_properties(clang PROPERTIES VERSION ${CLANG_EXECUTABLE_VERSION})
-endif()
-
-# Support plugins.
-if(CLANG_PLUGIN_SUPPORT)
-  export_executable_symbols_for_plugins(clang)
 endif()
 
 add_dependencies(clang clang-resource-headers)
@@ -107,7 +104,7 @@ endif()
 
 if(CLANG_ORDER_FILE AND
     (LLVM_LINKER_IS_APPLE OR LLVM_LINKER_IS_GOLD OR LLVM_LINKER_IS_LLD))
-  include(LLVMCheckLinkerFlag)
+  include(CheckLinkerFlag)
 
   if (LLVM_LINKER_IS_APPLE OR (LLVM_LINKER_IS_LLD AND APPLE))
     set(LINKER_ORDER_FILE_OPTION "-Wl,-order_file,${CLANG_ORDER_FILE}")
@@ -118,7 +115,7 @@ if(CLANG_ORDER_FILE AND
   endif()
 
   # This is a test to ensure the actual order file works with the linker.
-  llvm_check_linker_flag(CXX ${LINKER_ORDER_FILE_OPTION} LINKER_ORDER_FILE_WORKS)
+  check_linker_flag(CXX ${LINKER_ORDER_FILE_OPTION} LINKER_ORDER_FILE_WORKS)
 
   # Passing an empty order file disables some linker layout optimizations.
   # To work around this and enable workflows for re-linking when the order file
