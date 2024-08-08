@@ -1174,7 +1174,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
   // enable ctx profiling from the frontend.
   assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled()) &&
-         "Enabling both instrumented FDO and contextual instrumentation is not "
+         "Enabling both instrumented PGO and contextual instrumentation is not "
          "supported.");
   // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
