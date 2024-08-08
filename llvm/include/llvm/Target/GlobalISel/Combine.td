@@ -128,6 +128,16 @@ class GITypeOf<string opName> : GISpecialType {
   string OpName = opName;
 }
 
+// The type of an operand that can match a variable amount of operands.
+// This type contains a minimum and maximum number of operands to match.
+// The minimum must be 1 or more, as we cannot have an operand representing
+// zero operands, and the max can be zero (which means "unlimited") or a value
+// greater than the minimum.
+class GIVariadic<int min = 1, int max = 0> : GISpecialType {
+  int MinArgs = min;
+  int MaxArgs = max;
+}
+
 //===----------------------------------------------------------------------===//
 // Pattern Builtins
 //===----------------------------------------------------------------------===//
@@ -182,6 +192,7 @@ def FmReassoc   : MIFlagEnum<"FmReassoc">;
 def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
+def NonNeg      : MIFlagEnum<"NonNeg">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode
@@ -838,15 +849,6 @@ def unmerge_zext_to_zext : GICombineRule<
   (apply [{ Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
 >;
 
-// Fold trunc ([asz]ext x) -> x or ([asz]ext x) or (trunc x).
-def trunc_ext_fold_matchinfo : GIDefMatchData<"std::pair<Register, unsigned>">;
-def trunc_ext_fold: GICombineRule <
-  (defs root:$root, trunc_ext_fold_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_TRUNC):$root,
-         [{ return Helper.matchCombineTruncOfExt(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyCombineTruncOfExt(*${root}, ${matchinfo}); }])
->;
-
 // Under certain conditions, transform:
 //  trunc (shl x, K)     -> shl (trunc x), K//
 //  trunc ([al]shr x, K) -> (trunc ([al]shr (trunc x), K))
@@ -1025,7 +1027,10 @@ def and_or_disjoint_mask : GICombineRule<
 
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
-  (match (wip_match_opcode G_AND):$root,
+  (match (G_CONSTANT $mask, $imm2),
+         (G_CONSTANT $lsb, $imm1),
+         (G_LSHR $shift, $x, $lsb),
+         (G_AND $root, $shift, $mask):$root,
     [{ return Helper.matchBitfieldExtractFromAnd(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
@@ -1532,13 +1537,6 @@ def extract_vector_element_build_vector_trunc8 : GICombineRule<
    [{ return Helper.matchExtractVectorElementWithBuildVectorTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
-def extract_vector_element_freeze : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_FREEZE $src, $input),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithFreeze(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
 def sext_trunc : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
    (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
@@ -1551,6 +1549,12 @@ def zext_trunc : GICombineRule<
    (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
           (G_ZEXT $root, $src),
    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def nneg_zext : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_ZEXT $root, $x, (MIFlags NonNeg)),
+   [{ return Helper.matchNonNegZext(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 def extract_vector_element_shuffle_vector : GICombineRule<
@@ -1605,6 +1609,44 @@ def insert_vector_elt_oob : GICombineRule<
          [{ return Helper.matchInsertVectorElementOOB(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+def add_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $left, $imm1),
+          (G_VSCALE $right, $imm2),
+          (G_ADD $root, $left, $right, (MIFlags NoSWrap)),
+   [{ return Helper.matchAddOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def mul_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $left, $scale),
+          (G_CONSTANT $x, $imm1),
+          (G_MUL $root, $left, $x, (MIFlags NoSWrap)),
+   [{ return Helper.matchMulOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def shl_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $left, $imm),
+          (G_CONSTANT $x, $imm1),
+          (G_SHL $root, $left, $x, (MIFlags NoSWrap)),
+   [{ return Helper.matchShlOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def sub_of_vscale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $right, $imm),
+          (G_SUB $root, $x, $right, (MIFlags NoSWrap)),
+   [{ return Helper.matchSubOfVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def expand_const_fpowi : GICombineRule<
+   (defs root:$root),
+   (match (G_CONSTANT $int, $imm),
+          (G_FPOWI $dst, $float, $int):$root,
+          [{ return Helper.matchFPowIExpansion(*${root}, ${imm}.getCImm()->getSExtValue()); }]),
+   (apply [{ Helper.applyExpandFPowI(*${root}, ${imm}.getCImm()->getSExtValue()); }])>;
+
 // match_extract_of_element and insert_vector_elt_oob must be the first!
 def vector_ops_combines: GICombineGroup<[
 match_extract_of_element_undef_vector,
@@ -1636,9 +1678,12 @@ extract_vector_element_build_vector_trunc5,
 extract_vector_element_build_vector_trunc6,
 extract_vector_element_build_vector_trunc7,
 extract_vector_element_build_vector_trunc8,
-extract_vector_element_freeze,
 extract_vector_element_shuffle_vector,
-insert_vector_element_extract_vector_element
+insert_vector_element_extract_vector_element,
+add_of_vscale,
+mul_of_vscale,
+shl_of_vscale,
+sub_of_vscale,
 ]>;
 
 
@@ -1713,6 +1758,51 @@ def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCPlusA
 ]>;
 
+def freeze_of_non_undef_non_poison : GICombineRule<
+   (defs root:$root),
+   (match (G_FREEZE $root, $src),
+          [{ return isGuaranteedNotToBeUndefOrPoison(${src}.getReg(), MRI); }]),
+   (apply (GIReplaceReg $root, $src))>;
+
+def freeze_combines: GICombineGroup<[
+  freeze_of_non_undef_non_poison,
+  push_freeze_to_prevent_poison_from_propagating
+]>;
+
+/// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+class truncate_of_opcode<Instruction extOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (extOpcode $ext, $src):$ExtMI,
+         (G_TRUNC $root, $ext):$root,
+         [{ return Helper.matchTruncateOfExt(*${root}, *${ExtMI}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def truncate_of_zext : truncate_of_opcode<G_ZEXT>;
+def truncate_of_sext : truncate_of_opcode<G_SEXT>;
+def truncate_of_anyext : truncate_of_opcode<G_ANYEXT>;
+
+// Push cast through select.
+class select_of_opcode<Instruction castOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_SELECT $select, $cond, $true, $false):$Select,
+         (castOpcode $root, $select):$Cast,
+         [{ return Helper.matchCastOfSelect(*${Cast}, *${Select}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
+
+def select_of_zext : select_of_opcode<G_ZEXT>;
+def select_of_anyext : select_of_opcode<G_ANYEXT>;
+def select_of_truncate : select_of_opcode<G_TRUNC>;
+
+def cast_combines: GICombineGroup<[
+  truncate_of_zext,
+  truncate_of_sext,
+  truncate_of_anyext,
+  select_of_zext,
+  select_of_anyext,
+  select_of_truncate
+]>;
+
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -1741,7 +1831,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
                                      adde_to_addo,
-                                     combine_minmax_nan]>;
+                                     combine_minmax_nan, expand_const_fpowi]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
@@ -1770,8 +1860,10 @@ def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
 def constant_fold_binops : GICombineGroup<[constant_fold_binop,
                                            constant_fold_fp_binop]>;
 
+def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
+
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
-    vector_ops_combines,
+    vector_ops_combines, freeze_combines, cast_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
     combine_extracted_vector_load,
     undef_combines, identity_combines, phi_combines,
@@ -1782,7 +1874,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, unmerge_cst, unmerge_dead_to_trunc,
-    unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shift,
+    unmerge_zext_to_zext, merge_unmerge, trunc_shift,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
@@ -1793,8 +1885,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
-    sext_trunc, zext_trunc, combine_shuffle_concat,
-    push_freeze_to_prevent_poison_from_propagating]>;
+    sext_trunc, zext_trunc, prefer_sign_combines, combine_shuffle_concat]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

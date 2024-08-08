@@ -11,20 +11,27 @@
 
 // Basic test for float registers number are accepted.
 
-#include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unwind.h>
 
+// Using __attribute__((section("main_func"))) is ELF specific, but then
+// this entire test is marked as requiring Linux, so we should be good.
+//
+// We don't use dladdr() because on musl it's a no-op when statically linked.
+extern char __start_main_func;
+extern char __stop_main_func;
+
 _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
   (void)arg;
-  Dl_info info = {0, 0, 0, 0};
 
-  // Unwind util the main is reached, above frames depend on the platform and
+  // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
-  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx)), &info) &&
-      info.dli_sname && !strcmp("main", info.dli_sname))
+  uintptr_t ip = _Unwind_GetIP(ctx);
+  if (ip >= (uintptr_t)&__start_main_func &&
+      ip < (uintptr_t)&__stop_main_func) {
     _Exit(0);
+  }
 
   return _URC_NO_REASON;
 }
@@ -45,7 +52,7 @@ __attribute__((noinline)) void foo() {
   _Unwind_Backtrace(frame_handler, NULL);
 }
 
-int main() {
+__attribute__((section("main_func"))) int main() {
   foo();
   return -2;
 }

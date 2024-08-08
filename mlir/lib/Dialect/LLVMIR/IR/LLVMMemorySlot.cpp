@@ -841,12 +841,12 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
     return false;
   auto indexAttr =
       IntegerAttr::get(IntegerType::get(getContext(), 32), accessInfo->index);
-  assert(slot.elementPtrs.contains(indexAttr));
+  assert(slot.subelementTypes.contains(indexAttr));
   usedIndices.insert(indexAttr);
 
   // The remainder of the subslot should be accesses in-bounds. Thus, we create
   // a dummy slot with the size of the remainder.
-  Type subslotType = slot.elementPtrs.lookup(indexAttr);
+  Type subslotType = slot.subelementTypes.lookup(indexAttr);
   uint64_t slotSize = dataLayout.getTypeSize(subslotType);
   LLVM::LLVMArrayType remainingSlotType =
       getByteArrayType(getContext(), slotSize - accessInfo->subslotOffset);
@@ -923,7 +923,7 @@ static bool definitelyWritesOnlyWithinSlot(MemIntr op, const MemorySlot &slot,
 /// into them.
 static bool areAllIndicesI32(const DestructurableMemorySlot &slot) {
   Type i32 = IntegerType::get(slot.ptr.getContext(), 32);
-  return llvm::all_of(llvm::make_first_range(slot.elementPtrs),
+  return llvm::all_of(llvm::make_first_range(slot.subelementTypes),
                       [&](Attribute index) {
                         auto intIndex = dyn_cast<IntegerAttr>(index);
                         return intIndex && intIndex.getType() == i32;
@@ -1159,7 +1159,7 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
     return false;
 
   if (op.getSrc() == slot.ptr)
-    for (Attribute index : llvm::make_first_range(slot.elementPtrs))
+    for (Attribute index : llvm::make_first_range(slot.subelementTypes))
       usedIndices.insert(index);
 
   return true;
@@ -1211,7 +1211,7 @@ memcpyRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
   // It was previously checked that index types are consistent, so this type can
   // be fetched now.
   Type indexType = cast<IntegerAttr>(subslots.begin()->first).getType();
-  for (size_t i = 0, e = slot.elementPtrs.size(); i != e; i++) {
+  for (size_t i = 0, e = slot.subelementTypes.size(); i != e; i++) {
     Attribute index = IntegerAttr::get(indexType, i);
     if (!subslots.contains(index))
       continue;

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -113,8 +114,10 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr StorageType COUNT = 1'000'001;
-    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    constexpr int COUNT = 1'000'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
+        StorageType(1));
     for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
       F x = FPBits(i).get_val();
       if (x == F(0.0))
@@ -163,7 +166,13 @@ public:
 #define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
 
+// The GPU target does not support different rounding modes.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
+#else
 #define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, true)
+#endif
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H

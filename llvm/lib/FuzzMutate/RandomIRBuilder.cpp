@@ -69,9 +69,9 @@ AllocaInst *RandomIRBuilder::createStackMemory(Function *F, Type *Ty,
   BasicBlock *EntryBB = &F->getEntryBlock();
   DataLayout DL(F->getParent());
   AllocaInst *Alloca = new AllocaInst(Ty, DL.getAllocaAddrSpace(), "A",
-                                      &*EntryBB->getFirstInsertionPt());
+                                      EntryBB->getFirstInsertionPt());
   if (Init)
-    new StoreInst(Init, Alloca, Alloca->getNextNode());
+    new StoreInst(Init, Alloca, std::next(Alloca->getIterator()));
   return Alloca;
 }
 
@@ -165,7 +165,7 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
       Type *Ty = GV->getValueType();
       LoadInst *LoadGV = nullptr;
       if (BB.getTerminator()) {
-        LoadGV = new LoadInst(Ty, GV, "LGV", &*BB.getFirstInsertionPt());
+        LoadGV = new LoadInst(Ty, GV, "LGV", BB.getFirstInsertionPt());
       } else {
         LoadGV = new LoadInst(Ty, GV, "LGV", &BB);
       }
@@ -213,7 +213,7 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
     }
     // Pick the type independently.
     Type *AccessTy = RS.getSelection()->getType();
-    auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", &*IP);
+    auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", IP);
 
     // Only sample this load if it really matches the descriptor
     if (Pred.matches(Srcs, NewLoad))
@@ -231,7 +231,8 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
     Function *F = BB.getParent();
     AllocaInst *Alloca = createStackMemory(F, Ty, newSrc);
     if (BB.getTerminator()) {
-      newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L", BB.getTerminator());
+      newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L",
+                            BB.getTerminator()->getIterator());
     } else {
       newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L", &BB);
     }
@@ -325,7 +326,7 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       for (BasicBlock *Dom : Dominators) {
         for (Instruction &I : *Dom) {
           if (isa<PointerType>(I.getType()))
-            return new StoreInst(V, &I, Insts.back());
+            return new StoreInst(V, &I, Insts.back()->getIterator());
         }
       }
       break;
@@ -351,7 +352,7 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       Module *M = BB.getParent()->getParent();
       auto [GV, DidCreate] =
           findOrCreateGlobalVariable(M, {}, fuzzerop::onlyType(V->getType()));
-      return new StoreInst(V, GV, Insts.back());
+      return new StoreInst(V, GV, Insts.back()->getIterator());
     }
     case EndOfValueSink:
     default:
@@ -373,7 +374,7 @@ Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
     }
   }
 
-  return new StoreInst(V, Ptr, Insts.back());
+  return new StoreInst(V, Ptr, Insts.back()->getIterator());
 }
 
 Value *RandomIRBuilder::findPointer(BasicBlock &BB,

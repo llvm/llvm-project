@@ -40,6 +40,38 @@ namespace usage_ok {
   int *p = A().class_member(); // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   int *q = A(); // expected-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}}
   int *r = A(1); // expected-warning {{temporary whose address is used as value of local variable 'r' will be destroyed at the end of the full-expression}}
+
+  void test_assignment() {
+    p = A().class_member(); // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+    p = {A().class_member()}; // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+    q = A(); // expected-warning {{object backing the pointer q will be destroyed at the end of the full-expression}}
+    r = A(1); // expected-warning {{object backing the pointer r will be destroyed at the end of the full-expression}}
+  }
+
+  struct FieldCheck {
+    struct Set {
+      int a;
+    };
+    struct Pair {
+      const int& a;
+      int b;
+      Set c;
+      int * d;
+    };
+    Pair p;  
+    FieldCheck(const int& a): p(a){}
+    Pair& getR() [[clang::lifetimebound]] { return p; }
+    Pair* getP() [[clang::lifetimebound]] { return &p; }
+    Pair* getNoLB() { return &p; }
+  };
+  void test_field_access() {
+    int x = 0;
+    const int& a = FieldCheck{x}.getR().a;
+    const int& b = FieldCheck{x}.getP()->b;   // expected-warning {{temporary bound to local reference 'b' will be destroyed at the end of the full-expression}}
+    const int& c = FieldCheck{x}.getP()->c.a; // expected-warning {{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
+    const int& d = FieldCheck{x}.getNoLB()->c.a;
+    const int* e = FieldCheck{x}.getR().d;
+  }
 }
 
 # 1 "<std>" 1 3
@@ -232,3 +264,4 @@ namespace move_forward_et_al_examples {
   S X;
   S *AddressOfOk = std::addressof(X);
 } // namespace move_forward_et_al_examples
+

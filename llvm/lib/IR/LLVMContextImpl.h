@@ -57,6 +57,7 @@ class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
+class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DbgMarker;
 class ElementCount;
@@ -1534,6 +1535,13 @@ public:
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
 
+  // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
+  // ConstantRange. Since this is a dynamically sized class, it's not
+  // possible to use SpecificBumpPtrAllocator. Instead, we use normal Alloc
+  // for allocation and record all allocated pointers in this vector. In the
+  // LLVMContext destructor, call the destuctors of everything in the vector.
+  std::vector<ConstantRangeListAttributeImpl *> ConstantRangeListAttributes;
+
   DenseMap<Type *, std::unique_ptr<ConstantAggregateZero>> CAZConstants;
 
   using ArrayConstantsTy = ConstantUniqueMap<ConstantArray>;
@@ -1562,6 +1570,8 @@ public:
 
   DenseMap<const GlobalValue *, NoCFIValue *> NoCFIValues;
 
+  ConstantUniqueMap<ConstantPtrAuth> ConstantPtrAuths;
+
   ConstantUniqueMap<ConstantExpr> ExprConstants;
 
   ConstantUniqueMap<InlineAsm> InlineAsms;
@@ -1572,7 +1582,7 @@ public:
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
-  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy, X86_AMXTy;
+  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
@@ -1713,6 +1723,9 @@ public:
   }
 
   void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDbgRecords.erase(B); }
+
+  std::string DefaultTargetCPU;
+  std::string DefaultTargetFeatures;
 };
 
 } // end namespace llvm

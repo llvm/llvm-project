@@ -11,51 +11,60 @@ declare double @llvm.sin.f64(double)
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @src, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 2, i32 6>
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 3, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 1, i32 5>
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    store <2 x double> [[TMP12]], ptr @dst, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @src, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 2), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 4), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 6), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP4]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP4]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP10:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP3]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd fast <2 x double> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    store <2 x double> [[TMP15]], ptr @dst, align 8
 ; CHECK-NEXT:    ret void
 ;
 ; VECLIB-LABEL: @test(
-; VECLIB-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @src, align 8
-; VECLIB-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 2, i32 6>
-; VECLIB-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @__svml_sin2(<2 x double> [[TMP2]])
-; VECLIB-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 3, i32 7>
-; VECLIB-NEXT:    [[TMP5:%.*]] = call fast <2 x double> @__svml_sin2(<2 x double> [[TMP4]])
-; VECLIB-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 0, i32 4>
-; VECLIB-NEXT:    [[TMP7:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP6]])
-; VECLIB-NEXT:    [[TMP8:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 1, i32 5>
-; VECLIB-NEXT:    [[TMP9:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
-; VECLIB-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP5]]
-; VECLIB-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP9]]
-; VECLIB-NEXT:    [[TMP12:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP11]]
-; VECLIB-NEXT:    store <2 x double> [[TMP12]], ptr @dst, align 8
+; VECLIB-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @src, align 8
+; VECLIB-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 2), align 8
+; VECLIB-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 4), align 8
+; VECLIB-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 6), align 8
+; VECLIB-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP4]], <2 x i32> <i32 0, i32 2>
+; VECLIB-NEXT:    [[TMP6:%.*]] = call fast <2 x double> @__svml_sin2(<2 x double> [[TMP5]])
+; VECLIB-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP4]], <2 x i32> <i32 1, i32 3>
+; VECLIB-NEXT:    [[TMP8:%.*]] = call fast <2 x double> @__svml_sin2(<2 x double> [[TMP7]])
+; VECLIB-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 2>
+; VECLIB-NEXT:    [[TMP10:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP9]])
+; VECLIB-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP3]], <2 x i32> <i32 1, i32 3>
+; VECLIB-NEXT:    [[TMP12:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP11]])
+; VECLIB-NEXT:    [[TMP13:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP8]]
+; VECLIB-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP12]]
+; VECLIB-NEXT:    [[TMP15:%.*]] = fadd fast <2 x double> [[TMP13]], [[TMP14]]
+; VECLIB-NEXT:    store <2 x double> [[TMP15]], ptr @dst, align 8
 ; VECLIB-NEXT:    ret void
 ;
 ; AMDLIBM-LABEL: @test(
-; AMDLIBM-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @src, align 8
-; AMDLIBM-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 2, i32 6>
-; AMDLIBM-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @amd_vrd2_sin(<2 x double> [[TMP2]])
-; AMDLIBM-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 3, i32 7>
-; AMDLIBM-NEXT:    [[TMP5:%.*]] = call fast <2 x double> @amd_vrd2_sin(<2 x double> [[TMP4]])
-; AMDLIBM-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 0, i32 4>
-; AMDLIBM-NEXT:    [[TMP7:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP6]])
-; AMDLIBM-NEXT:    [[TMP8:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 1, i32 5>
-; AMDLIBM-NEXT:    [[TMP9:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
-; AMDLIBM-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP5]]
-; AMDLIBM-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP9]]
-; AMDLIBM-NEXT:    [[TMP12:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP11]]
-; AMDLIBM-NEXT:    store <2 x double> [[TMP12]], ptr @dst, align 8
+; AMDLIBM-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @src, align 8
+; AMDLIBM-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 2), align 8
+; AMDLIBM-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 4), align 8
+; AMDLIBM-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 6), align 8
+; AMDLIBM-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP4]], <2 x i32> <i32 0, i32 2>
+; AMDLIBM-NEXT:    [[TMP6:%.*]] = call fast <2 x double> @amd_vrd2_sin(<2 x double> [[TMP5]])
+; AMDLIBM-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP4]], <2 x i32> <i32 1, i32 3>
+; AMDLIBM-NEXT:    [[TMP8:%.*]] = call fast <2 x double> @amd_vrd2_sin(<2 x double> [[TMP7]])
+; AMDLIBM-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 2>
+; AMDLIBM-NEXT:    [[TMP10:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP9]])
+; AMDLIBM-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP3]], <2 x i32> <i32 1, i32 3>
+; AMDLIBM-NEXT:    [[TMP12:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP11]])
+; AMDLIBM-NEXT:    [[TMP13:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP8]]
+; AMDLIBM-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP12]]
+; AMDLIBM-NEXT:    [[TMP15:%.*]] = fadd fast <2 x double> [[TMP13]], [[TMP14]]
+; AMDLIBM-NEXT:    store <2 x double> [[TMP15]], ptr @dst, align 8
 ; AMDLIBM-NEXT:    ret void
 ;
   %a0 = load double, ptr @src, align 8

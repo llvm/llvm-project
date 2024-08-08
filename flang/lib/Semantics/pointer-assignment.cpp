@@ -145,8 +145,11 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
           DefinabilityFlags{DefinabilityFlag::PointerDefinition}, lhs)}) {
     if (auto *msg{Say(
             "The left-hand side of a pointer assignment is not definable"_err_en_US)}) {
-      msg->Attach(std::move(*whyNot));
+      msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
+    return false;
+  } else if (evaluate::IsAssumedRank(lhs)) {
+    Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
   } else {
     return true;
@@ -223,7 +226,8 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
             foldingContext_.messages().at(), scope_, {}, rhs)}) {
       if (auto *msg{
               Say("Pointer target is not a definable variable"_warn_en_US)}) {
-        msg->Attach(std::move(*because));
+        msg->Attach(
+            std::move(because->set_severity(parser::Severity::Because)));
       }
       return false;
     }
@@ -333,8 +337,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 
       } else if (!isBoundsRemapping_ &&
           !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
-        int lhsRank{evaluate::GetRank(lhsType_->shape())};
-        int rhsRank{evaluate::GetRank(rhsType->shape())};
+        int lhsRank{lhsType_->Rank()};
+        int rhsRank{rhsType->Rank()};
         if (lhsRank != rhsRank) {
           msg = MessageFormattedText{
               "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
@@ -354,8 +358,10 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
       Say(std::get<MessageFormattedText>(*msg));
     }
     return false;
+  } else {
+    context_.NoteDefinedSymbol(*base);
+    return true;
   }
-  return true;
 }
 
 // Common handling for procedure pointer right-hand sides

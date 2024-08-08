@@ -315,7 +315,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (!PM->getNumUsedPlugins()) {
+      if (!PM->getNumActivePlugins()) {
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
 
@@ -462,7 +462,9 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   if (DeviceOrErr->deleteData(DevicePtr, Kind) == OFFLOAD_FAIL)
-    FATAL_MESSAGE(DeviceNum, "%s", "Failed to deallocate device ptr");
+    FATAL_MESSAGE(DeviceNum, "%s",
+                  "Failed to deallocate device ptr. Set "
+                  "OFFLOAD_TRACK_ALLOCATION_TRACES=1 to track allocations.");
 
   DP("omp_target_free deallocated device ptr\n");
 }

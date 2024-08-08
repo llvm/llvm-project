@@ -55,6 +55,7 @@ public:
   enum class OStreamKind {
     OK_OStream,
     OK_FDStream,
+    OK_SVecStream,
   };
 
 private:
@@ -80,10 +81,6 @@ private:
   /// this buffer.
   char *OutBufStart, *OutBufEnd, *OutBufCur;
   bool ColorEnabled = false;
-
-  /// Optional stream this stream is tied to. If this stream is written to, the
-  /// tied-to stream will be flushed first.
-  raw_ostream *TiedStream = nullptr;
 
   enum class BufferKind {
     Unbuffered = 0,
@@ -359,10 +356,6 @@ public:
 
   bool colors_enabled() const { return ColorEnabled; }
 
-  /// Tie this stream to the specified stream. Replaces any existing tied-to
-  /// stream. Specifying a nullptr unties the stream.
-  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
-
   //===--------------------------------------------------------------------===//
   // Subclass Interface
   //===--------------------------------------------------------------------===//
@@ -421,9 +414,6 @@ private:
   /// flushing. The result is affected by calls to enable_color().
   bool prepare_colors();
 
-  /// Flush the tied-to stream (if present) and then write the required data.
-  void flush_tied_then_write(const char *Ptr, size_t Size);
-
   virtual void anchor();
 };
 
@@ -473,6 +463,10 @@ class raw_fd_ostream : public raw_pwrite_stream {
   bool SupportsSeeking = false;
   bool IsRegularFile = false;
   mutable std::optional<bool> HasColors;
+
+  /// Optional stream this stream is tied to. If this stream is written to, the
+  /// tied-to stream will be flushed first.
+  raw_ostream *TiedStream = nullptr;
 
 #ifdef _WIN32
   /// True if this fd refers to a Windows console device. Mintty and other
@@ -551,6 +545,13 @@ public:
   bool is_displayed() const override;
 
   bool has_colors() const override;
+
+  /// Tie this stream to the specified stream. Replaces any existing tied-to
+  /// stream. Specifying a nullptr unties the stream. This is intended for to
+  /// tie errs() to outs(), so that outs() is flushed whenever something is
+  /// written to errs(), preventing weird and hard-to-test output when stderr
+  /// is redirected to stdout.
+  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
 
   std::error_code error() const { return EC; }
 
@@ -703,7 +704,11 @@ public:
   ///
   /// \param O The vector to write to; this should generally have at least 128
   /// bytes free to avoid any extraneous memory overhead.
-  explicit raw_svector_ostream(SmallVectorImpl<char> &O) : OS(O) {
+  explicit raw_svector_ostream(SmallVectorImpl<char> &O)
+      : raw_pwrite_stream(false, raw_ostream::OStreamKind::OK_SVecStream),
+        OS(O) {
+    // FIXME: here and in a few other places, set directly to unbuffered in the
+    // ctor.
     SetUnbuffered();
   }
 
@@ -713,10 +718,13 @@ public:
 
   /// Return a StringRef for the vector contents.
   StringRef str() const { return StringRef(OS.data(), OS.size()); }
+  SmallVectorImpl<char> &buffer() { return OS; }
 
   void reserveExtraSpace(uint64_t ExtraSize) override {
     OS.reserve(tell() + ExtraSize);
   }
+
+  static bool classof(const raw_ostream *OS);
 };
 
 /// A raw_ostream that discards all output.

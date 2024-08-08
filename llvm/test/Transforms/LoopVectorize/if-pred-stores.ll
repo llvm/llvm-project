@@ -207,7 +207,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NEXT:    br label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[V_1]], [[ENTRY:%.*]] ]
-; UNROLL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[V_2]], [[ENTRY]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ [[V_2]], [[ENTRY]] ]
 ; UNROLL-NEXT:    br label [[FOR_BODY14:%.*]]
 ; UNROLL:       for.body14:
 ; UNROLL-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC23:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -281,7 +281,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP_N]], label [[FOR_INC26_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[V_1]], [[FOR_BODY14_PREHEADER]] ]
-; UNROLL-NOSIMPLIFY-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[V_2]], [[FOR_BODY14_PREHEADER]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ [[V_2]], [[FOR_BODY14_PREHEADER]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_BODY14:%.*]]
 ; UNROLL-NOSIMPLIFY:       for.body14:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC23:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -364,7 +364,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    br label [[SCALAR_PH]]
 ; VEC:       scalar.ph:
 ; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[V_1]], [[ENTRY:%.*]] ]
-; VEC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[V_2]], [[ENTRY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], [[MIDDLE_BLOCK]] ], [ [[V_2]], [[ENTRY]] ]
 ; VEC-NEXT:    br label [[FOR_BODY14:%.*]]
 ; VEC:       for.body14:
 ; VEC-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC23:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

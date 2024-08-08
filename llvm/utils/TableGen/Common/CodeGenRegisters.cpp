@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -618,6 +619,9 @@ struct TupleExpander : SetTheory::Expander {
   // the synthesized definitions for their lifetime.
   std::vector<std::unique_ptr<Record>> &SynthDefs;
 
+  // Track all synthesized tuple names in order to detect duplicate definitions.
+  llvm::StringSet<> TupleNames;
+
   TupleExpander(std::vector<std::unique_ptr<Record>> &SynthDefs)
       : SynthDefs(SynthDefs) {}
 
@@ -684,6 +688,12 @@ struct TupleExpander : SetTheory::Expander {
       Record *NewReg = SynthDefs.back().get();
       Elts.insert(NewReg);
 
+      // Detect duplicates among synthesized registers.
+      const auto Res = TupleNames.insert(NewReg->getName());
+      if (!Res.second)
+        PrintFatalError(Def->getLoc(),
+                        "Register tuple redefines register '" + Name + "'.");
+
       // Copy Proto super-classes.
       ArrayRef<std::pair<Record *, SMRange>> Supers = Proto->getSuperClasses();
       for (const auto &SuperPair : Supers)
@@ -743,7 +753,7 @@ struct TupleExpander : SetTheory::Expander {
 
 static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
   llvm::sort(M, deref<std::less<>>());
-  M.erase(std::unique(M.begin(), M.end(), deref<std::equal_to<>>()), M.end());
+  M.erase(llvm::unique(M, deref<std::equal_to<>>()), M.end());
 }
 
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)

@@ -25,7 +25,7 @@ namespace __sanitizer {
 const char *PrimaryAllocatorName = "SizeClassAllocator";
 const char *SecondaryAllocatorName = "LargeMmapAllocator";
 
-static ALIGNED(64) char internal_alloc_placeholder[sizeof(InternalAllocator)];
+alignas(64) static char internal_alloc_placeholder[sizeof(InternalAllocator)];
 static atomic_uint8_t internal_allocator_initialized;
 static StaticSpinMutex internal_alloc_init_mu;
 

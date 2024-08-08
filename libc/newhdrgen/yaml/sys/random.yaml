@@ -1,0 +1,16 @@
+header: sys-random.h
+macros: []
+types:
+  - type_name: ssize_t
+  - type_name: size_t
+enums: []
+objects: []
+functions:
+  - name: getrandom
+    standards:
+      - Linux
+    return_type: ssize_t
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: unsigned int

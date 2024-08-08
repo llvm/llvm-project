@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 
@@ -545,6 +546,41 @@ bool DwarfExpression::addExpression(
       // Reset the location description kind.
       LocationKind = Unknown;
       return true;
+    }
+    case dwarf::DW_OP_LLVM_extract_bits_sext:
+    case dwarf::DW_OP_LLVM_extract_bits_zext: {
+      unsigned SizeInBits = Op->getArg(1);
+      unsigned BitOffset = Op->getArg(0);
+
+      // If we have a memory location then dereference to get the value, though
+      // we have to make sure we don't dereference any bytes past the end of the
+      // object.
+      if (isMemoryLocation()) {
+        emitOp(dwarf::DW_OP_deref_size);
+        emitUnsigned(alignTo(BitOffset + SizeInBits, 8) / 8);
+      }
+
+      // Extract the bits by a shift left (to shift out the bits after what we
+      // want to extract) followed by shift right (to shift the bits to position
+      // 0 and also sign/zero extend). These operations are done in the DWARF
+      // "generic type" whose size is the size of a pointer.
+      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
+      unsigned LeftShift = PtrSizeInBytes * 8 - (SizeInBits + BitOffset);
+      unsigned RightShift = LeftShift + BitOffset;
+      if (LeftShift) {
+        emitOp(dwarf::DW_OP_constu);
+        emitUnsigned(LeftShift);
+        emitOp(dwarf::DW_OP_shl);
+      }
+      emitOp(dwarf::DW_OP_constu);
+      emitUnsigned(RightShift);
+      emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext ? dwarf::DW_OP_shra
+                                                          : dwarf::DW_OP_shr);
+
+      // The value is now at the top of the stack, so set the location to
+      // implicit so that we get a stack_value at the end.
+      LocationKind = Implicit;
+      break;
     }
     case dwarf::DW_OP_plus_uconst:
       assert(!isRegisterLocation());

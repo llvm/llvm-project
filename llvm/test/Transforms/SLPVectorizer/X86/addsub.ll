@@ -65,6 +65,62 @@ entry:
   ret void
 }
 
+define void @addsub_freeze() #0 {
+; CHECK-LABEL: @addsub_freeze(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @b, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @c, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @d, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr @e, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <4 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP8]]
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr @a, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, ptr @b, align 4
+  %1 = load i32, ptr @c, align 4
+  %add = add nsw i32 %0, %1
+  %2 = load i32, ptr @d, align 4
+  %3 = load i32, ptr @e, align 4
+  %add1 = add nsw i32 %2, %3
+  %add2 = add nsw i32 %add, %add1
+  %freeze.add2 = freeze i32 %add2
+  store i32 %freeze.add2, ptr @a, align 4
+  %4 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 1), align 4
+  %5 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 1), align 4
+  %add3 = add nsw i32 %4, %5
+  %6 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 1), align 4
+  %7 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 1), align 4
+  %add4 = add nsw i32 %6, %7
+  %sub = sub nsw i32 %add3, %add4
+  %freeze.sub = freeze i32 %sub
+  store i32 %freeze.sub, ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 1), align 4
+  %8 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 2), align 4
+  %9 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 2), align 4
+  %add5 = add nsw i32 %8, %9
+  %10 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 2), align 4
+  %11 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 2), align 4
+  %add6 = add nsw i32 %10, %11
+  %add7 = add nsw i32 %add5, %add6
+  %freeze.add7 = freeze i32 %add7
+  store i32 %freeze.add7, ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 2), align 4
+  %12 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 3), align 4
+  %13 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 3), align 4
+  %add8 = add nsw i32 %12, %13
+  %14 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 3), align 4
+  %15 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 3), align 4
+  %add9 = add nsw i32 %14, %15
+  %sub10 = sub nsw i32 %add8, %add9
+  %freeze.sub10 = freeze i32 %sub10
+  store i32 %freeze.sub10, ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 3), align 4
+  ret void
+}
+
 ; Function Attrs: nounwind uwtable
 define void @subadd() #0 {
 ; CHECK-LABEL: @subadd(

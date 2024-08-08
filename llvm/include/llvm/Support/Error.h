@@ -54,7 +54,7 @@ public:
     std::string Msg;
     raw_string_ostream OS(Msg);
     log(OS);
-    return OS.str();
+    return Msg;
   }
 
   /// Convert this error to a std::error_code.
@@ -166,6 +166,9 @@ class [[nodiscard]] Error {
   // handleErrors needs to be able to set the Checked flag.
   template <typename... HandlerTs>
   friend Error handleErrors(Error E, HandlerTs &&... Handlers);
+  // visitErrors needs direct access to the payload.
+  template <typename HandlerT>
+  friend void visitErrors(const Error &E, HandlerT H);
 
   // Expected<T> needs to be able to steal the payload when constructed from an
   // error.
@@ -369,6 +372,10 @@ class ErrorList final : public ErrorInfo<ErrorList> {
   // ErrorList.
   template <typename... HandlerTs>
   friend Error handleErrors(Error E, HandlerTs &&... Handlers);
+  // visitErrors needs to be able to iterate the payload list of an
+  // ErrorList.
+  template <typename HandlerT>
+  friend void visitErrors(const Error &E, HandlerT H);
 
   // joinErrors is implemented in terms of join.
   friend Error joinErrors(Error, Error);
@@ -754,7 +761,7 @@ inline void cantFail(Error Err, const char *Msg = nullptr) {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << Msg << "\n" << Err;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -785,7 +792,7 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
     raw_string_ostream OS(Str);
     auto E = ValOrErr.takeError();
     OS << Msg << "\n" << E;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -816,7 +823,7 @@ T& cantFail(Expected<T&> ValOrErr, const char *Msg = nullptr) {
     raw_string_ostream OS(Str);
     auto E = ValOrErr.takeError();
     OS << Msg << "\n" << E;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -977,6 +984,23 @@ inline void handleAllErrors(Error E) {
   cantFail(std::move(E));
 }
 
+/// Visit all the ErrorInfo(s) contained in E by passing them to the respective
+/// handler, without consuming the error.
+template <typename HandlerT> void visitErrors(const Error &E, HandlerT H) {
+  const ErrorInfoBase *Payload = E.getPtr();
+  if (!Payload)
+    return;
+
+  if (Payload->isA<ErrorList>()) {
+    const ErrorList &List = static_cast<const ErrorList &>(*Payload);
+    for (const auto &P : List.Payloads)
+      H(*P);
+    return;
+  }
+
+  return H(*Payload);
+}
+
 /// Handle any errors (if present) in an Expected<T>, then try a recovery path.
 ///
 /// If the incoming value is a success value it is returned unmodified. If it
@@ -1030,6 +1054,10 @@ void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner = {});
 /// Write all error messages (if any) in E to a string. The newline character
 /// is used to separate error messages.
 std::string toString(Error E);
+
+/// Like toString(), but does not consume the error. This can be used to print
+/// a warning while retaining the original error object.
+std::string toStringWithoutConsuming(const Error &E);
 
 /// Consume a Error without doing anything. This method should be used
 /// only where an error can be considered a reasonable and expected return
@@ -1278,6 +1306,11 @@ inline Error createStringError(const Twine &S) {
 }
 
 template <typename... Ts>
+inline Error createStringError(char const *Fmt, const Ts &...Vals) {
+  return createStringError(llvm::inconvertibleErrorCode(), Fmt, Vals...);
+}
+
+template <typename... Ts>
 inline Error createStringError(std::errc EC, char const *Fmt,
                                const Ts &... Vals) {
   return createStringError(std::make_error_code(EC), Fmt, Vals...);
@@ -1305,7 +1338,7 @@ public:
     std::string Msg;
     raw_string_ostream OS(Msg);
     Err->log(OS);
-    return OS.str();
+    return Msg;
   }
 
   StringRef getFileName() const { return FileName; }

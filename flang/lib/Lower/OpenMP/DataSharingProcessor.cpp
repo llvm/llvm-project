@@ -13,25 +13,51 @@
 #include "DataSharingProcessor.h"
 
 #include "Utils.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/tools.h"
 
 namespace Fortran {
 namespace lower {
 namespace omp {
+bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
+    const semantics::Symbol *symbol, lower::pft::Evaluation &eval) const {
+  return eval.visit(
+      common::visitors{[&](const parser::OpenMPConstruct &functionParserNode) {
+                         return symDefMap.count(symbol) &&
+                                symDefMap.at(symbol) == &functionParserNode;
+                       },
+                       [](const auto &functionParserNode) { return false; }});
+}
+
+DataSharingProcessor::DataSharingProcessor(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const List<Clause> &clauses, lower::pft::Evaluation &eval,
+    bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
+    lower::SymMap *symTable)
+    : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
+      firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
+      shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
+      useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
+      visitor() {
+  eval.visit([&](const auto &functionParserNode) {
+    parser::Walk(functionParserNode, visitor);
+  });
+}
 
 void DataSharingProcessor::processStep1(
-    mlir::omp::PrivateClauseOps *clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
+    mlir::omp::PrivateClauseOps *clauseOps) {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
-  privatize(clauseOps, privateSyms);
-  defaultPrivatize(clauseOps, privateSyms);
-  implicitPrivatize(clauseOps, privateSyms);
+  collectPreDeterminedSymbols();
+
+  privatize(clauseOps);
+
   insertBarrier();
 }
 
@@ -48,20 +74,17 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
     firOpBuilder.setInsertionPointAfter(op);
     insertDeallocs();
   } else {
-    // insert dummy instruction to mark the insertion position
-    mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
-        op->getLoc(), firOpBuilder.getIndexType());
+    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     insertDeallocs();
-    firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
   }
 }
 
 void DataSharingProcessor::insertDeallocs() {
-  for (const semantics::Symbol *sym : privatizedSymbols)
+  for (const semantics::Symbol *sym : allPrivatizedSymbols)
     if (semantics::IsAllocatable(sym->GetUltimate())) {
       if (!useDelayedPrivatization) {
         converter.createHostAssociateVarCloneDealloc(*sym);
-        return;
+        continue;
       }
 
       lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
@@ -92,13 +115,14 @@ void DataSharingProcessor::insertDeallocs() {
 }
 
 void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
-  // Privatization for symbols which are pre-determined (like loop index
-  // variables) happen separately, for everything else privatize here.
-  if (sym->test(semantics::Symbol::Flag::OmpPreDetermined))
-    return;
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
+
+  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+  if (!isFirstPrivate &&
+      Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))
+    Fortran::lower::defaultInitializeAtRuntime(converter, *sym, *symTable);
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
@@ -110,38 +134,80 @@ void DataSharingProcessor::copyFirstPrivateSymbol(
 void DataSharingProcessor::copyLastPrivateSymbol(
     const semantics::Symbol *sym,
     [[maybe_unused]] mlir::OpBuilder::InsertPoint *lastPrivIP) {
-  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
-    converter.copyHostAssociateVar(*sym, lastPrivIP);
+  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate)) {
+    bool allocatable = semantics::IsAllocatable(sym->GetUltimate());
+    if (!allocatable) {
+      converter.copyHostAssociateVar(*sym, lastPrivIP);
+      return;
+    }
+
+    // copyHostAssociateVar doesn't work properly if the privatised copy was
+    // reallocated (e.g. by assignment): it will only copy if the ultimate
+    // symbol was already allocated, and it only copies data so any reallocated
+    // lengths etc are lost
+
+    // 1) Fetch the original copy of the variable.
+    assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
+           "No host-association found");
+    const Fortran::semantics::Symbol &hsym = sym->GetUltimate();
+    Fortran::lower::SymbolBox hsb = symTable->lookupOneLevelUpSymbol(hsym);
+    assert(hsb && "Host symbol box not found");
+
+    // 2) Fetch the copied one that will mask the original.
+    Fortran::lower::SymbolBox sb = symTable->shallowLookupSymbol(sym);
+    assert(sb && "Host-associated symbol box not found");
+    assert(hsb.getAddr() != sb.getAddr() &&
+           "Host and associated symbol boxes are the same");
+
+    // 3) Perform the assignment.
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::Location loc = converter.genLocation(sym->name());
+    mlir::OpBuilder::InsertPoint insPt = builder.saveInsertionPoint();
+    if (lastPrivIP && lastPrivIP->isSet())
+      builder.restoreInsertionPoint(*lastPrivIP);
+    else
+      builder.setInsertionPointAfter(sb.getAddr().getDefiningOp());
+
+    hlfir::Entity dst{hsb.getAddr()};
+    hlfir::Entity src{sb.getAddr()};
+    builder.create<hlfir::AssignOp>(
+        loc, src, dst, /*isWholeAllocatableAssignment=*/allocatable,
+        /*keepLhsLengthInAllocatableAssignment=*/false,
+        /*temporary_lhs=*/false);
+
+    if (lastPrivIP && lastPrivIP->isSet() &&
+        sym->test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
+      builder.restoreInsertionPoint(insPt);
+    }
+  }
 }
 
 void DataSharingProcessor::collectOmpObjectListSymbol(
     const omp::ObjectList &objects,
     llvm::SetVector<const semantics::Symbol *> &symbolSet) {
   for (const omp::Object &object : objects)
-    symbolSet.insert(object.id());
+    symbolSet.insert(object.sym());
 }
 
 void DataSharingProcessor::collectSymbolsForPrivatization() {
-  bool hasCollapse = false;
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
-      collectOmpObjectListSymbol(privateClause->v, privatizedSymbols);
+      collectOmpObjectListSymbol(privateClause->v, explicitlyPrivatizedSymbols);
     } else if (const auto &firstPrivateClause =
                    std::get_if<omp::clause::Firstprivate>(&clause.u)) {
-      collectOmpObjectListSymbol(firstPrivateClause->v, privatizedSymbols);
+      collectOmpObjectListSymbol(firstPrivateClause->v,
+                                 explicitlyPrivatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
-      collectOmpObjectListSymbol(objects, privatizedSymbols);
+      collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
       hasLastPrivateOp = true;
-    } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
-      hasCollapse = true;
     }
   }
 
-  if (hasCollapse && hasLastPrivateOp)
-    TODO(converter.getCurrentLocation(), "Collapse clause with lastprivate");
+  for (auto *sym : explicitlyPrivatizedSymbols)
+    allPrivatizedSymbols.insert(sym);
 }
 
 bool DataSharingProcessor::needBarrier() {
@@ -149,7 +215,7 @@ bool DataSharingProcessor::needBarrier() {
   // initialization of firstprivate variables and post-update of lastprivate
   // variables.
   // Emit implicit barrier for linear clause. Maybe on somewhere else.
-  for (const semantics::Symbol *sym : privatizedSymbols) {
+  for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) &&
         sym->test(semantics::Symbol::Flag::OmpLastPrivate))
       return true;
@@ -204,28 +270,40 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       mlir::Operation *lastOper = loopOp.getRegion().back().getTerminator();
       firOpBuilder.setInsertionPoint(lastOper);
 
-      mlir::Value iv = loopOp.getIVs()[0];
-      mlir::Value ub = loopOp.getUpperBound()[0];
-      mlir::Value step = loopOp.getStep()[0];
+      mlir::Value cmpOp;
+      llvm::SmallVector<mlir::Value> vs;
+      vs.reserve(loopOp.getIVs().size());
+      for (auto [iv, ub, step] :
+           llvm::zip_equal(loopOp.getIVs(), loopOp.getLoopUpperBounds(),
+                           loopOp.getLoopSteps())) {
+        // v = iv + step
+        // cmp = step < 0 ? v < ub : v > ub
+        mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
+        vs.push_back(v);
+        mlir::Value zero =
+            firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
+        mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, step, zero);
+        mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, v, ub);
+        mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::sgt, v, ub);
+        mlir::Value icmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
+            loc, negativeStep, vLT, vGT);
 
-      // v = iv + step
-      // cmp = step < 0 ? v < ub : v > ub
-      mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
-      mlir::Value zero =
-          firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
-      mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, step, zero);
-      mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, v, ub);
-      mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::sgt, v, ub);
-      mlir::Value cmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
-          loc, negativeStep, vLT, vGT);
+        if (cmpOp) {
+          cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
+        } else {
+          cmpOp = icmpOp;
+        }
+      }
 
       auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
       firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      assert(loopIV && "loopIV was not set");
-      firOpBuilder.createStoreWithConvert(loc, v, loopIV);
+      for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
+        assert(loopIV && "loopIV was not set");
+        firOpBuilder.createStoreWithConvert(loc, v, loopIV);
+      }
       lastPrivIP = firOpBuilder.saveInsertionPoint();
     } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
       // Already handled by genOMP()
@@ -283,10 +361,11 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
       if (nestedEval.isConstruct())
         // Recursively look for OpenMP constructs within `nestedEval`'s region
         collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
-      else
+      else {
         converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
                                    /*collectSymbols=*/true,
                                    /*collectHostAssociatedSymbols=*/false);
+      }
     }
   }
 }
@@ -322,24 +401,44 @@ void DataSharingProcessor::collectSymbols(
   converter.collectSymbolSet(eval, allSymbols, flag,
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
+
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
+
+  for (auto *symbol : allSymbols)
+    if (visitor.isSymbolDefineBy(symbol, eval))
+      symbolsInNestedRegions.remove(symbol);
+
   // Filter-out symbols that must not be privatized.
   bool collectImplicit = flag == semantics::Symbol::Flag::OmpImplicit;
+  bool collectPreDetermined = flag == semantics::Symbol::Flag::OmpPreDetermined;
+
   auto isPrivatizable = [](const semantics::Symbol &sym) -> bool {
     return !semantics::IsProcedure(sym) &&
            !sym.GetUltimate().has<semantics::DerivedTypeDetails>() &&
            !sym.GetUltimate().has<semantics::NamelistDetails>() &&
            !semantics::IsImpliedDoIndex(sym.GetUltimate());
   };
+
+  auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
+    if (collectImplicit)
+      return sym->test(semantics::Symbol::Flag::OmpImplicit);
+
+    if (collectPreDetermined)
+      return sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+
+    return !sym->test(semantics::Symbol::Flag::OmpImplicit) &&
+           !sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+  };
+
   for (const auto *sym : allSymbols) {
     assert(curScope && "couldn't find current scope");
     if (isPrivatizable(*sym) && !symbolsInNestedRegions.contains(sym) &&
-        !privatizedSymbols.contains(sym) &&
-        !sym->test(semantics::Symbol::Flag::OmpPreDetermined) &&
-        (collectImplicit || !sym->test(semantics::Symbol::Flag::OmpImplicit)) &&
-        clauseScopes.contains(&sym->owner()))
+        !explicitlyPrivatizedSymbols.contains(sym) &&
+        shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
+      allPrivatizedSymbols.insert(sym);
       symbols.insert(sym);
+    }
   }
 }
 
@@ -363,22 +462,26 @@ void DataSharingProcessor::collectImplicitSymbols() {
     collectSymbols(semantics::Symbol::Flag::OmpImplicit, implicitSymbols);
 }
 
-void DataSharingProcessor::privatize(
-    mlir::omp::PrivateClauseOps *clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
-  for (const semantics::Symbol *sym : privatizedSymbols) {
+void DataSharingProcessor::collectPreDeterminedSymbols() {
+  if (shouldCollectPreDeterminedSymbols)
+    collectSymbols(semantics::Symbol::Flag::OmpPreDetermined,
+                   preDeterminedSymbols);
+}
+
+void DataSharingProcessor::privatize(mlir::omp::PrivateClauseOps *clauseOps) {
+  for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
-        doPrivatize(&*mem, clauseOps, privateSyms);
+        doPrivatize(&*mem, clauseOps);
     } else
-      doPrivatize(sym, clauseOps, privateSyms);
+      doPrivatize(sym, clauseOps);
   }
 }
 
 void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
   insertLastPrivateCompare(op);
-  for (const semantics::Symbol *sym : privatizedSymbols)
+  for (const semantics::Symbol *sym : allPrivatizedSymbols)
     if (const auto *commonDet =
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects()) {
@@ -389,23 +492,8 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
     }
 }
 
-void DataSharingProcessor::defaultPrivatize(
-    mlir::omp::PrivateClauseOps *clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
-  for (const semantics::Symbol *sym : defaultSymbols)
-    doPrivatize(sym, clauseOps, privateSyms);
-}
-
-void DataSharingProcessor::implicitPrivatize(
-    mlir::omp::PrivateClauseOps *clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
-  for (const semantics::Symbol *sym : implicitSymbols)
-    doPrivatize(sym, clauseOps, privateSyms);
-}
-
-void DataSharingProcessor::doPrivatize(
-    const semantics::Symbol *sym, mlir::omp::PrivateClauseOps *clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
+void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
+                                       mlir::omp::PrivateClauseOps *clauseOps) {
   if (!useDelayedPrivatization) {
     cloneSymbol(sym);
     copyFirstPrivateSymbol(sym);
@@ -461,9 +549,20 @@ void DataSharingProcessor::doPrivatize(
       symTable->addSymbol(*sym, localExV);
       symTable->pushScope();
       cloneSymbol(sym);
-      firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(),
-          symTable->shallowLookupSymbol(*sym).getAddr());
+      mlir::Value cloneAddr = symTable->shallowLookupSymbol(*sym).getAddr();
+      mlir::Type cloneType = cloneAddr.getType();
+
+      // A `convert` op is required for variables that are storage associated
+      // via `equivalence`. The problem is that these variables are declared as
+      // `fir.ptr`s while their privatized storage is declared as `fir.ref`,
+      // therefore we convert to proper symbol type.
+      mlir::Value yieldedValue =
+          (symType == cloneType) ? cloneAddr
+                                 : firOpBuilder.createConvert(
+                                       cloneAddr.getLoc(), symType, cloneAddr);
+
+      firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc(),
+                                              yieldedValue);
       symTable->popScope();
     }
 
@@ -506,12 +605,9 @@ void DataSharingProcessor::doPrivatize(
   }();
 
   if (clauseOps) {
-    clauseOps->privatizers.push_back(mlir::SymbolRefAttr::get(privatizerOp));
+    clauseOps->privateSyms.push_back(mlir::SymbolRefAttr::get(privatizerOp));
     clauseOps->privateVars.push_back(hsb.getAddr());
   }
-
-  if (privateSyms)
-    privateSyms->push_back(sym);
 
   symToPrivatizer[sym] = privatizerOp;
 }

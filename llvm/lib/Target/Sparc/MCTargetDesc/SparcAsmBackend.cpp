@@ -131,15 +131,16 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
 namespace {
   class SparcAsmBackend : public MCAsmBackend {
   protected:
-    const Target &TheTarget;
     bool Is64Bit;
+    bool IsV8Plus;
 
   public:
-    SparcAsmBackend(const Target &T)
-        : MCAsmBackend(StringRef(T.getName()) == "sparcel"
+    SparcAsmBackend(const MCSubtargetInfo &STI)
+        : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
                            ? llvm::endianness::little
                            : llvm::endianness::big),
-          TheTarget(T), Is64Bit(StringRef(TheTarget.getName()) == "sparcv9") {}
+          Is64Bit(STI.getTargetTriple().isArch64Bit()),
+          IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
 
     unsigned getNumFixupKinds() const override {
       return Sparc::NumTargetFixupKinds;
@@ -305,16 +306,6 @@ namespace {
       }
     }
 
-    /// fixupNeedsRelaxation - Target specific predicate for whether a given
-    /// fixup requires the associated instruction to be relaxed.
-    bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                              uint64_t Value,
-                              const MCRelaxableFragment *DF,
-                              const MCAsmLayout &Layout) const override {
-      // FIXME.
-      llvm_unreachable("fixupNeedsRelaxation() unimplemented");
-      return false;
-    }
     void relaxInstruction(MCInst &Inst,
                           const MCSubtargetInfo &STI) const override {
       // FIXME.
@@ -323,9 +314,11 @@ namespace {
 
     bool writeNopData(raw_ostream &OS, uint64_t Count,
                       const MCSubtargetInfo *STI) const override {
-      // Cannot emit NOP with size not multiple of 32 bits.
-      if (Count % 4 != 0)
-        return false;
+
+      // If the count is not 4-byte aligned, we must be writing data into the
+      // text section (otherwise we have unaligned instructions, and thus have
+      // far bigger problems), so just write zeros instead.
+      OS.write_zeros(Count % 4);
 
       uint64_t NumNops = Count / 4;
       for (uint64_t i = 0; i != NumNops; ++i)
@@ -338,8 +331,8 @@ namespace {
   class ELFSparcAsmBackend : public SparcAsmBackend {
     Triple::OSType OSType;
   public:
-    ELFSparcAsmBackend(const Target &T, Triple::OSType OSType) :
-      SparcAsmBackend(T), OSType(OSType) { }
+    ELFSparcAsmBackend(const MCSubtargetInfo &STI, Triple::OSType OSType)
+        : SparcAsmBackend(STI), OSType(OSType) {}
 
     void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                     const MCValue &Target, MutableArrayRef<char> Data,
@@ -366,7 +359,7 @@ namespace {
     std::unique_ptr<MCObjectTargetWriter>
     createObjectTargetWriter() const override {
       uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
-      return createSparcELFObjectWriter(Is64Bit, OSABI);
+      return createSparcELFObjectWriter(Is64Bit, IsV8Plus, OSABI);
     }
   };
 
@@ -376,5 +369,5 @@ MCAsmBackend *llvm::createSparcAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
-  return new ELFSparcAsmBackend(T, STI.getTargetTriple().getOS());
+  return new ELFSparcAsmBackend(STI, STI.getTargetTriple().getOS());
 }

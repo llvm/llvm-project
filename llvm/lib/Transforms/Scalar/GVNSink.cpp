@@ -921,8 +921,10 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
     }
 
   for (auto *I : Insts)
-    if (I != I0)
+    if (I != I0) {
       I->replaceAllUsesWith(I0);
+      I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
+    }
   foldPointlessPHINodes(BBEnd);
 
   // Finally nuke all instructions apart from the common instruction.

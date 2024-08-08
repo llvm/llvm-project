@@ -54,6 +54,10 @@ public:
     }
   }
 
+  // Delete the copy constructor and the copy assignment operator.
+  ArenaAllocator(const ArenaAllocator &) = delete;
+  ArenaAllocator &operator=(const ArenaAllocator &) = delete;
+
   char *allocUnalignedBuffer(size_t Size) {
     assert(Head && Head->Buf);
 

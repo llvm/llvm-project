@@ -37,7 +37,7 @@ int main(int, char**) {
     using View = std::ranges::transform_view<MoveOnlyView, PlusOneNoexcept>;
     View transformView(MoveOnlyView{buff}, PlusOneNoexcept{});
     assert(*transformView.begin() == 1);
-    LIBCPP_ASSERT_NOEXCEPT(*std::declval<std::ranges::iterator_t<View>>());
+    ASSERT_NOEXCEPT(*std::declval<std::ranges::iterator_t<View>>());
     ASSERT_SAME_TYPE(int, decltype(*std::declval<View>().begin()));
   }
   {

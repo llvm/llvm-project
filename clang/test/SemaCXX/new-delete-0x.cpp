@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -std=c++11 -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
 struct noreturn_t {} constexpr noreturn = {};

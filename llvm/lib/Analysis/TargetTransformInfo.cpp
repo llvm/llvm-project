@@ -98,8 +98,8 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
 
   Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
   ParamTys.reserve(Arguments.size());
-  for (unsigned Idx = 0, Size = Arguments.size(); Idx != Size; ++Idx)
-    ParamTys.push_back(Arguments[Idx]->getType());
+  for (const Value *Argument : Arguments)
+    ParamTys.push_back(Argument->getType());
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
@@ -279,6 +279,10 @@ BranchProbability TargetTransformInfo::getPredictableBranchThreshold() const {
              : TTIImpl->getPredictableBranchThreshold();
 }
 
+InstructionCost TargetTransformInfo::getBranchMispredictPenalty() const {
+  return TTIImpl->getBranchMispredictPenalty();
+}
+
 bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
   return TTIImpl->hasBranchDivergence(F);
 }
@@ -427,6 +431,10 @@ bool TargetTransformInfo::shouldFoldTerminatingConditionAfterLSR() const {
   return TTIImpl->shouldFoldTerminatingConditionAfterLSR();
 }
 
+bool TargetTransformInfo::shouldDropLSRSolutionIfLessProfitable() const {
+  return TTIImpl->shouldDropLSRSolutionIfLessProfitable();
+}
+
 bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {
   return TTIImpl->isProfitableLSRChainElement(I);
 }
@@ -511,6 +519,13 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
 bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
                                                   Align Alignment) const {
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::isLegalInterleavedAccessType(
+    VectorType *VTy, unsigned Factor, Align Alignment,
+    unsigned AddrSpace) const {
+  return TTIImpl->isLegalInterleavedAccessType(VTy, Factor, Alignment,
+                                               AddrSpace);
 }
 
 bool TargetTransformInfo::isLegalMaskedVectorHistogram(Type *AddrType,
@@ -716,6 +731,10 @@ bool TargetTransformInfo::preferToKeepConstantsAttached(
 
 unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
+}
+
+bool TargetTransformInfo::hasConditionalLoadStoreForType(Type *Ty) const {
+  return TTIImpl->hasConditionalLoadStoreForType(Ty);
 }
 
 unsigned TargetTransformInfo::getRegisterClassForType(bool Vector,
@@ -1186,7 +1205,7 @@ Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
 
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-    unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+    unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicElementSize) const {
   return TTIImpl->getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
                                             DestAddrSpace, SrcAlign, DestAlign,
@@ -1196,7 +1215,7 @@ Type *TargetTransformInfo::getMemcpyLoopLoweringType(
 void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-    unsigned SrcAlign, unsigned DestAlign,
+    Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicCpySize) const {
   TTIImpl->getMemcpyLoopResidualLoweringType(
       OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
@@ -1278,6 +1297,10 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
+bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
+  return TTIImpl->preferFixedOverScalableIfEqualCost();
+}
+
 bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode, Type *Ty,
                                                 ReductionFlags Flags) const {
   return TTIImpl->preferInLoopReduction(Opcode, Ty, Flags);
@@ -1307,6 +1330,12 @@ unsigned TargetTransformInfo::getMaxNumArgs() const {
 
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
+}
+
+TargetTransformInfo::ReductionShuffle
+TargetTransformInfo::getPreferredExpandedReductionShuffle(
+    const IntrinsicInst *II) const {
+  return TTIImpl->getPreferredExpandedReductionShuffle(II);
 }
 
 unsigned TargetTransformInfo::getGISelRematGlobalCost() const {
@@ -1346,7 +1375,7 @@ TargetIRAnalysis::Result TargetIRAnalysis::run(const Function &F,
 AnalysisKey TargetIRAnalysis::Key;
 
 TargetIRAnalysis::Result TargetIRAnalysis::getDefaultTTI(const Function &F) {
-  return Result(F.getParent()->getDataLayout());
+  return Result(F.getDataLayout());
 }
 
 // Register the basic pass.

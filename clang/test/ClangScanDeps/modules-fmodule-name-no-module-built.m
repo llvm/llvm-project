@@ -28,6 +28,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header2"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

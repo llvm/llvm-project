@@ -134,10 +134,10 @@ define <4 x float> @test_select(float %f, float %g) {
 
 define <2 x i64> @PR24922(<2 x i64> %v) {
 ; CHECK-LABEL: @PR24922(
-; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x i64> [[V:%.*]], i64 0, i64 0
-; CHECK-NEXT:    ret <2 x i64> [[RESULT1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> <i1 ptrtoint (ptr @PR24922 to i1), i1 true>, <2 x i64> [[V:%.*]], <2 x i64> <i64 0, i64 poison>
+; CHECK-NEXT:    ret <2 x i64> [[RESULT]]
 ;
-  %result = select <2 x i1> <i1 icmp eq (i64 extractelement (<2 x i64> bitcast (<4 x i32> <i32 15, i32 15, i32 15, i32 15> to <2 x i64>), i64 0), i64 0), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
+  %result = select <2 x i1> <i1 ptrtoint (ptr @PR24922 to i1), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
   ret <2 x i64> %result
 }
 

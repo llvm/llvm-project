@@ -2250,9 +2250,159 @@ TYPED_TEST(MutableConstTest, ICmp) {
   ICmpInst::Predicate MatchPred;
 
   EXPECT_TRUE(m_ICmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
-              .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_Cmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_ICmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_Cmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_ICmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_Cmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_c_ICmp(m_Specific(R), m_Specific(L))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_c_ICmp(m_Specific(R), m_Specific(R))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_SpecificICmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificICmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificICmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_FALSE(m_SpecificICmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificICmp(ICmpInst::getInversePredicate(Pred),
+                              m_Specific(L), m_Specific(R))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(ICmpInst::getInversePredicate(Pred), m_Specific(L),
+                             m_Specific(R))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificICmp(ICmpInst::getInversePredicate(Pred),
+                              m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(ICmpInst::getInversePredicate(Pred),
+                             m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_c_SpecificICmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_TRUE(m_c_SpecificICmp(ICmpInst::getSwappedPredicate(Pred),
+                               m_Specific(R), m_Specific(L))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_c_SpecificICmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+}
+
+TYPED_TEST(MutableConstTest, FCmp) {
+  auto &IRB = PatternMatchTest::IRB;
+
+  typedef std::tuple_element_t<0, TypeParam> ValueType;
+  typedef std::tuple_element_t<1, TypeParam> InstructionType;
+
+  Value *L = Constant::getNullValue(IRB.getFloatTy());
+  Value *R = ConstantFP::getInfinity(IRB.getFloatTy(), true);
+  FCmpInst::Predicate Pred = FCmpInst::FCMP_OGT;
+
+  ValueType MatchL;
+  ValueType MatchR;
+  FCmpInst::Predicate MatchPred;
+
+  EXPECT_TRUE(m_FCmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_Cmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_FCmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_Cmp(m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_FCmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_Cmp(m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_SpecificFCmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificFCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificFCmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+  MatchL = nullptr;
+  MatchR = nullptr;
+  EXPECT_TRUE(m_SpecificCmp(Pred, m_Value(MatchL), m_Value(MatchR))
+                  .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_FALSE(m_SpecificFCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificFCmp(FCmpInst::getInversePredicate(Pred),
+                              m_Specific(L), m_Specific(R))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(FCmpInst::getInversePredicate(Pred), m_Specific(L),
+                             m_Specific(R))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+
+  EXPECT_FALSE(m_SpecificFCmp(FCmpInst::getInversePredicate(Pred),
+                              m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
+  EXPECT_FALSE(m_SpecificCmp(FCmpInst::getInversePredicate(Pred),
+                             m_Value(MatchL), m_Value(MatchR))
+                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
 }
 
 TEST_F(PatternMatchTest, ConstExpr) {

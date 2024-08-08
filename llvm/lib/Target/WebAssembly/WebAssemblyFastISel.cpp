@@ -137,6 +137,10 @@ private:
       if (Subtarget->hasReferenceTypes())
         return VT;
       break;
+    case MVT::exnref:
+      if (Subtarget->hasReferenceTypes() && Subtarget->hasExceptionHandling())
+        return VT;
+      break;
     case MVT::f16:
       return MVT::f32;
     case MVT::v16i8:
@@ -216,7 +220,7 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     // Don't walk into other basic blocks unless the object is an alloca from
     // another block, otherwise it may not have a virtual register assigned.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(Obj)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -717,6 +721,10 @@ bool WebAssemblyFastISel::fastLowerArguments() {
       Opc = WebAssembly::ARGUMENT_externref;
       RC = &WebAssembly::EXTERNREFRegClass;
       break;
+    case MVT::exnref:
+      Opc = WebAssembly::ARGUMENT_exnref;
+      RC = &WebAssembly::EXNREFRegClass;
+      break;
     default:
       return false;
     }
@@ -821,6 +829,9 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     case MVT::externref:
       ResultReg = createResultReg(&WebAssembly::EXTERNREFRegClass);
       break;
+    case MVT::exnref:
+      ResultReg = createResultReg(&WebAssembly::EXNREFRegClass);
+      break;
     default:
       return false;
     }
@@ -875,7 +886,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
-        MF->getMMI().getContext(), Subtarget);
+        MF->getContext(), Subtarget);
     if (Subtarget->hasReferenceTypes()) {
       MIB.addSym(Table);
     } else {
@@ -947,6 +958,10 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
   case MVT::externref:
     Opc = WebAssembly::SELECT_EXTERNREF;
     RC = &WebAssembly::EXTERNREFRegClass;
+    break;
+  case MVT::exnref:
+    Opc = WebAssembly::SELECT_EXNREF;
+    RC = &WebAssembly::EXNREFRegClass;
     break;
   default:
     return false;
@@ -1294,13 +1309,13 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
 bool WebAssemblyFastISel::selectBr(const Instruction *I) {
   const auto *Br = cast<BranchInst>(I);
   if (Br->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.MBBMap[Br->getSuccessor(0)];
+    MachineBasicBlock *MSucc = FuncInfo.getMBB(Br->getSuccessor(0));
     fastEmitBranch(MSucc, Br->getDebugLoc());
     return true;
   }
 
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[Br->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[Br->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(Br->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(Br->getSuccessor(1));
 
   bool Not;
   unsigned CondReg = getRegForI1Value(Br->getCondition(), Br->getParent(), Not);
@@ -1355,6 +1370,7 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   case MVT::v2f64:
   case MVT::funcref:
   case MVT::externref:
+  case MVT::exnref:
     break;
   default:
     return false;

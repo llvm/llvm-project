@@ -391,12 +391,17 @@ void PointerReplacer::replace(Instruction *I) {
         GetElementPtrInst::Create(GEP->getSourceElementType(), V, Indices);
     IC.InsertNewInstWith(NewI, GEP->getIterator());
     NewI->takeName(GEP);
-    NewI->setIsInBounds(GEP->isInBounds());
+    NewI->setNoWrapFlags(GEP->getNoWrapFlags());
     WorkMap[GEP] = NewI;
   } else if (auto *SI = dyn_cast<SelectInst>(I)) {
-    auto *NewSI = SelectInst::Create(
-        SI->getCondition(), getReplacement(SI->getTrueValue()),
-        getReplacement(SI->getFalseValue()), SI->getName(), nullptr, SI);
+    Value *TrueValue = SI->getTrueValue();
+    Value *FalseValue = SI->getFalseValue();
+    if (Value *Replacement = getReplacement(TrueValue))
+      TrueValue = Replacement;
+    if (Value *Replacement = getReplacement(FalseValue))
+      FalseValue = Replacement;
+    auto *NewSI = SelectInst::Create(SI->getCondition(), TrueValue, FalseValue,
+                                     SI->getName(), nullptr, SI);
     IC.InsertNewInstWith(NewSI, SI->getIterator());
     NewSI->takeName(SI);
     WorkMap[SI] = NewSI;

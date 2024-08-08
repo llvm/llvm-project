@@ -21,6 +21,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -127,7 +128,7 @@ public:
 protected:
   /// Collect API information for the enum constants and associate with the
   /// parent enum.
-  void recordEnumConstants(EnumRecord *EnumRecord,
+  void recordEnumConstants(SymbolReference Container,
                            const EnumDecl::enumerator_range Constants);
 
   /// Collect API information for the Objective-C methods and associate with the
@@ -174,22 +175,25 @@ protected:
       // skip classes not inherited as public
       if (BaseSpecifier.getAccessSpecifier() != AccessSpecifier::AS_public)
         continue;
-      SymbolReference BaseClass;
-      if (BaseSpecifier.getType().getTypePtr()->isTemplateTypeParmType()) {
-        BaseClass.Name = API.copyString(BaseSpecifier.getType().getAsString());
-        if (auto *TTPTD = BaseSpecifier.getType()
-                              ->getAs<TemplateTypeParmType>()
-                              ->getDecl()) {
-          SmallString<128> USR;
-          index::generateUSRForDecl(TTPTD, USR);
-          BaseClass.USR = API.copyString(USR);
-          BaseClass.Source = API.copyString(getOwningModuleName(*TTPTD));
-        }
+      if (auto *BaseDecl = BaseSpecifier.getType()->getAsTagDecl()) {
+        Bases.emplace_back(createSymbolReferenceForDecl(*BaseDecl));
       } else {
-        BaseClass = createSymbolReferenceForDecl(
-            *BaseSpecifier.getType().getTypePtr()->getAsCXXRecordDecl());
+        SymbolReference BaseClass;
+        BaseClass.Name = API.copyString(BaseSpecifier.getType().getAsString(
+            Decl->getASTContext().getPrintingPolicy()));
+
+        if (BaseSpecifier.getType().getTypePtr()->isTemplateTypeParmType()) {
+          if (auto *TTPTD = BaseSpecifier.getType()
+                                ->getAs<TemplateTypeParmType>()
+                                ->getDecl()) {
+            SmallString<128> USR;
+            index::generateUSRForDecl(TTPTD, USR);
+            BaseClass.USR = API.copyString(USR);
+            BaseClass.Source = API.copyString(getOwningModuleName(*TTPTD));
+          }
+        }
+        Bases.emplace_back(BaseClass);
       }
-      Bases.emplace_back(BaseClass);
     }
     return Bases;
   }
@@ -248,12 +252,8 @@ protected:
     clang::index::generateUSRForDecl(Tag, TagUSR);
     if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(
             API.findRecordForUSR(TagUSR))) {
-      if (Record->IsEmbeddedInVarDeclarator) {
+      if (Record->IsEmbeddedInVarDeclarator)
         NewRecordContext->stealRecordChain(*Record);
-        auto *NewRecord = cast<APIRecord>(NewRecordContext);
-        if (NewRecord->Comment.empty())
-          NewRecord->Comment = Record->Comment;
-      }
     }
   }
 };
@@ -355,7 +355,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionDecl(
     return true;
 
   // Collect symbol information.
-  StringRef Name = Decl->getName();
+  auto Name = Decl->getNameAsString();
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);
   PresumedLoc Loc =
@@ -394,17 +394,6 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
-  SmallString<128> QualifiedNameBuffer;
-  // Collect symbol information.
-  StringRef Name = Decl->getName();
-  if (Name.empty())
-    Name = getTypedefName(Decl);
-  if (Name.empty()) {
-    llvm::raw_svector_ostream OS(QualifiedNameBuffer);
-    Decl->printQualifiedName(OS);
-    Name = QualifiedNameBuffer;
-  }
-
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);
   PresumedLoc Loc =
@@ -420,13 +409,29 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
       DeclarationFragmentsBuilder::getFragmentsForEnum(Decl);
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
-  auto *ER = API.createRecord<EnumRecord>(
-      USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
-      AvailabilityInfo::createFromDecl(Decl), Comment, Declaration, SubHeading,
-      isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+
+  // Collect symbol information.
+  SymbolReference ParentContainer;
+
+  if (Decl->hasNameForLinkage()) {
+    StringRef Name = Decl->getName();
+    if (Name.empty())
+      Name = getTypedefName(Decl);
+
+    auto *ER = API.createRecord<EnumRecord>(
+        USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
+        AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
+        SubHeading, isInSystemHeader(Decl), false);
+    ParentContainer = SymbolReference(ER);
+  } else {
+    // If this an anonymous enum then the parent scope of the constants is the
+    // top level namespace.
+    ParentContainer = {};
+  }
 
   // Now collect information about the enumerators in this enum.
-  getDerivedExtractAPIVisitor().recordEnumConstants(ER, Decl->enumerators());
+  getDerivedExtractAPIVisitor().recordEnumConstants(ParentContainer,
+                                                    Decl->enumerators());
 
   return true;
 }
@@ -664,8 +669,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXMethodDecl(
   if (FunctionTemplateDecl *TemplateDecl =
           Decl->getDescribedFunctionTemplate()) {
     API.createRecord<CXXMethodTemplateRecord>(
-        USR, Decl->getName(), createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment,
+        USR, Decl->getNameAsString(), createHierarchyInformationForDecl(*Decl),
+        Loc, AvailabilityInfo::createFromDecl(Decl), Comment,
         DeclarationFragmentsBuilder::getFragmentsForFunctionTemplate(
             TemplateDecl),
         SubHeading, DeclarationFragmentsBuilder::getFunctionSignature(Decl),
@@ -673,8 +678,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXMethodDecl(
         Template(TemplateDecl), isInSystemHeader(Decl));
   } else if (Decl->getTemplateSpecializationInfo())
     API.createRecord<CXXMethodTemplateSpecializationRecord>(
-        USR, Decl->getName(), createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment,
+        USR, Decl->getNameAsString(), createHierarchyInformationForDecl(*Decl),
+        Loc, AvailabilityInfo::createFromDecl(Decl), Comment,
         DeclarationFragmentsBuilder::
             getFragmentsForFunctionTemplateSpecialization(Decl),
         SubHeading, Signature, Access, isInSystemHeader(Decl));
@@ -686,14 +691,14 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXMethodDecl(
         SubHeading, Signature, Access, isInSystemHeader(Decl));
   else if (Decl->isStatic())
     API.createRecord<CXXStaticMethodRecord>(
-        USR, Decl->getName(), createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment,
+        USR, Decl->getNameAsString(), createHierarchyInformationForDecl(*Decl),
+        Loc, AvailabilityInfo::createFromDecl(Decl), Comment,
         DeclarationFragmentsBuilder::getFragmentsForCXXMethod(Decl), SubHeading,
         Signature, Access, isInSystemHeader(Decl));
   else
     API.createRecord<CXXInstanceMethodRecord>(
-        USR, Decl->getName(), createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment,
+        USR, Decl->getNameAsString(), createHierarchyInformationForDecl(*Decl),
+        Loc, AvailabilityInfo::createFromDecl(Decl), Comment,
         DeclarationFragmentsBuilder::getFragmentsForCXXMethod(Decl), SubHeading,
         Signature, Access, isInSystemHeader(Decl));
 
@@ -975,7 +980,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionTemplateDecl(
     return true;
 
   // Collect symbol information.
-  StringRef Name = Decl->getName();
+  auto Name = Decl->getNameAsString();
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);
   PresumedLoc Loc =
@@ -1197,7 +1202,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
 /// parent enum.
 template <typename Derived>
 void ExtractAPIVisitorBase<Derived>::recordEnumConstants(
-    EnumRecord *EnumRecord, const EnumDecl::enumerator_range Constants) {
+    SymbolReference Container, const EnumDecl::enumerator_range Constants) {
   for (const auto *Constant : Constants) {
     // Collect symbol information.
     StringRef Name = Constant->getName();
@@ -1218,9 +1223,8 @@ void ExtractAPIVisitorBase<Derived>::recordEnumConstants(
         DeclarationFragmentsBuilder::getSubHeading(Constant);
 
     API.createRecord<EnumConstantRecord>(
-        USR, Name, createHierarchyInformationForDecl(*Constant), Loc,
-        AvailabilityInfo::createFromDecl(Constant), Comment, Declaration,
-        SubHeading, isInSystemHeader(Constant));
+        USR, Name, Container, Loc, AvailabilityInfo::createFromDecl(Constant),
+        Comment, Declaration, SubHeading, isInSystemHeader(Constant));
   }
 }
 
@@ -1469,7 +1473,17 @@ public:
 
   bool shouldDeclBeIncluded(const Decl *D) const { return true; }
   const RawComment *fetchRawCommentForDecl(const Decl *D) const {
-    return this->Context.getRawCommentForDeclNoCache(D);
+    if (const auto *Comment = this->Context.getRawCommentForDeclNoCache(D))
+      return Comment;
+
+    if (const auto *Declarator = dyn_cast<DeclaratorDecl>(D)) {
+      const auto *TagTypeDecl = Declarator->getType()->getAsTagDecl();
+      if (TagTypeDecl && TagTypeDecl->isEmbeddedInDeclarator() &&
+          TagTypeDecl->isCompleteDefinition())
+        return this->Context.getRawCommentForDeclNoCache(TagTypeDecl);
+    }
+
+    return nullptr;
   }
 };
 

@@ -9,11 +9,15 @@ declare <vscale x 8 x i7> @llvm.vp.smin.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x 
 define <vscale x 8 x i7> @vmin_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: vmin_vx_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsra.vi v8, v8, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsra.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vsll.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    vsra.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    vmin.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
   %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> poison, <vscale x 8 x i32> zeroinitializer
@@ -1069,20 +1073,17 @@ define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i3
 define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m) {
 ; RV32-LABEL: vmin_vx_nxv32i32_evl_nx16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmin.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmin_vx_nxv32i32_evl_nx16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    srli a2, a1, 2
-; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v24, v0, a2
-; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    srli a1, a1, 2
+; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v24, v0, a1
+; RV64-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmin.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma

@@ -775,13 +775,11 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
 }
 
 bool R600TargetLowering::isZero(SDValue Op) const {
-  if(ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op)) {
+  if (ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op))
     return Cst->isZero();
-  } else if(ConstantFPSDNode *CstFP = dyn_cast<ConstantFPSDNode>(Op)){
+  if (ConstantFPSDNode *CstFP = dyn_cast<ConstantFPSDNode>(Op))
     return CstFP->isZero();
-  } else {
-    return false;
-  }
+  return false;
 }
 
 bool R600TargetLowering::isHWTrueValue(SDValue Op) const {
@@ -1187,7 +1185,8 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getMemIntrinsicNode(AMDGPUISD::STORE_MSKOR, DL,
                                      Op->getVTList(), Args, MemVT,
                                      StoreNode->getMemOperand());
-    } else if (Ptr->getOpcode() != AMDGPUISD::DWORDADDR && VT.bitsGE(MVT::i32)) {
+    }
+    if (Ptr->getOpcode() != AMDGPUISD::DWORDADDR && VT.bitsGE(MVT::i32)) {
       // Convert pointer from byte address to dword address.
       Ptr = DAG.getNode(AMDGPUISD::DWORDADDR, DL, PtrVT, DWordAddr);
 
@@ -1348,16 +1347,15 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     if (isa<Constant>(LoadNode->getMemOperand()->getValue()) ||
         isa<ConstantSDNode>(Ptr)) {
       return constBufferLoad(LoadNode, LoadNode->getAddressSpace(), DAG);
-    } else {
-      //TODO: Does this even work?
-      // non-constant ptr can't be folded, keeps it as a v4f32 load
-      Result = DAG.getNode(AMDGPUISD::CONST_ADDRESS, DL, MVT::v4i32,
-          DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
-                      DAG.getConstant(4, DL, MVT::i32)),
-                      DAG.getConstant(LoadNode->getAddressSpace() -
-                                      AMDGPUAS::CONSTANT_BUFFER_0, DL, MVT::i32)
-          );
     }
+    // TODO: Does this even work?
+    //  non-constant ptr can't be folded, keeps it as a v4f32 load
+    Result = DAG.getNode(AMDGPUISD::CONST_ADDRESS, DL, MVT::v4i32,
+                         DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
+                                     DAG.getConstant(4, DL, MVT::i32)),
+                         DAG.getConstant(LoadNode->getAddressSpace() -
+                                             AMDGPUAS::CONSTANT_BUFFER_0,
+                                         DL, MVT::i32));
 
     if (!VT.isVector()) {
       Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,

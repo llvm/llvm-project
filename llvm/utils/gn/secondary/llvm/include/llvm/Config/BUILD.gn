@@ -13,6 +13,7 @@ import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
@@ -315,9 +316,9 @@ write_cmake_config("llvm-config") {
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
-    "LLVM_ENABLE_ZSTD=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
+    "LLVM_HAS_LOGF128=",
     "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
@@ -384,6 +385,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
     values += [ "LLVM_ENABLE_ZLIB=" ]
+  }
+
+  if (llvm_enable_zstd) {
+    values += [ "LLVM_ENABLE_ZSTD=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ZSTD=" ]
   }
 
   if (llvm_enable_libcurl) {

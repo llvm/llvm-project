@@ -124,6 +124,31 @@ _Static_assert(__atomic_always_lock_free(4, &i64), "");
 _Static_assert(!__atomic_always_lock_free(8, &i32), "");
 _Static_assert(__atomic_always_lock_free(8, &i64), "");
 
+// Validate use with fake pointers constants. This mechanism is used to allow
+// validating atomicity of a given size and alignment.
+_Static_assert(__atomic_is_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_is_lock_free(1, (void*)-1), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)-2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)-4), "");
+
+_Static_assert(__atomic_always_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_always_lock_free(1, (void*)-1), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)2), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)-2), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)-4), "");
+
+// Ensure that "weird" constants don't cause trouble.
+_Static_assert(__atomic_always_lock_free(1, "string"), "");
+_Static_assert(!__atomic_always_lock_free(2, "string"), "");
+_Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
+void dummyfn();
+_Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
+
+
+
 #define _AS1 __attribute__((address_space(1)))
 #define _AS2 __attribute__((address_space(2)))
 
@@ -637,6 +662,68 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_seq_cst);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, -1); // expected-warning {{memory order argument to atomic operation is invalid}}
+}
+
+struct Z {
+  char z[];
+};
+
+void zeroSizeArgError(struct Z *a, struct Z *b, struct Z *c) {
+  __atomic_exchange(b, b, c, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_relaxed, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_acq_rel, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_acquire, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_consume, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_release, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+
+}
+
+struct IncompleteTy IncA, IncB, IncC; // expected-error 3{{tentative definition has type 'struct IncompleteTy' that is never completed}} \
+                                      // expected-note 27{{forward declaration of 'struct IncompleteTy'}}
+void incompleteTypeArgError() {
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_relaxed, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_acq_rel, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_acquire, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_consume, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_release, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+
 }
 
 void nullPointerWarning(void) {

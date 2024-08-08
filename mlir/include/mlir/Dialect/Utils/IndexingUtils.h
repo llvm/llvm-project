@@ -243,6 +243,14 @@ SmallVector<int64_t>
 computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
                          ArrayRef<int64_t> desiredPositions);
 
+/// Returns a permutation vector that drop the input dims in
+/// dropPositions from inputPerm.
+///
+/// For example, inputPerm = {2, 4, 0, 1, 3} and dropPositions= {1, 2} would
+/// result in a {2, 0, 1} permutation vector.
+SmallVector<int64_t> dropDims(ArrayRef<int64_t> inputPerm,
+                              ArrayRef<int64_t> dropPositions);
+
 /// Helper to return a subset of `arrayAttr` as a vector of int64_t.
 // TODO: Port everything relevant to DenseArrayAttr and drop this util.
 SmallVector<int64_t> getI64SubArray(ArrayAttr arrayAttr, unsigned dropFront = 0,
@@ -286,6 +294,8 @@ public:
     else
       return getDynamicTileOffsets(linearIndex);
   }
+
+  size_t getRank() const { return tileShape.size(); }
 
 private:
   /// The sub-shape that divides the larger outer shape (which is provided to
@@ -387,6 +397,9 @@ public:
 
   /// Returns the total number of tiles that fit in the larger shape.
   size_t size() const { return params.getMaxLinearIndex(); }
+
+  /// Returns rank of the iterator's shape.
+  size_t getRank() const { return params.getRank(); }
 
 private:
   const ParamsTy params;

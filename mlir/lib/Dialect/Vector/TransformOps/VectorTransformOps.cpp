@@ -59,6 +59,11 @@ void transform::ApplyFoldArithExtensionPatternsOp::populatePatterns(
   vector::populateFoldArithExtensionPatterns(patterns);
 }
 
+void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateElementwiseToVectorOpsPatterns(patterns);
+}
+
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
@@ -77,6 +82,11 @@ void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
 void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorBitCastLoweringPatterns(patterns);
 }
 
 void transform::ApplyLowerBroadcastPatternsOp::populatePatterns(
@@ -202,6 +212,8 @@ class VectorTransformDialectExtension
     : public transform::TransformDialectExtension<
           VectorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorTransformDialectExtension)
+
   VectorTransformDialectExtension() {
     declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();

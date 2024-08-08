@@ -13,13 +13,17 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <system_error>
 #include <unistd.h>
 #include <unordered_map>
 
+#include "ErrorReporting.h"
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/Utils.h"
@@ -42,6 +46,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
 #if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
@@ -57,12 +62,12 @@
 #endif
 
 #if defined(__has_include)
-#if __has_include("hsa/hsa.h")
-#include "hsa/hsa.h"
-#include "hsa/hsa_ext_amd.h"
-#elif __has_include("hsa.h")
+#if __has_include("hsa.h")
 #include "hsa.h"
 #include "hsa_ext_amd.h"
+#elif __has_include("hsa/hsa.h")
+#include "hsa/hsa.h"
+#include "hsa/hsa_ext_amd.h"
 #endif
 #else
 #include "hsa/hsa.h"
@@ -307,6 +312,15 @@ struct AMDGPUMemoryPoolTy {
     return Plugin::check(Status, "Error in hsa_amd_memory_pool_free: %s");
   }
 
+  /// Returns if the \p Agent can access the memory pool.
+  bool canAccess(hsa_agent_t Agent) {
+    hsa_amd_memory_pool_access_t Access;
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &Access))
+      return false;
+    return Access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
+  }
+
   /// Allow the device to access a specific allocation.
   Error enableAccess(void *Ptr, int64_t Size,
                      const llvm::SmallVector<hsa_agent_t> &Agents) const {
@@ -549,7 +563,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+                   KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Print more elaborate kernel launch info for AMDGPU
@@ -674,12 +689,12 @@ struct AMDGPUQueueTy {
   AMDGPUQueueTy() : Queue(nullptr), Mutex(), NumUsers(0) {}
 
   /// Lazily initialize a new queue belonging to a specific agent.
-  Error init(hsa_agent_t Agent, int32_t QueueSize) {
+  Error init(GenericDeviceTy &Device, hsa_agent_t Agent, int32_t QueueSize) {
     if (Queue)
       return Plugin::success();
     hsa_status_t Status =
         hsa_queue_create(Agent, QueueSize, HSA_QUEUE_TYPE_MULTI, callbackError,
-                         nullptr, UINT32_MAX, UINT32_MAX, &Queue);
+                         &Device, UINT32_MAX, UINT32_MAX, &Queue);
     return Plugin::check(Status, "Error in hsa_queue_create: %s");
   }
 
@@ -864,10 +879,8 @@ private:
   }
 
   /// Callack that will be called when an error is detected on the HSA queue.
-  static void callbackError(hsa_status_t Status, hsa_queue_t *Source, void *) {
-    auto Err = Plugin::check(Status, "Received error in queue %p: %s", Source);
-    FATAL_MESSAGE(1, "%s", toString(std::move(Err)).data());
-  }
+  static void callbackError(hsa_status_t Status, hsa_queue_t *Source,
+                            void *Data);
 
   /// The HSA queue.
   hsa_queue_t *Queue;
@@ -1473,6 +1486,8 @@ public:
     return true;
   }
 
+  const AMDGPUQueueTy *getQueue() const { return Queue; }
+
   /// Record the state of the stream on an event.
   Error recordEvent(AMDGPUEventTy &Event) const;
 
@@ -1583,7 +1598,7 @@ struct AMDGPUStreamManagerTy final
   using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
 
   AMDGPUStreamManagerTy(GenericDeviceTy &Device, hsa_agent_t HSAAgent)
-      : GenericDeviceResourceManagerTy(Device),
+      : GenericDeviceResourceManagerTy(Device), Device(Device),
         OMPX_QueueTracking("LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING", true),
         NextQueue(0), Agent(HSAAgent) {}
 
@@ -1592,7 +1607,7 @@ struct AMDGPUStreamManagerTy final
     QueueSize = HSAQueueSize;
     MaxNumQueues = NumHSAQueues;
     // Initialize one queue eagerly
-    if (auto Err = Queues.front().init(Agent, QueueSize))
+    if (auto Err = Queues.front().init(Device, Agent, QueueSize))
       return Err;
 
     return GenericDeviceResourceManagerTy::init(InitialSize);
@@ -1649,13 +1664,16 @@ private:
     }
 
     // Make sure the queue is initialized, then add user & assign.
-    if (auto Err = Queues[Index].init(Agent, QueueSize))
+    if (auto Err = Queues[Index].init(Device, Agent, QueueSize))
       return Err;
     Queues[Index].addUser();
     Stream->Queue = &Queues[Index];
 
     return Plugin::success();
   }
+
+  /// The device associated with this stream.
+  GenericDeviceTy &Device;
 
   /// Envar for controlling the tracking of busy HSA queues.
   BoolEnvar OMPX_QueueTracking;
@@ -2793,9 +2811,10 @@ private:
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
     KernelArgsTy KernelArgs = {};
-    if (auto Err = AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
-                                           /*NumBlocks=*/1ul, KernelArgs,
-                                           /*Args=*/nullptr, AsyncInfoWrapper))
+    if (auto Err =
+            AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
+                                    /*NumBlocks=*/1ul, KernelArgs,
+                                    KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
     Error Err = Plugin::success();
@@ -3062,7 +3081,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     Initialized = true;
 
     // Register event handler to detect memory errors on the devices.
-    Status = hsa_amd_register_system_event_handler(eventHandler, nullptr);
+    Status = hsa_amd_register_system_event_handler(eventHandler, this);
     if (auto Err = Plugin::check(
             Status, "Error in hsa_amd_register_system_event_handler: %s"))
       return std::move(Err);
@@ -3154,25 +3173,24 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
   /// Check whether the image is compatible with an AMDGPU device.
-  Expected<bool> isELFCompatible(StringRef Image) const override {
+  Expected<bool> isELFCompatible(uint32_t DeviceId,
+                                 StringRef Image) const override {
     // Get the associated architecture and flags from the ELF.
     auto ElfOrErr = ELF64LEObjectFile::create(
         MemoryBufferRef(Image, /*Identifier=*/""), /*InitContent=*/false);
     if (!ElfOrErr)
       return ElfOrErr.takeError();
     std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
+    if (!Processor)
+      return false;
 
-    for (hsa_agent_t Agent : KernelAgents) {
-      auto TargeTripleAndFeaturesOrError =
-          utils::getTargetTripleAndFeatures(Agent);
-      if (!TargeTripleAndFeaturesOrError)
-        return TargeTripleAndFeaturesOrError.takeError();
-      if (!utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
+    auto TargeTripleAndFeaturesOrError =
+        utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    return utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
                                            ElfOrErr->getPlatformFlags(),
-                                           *TargeTripleAndFeaturesOrError))
-        return false;
-    }
-    return true;
+                                           *TargeTripleAndFeaturesOrError);
   }
 
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -3198,7 +3216,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
 private:
   /// Event handler that will be called by ROCr if an event is detected.
-  static hsa_status_t eventHandler(const hsa_amd_event_t *Event, void *) {
+  static hsa_status_t eventHandler(const hsa_amd_event_t *Event,
+                                   void *PluginPtr) {
     if (Event->event_type != HSA_AMD_GPU_MEMORY_FAULT_EVENT)
       return HSA_STATUS_SUCCESS;
 
@@ -3229,6 +3248,26 @@ private:
     uint32_t Node = -1;
     hsa_agent_get_info(Event->memory_fault.agent, HSA_AGENT_INFO_NODE, &Node);
 
+    AMDGPUPluginTy &Plugin = *reinterpret_cast<AMDGPUPluginTy *>(PluginPtr);
+    for (uint32_t I = 0, E = Plugin.getNumDevices();
+         Node != uint32_t(-1) && I < E; ++I) {
+      AMDGPUDeviceTy &AMDGPUDevice =
+          reinterpret_cast<AMDGPUDeviceTy &>(Plugin.getDevice(I));
+      auto KernelTraceInfoRecord =
+          AMDGPUDevice.KernelLaunchTraces.getExclusiveAccessor();
+
+      uint32_t DeviceNode = -1;
+      if (auto Err =
+              AMDGPUDevice.getDeviceAttr(HSA_AGENT_INFO_NODE, DeviceNode)) {
+        consumeError(std::move(Err));
+        continue;
+      }
+      if (DeviceNode != Node)
+        continue;
+
+      ErrorReporter::reportKernelTraces(AMDGPUDevice, *KernelTraceInfoRecord);
+    }
+
     // Abort the execution since we do not recover from this error.
     FATAL_MESSAGE(1,
                   "Memory access fault by GPU %" PRIu32 " (agent 0x%" PRIx64
@@ -3257,18 +3296,12 @@ private:
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads, uint64_t NumBlocks,
-                                 KernelArgsTy &KernelArgs, void *Args,
+                                 KernelArgsTy &KernelArgs,
+                                 KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-  const uint32_t KernelArgsSize = KernelArgs.NumArgs * sizeof(void *);
-
-  if (ArgsSize < KernelArgsSize)
+  if (ArgsSize != LaunchParams.Size &&
+      ArgsSize != LaunchParams.Size + getImplicitArgsSize())
     return Plugin::error("Mismatch of kernel arguments size");
-
-  // The args size reported by HSA may or may not contain the implicit args.
-  // For now, assume that HSA does not consider the implicit arguments when
-  // reporting the arguments of a kernel. In the worst case, we can waste
-  // 56 bytes per allocation.
-  uint32_t AllArgsSize = KernelArgsSize + ImplicitArgsSize;
 
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
@@ -3276,7 +3309,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   AMDGPUMemoryManagerTy &ArgsMemoryManager = HostDevice.getArgsMemoryManager();
 
   void *AllArgs = nullptr;
-  if (auto Err = ArgsMemoryManager.allocate(AllArgsSize, &AllArgs))
+  if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
     return Err;
 
   // Account for user requested dynamic shared memory.
@@ -3290,20 +3323,21 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  // Initialize implicit arguments.
-  utils::AMDGPUImplicitArgsTy *ImplArgs =
-      reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
-          advanceVoidPtr(AllArgs, KernelArgsSize));
+  utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
+  if (ArgsSize == LaunchParams.Size + getImplicitArgsSize()) {
+    // Initialize implicit arguments.
+    ImplArgs = reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
+        advanceVoidPtr(AllArgs, LaunchParams.Size));
 
-  // Initialize the implicit arguments to zero.
-  std::memset(ImplArgs, 0, ImplicitArgsSize);
+    // Initialize the implicit arguments to zero.
+    std::memset(ImplArgs, 0, getImplicitArgsSize());
+  }
 
   // Copy the explicit arguments.
   // TODO: We should expose the args memory manager alloc to the common part as
   // 	   alternative to copying them twice.
-  if (KernelArgs.NumArgs)
-    std::memcpy(AllArgs, *static_cast<void **>(Args),
-                sizeof(void *) * KernelArgs.NumArgs);
+  if (LaunchParams.Size)
+    std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
 
@@ -3316,7 +3350,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     Stream->setRPCServer(GenericDevice.getRPCServer());
 
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
-  if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
+  if (ImplArgs &&
+      getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
     ImplArgs->BlockCountX = NumBlocks;
     ImplArgs->BlockCountY = 1;
     ImplArgs->BlockCountZ = 1;
@@ -3407,10 +3442,14 @@ void *AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
   }
   assert(Ptr && "Invalid pointer");
 
-  auto &KernelAgents = Plugin.getKernelAgents();
+  // Get a list of agents that can access this memory pool.
+  llvm::SmallVector<hsa_agent_t> Agents;
+  llvm::copy_if(
+      Plugin.getKernelAgents(), std::back_inserter(Agents),
+      [&](hsa_agent_t Agent) { return MemoryPool->canAccess(Agent); });
 
-  // Allow all kernel agents to access the allocation.
-  if (auto Err = MemoryPool->enableAccess(Ptr, Size, KernelAgents)) {
+  // Allow all valid kernel agents to access the allocation.
+  if (auto Err = MemoryPool->enableAccess(Ptr, Size, Agents)) {
     REPORT("%s\n", toString(std::move(Err)).data());
     return nullptr;
   }
@@ -3450,19 +3489,45 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   }
 
   if (Alloc) {
-    auto &KernelAgents =
-        static_cast<AMDGPUPluginTy &>(Plugin).getKernelAgents();
-    // Inherently necessary for host or shared allocations
-    // Also enabled for device memory to allow device to device memcpy
+    // Get a list of agents that can access this memory pool. Inherently
+    // necessary for host or shared allocations Also enabled for device memory
+    // to allow device to device memcpy
+    llvm::SmallVector<hsa_agent_t> Agents;
+    llvm::copy_if(static_cast<AMDGPUPluginTy &>(Plugin).getKernelAgents(),
+                  std::back_inserter(Agents), [&](hsa_agent_t Agent) {
+                    return MemoryPool->canAccess(Agent);
+                  });
 
-    // Enable all kernel agents to access the buffer.
-    if (auto Err = MemoryPool->enableAccess(Alloc, Size, KernelAgents)) {
+    // Enable all valid kernel agents to access the buffer.
+    if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents)) {
       REPORT("%s\n", toString(std::move(Err)).data());
       return nullptr;
     }
   }
 
   return Alloc;
+}
+
+void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
+                                  void *Data) {
+  auto &AMDGPUDevice = *reinterpret_cast<AMDGPUDeviceTy *>(Data);
+
+  if (Status == HSA_STATUS_ERROR_EXCEPTION) {
+    auto KernelTraceInfoRecord =
+        AMDGPUDevice.KernelLaunchTraces.getExclusiveAccessor();
+    std::function<bool(__tgt_async_info &)> AsyncInfoWrapperMatcher =
+        [=](__tgt_async_info &AsyncInfo) {
+          auto *Stream = reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
+          if (!Stream || !Stream->getQueue())
+            return false;
+          return Stream->getQueue()->Queue == Source;
+        };
+    ErrorReporter::reportTrapInKernel(AMDGPUDevice, *KernelTraceInfoRecord,
+                                      AsyncInfoWrapperMatcher);
+  }
+
+  auto Err = Plugin::check(Status, "Received error in queue %p: %s", Source);
+  FATAL_MESSAGE(1, "%s", toString(std::move(Err)).data());
 }
 
 } // namespace plugin

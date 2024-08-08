@@ -30,6 +30,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -57,6 +58,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -108,6 +110,7 @@ cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
     "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
     cl::desc("Load bitcode directly into the new debug info format (regardless "
              "of input format)"));
+extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 extern bool WriteNewDbgInfoFormatToBitcode;
 extern cl::opt<bool> WriteNewDbgInfoFormat;
@@ -517,7 +520,8 @@ public:
   static constexpr uint8_t NoCFIOpcode = 252;
   static constexpr uint8_t DSOLocalEquivalentOpcode = 251;
   static constexpr uint8_t BlockAddressOpcode = 250;
-  static constexpr uint8_t FirstSpecialOpcode = BlockAddressOpcode;
+  static constexpr uint8_t ConstantPtrAuthOpcode = 249;
+  static constexpr uint8_t FirstSpecialOpcode = ConstantPtrAuthOpcode;
 
   // Separate struct to make passing different number of parameters to
   // BitcodeConstant::create() more convenient.
@@ -835,10 +839,10 @@ private:
   }
 
   Expected<ConstantRange> readConstantRange(ArrayRef<uint64_t> Record,
-                                            unsigned &OpNum) {
-    if (Record.size() - OpNum < 3)
+                                            unsigned &OpNum,
+                                            unsigned BitWidth) {
+    if (Record.size() - OpNum < 2)
       return error("Too few records for range");
-    unsigned BitWidth = Record[OpNum++];
     if (BitWidth > 64) {
       unsigned LowerActiveWords = Record[OpNum];
       unsigned UpperActiveWords = Record[OpNum++] >> 32;
@@ -856,6 +860,14 @@ private:
       int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
       return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
     }
+  }
+
+  Expected<ConstantRange>
+  readBitWidthAndConstantRange(ArrayRef<uint64_t> Record, unsigned &OpNum) {
+    if (Record.size() - OpNum < 1)
+      return error("Too few records for range");
+    unsigned BitWidth = Record[OpNum++];
+    return readConstantRange(Record, OpNum, BitWidth);
   }
 
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
@@ -1459,6 +1471,17 @@ unsigned BitcodeReader::getVirtualTypeID(Type *Ty,
   return TypeID;
 }
 
+static GEPNoWrapFlags toGEPNoWrapFlags(uint64_t Flags) {
+  GEPNoWrapFlags NW;
+  if (Flags & (1 << bitc::GEP_INBOUNDS))
+    NW |= GEPNoWrapFlags::inBounds();
+  if (Flags & (1 << bitc::GEP_NUSW))
+    NW |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  if (Flags & (1 << bitc::GEP_NUW))
+    NW |= GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 static bool isConstExprSupported(const BitcodeConstant *BC) {
   uint8_t Opcode = BC->Opcode;
 
@@ -1483,6 +1506,8 @@ static bool isConstExprSupported(const BitcodeConstant *BC) {
   switch (Opcode) {
   case Instruction::FNeg:
   case Instruction::Select:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
     return false;
   default:
     return true;
@@ -1551,6 +1576,18 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         C = ConstantExpr::get(BC->Opcode, ConstOps[0], ConstOps[1], BC->Flags);
       } else {
         switch (BC->Opcode) {
+        case BitcodeConstant::ConstantPtrAuthOpcode: {
+          auto *Key = dyn_cast<ConstantInt>(ConstOps[1]);
+          if (!Key)
+            return error("ptrauth key operand must be ConstantInt");
+
+          auto *Disc = dyn_cast<ConstantInt>(ConstOps[2]);
+          if (!Disc)
+            return error("ptrauth disc operand must be ConstantInt");
+
+          C = ConstantPtrAuth::get(ConstOps[0], Key, Disc, ConstOps[3]);
+          break;
+        }
         case BitcodeConstant::NoCFIOpcode: {
           auto *GV = dyn_cast<GlobalValue>(ConstOps[0]);
           if (!GV)
@@ -1609,14 +1646,10 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         case BitcodeConstant::ConstantVectorOpcode:
           C = ConstantVector::get(ConstOps);
           break;
-        case Instruction::ICmp:
-        case Instruction::FCmp:
-          C = ConstantExpr::getCompare(BC->Flags, ConstOps[0], ConstOps[1]);
-          break;
         case Instruction::GetElementPtr:
-          C = ConstantExpr::getGetElementPtr(BC->SrcElemTy, ConstOps[0],
-                                             ArrayRef(ConstOps).drop_front(),
-                                             BC->Flags, BC->getInRange());
+          C = ConstantExpr::getGetElementPtr(
+              BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
+              toGEPNoWrapFlags(BC->Flags), BC->getInRange());
           break;
         case Instruction::ExtractElement:
           C = ConstantExpr::getExtractElement(ConstOps[0], ConstOps[1]);
@@ -1700,8 +1733,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         I = GetElementPtrInst::Create(BC->SrcElemTy, Ops[0],
                                       ArrayRef(Ops).drop_front(), "constexpr",
                                       InsertBB);
-        if (BC->Flags)
-          cast<GetElementPtrInst>(I)->setIsInBounds();
+        cast<GetElementPtrInst>(I)->setNoWrapFlags(toGEPNoWrapFlags(BC->Flags));
         break;
       case Instruction::Select:
         I = SelectInst::Create(Ops[0], Ops[1], Ops[2], "constexpr", InsertBB);
@@ -1956,8 +1988,8 @@ Error BitcodeReader::parseAttributeBlock() {
       Attrs.clear();
       break;
     case bitc::PARAMATTR_CODE_ENTRY: // ENTRY: [attrgrp0, attrgrp1, ...]
-      for (unsigned i = 0, e = Record.size(); i != e; ++i)
-        Attrs.push_back(MAttributeGroups[Record[i]]);
+      for (uint64_t Val : Record)
+        Attrs.push_back(MAttributeGroups[Val]);
 
       MAttributes.push_back(AttributeList::get(Context, Attrs));
       Attrs.clear();
@@ -2107,6 +2139,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeThread;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
     return Attribute::SanitizeMemory;
+  case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
+    return Attribute::SanitizeNumericalStability;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME:
+    return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -2149,6 +2185,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DeadOnUnwind;
   case bitc::ATTR_KIND_RANGE:
     return Attribute::Range;
+  case bitc::ATTR_KIND_INITIALIZES:
+    return Attribute::Initializes;
   }
 }
 
@@ -2327,12 +2365,39 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (!Attribute::isConstantRangeAttrKind(Kind))
             return error("Not a ConstantRange attribute");
 
-          Expected<ConstantRange> MaybeCR = readConstantRange(Record, i);
+          Expected<ConstantRange> MaybeCR =
+              readBitWidthAndConstantRange(Record, i);
           if (!MaybeCR)
             return MaybeCR.takeError();
           i--;
 
           B.addConstantRangeAttr(Kind, MaybeCR.get());
+        } else if (Record[i] == 8) {
+          Attribute::AttrKind Kind;
+
+          i++;
+          if (Error Err = parseAttrKind(Record[i++], &Kind))
+            return Err;
+          if (!Attribute::isConstantRangeListAttrKind(Kind))
+            return error("Not a constant range list attribute");
+
+          SmallVector<ConstantRange, 2> Val;
+          if (i + 2 > e)
+            return error("Too few records for constant range list");
+          unsigned RangeSize = Record[i++];
+          unsigned BitWidth = Record[i++];
+          for (unsigned Idx = 0; Idx < RangeSize; ++Idx) {
+            Expected<ConstantRange> MaybeCR =
+                readConstantRange(Record, i, BitWidth);
+            if (!MaybeCR)
+              return MaybeCR.takeError();
+            Val.push_back(MaybeCR.get());
+          }
+          i--;
+
+          if (!ConstantRangeList::isOrderedRanges(Val))
+            return error("Invalid (unordered or overlapping) range list");
+          B.addConstantRangeListAttr(Kind, Val);
         } else {
           return error("Invalid attribute group entry");
         }
@@ -2433,7 +2498,9 @@ Error BitcodeReader::parseTypeTableBody() {
       ResultTy = Type::getMetadataTy(Context);
       break;
     case bitc::TYPE_CODE_X86_MMX:   // X86_MMX
-      ResultTy = Type::getX86_MMXTy(Context);
+      // Deprecated: decodes as <1 x i64>
+      ResultTy =
+          llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
       break;
     case bitc::TYPE_CODE_X86_AMX:   // X86_AMX
       ResultTy = Type::getX86_AMXTy(Context);
@@ -3165,7 +3232,7 @@ Error BitcodeReader::parseConstants() {
         V = ConstantFP::get(
             CurTy, APFloat(APFloat::PPCDoubleDouble(), APInt(128, Record)));
       else
-        V = UndefValue::get(CurTy);
+        V = PoisonValue::get(CurTy);
       break;
     }
 
@@ -3188,7 +3255,7 @@ Error BitcodeReader::parseConstants() {
         V = BitcodeConstant::create(
             Alloc, CurTy, BitcodeConstant::ConstantVectorOpcode, Elts);
       } else {
-        V = UndefValue::get(CurTy);
+        V = PoisonValue::get(CurTy);
       }
       break;
     }
@@ -3269,7 +3336,7 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid unary op constexpr record");
       int Opc = getDecodedUnaryOpcode(Record[0], CurTy);
       if (Opc < 0) {
-        V = UndefValue::get(CurTy);  // Unknown unop.
+        V = PoisonValue::get(CurTy);  // Unknown unop.
       } else {
         V = BitcodeConstant::create(Alloc, CurTy, Opc, (unsigned)Record[1]);
       }
@@ -3280,7 +3347,7 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid binary op constexpr record");
       int Opc = getDecodedBinaryOpcode(Record[0], CurTy);
       if (Opc < 0) {
-        V = UndefValue::get(CurTy);  // Unknown binop.
+        V = PoisonValue::get(CurTy);  // Unknown binop.
       } else {
         uint8_t Flags = 0;
         if (Record.size() >= 4) {
@@ -3310,7 +3377,7 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid cast constexpr record");
       int Opc = getDecodedCastOpcode(Record[0]);
       if (Opc < 0) {
-        V = UndefValue::get(CurTy);  // Unknown cast.
+        V = PoisonValue::get(CurTy);  // Unknown cast.
       } else {
         unsigned OpTyID = Record[1];
         Type *OpTy = getTypeByID(OpTyID);
@@ -3321,9 +3388,10 @@ Error BitcodeReader::parseConstants() {
       break;
     }
     case bitc::CST_CODE_CE_INBOUNDS_GEP: // [ty, n x operands]
-    case bitc::CST_CODE_CE_GEP: // [ty, n x operands]
+    case bitc::CST_CODE_CE_GEP_OLD:      // [ty, n x operands]
     case bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD: // [ty, flags, n x
                                                        // operands]
+    case bitc::CST_CODE_CE_GEP:                // [ty, flags, n x operands]
     case bitc::CST_CODE_CE_GEP_WITH_INRANGE: { // [ty, flags, start, end, n x
                                                // operands]
       if (Record.size() < 2)
@@ -3331,27 +3399,30 @@ Error BitcodeReader::parseConstants() {
       unsigned OpNum = 0;
       Type *PointeeType = nullptr;
       if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD ||
-          BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE || Record.size() % 2)
+          BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE ||
+          BitCode == bitc::CST_CODE_CE_GEP || Record.size() % 2)
         PointeeType = getTypeByID(Record[OpNum++]);
 
-      bool InBounds = false;
+      uint64_t Flags = 0;
       std::optional<ConstantRange> InRange;
       if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD) {
         uint64_t Op = Record[OpNum++];
-        InBounds = Op & 1;
+        Flags = Op & 1; // inbounds
         unsigned InRangeIndex = Op >> 1;
         // "Upgrade" inrange by dropping it. The feature is too niche to
         // bother.
         (void)InRangeIndex;
       } else if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE) {
-        uint64_t Op = Record[OpNum++];
-        InBounds = Op & 1;
-        Expected<ConstantRange> MaybeInRange = readConstantRange(Record, OpNum);
+        Flags = Record[OpNum++];
+        Expected<ConstantRange> MaybeInRange =
+            readBitWidthAndConstantRange(Record, OpNum);
         if (!MaybeInRange)
           return MaybeInRange.takeError();
         InRange = MaybeInRange.get();
+      } else if (BitCode == bitc::CST_CODE_CE_GEP) {
+        Flags = Record[OpNum++];
       } else if (BitCode == bitc::CST_CODE_CE_INBOUNDS_GEP)
-        InBounds = true;
+        Flags = (1 << bitc::GEP_INBOUNDS);
 
       SmallVector<unsigned, 16> Elts;
       unsigned BaseTypeID = Record[OpNum];
@@ -3384,7 +3455,8 @@ Error BitcodeReader::parseConstants() {
 
       V = BitcodeConstant::create(
           Alloc, CurTy,
-          {Instruction::GetElementPtr, InBounds, PointeeType, InRange}, Elts);
+          {Instruction::GetElementPtr, uint8_t(Flags), PointeeType, InRange},
+          Elts);
       break;
     }
     case bitc::CST_CODE_CE_SELECT: {  // CE_SELECT: [opval#, opval#, opval#]
@@ -3628,6 +3700,16 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid no_cfi record");
       V = BitcodeConstant::create(Alloc, CurTy, BitcodeConstant::NoCFIOpcode,
                                   Record[1]);
+      break;
+    }
+    case bitc::CST_CODE_PTRAUTH: {
+      if (Record.size() < 4)
+        return error("Invalid ptrauth record");
+      // Ptr, Key, Disc, AddrDisc
+      V = BitcodeConstant::create(Alloc, CurTy,
+                                  BitcodeConstant::ConstantPtrAuthOpcode,
+                                  {(unsigned)Record[0], (unsigned)Record[1],
+                                   (unsigned)Record[2], (unsigned)Record[3]});
       break;
     }
     }
@@ -4303,7 +4385,6 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
       return error("Malformed partition, too large.");
     NewGA->setPartition(
         StringRef(Strtab.data() + Record[OpNum], Record[OpNum + 1]));
-    OpNum += 2;
   }
 
   ValueList.push_back(NewGA, getVirtualTypeID(NewGA->getType(), TypeID));
@@ -4320,7 +4401,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
     TheModule->IsNewDbgInfoFormat =
         UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
+        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
   }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
@@ -5062,14 +5143,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       unsigned TyID;
       Type *Ty;
-      bool InBounds;
+      GEPNoWrapFlags NW;
 
       if (BitCode == bitc::FUNC_CODE_INST_GEP) {
-        InBounds = Record[OpNum++];
+        NW = toGEPNoWrapFlags(Record[OpNum++]);
         TyID = Record[OpNum++];
         Ty = getTypeByID(TyID);
       } else {
-        InBounds = BitCode == bitc::FUNC_CODE_INST_INBOUNDS_GEP_OLD;
+        if (BitCode == bitc::FUNC_CODE_INST_INBOUNDS_GEP_OLD)
+          NW = GEPNoWrapFlags::inBounds();
         TyID = InvalidTypeID;
         Ty = nullptr;
       }
@@ -5096,7 +5178,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         GEPIdx.push_back(Op);
       }
 
-      I = GetElementPtrInst::Create(Ty, BasePtr, GEPIdx);
+      auto *GEP = GetElementPtrInst::Create(Ty, BasePtr, GEPIdx);
+      I = GEP;
 
       ResTypeID = TyID;
       if (cast<GEPOperator>(I)->getNumIndices() != 0) {
@@ -5122,8 +5205,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         ResTypeID = getVirtualTypeID(I->getType(), ResTypeID);
 
       InstructionList.push_back(I);
-      if (InBounds)
-        cast<GetElementPtrInst>(I)->setIsInBounds(true);
+      GEP->setNoWrapFlags(NW);
       break;
     }
 
@@ -6913,8 +6995,10 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         else
           continue; // ignore and continue.
 
+        unsigned Offset = getBranchWeightOffset(MD);
+
         // If branch weight doesn't match, just strip branch weight.
-        if (MD->getNumOperands() != 1 + ExpectedNumOperands)
+        if (MD->getNumOperands() != Offset + ExpectedNumOperands)
           I.setMetadata(LLVMContext::MD_prof, nullptr);
       }
     }
@@ -7291,7 +7375,13 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
                                               bool IsOldProfileFormat,
                                               bool HasProfile, bool HasRelBF) {
   std::vector<FunctionSummary::EdgeTy> Ret;
-  Ret.reserve(Record.size());
+  // In the case of new profile formats, there are two Record entries per
+  // Edge. Otherwise, conservatively reserve up to Record.size.
+  if (!IsOldProfileFormat && (HasProfile || HasRelBF))
+    Ret.reserve(Record.size() / 2);
+  else
+    Ret.reserve(Record.size());
+
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     bool HasTailCall = false;
@@ -7907,7 +7997,12 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_PERMODULE_ALLOC_INFO: {
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
-      while (I < Record.size()) {
+      unsigned NumMIBs = 0;
+      if (Version >= 10)
+        NumMIBs = Record[I++];
+      unsigned MIBsRead = 0;
+      while ((Version >= 10 && MIBsRead++ < NumMIBs) ||
+             (Version < 10 && I < Record.size())) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
         unsigned NumStackEntries = Record[I++];
@@ -7920,7 +8015,19 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         }
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
+      std::vector<uint64_t> TotalSizes;
+      // We either have no sizes or NumMIBs of them.
+      assert(I == Record.size() || Record.size() - I == NumMIBs);
+      if (I < Record.size()) {
+        MIBsRead = 0;
+        while (MIBsRead++ < NumMIBs)
+          TotalSizes.push_back(Record[I++]);
+      }
       PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
+      if (!TotalSizes.empty()) {
+        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
+        PendingAllocs.back().TotalSizes = std::move(TotalSizes);
+      }
       break;
     }
 
@@ -7947,8 +8054,21 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<uint8_t> Versions;
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(Record[I++]);
+      std::vector<uint64_t> TotalSizes;
+      // We either have no sizes or NumMIBs of them.
+      assert(I == Record.size() || Record.size() - I == NumMIBs);
+      if (I < Record.size()) {
+        MIBsRead = 0;
+        while (MIBsRead++ < NumMIBs) {
+          TotalSizes.push_back(Record[I++]);
+        }
+      }
       PendingAllocs.push_back(
           AllocInfo(std::move(Versions), std::move(MIBs)));
+      if (!TotalSizes.empty()) {
+        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
+        PendingAllocs.back().TotalSizes = std::move(TotalSizes);
+      }
       break;
     }
     }

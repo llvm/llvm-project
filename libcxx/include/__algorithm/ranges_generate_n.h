@@ -33,9 +33,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __generate_n {
-
-struct __fn {
+struct __generate_n {
   template <input_or_output_iterator _OutIter, copy_constructible _Func>
     requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
   _LIBCPP_HIDE_FROM_ABI constexpr _OutIter
@@ -49,10 +47,8 @@ struct __fn {
   }
 };
 
-} // namespace __generate_n
-
 inline namespace __cpo {
-inline constexpr auto generate_n = __generate_n::__fn{};
+inline constexpr auto generate_n = __generate_n{};
 } // namespace __cpo
 } // namespace ranges
 

@@ -384,7 +384,7 @@ public:
     bool isRValue() const { return Kind >= CL_XValue; }
     bool isModifiable() const { return getModifiable() == CM_Modifiable; }
 
-    /// Create a simple, modifiably lvalue
+    /// Create a simple, modifiable lvalue
     static Classification makeSimpleLValue() {
       return Classification(CL_LValue, CM_Modifiable);
     }
@@ -786,6 +786,11 @@ public:
                                  const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
                                  EvalResult &Status) const;
+
+  /// If the current Expr can be evaluated to a pointer to a null-terminated
+  /// constant string, return the constant string (without the terminating
+  /// null).
+  std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const;
 
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().
@@ -1287,7 +1292,7 @@ class DeclRefExpr final
 
   DeclRefExpr(const ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
               SourceLocation TemplateKWLoc, ValueDecl *D,
-              bool RefersToEnlosingVariableOrCapture,
+              bool RefersToEnclosingVariableOrCapture,
               const DeclarationNameInfo &NameInfo, NamedDecl *FoundD,
               const TemplateArgumentListInfo *TemplateArgs, QualType T,
               ExprValueKind VK, NonOdrUseReason NOUR);
@@ -1653,14 +1658,14 @@ public:
   }
 
   /// Get a raw enumeration value representing the floating-point semantics of
-  /// this literal (32-bit IEEE, x87, ...), suitable for serialisation.
+  /// this literal (32-bit IEEE, x87, ...), suitable for serialization.
   llvm::APFloatBase::Semantics getRawSemantics() const {
     return static_cast<llvm::APFloatBase::Semantics>(
         FloatingLiteralBits.Semantics);
   }
 
   /// Set the raw enumeration value representing the floating-point semantics of
-  /// this literal (32-bit IEEE, x87, ...), suitable for serialisation.
+  /// this literal (32-bit IEEE, x87, ...), suitable for serialization.
   void setRawSemantics(llvm::APFloatBase::Semantics Sem) {
     FloatingLiteralBits.Semantics = Sem;
   }
@@ -2125,7 +2130,7 @@ public:
   static std::string ComputeName(ASTContext &Context, QualType Ty);
 };
 
-/// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This
+/// ParenExpr - This represents a parenthesized expression, e.g. "(1)".  This
 /// AST node is only formed if full location information is requested.
 class ParenExpr : public Expr {
   SourceLocation L, R;
@@ -2241,7 +2246,7 @@ public:
   bool canOverflow() const { return UnaryOperatorBits.CanOverflow; }
   void setCanOverflow(bool C) { UnaryOperatorBits.CanOverflow = C; }
 
-  /// Get the FP contractability status of this operator. Only meaningful for
+  /// Get the FP contractibility status of this operator. Only meaningful for
   /// operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
@@ -2326,6 +2331,11 @@ public:
   /// Get FPFeatures from trailing storage.
   FPOptionsOverride getStoredFPFeatures() const {
     return getTrailingFPFeatures();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
 protected:
@@ -3091,6 +3101,11 @@ public:
     *getTrailingFPFeatures() = F;
   }
 
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
   /// Get the FP features status of this operator. Only meaningful for
   /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
@@ -3587,6 +3602,11 @@ public:
     return *getTrailingFPFeatures();
   }
 
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
   /// Get the FP features status of this operation. Only meaningful for
   /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
@@ -4033,6 +4053,10 @@ public:
     assert(BinaryOperatorBits.HasFPFeatures);
     *getTrailingFPFeatures() = F;
   }
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
 
   /// Get the FP features status of this operator. Only meaningful for
   /// operations on floating point types.
@@ -4049,7 +4073,7 @@ public:
     return FPOptionsOverride();
   }
 
-  /// Get the FP contractability status of this operator. Only meaningful for
+  /// Get the FP contractibility status of this operator. Only meaningful for
   /// operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
@@ -4290,7 +4314,7 @@ public:
   }
 
   /// getFalseExpr - Return the subexpression which will be
-  ///   evaluated if the condnition evaluates to false; this is
+  ///   evaluated if the condition evaluates to false; this is
   ///   defined in terms of the opaque value.
   Expr *getFalseExpr() const {
     return cast<Expr>(SubExprs[RHS]);
@@ -4793,6 +4817,164 @@ public:
     default:
       return false;
     }
+  }
+
+private:
+  friend class ASTStmtReader;
+};
+
+/// Stores data related to a single #embed directive.
+struct EmbedDataStorage {
+  StringLiteral *BinaryData;
+  size_t getDataElementCount() const { return BinaryData->getByteLength(); }
+};
+
+/// Represents a reference to #emded data. By default, this references the whole
+/// range. Otherwise it represents a subrange of data imported by #embed
+/// directive. Needed to handle nested initializer lists with #embed directives.
+/// Example:
+///  struct S {
+///    int x, y;
+///  };
+///
+///  struct T {
+///    int x[2];
+///    struct S s
+///  };
+///
+///  struct T t[] = {
+///  #embed "data" // data contains 10 elements;
+///  };
+///
+/// The resulting semantic form of initializer list will contain (EE stands
+/// for EmbedExpr):
+///  { {EE(first two data elements), {EE(3rd element), EE(4th element) }},
+///  { {EE(5th and 6th element), {EE(7th element), EE(8th element) }},
+///  { {EE(9th and 10th element), { zeroinitializer }}}
+///
+/// EmbedExpr inside of a semantic initializer list and referencing more than
+/// one element can only appear for arrays of scalars.
+class EmbedExpr final : public Expr {
+  SourceLocation EmbedKeywordLoc;
+  IntegerLiteral *FakeChildNode = nullptr;
+  const ASTContext *Ctx = nullptr;
+  EmbedDataStorage *Data;
+  unsigned Begin = 0;
+  unsigned NumOfElements;
+
+public:
+  EmbedExpr(const ASTContext &Ctx, SourceLocation Loc, EmbedDataStorage *Data,
+            unsigned Begin, unsigned NumOfElements);
+  explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
+
+  SourceLocation getLocation() const { return EmbedKeywordLoc; }
+  SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
+  SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
+
+  StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
+  EmbedDataStorage *getData() const { return Data; }
+
+  unsigned getStartingElementPos() const { return Begin; }
+  size_t getDataElementCount() const { return NumOfElements; }
+
+  // Allows accessing every byte of EmbedExpr data and iterating over it.
+  // An Iterator knows the EmbedExpr that it refers to, and an offset value
+  // within the data.
+  // Dereferencing an Iterator results in construction of IntegerLiteral AST
+  // node filled with byte of data of the corresponding EmbedExpr within offset
+  // that the Iterator currently has.
+  template <bool Const>
+  class ChildElementIter
+      : public llvm::iterator_facade_base<
+            ChildElementIter<Const>, std::random_access_iterator_tag,
+            std::conditional_t<Const, const IntegerLiteral *,
+                               IntegerLiteral *>> {
+    friend class EmbedExpr;
+
+    EmbedExpr *EExpr = nullptr;
+    unsigned long long CurOffset = ULLONG_MAX;
+    using BaseTy = typename ChildElementIter::iterator_facade_base;
+
+    ChildElementIter(EmbedExpr *E) : EExpr(E) {
+      if (E)
+        CurOffset = E->getStartingElementPos();
+    }
+
+  public:
+    ChildElementIter() : CurOffset(ULLONG_MAX) {}
+    typename BaseTy::reference operator*() const {
+      assert(EExpr && CurOffset != ULLONG_MAX &&
+             "trying to dereference an invalid iterator");
+      IntegerLiteral *N = EExpr->FakeChildNode;
+      StringRef DataRef = EExpr->Data->BinaryData->getBytes();
+      N->setValue(*EExpr->Ctx,
+                  llvm::APInt(N->getValue().getBitWidth(), DataRef[CurOffset],
+                              N->getType()->isSignedIntegerType()));
+      // We want to return a reference to the fake child node in the
+      // EmbedExpr, not the local variable N.
+      return const_cast<typename BaseTy::reference>(EExpr->FakeChildNode);
+    }
+    typename BaseTy::pointer operator->() const { return **this; }
+    using BaseTy::operator++;
+    ChildElementIter &operator++() {
+      assert(EExpr && "trying to increment an invalid iterator");
+      assert(CurOffset != ULLONG_MAX &&
+             "Already at the end of what we can iterate over");
+      if (++CurOffset >=
+          EExpr->getDataElementCount() + EExpr->getStartingElementPos()) {
+        CurOffset = ULLONG_MAX;
+        EExpr = nullptr;
+      }
+      return *this;
+    }
+    bool operator==(ChildElementIter Other) const {
+      return (EExpr == Other.EExpr && CurOffset == Other.CurOffset);
+    }
+  }; // class ChildElementIter
+
+public:
+  using fake_child_range = llvm::iterator_range<ChildElementIter<false>>;
+  using const_fake_child_range = llvm::iterator_range<ChildElementIter<true>>;
+
+  fake_child_range underlying_data_elements() {
+    return fake_child_range(ChildElementIter<false>(this),
+                            ChildElementIter<false>());
+  }
+
+  const_fake_child_range underlying_data_elements() const {
+    return const_fake_child_range(
+        ChildElementIter<true>(const_cast<EmbedExpr *>(this)),
+        ChildElementIter<true>());
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == EmbedExprClass;
+  }
+
+  ChildElementIter<false> begin() { return ChildElementIter<false>(this); }
+
+  ChildElementIter<true> begin() const {
+    return ChildElementIter<true>(const_cast<EmbedExpr *>(this));
+  }
+
+  template <typename Call, typename... Targs>
+  bool doForEachDataElement(Call &&C, unsigned &StartingIndexInArray,
+                            Targs &&...Fargs) const {
+    for (auto It : underlying_data_elements()) {
+      if (!std::invoke(std::forward<Call>(C), const_cast<IntegerLiteral *>(It),
+                       StartingIndexInArray, std::forward<Targs>(Fargs)...))
+        return false;
+      StartingIndexInArray++;
+    }
+    return true;
   }
 
 private:
@@ -5840,7 +6022,7 @@ class GenericSelectionExpr final
     //    if *It1 and *It2 are bound to the same objects.
     // An alternative design approach was discussed during review;
     // store an Association object inside the iterator, and return a reference
-    // to it when dereferenced. This idea was discarded beacuse of nasty
+    // to it when dereferenced. This idea was discarded because of nasty
     // lifetime issues:
     //    AssociationIterator It = ...;
     //    const Association &Assoc = *It++; // Oops, Assoc is dangling.

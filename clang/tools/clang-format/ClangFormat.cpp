@@ -364,7 +364,7 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                            : SourceMgr::DiagKind::DK_Warning,
           "code should be clang-formatted [-Wclang-format-violations]");
 
-      Diag.print(nullptr, llvm::errs(), (ShowColors && !NoShowColors));
+      Diag.print(nullptr, llvm::errs(), ShowColors && !NoShowColors);
       if (ErrorLimit && ++Errors >= ErrorLimit)
         break;
     }
@@ -509,8 +509,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   if (OutputXML || DryRun) {
     if (DryRun)
       return emitReplacementWarnings(Replaces, AssumedFileName, Code);
-    else
-      outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
+    outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);

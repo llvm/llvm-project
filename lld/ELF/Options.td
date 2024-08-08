@@ -57,7 +57,7 @@ def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
 def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
-def : F<"build-id">, Alias<build_id>, AliasArgs<["fast"]>, HelpText<"Alias for --build-id=fast">;
+def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for --build-id=sha1">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
@@ -253,6 +253,9 @@ def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
 
 def fix_cortex_a8: F<"fix-cortex-a8">,
   HelpText<"Apply fixes for ARM Cortex-A8 erratum 657417">;
+
+def force_group_allocation: FF<"force-group-allocation">,
+  HelpText<"Only meaningful for -r. Section groups are discarded. If two section group members are placed to the same output section, combine their relocations as well">;
 
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
   MetaVarName<"[default,elf,binary]">;
@@ -611,6 +614,8 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
+def lto_emit_llvm: FF<"lto-emit-llvm">,
+  HelpText<"Emit LLVM-IR bitcode">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -692,7 +697,8 @@ def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
 def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
   Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
-def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
+def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">,
+  Alias<lto_emit_llvm>, HelpText<"Alias for --lto-emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;

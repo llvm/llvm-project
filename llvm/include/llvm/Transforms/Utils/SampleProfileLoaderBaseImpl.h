@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -153,6 +154,22 @@ extern cl::opt<bool> SampleProfileUseProfi;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
+
+static inline void
+buildTopDownFuncOrder(LazyCallGraph &CG,
+                      std::vector<Function *> &FunctionOrderList) {
+  CG.buildRefSCCs();
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    for (LazyCallGraph::SCC &C : RC) {
+      for (LazyCallGraph::Node &N : C) {
+        Function &F = N.getFunction();
+        if (!skipProfileForFunction(F))
+          FunctionOrderList.push_back(&F);
+      }
+    }
+  }
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
 }
 
 template <typename FT> class SampleProfileLoaderBaseImpl {

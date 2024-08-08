@@ -20,15 +20,17 @@
 define void @lookahead_basic(ptr %array) {
 ; CHECK-LABEL: @lookahead_basic(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr [[ARRAY:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <2 x double> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[ARRAY]], align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 2
+; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 4
+; CHECK-NEXT:    [[IDX6:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 6
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[IDX2]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[IDX4]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[IDX6]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[ARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -78,17 +80,17 @@ entry:
 define void @lookahead_alt1(ptr %array) {
 ; CHECK-LABEL: @lookahead_alt1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 4
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 2
+; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 4
 ; CHECK-NEXT:    [[IDX5:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 5
 ; CHECK-NEXT:    [[IDX6:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 6
 ; CHECK-NEXT:    [[IDX7:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 7
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[ARRAY]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[ARRAY]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[IDX2]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[ARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -134,19 +136,21 @@ entry:
 define void @lookahead_alt2(ptr %array) {
 ; CHECK-LABEL: @lookahead_alt2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr [[ARRAY:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP4]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <2 x double> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr [[ARRAY]], align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 2
+; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 4
+; CHECK-NEXT:    [[IDX6:%.*]] = getelementptr inbounds double, ptr [[ARRAY]], i64 6
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[IDX2]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[IDX4]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[IDX6]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    store <2 x double> [[TMP10]], ptr [[ARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -375,33 +379,21 @@ define void @lookahead_crash(ptr %A, ptr %S, ptr %Arg0) {
 
 ; This checks that we choose to group consecutive extracts from the same vectors.
 define void @ChecksExtractScores(ptr %storeArray, ptr %array, ptr %vecPtr1, ptr %vecPtr2) {
-; SSE-LABEL: @ChecksExtractScores(
-; SSE-NEXT:    [[LOADVEC:%.*]] = load <2 x double>, ptr [[VECPTR1:%.*]], align 4
-; SSE-NEXT:    [[LOADVEC2:%.*]] = load <2 x double>, ptr [[VECPTR2:%.*]], align 4
-; SSE-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAY:%.*]], align 4
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
-; SSE-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[LOADVEC]], [[TMP2]]
-; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
-; SSE-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[LOADVEC2]], [[TMP4]]
-; SSE-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP3]], [[TMP5]]
-; SSE-NEXT:    store <2 x double> [[TMP6]], ptr [[STOREARRAY:%.*]], align 8
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @ChecksExtractScores(
-; AVX-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 1
-; AVX-NEXT:    [[LOADA0:%.*]] = load double, ptr [[ARRAY]], align 4
-; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
-; AVX-NEXT:    [[LOADVEC:%.*]] = load <2 x double>, ptr [[VECPTR1:%.*]], align 4
-; AVX-NEXT:    [[LOADVEC2:%.*]] = load <2 x double>, ptr [[VECPTR2:%.*]], align 4
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[LOADA0]], i32 0
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
-; AVX-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[LOADVEC]], [[TMP2]]
-; AVX-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[LOADA1]], i32 0
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
-; AVX-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[LOADVEC2]], [[TMP5]]
-; AVX-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP3]], [[TMP6]]
-; AVX-NEXT:    store <2 x double> [[TMP7]], ptr [[STOREARRAY:%.*]], align 8
-; AVX-NEXT:    ret void
+; CHECK-LABEL: @ChecksExtractScores(
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 1
+; CHECK-NEXT:    [[LOADA0:%.*]] = load double, ptr [[ARRAY]], align 4
+; CHECK-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
+; CHECK-NEXT:    [[LOADVEC:%.*]] = load <2 x double>, ptr [[VECPTR1:%.*]], align 4
+; CHECK-NEXT:    [[LOADVEC2:%.*]] = load <2 x double>, ptr [[VECPTR2:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[LOADA0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[LOADVEC]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[LOADA1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[LOADVEC2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[STOREARRAY:%.*]], align 8
+; CHECK-NEXT:    ret void
 ;
   %idx1 = getelementptr inbounds double, ptr %array, i64 1
   %loadA0 = load double, ptr %array, align 4

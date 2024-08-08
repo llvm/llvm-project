@@ -16,6 +16,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
@@ -40,7 +41,7 @@ FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
 ModulePass *createNVPTXAssignValidGlobalNamesPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
-FunctionPass *createNVVMIntrRangePass(unsigned int SmVersion);
+FunctionPass *createNVVMIntrRangePass();
 FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
@@ -53,12 +54,7 @@ MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 
 struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
-  NVVMIntrRangePass();
-  NVVMIntrRangePass(unsigned SmVersion) : SmVersion(SmVersion) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-private:
-  unsigned SmVersion;
 };
 
 struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
@@ -111,6 +107,24 @@ enum LoadStore {
   isStoreShift = 6
 };
 
+// Extends LLVM AtomicOrdering with PTX Orderings:
+using OrderingUnderlyingType = unsigned int;
+enum Ordering : OrderingUnderlyingType {
+  NotAtomic = (OrderingUnderlyingType)
+      AtomicOrdering::NotAtomic, // PTX calls these: "Weak"
+  // Unordered = 1, // NVPTX maps LLVM Unorderd to Relaxed
+  Relaxed = (OrderingUnderlyingType)AtomicOrdering::Monotonic,
+  // Consume = 3,   // Unimplemented in LLVM; NVPTX would map to "Acquire"
+  Acquire = (OrderingUnderlyingType)AtomicOrdering::Acquire,
+  Release = (OrderingUnderlyingType)AtomicOrdering::Release,
+  // AcquireRelease = 6, // TODO
+  SequentiallyConsistent =
+      (OrderingUnderlyingType)AtomicOrdering::SequentiallyConsistent,
+  Volatile = SequentiallyConsistent + 1,
+  RelaxedMMIO = Volatile + 1,
+  LAST = RelaxedMMIO
+};
+
 namespace PTXLdStInstCode {
 enum AddressSpace {
   GENERIC = 0,
@@ -131,7 +145,7 @@ enum VecType {
   V2 = 2,
   V4 = 4
 };
-}
+} // namespace PTXLdStInstCode
 
 /// PTXCvtMode - Conversion code enumeration
 namespace PTXCvtMode {
@@ -194,7 +208,7 @@ enum PrmtMode {
 };
 }
 }
-void initializeNVPTXDAGToDAGISelPass(PassRegistry &);
+void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 } // namespace llvm
 
 // Defines symbolic names for NVPTX registers.  This defines a mapping from

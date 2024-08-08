@@ -737,9 +737,11 @@ bool XCOFFObjectFile::isRelocatableObject() const {
 }
 
 Expected<uint64_t> XCOFFObjectFile::getStartAddress() const {
-  // TODO FIXME Should get from auxiliary_header->o_entry when support for the
-  // auxiliary_header is added.
-  return 0;
+  if (AuxiliaryHeader == nullptr)
+    return 0;
+
+  return is64Bit() ? auxiliaryHeader64()->getEntryPointAddr()
+                   : auxiliaryHeader32()->getEntryPointAddr();
 }
 
 StringRef XCOFFObjectFile::mapDebugSectionName(StringRef Name) const {
@@ -1367,7 +1369,7 @@ Expected<StringRef> XCOFFSymbolRef::getName() const {
   return getObject()->getStringTableEntry(getSymbol64()->Offset);
 }
 
-// Explictly instantiate template classes.
+// Explicitly instantiate template classes.
 template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
 template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
 

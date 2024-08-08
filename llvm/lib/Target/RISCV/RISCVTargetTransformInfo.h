@@ -57,7 +57,7 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
                                           TTI::TargetCostKind CostKind);
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
@@ -281,6 +281,12 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
+    return TLI->isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace,
+                                             DL);
+  }
+
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
   bool isVScaleKnownToBeAPowerOfTwo() const {
@@ -397,6 +403,8 @@ public:
   bool shouldFoldTerminatingConditionAfterLSR() const {
     return true;
   }
+
+  std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 
 } // end namespace llvm
