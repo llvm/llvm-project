@@ -25,7 +25,8 @@ class Value;
 
 class IntrinsicLowering {
   const DataLayout &DL;
-  /// This controls if some intrinsics are lowered to calls to external functions. 
+  /// This controls if some intrinsics are lowered to calls to external
+  /// functions.
   bool AllowLibraryFunctionCalls;
 
   bool Warned = false;

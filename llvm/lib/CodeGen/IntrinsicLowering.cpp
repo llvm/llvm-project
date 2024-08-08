@@ -356,7 +356,8 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     Ops[0] = CI->getArgOperand(0);
     Ops[1] = CI->getArgOperand(1);
     Ops[2] = Size;
-    ReplaceCallWith("memcpy", CI, {Ops, Ops + 3}, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memcpy", CI, {Ops, Ops + 3},
+                    CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::memmove: {
@@ -367,7 +368,8 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     Ops[0] = CI->getArgOperand(0);
     Ops[1] = CI->getArgOperand(1);
     Ops[2] = Size;
-    ReplaceCallWith("memmove", CI, {Ops, Ops + 3}, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memmove", CI, {Ops, Ops + 3},
+                    CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::memset: {
@@ -382,7 +384,8 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
                                    Type::getInt32Ty(Context),
                                    /* isSigned */ false);
     Ops[2] = Size;
-    ReplaceCallWith("memset", CI, {Ops, Ops + 3}, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memset", CI, {Ops, Ops + 3},
+                    CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::sqrt: {
