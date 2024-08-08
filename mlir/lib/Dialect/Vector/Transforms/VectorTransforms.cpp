@@ -1774,8 +1774,7 @@ struct DropUnitDimsFromTransposeOp final
     // Fixup for `newPerm`. The `sourceTypeWithoutUnitDims` could be vector<1xT>
     // type when the dimensions are unit dimensions. In this case, the newPerm
     // should be [0].
-    if (sourceTypeWithoutUnitDims.getRank() == 1 &&
-        sourceTypeWithoutUnitDims.getShape()[0] == 1 && newPerm.empty()) {
+    if (newPerm.empty()) {
       newPerm.push_back(0);
     }
 
