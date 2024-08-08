@@ -31,14 +31,18 @@ public:
   Value *MaybeEVL;
   // The Stride Value, if we're looking at a strided load/store.
   Value *MaybeStride;
+  // The Offset Value, if we're looking at a indexed load/store. The
+  // offset actually means byte-offset instead of array index.
+  Value *MaybeOffset;
 
   MemoryRefInfo() = default;
   MemoryRefInfo(Instruction *I, unsigned OperandNo, bool IsWrite,
                 class Type *OpType, MaybeAlign Alignment,
                 Value *MaybeMask = nullptr, Value *MaybeEVL = nullptr,
-                Value *MaybeStride = nullptr)
+                Value *MaybeStride = nullptr, Value *MaybeOffset = nullptr)
       : IsWrite(IsWrite), OpType(OpType), Alignment(Alignment),
-        MaybeMask(MaybeMask), MaybeEVL(MaybeEVL), MaybeStride(MaybeStride) {
+        MaybeMask(MaybeMask), MaybeEVL(MaybeEVL), MaybeStride(MaybeStride),
+        MaybeOffset(MaybeOffset) {
     const DataLayout &DL = I->getDataLayout();
     TypeStoreSize = DL.getTypeStoreSizeInBits(OpType);
     PtrUse = &I->getOperandUse(OperandNo);

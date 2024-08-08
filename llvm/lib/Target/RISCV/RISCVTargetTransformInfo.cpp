@@ -110,6 +110,35 @@ bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
                              EVL, Stride);
     return true;
   }
+  case Intrinsic::riscv_vloxei_mask:
+  case Intrinsic::riscv_vluxei_mask:
+  case Intrinsic::riscv_vsoxei_mask:
+  case Intrinsic::riscv_vsuxei_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vloxei:
+  case Intrinsic::riscv_vluxei:
+  case Intrinsic::riscv_vsoxei:
+  case Intrinsic::riscv_vsuxei: {
+    // Intrinsic interface (only listed ordered version):
+    // riscv_vloxei(merge, ptr, index, vl)
+    // riscv_vloxei_mask(merge, ptr, index, mask, vl, policy)
+    // riscv_vsoxei(val, ptr, index, vl)
+    // riscv_vsoxei_mask(val, ptr, index, mask, vl, policy)
+    bool IsWrite = II->getType()->isVoidTy();
+    Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IID);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+    Value *Mask = ConstantInt::getTrue(MaskType);
+    if (HasMask)
+      Mask = II->getArgOperand(VLIndex - 1);
+    Value *EVL = II->getArgOperand(VLIndex);
+    Value *OffsetOp = II->getArgOperand(PtrOperandNo + 1);
+    Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Align(1), Mask, EVL,
+                             /* Stride */ nullptr, OffsetOp);
+  }
   }
   return false;
 }
