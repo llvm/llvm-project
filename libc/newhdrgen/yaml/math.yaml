@@ -1831,7 +1831,7 @@ functions:
       - type: _Float16 *
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-   - name: setpayloadsigf128
+  - name: setpayloadsigf128
     standards:
       - stdc
     return_type: int
