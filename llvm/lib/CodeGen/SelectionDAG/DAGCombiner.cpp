@@ -5263,6 +5263,10 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
 
+  // fold (abd x, x) -> 0
+  if (N0 == N1)
+    return DAG.getConstant(0, DL, VT);
+
   SDValue X;
 
   // fold (abds x, 0) -> abs x
@@ -10948,7 +10952,7 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
   EVT MaxVT = VT0.bitsGT(VT1) ? VT0 : VT1;
   if ((VT0 == MaxVT || Op0->hasOneUse()) &&
       (VT1 == MaxVT || Op1->hasOneUse()) &&
-      (!LegalOperations || hasOperation(ABDOpcode, MaxVT))) {
+      (!LegalTypes || hasOperation(ABDOpcode, MaxVT))) {
     SDValue ABD = DAG.getNode(ABDOpcode, DL, MaxVT,
                               DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op0),
                               DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op1));

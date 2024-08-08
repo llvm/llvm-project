@@ -1047,10 +1047,13 @@ static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
 /// Opcode1.
 SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
                                unsigned Opcode1) {
-  SmallBitVector OpcodeMask(VL.size(), false);
+  Type *ScalarTy = VL[0]->getType();
+  unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+  SmallBitVector OpcodeMask(VL.size() * ScalarTyNumElements, false);
   for (unsigned Lane : seq<unsigned>(VL.size()))
     if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
-      OpcodeMask.set(Lane);
+      OpcodeMask.set(Lane * ScalarTyNumElements,
+                     Lane * ScalarTyNumElements + ScalarTyNumElements);
   return OpcodeMask;
 }
 
@@ -2968,12 +2971,23 @@ private:
     /// (either with vector instruction or with scatter/gather
     /// intrinsics for store/load)?
     enum EntryState {
-      Vectorize,
-      ScatterVectorize,
-      StridedVectorize,
-      NeedToGather
+      Vectorize,         ///< The node is regularly vectorized.
+      ScatterVectorize,  ///< Masked scatter/gather node.
+      StridedVectorize,  ///< Strided loads (and stores)
+      NeedToGather,      ///< Gather/buildvector node.
+      CombinedVectorize, ///< Vectorized node, combined with its user into more
+                         ///< complex node like select/cmp to minmax, mul/add to
+                         ///< fma, etc. Must be used for the following nodes in
+                         ///< the pattern, not the very first one.
     };
     EntryState State;
+
+    /// List of combined opcodes supported by the vectorizer.
+    enum CombinedOpcode {
+      NotCombinedOp = -1,
+      MinMax = Instruction::OtherOpsEnd + 1,
+    };
+    CombinedOpcode CombinedOp = NotCombinedOp;
 
     /// Does this sequence require some shuffling?
     SmallVector<int, 4> ReuseShuffleIndices;
@@ -3161,6 +3175,9 @@ private:
         break;
       case NeedToGather:
         dbgs() << "NeedToGather\n";
+        break;
+      case CombinedVectorize:
+        dbgs() << "CombinedVectorize\n";
         break;
       }
       dbgs() << "MainOp: ";
@@ -6493,6 +6510,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
+  case Instruction::Freeze:
     return TreeEntry::Vectorize;
   case Instruction::GetElementPtr: {
     // We don't combine GEPs with complicated (nested) indexing.
@@ -7209,6 +7227,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         buildTree_rec(PointerOps, Depth + 1, {TE, 0});
         LLVM_DEBUG(dbgs() << "SLP: added a vector of non-consecutive loads.\n");
         break;
+      case TreeEntry::CombinedVectorize:
       case TreeEntry::NeedToGather:
         llvm_unreachable("Unexpected loads state.");
       }
@@ -7330,7 +7349,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::AShr:
     case Instruction::And:
     case Instruction::Or:
-    case Instruction::Xor: {
+    case Instruction::Xor:
+    case Instruction::Freeze: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of un/bin op.\n");
@@ -8286,6 +8306,22 @@ void BoUpSLP::transformNodes() {
           // Strided load is more profitable than consecutive load + reverse -
           // transform the node to strided load.
           E.State = TreeEntry::StridedVectorize;
+      }
+      break;
+    }
+    case Instruction::Select: {
+      if (E.State != TreeEntry::Vectorize)
+        break;
+      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(E.Scalars);
+      if (MinMaxID == Intrinsic::not_intrinsic)
+        break;
+      // This node is a minmax node.
+      E.CombinedOp = TreeEntry::MinMax;
+      TreeEntry *CondEntry = const_cast<TreeEntry *>(getOperandEntry(&E, 0));
+      if (SelectOnly && CondEntry->UserTreeIndices.size() == 1 &&
+          CondEntry->State == TreeEntry::Vectorize) {
+        // The condition node is part of the combined minmax node.
+        CondEntry->State = TreeEntry::CombinedVectorize;
       }
       break;
     }
@@ -9425,6 +9461,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   Instruction *VL0 = E->getMainOp();
   unsigned ShuffleOrOp =
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
+  if (E->CombinedOp != TreeEntry::NotCombinedOp)
+    ShuffleOrOp = E->CombinedOp;
   SetVector<Value *> UniqueValues(VL.begin(), VL.end());
   const unsigned Sz = UniqueValues.size();
   SmallBitVector UsedScalars(Sz, false);
@@ -9510,6 +9548,31 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     return VecCost - ScalarCost;
   };
 
+  auto GetMinMaxCost = [&](Type *Ty, Instruction *VI = nullptr) {
+    auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VI ? VI : VL);
+    if (MinMaxID == Intrinsic::not_intrinsic)
+      return InstructionCost::getInvalid();
+    Type *CanonicalType = Ty;
+    if (CanonicalType->isPtrOrPtrVectorTy())
+      CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
+          CanonicalType->getContext(),
+          DL->getTypeSizeInBits(CanonicalType->getScalarType())));
+
+    IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                      {CanonicalType, CanonicalType});
+    InstructionCost IntrinsicCost =
+        TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+    // If the selects are the only uses of the compares, they will be
+    // dead and we can adjust the cost by removing their cost.
+    if (VI && SelectOnly) {
+      assert(!Ty->isVectorTy() && "Expected only for scalar type.");
+      auto *CI = cast<CmpInst>(VI->getOperand(0));
+      IntrinsicCost -=
+          TTI->getCmpSelInstrCost(CI->getOpcode(), Ty, Builder.getInt1Ty(),
+                                  CI->getPredicate(), CostKind, CI);
+    }
+    return IntrinsicCost;
+  };
   switch (ShuffleOrOp) {
   case Instruction::PHI: {
     // Count reused scalars.
@@ -9770,28 +9833,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
           CostKind, VI);
-      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VI);
-      if (MinMaxID != Intrinsic::not_intrinsic) {
-        Type *CanonicalType = OrigScalarTy;
-        if (CanonicalType->isPtrOrPtrVectorTy())
-          CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
-              CanonicalType->getContext(),
-              DL->getTypeSizeInBits(CanonicalType->getScalarType())));
-
-        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
-                                          {CanonicalType, CanonicalType});
-        InstructionCost IntrinsicCost =
-            TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-        // If the selects are the only uses of the compares, they will be
-        // dead and we can adjust the cost by removing their cost.
-        if (SelectOnly) {
-          auto *CI = cast<CmpInst>(VI->getOperand(0));
-          IntrinsicCost -= TTI->getCmpSelInstrCost(
-              CI->getOpcode(), OrigScalarTy, Builder.getInt1Ty(),
-              CI->getPredicate(), CostKind, CI);
-        }
-        ScalarCost = std::min(ScalarCost, IntrinsicCost);
-      }
+      InstructionCost IntrinsicCost = GetMinMaxCost(OrigScalarTy, VI);
+      if (IntrinsicCost.isValid())
+        ScalarCost = IntrinsicCost;
 
       return ScalarCost;
     };
@@ -9800,30 +9844,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       InstructionCost VecCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), VecTy, MaskTy, VecPred, CostKind, VL0);
-      // Check if it is possible and profitable to use min/max for selects
-      // in VL.
-      //
-      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VL);
-      if (MinMaxID != Intrinsic::not_intrinsic) {
-        Type *CanonicalType = VecTy;
-        if (CanonicalType->isPtrOrPtrVectorTy())
-          CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
-              CanonicalType->getContext(),
-              DL->getTypeSizeInBits(CanonicalType->getScalarType())));
-        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
-                                          {CanonicalType, CanonicalType});
-        InstructionCost IntrinsicCost =
-            TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-        // If the selects are the only uses of the compares, they will be
-        // dead and we can adjust the cost by removing their cost.
-        if (SelectOnly) {
-          auto *CI =
-              cast<CmpInst>(cast<Instruction>(VL.front())->getOperand(0));
-          IntrinsicCost -= TTI->getCmpSelInstrCost(CI->getOpcode(), VecTy,
-                                                   MaskTy, VecPred, CostKind);
-        }
-        VecCost = std::min(VecCost, IntrinsicCost);
-      }
       if (auto *SI = dyn_cast<SelectInst>(VL0)) {
         auto *CondType =
             getWidenedType(SI->getCondition()->getType(), VL.size());
@@ -9841,6 +9861,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                    CondNumElements));
         }
       }
+      return VecCost + CommonCost;
+    };
+    return GetCostDiff(GetScalarCost, GetVectorCost);
+  }
+  case TreeEntry::MinMax: {
+    auto GetScalarCost = [&](unsigned Idx) {
+      return GetMinMaxCost(OrigScalarTy);
+    };
+    auto GetVectorCost = [&](InstructionCost CommonCost) {
+      InstructionCost VecCost = GetMinMaxCost(VecTy);
       return VecCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -10118,6 +10148,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
+  case Instruction::Freeze:
+    return CommonCost;
   default:
     llvm_unreachable("Unknown instruction");
   }
@@ -10581,6 +10613,15 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   SmallPtrSet<Value *, 4> CheckedExtracts;
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
     TreeEntry &TE = *VectorizableTree[I];
+    // No need to count the cost for combined entries, they are combined and
+    // just skip their cost.
+    if (TE.State == TreeEntry::CombinedVectorize) {
+      LLVM_DEBUG(
+          dbgs() << "SLP: Skipping cost for combined node that starts with "
+                 << *TE.Scalars[0] << ".\n";
+          TE.dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
+      continue;
+    }
     if (TE.isGather()) {
       if (const TreeEntry *E = getTreeEntry(TE.getMainOp());
           E && E->getVectorFactor() == TE.getVectorFactor() &&
@@ -11487,7 +11528,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  APInt ShuffledElements = APInt::getZero(VL.size());
+  unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+  APInt ShuffledElements = APInt::getZero(VecTy->getNumElements());
   DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
@@ -11507,7 +11549,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     Value *V = VL[I];
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
-      ShuffledElements.setBit(I);
+      ShuffledElements.setBits(I * ScalarTyNumElements,
+                               I * ScalarTyNumElements + ScalarTyNumElements);
       ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
       continue;
     }
@@ -11520,7 +11563,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     }
 
     DuplicateNonConst = true;
-    ShuffledElements.setBit(I);
+    ShuffledElements.setBits(I * ScalarTyNumElements,
+                             I * ScalarTyNumElements + ScalarTyNumElements);
     ShuffleMask[I] = Res.first->second;
   }
   if (ForPoisonSrc)
@@ -12946,10 +12990,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     return ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   };
 
-  assert((E->State == TreeEntry::Vectorize ||
-          E->State == TreeEntry::ScatterVectorize ||
-          E->State == TreeEntry::StridedVectorize) &&
-         "Unhandled state");
+  assert(!E->isGather() && "Unhandled state");
   unsigned ShuffleOrOp =
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   Instruction *VL0 = E->getMainOp();
@@ -13383,6 +13424,24 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
+      V = FinalShuffle(V, E, VecTy);
+
+      E->VectorizedValue = V;
+      ++NumVectorInstructions;
+
+      return V;
+    }
+    case Instruction::Freeze: {
+      setInsertPointAfterBundle(E);
+
+      Value *Op = vectorizeOperand(E, 0, PostponedPHIs);
+
+      if (E->VectorizedValue) {
+        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
+        return E->VectorizedValue;
+      }
+
+      Value *V = Builder.CreateFreeze(Op);
       V = FinalShuffle(V, E, VecTy);
 
       E->VectorizedValue = V;

@@ -722,9 +722,12 @@ enum ASTRecordTypes {
   /// Record code for \#pragma clang unsafe_buffer_usage begin/end
   PP_UNSAFE_BUFFER_USAGE = 69,
 
+  /// Record code for vtables to emit.
+  VTABLES_TO_EMIT = 70,
+
   /// Record code for Sema's vector of functions/blocks with effects to
   /// be verified.
-  DECLS_WITH_EFFECTS_TO_VERIFY = 70,
+  DECLS_WITH_EFFECTS_TO_VERIFY = 71,
 };
 
 /// Record types used within a source manager block.

@@ -5507,7 +5507,7 @@ def no__dead__strip__inits__and__terms : Flag<["-"], "no_dead_strip_inits_and_te
 def nobuiltininc : Flag<["-"], "nobuiltininc">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   Group<IncludePath_Group>,
-  HelpText<"Disable builtin #include directories">,
+  HelpText<"Disable builtin #include directories only">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"UseBuiltinIncludes">>;
 def nogpuinc : Flag<["-"], "nogpuinc">, Group<IncludePath_Group>,
   HelpText<"Do not add include paths for CUDA/HIP and"
@@ -5534,8 +5534,10 @@ def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
 def nostartfiles : Flag<["-"], "nostartfiles">, Group<Link_Group>;
 def nostdinc : Flag<["-"], "nostdinc">,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Group<IncludePath_Group>;
-def nostdlibinc : Flag<["-"], "nostdlibinc">, Group<IncludePath_Group>;
+  Visibility<[ClangOption, CLOption, DXCOption]>, Group<IncludePath_Group>,
+  HelpText<"Disable both standard system #include directories and builtin #include directores">;
+def nostdlibinc : Flag<["-"], "nostdlibinc">, Group<IncludePath_Group>,
+  HelpText<"Disable standard system #include directories only">;
 def nostdincxx : Flag<["-"], "nostdinc++">, Visibility<[ClangOption, CC1Option]>,
   Group<IncludePath_Group>,
   HelpText<"Disable standard #include directories for the C++ standard library">,

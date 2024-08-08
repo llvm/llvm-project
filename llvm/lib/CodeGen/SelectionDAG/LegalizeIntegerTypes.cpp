@@ -195,7 +195,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ABDS:
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
-
   case ISD::VP_SMIN:
   case ISD::VP_SMAX:
   case ISD::SDIV:
@@ -206,7 +205,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ABDU:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORU:
-
   case ISD::VP_UMIN:
   case ISD::VP_UMAX:
   case ISD::UDIV:
