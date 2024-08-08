@@ -2128,7 +2128,7 @@ DeclResult Sema::CheckClassTemplate(
   // context, because the template parameter list might be dependent.
   if (ShouldAddRedecl && CheckTemplateParameterList(
       TemplateParams,
-      PrevClassTemplate ? GetTemplateParameterList(PrevClassTemplate)
+      PrevClassTemplate ? PrevClassTemplate->getTemplateParameters()
                         : nullptr,
       (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
        SemanticContext->isDependentContext())

@@ -5186,9 +5186,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
+    #if 0
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
         Function, Function->getLexicalDeclContext(), /*Final=*/false,
         /*Innermost=*/std::nullopt, false, PatternDecl);
+    #else
+    MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+        Function, Function->getLexicalDeclContext());
+    #endif
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.

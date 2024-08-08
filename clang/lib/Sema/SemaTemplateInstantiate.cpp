@@ -52,7 +52,6 @@ using namespace sema;
 //===----------------------------------------------------------------------===/
 
 namespace {
-namespace TemplateInstArgsHelpers {
 struct Response {
   const Decl *NextDecl = nullptr;
   bool IsDone = false;
@@ -84,6 +83,7 @@ struct Response {
   }
 };
 
+namespace TemplateInstArgsHelpers {
 // Retrieve the primary template for a lambda call operator. It's
 // unfortunate that we only have the mappings of call operators rather
 // than lambda classes.
@@ -331,7 +331,8 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
 }
 
 Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
-                                    MultiLevelTemplateArgumentList &Result) {
+                                    MultiLevelTemplateArgumentList &Result,
+                                    bool ForConstraintInstantiation) {
   #if 0
   if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
     Result.addOuterTemplateArguments(
@@ -385,10 +386,11 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
 
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
   #else
-  Result.addOuterTemplateArguments(
-      const_cast<FunctionTemplateDecl *>(FTD),
-      const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
-      /*Final=*/false);
+  if (ForConstraintInstantiation)
+    Result.addOuterTemplateArguments(
+        const_cast<FunctionTemplateDecl *>(FTD),
+        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
+        /*Final=*/false);
 
   if (FTD->isMemberSpecialization())
     return Response::Done();
@@ -400,12 +402,15 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
 }
 
 Response HandleClassTemplateDecl(const ClassTemplateDecl *CTD,
-                                    MultiLevelTemplateArgumentList &Result) {
-  #if 0
-  Result.addOuterTemplateArguments(
-      const_cast<ClassTemplateDecl *>(CTD),
-      const_cast<ClassTemplateDecl *>(CTD)->getInjectedTemplateArgs(),
-      /*Final=*/false);
+                                 MultiLevelTemplateArgumentList &Result,
+                                 bool ForConstraintInstantiation,
+                                 bool SkipForSpecialization) {
+  #if 1
+  if (!SkipForSpecialization && ForConstraintInstantiation)
+    Result.addOuterTemplateArguments(
+        const_cast<ClassTemplateDecl *>(CTD),
+        const_cast<ClassTemplateDecl *>(CTD)->getInjectedTemplateArgs(),
+        /*Final=*/false);
 
   if (CTD->isMemberSpecialization())
     return Response::Done();
@@ -496,6 +501,38 @@ Response HandleGenericDeclContext(const Decl *CurDecl) {
   return Response::UseNextDecl(CurDecl);
 }
 } // namespace TemplateInstArgsHelpers
+
+
+struct TemplateInstantiationArgumentCollecter
+    : DeclVisitor<TemplateInstantiationArgumentCollecter, Decl*> {
+  MultiLevelTemplateArgumentList &Result;
+  bool RelativeToPrimary;
+  bool ForConstraintInstantiation;
+  bool SkipForSpecialization;
+
+  TemplateInstantiationArgumentCollecter(
+      MultiLevelTemplateArgumentList &Result,
+      bool RelativeToPrimary,
+      bool ForConstraintInstantiation,
+      bool SkipForSpecialization) :
+          Result(Result), RelativeToPrimary(RelativeToPrimary),
+          ForConstraintInstantiation(ForConstraintInstantiation),
+          SkipForSpecialization(SkipForSpecialization) { }
+  //using inherited = DeclVisitor<TemplateInstantiationArgumentCollecter>;
+
+
+
+  Decl *VisitDecl(Decl *D) {
+    if (D->isFileContextDecl())
+      return nullptr;
+
+    if (isa<DeclContext>(D))
+      RelativeToPrimary = false;
+
+    return Decl::castFromDeclContext(D->getDeclContext());
+  }
+};
+
 } // namespace
 
 MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
@@ -529,6 +566,14 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
   }
 
+  TemplateInstantiationArgumentCollecter Collecter(
+      Result, RelativeToPrimary,
+      ForConstraintInstantiation,
+      SkipForSpecialization);
+  do {
+    CurDecl = Collecter.Visit(const_cast<Decl *>(CurDecl));
+  } while (CurDecl);
+
   while (!CurDecl->isFileContextDecl()) {
     Response R;
     if (const auto *VarTemplSpec =
@@ -553,9 +598,9 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
                    dyn_cast<ImplicitConceptSpecializationDecl>(CurDecl)) {
       R = HandleImplicitConceptSpecializationDecl(CSD, Result);
     } else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(CurDecl)) {
-      R = HandleFunctionTemplateDecl(FTD, Result);
+      R = HandleFunctionTemplateDecl(FTD, Result, ForConstraintInstantiation);
     } else if (const auto *CTD = dyn_cast<ClassTemplateDecl>(CurDecl)) {
-      R = HandleClassTemplateDecl(CTD, Result);
+      R = HandleClassTemplateDecl(CTD, Result, ForConstraintInstantiation, SkipForSpecialization);
     } else if (!isa<DeclContext>(CurDecl)) {
       R = Response::DontClearRelativeToPrimaryNextDecl(CurDecl);
       if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl)) {

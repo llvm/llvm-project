@@ -317,7 +317,7 @@ struct ConvertConstructorToDeductionGuideTransform {
     }
 
     if (NestedPattern)
-      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(Template);
+      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(/*D=*/nullptr, Template->getDeclContext());
   }
 
   Sema &SemaRef;
