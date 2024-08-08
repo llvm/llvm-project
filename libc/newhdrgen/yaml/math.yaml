@@ -2236,7 +2236,7 @@ functions:
     arguments:
       - type: float128
       - type: long
-    guard: LIBC_HAS_TYPES_FLOAT128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: lgamma
     standards: 
       - stdc
