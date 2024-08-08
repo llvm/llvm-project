@@ -3643,8 +3643,8 @@ add_fp_unittest(
     ScalbnTest.h
   DEPENDS
     libc.src.math.scalblnf
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
 
