@@ -129,9 +129,9 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
 
-  diag(MatchedExpr->getBeginLoc(),
+  diag(MatchedExpr->getCallee()->getBeginLoc(),
        "found possibly unsafe 'operator[]', consider using 'at()' instead")
-      << MatchedExpr->getSourceRange();
+      << MatchedExpr->getCallee()->getSourceRange();
   diag(Alternative->getBeginLoc(), "alternative 'at()' defined here",
        DiagnosticIDs::Note)
       << Alternative->getNameInfo().getSourceRange();
