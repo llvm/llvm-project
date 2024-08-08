@@ -455,7 +455,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
 }
 
 WritableDataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
-                                            lldb::addr_t addr, 
+                                            lldb::addr_t addr,
                                             size_t byte_size) {
   WritableDataBufferSP data_sp;
   if (process_sp) {

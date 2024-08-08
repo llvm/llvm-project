@@ -892,8 +892,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
   for (size_t i = 0; i < m_dynamic_symbols.size(); ++i) {
     const ELFDynamic &symbol = m_dynamic_symbols[i].symbol;
 
-    if (symbol.d_tag != DT_DEBUG &&
-        symbol.d_tag != DT_MIPS_RLD_MAP &&
+    if (symbol.d_tag != DT_DEBUG && symbol.d_tag != DT_MIPS_RLD_MAP &&
         symbol.d_tag != DT_MIPS_RLD_MAP_REL)
       continue;
 
@@ -911,7 +910,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
     // exists in non-PIE.
     if ((symbol.d_tag == DT_MIPS_RLD_MAP ||
          symbol.d_tag == DT_MIPS_RLD_MAP_REL) &&
-         target) {
+        target) {
       const addr_t d_load_addr = d_addr.GetLoadAddress(target);
       if (d_load_addr == LLDB_INVALID_ADDRESS)
         return Address();
