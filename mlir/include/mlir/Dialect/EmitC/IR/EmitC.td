@@ -1312,9 +1312,8 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
   let summary = "Switch operation";
   let description = [{
     The `emitc.switch` is a control-flow operation that branches to one of
-    the given regions based on the values of the argument and the cases. The
-    argument is always of type opaque or integer (singed or unsigned), excluding i8 
-    and i1.
+    the given regions based on the values of the argument and the cases.
+    The operand to a switch operation is a opaque or integral value.
 
     The operation always has a "default" region and any number of case regions
     denoted by integer constants. Control-flow transfers to the case region
@@ -1323,7 +1322,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
     region.
 
     The operation does not return any value. Moreover, case regions and 
-    default region must be terminated using the `emitc.yield` operation.
+    default region must be explicitly terminated using the `emitc.yield` operation.
 
     Example:
 
