@@ -11,6 +11,7 @@
 
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 float faddf128(float128 x, float128 y);
