@@ -1668,6 +1668,12 @@ MachineBlockPlacement::selectBestSuccessor(
     BestSucc.BB = Succ;
     BestProb = SuccProb;
   }
+
+  // TODO: isProfitableToTailDup requries a MPDT, but it is not necessarily
+  // valid at this point, because we already modified the CFG. This assertion
+  // fails.
+  // assert(MPDT && MPDT->verify());
+
   // Handle the tail duplication candidates in order of decreasing probability.
   // Stop at the first one that is profitable. Also stop if they are less
   // profitable than BestSucc. Position is important because we preserve it and
@@ -3193,6 +3199,10 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
           }
         }
 
+        // We removed a block that possibly post-dominated other blocks. As the
+        // post-dominator tree is now invalid, clear it.
+        if (MPDT)
+          MPDT = nullptr;
         // Remove the block from loop info.
         MLI->removeBlock(RemBB);
         if (RemBB == PreferredLoopExit)
@@ -3649,11 +3659,6 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
-  // At this point, we possibly removed blocks from the function, so we can't
-  // renumber the domtree. At this point, we don't need it anymore, though.
-  // TODO: move this to the point where the dominator tree is actually
-  // invalidated (i.e., where blocks are removed without updating the domtree).
-  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {
