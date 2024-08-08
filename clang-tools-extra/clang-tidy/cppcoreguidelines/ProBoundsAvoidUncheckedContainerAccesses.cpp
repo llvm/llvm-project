@@ -55,6 +55,9 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
                 Serialized.substr(0, Serialized.size() - DefaultsStringLength));
 }
 
+// TODO: if at() is defined in another class in the class hierarchy of the class
+// that defines the operator[] we matched on, findAlternative() will not detect
+// it.
 static const CXXMethodDecl *
 findAlternative(const CXXMethodDecl *MatchedOperator) {
   const CXXRecordDecl *Parent = MatchedOperator->getParent();
