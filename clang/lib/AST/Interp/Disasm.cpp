@@ -278,10 +278,15 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
   OS << "\n";
   OS.indent(Spaces) << "This: " << getThis() << "\n";
   OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  OS.indent(Spaces) << "Depth: " << Depth << "\n";
+  OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
+  OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
+  OS.indent(Spaces) << "FrameOffset: " << FrameOffset << "\n";
+  OS.indent(Spaces) << "FrameSize: " << (Func ? Func->getFrameSize() : 0)
+                    << "\n";
 
-  while (const InterpFrame *F = this->Caller) {
+  for (const InterpFrame *F = this->Caller; F; F = F->Caller) {
     F->dump(OS, Indent + 1);
-    F = F->Caller;
   }
 }
 
@@ -325,8 +330,11 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
 LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
-    OS << "Block " << (const void *)this << "\n";
+    OS << "Block " << (const void *)this;
   }
+  OS << " (";
+  Desc->dump(OS);
+  OS << ")\n";
   unsigned NPointers = 0;
   for (const Pointer *P = Pointers; P; P = P->Next) {
     ++NPointers;
@@ -363,9 +371,9 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
 
     OS << "LValue: ";
     if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-      FP->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      FP->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     OS << "\n";
     break;
   }

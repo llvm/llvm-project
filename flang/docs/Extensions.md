@@ -134,6 +134,13 @@ end
   implicitly simply appearing in an asynchronous data transfer statement,
   without the attribute being visible in the procedure's explicit
   interface.
+* When the name of an extended derived type's base type is the
+  result of `USE` association with renaming, the name of the extended
+  derived type's parent component is the new name by which the base
+  is known in the scope of the extended derived type, not the original.
+  This interpretation has usability advantages and is what six other
+  Fortran compilers do, but is not conforming now that J3 approved an
+  "interp" in June 2024 to the contrary.
 
 ## Extensions, deletions, and legacy features supported by default
 

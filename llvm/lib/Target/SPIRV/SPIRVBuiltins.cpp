@@ -169,21 +169,9 @@ using namespace InstructionSet;
 // TableGen records
 //===----------------------------------------------------------------------===//
 
-/// Looks up the demangled builtin call in the SPIRVBuiltins.td records using
-/// the provided \p DemangledCall and specified \p Set.
-///
-/// The lookup follows the following algorithm, returning the first successful
-/// match:
-/// 1. Search with the plain demangled name (expecting a 1:1 match).
-/// 2. Search with the prefix before or suffix after the demangled name
-/// signyfying the type of the first argument.
-///
-/// \returns Wrapper around the demangled call and found builtin definition.
-static std::unique_ptr<const SPIRV::IncomingCall>
-lookupBuiltin(StringRef DemangledCall,
-              SPIRV::InstructionSet::InstructionSet Set,
-              Register ReturnRegister, const SPIRVType *ReturnType,
-              const SmallVectorImpl<Register> &Arguments) {
+namespace SPIRV {
+/// Parses the name part of the demangled builtin call.
+std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   const static std::string PassPrefix = "(anonymous namespace)::";
   std::string BuiltinName;
   // Itanium Demangler result may have "(anonymous namespace)::" prefix
@@ -214,6 +202,27 @@ lookupBuiltin(StringRef DemangledCall,
       StringRef(BuiltinName).contains("_R")) {
     BuiltinName = BuiltinName.substr(0, BuiltinName.find("_R"));
   }
+
+  return BuiltinName;
+}
+} // namespace SPIRV
+
+/// Looks up the demangled builtin call in the SPIRVBuiltins.td records using
+/// the provided \p DemangledCall and specified \p Set.
+///
+/// The lookup follows the following algorithm, returning the first successful
+/// match:
+/// 1. Search with the plain demangled name (expecting a 1:1 match).
+/// 2. Search with the prefix before or suffix after the demangled name
+/// signyfying the type of the first argument.
+///
+/// \returns Wrapper around the demangled call and found builtin definition.
+static std::unique_ptr<const SPIRV::IncomingCall>
+lookupBuiltin(StringRef DemangledCall,
+              SPIRV::InstructionSet::InstructionSet Set,
+              Register ReturnRegister, const SPIRVType *ReturnType,
+              const SmallVectorImpl<Register> &Arguments) {
+  std::string BuiltinName = SPIRV::lookupBuiltinNameHelper(DemangledCall);
 
   SmallVector<StringRef, 10> BuiltinArgumentTypes;
   StringRef BuiltinArgs =
@@ -2610,9 +2619,6 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
     // Unable to recognize SPIRV type name.
     return nullptr;
 
-  if (BaseType->isVoidTy())
-    BaseType = Type::getInt8Ty(Ctx);
-
   // Handle "typeN*" or "type vector[N]*".
   TypeStr.consume_back("*");
 
@@ -2621,7 +2627,8 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
 
   TypeStr.getAsInteger(10, VecElts);
   if (VecElts > 0)
-    BaseType = VectorType::get(BaseType, VecElts, false);
+    BaseType = VectorType::get(
+        BaseType->isVoidTy() ? Type::getInt8Ty(Ctx) : BaseType, VecElts, false);
 
   return BaseType;
 }

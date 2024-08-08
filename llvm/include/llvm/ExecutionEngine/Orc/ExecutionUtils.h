@@ -328,6 +328,7 @@ private:
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
   DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
+  BumpPtrAllocator ObjFileNameStorage;
 };
 
 /// A utility class to create COFF dllimport GOT symbols (__imp_*) and PLT

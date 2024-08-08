@@ -5456,34 +5456,14 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   CHECK(scope.symbol());
   CHECK(scope.symbol()->scope() == &scope);
   auto &details{scope.symbol()->get<DerivedTypeDetails>()};
-  std::set<SourceName> paramNames;
   for (auto &paramName : std::get<std::list<parser::Name>>(stmt.statement.t)) {
-    details.add_paramName(paramName.source);
-    auto *symbol{FindInScope(scope, paramName)};
-    if (!symbol) {
-      Say(paramName,
-          "No definition found for type parameter '%s'"_err_en_US); // C742
-      // No symbol for a type param.  Create one and mark it as containing an
-      // error to improve subsequent semantic processing
-      BeginAttrs();
-      Symbol *typeParam{MakeTypeSymbol(
-          paramName, TypeParamDetails{common::TypeParamAttr::Len})};
-      context().SetError(*typeParam);
-      EndAttrs();
-    } else if (!symbol->has<TypeParamDetails>()) {
-      Say2(paramName, "'%s' is not defined as a type parameter"_err_en_US,
-          *symbol, "Definition of '%s'"_en_US); // C741
-    }
-    if (!paramNames.insert(paramName.source).second) {
-      Say(paramName,
-          "Duplicate type parameter name: '%s'"_err_en_US); // C731
-    }
-  }
-  for (const auto &[name, symbol] : currScope()) {
-    if (symbol->has<TypeParamDetails>() && !paramNames.count(name)) {
-      SayDerivedType(name,
-          "'%s' is not a type parameter of this derived type"_err_en_US,
-          currScope()); // C741
+    if (auto *symbol{FindInScope(scope, paramName)}) {
+      if (auto *details{symbol->detailsIf<TypeParamDetails>()}) {
+        if (!details->attr()) {
+          Say(paramName,
+              "No definition found for type parameter '%s'"_err_en_US); // C742
+        }
+      }
     }
   }
   Walk(std::get<std::list<parser::Statement<parser::PrivateOrSequence>>>(x.t));
@@ -5499,7 +5479,7 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
             "A sequence type should have at least one component"_warn_en_US);
       }
     }
-    if (!details.paramNames().empty()) { // C740
+    if (!details.paramDeclOrder().empty()) { // C740
       Say(stmt.source,
           "A sequence type may not have type parameters"_err_en_US);
     }
@@ -5559,24 +5539,50 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
       details.add_component(comp);
     }
   }
+  // Create symbols now for type parameters so that they shadow names
+  // from the enclosing specification part.
+  if (auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
+    for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
+      if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{})}) {
+        details->add_paramNameOrder(*symbol);
+      }
+    }
+  }
   EndAttrs();
 }
 
 void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
   auto *type{GetDeclTypeSpec()};
+  DerivedTypeDetails *derivedDetails{nullptr};
+  if (Symbol * dtSym{currScope().symbol()}) {
+    derivedDetails = dtSym->detailsIf<DerivedTypeDetails>();
+  }
   auto attr{std::get<common::TypeParamAttr>(x.t)};
   for (auto &decl : std::get<std::list<parser::TypeParamDecl>>(x.t)) {
     auto &name{std::get<parser::Name>(decl.t)};
-    if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{attr})}) {
-      SetType(name, *type);
-      if (auto &init{
-              std::get<std::optional<parser::ScalarIntConstantExpr>>(decl.t)}) {
-        if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
-          if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
-            symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
+    if (Symbol * symbol{FindInScope(currScope(), name)}) {
+      if (auto *paramDetails{symbol->detailsIf<TypeParamDetails>()}) {
+        if (!paramDetails->attr()) {
+          paramDetails->set_attr(attr);
+          SetType(name, *type);
+          if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
+                  decl.t)}) {
+            if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
+              if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
+                paramDetails->set_init(std::move(*intExpr));
+              }
+            }
           }
+          if (derivedDetails) {
+            derivedDetails->add_paramDeclOrder(*symbol);
+          }
+        } else {
+          Say(name,
+              "Type parameter '%s' was already declared in this derived type"_err_en_US);
         }
       }
+    } else {
+      Say(name, "'%s' is not a parameter of this derived type"_err_en_US);
     }
   }
   EndDecl();
@@ -6554,7 +6560,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
           name.source, currScope(), DefinabilityFlags{}, symbol)}) {
     SayWithReason(name, symbol,
         "'%s' may not appear in a locality-spec because it is not definable"_err_en_US,
-        std::move(*whyNot));
+        std::move(whyNot->set_severity(parser::Severity::Because)));
     return false;
   }
   return PassesSharedLocalityChecks(name, symbol);
@@ -6779,9 +6785,6 @@ Symbol *DeclarationVisitor::MakeTypeSymbol(
     }
     Symbol &result{MakeSymbol(name, attrs, std::move(details))};
     SetCUDADataAttr(name, result, cudaDataAttr());
-    if (result.has<TypeParamDetails>()) {
-      derivedType.symbol()->get<DerivedTypeDetails>().add_paramDecl(result);
-    }
     return &result;
   }
 }
@@ -7118,8 +7121,12 @@ void ConstructVisitor::Post(const parser::AssociateStmt &x) {
   for (auto nthLastAssoc{assocCount}; nthLastAssoc > 0; --nthLastAssoc) {
     SetCurrentAssociation(nthLastAssoc);
     if (auto *symbol{MakeAssocEntity()}) {
-      if (ExtractCoarrayRef(GetCurrentAssociation().selector.expr)) { // C1103
+      const MaybeExpr &expr{GetCurrentAssociation().selector.expr};
+      if (ExtractCoarrayRef(expr)) { // C1103
         Say("Selector must not be a coindexed object"_err_en_US);
+      }
+      if (evaluate::IsAssumedRank(expr)) {
+        Say("Selector must not be assumed-rank"_err_en_US);
       }
       SetTypeFromAssociation(*symbol);
       SetAttrsFromAssociation(*symbol);
@@ -7830,6 +7837,12 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       CheckEntryDummyUse(name.source, symbol);
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
+    } else if (const auto *tpd{symbol->detailsIf<TypeParamDetails>()};
+               tpd && !tpd->attr()) {
+      Say(name,
+          "Type parameter '%s' was referenced before being declared"_err_en_US,
+          name.source);
+      context().SetError(*symbol);
     }
     if (checkIndexUseInOwnBounds_ &&
         *checkIndexUseInOwnBounds_ == name.source && !InModuleFile()) {

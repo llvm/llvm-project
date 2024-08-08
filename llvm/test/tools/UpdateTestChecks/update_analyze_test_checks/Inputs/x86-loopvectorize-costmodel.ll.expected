@@ -17,6 +17,7 @@ define void @test() {
 ; CHECK:  LV: Found an estimated cost of 5 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
 ; CHECK:  LV: Found an estimated cost of 22 for VF 32 For instruction: %v0 = load float, ptr %in0, align 4
 ; CHECK:  LV: Found an estimated cost of 92 for VF 64 For instruction: %v0 = load float, ptr %in0, align 4
+; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
 ;
 entry:
   br label %for.body

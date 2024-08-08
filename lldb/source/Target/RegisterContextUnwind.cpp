@@ -1401,7 +1401,7 @@ RegisterContextUnwind::SavedLocationForRegister(
       // it's still live in the actual register. Handle this specially.
 
       if (!have_unwindplan_regloc && return_address_reg.IsValid() &&
-          IsFrameZero()) {
+          BehavesLikeZerothFrame()) {
         if (return_address_reg.GetAsKind(eRegisterKindLLDB) !=
             LLDB_INVALID_REGNUM) {
           lldb_private::UnwindLLDB::RegisterLocation new_regloc;
@@ -1692,6 +1692,15 @@ RegisterContextUnwind::SavedLocationForRegister(
                  "(%d) but failed",
                  regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
     return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
+  }
+
+  if (unwindplan_regloc.IsConstant()) {
+    regloc.type = UnwindLLDB::RegisterLocation::eRegisterValueInferred;
+    regloc.location.inferred_value = unwindplan_regloc.GetConstant();
+    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
+    UnwindLogMsg("supplying caller's register %s (%d) via constant value",
+                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+    return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
   UnwindLogMsg("no save location for %s (%d) in this stack frame",

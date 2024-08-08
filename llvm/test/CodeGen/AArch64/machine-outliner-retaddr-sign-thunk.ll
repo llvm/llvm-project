@@ -11,7 +11,8 @@ define i32 @a() #0 {
 ; CHECK:        // %bb.0:                               // %entry
 ; V8A-NEXT:         hint #25
 ; V83A-NEXT:        paciasp
-; CHECK-NEXT:       .cfi_negate_ra_state
+; CHECK:            .cfi_negate_ra_state
+; CHECK-NEXT:       .cfi_def_cfa_offset
 ; V8A:              hint #29
 ; V8A-NEXT:         ret
 ; V83A:             retaa
@@ -26,7 +27,8 @@ define i32 @b() #0 {
 ; CHECK:        // %bb.0:                               // %entry
 ; V8A-NEXT:         hint #25
 ; V83A-NEXT:        paciasp
-; CHECK-NEXT:       .cfi_negate_ra_state
+; CHECK:            .cfi_negate_ra_state
+; CHECK-NEXT:       .cfi_def_cfa_offset
 ; V8A:              hint #29
 ; V8A-NEXT:         ret
 ; V83A:             retaa
@@ -41,7 +43,8 @@ define hidden i32 @c(ptr %fptr) #0 {
 ; CHECK:        // %bb.0:                               // %entry
 ; V8A-NEXT:         hint #25
 ; V83A-NEXT:        paciasp
-; CHECK-NEXT:       .cfi_negate_ra_state
+; CHECK:            .cfi_negate_ra_state
+; CHECK-NEXT:       .cfi_def_cfa_offset
 ; V8A:              hint #29
 ; V8A-NEXT:         ret
 ; V83A:             retaa
@@ -56,7 +59,8 @@ define hidden i32 @d(ptr %fptr) #0 {
 ; CHECK:        // %bb.0:                               // %entry
 ; V8A-NEXT:         hint #25
 ; V83A-NEXT:        paciasp
-; CHECK-NEXT:       .cfi_negate_ra_state
+; CHECK:            .cfi_negate_ra_state
+; CHECK-NEXT:       .cfi_def_cfa_offset
 ; V8A:              hint #29
 ; V8A-NEXT:         ret
 ; V83A:             retaa

@@ -1756,6 +1756,44 @@ const APInt &Constant::getUniqueInteger() const {
   return cast<ConstantInt>(C)->getValue();
 }
 
+ConstantRange Constant::toConstantRange() const {
+  if (auto *CI = dyn_cast<ConstantInt>(this))
+    return ConstantRange(CI->getValue());
+
+  unsigned BitWidth = getType()->getScalarSizeInBits();
+  if (!getType()->isVectorTy())
+    return ConstantRange::getFull(BitWidth);
+
+  if (auto *CI = dyn_cast_or_null<ConstantInt>(
+          getSplatValue(/*AllowPoison=*/true)))
+    return ConstantRange(CI->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(CDV->getElementAsAPInt(I));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantRange::getFull(BitWidth);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CI = dyn_cast<ConstantInt>(Elem);
+      if (!CI)
+        return ConstantRange::getFull(BitWidth);
+      CR = CR.unionWith(CI->getValue());
+    }
+    return CR;
+  }
+
+  return ConstantRange::getFull(BitWidth);
+}
+
 //---- ConstantPointerNull::get() implementation.
 //
 
@@ -2058,6 +2096,18 @@ Value *ConstantPtrAuth::handleOperandChangeImpl(Value *From, Value *ToV) {
 
   return getContext().pImpl->ConstantPtrAuths.replaceOperandsInPlace(
       Values, this, From, To, NumUpdated, OperandNo);
+}
+
+bool ConstantPtrAuth::hasSpecialAddressDiscriminator(uint64_t Value) const {
+  const auto *CastV = dyn_cast<ConstantExpr>(getAddrDiscriminator());
+  if (!CastV || CastV->getOpcode() != Instruction::IntToPtr)
+    return false;
+
+  const auto *IntVal = dyn_cast<ConstantInt>(CastV->getOperand(0));
+  if (!IntVal)
+    return false;
+
+  return IntVal->getValue() == Value;
 }
 
 bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,

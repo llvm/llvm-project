@@ -24,7 +24,6 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -327,7 +326,7 @@ int main(int argc, char **argv) {
   // information.
   std::string ActivePrefix, ActiveBinDir, ActiveIncludeDir, ActiveLibDir,
               ActiveCMakeDir;
-  std::vector<std::string> ActiveIncludeOptions;
+  std::string ActiveIncludeOption;
   if (IsInDevelopmentTree) {
     ActiveIncludeDir = std::string(LLVM_SRC_ROOT) + "/include";
     ActivePrefix = CurrentExecPrefix;
@@ -353,8 +352,8 @@ int main(int argc, char **argv) {
     }
 
     // We need to include files from both the source and object trees.
-    ActiveIncludeOptions.push_back(ActiveIncludeDir);
-    ActiveIncludeOptions.push_back(ActiveObjRoot + "/include");
+    ActiveIncludeOption =
+        ("-I" + ActiveIncludeDir + " " + "-I" + ActiveObjRoot + "/include");
   } else {
     ActivePrefix = CurrentExecPrefix;
     {
@@ -373,7 +372,7 @@ int main(int argc, char **argv) {
       sys::fs::make_absolute(ActivePrefix, Path);
       ActiveCMakeDir = std::string(Path);
     }
-    ActiveIncludeOptions.push_back(ActiveIncludeDir);
+    ActiveIncludeOption = "-I" + ActiveIncludeDir;
   }
 
   /// We only use `shared library` mode in cases where the static library form
@@ -402,8 +401,8 @@ int main(int argc, char **argv) {
       std::replace(ActiveBinDir.begin(), ActiveBinDir.end(), '/', '\\');
       std::replace(ActiveLibDir.begin(), ActiveLibDir.end(), '/', '\\');
       std::replace(ActiveCMakeDir.begin(), ActiveCMakeDir.end(), '/', '\\');
-      for (auto &Include : ActiveIncludeOptions)
-        std::replace(Include.begin(), Include.end(), '/', '\\');
+      std::replace(ActiveIncludeOption.begin(), ActiveIncludeOption.end(), '/',
+                   '\\');
     }
     SharedDir = ActiveBinDir;
     StaticDir = ActiveLibDir;
@@ -505,20 +504,6 @@ int main(int argc, char **argv) {
   };
 
   raw_ostream &OS = outs();
-
-  // Render include paths and associated flags
-  auto RenderFlags = [&](StringRef Flags) {
-    bool First = true;
-    for (auto &Include : ActiveIncludeOptions) {
-      if (!First)
-        OS << ' ';
-      OS << "-I";
-      sys::printArg(OS, Include, /*Quote=*/true);
-      First = false;
-    }
-    OS << ' ' << Flags << '\n';
-  };
-
   for (int i = 1; i != argc; ++i) {
     StringRef Arg = argv[i];
 
@@ -527,30 +512,24 @@ int main(int argc, char **argv) {
       if (Arg == "--version") {
         OS << PACKAGE_VERSION << '\n';
       } else if (Arg == "--prefix") {
-        sys::printArg(OS, ActivePrefix, /*Quote=*/true);
-        OS << '\n';
+        OS << ActivePrefix << '\n';
       } else if (Arg == "--bindir") {
-        sys::printArg(OS, ActiveBinDir, /*Quote=*/true);
-        OS << '\n';
+        OS << ActiveBinDir << '\n';
       } else if (Arg == "--includedir") {
-        sys::printArg(OS, ActiveIncludeDir, /*Quote=*/true);
-        OS << '\n';
+        OS << ActiveIncludeDir << '\n';
       } else if (Arg == "--libdir") {
-        sys::printArg(OS, ActiveLibDir, /*Quote=*/true);
-        OS << '\n';
+        OS << ActiveLibDir << '\n';
       } else if (Arg == "--cmakedir") {
-        sys::printArg(OS, ActiveCMakeDir, /*Quote=*/true);
-        OS << '\n';
+        OS << ActiveCMakeDir << '\n';
       } else if (Arg == "--cppflags") {
-        RenderFlags(LLVM_CPPFLAGS);
+        OS << ActiveIncludeOption << ' ' << LLVM_CPPFLAGS << '\n';
       } else if (Arg == "--cflags") {
-        RenderFlags(LLVM_CFLAGS);
+        OS << ActiveIncludeOption << ' ' << LLVM_CFLAGS << '\n';
       } else if (Arg == "--cxxflags") {
-        RenderFlags(LLVM_CXXFLAGS);
+        OS << ActiveIncludeOption << ' ' << LLVM_CXXFLAGS << '\n';
       } else if (Arg == "--ldflags") {
-        OS << ((HostTriple.isWindowsMSVCEnvironment()) ? "-LIBPATH:" : "-L");
-        sys::printArg(OS, ActiveLibDir, /*Quote=*/true);
-        OS << ' ' << LLVM_LDFLAGS << '\n';
+        OS << ((HostTriple.isWindowsMSVCEnvironment()) ? "-LIBPATH:" : "-L")
+           << ActiveLibDir << ' ' << LLVM_LDFLAGS << '\n';
       } else if (Arg == "--system-libs") {
         PrintSystemLibs = true;
       } else if (Arg == "--libs") {
@@ -611,8 +590,7 @@ int main(int argc, char **argv) {
       } else if (Arg == "--shared-mode") {
         PrintSharedMode = true;
       } else if (Arg == "--obj-root") {
-        sys::printArg(OS, ActivePrefix, /*Quote=*/true);
-        OS << '\n';
+        OS << ActivePrefix << '\n';
       } else if (Arg == "--ignore-libllvm") {
         LinkDyLib = false;
         LinkMode = BuiltSharedLibs ? LinkModeShared : LinkModeAuto;
@@ -717,30 +695,26 @@ int main(int argc, char **argv) {
 
       auto PrintForLib = [&](const StringRef &Lib) {
         const bool Shared = LinkMode == LinkModeShared;
-        std::string LibFileName;
         if (PrintLibNames) {
-          LibFileName = GetComponentLibraryFileName(Lib, Shared);
+          OS << GetComponentLibraryFileName(Lib, Shared);
         } else if (PrintLibFiles) {
-          LibFileName = GetComponentLibraryPath(Lib, Shared);
+          OS << GetComponentLibraryPath(Lib, Shared);
         } else if (PrintLibs) {
           // On Windows, output full path to library without parameters.
           // Elsewhere, if this is a typical library name, include it using -l.
           if (HostTriple.isWindowsMSVCEnvironment()) {
-            LibFileName = GetComponentLibraryPath(Lib, Shared);
+            OS << GetComponentLibraryPath(Lib, Shared);
           } else {
-            OS << "-l";
             StringRef LibName;
             if (GetComponentLibraryNameSlice(Lib, LibName)) {
               // Extract library name (remove prefix and suffix).
-              LibFileName = LibName;
+              OS << "-l" << LibName;
             } else {
               // Lib is already a library name without prefix and suffix.
-              LibFileName = Lib;
+              OS << "-l" << Lib;
             }
           }
         }
-        if (!LibFileName.empty())
-          sys::printArg(OS, LibFileName, /*Quote=*/true);
       };
 
       if (LinkMode == LinkModeShared && LinkDyLib) {

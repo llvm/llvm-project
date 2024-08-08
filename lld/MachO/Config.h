@@ -199,6 +199,7 @@ struct Configuration {
   std::vector<llvm::StringRef> systemLibraryRoots;
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
+  bool warnDuplicateRpath = true;
   llvm::SmallVector<llvm::StringRef, 0> runtimePaths;
   std::vector<std::string> astPaths;
   std::vector<Symbol *> explicitUndefineds;
@@ -211,9 +212,15 @@ struct Configuration {
   bool csProfileGenerate = false;
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
+  bool warnThinArchiveMissingMembers;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
+
+  llvm::StringRef irpgoProfileSortProfilePath;
+  bool functionOrderForCompression = false;
+  bool dataOrderForCompression = false;
+  bool verboseBpSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;

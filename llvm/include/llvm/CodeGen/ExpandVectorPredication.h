@@ -13,11 +13,14 @@
 
 namespace llvm {
 
-class ExpandVectorPredicationPass
-    : public PassInfoMixin<ExpandVectorPredicationPass> {
-public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
+class TargetTransformInfo;
+class VPIntrinsic;
+
+/// Expand a vector predication intrinsic. Returns true if the intrinsic was
+/// removed/replaced.
+bool expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
+                                      const TargetTransformInfo &TTI);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_EXPANDVECTORPREDICATION_H

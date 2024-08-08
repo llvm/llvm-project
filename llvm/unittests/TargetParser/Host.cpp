@@ -536,6 +536,7 @@ TEST(HostTest, AIXHostCPUDetect) {
                        .Case("POWER 8\n", "pwr8")
                        .Case("POWER 9\n", "pwr9")
                        .Case("POWER 10\n", "pwr10")
+                       .Case("POWER 11\n", "pwr11")
                        .Default("unknown");
 
   StringRef HostCPU = sys::getHostCPUName();

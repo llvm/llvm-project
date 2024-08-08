@@ -109,6 +109,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// registers.
   unsigned VarArgsFPRSize = 0;
 
+  /// The stack slots used to add space between FPR and GPR accesses when using
+  /// hazard padding. StackHazardCSRSlotIndex is added between GPR and FPR CSRs.
+  /// StackHazardSlotIndex is added between (sorted) stack objects.
+  int StackHazardSlotIndex = std::numeric_limits<int>::max();
+  int StackHazardCSRSlotIndex = std::numeric_limits<int>::max();
+
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
   bool IsSplitCSR = false;
@@ -170,6 +176,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
+
+  /// HasELFSignedGOT is true if the target binary format is ELF and the IR
+  /// module containing the corresponding function has the following flags:
+  /// - aarch64-elf-pauthabi-platform flag equal to
+  ///   AARCH64_PAUTH_PLATFORM_LLVM_LINUX;
+  /// - aarch64-elf-pauthabi-version flag with
+  ///   AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT bit set.
+  bool HasELFSignedGOT = false;
 
   /// SigningInstrOffset captures the offset of the PAC-RET signing instruction
   /// within the prologue, so it can be re-used for authentication in the
@@ -346,6 +360,13 @@ public:
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
 
+      if (StackHazardCSRSlotIndex != std::numeric_limits<int>::max()) {
+        int64_t Offset = MFI.getObjectOffset(StackHazardCSRSlotIndex);
+        int64_t ObjSize = MFI.getObjectSize(StackHazardCSRSlotIndex);
+        MinOffset = std::min<int64_t>(Offset, MinOffset);
+        MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
+      }
+
       unsigned Size = alignTo(MaxOffset - MinOffset, 16);
       assert((!HasCalleeSavedStackSize || getCalleeSavedStackSize() == Size) &&
              "Invalid size calculated for callee saves");
@@ -402,6 +423,20 @@ public:
 
   unsigned getVarArgsFPRSize() const { return VarArgsFPRSize; }
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
+
+  bool hasStackHazardSlotIndex() const {
+    return StackHazardSlotIndex != std::numeric_limits<int>::max();
+  }
+  int getStackHazardSlotIndex() const { return StackHazardSlotIndex; }
+  void setStackHazardSlotIndex(int Index) {
+    assert(StackHazardSlotIndex == std::numeric_limits<int>::max());
+    StackHazardSlotIndex = Index;
+  }
+  int getStackHazardCSRSlotIndex() const { return StackHazardCSRSlotIndex; }
+  void setStackHazardCSRSlotIndex(int Index) {
+    assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
+    StackHazardCSRSlotIndex = Index;
+  }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
@@ -481,6 +516,8 @@ public:
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
+
+  bool hasELFSignedGOT() const { return HasELFSignedGOT; }
 
   MCSymbol *getSigningInstrLabel() const { return SignInstrLabel; }
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }

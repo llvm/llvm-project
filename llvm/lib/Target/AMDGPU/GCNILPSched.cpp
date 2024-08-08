@@ -27,7 +27,7 @@ class GCNILPScheduler {
   };
 
   SpecificBumpPtrAllocator<Candidate> Alloc;
-  typedef simple_ilist<Candidate> Queue;
+  using Queue = simple_ilist<Candidate>;
   Queue PendingQueue;
   Queue AvailQueue;
   unsigned CurQueueId = 0;
@@ -224,13 +224,11 @@ const SUnit *GCNILPScheduler::pickBest(const SUnit *left, const SUnit *right)
       return result > 0 ? right : left;
     return left;
   }
-  else {
-    if (left->getHeight() != right->getHeight())
-      return (left->getHeight() > right->getHeight()) ? right : left;
+  if (left->getHeight() != right->getHeight())
+    return (left->getHeight() > right->getHeight()) ? right : left;
 
-    if (left->getDepth() != right->getDepth())
-      return (left->getDepth() < right->getDepth()) ? right : left;
-  }
+  if (left->getDepth() != right->getDepth())
+    return (left->getDepth() < right->getDepth()) ? right : left;
 
   assert(left->NodeQueueId && right->NodeQueueId &&
         "NodeQueueId cannot be zero");
@@ -359,4 +357,4 @@ std::vector<const SUnit*> makeGCNILPScheduler(ArrayRef<const SUnit*> BotRoots,
   GCNILPScheduler S;
   return S.schedule(BotRoots, DAG);
 }
-}
+} // namespace llvm

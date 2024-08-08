@@ -31,6 +31,7 @@ add_clang_tool(clang-linker-wrapper
 
   DEPENDS
   ${tablegen_deps}
+  EXPORT_SYMBOLS_FOR_PLUGINS
   )
 
 set(CLANG_LINKER_WRAPPER_LIB_DEPS

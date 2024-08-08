@@ -2729,3 +2729,14 @@ func.func @fold_vector_step_to_constant() -> vector<4xindex> {
   %0 = vector.step : vector<4xindex>
   return %0 : vector<4xindex>
 }
+
+// -----
+
+// CHECK-LABEL: func @vector_insert_const_regression(
+//       CHECK:   llvm.mlir.undef
+//       CHECK:   vector.insert
+func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
+  %0 = llvm.mlir.undef : vector<4xi8>
+  %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
+  return %1 : vector<4xi8>
+}

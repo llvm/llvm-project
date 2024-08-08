@@ -75,7 +75,7 @@ char SILowerSGPRSpills::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SILowerSGPRSpills, DEBUG_TYPE,
                       "SI lower SGPR spill instructions", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_END(SILowerSGPRSpills, DEBUG_TYPE,
                     "SI lower SGPR spill instructions", false, false)
@@ -237,7 +237,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                            TRI->getSpillAlign(*RC), true);
 
-        CSI.push_back(CalleeSavedInfo(Reg, JunkFI));
+        CSI.emplace_back(Reg, JunkFI);
         CalleeSavedFIs.push_back(JunkFI);
       }
     }
@@ -311,8 +311,10 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
 
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
-  Indexes = getAnalysisIfAvailable<SlotIndexes>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
 
   assert(SaveBlocks.empty() && RestoreBlocks.empty());
 

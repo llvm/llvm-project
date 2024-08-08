@@ -913,6 +913,12 @@ Clang options that don't fit neatly into other categories.
   binary compatibility issues on older x86_64 targets, however, so use it with
   caution.
 
+.. option:: -fdisable-block-signature-string
+
+  Instruct clang not to emit the signature string for blocks. Disabling the
+  string can potentially break existing code that relies on it. Users should
+  carefully consider this possibiilty when using the flag.
+
 .. _configuration-files:
 
 Configuration files
@@ -4739,6 +4745,12 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -flto=<value>           Set LTO mode to either 'full' or 'thin'
       -flto                   Enable LTO in 'full' mode
       -fmerge-all-constants   Allow merging of constants
+      -fmodule-file=<module_name>=<module-file>
+                              Use the specified module file that provides the module <module_name>
+      -fmodule-header=<header>
+                              Build <header> as a C++20 header unit
+      -fmodule-output=<path>
+                              Save intermediate module file results when compiling a standard C++ module unit.
       -fms-compatibility-version=<value>
                               Dot-separated value representing the Microsoft compiler version
                               number to report in _MSC_VER (0 = don't define it; default is same value as installed cl.exe, or 1933)

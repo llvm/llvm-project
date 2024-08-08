@@ -11,6 +11,7 @@ add_llvm_library(LLVMBOLTProfile
 
   LINK_COMPONENTS
   Demangle
+  MC
   Support
   TransformUtils
   )

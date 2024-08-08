@@ -325,6 +325,22 @@ Vendors can use the following ABI options to enable additional hardening checks:
   - ``span``;
   - ``string_view``.
 
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` -- changes the iterator type of
+  ``basic_string`` to a bounded iterator that keeps track of whether it's within
+  the bounds of the original container and asserts it on every dereference and
+  when performing iterator arithmetics.
+
+  ABI impact: changes the iterator type of ``basic_string`` and its
+  specializations, such as ``string`` and ``wstring``.
+
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` -- changes the iterator type of
+  ``vector`` to a bounded iterator that keeps track of whether it's within the
+  bounds of the original container and asserts it on every dereference and when
+  performing iterator arithmetics. Note: this doesn't yet affect
+  ``vector<bool>``.
+
+  ABI impact: changes the iterator type of ``vector`` (except ``vector<bool>``).
+
 ABI tags
 --------
 
@@ -367,10 +383,10 @@ Hardened containers status
       - ❌
     * - ``vector``
       - ✅
-      - ❌
+      - ✅ (see note)
     * - ``string``
       - ✅
-      - ❌
+      - ✅ (see note)
     * - ``list``
       - ✅
       - ❌
@@ -428,6 +444,12 @@ Hardened containers status
     * - ``bitset``
       - ❌
       - N/A
+
+Note: for ``vector`` and ``string``, the iterator does not check for
+invalidation (accesses made via an invalidated iterator still lead to undefined
+behavior)
+
+Note: ``vector<bool>`` iterator is not currently hardened.
 
 Testing
 =======

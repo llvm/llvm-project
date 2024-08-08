@@ -120,11 +120,13 @@ MyLongPointerFromConversion global2;
 
 void initLocalGslPtrWithTempOwner() {
   MyIntPointer p = MyIntOwner{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  p = MyIntOwner{}; // TODO ?
-  global = MyIntOwner{}; // TODO ?
+  MyIntPointer pp = p = MyIntOwner{}; // expected-warning {{object backing the pointer p will be}}
+  p = MyIntOwner{}; // expected-warning {{object backing the pointer p }}
+  pp = p; // no warning
+  global = MyIntOwner{}; // expected-warning {{object backing the pointer global }}
   MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  p2 = MyLongOwnerWithConversion{}; // TODO ?
-  global2 = MyLongOwnerWithConversion{}; // TODO ?
+  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer p2 }}
+  global2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer global2 }}
 }
 
 namespace __gnu_cxx {
@@ -170,6 +172,7 @@ struct basic_string_view {
   basic_string_view(const T *);
   const T *begin() const;
 };
+using string_view = basic_string_view<char>;
 
 template<class _Mystr> struct iter {
     iter& operator-=(int);
@@ -188,7 +191,7 @@ struct basic_string {
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
 };
-
+using string = basic_string<char>;
 
 template<typename T>
 struct unique_ptr {
@@ -344,6 +347,12 @@ void handleGslPtrInitsThroughReference2() {
 void handleTernaryOperator(bool cond) {
     std::basic_string<char> def;
     std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+}
+
+std::string operator+(std::string_view s1, std::string_view s2);
+void danglingStringviewAssignment(std::string_view a1, std::string_view a2) {
+  a1 = std::string(); // expected-warning {{object backing}}
+  a2 = a1 + a1; // expected-warning {{object backing}}
 }
 
 std::reference_wrapper<int> danglingPtrFromNonOwnerLocal() {

@@ -455,7 +455,8 @@ template <class ELFT>
 void EhFrameSection::addSectionAux(EhInputSection *sec) {
   if (!sec->isLive())
     return;
-  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rels =
+      sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
   if (rels.areRelocsRel())
     addRecords<ELFT>(sec, rels.rels);
   else
@@ -489,7 +490,8 @@ void EhFrameSection::iterateFDEWithLSDA(
   DenseSet<size_t> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+    const RelsOrRelas<ELFT> rels =
+        sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
     if (rels.areRelocsRel())
       iterateFDEWithLSDAAux<ELFT>(*sec, rels.rels, ciesWithLSDA, fn);
     else
@@ -551,7 +553,7 @@ void EhFrameSection::finalizeContents() {
 // to get an FDE from an address to which FDE is applied. This function
 // returns a list of such pairs.
 SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
-  uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
+  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
   SmallVector<FdeData, 0> ret;
 
   uint64_t va = getPartition().ehFrameHdr->getVA();
@@ -653,20 +655,20 @@ GotSection::GotSection()
 
 void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().gotIdx = numEntries++;
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().gotIdx = numEntries++;
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().tlsDescIdx = numEntries;
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().tlsDescIdx = numEntries;
   numEntries += 2;
   return true;
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().tlsGdIdx = numEntries;
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().tlsGdIdx = numEntries;
   // Global Dynamic TLS entries take two GOT slots.
   numEntries += 2;
   return true;
@@ -700,7 +702,7 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &b) const {
 
 void GotSection::finalizeContents() {
   if (config->emachine == EM_PPC64 &&
-      numEntries <= target->gotHeaderEntriesNum && !ElfSym::globalOffsetTable)
+      numEntries <= target->gotHeaderEntriesNum && !ctx.sym.globalOffsetTable)
     size = 0;
   else
     size = numEntries * config->wordsize;
@@ -997,12 +999,12 @@ void MipsGotSection::build() {
   for (auto &p : primGot->global) {
     if (p.first->auxIdx == 0)
       p.first->allocateAux();
-    symAux.back().gotIdx = p.second;
+    ctx.symAux.back().gotIdx = p.second;
   }
   for (auto &p : primGot->relocs) {
     if (p.first->auxIdx == 0)
       p.first->allocateAux();
-    symAux.back().gotIdx = p.second;
+    ctx.symAux.back().gotIdx = p.second;
   }
 
   // Create dynamic relocations.
@@ -1088,7 +1090,7 @@ uint64_t MipsGotSection::getGp(const InputFile *f) const {
   // returns "common" _gp value. For secondary GOTs calculate
   // individual _gp values.
   if (!f || f->mipsGotIndex == uint32_t(-1) || f->mipsGotIndex == 0)
-    return ElfSym::mipsGp->getVA(0);
+    return ctx.sym.mipsGp->getVA(0);
   return getVA() + gots[f->mipsGotIndex].startIndex * config->wordsize + 0x7ff0;
 }
 
@@ -1171,8 +1173,8 @@ GotPltSection::GotPltSection()
 }
 
 void GotPltSection::addEntry(Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1 &&
-         symAux.back().pltIdx == entries.size());
+  assert(sym.auxIdx == ctx.symAux.size() - 1 &&
+         ctx.symAux.back().pltIdx == entries.size());
   entries.push_back(&sym);
 }
 
@@ -1217,7 +1219,7 @@ IgotPltSection::IgotPltSection()
                        target->gotEntrySize, getIgotPltName()) {}
 
 void IgotPltSection::addEntry(Symbol &sym) {
-  assert(symAux.back().pltIdx == entries.size());
+  assert(ctx.symAux.back().pltIdx == entries.size());
   entries.push_back(&sym);
 }
 
@@ -1491,17 +1493,17 @@ DynamicSection<ELFT>::computeContents() {
     addInSec(DT_HASH, *part.hashTab);
 
   if (isMain) {
-    if (Out::preinitArray) {
-      addInt(DT_PREINIT_ARRAY, Out::preinitArray->addr);
-      addInt(DT_PREINIT_ARRAYSZ, Out::preinitArray->size);
+    if (ctx.out.preinitArray) {
+      addInt(DT_PREINIT_ARRAY, ctx.out.preinitArray->addr);
+      addInt(DT_PREINIT_ARRAYSZ, ctx.out.preinitArray->size);
     }
-    if (Out::initArray) {
-      addInt(DT_INIT_ARRAY, Out::initArray->addr);
-      addInt(DT_INIT_ARRAYSZ, Out::initArray->size);
+    if (ctx.out.initArray) {
+      addInt(DT_INIT_ARRAY, ctx.out.initArray->addr);
+      addInt(DT_INIT_ARRAYSZ, ctx.out.initArray->size);
     }
-    if (Out::finiArray) {
-      addInt(DT_FINI_ARRAY, Out::finiArray->addr);
-      addInt(DT_FINI_ARRAYSZ, Out::finiArray->size);
+    if (ctx.out.finiArray) {
+      addInt(DT_FINI_ARRAY, ctx.out.finiArray->addr);
+      addInt(DT_FINI_ARRAYSZ, ctx.out.finiArray->size);
     }
 
     if (Symbol *b = symtab.find(config->init))
@@ -2566,8 +2568,8 @@ void PltSection::writeTo(uint8_t *buf) {
 }
 
 void PltSection::addEntry(Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().pltIdx = entries.size();
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().pltIdx = entries.size();
   entries.push_back(&sym);
 }
 
@@ -2613,8 +2615,8 @@ size_t IpltSection::getSize() const {
 }
 
 void IpltSection::addEntry(Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().pltIdx = entries.size();
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().pltIdx = entries.size();
   entries.push_back(&sym);
 }
 
@@ -3203,10 +3205,10 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
 template <class ELFT>
 template <class RelTy>
 void DebugNamesSection<ELFT>::getNameRelocs(
-    InputSection *sec, ArrayRef<RelTy> rels,
-    DenseMap<uint32_t, uint32_t> &relocs) {
+    const InputFile &file, DenseMap<uint32_t, uint32_t> &relocs,
+    Relocs<RelTy> rels) {
   for (const RelTy &rel : rels) {
-    Symbol &sym = sec->file->getRelocTargetSym(rel);
+    Symbol &sym = file.getRelocTargetSym(rel);
     relocs[rel.r_offset] = sym.getVA(getAddend<ELFT>(rel));
   }
 }
@@ -3216,11 +3218,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
   auto relocs = std::make_unique<DenseMap<uint32_t, uint32_t>[]>(numChunks);
   parallelFor(0, numChunks, [&](size_t i) {
     InputSection *sec = inputSections[i];
-    auto rels = sec->template relsOrRelas<ELFT>();
-    if (rels.areRelocsRel())
-      getNameRelocs(sec, rels.rels, relocs.get()[i]);
-    else
-      getNameRelocs(sec, rels.relas, relocs.get()[i]);
+    invokeOnRelocs(*sec, getNameRelocs, *sec->file, relocs.get()[i]);
 
     // Relocate CU offsets with .debug_info + X relocations.
     OutputChunk &chunk = chunks.get()[i];
@@ -3633,7 +3631,7 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
 // the starting PC from where FDEs covers, and the FDE's address.
 // It is sorted by PC.
 void EhFrameHeader::write() {
-  uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
+  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
   using FdeData = EhFrameSection::FdeData;
   SmallVector<FdeData, 0> fdes = getPartition().ehFrame->getFdeData();
 
@@ -4649,13 +4647,6 @@ static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
 }
 
 template <class ELFT> void elf::createSyntheticSections() {
-  // Initialize all pointers with NULL. This is needed because
-  // you can call lld::elf::main more than once as a library.
-  Out::tlsPhdr = nullptr;
-  Out::preinitArray = nullptr;
-  Out::initArray = nullptr;
-  Out::finiArray = nullptr;
-
   // Add the .interp section first because it is not a SyntheticSection.
   // The removeUnusedSyntheticSections() function relies on the
   // SyntheticSections coming last.
@@ -4669,10 +4660,11 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   auto add = [](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
 
-  in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
+  if (config->zSectionHeader)
+    in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
 
-  Out::programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::programHeaders->addralign = config->wordsize;
+  ctx.out.programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.programHeaders->addralign = config->wordsize;
 
   if (config->strip != StripPolicy::All) {
     in.strTab = std::make_unique<StringTableSection>(".strtab", false);
@@ -4868,7 +4860,7 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
   // it as a relocation and ensure the referenced section is created.
-  if (ElfSym::globalOffsetTable && config->emachine != EM_MIPS) {
+  if (ctx.sym.globalOffsetTable && config->emachine != EM_MIPS) {
     if (target->gotBaseSymInGotPlt)
       in.gotPlt->hasGotPltOffRel = true;
     else
@@ -4921,7 +4913,8 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.symTab);
   if (in.symTabShndx)
     add(*in.symTabShndx);
-  add(*in.shStrTab);
+  if (in.shStrTab)
+    add(*in.shStrTab);
   if (in.strTab)
     add(*in.strTab);
 }

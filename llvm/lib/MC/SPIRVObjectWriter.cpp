@@ -14,45 +14,25 @@
 
 using namespace llvm;
 
-namespace {
-class SPIRVObjectWriter : public MCObjectWriter {
-  ::support::endian::Writer W;
-
-  /// The target specific SPIR-V writer instance.
-  std::unique_ptr<MCSPIRVObjectTargetWriter> TargetObjectWriter;
-
-public:
-  SPIRVObjectWriter(std::unique_ptr<MCSPIRVObjectTargetWriter> MOTW,
-                    raw_pwrite_stream &OS)
-      : W(OS, llvm::endianness::little), TargetObjectWriter(std::move(MOTW)) {}
-
-  ~SPIRVObjectWriter() override {}
-
-private:
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override {}
-
-  uint64_t writeObject(MCAssembler &Asm) override;
-  void writeHeader(const MCAssembler &Asm);
-};
-} // namespace
-
 void SPIRVObjectWriter::writeHeader(const MCAssembler &Asm) {
   constexpr uint32_t MagicNumber = 0x07230203;
   constexpr uint32_t GeneratorID = 43;
   constexpr uint32_t GeneratorMagicNumber =
       (GeneratorID << 16) | (LLVM_VERSION_MAJOR);
   constexpr uint32_t Schema = 0;
-  const MCAssembler::VersionInfoType &VIT = Asm.getVersionInfo();
-  uint32_t VersionNumber = 0 | (VIT.Major << 16) | (VIT.Minor << 8);
-  uint32_t Bound = VIT.Update;
 
   W.write<uint32_t>(MagicNumber);
-  W.write<uint32_t>(VersionNumber);
+  W.write<uint32_t>((VersionInfo.Major << 16) | (VersionInfo.Minor << 8));
   W.write<uint32_t>(GeneratorMagicNumber);
-  W.write<uint32_t>(Bound);
+  W.write<uint32_t>(VersionInfo.Bound);
   W.write<uint32_t>(Schema);
+}
+
+void SPIRVObjectWriter::setBuildVersion(unsigned Major, unsigned Minor,
+                                        unsigned Bound) {
+  VersionInfo.Major = Major;
+  VersionInfo.Minor = Minor;
+  VersionInfo.Bound = Bound;
 }
 
 uint64_t SPIRVObjectWriter::writeObject(MCAssembler &Asm) {

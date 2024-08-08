@@ -8,38 +8,38 @@ enums: []
 objects: []
 functions:
   - name: alphasort
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const struct dirent **
       - type: const struct dirent **
   - name: closedir
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: DIR *
   - name: dirfd
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: DIR *
   - name: fdopendir
-    standards: 
+    standards:
       - POSIX
     return_type: DIR *
     arguments:
       - type: int
   - name: opendir
-    standards: 
+    standards:
       - POSIX
     return_type: DIR *
     arguments:
       - type: const char *
   - name: readdir
-    standards: 
+    standards:
       - POSIX
     return_type: struct dirent *
     arguments:

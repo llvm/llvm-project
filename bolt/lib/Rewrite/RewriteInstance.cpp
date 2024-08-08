@@ -354,6 +354,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     }
   }
 
+  Relocation::Arch = TheTriple.getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
       TheTriple, File->getFileName(), Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
@@ -669,6 +670,7 @@ Error RewriteInstance::run() {
         opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
       selectFunctionsToProcess();
       disassembleFunctions();
+      processMetadataPreCFG();
       buildFunctionsCFG();
     }
     processProfileData();
@@ -886,7 +888,7 @@ void RewriteInstance::discoverFileObjects() {
     if (SymName == "__hot_start" || SymName == "__hot_end")
       continue;
 
-    FileSymRefs[SymbolAddress] = Symbol;
+    FileSymRefs.emplace(SymbolAddress, Symbol);
 
     // Skip section symbols that will be registered by disassemblePLT().
     if (SymbolType == SymbolRef::ST_Debug) {
@@ -954,13 +956,13 @@ void RewriteInstance::discoverFileObjects() {
     uint64_t SymbolSize = ELFSymbolRef(Symbol).getSize();
     uint64_t SymbolAlignment = Symbol.getAlignment();
 
-    auto registerName = [&](uint64_t FinalSize) {
+    auto registerName = [&](uint64_t FinalSize, BinarySection *Section = NULL) {
       // Register names even if it's not a function, e.g. for an entry point.
       BC->registerNameAtAddress(UniqueName, SymbolAddress, FinalSize,
-                                SymbolAlignment, SymbolFlags);
+                                SymbolAlignment, SymbolFlags, Section);
       if (!AlternativeName.empty())
         BC->registerNameAtAddress(AlternativeName, SymbolAddress, FinalSize,
-                                  SymbolAlignment, SymbolFlags);
+                                  SymbolAlignment, SymbolFlags, Section);
     };
 
     section_iterator Section =
@@ -985,12 +987,25 @@ void RewriteInstance::discoverFileObjects() {
                       << " for function\n");
 
     if (SymbolAddress == Section->getAddress() + Section->getSize()) {
+      ErrorOr<BinarySection &> SectionOrError =
+          BC->getSectionForAddress(Section->getAddress());
+
+      // Skip symbols from invalid sections
+      if (!SectionOrError) {
+        BC->errs() << "BOLT-WARNING: " << UniqueName << " (0x"
+                   << Twine::utohexstr(SymbolAddress)
+                   << ") does not have any section\n";
+        continue;
+      }
+
       assert(SymbolSize == 0 &&
              "unexpect non-zero sized symbol at end of section");
-      LLVM_DEBUG(
-          dbgs()
-          << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
-      registerName(SymbolSize);
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: rejecting as symbol " << UniqueName
+               << " points to end of " << SectionOrError->getName()
+               << " section\n";
+      });
+      registerName(SymbolSize, &SectionOrError.get());
       continue;
     }
 
@@ -1052,7 +1067,9 @@ void RewriteInstance::discoverFileObjects() {
 
         // Remove the symbol from FileSymRefs so that we can skip it from
         // in the future.
-        auto SI = FileSymRefs.find(SymbolAddress);
+        auto SI = llvm::find_if(
+            llvm::make_range(FileSymRefs.equal_range(SymbolAddress)),
+            [&](auto SymIt) { return SymIt.second == Symbol; });
         assert(SI != FileSymRefs.end() && "symbol expected to be present");
         assert(SI->second == Symbol && "wrong symbol found");
         FileSymRefs.erase(SI);
@@ -1260,6 +1277,7 @@ void RewriteInstance::discoverFileObjects() {
 
   registerFragments();
   FileSymbols.clear();
+  FileSymRefs.clear();
 
   discoverBOLTReserved();
 }
@@ -1429,11 +1447,17 @@ void RewriteInstance::registerFragments() {
   // of the last local symbol.
   ELFSymbolRef LocalSymEnd = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
 
-  for (auto &[ParentName, BF] : AmbiguousFragments) {
+  for (auto &Fragment : AmbiguousFragments) {
+    const StringRef &ParentName = Fragment.first;
+    BinaryFunction *BF = Fragment.second;
     const uint64_t Address = BF->getAddress();
 
     // Get fragment's own symbol
-    const auto SymIt = FileSymRefs.find(Address);
+    const auto SymIt = llvm::find_if(
+        llvm::make_range(FileSymRefs.equal_range(Address)), [&](auto SI) {
+          StringRef Name = cantFail(SI.second.getName());
+          return Name.contains(ParentName);
+        });
     if (SymIt == FileSymRefs.end()) {
       BC->errs()
           << "BOLT-ERROR: symbol lookup failed for function at address 0x"
@@ -2133,6 +2157,14 @@ bool RewriteInstance::analyzeRelocation(
   if (!Relocation::isSupported(RType))
     return false;
 
+  auto IsWeakReference = [](const SymbolRef &Symbol) {
+    Expected<uint32_t> SymFlagsOrErr = Symbol.getFlags();
+    if (!SymFlagsOrErr)
+      return false;
+    return (*SymFlagsOrErr & SymbolRef::SF_Undefined) &&
+           (*SymFlagsOrErr & SymbolRef::SF_Weak);
+  };
+
   const bool IsAArch64 = BC->isAArch64();
 
   const size_t RelSize = Relocation::getSizeForType(RType);
@@ -2164,7 +2196,8 @@ bool RewriteInstance::analyzeRelocation(
     // Section symbols are marked as ST_Debug.
     IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
     // Check for PLT entry registered with symbol name
-    if (!SymbolAddress && (IsAArch64 || BC->isRISCV())) {
+    if (!SymbolAddress && !IsWeakReference(Symbol) &&
+        (IsAArch64 || BC->isRISCV())) {
       const BinaryData *BD = BC->getPLTBinaryDataByName(SymbolName);
       SymbolAddress = BD ? BD->getAddress() : 0;
     }
@@ -2593,7 +2626,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       Expected<StringRef> SectionName = Section->getName();
       if (SectionName && !SectionName->empty())
         ReferencedSection = BC->getUniqueSectionByName(*SectionName);
-    } else if (ReferencedSymbol && ContainingBF &&
+    } else if (BC->isRISCV() && ReferencedSymbol && ContainingBF &&
                (cantFail(Symbol.getFlags()) & SymbolRef::SF_Absolute)) {
       // This might be a relocation for an ABS symbols like __global_pointer$ on
       // RISC-V
@@ -2601,6 +2634,30 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                   Rel.getType(), 0,
                                   cantFail(Symbol.getValue()));
       return;
+    }
+  }
+
+  if (Relocation::isGOT(RType) && !Relocation::isTLS(RType)) {
+    auto exitOnGotEndSymol = [&](StringRef Name) {
+      BC->errs() << "BOLT-ERROR: GOT table contains currently unsupported "
+                    "section end symbol "
+                 << Name << "\n";
+      exit(1);
+    };
+
+    if (SymbolIter != InputFile->symbol_end() && ReferencedSection) {
+      if (cantFail(SymbolIter->getAddress()) ==
+          ReferencedSection->getEndAddress())
+        exitOnGotEndSymol(cantFail(SymbolIter->getName()));
+    } else {
+      // If no section and symbol are provided by relocation, try to find the
+      // symbol by its name, including the possibility that the symbol is local.
+      BinaryData *BD = BC->getBinaryDataByName(SymbolName);
+      if (!BD && NR.getUniquifiedNameCount(SymbolName) == 1)
+        BD = BC->getBinaryDataByName(NR.getUniqueName(SymbolName, 1));
+
+      if ((BD && BD->getAddress() == BD->getSection().getEndAddress()))
+        exitOnGotEndSymol(BD->getName());
     }
   }
 
@@ -3121,18 +3178,24 @@ void RewriteInstance::initializeMetadataManager() {
 }
 
 void RewriteInstance::processSectionMetadata() {
+  NamedRegionTimer T("processmetadata-section", "process section metadata",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   initializeMetadataManager();
 
   MetadataManager.runSectionInitializers();
 }
 
 void RewriteInstance::processMetadataPreCFG() {
+  NamedRegionTimer T("processmetadata-precfg", "process metadata pre-CFG",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   MetadataManager.runInitializersPreCFG();
 
   processProfileDataPreCFG();
 }
 
 void RewriteInstance::processMetadataPostCFG() {
+  NamedRegionTimer T("processmetadata-postcfg", "process metadata post-CFG",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   MetadataManager.runInitializersPostCFG();
 }
 
@@ -3184,6 +3247,7 @@ void RewriteInstance::processProfileData() {
   if (opts::AggregateOnly) {
     PrintProgramStats PPS(&*BAT);
     BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*BC));
+    TimerGroup::printAll(outs());
     exit(0);
   }
 }
@@ -3526,10 +3590,14 @@ void RewriteInstance::emitAndLink() {
 }
 
 void RewriteInstance::finalizeMetadataPreEmit() {
+  NamedRegionTimer T("finalizemetadata-preemit", "finalize metadata pre-emit",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   MetadataManager.runFinalizersPreEmit();
 }
 
 void RewriteInstance::updateMetadata() {
+  NamedRegionTimer T("updatemetadata-postemit", "update metadata post-emit",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   MetadataManager.runFinalizersAfterEmit();
 
   if (opts::UpdateDebugSections) {
@@ -5488,6 +5556,14 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
   if (const BinaryFunction *BF =
           BC->getBinaryFunctionContainingAddress(OldAddress)) {
     if (BF->isEmitted()) {
+      // If OldAddress is the another entry point of
+      // the function, then BOLT could get the new address.
+      if (BF->isMultiEntry()) {
+        for (const BinaryBasicBlock &BB : *BF)
+          if (BB.isEntryPoint() &&
+              (BF->getAddress() + BB.getOffset()) == OldAddress)
+            return BF->getOutputAddress() + BB.getOffset();
+      }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
                  << Twine::utohexstr(OldAddress) << " in function " << *BF

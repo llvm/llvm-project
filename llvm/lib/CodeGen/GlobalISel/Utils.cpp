@@ -236,7 +236,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
   // If we can move an instruction, we can remove it.  Otherwise, it has
   // a side-effect of some sort.
   bool SawStore = false;
-  if (!MI.isSafeToMove(/*AA=*/nullptr, SawStore) && !MI.isPHI())
+  if (!MI.isSafeToMove(SawStore) && !MI.isPHI())
     return false;
 
   // Instructions without side-effects are dead iff they only define dead vregs.
@@ -834,6 +834,12 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FTAN:
+  case TargetOpcode::G_FACOS:
+  case TargetOpcode::G_FASIN:
+  case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FCOSH:
+  case TargetOpcode::G_FSINH:
+  case TargetOpcode::G_FTANH:
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD:
     if (SNaN)
@@ -1715,6 +1721,12 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FTAN:
+  case TargetOpcode::G_FACOS:
+  case TargetOpcode::G_FASIN:
+  case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FCOSH:
+  case TargetOpcode::G_FSINH:
+  case TargetOpcode::G_FTANH:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_INTRINSIC_ROUND:
@@ -1787,7 +1799,6 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
 
   // Check whether opcode is a poison/undef-generating operation.
   switch (RegDef->getOpcode()) {
-  case TargetOpcode::G_FREEZE:
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_CONSTANT_FOLD_BARRIER:
     return false;
@@ -1829,6 +1840,50 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_USHLSAT:
     return includesPoison(Kind) &&
            !shiftAmountKnownInRange(RegDef->getOperand(2).getReg(), MRI);
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    GInsertVectorElement *Insert = cast<GInsertVectorElement>(RegDef);
+    if (includesPoison(Kind)) {
+      std::optional<ValueAndVReg> Index =
+          getIConstantVRegValWithLookThrough(Insert->getIndexReg(), MRI);
+      if (!Index)
+        return true;
+      LLT VecTy = MRI.getType(Insert->getVectorReg());
+      return Index->Value.uge(VecTy.getElementCount().getKnownMinValue());
+    }
+    return false;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement *Extract = cast<GExtractVectorElement>(RegDef);
+    if (includesPoison(Kind)) {
+      std::optional<ValueAndVReg> Index =
+          getIConstantVRegValWithLookThrough(Extract->getIndexReg(), MRI);
+      if (!Index)
+        return true;
+      LLT VecTy = MRI.getType(Extract->getVectorReg());
+      return Index->Value.uge(VecTy.getElementCount().getKnownMinValue());
+    }
+    return false;
+  }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    GShuffleVector *Shuffle = cast<GShuffleVector>(RegDef);
+    ArrayRef<int> Mask = Shuffle->getMask();
+    return includesPoison(Kind) && is_contained(Mask, -1);
+  }
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_PHI:
+  case TargetOpcode::G_SELECT:
+  case TargetOpcode::G_UREM:
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_FREEZE:
+  case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_PTR_ADD:
+    return false;
   default:
     return !isa<GCastOp>(RegDef) && !isa<GBinOp>(RegDef);
   }
@@ -1856,6 +1911,15 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     unsigned NumSources = BV->getNumSources();
     for (unsigned I = 0; I < NumSources; ++I)
       if (!::isGuaranteedNotToBeUndefOrPoison(BV->getSourceReg(I), MRI,
+                                              Depth + 1, Kind))
+        return false;
+    return true;
+  }
+  case TargetOpcode::G_PHI: {
+    GPhi *Phi = cast<GPhi>(RegDef);
+    unsigned NumIncoming = Phi->getNumIncomingValues();
+    for (unsigned I = 0; I < NumIncoming; ++I)
+      if (!::isGuaranteedNotToBeUndefOrPoison(Phi->getIncomingValue(I), MRI,
                                               Depth + 1, Kind))
         return false;
     return true;

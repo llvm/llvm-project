@@ -703,7 +703,9 @@ public:
   bool isUImm6() const { return IsUImm<6>(); }
   bool isUImm7() const { return IsUImm<7>(); }
   bool isUImm8() const { return IsUImm<8>(); }
+  bool isUImm16() const { return IsUImm<16>(); }
   bool isUImm20() const { return IsUImm<20>(); }
+  bool isUImm32() const { return IsUImm<32>(); }
 
   bool isUImm8GE32() const {
     int64_t Imm;
@@ -804,6 +806,26 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isShiftedUInt<1, 1>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm5Lsb0() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedUInt<4, 1>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm6Lsb0() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedUInt<5, 1>(Imm) &&
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
@@ -1500,6 +1522,14 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 1, (1 << 5) - 1,
         "immediate must be in [0xfffe0, 0xfffff] or");
+  case Match_InvalidUImm5Lsb0:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 5) - 2,
+        "immediate must be a multiple of 2 bytes in the range");
+  case Match_InvalidUImm6Lsb0:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 6) - 2,
+        "immediate must be a multiple of 2 bytes in the range");
   case Match_InvalidUImm7Lsb00:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 7) - 4,
@@ -1860,11 +1890,18 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
     if (CE) {
       int64_t Imm = CE->getValue();
       if (isUInt<12>(Imm)) {
-        auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
-        // Accept an immediate representing a named or un-named Sys Reg
-        // if the range is valid, regardless of the required features.
-        Operands.push_back(
-            RISCVOperand::createSysReg(SysReg ? SysReg->Name : "", S, Imm));
+        auto Range = RISCVSysReg::lookupSysRegByEncoding(Imm);
+        // Accept an immediate representing a named Sys Reg if it satisfies the
+        // the required features.
+        for (auto &Reg : Range) {
+          if (Reg.haveRequiredFeatures(STI->getFeatureBits())) {
+            Operands.push_back(RISCVOperand::createSysReg(Reg.Name, S, Imm));
+            return ParseStatus::Success;
+          }
+        }
+        // Accept an immediate representing an un-named Sys Reg if the range is
+        // valid, regardless of the required features.
+        Operands.push_back(RISCVOperand::createSysReg("", S, Imm));
         return ParseStatus::Success;
       }
     }
@@ -3055,17 +3092,50 @@ bool isValidInsnFormat(StringRef Format, bool AllowC) {
 
 /// parseDirectiveInsn
 /// ::= .insn [ format encoding, (operands (, operands)*) ]
+/// ::= .insn [ length, value ]
+/// ::= .insn [ value ]
 bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
   MCAsmParser &Parser = getParser();
+
+  bool AllowC = getSTI().hasFeature(RISCV::FeatureStdExtC) ||
+                getSTI().hasFeature(RISCV::FeatureStdExtZca);
 
   // Expect instruction format as identifier.
   StringRef Format;
   SMLoc ErrorLoc = Parser.getTok().getLoc();
-  if (Parser.parseIdentifier(Format))
-    return Error(ErrorLoc, "expected instruction format");
+  if (Parser.parseIdentifier(Format)) {
+    // Try parsing .insn [length], value
+    int64_t Length = 0;
+    int64_t Value = 0;
+    if (Parser.parseIntToken(
+            Value, "expected instruction format or an integer constant"))
+      return true;
+    if (Parser.parseOptionalToken(AsmToken::Comma)) {
+      Length = Value;
+      if (Parser.parseIntToken(Value, "expected an integer constant"))
+        return true;
+    }
 
-  bool AllowC = getSTI().hasFeature(RISCV::FeatureStdExtC) ||
-                getSTI().hasFeature(RISCV::FeatureStdExtZca);
+    // TODO: Add support for long instructions
+    int64_t RealLength = (Value & 3) == 3 ? 4 : 2;
+    if (!isUIntN(RealLength * 8, Value))
+      return Error(ErrorLoc, "invalid operand for instruction");
+    if (RealLength == 2 && !AllowC)
+      return Error(ErrorLoc, "compressed instructions are not allowed");
+    if (Length != 0 && Length != RealLength)
+      return Error(ErrorLoc, "instruction length mismatch");
+
+    if (getParser().parseEOL("invalid operand for instruction")) {
+      getParser().eatToEndOfStatement();
+      return true;
+    }
+
+    emitToStreamer(getStreamer(), MCInstBuilder(RealLength == 2 ? RISCV::Insn16
+                                                                : RISCV::Insn32)
+                                      .addImm(Value));
+    return false;
+  }
+
   if (!isValidInsnFormat(Format, AllowC))
     return Error(ErrorLoc, "invalid instruction format");
 
