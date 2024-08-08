@@ -2929,14 +2929,6 @@ LogicalResult OperationConverter::legalizeChangedResultType(
 // Type Conversion
 //===----------------------------------------------------------------------===//
 
-std::optional<Type>
-TypeConverter::SignatureConversion::getConvertedType(unsigned input) const {
-  auto mapping = getInputMapping(input);
-  if (!mapping || mapping->size != 1)
-    return std::nullopt;
-  return getConvertedTypes()[mapping->inputNo];
-}
-
 void TypeConverter::SignatureConversion::addInputs(unsigned origInputNo,
                                                    ArrayRef<Type> types) {
   assert(!types.empty() && "expected valid types");
@@ -2964,14 +2956,6 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
   assert(!remappedInputs[origInputNo] && "input has already been remapped");
   remappedInputs[origInputNo] =
       InputMapping{origInputNo, /*size=*/0, replacementValue};
-}
-
-void TypeConverter::SignatureConversion::replaceRemappedInputType(
-    unsigned origInputNo, Type type) {
-  auto inputMap = remappedInputs[origInputNo];
-  assert(inputMap && "Expected remapped input");
-  assert(inputMap->size == 1 && "Can't replace 1->N remapped input");
-  argTypes[inputMap->inputNo] = type;
 }
 
 LogicalResult TypeConverter::convertType(Type t,

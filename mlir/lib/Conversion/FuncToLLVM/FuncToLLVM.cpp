@@ -83,38 +83,6 @@ static void filterFuncAttributes(FunctionOpInterface func,
   }
 }
 
-/// Returns the `llvm.byval` or `llvm.byref` attributes that are present in the
-/// function arguments and were not converted to an LLVM pointer type. Returns
-/// an empty container if none of these attributes are found in any of the
-/// attributes.
-static void filterByValRefNonPtrAttrs(
-    FunctionOpInterface funcOp,
-    const TypeConverter::SignatureConversion &signatureConv,
-    SmallVectorImpl<std::optional<NamedAttribute>> &result,
-    function_ref<bool(int argIdx)> filter = nullptr) {
-  assert(result.empty() && "Unexpected non-empty output");
-  result.resize(funcOp.getNumArguments(), std::nullopt);
-  bool foundByValByRefAttrs = false;
-  for (int argIdx : llvm::seq(funcOp.getNumArguments())) {
-    for (NamedAttribute namedAttr : funcOp.getArgAttrs(argIdx)) {
-      if ((namedAttr.getName() == LLVM::LLVMDialect::getByValAttrName() ||
-           namedAttr.getName() == LLVM::LLVMDialect::getByRefAttrName())) {
-        // Retrieve the converted type from the converted signature and check
-        // that is not an LLVM pointer.
-        auto convType = signatureConv.getConvertedType(argIdx);
-        if (!convType || isa<LLVM::LLVMPointerType>(*convType))
-          continue;
-        foundByValByRefAttrs = true;
-        result[argIdx] = namedAttr;
-        break;
-      }
-    }
-  }
-
-  if (!foundByValByRefAttrs)
-    result.clear();
-}
-
 /// Propagate argument/results attributes.
 static void propagateArgResAttrs(OpBuilder &builder, bool resultStructType,
                                  FunctionOpInterface funcOp,
@@ -344,20 +312,16 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
   // Convert the original function arguments. They are converted using the
   // LLVMTypeConverter provided to this legalization pattern.
   auto varargsAttr = funcOp->getAttrOfType<BoolAttr>(varargsAttrName);
+  // Gather `llvm.byval` and `llvm.byref` arguments whose type convertion was
+  // overriden with an LLVM pointer type for later processing.
+  SmallVector<std::optional<NamedAttribute>> byValRefNonPtrAttrs;
   TypeConverter::SignatureConversion result(funcOp.getNumArguments());
-  auto llvmType =
-      cast_or_null<LLVM::LLVMFunctionType>(converter.convertFunctionSignature(
-          funcTy, varargsAttr && varargsAttr.getValue(),
-          shouldUseBarePtrCallConv(funcOp, &converter), result));
+  auto llvmType = converter.convertFunctionSignature(
+      funcOp, varargsAttr && varargsAttr.getValue(),
+      shouldUseBarePtrCallConv(funcOp, &converter), result,
+      byValRefNonPtrAttrs);
   if (!llvmType)
     return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
-
-  // Replace the type of `llvm.byval` and `llvm.byref` arguments that were not
-  // converted to an LLVM pointer type.
-  SmallVector<std::optional<NamedAttribute>> byValRefNonPtrAttrs;
-  filterByValRefNonPtrAttrs(funcOp, result, byValRefNonPtrAttrs);
-  llvmType = converter.materializePtrForByValByRefFuncArgs(
-      llvmType, byValRefNonPtrAttrs, result);
 
   // Create an LLVM function, use external linkage by default until MLIR
   // functions have linkage.
