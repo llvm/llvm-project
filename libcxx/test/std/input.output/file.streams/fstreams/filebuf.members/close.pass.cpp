@@ -24,7 +24,8 @@
 // API level, though, so declare the API function here using weak.
 #if defined(__BIONIC__)
 #include <android/fdsan.h>
-enum android_fdsan_error_level android_fdsan_set_error_level(enum android_fdsan_error_level new_level) __attribute__((weak));
+enum android_fdsan_error_level android_fdsan_set_error_level(enum android_fdsan_error_level new_level)
+    __attribute__((weak));
 #endif
 
 int main(int, char**)
