@@ -113,7 +113,7 @@ public:
   void reserve(size_type NumEntries) {
     incrementEpoch();
     // Do nothing if we're given zero as a reservation size.
-    if (!NumEntries)
+    if (NumEntries == 0)
       return;
     // No need to expand if we're small and NumEntries will fit in the space.
     if (isSmall() && NumEntries <= CurArraySize)
