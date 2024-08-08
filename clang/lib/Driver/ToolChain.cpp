@@ -120,7 +120,6 @@ ToolChain::executeToolChainProgram(StringRef Executable,
   int SecondsToWait = DefaultSecondsToWait;
   if (std::optional<std::string> Str =
           llvm::sys::Process::GetEnv("CLANG_TOOLCHAIN_PROGRAM_TIMEOUT")) {
-    int SecondsToWait;
     if (!llvm::to_integer(*Str, SecondsToWait))
       return llvm::createStringError(std::error_code(),
                                      "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
