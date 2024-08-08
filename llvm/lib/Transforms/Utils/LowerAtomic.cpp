@@ -95,6 +95,17 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     Value *Or = Builder.CreateOr(CmpEq0, CmpOldGtVal);
     return Builder.CreateSelect(Or, Val, Dec, "new");
   }
+  case AtomicRMWInst::USubCond: {
+    Value *Cmp = Builder.CreateICmpUGE(Loaded, Val);
+    Value *Sub = Builder.CreateSub(Loaded, Val);
+    return Builder.CreateSelect(Cmp, Sub, Val, "new");
+  }
+  case AtomicRMWInst::USubSat: {
+    Constant *Zero = ConstantInt::get(Loaded->getType(), 0);
+    Value *Cmp = Builder.CreateICmpUGE(Loaded, Val);
+    Value *Sub = Builder.CreateSub(Loaded, Val);
+    return Builder.CreateSelect(Cmp, Sub, Zero, "new");
+  }
   default:
     llvm_unreachable("Unknown atomic op");
   }
