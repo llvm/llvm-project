@@ -3756,14 +3756,11 @@ def VAArgOp : CIR_Op<"va.arg">,
 }
 
 //===----------------------------------------------------------------------===//
-// AllocException
+// AllocExceptionOp
 //===----------------------------------------------------------------------===//
 
-def AllocException : CIR_Op<"alloc_exception", [
-  AllocaTypesMatchWith<"'allocType' matches pointee type of 'addr'",
-                 "addr", "allocType",
-                 "cast<PointerType>($_self).getPointee()">]> {
-  let summary = "Defines a scope-local variable";
+def AllocExceptionOp : CIR_Op<"alloc.exception"> {
+  let summary = "Allocates an exception according to Itanium ABI";
   let description = [{
     Implements a slightly higher level __cxa_allocate_exception:
 
@@ -3778,18 +3775,18 @@ def AllocException : CIR_Op<"alloc_exception", [
     //   ...
     //   throw "...";
     cir.if %10 {
-        %11 = cir.alloc_exception(!cir.ptr<!u8i>) -> <!cir.ptr<!u8i>>
+        %11 = cir.alloc_exception 8 -> !cir.ptr<!void>
         ... // store exception content into %11
         cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>, ...
     ```
   }];
 
-  let arguments = (ins TypeAttr:$allocType);
+  let arguments = (ins UI64Attr:$size);
   let results = (outs Res<CIR_PointerType, "",
                       [MemAlloc<DefaultResource>]>:$addr);
 
   let assemblyFormat = [{
-    `(` $allocType `)` `->` type($addr) attr-dict
+    $size `->` qualified(type($addr)) attr-dict
   }];
 
   // Constraints verified elsewhere.
