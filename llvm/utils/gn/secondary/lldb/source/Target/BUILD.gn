@@ -11,7 +11,10 @@ lldb_tablegen("TargetPropertiesEnum") {
 
 static_library("Target") {
   output_name = "lldbTarget"
-  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:lldb_code",
+  ]
   deps = [
     ":TargetProperties",
     ":TargetPropertiesEnum",
@@ -58,6 +61,7 @@ static_library("Target") {
     "RegisterFlags.cpp",
     "RegisterNumber.cpp",
     "RemoteAwarePlatform.cpp",
+    "ScriptedThreadPlan.cpp",
     "SectionLoadHistory.cpp",
     "SectionLoadList.cpp",
     "StackFrame.cpp",
@@ -79,9 +83,9 @@ static_library("Target") {
     "ThreadPlanCallFunctionUsingABI.cpp",
     "ThreadPlanCallOnFunctionExit.cpp",
     "ThreadPlanCallUserExpression.cpp",
-    "ThreadPlanPython.cpp",
     "ThreadPlanRunToAddress.cpp",
     "ThreadPlanShouldStopHere.cpp",
+    "ThreadPlanSingleThreadTimeout.cpp",
     "ThreadPlanStack.cpp",
     "ThreadPlanStepInRange.cpp",
     "ThreadPlanStepInstruction.cpp",
@@ -100,5 +104,6 @@ static_library("Target") {
     "UnixSignals.cpp",
     "UnwindAssembly.cpp",
     "UnwindLLDB.cpp",
+    "VerboseTrapFrameRecognizer.cpp",
   ]
 }

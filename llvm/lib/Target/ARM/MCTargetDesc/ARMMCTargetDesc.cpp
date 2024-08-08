@@ -369,10 +369,9 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
 static MCStreamer *
 createARMMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&MAB,
                        std::unique_ptr<MCObjectWriter> &&OW,
-                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                       bool DWARFMustBeAtTheEnd) {
+                       std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createMachOStreamer(Ctx, std::move(MAB), std::move(OW),
-                             std::move(Emitter), DWARFMustBeAtTheEnd);
+                             std::move(Emitter), false);
 }
 
 static MCInstPrinter *createARMMCInstPrinter(const Triple &T,

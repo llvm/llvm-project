@@ -567,6 +567,34 @@ void llvm::processShuffleMasks(
   }
 }
 
+void llvm::getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
+                                               const APInt &DemandedElts,
+                                               APInt &DemandedLHS,
+                                               APInt &DemandedRHS) {
+  assert(VectorBitWidth >= 128 && "Vectors smaller than 128 bit not supported");
+  int NumLanes = VectorBitWidth / 128;
+  int NumElts = DemandedElts.getBitWidth();
+  int NumEltsPerLane = NumElts / NumLanes;
+  int HalfEltsPerLane = NumEltsPerLane / 2;
+
+  DemandedLHS = APInt::getZero(NumElts);
+  DemandedRHS = APInt::getZero(NumElts);
+
+  // Map DemandedElts to the horizontal operands.
+  for (int Idx = 0; Idx != NumElts; ++Idx) {
+    if (!DemandedElts[Idx])
+      continue;
+    int LaneIdx = (Idx / NumEltsPerLane) * NumEltsPerLane;
+    int LocalIdx = Idx % NumEltsPerLane;
+    if (LocalIdx < HalfEltsPerLane) {
+      DemandedLHS.setBit(LaneIdx + 2 * LocalIdx);
+    } else {
+      LocalIdx -= HalfEltsPerLane;
+      DemandedRHS.setBit(LaneIdx + 2 * LocalIdx);
+    }
+  }
+}
+
 MapVector<Instruction *, uint64_t>
 llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                                const TargetTransformInfo *TTI) {

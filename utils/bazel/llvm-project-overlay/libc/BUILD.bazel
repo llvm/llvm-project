@@ -150,6 +150,12 @@ libc_support_library(
     hdrs = ["hdr/stdio_macros.h"],
 )
 
+
+libc_support_library(
+    name = "hdr_limits_macros",
+    hdrs = ["hdr/limits_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -254,6 +260,7 @@ libc_support_library(
     hdrs = ["src/__support/macros/optimization.h"],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
         ":__support_macros_properties_compiler",
     ],
 )
@@ -261,6 +268,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_sanitizer",
     hdrs = ["src/__support/macros/sanitizer.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
 )
 
 libc_support_library(
@@ -271,6 +281,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
         ":__support_macros_properties_architectures",
     ],
 )
@@ -280,6 +291,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/algorithm.h"],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
     ],
 )
 
@@ -317,6 +329,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/bitset.h"],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
     ],
 )
 
@@ -334,6 +347,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/expected.h"],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
     ],
 )
 
@@ -354,7 +368,7 @@ libc_support_library(
         "__support_cpp_type_traits",
         "__support_macros_attributes",
         ":__support_macros_properties_types",
-        ":llvm_libc_macros_limits_macros",
+        ":hdr_limits_macros",
     ],
 )
 
@@ -424,6 +438,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
         ":__support_macros_properties_types",
         ":llvm_libc_macros_stdfix_macros",
     ],
@@ -573,7 +588,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_str_to_num_result",
     hdrs = ["src/__support/str_to_num_result.h"],
-    deps = [":__support_macros_attributes"],
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
 )
 
 libc_support_library(
@@ -612,7 +630,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_ctype_utils",
     hdrs = ["src/__support/ctype_utils.h"],
-    deps = [":__support_macros_attributes"],
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
 )
 
 libc_support_library(
@@ -643,8 +664,6 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_cpp_string_view",
         ":__support_ctype_utils",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_str_to_integer",
@@ -660,6 +679,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_macros_optimization",
@@ -785,6 +805,7 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/rounding_mode.h"],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
         ":hdr_fenv_macros",
     ],
 )
@@ -1126,6 +1147,7 @@ libc_support_library(
     hdrs = ["src/__support/threads/sleep.h"],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
     ],
 )
 
@@ -1406,6 +1428,41 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
+    ],
+)
+
+libc_support_library(
+    name = "range_reduction_double",
+    hdrs = [
+        "src/math/generic/range_reduction_double_common.h",
+        "src/math/generic/range_reduction_double_fma.h",
+        "src/math/generic/range_reduction_double_nofma.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_rounding_mode",
+        ":__support_integer_literals",
+    ],
+)
+
+libc_support_library(
+    name = "sincos_eval",
+    hdrs = [
+        "src/math/generic/sincos_eval.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
     ],
 )
 
@@ -1894,7 +1951,6 @@ libc_math_function(name = "fdimf128")
 libc_math_function(
     name = "ceil",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1902,7 +1958,6 @@ libc_math_function(
 libc_math_function(
     name = "ceilf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1919,7 +1974,6 @@ libc_math_function(name = "ceilf128")
 libc_math_function(
     name = "floor",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1927,7 +1981,6 @@ libc_math_function(
 libc_math_function(
     name = "floorf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1947,7 +2000,6 @@ libc_math_function(name = "ldexpf128")
 libc_math_function(
     name = "trunc",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1955,7 +2007,6 @@ libc_math_function(
 libc_math_function(
     name = "truncf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1967,7 +2018,6 @@ libc_math_function(name = "truncf128")
 libc_math_function(
     name = "round",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1975,7 +2025,6 @@ libc_math_function(
 libc_math_function(
     name = "roundf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -2011,6 +2060,7 @@ libc_math_function(name = "hypot")
 libc_math_function(
     name = "hypotf",
     additional_deps = [
+        ":__support_fputil_double_double",
         ":__support_fputil_sqrt",
     ],
 )
@@ -2071,6 +2121,17 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "cos",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
+    ],
+)
+
+libc_math_function(
     name = "sincosf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -2079,6 +2140,17 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "sincos",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
     ],
 )
 
@@ -2097,6 +2169,17 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "sin",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
+    ],
+)
+
+libc_math_function(
     name = "tanf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -2107,6 +2190,17 @@ libc_math_function(
         ":__support_macros_properties_cpu_features",
         ":range_reduction",
         ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "tan",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
     ],
 )
 
@@ -2396,9 +2490,15 @@ libc_function(
 
 libc_support_library(
     name = "qsort_util",
-    hdrs = ["src/stdlib/qsort_util.h"],
+    hdrs = [
+        "src/stdlib/heap_sort.h",
+        "src/stdlib/qsort_data.h",
+        "src/stdlib/qsort_util.h",
+        "src/stdlib/quick_sort.h",
+    ],
     deps = [
         ":__support_common",
+        ":__support_cpp_cstddef",
         ":__support_macros_attributes",
     ],
 )
@@ -3011,17 +3111,6 @@ libc_function(
 )
 
 libc_function(
-    name = "getpid",
-    srcs = ["src/unistd/linux/getpid.cpp"],
-    hdrs = ["src/unistd/getpid.h"],
-    deps = [
-        ":__support_common",
-        ":__support_osutil_syscall",
-        ":errno",
-    ],
-)
-
-libc_function(
     name = "getppid",
     srcs = ["src/unistd/linux/getppid.cpp"],
     hdrs = ["src/unistd/getppid.h"],
@@ -3408,9 +3497,9 @@ libc_support_library(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_attributes",
-        ":types_FILE",
         ":printf_main",
         ":printf_writer",
+        ":types_FILE",
     ],
 )
 

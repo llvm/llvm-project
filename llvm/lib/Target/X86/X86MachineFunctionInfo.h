@@ -170,6 +170,10 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   SmallVector<size_t, 0> PreallocatedStackSizes;
   SmallVector<SmallVector<size_t, 4>, 0> PreallocatedArgOffsets;
 
+  // True if a function clobbers FP/BP according to its calling convention.
+  bool FPClobberedByCall = false;
+  bool BPClobberedByCall = false;
+
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
   /// that must be forwarded to every musttail call.
@@ -328,6 +332,12 @@ public:
     assert(!PreallocatedArgOffsets[Id].empty() && "arg offsets not set");
     return PreallocatedArgOffsets[Id];
   }
+
+  bool getFPClobberedByCall() const { return FPClobberedByCall; }
+  void setFPClobberedByCall(bool C) { FPClobberedByCall = C; }
+
+  bool getBPClobberedByCall() const { return BPClobberedByCall; }
+  void setBPClobberedByCall(bool C) { BPClobberedByCall = C; }
 };
 
 } // End llvm namespace

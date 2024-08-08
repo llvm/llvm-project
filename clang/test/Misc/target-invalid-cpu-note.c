@@ -57,7 +57,7 @@
 
 // RUN: not %clang_cc1 -triple powerpc--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix PPC
 // PPC: error: unknown target CPU 'not-a-cpu'
-// PPC-NEXT: note: valid target CPU values are: generic, 440, 450, 601, 602, 603, 603e, 603ev, 604, 604e, 620, 630, g3, 7400, g4, 7450, g4+, 750, 8548, 970, g5, a2, e500, e500mc, e5500, power3, pwr3, power4, pwr4, power5, pwr5, power5x, pwr5x, power6, pwr6, power6x, pwr6x, power7, pwr7, power8, pwr8, power9, pwr9, power10, pwr10, powerpc, ppc, ppc32, powerpc64, ppc64, powerpc64le, ppc64le, future{{$}}
+// PPC-NEXT: note: valid target CPU values are: generic, 440, 440fp, ppc440, 450, 601, 602, 603, 603e, 603ev, 604, 604e, 620, 630, g3, 7400, g4, 7450, g4+, 750, 8548, ppc405, ppc464, ppc476, 970, ppc970, g5, a2, ppca2, ppc-cell-be, e500, e500mc, e5500, power3, pwr3, pwr4, power4, pwr5, power5, pwr5+, power5+, pwr5x, power5x, pwr6, power6, pwr6x, power6x, pwr7, power7, pwr8, power8, pwr9, power9, pwr10, power10, pwr11, power11, powerpc, ppc, ppc32, powerpc64, ppc64, powerpc64le, ppc64le, future{{$}}
 
 // RUN: not %clang_cc1 -triple mips--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix MIPS
 // MIPS: error: unknown target CPU 'not-a-cpu'
@@ -81,16 +81,17 @@
 
 // RUN: not %clang_cc1 -triple riscv32 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV32
 // RISCV32: error: unknown target CPU 'not-a-cpu'
-// RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32{{$}}
+// RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32, syntacore-scr4-rv32{{$}}
 
 // RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
 // RISCV64: error: unknown target CPU 'not-a-cpu'
-// RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, veyron-v1, xiangshan-nanhu{{$}}
+// RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p470, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, syntacore-scr4-rv64, veyron-v1, xiangshan-nanhu{{$}}
 
 // RUN: not %clang_cc1 -triple riscv32 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV32
 // TUNE-RISCV32: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32, generic, rocket, sifive-7-series{{$}}
+// TUNE-RISCV32-NEXT: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, syntacore-scr1-base, syntacore-scr1-max, syntacore-scr3-rv32, syntacore-scr4-rv32, generic, rocket, sifive-7-series{{$}}
 
 // RUN: not %clang_cc1 -triple riscv64 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV64
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, veyron-v1, xiangshan-nanhu, generic, rocket, sifive-7-series{{$}}
+// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p470, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, spacemit-x60, syntacore-scr3-rv64, syntacore-scr4-rv64, veyron-v1, xiangshan-nanhu, generic, rocket, sifive-7-series{{$}}
+

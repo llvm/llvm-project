@@ -88,7 +88,7 @@ private:
   };
 
   /// Map OldSubReg -> { RC, NewSubReg }. Used as in/out container.
-  typedef SmallDenseMap<unsigned, SubRegInfo> SubRegMap;
+  using SubRegMap = SmallDenseMap<unsigned, SubRegInfo>;
 
   /// Given register class RC and the set of used subregs as keys in the SubRegs
   /// map return new register class and indexes of right-shifted subregs as

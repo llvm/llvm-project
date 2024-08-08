@@ -8,9 +8,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST8
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST9
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST10 -ffreestanding
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST11
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST12
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s -DTEST13
 
 #if TEST1
-int main; // expected-error{{main cannot be declared as global variable}}
+int main; // expected-error{{main cannot be declared as a variable in the global scope}}
 
 #elif TEST2
 // expected-no-diagnostics
@@ -46,7 +49,7 @@ namespace foo {
 #elif TEST8
 void z(void)
 {
-  extern int main;  // expected-error{{main cannot be declared as global variable}}
+  extern int main;  // expected-error{{main cannot be declared as a variable in the global scope}}}
 }
 
 #elif TEST9
@@ -60,6 +63,64 @@ int q(void)
 #elif TEST10
 // expected-no-diagnostics
 int main;
+
+#elif TEST11
+extern "C" {
+  namespace Y {
+    int main; // expected-error {{main cannot be declared as a variable with C language linkage}}}
+  }
+}
+namespace ns {
+  extern "C" int main; // expected-error {{main cannot be declared as a variable with C language linkage}}
+}
+
+#elif TEST12
+extern "C" struct A { int main(); }; // ok
+
+namespace c {
+  extern "C" void main(); // expected-warning {{'main' should not be 'extern "C"'}}
+}
+
+extern "C" {
+  namespace Z {
+    void main(); // expected-warning {{'main' should not be 'extern "C"'}}
+  }
+}
+
+namespace ns {
+  extern "C" struct A {
+    int main; // ok
+  };
+
+  extern "C" struct B {
+    int main(); // ok
+  };
+}
+
+#elif TEST13
+extern "C++" {
+  int main(); // expected-warning {{'main' should not be 'extern "C++"'}}
+}
+
+extern "C" {
+  int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+}
+
+extern "C" int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+extern "C++" int main(); // expected-warning {{'main' should not be 'extern "C++"'}}
+
+namespace ns1 {
+  extern "C++" int main(); // ok
+  extern "C" {
+    extern "C++" {
+      int main(void *); // ok
+    }
+  }
+}
+
+namespace ns2 {
+  extern "C++" void main() {} // ok
+}
 
 #else
 #error Unknown Test

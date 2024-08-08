@@ -170,44 +170,6 @@ ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI) {
   llvm::call_once(InitializeRegisterBankFlag, InitializeRegisterBankOnce);
 }
 
-const RegisterBank &
-ARMRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                            LLT) const {
-  using namespace ARM;
-
-  switch (RC.getID()) {
-  case GPRRegClassID:
-  case GPRwithAPSRRegClassID:
-  case GPRnoipRegClassID:
-  case GPRnopcRegClassID:
-  case GPRnoip_and_GPRnopcRegClassID:
-  case rGPRRegClassID:
-  case GPRspRegClassID:
-  case tcGPRRegClassID:
-  case tcGPRnotr12RegClassID:
-  case tGPRRegClassID:
-  case tGPREvenRegClassID:
-  case tGPROddRegClassID:
-  case tGPR_and_tGPREvenRegClassID:
-  case tGPR_and_tGPROddRegClassID:
-  case tGPREven_and_tcGPRRegClassID:
-  case tGPROdd_and_tcGPRRegClassID:
-  case tGPREven_and_tcGPRnotr12RegClassID:
-    return getRegBank(ARM::GPRRegBankID);
-  case HPRRegClassID:
-  case SPR_8RegClassID:
-  case SPRRegClassID:
-  case DPR_8RegClassID:
-  case DPRRegClassID:
-  case QPRRegClassID:
-    return getRegBank(ARM::FPRRegBankID);
-  default:
-    llvm_unreachable("Unsupported register kind");
-  }
-
-  llvm_unreachable("Switch should handle all register classes");
-}
-
 const RegisterBankInfo::InstructionMapping &
 ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   auto Opc = MI.getOpcode();

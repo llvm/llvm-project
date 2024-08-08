@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -62,12 +63,24 @@
 
 using namespace llvm;
 
-#undef  DEBUG_TYPE
-#define DEBUG_TYPE "reloc-info"
+#define DEBUG_TYPE "elf-object-writer"
 
 namespace {
+namespace stats {
 
-class ELFObjectWriter;
+STATISTIC(AllocTextBytes, "Total size of SHF_ALLOC text sections");
+STATISTIC(AllocROBytes, "Total size of SHF_ALLOC readonly sections");
+STATISTIC(AllocRWBytes, "Total size of SHF_ALLOC read-write sections");
+STATISTIC(StrtabBytes, "Total size of SHT_STRTAB sections");
+STATISTIC(SymtabBytes, "Total size of SHT_SYMTAB sections");
+STATISTIC(RelocationBytes, "Total size of relocation sections");
+STATISTIC(DynsymBytes, "Total size of SHT_DYNSYM sections");
+STATISTIC(DebugBytes, "Total size of debug info sections");
+STATISTIC(UnwindBytes, "Total size of unwind sections");
+STATISTIC(OtherBytes, "Total size of uncategorized sections");
+
+} // namespace stats
+
 struct ELFWriter;
 
 bool isDwoSection(const MCSectionELF &Sec) {
@@ -199,116 +212,6 @@ public:
   void writeSection(uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
                     const MCSectionELF &Section);
 };
-
-class ELFObjectWriter : public MCObjectWriter {
-  /// The target specific ELF writer instance.
-  std::unique_ptr<MCELFObjectTargetWriter> TargetObjectWriter;
-
-  DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
-
-  DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
-
-  bool SeenGnuAbi = false;
-
-  std::optional<uint8_t> OverrideABIVersion;
-
-  bool hasRelocationAddend() const;
-
-  bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
-                                const MCSymbolELF *Sym, uint64_t C,
-                                unsigned Type) const;
-
-public:
-  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW)
-      : TargetObjectWriter(std::move(MOTW)) {}
-
-  void reset() override {
-    SeenGnuAbi = false;
-    OverrideABIVersion.reset();
-    Relocations.clear();
-    Renames.clear();
-    MCObjectWriter::reset();
-  }
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
-                                              const MCFragment &FB, bool InSet,
-                                              bool IsPCRel) const override;
-
-  virtual bool checkRelocation(MCContext &Ctx, SMLoc Loc,
-                               const MCSectionELF *From,
-                               const MCSectionELF *To) {
-    return true;
-  }
-
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
-  bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
-
-  void executePostLayoutBinding(MCAssembler &Asm) override;
-
-  void markGnuAbi() override { SeenGnuAbi = true; }
-  bool seenGnuAbi() const { return SeenGnuAbi; }
-
-  bool seenOverrideABIVersion() const { return OverrideABIVersion.has_value(); }
-  uint8_t getOverrideABIVersion() const { return OverrideABIVersion.value(); }
-  void setOverrideABIVersion(uint8_t V) override { OverrideABIVersion = V; }
-
-  friend struct ELFWriter;
-};
-
-class ELFSingleObjectWriter : public ELFObjectWriter {
-  raw_pwrite_stream &OS;
-  bool IsLittleEndian;
-
-public:
-  ELFSingleObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                        raw_pwrite_stream &OS, bool IsLittleEndian)
-      : ELFObjectWriter(std::move(MOTW)), OS(OS),
-        IsLittleEndian(IsLittleEndian) {}
-
-  uint64_t writeObject(MCAssembler &Asm) override {
-    return ELFWriter(*this, OS, IsLittleEndian, ELFWriter::AllSections)
-        .writeObject(Asm);
-  }
-
-  friend struct ELFWriter;
-};
-
-class ELFDwoObjectWriter : public ELFObjectWriter {
-  raw_pwrite_stream &OS, &DwoOS;
-  bool IsLittleEndian;
-
-public:
-  ELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                     raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
-                     bool IsLittleEndian)
-      : ELFObjectWriter(std::move(MOTW)), OS(OS), DwoOS(DwoOS),
-        IsLittleEndian(IsLittleEndian) {}
-
-  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
-                       const MCSectionELF *To) override {
-    if (isDwoSection(*From)) {
-      Ctx.reportError(Loc, "A dwo section may not contain relocations");
-      return false;
-    }
-    if (To && isDwoSection(*To)) {
-      Ctx.reportError(Loc, "A relocation may not refer to a dwo section");
-      return false;
-    }
-    return true;
-  }
-
-  uint64_t writeObject(MCAssembler &Asm) override {
-    uint64_t Size = ELFWriter(*this, OS, IsLittleEndian, ELFWriter::NonDwoOnly)
-                        .writeObject(Asm);
-    Size += ELFWriter(*this, DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
-                .writeObject(Asm);
-    return Size;
-  }
-};
-
 } // end anonymous namespace
 
 uint64_t ELFWriter::align(Align Alignment) {
@@ -403,8 +306,8 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
                    ? int(ELF::ELFOSABI_GNU)
                    : OSABI);
   // e_ident[EI_ABIVERSION]
-  W.OS << char(OWriter.seenOverrideABIVersion()
-                   ? OWriter.getOverrideABIVersion()
+  W.OS << char(OWriter.OverrideABIVersion
+                   ? *OWriter.OverrideABIVersion
                    : OWriter.TargetObjectWriter->getABIVersion());
 
   W.OS.write_zeros(ELF::EI_NIDENT - ELF::EI_PAD);
@@ -419,7 +322,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   WriteWord(0);                     // e_shoff = sec hdr table off in bytes
 
   // e_flags = whatever the target wants
-  W.write<uint32_t>(Asm.getELFHeaderEFlags());
+  W.write<uint32_t>(OWriter.getELFHeaderEFlags());
 
   // e_ehsize = ELF header size
   W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Ehdr)
@@ -619,7 +522,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
   std::vector<ELFSymbolData> LocalSymbolData;
   std::vector<ELFSymbolData> ExternalSymbolData;
   MutableArrayRef<std::pair<std::string, size_t>> FileNames =
-      Asm.getFileNames();
+      OWriter.getFileNames();
   for (const std::pair<std::string, size_t> &F : FileNames)
     StrTabBuilder.add(F.first);
 
@@ -779,7 +682,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
 }
 
 void ELFWriter::writeAddrsigSection() {
-  for (const MCSymbol *Sym : OWriter.AddrsigSyms)
+  for (const MCSymbol *Sym : OWriter.getAddrsigSyms())
     if (Sym->getIndex() != 0)
       encodeULEB128(Sym->getIndex(), W.OS);
 }
@@ -1062,6 +965,44 @@ void ELFWriter::writeSectionHeader(const MCAssembler &Asm) {
     else
       Size = Offsets.second - Offsets.first;
 
+    auto SectionHasFlag = [&](uint64_t Flag) -> bool {
+      return Section->getFlags() & Flag;
+    };
+
+    if (Section->getName().starts_with(".debug")) {
+      stats::DebugBytes += Size;
+    } else if (Section->getName().starts_with(".eh_frame")) {
+      stats::UnwindBytes += Size;
+    } else if (SectionHasFlag(ELF::SHF_ALLOC)) {
+      if (SectionHasFlag(ELF::SHF_EXECINSTR)) {
+        stats::AllocTextBytes += Size;
+      } else if (SectionHasFlag(ELF::SHF_WRITE)) {
+        stats::AllocRWBytes += Size;
+      } else {
+        stats::AllocROBytes += Size;
+      }
+    } else {
+      switch (Section->getType()) {
+      case ELF::SHT_STRTAB:
+        stats::StrtabBytes += Size;
+        break;
+      case ELF::SHT_SYMTAB:
+        stats::SymtabBytes += Size;
+        break;
+      case ELF::SHT_DYNSYM:
+        stats::DynsymBytes += Size;
+        break;
+      case ELF::SHT_REL:
+      case ELF::SHT_RELA:
+      case ELF::SHT_CREL:
+        stats::RelocationBytes += Size;
+        break;
+      default:
+        stats::OtherBytes += Size;
+        break;
+      }
+    }
+
     writeSection(GroupSymbolIndex, Offsets.first, Size, *Section);
   }
 }
@@ -1129,8 +1070,6 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
       if (RelSection)
         Members.second.push_back(RelSection->getOrdinal());
     }
-
-    OWriter.TargetObjectWriter->addTargetSectionFlags(Ctx, Section);
   }
 
   for (auto &[Group, Members] : Groups) {
@@ -1150,7 +1089,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
     StrTabBuilder.finalize();
   } else {
     MCSectionELF *AddrsigSection;
-    if (OWriter.EmitAddrsigSection) {
+    if (OWriter.getEmitAddrsigSection()) {
       AddrsigSection = Ctx.getELFSection(".llvm_addrsig", ELF::SHT_LLVM_ADDRSIG,
                                          ELF::SHF_EXCLUDE);
       addToSectionTable(AddrsigSection);
@@ -1170,7 +1109,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
       RelSection->setOffsets(SecStart, SecEnd);
     }
 
-    if (OWriter.EmitAddrsigSection) {
+    if (OWriter.getEmitAddrsigSection()) {
       uint64_t SecStart = W.OS.tell();
       writeAddrsigSection();
       uint64_t SecEnd = W.OS.tell();
@@ -1215,6 +1154,26 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
   return W.OS.tell() - StartOffset;
 }
 
+ELFObjectWriter::ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                                 raw_pwrite_stream &OS, bool IsLittleEndian)
+    : TargetObjectWriter(std::move(MOTW)), OS(OS),
+      IsLittleEndian(IsLittleEndian) {}
+ELFObjectWriter::ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                                 raw_pwrite_stream &OS,
+                                 raw_pwrite_stream &DwoOS, bool IsLittleEndian)
+    : TargetObjectWriter(std::move(MOTW)), OS(OS), DwoOS(&DwoOS),
+      IsLittleEndian(IsLittleEndian) {}
+
+void ELFObjectWriter::reset() {
+  ELFHeaderEFlags = 0;
+  SeenGnuAbi = false;
+  OverrideABIVersion.reset();
+  Relocations.clear();
+  Renames.clear();
+  Symvers.clear();
+  MCObjectWriter::reset();
+}
+
 bool ELFObjectWriter::hasRelocationAddend() const {
   return TargetObjectWriter->hasRelocationAddend();
 }
@@ -1222,7 +1181,7 @@ bool ELFObjectWriter::hasRelocationAddend() const {
 void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
-  for (const MCAssembler::Symver &S : Asm.Symvers) {
+  for (const Symver &S : Symvers) {
     StringRef AliasName = S.Name;
     const auto &Symbol = cast<MCSymbolELF>(*S.Sym);
     size_t Pos = AliasName.find('@');
@@ -1406,6 +1365,22 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   return false;
 }
 
+bool ELFObjectWriter::checkRelocation(MCContext &Ctx, SMLoc Loc,
+                                      const MCSectionELF *From,
+                                      const MCSectionELF *To) {
+  if (DwoOS) {
+    if (isDwoSection(*From)) {
+      Ctx.reportError(Loc, "A dwo section may not contain relocations");
+      return false;
+    }
+    if (To && isDwoSection(*To)) {
+      Ctx.reportError(Loc, "A relocation may not refer to a dwo section");
+      return false;
+    }
+  }
+  return true;
+}
+
 void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                                        const MCFragment *Fragment,
                                        const MCFixup &Fixup, MCValue Target,
@@ -1522,17 +1497,13 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SymA.getSection() == FB.getParent();
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                            raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return std::make_unique<ELFSingleObjectWriter>(std::move(MOTW), OS,
-                                                  IsLittleEndian);
-}
-
-std::unique_ptr<MCObjectWriter>
-llvm::createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
-                               raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
-                               bool IsLittleEndian) {
-  return std::make_unique<ELFDwoObjectWriter>(std::move(MOTW), OS, DwoOS,
-                                               IsLittleEndian);
+uint64_t ELFObjectWriter::writeObject(MCAssembler &Asm) {
+  uint64_t Size =
+      ELFWriter(*this, OS, IsLittleEndian,
+                DwoOS ? ELFWriter::NonDwoOnly : ELFWriter::AllSections)
+          .writeObject(Asm);
+  if (DwoOS)
+    Size += ELFWriter(*this, *DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
+                .writeObject(Asm);
+  return Size;
 }

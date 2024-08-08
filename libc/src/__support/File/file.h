@@ -183,7 +183,7 @@ public:
     return read_unlocked(data, len);
   }
 
-  ErrorOr<int> seek(long offset, int whence);
+  ErrorOr<int> seek(off_t offset, int whence);
 
   ErrorOr<off_t> tell();
 

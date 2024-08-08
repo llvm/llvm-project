@@ -57,6 +57,10 @@ void Positives() {
   // CHECK-MESSAGES-CPP23: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES-CPP23: std::ranges::iota(I, 0);
 
+  std::rotate(I.begin(), I.begin() + 2, I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::rotate(I, I.begin() + 2);
+
   using std::find;
   namespace my_std = std;
 
@@ -100,4 +104,11 @@ void Negatives() {
   std::equal(I.begin(), I.end(), J.end(), J.end());
   std::equal(std::rbegin(I), std::rend(I), std::rend(J), std::rbegin(J));
   std::equal(I.begin(), J.end(), I.begin(), I.end());
+
+  // std::rotate expects the full range in the 1st and 3rd argument.
+  // Anyone writing this code has probably written a bug, but this isn't the
+  // purpose of this check.
+  std::rotate(I.begin(), I.end(), I.begin() + 2);
+  // Pathological, but probably shouldn't diagnose this
+  std::rotate(I.begin(), I.end(), I.end() + 0);
 }

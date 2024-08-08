@@ -130,6 +130,12 @@ struct SimplifyQuery {
     Copy.CC = &CC;
     return Copy;
   }
+
+  SimplifyQuery getWithoutCondContext() const {
+    SimplifyQuery Copy(*this);
+    Copy.CC = nullptr;
+    return Copy;
+  }
 };
 
 } // end namespace llvm

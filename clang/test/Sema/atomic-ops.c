@@ -124,6 +124,31 @@ _Static_assert(__atomic_always_lock_free(4, &i64), "");
 _Static_assert(!__atomic_always_lock_free(8, &i32), "");
 _Static_assert(__atomic_always_lock_free(8, &i64), "");
 
+// Validate use with fake pointers constants. This mechanism is used to allow
+// validating atomicity of a given size and alignment.
+_Static_assert(__atomic_is_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_is_lock_free(1, (void*)-1), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)-2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)-4), "");
+
+_Static_assert(__atomic_always_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_always_lock_free(1, (void*)-1), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)2), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)-2), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)-4), "");
+
+// Ensure that "weird" constants don't cause trouble.
+_Static_assert(__atomic_always_lock_free(1, "string"), "");
+_Static_assert(!__atomic_always_lock_free(2, "string"), "");
+_Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
+void dummyfn();
+_Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
+
+
+
 #define _AS1 __attribute__((address_space(1)))
 #define _AS2 __attribute__((address_space(2)))
 

@@ -1,5 +1,7 @@
 #include <libcxx-simulators-common/compressed_pair.h>
 
+#include <stdio.h>
+
 namespace std {
 namespace __lldb {
 template <class _Tp> struct default_delete {
