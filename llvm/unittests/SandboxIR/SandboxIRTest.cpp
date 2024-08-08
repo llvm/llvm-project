@@ -2207,3 +2207,29 @@ bb5:
   }
   EXPECT_EQ(NewPHI->getNumIncomingValues(), PHI->getNumIncomingValues());
 }
+
+TEST_F(SandboxIRTest, UnreachableInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+  unreachable
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *UI = cast<sandboxir::UnreachableInst>(&*It++);
+
+  EXPECT_EQ(UI->getNumSuccessors(), 0u);
+  EXPECT_EQ(UI->getNumOfIRInstrs(), 1u);
+  // Check create(InsertBefore)
+  sandboxir::UnreachableInst *NewUI =
+      sandboxir::UnreachableInst::create(/*InsertBefore=*/UI, Ctx);
+  EXPECT_EQ(NewUI->getNextNode(), UI);
+  // Check create(InsertAtEnd)
+  sandboxir::UnreachableInst *NewUIEnd =
+      sandboxir::UnreachableInst::create(/*InsertAtEnd=*/BB, Ctx);
+  EXPECT_EQ(NewUIEnd->getParent(), BB);
+  EXPECT_EQ(NewUIEnd->getNextNode(), nullptr);
+}
