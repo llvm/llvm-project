@@ -878,7 +878,7 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
     KMP_SYSFAIL("pthread_create", status);
   }
 
-#if defined(KMP_OS_LINUX) && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+#ifdef LIBOMP_HAVE_LINUX_PTHREAD_SETNAME
   // Rename worker threads for improved debuggability
   if (!KMP_UBER_GTID(gtid)) {
     pthread_setname_np(handle, "openmp_worker");

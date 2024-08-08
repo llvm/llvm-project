@@ -101,6 +101,11 @@ if(${LIBOMP_FORTRAN_MODULES})
   libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
 endif()
 
+# Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+  check_symbol_exists(pthread_setname_np "pthread.h" LIBOMP_HAVE_LINUX_PTHREAD_SETNAME)
+endif()
+
 # Check for Unix shared memory
 check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_NO_LRT)
 if (NOT LIBOMP_HAVE_SHM_OPEN_NO_LRT)
