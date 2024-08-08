@@ -71,7 +71,7 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
 
-  if(LIBC_TYPES_TIME_T_IS_32_BIT)
+  if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
     list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
   endif()
 

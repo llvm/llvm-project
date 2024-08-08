@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_TIME_T_H
-#define LLVM_LIBC_TYPES_TIME_T_H
+#ifndef LLVM_LIBC_TYPES_TIME_T_32_H
+#define LLVM_LIBC_TYPES_TIME_T_32_H
 
 typedef __INT32_TYPE__ time_t;
 
-#endif // LLVM_LIBC_TYPES_TIME_T_H
+#endif // LLVM_LIBC_TYPES_TIME_T_32_H
