@@ -107,7 +107,7 @@ Changes in existing checks
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to handle smart pointers
   like any other objects allowing to detect more cases, previous behavior can
-  be restored by setting `IgnoreNonDerefSmartPtrs` option to `true`. 
+  be restored by setting `AllowMovedSmartPtrUse` option to `true`.
 
 Removed checks
 ^^^^^^^^^^^^^^

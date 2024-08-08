@@ -201,7 +201,7 @@ An exception to this are objects of type ``std::unique_ptr``,
 from). Therefore, an object of these classes will only be considered to be used
 if it is dereferenced, i.e. if ``operator*``, ``operator->`` or ``operator[]``
 (in the case of ``std::unique_ptr<T []>``) is called on it. This behavior can be
-overridden with the option :option:`IgnoreNonDerefSmartPtrs`.
+overridden with the option :option:`AllowMovedSmartPtrUse`.
 
 If multiple uses occur after a move, only the first of these is flagged.
 
@@ -255,7 +255,7 @@ use-after-move warning.
 Options
 -------
 
-.. option:: IgnoreNonDerefSmartPtrs
+.. option:: AllowMovedSmartPtrUse
 
    If this option is set to `true`, the check will not warn about uses of
    ``std::unique_ptr``, ``std::shared_ptr`` that are not dereferences. This

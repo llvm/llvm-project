@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
-// RUN:    -config="{CheckOptions: {bugprone-use-after-move.IgnoreNonDerefSmartPtrs: false}}" -- -fno-delayed-template-parsing -I %S/../modernize/Inputs/smart-ptr/
+// RUN:    -config="{CheckOptions: {bugprone-use-after-move.AllowMovedSmartPtrUse: false}}" -- -fno-delayed-template-parsing -I %S/../modernize/Inputs/smart-ptr/
 
 #include "unique_ptr.h"
 

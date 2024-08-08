@@ -29,7 +29,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  const bool IgnoreNonDerefSmartPtrs;
+  const bool AllowMovedSmartPtrUse;
 };
 
 } // namespace clang::tidy::bugprone

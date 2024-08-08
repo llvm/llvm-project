@@ -48,7 +48,7 @@ struct UseAfterMove {
 /// various internal helper functions).
 class UseAfterMoveFinder {
 public:
-  UseAfterMoveFinder(ASTContext *TheContext, bool IgnoreNonDerefSmartPtrs);
+  UseAfterMoveFinder(ASTContext *TheContext, bool AllowMovedSmartPtrUse);
 
   // Within the given code block, finds the first use of 'MovedVariable' that
   // occurs after 'MovingCall' (the expression that performs the move). If a
@@ -71,7 +71,7 @@ private:
                   llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
 
   ASTContext *Context;
-  const bool IgnoreNonDerefSmartPtrs;
+  const bool AllowMovedSmartPtrUse;
   std::unique_ptr<ExprSequence> Sequence;
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
@@ -94,8 +94,8 @@ static StatementMatcher inDecltypeOrTemplateArg() {
 }
 
 UseAfterMoveFinder::UseAfterMoveFinder(ASTContext *TheContext,
-                                       bool IgnoreNonDerefSmartPtrs)
-    : Context(TheContext), IgnoreNonDerefSmartPtrs(IgnoreNonDerefSmartPtrs) {}
+                                       bool AllowMovedSmartPtrUse)
+    : Context(TheContext), AllowMovedSmartPtrUse(AllowMovedSmartPtrUse) {}
 
 std::optional<UseAfterMove>
 UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
@@ -282,7 +282,7 @@ void UseAfterMoveFinder::getDeclRefs(
           // pointer.
           const auto *Operator =
               Match.getNodeAs<CXXOperatorCallExpr>("operator");
-          if (Operator || !IgnoreNonDerefSmartPtrs ||
+          if (Operator || !AllowMovedSmartPtrUse ||
               !isStandardSmartPointer(DeclRef->getDecl())) {
             DeclRefs->insert(DeclRef);
           }
@@ -435,10 +435,10 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
 }
 UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreNonDerefSmartPtrs(Options.get("IgnoreNonDerefSmartPtrs", false)) {}
+      AllowMovedSmartPtrUse(Options.get("AllowMovedSmartPtrUse", false)) {}
 
 void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IgnoreNonDerefSmartPtrs", IgnoreNonDerefSmartPtrs);
+  Options.store(Opts, "AllowMovedSmartPtrUse", AllowMovedSmartPtrUse);
 }
 
 void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
@@ -531,7 +531,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   for (Stmt *CodeBlock : CodeBlocks) {
-    UseAfterMoveFinder Finder(Result.Context, IgnoreNonDerefSmartPtrs);
+    UseAfterMoveFinder Finder(Result.Context, AllowMovedSmartPtrUse);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl));
