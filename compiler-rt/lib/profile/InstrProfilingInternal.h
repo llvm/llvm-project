@@ -160,7 +160,8 @@ int lprofWriteDataImpl(ProfDataWriter *Writer,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
                        const char *NamesEnd, const VTableProfData *VTableBegin,
                        const VTableProfData *VTableEnd, const char *VNamesBegin,
-                       const char *VNamesEnd, int SkipNameDataWrite);
+                       const char *VNamesEnd, int SkipNameDataWrite,
+                       uint64_t Version);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
