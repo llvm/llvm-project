@@ -78,9 +78,12 @@ public:
     MCObjectStreamer::reset();
   }
 
-  MachObjectWriter &getWriter() {
-    return static_cast<MachObjectWriter &>(getAssembler().getWriter());
-  }
+  // This function is commented out downstream because it is unsafe to use a
+  // MachObjectWriter in the McMachOStreamer which may hold a MachOCASWriter
+  // instead.
+  // MachObjectWriter &getWriter() {
+  //   return static_cast<MachObjectWriter &>(getAssembler().getWriter());
+  // }
 
   MCObjectWriter &getMCObjectWriter() {
     return static_cast<MCObjectWriter &>(getAssembler().getWriter());
@@ -124,12 +127,12 @@ public:
   }
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override {
-    getWriter().getLOHContainer().addDirective(Kind, Args);
+    getMCObjectWriter().getLOHContainer().addDirective(Kind, Args);
   }
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
     if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-      getWriter().getCGProfile().push_back({From, To, Count});
+      getMCObjectWriter().getCGProfile().push_back({From, To, Count});
   }
 
   void finishImpl() override;
@@ -203,11 +206,11 @@ void MCMachOStreamer::emitDataRegion(MachO::DataRegionType Kind) {
   MCSymbol *Start = getContext().createTempSymbol();
   emitLabel(Start);
   // Record the region for the object writer to use.
-  getWriter().getDataRegions().push_back({Kind, Start, nullptr});
+  getMCObjectWriter().getDataRegions().push_back({Kind, Start, nullptr});
 }
 
 void MCMachOStreamer::emitDataRegionEnd() {
-  auto &Regions = getWriter().getDataRegions();
+  auto &Regions = getMCObjectWriter().getDataRegions();
   assert(!Regions.empty() && "Mismatched .end_data_region!");
   auto &Data = Regions.back();
   assert(!Data.End && "Mismatched .end_data_region!");
@@ -232,7 +235,7 @@ void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
-  getWriter().getLinkerOptions().push_back(Options);
+  getMCObjectWriter().getLinkerOptions().push_back(Options);
 }
 
 void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
@@ -277,8 +280,8 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
 
 void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                                             bool PtrAuthKernelABIVersion) {
-  getWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
-  getWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
+  getMCObjectWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
+  getMCObjectWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
@@ -297,7 +300,7 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   if (Attribute == MCSA_IndirectSymbol) {
     // Note that we intentionally cannot use the symbol data here; this is
     // important for matching the string table that 'as' generates.
-    getWriter().getIndirectSymbols().push_back(
+    getMCObjectWriter().getIndirectSymbols().push_back(
         {Symbol, getCurrentSectionOnly()});
     return true;
   }
@@ -518,7 +521,7 @@ void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
 
 void MCMachOStreamer::finalizeCGProfile() {
   MCAssembler &Asm = getAssembler();
-  MCObjectWriter &W = getWriter();
+  MCObjectWriter &W = getMCObjectWriter();
   if (W.getCGProfile().empty())
     return;
   for (auto &E : W.getCGProfile()) {
