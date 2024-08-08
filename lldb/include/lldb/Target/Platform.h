@@ -31,6 +31,7 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 
@@ -451,8 +452,9 @@ public:
   ///          (e.g., a public and internal SDK).
   virtual llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(llvm::formatv(
-        "{0} not implemented for '{1}' platform.", __func__, GetName()));
+    return llvm::createStringError(
+        llvm::formatv("{0} not implemented for '{1}' platform.",
+                      LLVM_PRETTY_FUNCTION, GetName()));
   }
 
   /// Returns the full path of the most appropriate SDK for the
@@ -466,8 +468,9 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(llvm::formatv(
-        "{0} not implemented for '{1}' platform.", __func__, GetName()));
+    return llvm::createStringError(
+        llvm::formatv("{0} not implemented for '{1}' platform.",
+                      LLVM_PRETTY_FUNCTION, GetName()));
   }
 
   const std::string &GetRemoteURL() const { return m_remote_url; }
