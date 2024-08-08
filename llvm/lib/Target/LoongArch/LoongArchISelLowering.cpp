@@ -5578,12 +5578,11 @@ bool LoongArchTargetLowering::isFPImmVLDILegal(const APFloat &Imm,
   if (!Subtarget.hasExtLSX())
     return false;
 
-  uint64_t val = Imm.bitcastToAPInt().getZExtValue();
   if (VT == MVT::f32) {
-    uint64_t masked = val & 0x7e07ffff;
+    uint64_t masked = Imm.bitcastToAPInt().getZExtValue() & 0x7e07ffff;
     return (masked == 0x3e000000 || masked == 0x40000000);
   } else if (VT == MVT::f64) {
-    uint64_t masked = val & 0x7fc0ffffffffffff;
+    uint64_t masked = Imm.bitcastToAPInt().getZExtValue() & 0x7fc0ffffffffffff;
     return (masked == 0x3fc0000000000000 || masked == 0x4000000000000000);
   }
 
