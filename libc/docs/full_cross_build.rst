@@ -8,6 +8,11 @@ Full Cross Build
    :depth: 1
    :local:
 
+.. note:: 
+   Fullbuild requires running headergen, which is a python program that depends on
+   pyyaml. The minimum versions are listed on the :ref:`header_generation`
+   page, as well as additional information.
+
 In this document, we will present recipes to cross build the full libc. When we
 say *cross build* a full libc, we mean that we will build the full libc for a
 target system which is not the same as the system on which the libc is being

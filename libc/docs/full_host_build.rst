@@ -8,6 +8,11 @@ Full Host Build
    :depth: 1
    :local:
 
+.. note:: 
+   Fullbuild requires running headergen, which is a python program that depends on
+   pyyaml. The minimum versions are listed on the :ref:`header_generation`
+   page, as well as additional information.
+
 In this document, we will present a recipe to build the full libc for the host.
 When we say *build the libc for the host*, the goal is to build the libc for
 the same system on which the libc is being built. First, we will explain how to
