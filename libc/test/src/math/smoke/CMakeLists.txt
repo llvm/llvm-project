@@ -151,8 +151,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.fadd
-    libc.src.__support.FPUtil.basic_operations
-
 )
 
 add_fp_unittest(
@@ -166,7 +164,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.faddl
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
@@ -180,7 +177,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.faddf128
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_fp_unittest(
@@ -4069,7 +4065,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16add
 )
 
@@ -4084,7 +4079,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16addf
 )
 
@@ -4099,7 +4093,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16addl
 )
 
@@ -4114,7 +4107,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16addf128
 )
 
