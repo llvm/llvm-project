@@ -2484,8 +2484,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     LLT CurTy = MRI.getType(SrcReg);
     unsigned NewOpc = MI.getOpcode();
 
-    if ((MI.getOpcode() == TargetOpcode::G_CTLZ ||
-         MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) &&
+    if ((MI.getOpcode() == TargetOpcode::G_CTLZ) &&
         extendCtlzNot(MI, MIRBuilder, MRI, WideTy)) {
       MI.eraseFromParent();
       return Legalized;

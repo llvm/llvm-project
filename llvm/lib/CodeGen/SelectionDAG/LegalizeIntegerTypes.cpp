@@ -723,10 +723,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
 
   unsigned CtlzOpcode = N->getOpcode();
   // If the operand of CTLZ is NOT, push the extend in the NOT.
-  if (SDValue Res;
-      (CtlzOpcode == ISD::CTLZ || CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
-       CtlzOpcode == ISD::VP_CTLZ || CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) &&
-      (Res = ExtendCtlzNot(N, dl, OVT, NVT, DAG))) {
+  if (SDValue Res; (CtlzOpcode == ISD::CTLZ || CtlzOpcode == ISD::VP_CTLZ) &&
+                   (Res = ExtendCtlzNot(N, dl, OVT, NVT, DAG))) {
     return Res;
   }
 
