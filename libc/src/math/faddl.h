@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_MATH_FADDL_H
 
 #include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 float faddl(long double x, long double y);
