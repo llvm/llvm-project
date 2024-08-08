@@ -628,8 +628,7 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
   lang_opts.GNUKeywords = true;
   lang_opts.CPlusPlus11 = true;
 
-  auto supported_or_err = sdkSupportsBuiltinModules(target);
-  if (supported_or_err)
+  if (auto supported_or_err = sdkSupportsBuiltinModules(target))
     lang_opts.BuiltinHeadersInSystemModules = !*supported_or_err;
   else
     LLDB_LOG_ERROR(log, supported_or_err.takeError(),
