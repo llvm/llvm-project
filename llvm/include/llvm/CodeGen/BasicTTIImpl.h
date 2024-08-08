@@ -2184,44 +2184,17 @@ public:
       return Cost;
     }
     case Intrinsic::sadd_with_overflow:
-    case Intrinsic::ssub_with_overflow: {
-      Type *SumTy = RetTy->getContainedType(0);
-      Type *OverflowTy = RetTy->getContainedType(1);
-      unsigned Opcode = IID == Intrinsic::sadd_with_overflow
-                            ? BinaryOperator::Add
-                            : BinaryOperator::Sub;
-
-      //   Add:
-      //   Overflow -> (Result < LHS) ^ (RHS < 0)
-      //   Sub:
-      //   Overflow -> (Result < LHS) ^ (RHS > 0)
-      InstructionCost Cost = 0;
-      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
-      Cost += 2 * thisT()->getCmpSelInstrCost(
-                      Instruction::ICmp, SumTy, OverflowTy,
-                      CmpInst::ICMP_SGT, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Xor, OverflowTy,
-                                              CostKind);
-      return Cost;
-    }
+      ISD = ISD::SADDO;
+      break;
+    case Intrinsic::ssub_with_overflow:
+      ISD = ISD::SSUBO;
+      break;
     case Intrinsic::uadd_with_overflow:
-    case Intrinsic::usub_with_overflow: {
-      Type *SumTy = RetTy->getContainedType(0);
-      Type *OverflowTy = RetTy->getContainedType(1);
-      unsigned Opcode = IID == Intrinsic::uadd_with_overflow
-                            ? BinaryOperator::Add
-                            : BinaryOperator::Sub;
-      CmpInst::Predicate Pred = IID == Intrinsic::uadd_with_overflow
-                                    ? CmpInst::ICMP_ULT
-                                    : CmpInst::ICMP_UGT;
-
-      InstructionCost Cost = 0;
-      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
-      Cost +=
-          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy, OverflowTy,
-                                      Pred, CostKind);
-      return Cost;
-    }
+      ISD = ISD::UADDO;
+      break;
+    case Intrinsic::usub_with_overflow:
+      ISD = ISD::USUBO;
+      break;
     case Intrinsic::smul_with_overflow:
     case Intrinsic::umul_with_overflow: {
       Type *MulTy = RetTy->getContainedType(0);
@@ -2300,8 +2273,11 @@ public:
       break;
     }
 
+    auto *ST = dyn_cast<StructType>(RetTy);
+    Type *LegalizeTy = ST ? ST->getContainedType(0) : RetTy;
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(LegalizeTy);
+
     const TargetLoweringBase *TLI = getTLI();
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
 
     if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
@@ -2355,6 +2331,44 @@ public:
                                           Pred, CostKind);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
                                           Pred, CostKind);
+      return Cost;
+    }
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::ssub_with_overflow: {
+      Type *SumTy = RetTy->getContainedType(0);
+      Type *OverflowTy = RetTy->getContainedType(1);
+      unsigned Opcode = IID == Intrinsic::sadd_with_overflow
+                            ? BinaryOperator::Add
+                            : BinaryOperator::Sub;
+
+      //   Add:
+      //   Overflow -> (Result < LHS) ^ (RHS < 0)
+      //   Sub:
+      //   Overflow -> (Result < LHS) ^ (RHS > 0)
+      InstructionCost Cost = 0;
+      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
+      Cost +=
+          2 * thisT()->getCmpSelInstrCost(Instruction::ICmp, SumTy, OverflowTy,
+                                          CmpInst::ICMP_SGT, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Xor, OverflowTy,
+                                              CostKind);
+      return Cost;
+    }
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::usub_with_overflow: {
+      Type *SumTy = RetTy->getContainedType(0);
+      Type *OverflowTy = RetTy->getContainedType(1);
+      unsigned Opcode = IID == Intrinsic::uadd_with_overflow
+                            ? BinaryOperator::Add
+                            : BinaryOperator::Sub;
+      CmpInst::Predicate Pred = IID == Intrinsic::uadd_with_overflow
+                                    ? CmpInst::ICMP_ULT
+                                    : CmpInst::ICMP_UGT;
+
+      InstructionCost Cost = 0;
+      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy,
+                                          OverflowTy, Pred, CostKind);
       return Cost;
     }
     case Intrinsic::sadd_sat:
