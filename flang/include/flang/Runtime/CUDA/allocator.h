@@ -36,5 +36,8 @@ void CUFFreeDevice(void *);
 void *CUFAllocManaged(std::size_t);
 void CUFFreeManaged(void *);
 
+void *CUFAllocUnified(std::size_t);
+void CUFFreeUnified(void *);
+
 } // namespace Fortran::runtime::cuda
 #endif // FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
