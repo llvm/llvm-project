@@ -269,8 +269,7 @@ public:
       const parser::CharBlock statementLocation{
           GetImageControlStmtLocation(construct)};
       auto &msg{context_.Say(statementLocation,
-          "An image control statement is not allowed in DO"
-          " CONCURRENT"_err_en_US)};
+          "An image control statement is not allowed in DO CONCURRENT"_err_en_US)};
       if (auto coarrayMsg{GetImageControlStmtCoarrayMsg(construct)}) {
         msg.Attach(statementLocation, *coarrayMsg);
       }
@@ -372,8 +371,8 @@ private:
 // Find a DO or FORALL and enforce semantics checks on its body
 class DoContext {
 public:
-  DoContext(SemanticsContext &context, IndexVarKind kind)
-      : context_{context}, kind_{kind} {}
+  DoContext(SemanticsContext &context, IndexVarKind kind, bool isNested)
+      : context_{context}, kind_{kind}, isNested_{isNested} {}
 
   // Mark this DO construct as a point of definition for the DO variables
   // or index-names it contains.  If they're already defined, emit an error
@@ -743,12 +742,20 @@ private:
             std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)}) {
       CheckMaskIsPure(*mask);
     }
-    auto &controls{std::get<std::list<parser::ConcurrentControl>>(header.t)};
+    const auto &controls{
+        std::get<std::list<parser::ConcurrentControl>>(header.t)};
     UnorderedSymbolSet indexNames;
     for (const parser::ConcurrentControl &control : controls) {
       const auto &indexName{std::get<parser::Name>(control.t)};
       if (indexName.symbol) {
         indexNames.insert(*indexName.symbol);
+      }
+      if (isNested_) {
+        CheckForImpureCall(std::get<1>(control.t));
+        CheckForImpureCall(std::get<2>(control.t));
+        if (const auto &stride{std::get<3>(control.t)}) {
+          CheckForImpureCall(*stride);
+        }
       }
     }
     if (!indexNames.empty()) {
@@ -808,12 +815,23 @@ private:
     CheckConcurrentHeader(std::get<parser::ConcurrentHeader>(concurrent.t));
   }
 
-  template <typename T> void CheckForImpureCall(const T &x) {
+  template <typename T> void CheckForImpureCall(const T &x) const {
     if (auto bad{FindImpureCall(context_.foldingContext(), x)}) {
       context_.Say(
           "Impure procedure '%s' may not be referenced in a %s"_err_en_US, *bad,
           LoopKindName());
     }
+  }
+  void CheckForImpureCall(const parser::ScalarIntExpr &x) const {
+    const auto &parsedExpr{x.thing.thing.value()};
+    auto oldLocation{context_.location()};
+    context_.set_location(parsedExpr.source);
+    if (const auto &typedExpr{parsedExpr.typedExpr}) {
+      if (const auto &expr{typedExpr->v}) {
+        CheckForImpureCall(*expr);
+      }
+    }
+    context_.set_location(oldLocation);
   }
 
   // Each index should be used on the LHS of each assignment in a FORALL
@@ -870,40 +888,47 @@ private:
   SemanticsContext &context_;
   const IndexVarKind kind_;
   parser::CharBlock currentStatementSourcePosition_;
+  bool isNested_{false};
 }; // class DoContext
 
 void DoForallChecker::Enter(const parser::DoConstruct &doConstruct) {
-  DoContext doContext{context_, IndexVarKind::DO};
+  DoContext doContext{context_, IndexVarKind::DO, constructNesting_ > 0};
   doContext.DefineDoVariables(doConstruct);
 }
 
 void DoForallChecker::Leave(const parser::DoConstruct &doConstruct) {
-  DoContext doContext{context_, IndexVarKind::DO};
+  DoContext doContext{context_, IndexVarKind::DO, constructNesting_ > 0};
+  ++constructNesting_;
   doContext.Check(doConstruct);
   doContext.ResetDoVariables(doConstruct);
+  --constructNesting_;
 }
 
 void DoForallChecker::Enter(const parser::ForallConstruct &construct) {
-  DoContext doContext{context_, IndexVarKind::FORALL};
+  DoContext doContext{context_, IndexVarKind::FORALL, constructNesting_ > 0};
   doContext.ActivateIndexVars(GetControls(construct));
+  ++constructNesting_;
+  doContext.Check(construct);
 }
 void DoForallChecker::Leave(const parser::ForallConstruct &construct) {
-  DoContext doContext{context_, IndexVarKind::FORALL};
-  doContext.Check(construct);
+  DoContext doContext{context_, IndexVarKind::FORALL, constructNesting_ > 0};
   doContext.DeactivateIndexVars(GetControls(construct));
+  --constructNesting_;
 }
 
 void DoForallChecker::Enter(const parser::ForallStmt &stmt) {
-  DoContext doContext{context_, IndexVarKind::FORALL};
+  DoContext doContext{context_, IndexVarKind::FORALL, constructNesting_ > 0};
+  ++constructNesting_;
+  doContext.Check(stmt);
   doContext.ActivateIndexVars(GetControls(stmt));
 }
 void DoForallChecker::Leave(const parser::ForallStmt &stmt) {
-  DoContext doContext{context_, IndexVarKind::FORALL};
-  doContext.Check(stmt);
+  DoContext doContext{context_, IndexVarKind::FORALL, constructNesting_ > 0};
   doContext.DeactivateIndexVars(GetControls(stmt));
+  --constructNesting_;
 }
 void DoForallChecker::Leave(const parser::ForallAssignmentStmt &stmt) {
-  DoContext doContext{context_, IndexVarKind::FORALL};
+  DoContext doContext{context_, IndexVarKind::FORALL, constructNesting_ > 0};
   doContext.Check(stmt);
 }
 
