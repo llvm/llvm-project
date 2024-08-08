@@ -4,13 +4,13 @@ types: []
 enums: []
 objects: []
 functions:
-  - name: prctl
-    standards:
-      - Linux
-    return_type: int
-    arguments:
-      - type: int
-      - type: unsigned long
-      - type: unsigned long
-      - type: unsigned long
-      - type: unsigned long
+- name: prctl
+  standards:
+  - Linux
+  return_type: int
+  arguments:
+  - type: int
+  - type: unsigned long
+  - type: unsigned long
+  - type: unsigned long
+  - type: unsigned long

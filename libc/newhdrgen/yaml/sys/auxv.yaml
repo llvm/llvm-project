@@ -4,9 +4,9 @@ types: []
 enums: []
 objects: []
 functions:
-  - name: getauxval
-    standards:
-      - GNUExtensions
-    return_type: unsigned long
-    arguments:
-      - type: unsigned long
+- name: getauxval
+  standards:
+  - GNUExtensions
+  return_type: unsigned long
+  arguments:
+  - type: unsigned long

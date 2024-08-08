@@ -1,6 +1,6 @@
 header: stdint.h
 standards:
-  - stdc
+- stdc
 macros: []
 types: []
 enums: []

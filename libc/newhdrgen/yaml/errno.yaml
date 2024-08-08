@@ -1,8 +1,8 @@
 header: errno.h
 standards:
-  - stdc
-  - Linux
-  - POSIX
+- stdc
+- Linux
+- POSIX
 macros: []
 types: []
 enums: []

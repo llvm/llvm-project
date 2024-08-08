@@ -1,6 +1,6 @@
 header: features.h
 standards:
-  - stdc
+- stdc
 macros: []
 types: []
 enums: []
