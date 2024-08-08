@@ -23,7 +23,7 @@
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
 
-namespace Fortran::runtime::cuf {
+namespace Fortran::runtime::cuda {
 
 void CUFRegisterAllocator();
 
@@ -36,5 +36,8 @@ void CUFFreeDevice(void *);
 void *CUFAllocManaged(std::size_t);
 void CUFFreeManaged(void *);
 
-} // namespace Fortran::runtime::cuf
+void *CUFAllocUnified(std::size_t);
+void CUFFreeUnified(void *);
+
+} // namespace Fortran::runtime::cuda
 #endif // FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_

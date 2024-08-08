@@ -14093,9 +14093,9 @@ ExprResult Sema::CreateUnresolvedLookupExpr(CXXRecordDecl *NamingClass,
                                             DeclarationNameInfo DNI,
                                             const UnresolvedSetImpl &Fns,
                                             bool PerformADL) {
-  return UnresolvedLookupExpr::Create(Context, NamingClass, NNSLoc, DNI,
-                                      PerformADL, Fns.begin(), Fns.end(),
-                                      /*KnownDependent=*/false);
+  return UnresolvedLookupExpr::Create(
+      Context, NamingClass, NNSLoc, DNI, PerformADL, Fns.begin(), Fns.end(),
+      /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false);
 }
 
 ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
@@ -16125,7 +16125,7 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       // Replace the resulting type information before rebuilding the generic
       // selection expression.
       ArrayRef<Expr *> A = GSE->getAssocExprs();
-      SmallVector<Expr *, 4> AssocExprs(A.begin(), A.end());
+      SmallVector<Expr *, 4> AssocExprs(A);
       unsigned ResultIdx = GSE->getResultIndex();
       AssocExprs[ResultIdx] = SubExpr.get();
 

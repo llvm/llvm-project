@@ -546,7 +546,8 @@ void SelectInst::dump() const {
 BranchInst *BranchInst::create(BasicBlock *IfTrue, Instruction *InsertBefore,
                                Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(cast<llvm::Instruction>(LLVMBefore));
   llvm::BranchInst *NewBr =
       Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
   return Ctx.createBranchInst(NewBr);
@@ -565,7 +566,8 @@ BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                                Value *Cond, Instruction *InsertBefore,
                                Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(InsertBefore->Val));
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(LLVMBefore);
   llvm::BranchInst *NewBr =
       Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
                            cast<llvm::BasicBlock>(IfFalse->Val));
@@ -624,8 +626,11 @@ void BranchInst::dump() const {
 
 void LoadInst::setVolatile(bool V) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(std::make_unique<
+                  GenericSetter<&LoadInst::isVolatile, &LoadInst::setVolatile>>(
+        this, Tracker));
+  }
   cast<llvm::LoadInst>(Val)->setVolatile(V);
 }
 
@@ -686,8 +691,12 @@ void LoadInst::dump() const {
 
 void StoreInst::setVolatile(bool V) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<
+            GenericSetter<&StoreInst::isVolatile, &StoreInst::setVolatile>>(
+            this, Tracker));
+  }
   cast<llvm::StoreInst>(Val)->setVolatile(V);
 }
 
@@ -742,6 +751,39 @@ void StoreInst::dump(raw_ostream &OS) const {
 }
 
 void StoreInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+UnreachableInst *UnreachableInst::create(Instruction *InsertBefore,
+                                         Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
+  Builder.SetInsertPoint(LLVMBefore);
+  llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
+  return Ctx.createUnreachableInst(NewUI);
+}
+
+UnreachableInst *UnreachableInst::create(BasicBlock *InsertAtEnd,
+                                         Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
+  return Ctx.createUnreachableInst(NewUI);
+}
+
+bool UnreachableInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::Unreachable;
+}
+
+#ifndef NDEBUG
+void UnreachableInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void UnreachableInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
@@ -1007,8 +1049,11 @@ llvm::SmallVector<BasicBlock *, 16> CallBrInst::getIndirectDests() const {
 }
 void CallBrInst::setDefaultDest(BasicBlock *BB) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<CallBrInstSetDefaultDest>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(std::make_unique<GenericSetter<&CallBrInst::getDefaultDest,
+                                                 &CallBrInst::setDefaultDest>>(
+        this, Tracker));
+  }
   cast<llvm::CallBrInst>(Val)->setDefaultDest(cast<llvm::BasicBlock>(BB->Val));
 }
 void CallBrInst::setIndirectDest(unsigned Idx, BasicBlock *BB) {
@@ -1145,7 +1190,6 @@ Value *PHINode::removeIncomingValue(unsigned Idx) {
   auto &Tracker = Ctx.getTracker();
   if (Tracker.isTracking())
     Tracker.track(std::make_unique<PHIRemoveIncoming>(*this, Idx, Tracker));
-
   llvm::Value *LLVMV =
       cast<llvm::PHINode>(Val)->removeIncomingValue(Idx,
                                                     /*DeletePHIIfEmpty=*/false);
@@ -1176,6 +1220,27 @@ Value *PHINode::getIncomingValueForBlock(const BasicBlock *BB) const {
 Value *PHINode::hasConstantValue() const {
   llvm::Value *LLVMV = cast<llvm::PHINode>(Val)->hasConstantValue();
   return LLVMV != nullptr ? Ctx.getValue(LLVMV) : nullptr;
+}
+void PHINode::replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New) {
+  assert(New && Old && "Sandbox IR PHI node got a null basic block!");
+  for (unsigned Idx = 0, NumOps = cast<llvm::PHINode>(Val)->getNumOperands();
+       Idx != NumOps; ++Idx)
+    if (getIncomingBlock(Idx) == Old)
+      setIncomingBlock(Idx, New);
+}
+void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
+  // Avoid duplicate tracking by going through this->removeIncomingValue here at
+  // the expense of some performance. Copy PHI::removeIncomingValueIf more
+  // directly if performance becomes an issue.
+
+  // Removing the element at index X, moves the element previously at X + 1
+  // to X. Working from the end avoids complications from that.
+  unsigned Idx = getNumIncomingValues();
+  while (Idx > 0) {
+    if (Predicate(Idx - 1))
+      removeIncomingValue(Idx - 1);
+    --Idx;
+  }
 }
 
 static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
@@ -1211,6 +1276,81 @@ static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
     llvm_unreachable("Opcode not suitable for CastInst!");
   }
 }
+
+AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               Value *ArraySize, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *NewAlloca = Builder.CreateAlloca(Ty, AddrSpace, ArraySize->Val, Name);
+  return Ctx.createAllocaInst(NewAlloca);
+}
+
+AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
+                               Instruction *InsertBefore, Context &Ctx,
+                               Value *ArraySize, const Twine &Name) {
+  return create(Ty, AddrSpace, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, ArraySize, Name);
+}
+
+AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
+                               BasicBlock *InsertAtEnd, Context &Ctx,
+                               Value *ArraySize, const Twine &Name) {
+  return create(Ty, AddrSpace, InsertAtEnd->end(), InsertAtEnd, Ctx, ArraySize,
+                Name);
+}
+
+void AllocaInst::setAllocatedType(Type *Ty) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<GenericSetter<&AllocaInst::getAllocatedType,
+                                       &AllocaInst::setAllocatedType>>(
+            this, Tracker));
+  }
+  cast<llvm::AllocaInst>(Val)->setAllocatedType(Ty);
+}
+
+void AllocaInst::setAlignment(Align Align) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<
+            GenericSetter<&AllocaInst::getAlign, &AllocaInst::setAlignment>>(
+            this, Tracker));
+  }
+  cast<llvm::AllocaInst>(Val)->setAlignment(Align);
+}
+
+void AllocaInst::setUsedWithInAlloca(bool V) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<GenericSetter<&AllocaInst::isUsedWithInAlloca,
+                                       &AllocaInst::setUsedWithInAlloca>>(
+            this, Tracker));
+  }
+  cast<llvm::AllocaInst>(Val)->setUsedWithInAlloca(V);
+}
+
+Value *AllocaInst::getArraySize() {
+  return Ctx.getValue(cast<llvm::AllocaInst>(Val)->getArraySize());
+}
+
+#ifndef NDEBUG
+void AllocaInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void AllocaInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
 
 Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
                         BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
@@ -1359,6 +1499,16 @@ std::unique_ptr<Value> Context::detach(Value *V) {
 Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
+
+  // Track creation of instructions.
+  // Please note that we don't allow the creation of detached instructions,
+  // meaning that the instructions need to be inserted into a block upon
+  // creation. This is why the tracker class combines creation and insertion.
+  auto &Tracker = getTracker();
+  if (Tracker.isTracking())
+    if (auto *I = dyn_cast<Instruction>(VPtr.get()))
+      Tracker.track(std::make_unique<CreateAndInsertInst>(I, Tracker));
+
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =
       LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
@@ -1442,6 +1592,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new GetElementPtrInst(LLVMGEP, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Alloca: {
+    auto *LLVMAlloca = cast<llvm::AllocaInst>(LLVMV);
+    It->second = std::unique_ptr<AllocaInst>(new AllocaInst(LLVMAlloca, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::ZExt:
   case llvm::Instruction::SExt:
   case llvm::Instruction::FPToUI:
@@ -1462,6 +1617,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   case llvm::Instruction::PHI: {
     auto *LLVMPhi = cast<llvm::PHINode>(LLVMV);
     It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::Unreachable: {
+    auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
+    It->second = std::unique_ptr<UnreachableInst>(
+        new UnreachableInst(LLVMUnreachable, *this));
     return It->second.get();
   }
   default:
@@ -1522,13 +1683,22 @@ CallBrInst *Context::createCallBrInst(llvm::CallBrInst *I) {
   return cast<CallBrInst>(registerValue(std::move(NewPtr)));
 }
 
+UnreachableInst *Context::createUnreachableInst(llvm::UnreachableInst *UI) {
+  auto NewPtr =
+      std::unique_ptr<UnreachableInst>(new UnreachableInst(UI, *this));
+  return cast<UnreachableInst>(registerValue(std::move(NewPtr)));
+}
+
 GetElementPtrInst *
 Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
 }
-
+AllocaInst *Context::createAllocaInst(llvm::AllocaInst *I) {
+  auto NewPtr = std::unique_ptr<AllocaInst>(new AllocaInst(I, *this));
+  return cast<AllocaInst>(registerValue(std::move(NewPtr)));
+}
 CastInst *Context::createCastInst(llvm::CastInst *I) {
   auto NewPtr = std::unique_ptr<CastInst>(new CastInst(I, *this));
   return cast<CastInst>(registerValue(std::move(NewPtr)));

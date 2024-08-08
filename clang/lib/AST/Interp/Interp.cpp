@@ -301,10 +301,11 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
   auto IsConstType = [&S](const VarDecl *VD) -> bool {
-    if (VD->isConstexpr())
+    QualType T = VD->getType();
+
+    if (T.isConstant(S.getCtx()))
       return true;
 
-    QualType T = VD->getType();
     if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
       return (T->isSignedIntegerOrEnumerationType() ||
               T->isUnsignedIntegerOrEnumerationType()) &&
@@ -325,7 +326,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (const auto *D = Desc->asVarDecl();
       D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
     diagnoseNonConstVariable(S, OpPC, D);
-    return S.inConstantContext();
+    return false;
   }
 
   return true;
@@ -628,7 +629,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
       S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+
+      if (DiagDecl->getDefinition())
+        S.Note(DiagDecl->getDefinition()->getLocation(),
+               diag::note_declared_at);
+      else
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
     }
   } else {
     S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);

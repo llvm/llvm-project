@@ -42,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
 #include <optional>
 
 using namespace llvm;
@@ -16645,7 +16646,9 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
       Addr, PointerType::get(Ctx, AMDGPUAS::PRIVATE_ADDRESS));
   Value *LoadedPrivate =
       Builder.CreateLoad(ValTy, CastToPrivate, "loaded.private");
-  Value *NewVal = Builder.CreateFAdd(LoadedPrivate, Val, "val.new");
+
+  Value *NewVal = buildAtomicRMWValue(Op, Builder, LoadedPrivate, Val);
+
   Builder.CreateStore(NewVal, CastToPrivate);
   Builder.CreateBr(PhiBB);
 

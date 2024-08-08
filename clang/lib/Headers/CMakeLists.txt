@@ -149,8 +149,10 @@ set(x86_files
   amxintrin.h
   avx10_2_512minmaxintrin.h
   avx10_2_512niintrin.h
+  avx10_2_512satcvtintrin.h
   avx10_2minmaxintrin.h
   avx10_2niintrin.h
+  avx10_2satcvtintrin.h
   avx2intrin.h
   avx512bf16intrin.h
   avx512bitalgintrin.h
