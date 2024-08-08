@@ -3908,12 +3908,12 @@ let isTerminator = 1, isBranch = 1, isIndirectBranch = 1 in {
 
   def BRX_ITEM :
     NVPTXInst<(outs), (ins brtarget:$target),
-              "$target,",
+              "\t$target,",
               [(brx_item bb:$target)]>;
 
   def BRX_END :
     NVPTXInst<(outs), (ins brtarget:$target, Int32Regs:$val, i32imm:$id),
-              "$target;\n\tbrx.idx \t$val, $$L_brx_$id;",
+              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;",
               [(brx_end bb:$target, (i32 Int32Regs:$val), (i32 imm:$id))]>;
 }
 

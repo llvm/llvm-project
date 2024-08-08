@@ -18,10 +18,10 @@ define void @foo(i32 %i) {
 ; CHECK-NEXT:    @%p1 bra $L__BB0_6;
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    $L_brx_0: .branchtargets
-; CHECK-NEXT:    $L__BB0_2,
-; CHECK-NEXT:    $L__BB0_3,
-; CHECK-NEXT:    $L__BB0_4,
-; CHECK-NEXT:    $L__BB0_5;
+; CHECK-NEXT:     $L__BB0_2,
+; CHECK-NEXT:     $L__BB0_3,
+; CHECK-NEXT:     $L__BB0_4,
+; CHECK-NEXT:     $L__BB0_5;
 ; CHECK-NEXT:    brx.idx %r2, $L_brx_0;
 ; CHECK-NEXT:  $L__BB0_2: // %case0
 ; CHECK-NEXT:    mov.b32 %r6, 0;
