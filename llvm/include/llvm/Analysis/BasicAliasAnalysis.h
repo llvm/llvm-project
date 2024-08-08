@@ -122,8 +122,7 @@ private:
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2,
                                      const AAQueryInfo &AAQI);
 
-  void subtractDecomposedGEPs(DecomposedGEP &DestGEP,
-                              const DecomposedGEP &SrcGEP,
+  void subtractDecomposedGEPs(DecomposedGEP &DestGEP, DecomposedGEP &SrcGEP,
                               const AAQueryInfo &AAQI);
 
   AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,

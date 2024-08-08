@@ -140,3 +140,95 @@ define void @test_struct_nuw(ptr %st, i64 %i) {
   ret void
 }
 
+; CHECK-LABEL: constant_offset_overflow
+;
+; If subtraction of constant offsets could overflow in an unsigned sense, we
+; cannot prove the lower bound between the GEPs and so they may still alias.
+;
+; CHECK-DAG: MayAlias: i32* %a, i32* %b
+
+define void @constant_offset_overflow(ptr %p, i64 %i) {
+  %a = getelementptr i8, ptr %p, i64 -8
+  %add = getelementptr nuw i8, ptr %p, i64 4
+  %b = getelementptr nuw i8, ptr %add, i64 %i
+
+  load i32, ptr %a
+  load i32, ptr %b
+
+  ret void
+}
+
+; CHECK-LABEL: constant_offset_overflow_rev_order
+;
+; Same as above test, just verifying correct behaviour when GEPs encountered
+; in the reverse order;
+;
+; CHECK-DAG: MayAlias: i32* %a, i32* %b
+
+define void @constant_offset_overflow_rev_order(ptr %p, i64 %i) {
+  %a = getelementptr i8, ptr %p, i64 -8
+  %add = getelementptr nuw i8, ptr %p, i64 4
+  %b = getelementptr nuw i8, ptr %add, i64 %i
+
+  load i32, ptr %b
+  load i32, ptr %a
+
+  ret void
+}
+
+; CHECK-LABEL: equal_var_idx_noalias
+;
+; If GEPs have equal variable indices, we can prove NoAlias when the Scale of
+; the RHS GEP is greater, as in this scenario the constant lower bound holds.
+;
+; CHECK-DAG: NoAlias: i32* %a, i32* %b
+
+define void @equal_var_idx_noalias(ptr %p, i64 %i) {
+  %a = getelementptr i8, ptr %p, i64 %i
+
+  %add = getelementptr nuw i8, ptr %p, i64 4
+  %b = getelementptr nuw i16, ptr %add, i64 %i
+
+  load i32, ptr %a
+  load i32, ptr %b
+
+  ret void
+}
+
+; CHECK-LABEL: equal_var_idx_alias
+;
+; If GEPs have equal variable indices, we cannot prove NoAlias when the Scale of
+; the RHS GEP is ult Scale of the LHS GEP.
+;
+; CHECK-DAG: MayAlias: i32* %a, i32* %b
+
+define void @equal_var_idx_alias(ptr %p, i64 %i) {
+  %a = getelementptr i32, ptr %p, i64 %i
+
+  %add = getelementptr nuw i8, ptr %p, i64 4
+  %b = getelementptr nuw i16, ptr %add, i64 %i
+
+  load i32, ptr %b
+  load i32, ptr %a
+
+  ret void
+}
+
+; CHECK-LABEL: both_var_idx
+;
+; If the RHS GEP has unmatched variable indices, we cannot prove a constant
+; lower bound between GEPs.
+;
+; CHECK-DAG: MayAlias: i32* %a, i32* %b
+
+define void @both_var_idx(ptr %p, i64 %i, i64 %j) {
+  %a = getelementptr i8, ptr %p, i64 %i
+
+  %add = getelementptr nuw i8, ptr %p, i64 4
+  %b = getelementptr nuw i8, ptr %add, i64 %j
+
+  load i32, ptr %a
+  load i32, ptr %b
+
+  ret void
+}

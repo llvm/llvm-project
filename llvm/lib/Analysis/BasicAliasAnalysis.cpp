@@ -530,6 +530,8 @@ struct VariableGEPIndex {
     return Scale == Other.Scale;
   }
 
+  bool isSubtracted() const { return IsNegated || Scale.isNegative(); }
+
   void dump() const {
     print(dbgs());
     dbgs() << "\n";
@@ -564,8 +566,8 @@ struct BasicAAResult::DecomposedGEP {
     dbgs() << "\n";
   }
   void print(raw_ostream &OS) const {
-    OS << "(DecomposedGEP Base=" << Base->getName()
-       << ", Offset=" << Offset
+    OS << "(DecomposedGEP Base=" << Base->getName() << ", Offset=" << Offset
+       << ", nuw=" << ((NWFlags && NWFlags->hasNoUnsignedWrap()) ? "1" : "0")
        << ", VarIndices=[";
     for (size_t i = 0; i < VarIndices.size(); i++) {
       if (i != 0)
@@ -1238,11 +1240,10 @@ AliasResult BasicAAResult::aliasGEP(
     }
   }
 
-  // If the difference between pointers is Offset +<nuw> Indices (the variable
-  // indices all come from nuw GEPs) then we know that the addition does not
-  // wrap the pointer index type (add nuw) and the constant Offset is a lower
-  // bound on the distance between the pointers. We can then prove NoAlias via
-  // Offset u>= VLeftSize.
+  // If the difference between pointers is Offset +<nuw> Indices then we know
+  // that the addition does not wrap the pointer index type (add nuw) and the
+  // constant Offset is a lower bound on the distance between the pointers. We
+  // can then prove NoAlias via Offset u>= VLeftSize.
   //    +                +                     +
   //    | BaseOffset     |   +<nuw> Indices    |
   //    ---------------->|-------------------->|
@@ -1250,15 +1251,15 @@ AliasResult BasicAAResult::aliasGEP(
   //   LHS                                    RHS
   if (!DecompGEP1.VarIndices.empty() &&
       llvm::all_of(DecompGEP1.VarIndices, [&](const VariableGEPIndex &V) {
-        return V.IsNegated == DecompGEP1.VarIndices.front().IsNegated;
+        return V.isSubtracted() == DecompGEP1.VarIndices.front().isSubtracted();
       })) {
-    APInt Off = DecompGEP1.Offset;
+    const APInt &Off = DecompGEP1.Offset;
     bool Swapped = Off.isNegative();
     LocationSize VLeftSize = Swapped ? V1Size : V2Size;
-    DecomposedGEP &DecompRight = Swapped ? DecompGEP2 : DecompGEP1;
+    const DecomposedGEP &DecompRight = Swapped ? DecompGEP2 : DecompGEP1;
 
-    bool IndicesFromRight = DecompGEP1.VarIndices.front().IsNegated == Swapped;
-    if (IndicesFromRight && DecompRight.NWFlags->hasNoUnsignedWrap())
+    bool IndicesAdded = DecompGEP1.VarIndices.front().isSubtracted() == Swapped;
+    if (IndicesAdded && DecompRight.NWFlags->hasNoUnsignedWrap())
       if (VLeftSize.hasValue() && !VLeftSize.isScalable() &&
           Off.abs().uge(VLeftSize.getValue()))
         return AliasResult::NoAlias;
@@ -1866,8 +1867,15 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
 
 /// Computes the symbolic difference between two de-composed GEPs.
 void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
-                                           const DecomposedGEP &SrcGEP,
+                                           DecomposedGEP &SrcGEP,
                                            const AAQueryInfo &AAQI) {
+  // Drop nuw flag from GEP if subtraction of constant offsets overflows in an
+  // unsigned sense.
+  if (DestGEP.Offset.ult(SrcGEP.Offset))
+    DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
+  else if (SrcGEP.Offset.ult(DestGEP.Offset) && SrcGEP.NWFlags)
+    SrcGEP.NWFlags = SrcGEP.NWFlags->withoutNoUnsignedWrap();
+
   DestGEP.Offset -= SrcGEP.Offset;
   for (const VariableGEPIndex &Src : SrcGEP.VarIndices) {
     // Find V in Dest.  This is N^2, but pointer indices almost never have more
@@ -1890,6 +1898,13 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
       // If we found it, subtract off Scale V's from the entry in Dest.  If it
       // goes to zero, remove the entry.
       if (Dest.Scale != Src.Scale) {
+        // Drop nuw flag from GEP if subtraction of V's Scale overflows in an
+        // unsigned sense.
+        if (Dest.Scale.ult(Src.Scale))
+          DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
+        else if (SrcGEP.NWFlags)
+          SrcGEP.NWFlags = SrcGEP.NWFlags->withoutNoUnsignedWrap();
+
         Dest.Scale -= Src.Scale;
         Dest.IsNSW = false;
       } else {
