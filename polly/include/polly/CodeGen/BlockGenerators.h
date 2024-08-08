@@ -162,8 +162,21 @@ protected:
   /// The dominator tree of this function.
   DominatorTree &DT;
 
-  /// The entry block of the current function.
-  BasicBlock *EntryBB;
+  /// Relates to the region where the code is emitted into.
+  /// @{
+  DominatorTree *GenDT;
+  LoopInfo *GenLI;
+  ScalarEvolution *GenSE;
+  /// @}
+
+public:
+  /// Change the function that code is emitted into.
+  void switchGeneratedFunc(Function *GenFn, DominatorTree *GenDT,
+                           LoopInfo *GenLI, ScalarEvolution *GenSE) {
+    this->GenDT = GenDT;
+    this->GenLI = GenLI;
+    this->GenSE = GenSE;
+  }
 
   /// Map to resolve scalar dependences for PHI operands and scalars.
   ///
