@@ -66,6 +66,14 @@ using __current_configuration = __backend_configuration<__libdispatch_backend_ta
 #  endif
 
 template <class _Backend, class _ExecutionPolicy>
+struct __adjacent_difference;
+// template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _BinaryOp>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//            _ForwardOutIterator __out_it,
+//            _BinaryOp __bin_op) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __find_if;
 // template <class _Policy, class _ForwardIterator, class _Predicate>
 // optional<_ForwardIterator>
