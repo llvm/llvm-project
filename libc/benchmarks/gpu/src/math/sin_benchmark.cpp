@@ -48,8 +48,8 @@ BENCH(NvSinVeryLarge, LIBC_NAMESPACE::__nv_sin, 30, 1000);
 #endif
 
 #ifdef AMDGPU_MATH_FOUND
-BENCH(AmdgpuSin, LIBC_NAMESPACE::__ocml_sin_f64, -1023, 1023);
-BENCH(AmdgpuSinTwoPi, LIBC_NAMESPACE::__ocml_sin_f64, -10, 3);
-BENCH(AmdgpuSinTwoPow30, LIBC_NAMESPACE::__ocml_sin_f64, 0, 30);
-BENCH(AmdgpuSinVeryLarge, LIBC_NAMESPACE::__ocml_sin_f64, 30, 1000);
+BENCH(AmdSin, LIBC_NAMESPACE::__ocml_sin_f64, -1023, 1023);
+BENCH(AmdSinTwoPi, LIBC_NAMESPACE::__ocml_sin_f64, -10, 3);
+BENCH(AmdSinTwoPow30, LIBC_NAMESPACE::__ocml_sin_f64, 0, 30);
+BENCH(AmdSinVeryLarge, LIBC_NAMESPACE::__ocml_sin_f64, 30, 1000);
 #endif
