@@ -2295,6 +2295,9 @@ public:
     case llvm::omp::Directive::OMPD_barrier:
       Word("BARRIER ");
       break;
+    case llvm::omp::Directive::OMPD_scan:
+      Word("SCAN ");
+      break;
     case llvm::omp::Directive::OMPD_taskwait:
       Word("TASKWAIT ");
       break;
