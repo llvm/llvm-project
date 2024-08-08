@@ -1299,10 +1299,8 @@ clang::NamedDecl *TypeSystemClang::CreateRecordDecl(
 
   if (language == eLanguageTypeObjC ||
       language == eLanguageTypeObjC_plus_plus) {
-    bool isForwardDecl = true;
     bool isInternal = false;
-    return CreateObjCDecl(name, decl_ctx, owning_module, isForwardDecl,
-                          isInternal, metadata);
+    return CreateObjCDecl(name, decl_ctx, owning_module, isInternal, metadata);
   }
 
   // NOTE: Eventually CXXRecordDecl will be merged back into RecordDecl and
@@ -1883,7 +1881,7 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
 
 clang::ObjCInterfaceDecl *TypeSystemClang::CreateObjCDecl(
     llvm::StringRef name, clang::DeclContext *decl_ctx,
-    OptionalClangModuleID owning_module, bool isForwardDecl, bool isInternal,
+    OptionalClangModuleID owning_module, bool isInternal,
     std::optional<ClangASTMetadata> metadata) {
   ASTContext &ast = getASTContext();
   assert(!name.empty());
@@ -1894,7 +1892,6 @@ clang::ObjCInterfaceDecl *TypeSystemClang::CreateObjCDecl(
       ObjCInterfaceDecl::CreateDeserialized(ast, GlobalDeclID());
   decl->setDeclContext(decl_ctx);
   decl->setDeclName(&ast.Idents.get(name));
-  /*isForwardDecl,*/
   decl->setImplicit(isInternal);
   SetOwningModule(decl, owning_module);
 
@@ -9250,8 +9247,7 @@ CompilerType TypeSystemClang::CreateRedeclaration(CompilerType ct) {
   if (clang::ObjCInterfaceDecl *interface = ClangUtil::GetAsObjCDecl(ct)) {
     clang::NamedDecl *res = CreateObjCDecl(
         interface->getName(), interface->getDeclContext()->getRedeclContext(),
-        GetModuleForDecl(interface), /*isForwardDecl=*/false,
-        interface->isImplicit());
+        GetModuleForDecl(interface), interface->isImplicit());
     clang::ObjCInterfaceDecl *redecl = llvm::cast<ObjCInterfaceDecl>(res);
     ConnectRedeclToPrev(*this, interface, redecl);
     return GetTypeForDecl(redecl);
