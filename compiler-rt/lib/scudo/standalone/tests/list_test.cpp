@@ -66,14 +66,14 @@ static void checkList(ListT *L, ListItemTy *I1, ListItemTy *I2 = nullptr,
 
 template <template <typename> class ListTy, typename ListItemTy>
 static void testListCommon(void) {
-  ListItemTy Items[6];
+  ListItemTy Items[3];
   ListItemTy *X = &Items[0];
   ListItemTy *Y = &Items[1];
   ListItemTy *Z = &Items[2];
 
   ListTy<ListItemTy> L;
   L.clear();
-  L.init(Items);
+  L.init(Items, sizeof(Items));
 
   EXPECT_EQ(L.size(), 0U);
   L.push_back(X);
@@ -146,7 +146,7 @@ static void testSinglyLinkedList() {
 
   ListTy<ListItemTy> L;
   L.clear();
-  L.init(Items);
+  L.init(Items, sizeof(Items));
 
   L.push_back(X);
   L.push_back(Y);
@@ -167,8 +167,8 @@ static void testSinglyLinkedList() {
   ListTy<ListItemTy> L1, L2;
   L1.clear();
   L2.clear();
-  L1.init(Items);
-  L2.init(Items);
+  L1.init(Items, sizeof(Items));
+  L2.init(Items, sizeof(Items));
 
   L1.append_back(&L2);
   EXPECT_TRUE(L1.empty());
@@ -203,14 +203,14 @@ TEST(ScudoListTest, SinglyLinkedList) {
 
 template <template <typename> class ListTy, typename ListItemTy>
 static void testDoublyLinkedList() {
-  ListItemTy Items[6];
+  ListItemTy Items[3];
   ListItemTy *X = &Items[0];
   ListItemTy *Y = &Items[1];
   ListItemTy *Z = &Items[2];
 
   ListTy<ListItemTy> L;
   L.clear();
-  L.init(Items);
+  L.init(Items, sizeof(Items));
 
   L.push_back(X);
   L.push_back(Y);

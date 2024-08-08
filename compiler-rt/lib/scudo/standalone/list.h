@@ -31,10 +31,10 @@ namespace scudo {
 // The intrusive list requires the member `Next` (and `Prev` if doubly linked
 // list)` defined in the node type. The type of `Next`/`Prev` can be a pointer
 // or an index to an array. For example, if the storage of the nodes is an
-// array, instead of using pointer type, linking with index type can save some
-// space.
+// array, instead of using a pointer type, linking with an index type can save
+// some space.
 //
-// There are two things to be noticed while using index type,
+// There are two things to be noticed while using an index type,
 //   1. Call init() to set up the base address of the array.
 //   2. Define `EndOfListVal` as the nil of the list.
 
@@ -43,7 +43,7 @@ class LinkOp {
 public:
   LinkOp() = default;
   LinkOp(UNUSED T *BaseT) {}
-  void init(UNUSED T *LinkBase) {}
+  void init(UNUSED T *LinkBase, UNUSED uptr Size) {}
   T *getBase() const { return nullptr; }
 
   T *getNext(T *X) const { return X->Next; }
@@ -61,13 +61,18 @@ public:
 
   LinkOp() = default;
   LinkOp(T *BaseT) : Base(BaseT) {}
-  void init(T *LinkBase) { Base = LinkBase; }
+  void init(T *LinkBase, uptr BaseSize) {
+    Base = LinkBase;
+    // TODO: Check if the `BaseSize` can fit in `Size`.
+    Size = static_cast<LinkTy>(BaseSize);
+  }
   T *getBase() const { return Base; }
 
   T *getNext(T *X) const {
     DCHECK_NE(getBase(), nullptr);
     if (X->Next == getEndOfListVal())
       return nullptr;
+    DCHECK_LT(X->Next, Size);
     return &Base[X->Next];
   }
   // Set `X->Next` to `Next`.
@@ -83,11 +88,13 @@ public:
     DCHECK_NE(getBase(), nullptr);
     if (X->Prev == getEndOfListVal())
       return nullptr;
+    DCHECK_LT(X->Prev, Size);
     return &Base[X->Prev];
   }
   // Set `X->Prev` to `Prev`.
   void setPrev(T *X, T *Prev) const {
-    // TODO: Check if the offset fits in the size of `LinkTy`.
+    DCHECK_LT(reinterpret_cast<uptr>(Prev),
+              reinterpret_cast<uptr>(Base + Size));
     if (Prev == nullptr)
       X->Prev = getEndOfListVal();
     else
@@ -99,6 +106,7 @@ public:
 
 protected:
   T *Base = nullptr;
+  LinkTy Size = 0;
 };
 
 template <class T> class IteratorBase : public LinkOp<T> {
@@ -120,7 +128,7 @@ private:
 template <class T> struct IntrusiveList : public LinkOp<T> {
   IntrusiveList() = default;
   IntrusiveList(T *Base) { init(Base); }
-  void init(T *Base) { LinkOp<T>::init(Base); }
+  void init(T *Base, uptr BaseSize) { LinkOp<T>::init(Base, BaseSize); }
 
   bool empty() const { return Size == 0; }
   uptr size() const { return Size; }
