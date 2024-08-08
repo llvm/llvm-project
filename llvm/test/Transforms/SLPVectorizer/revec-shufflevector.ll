@@ -5,21 +5,8 @@ define void @test1(ptr %in, ptr %out) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[IN:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i32> [[TMP1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i32> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 16
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 32
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 48
-; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP10]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i32> [[TMP0]] to <8 x i64>
+; CHECK-NEXT:    store <8 x i64> [[TMP1]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -53,15 +40,11 @@ define void @test2(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i32> [[TMP2]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 16
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 32
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 48
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 16
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 32
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP10]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[TMP7]], align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
