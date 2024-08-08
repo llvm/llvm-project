@@ -171,9 +171,9 @@ const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
   assert(isa<SCEVUnknown>(StrideSCEV) && "shouldn't be in map");
 
   ScalarEvolution *SE = PSE.getSE();
-  const auto *CT = SE->getOne(StrideSCEV->getType());
+  const SCEV *CT = SE->getOne(StrideSCEV->getType());
   PSE.addPredicate(*SE->getEqualPredicate(StrideSCEV, CT));
-  auto *Expr = PSE.getSCEV(Ptr);
+  const SCEV *Expr = PSE.getSCEV(Ptr);
 
   LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
 	     << " by: " << *Expr << "\n");
@@ -1084,7 +1084,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
         return false;
 
       if (!isNoWrap(PSE, StridesMap, Ptr, AccessTy, TheLoop)) {
-        auto *Expr = PSE.getSCEV(Ptr);
+        const SCEV *Expr = PSE.getSCEV(Ptr);
         if (!Assume || !isa<SCEVAddRecExpr>(Expr))
           return false;
         PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
@@ -1440,7 +1440,7 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
         // Assume constant for other the operand so that the AddRec can be
         // easily found.
         isa<ConstantInt>(OBO->getOperand(1))) {
-      auto *OpScev = PSE.getSCEV(OBO->getOperand(0));
+      const SCEV *OpScev = PSE.getSCEV(OBO->getOperand(0));
 
       if (auto *OpAR = dyn_cast<SCEVAddRecExpr>(OpScev))
         return OpAR->getLoop() == L && OpAR->getNoWrapFlags(SCEV::FlagNSW);

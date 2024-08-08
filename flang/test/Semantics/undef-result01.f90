@@ -121,6 +121,7 @@ integer function defdBySize()
 end
 
 character(40) function defdByIomsg()
+  !WARNING: IOMSG= is useless without either ERR= or IOSTAT=
   write(123,*,iomsg=defdByIomsg)
 end
 

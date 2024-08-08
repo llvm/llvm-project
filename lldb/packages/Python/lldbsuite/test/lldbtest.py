@@ -1514,19 +1514,23 @@ class Base(unittest.TestCase):
             stdflag = "-std=c++11"
         return stdflag
 
-    def buildDriver(self, sources, exe_name):
+    def buildDriver(self, sources, exe_name, defines=None):
         """Platform-specific way to build a program that links with LLDB (via the liblldb.so
         or LLDB.framework).
         """
+        if defines is None:
+            defines = []
+
         stdflag = self.getstdFlag()
         stdlibflag = self.getstdlibFlag()
+        defines = " ".join(["-D{}={}".format(name, value) for name, value in defines])
 
         lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s" % (stdflag, stdlibflag),
+                "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
                 "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
             }
@@ -1534,12 +1538,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -lliblldb" % lib_dir,
             }
@@ -1547,12 +1552,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir),
             }

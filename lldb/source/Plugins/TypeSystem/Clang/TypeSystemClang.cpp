@@ -1220,7 +1220,8 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     AccessType access_type, llvm::StringRef name, int kind,
-    LanguageType language, ClangASTMetadata *metadata, bool exports_symbols) {
+    LanguageType language, std::optional<ClangASTMetadata> metadata,
+    bool exports_symbols) {
   ASTContext &ast = getASTContext();
 
   if (decl_ctx == nullptr)
@@ -1228,10 +1229,8 @@ CompilerType TypeSystemClang::CreateRecordType(
 
   if (language == eLanguageTypeObjC ||
       language == eLanguageTypeObjC_plus_plus) {
-    bool isForwardDecl = true;
     bool isInternal = false;
-    return CreateObjCClass(name, decl_ctx, owning_module, isForwardDecl,
-                           isInternal, metadata);
+    return CreateObjCClass(name, decl_ctx, owning_module, isInternal, metadata);
   }
 
   // NOTE: Eventually CXXRecordDecl will be merged back into RecordDecl and
@@ -1787,8 +1786,8 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
   // -flimit-debug-info instead of just seeing nothing if this is a base class
   // (since we were hiding empty base classes), or nothing when you turn open
   // an valiable whose type was incomplete.
-  ClangASTMetadata *meta_data = GetMetadata(record_decl);
-  if (meta_data && meta_data->IsForcefullyCompleted())
+  if (std::optional<ClangASTMetadata> meta_data = GetMetadata(record_decl);
+      meta_data && meta_data->IsForcefullyCompleted())
     return true;
 
   return false;
@@ -1798,8 +1797,8 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
 
 CompilerType TypeSystemClang::CreateObjCClass(
     llvm::StringRef name, clang::DeclContext *decl_ctx,
-    OptionalClangModuleID owning_module, bool isForwardDecl, bool isInternal,
-    ClangASTMetadata *metadata) {
+    OptionalClangModuleID owning_module, bool isInternal,
+    std::optional<ClangASTMetadata> metadata) {
   ASTContext &ast = getASTContext();
   assert(!name.empty());
   if (!decl_ctx)
@@ -1809,7 +1808,6 @@ CompilerType TypeSystemClang::CreateObjCClass(
       ObjCInterfaceDecl::CreateDeserialized(ast, GlobalDeclID());
   decl->setDeclContext(decl_ctx);
   decl->setDeclName(&ast.Idents.get(name));
-  /*isForwardDecl,*/
   decl->setImplicit(isInternal);
   SetOwningModule(decl, owning_module);
 
@@ -2465,27 +2463,31 @@ void TypeSystemClang::SetMetadataAsUserID(const clang::Type *type,
 }
 
 void TypeSystemClang::SetMetadata(const clang::Decl *object,
-                                  ClangASTMetadata &metadata) {
+                                  ClangASTMetadata metadata) {
   m_decl_metadata[object] = metadata;
 }
 
 void TypeSystemClang::SetMetadata(const clang::Type *object,
-                                  ClangASTMetadata &metadata) {
+                                  ClangASTMetadata metadata) {
   m_type_metadata[object] = metadata;
 }
 
-ClangASTMetadata *TypeSystemClang::GetMetadata(const clang::Decl *object) {
+std::optional<ClangASTMetadata>
+TypeSystemClang::GetMetadata(const clang::Decl *object) {
   auto It = m_decl_metadata.find(object);
   if (It != m_decl_metadata.end())
-    return &It->second;
-  return nullptr;
+    return It->second;
+
+  return std::nullopt;
 }
 
-ClangASTMetadata *TypeSystemClang::GetMetadata(const clang::Type *object) {
+std::optional<ClangASTMetadata>
+TypeSystemClang::GetMetadata(const clang::Type *object) {
   auto It = m_type_metadata.find(object);
   if (It != m_type_metadata.end())
-    return &It->second;
-  return nullptr;
+    return It->second;
+
+  return std::nullopt;
 }
 
 void TypeSystemClang::SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
@@ -2934,9 +2936,10 @@ bool TypeSystemClang::IsRuntimeGeneratedType(
   clang::ObjCInterfaceDecl *result_iface_decl =
       llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl_ctx);
 
-  ClangASTMetadata *ast_metadata = GetMetadata(result_iface_decl);
+  std::optional<ClangASTMetadata> ast_metadata = GetMetadata(result_iface_decl);
   if (!ast_metadata)
     return false;
+
   return (ast_metadata->GetISAPtr() != 0);
 }
 
@@ -3622,8 +3625,8 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
             if (is_complete)
               success = cxx_record_decl->isDynamicClass();
             else {
-              ClangASTMetadata *metadata = GetMetadata(cxx_record_decl);
-              if (metadata)
+              if (std::optional<ClangASTMetadata> metadata =
+                      GetMetadata(cxx_record_decl))
                 success = metadata->GetIsDynamicCXXType();
               else {
                 is_complete = GetType(pointee_qual_type).GetCompleteType();
@@ -4966,6 +4969,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Kind::OCLQueue:
     case clang::BuiltinType::Kind::OCLReserveID:
     case clang::BuiltinType::Kind::OCLSampler:
+    case clang::BuiltinType::Kind::HLSLResource:
     case clang::BuiltinType::Kind::ArraySection:
     case clang::BuiltinType::Kind::OMPArrayShaping:
     case clang::BuiltinType::Kind::OMPIterator:
@@ -5325,7 +5329,8 @@ GetDynamicArrayInfo(TypeSystemClang &ast, SymbolFile *sym_file,
                     clang::QualType qual_type,
                     const ExecutionContext *exe_ctx) {
   if (qual_type->isIncompleteArrayType())
-    if (auto *metadata = ast.GetMetadata(qual_type.getTypePtr()))
+    if (std::optional<ClangASTMetadata> metadata =
+            ast.GetMetadata(qual_type.getTypePtr()))
       return sym_file->GetDynamicArrayInfoForUID(metadata->GetUserID(),
                                                  exe_ctx);
   return std::nullopt;
@@ -6091,6 +6096,7 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
     case clang::BuiltinType::OCLImage3dWO:
     case clang::BuiltinType::OCLImage3dRW:
     case clang::BuiltinType::OCLSampler:
+    case clang::BuiltinType::HLSLResource:
       return 0;
     case clang::BuiltinType::Bool:
     case clang::BuiltinType::Char_U:
@@ -7978,7 +7984,7 @@ bool TypeSystemClang::AddObjCClassProperty(
     const CompilerType &type, const char *property_name,
     const CompilerType &property_clang_type, clang::ObjCIvarDecl *ivar_decl,
     const char *property_setter_name, const char *property_getter_name,
-    uint32_t property_attributes, ClangASTMetadata *metadata) {
+    uint32_t property_attributes, ClangASTMetadata metadata) {
   if (!type || !property_clang_type.IsValid() || property_name == nullptr ||
       property_name[0] == '\0')
     return false;
@@ -8022,8 +8028,7 @@ bool TypeSystemClang::AddObjCClassProperty(
   if (!property_decl)
     return false;
 
-  if (metadata)
-    ast->SetMetadata(property_decl, *metadata);
+  ast->SetMetadata(property_decl, metadata);
 
   class_interface_decl->addDecl(property_decl);
 
@@ -8115,8 +8120,7 @@ bool TypeSystemClang::AddObjCClassProperty(
     SetMemberOwningModule(getter, class_interface_decl);
 
     if (getter) {
-      if (metadata)
-        ast->SetMetadata(getter, *metadata);
+      ast->SetMetadata(getter, metadata);
 
       getter->setMethodParams(clang_ast, llvm::ArrayRef<clang::ParmVarDecl *>(),
                               llvm::ArrayRef<clang::SourceLocation>());
@@ -8158,8 +8162,7 @@ bool TypeSystemClang::AddObjCClassProperty(
     SetMemberOwningModule(setter, class_interface_decl);
 
     if (setter) {
-      if (metadata)
-        ast->SetMetadata(setter, *metadata);
+      ast->SetMetadata(setter, metadata);
 
       llvm::SmallVector<clang::ParmVarDecl *, 1> params;
       params.push_back(clang::ParmVarDecl::Create(
@@ -8866,8 +8869,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
 
   CompilerType ct(weak_from_this(), type);
   const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  ClangASTMetadata *metadata = GetMetadata(clang_type);
-  if (metadata) {
+  if (std::optional<ClangASTMetadata> metadata = GetMetadata(clang_type)) {
     metadata->Dump(&s);
   }
 }
@@ -9488,7 +9490,7 @@ bool TypeSystemClang::DeclContextIsClassMethod(void *opaque_decl_ctx) {
     return true;
   } else if (clang::FunctionDecl *fun_decl =
                  llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
-    if (ClangASTMetadata *metadata = GetMetadata(fun_decl))
+    if (std::optional<ClangASTMetadata> metadata = GetMetadata(fun_decl))
       return metadata->HasObjectPtr();
   }
 
@@ -9541,7 +9543,7 @@ TypeSystemClang::DeclContextGetLanguage(void *opaque_decl_ctx) {
   } else if (llvm::isa<clang::CXXMethodDecl>(decl_ctx)) {
     return eLanguageTypeC_plus_plus;
   } else if (auto *fun_decl = llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
-    if (ClangASTMetadata *metadata = GetMetadata(fun_decl))
+    if (std::optional<ClangASTMetadata> metadata = GetMetadata(fun_decl))
       return metadata->GetObjectPtrLanguage();
   }
 
@@ -9591,7 +9593,7 @@ TypeSystemClang::DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc) {
   return nullptr;
 }
 
-ClangASTMetadata *
+std::optional<ClangASTMetadata>
 TypeSystemClang::DeclContextGetMetaData(const CompilerDeclContext &dc,
                                         const Decl *object) {
   TypeSystemClang *ast = llvm::cast<TypeSystemClang>(dc.GetTypeSystem());
@@ -9825,8 +9827,7 @@ bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
     if (record_type) {
       const clang::RecordDecl *record_decl = record_type->getDecl();
       assert(record_decl);
-      ClangASTMetadata *metadata = GetMetadata(record_decl);
-      if (metadata)
+      if (std::optional<ClangASTMetadata> metadata = GetMetadata(record_decl))
         return metadata->IsForcefullyCompleted();
     }
   }
@@ -9836,11 +9837,13 @@ bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
 bool TypeSystemClang::SetDeclIsForcefullyCompleted(const clang::TagDecl *td) {
   if (td == nullptr)
     return false;
-  ClangASTMetadata *metadata = GetMetadata(td);
-  if (metadata == nullptr)
+  std::optional<ClangASTMetadata> metadata = GetMetadata(td);
+  if (!metadata)
     return false;
   m_has_forcefully_completed_types = true;
   metadata->SetIsForcefullyCompleted();
+  SetMetadata(td, *metadata);
+
   return true;
 }
 
