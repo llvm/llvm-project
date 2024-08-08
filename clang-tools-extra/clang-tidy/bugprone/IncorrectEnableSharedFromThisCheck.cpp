@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncorrectEnableSharedFromThisCheck.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -40,8 +41,8 @@ void IncorrectEnableSharedFromThisCheck::check(
       result.Nodes.getNodeAs<CXXRecordDecl>("class-missing-std");
 
   if (StdEnableSharedClassDecl) {
-    for (const auto &Base : StdEnableSharedClassDecl->bases()) {
-      const auto *BaseType = Base.getType()->getAsCXXRecordDecl();
+    for (const CXXBaseSpecifier &Base : StdEnableSharedClassDecl->bases()) {
+      const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
       if (BaseType && BaseType->getQualifiedNameAsString() ==
                           "std::enable_shared_from_this") {
         SourceRange ReplacementRange = Base.getSourceRange();
@@ -61,8 +62,8 @@ void IncorrectEnableSharedFromThisCheck::check(
   }
 
   if (MissingStdSharedClassDecl) {
-    for (const auto &Base : MissingStdSharedClassDecl->bases()) {
-      const auto *BaseType = Base.getType()->getAsCXXRecordDecl();
+    for (const CXXBaseSpecifier &Base : MissingStdSharedClassDecl->bases()) {
+      const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
       if (BaseType &&
           BaseType->getQualifiedNameAsString() == "enable_shared_from_this") {
         clang::AccessSpecifier AccessSpec = Base.getAccessSpecifier();
