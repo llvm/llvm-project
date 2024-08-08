@@ -290,3 +290,64 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
   return std::equal(RVLocs1.begin(), RVLocs1.end(), RVLocs2.begin(),
                     RVLocs2.end(), AreCompatible);
 }
+
+void CCState::dump() const {
+  dbgs() << "CCState:\n";
+  for (const CCValAssign &Loc : Locs) {
+    if (Loc.isRegLoc()) {
+      dbgs() << "  Reg " << TRI.getName(Loc.getLocReg());
+    } else if (Loc.isMemLoc()) {
+      dbgs() << "  Mem " << Loc.getLocMemOffset();
+    } else {
+      assert(Loc.isPendingLoc());
+      dbgs() << "  Pend " << Loc.getExtraInfo();
+    }
+
+    dbgs() << " ValVT:" << Loc.getValVT();
+    dbgs() << " LocVT:" << Loc.getLocVT();
+
+    if (Loc.needsCustom())
+      dbgs() << " custom";
+
+    switch (Loc.getLocInfo()) {
+    case CCValAssign::Full:
+      dbgs() << " Full";
+      break;
+    case CCValAssign::SExt:
+      dbgs() << " SExt";
+      break;
+    case CCValAssign::ZExt:
+      dbgs() << " ZExt";
+      break;
+    case CCValAssign::AExt:
+      dbgs() << " AExt";
+      break;
+    case CCValAssign::SExtUpper:
+      dbgs() << " SExtUpper";
+      break;
+    case CCValAssign::ZExtUpper:
+      dbgs() << " ZExtUpper";
+      break;
+    case CCValAssign::AExtUpper:
+      dbgs() << " AExtUpper";
+      break;
+    case CCValAssign::BCvt:
+      dbgs() << " BCvt";
+      break;
+    case CCValAssign::Trunc:
+      dbgs() << " Trunc";
+      break;
+    case CCValAssign::VExt:
+      dbgs() << " VExt";
+      break;
+    case CCValAssign::FPExt:
+      dbgs() << " FPExt";
+      break;
+    case CCValAssign::Indirect:
+      dbgs() << " Indirect";
+      break;
+    }
+
+    dbgs() << "\n";
+  }
+}
