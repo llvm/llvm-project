@@ -582,6 +582,7 @@ set(files
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
+  __pstl/backends/forward_to_mem_funcs.h
   __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
   __pstl/backends/std_thread.h
