@@ -1536,7 +1536,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // deserializing every method so we can compute it.
   //
   // FIXME: Avoid adding the key function if the class is defined in
-  // module purview since the key function is meaningless in module purview.
+  // module purview since in that case the key function is meaningless.
   if (D->isCompleteDefinition())
     Record.AddDeclRef(Context.getCurrentKeyFunction(D));
 

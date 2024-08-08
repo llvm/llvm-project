@@ -5169,7 +5169,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     GetDeclRef(D);
 
-  // Write all classes need to emit the vtable definitions if required.
+  // Write all classes that need to emit the vtable definitions if required.
   if (isWritingStdCXXNamedModules())
     for (CXXRecordDecl *RD : PendingEmittingVTables)
       GetDeclRef(RD);

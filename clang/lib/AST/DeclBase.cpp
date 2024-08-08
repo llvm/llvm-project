@@ -1129,7 +1129,7 @@ bool Decl::isInAnotherModuleUnit() const {
   // module included by the current unit, should we return false
   // here?
   //
-  // It is clear for header units as the specification says the
+  // This is clear for header units as the specification says the
   // header units live in a synthesised translation unit. So we
   // can return false here.
   M = M->getTopLevelModule();

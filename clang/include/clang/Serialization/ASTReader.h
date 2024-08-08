@@ -791,7 +791,7 @@ private:
   SmallVector<GlobalDeclID, 16> EagerlyDeserializedDecls;
 
   /// The IDs of all vtables to emit. The referenced declarations are passed
-  /// to the consumers's HandleVTable eagerly after passing
+  /// to the consumers' HandleVTable eagerly after passing
   /// EagerlyDeserializedDecls.
   SmallVector<GlobalDeclID, 16> VTablesToEmit;
 
