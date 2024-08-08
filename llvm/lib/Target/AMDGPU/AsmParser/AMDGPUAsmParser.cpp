@@ -170,6 +170,10 @@ public:
     ImmTyWaitEXP,
     ImmTyWaitVAVDst,
     ImmTyWaitVMVSrc,
+#if LLPC_BUILD_GFX12
+    ImmTyGlobalSReg32,
+    ImmTyGlobalSReg64,
+#endif /* LLPC_BUILD_GFX12 */
     ImmTyByteSel,
   };
 
@@ -402,6 +406,10 @@ public:
   bool isOpSelHi() const { return isImmTy(ImmTyOpSelHi); }
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
+#if LLPC_BUILD_GFX12
+  bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
+  bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
+#endif /* LLPC_BUILD_GFX12 */
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1125,6 +1133,14 @@ public:
     case ImmTyWaitEXP: OS << "WaitEXP"; break;
     case ImmTyWaitVAVDst: OS << "WaitVAVDst"; break;
     case ImmTyWaitVMVSrc: OS << "WaitVMVSrc"; break;
+#if LLPC_BUILD_GFX12
+    case ImmTyGlobalSReg32:
+      OS << "GlobalSReg32";
+      break;
+    case ImmTyGlobalSReg64:
+      OS << "GlobalSReg64";
+      break;
+#endif /* LLPC_BUILD_GFX12 */
     case ImmTyByteSel: OS << "ByteSel" ; break;
     }
     // clang-format on
@@ -1618,6 +1634,14 @@ public:
   ParseStatus parseTH(OperandVector &Operands, int64_t &TH);
   ParseStatus parseStringWithPrefix(StringRef Prefix, StringRef &Value,
                                     SMLoc &StringLoc);
+  ParseStatus parseStringOrIntWithPrefix(OperandVector &Operands,
+                                         StringRef Name,
+                                         ArrayRef<const char *> Ids,
+                                         int64_t &IntVal);
+  ParseStatus parseStringOrIntWithPrefix(OperandVector &Operands,
+                                         StringRef Name,
+                                         ArrayRef<const char *> Ids,
+                                         AMDGPUOperand::ImmTy Type);
 
   bool isModifier();
   bool isOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const;
@@ -1637,6 +1661,13 @@ public:
   ParseStatus parseRegWithFPInputMods(OperandVector &Operands);
   ParseStatus parseRegWithIntInputMods(OperandVector &Operands);
   ParseStatus parseVReg32OrOff(OperandVector &Operands);
+#if LLPC_BUILD_GFX12
+  ParseStatus parseGlobalRegImm(OperandVector &Operands,
+                                AMDGPUOperand::ImmTy ImmTy,
+                                unsigned ExpectedWidth);
+  ParseStatus parseGlobalSReg32(OperandVector &Operands);
+  ParseStatus parseGlobalSReg64(OperandVector &Operands);
+#endif /* LLPC_BUILD_GFX12 */
   ParseStatus tryParseIndexKey(OperandVector &Operands,
                                AMDGPUOperand::ImmTy ImmTy);
   ParseStatus parseIndexKey8bit(OperandVector &Operands);
@@ -3456,6 +3487,54 @@ ParseStatus AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) {
   return ParseStatus::Failure;
 }
 
+#if LLPC_BUILD_GFX12
+ParseStatus AMDGPUAsmParser::parseGlobalRegImm(OperandVector &Operands,
+                                               AMDGPUOperand::ImmTy ImmTy,
+                                               unsigned ExpectedWidth) {
+  if (!isRegister())
+    return ParseStatus::NoMatch;
+
+  auto Loc = getLoc();
+  RegisterKind RegKind;
+  unsigned Reg;
+  unsigned RegNum;
+  unsigned RegWidth;
+  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth))
+    return ParseStatus::Failure;
+
+  // Map VCC to its underlying SGPR alias.
+  if (RegKind == IS_SPECIAL) {
+    if (Reg == AMDGPU::VCC) {
+      RegKind = IS_SGPR;
+      RegNum = 106;
+      RegWidth = ExpectedWidth;
+    } else if (Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI) {
+      RegKind = IS_SGPR;
+      RegNum = Reg == AMDGPU::VCC_LO ? 106 : 107;
+      RegWidth = 32;
+    }
+  }
+
+  if (RegKind != IS_SGPR)
+    return Error(Loc, "expected an SGPR or vcc/vcc_lo/vcc_hi");
+
+  if (RegWidth != ExpectedWidth)
+    return Error(Loc,
+                 Twine("expected a ") + Twine(ExpectedWidth) + "-bit register");
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, RegNum, Loc, ImmTy));
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseGlobalSReg32(OperandVector &Operands) {
+  return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg32, 32);
+}
+
+ParseStatus AMDGPUAsmParser::parseGlobalSReg64(OperandVector &Operands) {
+  return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg64, 64);
+}
+
+#endif /* LLPC_BUILD_GFX12 */
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
 
@@ -3683,6 +3762,9 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   if (MO.isReg()) {
     auto Reg = MO.getReg();
     if (!Reg)
+#if LLPC_BUILD_GFX12
+      // TODO-GFX12: why is this needed only for a few GFX12 instructions?
+#endif /* LLPC_BUILD_GFX12 */
       return false;
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);
@@ -6633,27 +6715,17 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
 
 ParseStatus AMDGPUAsmParser::parseScope(OperandVector &Operands,
                                         int64_t &Scope) {
-  Scope = AMDGPU::CPol::SCOPE_CU; // default;
+  static const unsigned Scopes[] = {CPol::SCOPE_CU, CPol::SCOPE_SE,
+                                    CPol::SCOPE_DEV, CPol::SCOPE_SYS};
 
-  StringRef Value;
-  SMLoc StringLoc;
-  ParseStatus Res;
+  ParseStatus Res = parseStringOrIntWithPrefix(
+      Operands, "scope", {"SCOPE_CU", "SCOPE_SE", "SCOPE_DEV", "SCOPE_SYS"},
+      Scope);
 
-  Res = parseStringWithPrefix("scope", Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
+  if (Res.isSuccess())
+    Scope = Scopes[Scope];
 
-  Scope = StringSwitch<int64_t>(Value)
-              .Case("SCOPE_CU", AMDGPU::CPol::SCOPE_CU)
-              .Case("SCOPE_SE", AMDGPU::CPol::SCOPE_SE)
-              .Case("SCOPE_DEV", AMDGPU::CPol::SCOPE_DEV)
-              .Case("SCOPE_SYS", AMDGPU::CPol::SCOPE_SYS)
-              .Default(0xffffffff);
-
-  if (Scope == 0xffffffff)
-    return Error(StringLoc, "invalid scope value");
-
-  return ParseStatus::Success;
+  return Res;
 }
 
 ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
@@ -6740,6 +6812,44 @@ ParseStatus AMDGPUAsmParser::parseStringWithPrefix(StringRef Prefix,
   StringLoc = getLoc();
   return parseId(Value, "expected an identifier") ? ParseStatus::Success
                                                   : ParseStatus::Failure;
+}
+
+ParseStatus AMDGPUAsmParser::parseStringOrIntWithPrefix(
+    OperandVector &Operands, StringRef Name, ArrayRef<const char *> Ids,
+    int64_t &IntVal) {
+  if (!trySkipId(Name, AsmToken::Colon))
+    return ParseStatus::NoMatch;
+
+  SMLoc StringLoc = getLoc();
+
+  StringRef Value;
+  if (isToken(AsmToken::Identifier)) {
+    Value = getTokenStr();
+    lex();
+
+    for (IntVal = 0; IntVal < (int64_t)Ids.size(); ++IntVal)
+      if (Value == Ids[IntVal])
+        break;
+  } else if (!parseExpr(IntVal))
+    return ParseStatus::Failure;
+
+  if (IntVal < 0 || IntVal >= (int64_t)Ids.size())
+    return Error(StringLoc, "invalid " + Twine(Name) + " value");
+
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseStringOrIntWithPrefix(
+    OperandVector &Operands, StringRef Name, ArrayRef<const char *> Ids,
+    AMDGPUOperand::ImmTy Type) {
+  SMLoc S = getLoc();
+  int64_t IntVal;
+
+  ParseStatus Res = parseStringOrIntWithPrefix(Operands, Name, Ids, IntVal);
+  if (Res.isSuccess())
+    Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S, Type));
+
+  return Res;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9396,57 +9506,16 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
 ParseStatus AMDGPUAsmParser::parseSDWASel(OperandVector &Operands,
                                           StringRef Prefix,
                                           AMDGPUOperand::ImmTy Type) {
-  using namespace llvm::AMDGPU::SDWA;
-
-  SMLoc S = getLoc();
-  StringRef Value;
-
-  SMLoc StringLoc;
-  ParseStatus Res = parseStringWithPrefix(Prefix, Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
-
-  int64_t Int;
-  Int = StringSwitch<int64_t>(Value)
-        .Case("BYTE_0", SdwaSel::BYTE_0)
-        .Case("BYTE_1", SdwaSel::BYTE_1)
-        .Case("BYTE_2", SdwaSel::BYTE_2)
-        .Case("BYTE_3", SdwaSel::BYTE_3)
-        .Case("WORD_0", SdwaSel::WORD_0)
-        .Case("WORD_1", SdwaSel::WORD_1)
-        .Case("DWORD", SdwaSel::DWORD)
-        .Default(0xffffffff);
-
-  if (Int == 0xffffffff)
-    return Error(StringLoc, "invalid " + Twine(Prefix) + " value");
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, Type));
-  return ParseStatus::Success;
+  return parseStringOrIntWithPrefix(
+      Operands, Prefix,
+      {"BYTE_0", "BYTE_1", "BYTE_2", "BYTE_3", "WORD_0", "WORD_1", "DWORD"},
+      Type);
 }
 
 ParseStatus AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
-  using namespace llvm::AMDGPU::SDWA;
-
-  SMLoc S = getLoc();
-  StringRef Value;
-
-  SMLoc StringLoc;
-  ParseStatus Res = parseStringWithPrefix("dst_unused", Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
-
-  int64_t Int;
-  Int = StringSwitch<int64_t>(Value)
-        .Case("UNUSED_PAD", DstUnused::UNUSED_PAD)
-        .Case("UNUSED_SEXT", DstUnused::UNUSED_SEXT)
-        .Case("UNUSED_PRESERVE", DstUnused::UNUSED_PRESERVE)
-        .Default(0xffffffff);
-
-  if (Int == 0xffffffff)
-    return Error(StringLoc, "invalid dst_unused value");
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, AMDGPUOperand::ImmTySDWADstUnused));
-  return ParseStatus::Success;
+  return parseStringOrIntWithPrefix(
+      Operands, "dst_unused", {"UNUSED_PAD", "UNUSED_SEXT", "UNUSED_PRESERVE"},
+      AMDGPUOperand::ImmTySDWADstUnused);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands) {

@@ -337,6 +337,10 @@ struct CastedValue {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
     if (TruncBits) N = N.truncate(N.getBitWidth() - TruncBits);
+    if (IsNonNegative && !N.isAllNonNegative())
+      N = N.intersectWith(
+          ConstantRange(APInt::getZero(N.getBitWidth()),
+                        APInt::getSignedMinValue(N.getBitWidth())));
     if (SExtBits) N = N.signExtend(N.getBitWidth() + SExtBits);
     if (ZExtBits) N = N.zeroExtend(N.getBitWidth() + ZExtBits);
     return N;
@@ -693,15 +697,17 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       // If the integer type is smaller than the index size, it is implicitly
       // sign extended or truncated to index size.
+      bool NUSW = GEPOp->hasNoUnsignedSignedWrap();
+      bool NonNeg = NUSW && GEPOp->hasNoUnsignedWrap();
       unsigned Width = Index->getType()->getIntegerBitWidth();
       unsigned SExtBits = IndexSize > Width ? IndexSize - Width : 0;
       unsigned TruncBits = IndexSize < Width ? Width - IndexSize : 0;
       LinearExpression LE = GetLinearExpression(
-          CastedValue(Index, 0, SExtBits, TruncBits, false), DL, 0, AC, DT);
+          CastedValue(Index, 0, SExtBits, TruncBits, NonNeg), DL, 0, AC, DT);
 
       // Scale by the type size.
       unsigned TypeSize = AllocTypeSize.getFixedValue();
-      LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->hasNoUnsignedSignedWrap());
+      LE = LE.mul(APInt(IndexSize, TypeSize), NUSW);
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);
 

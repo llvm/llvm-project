@@ -867,6 +867,10 @@ bool isInvalidSingleUseConsumerInst(unsigned Opc);
 LLVM_READONLY
 bool isInvalidSingleUseProducerInst(unsigned Opc);
 
+#if LLPC_BUILD_GFX12
+bool isDPMACCInstruction(unsigned Opc);
+
+#endif /* LLPC_BUILD_GFX12 */
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
@@ -928,28 +932,55 @@ struct Waitcnt {
   unsigned SampleCnt = ~0u; // gfx12+ only.
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
+#if LLPC_BUILD_GFX12
+  unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
+  unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
+#endif /* LLPC_BUILD_GFX12 */
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
       : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt),
+#if LLPC_BUILD_GFX12
+        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u), VaVdst(~0u), VmVsrc(~0u) {}
+#else /* LLPC_BUILD_GFX12 */
         SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u) {}
+#endif /* LLPC_BUILD_GFX12 */
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
+#if LLPC_BUILD_GFX12
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned VaVdst,
+          unsigned VmVsrc)
+#else /* LLPC_BUILD_GFX12 */
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt)
+#endif /* LLPC_BUILD_GFX12 */
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
+#if LLPC_BUILD_GFX12
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), VaVdst(VaVdst),
+        VmVsrc(VmVsrc) {}
+#else /* LLPC_BUILD_GFX12 */
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
+#endif /* LLPC_BUILD_GFX12 */
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
+#if LLPC_BUILD_GFX12
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || VaVdst != ~0u ||
+           VmVsrc != ~0u;
+#else /* LLPC_BUILD_GFX12 */
            SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u;
+#endif /* LLPC_BUILD_GFX12 */
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
 
+#if LLPC_BUILD_GFX12
+  bool hasWaitDepctr() const { return VaVdst != ~0u || VmVsrc != ~0u; }
+
+#endif /* LLPC_BUILD_GFX12 */
   Waitcnt combined(const Waitcnt &Other) const {
     // Does the right thing provided self and Other are either both pre-gfx12
     // or both gfx12+.
@@ -957,7 +988,12 @@ struct Waitcnt {
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
+#if LLPC_BUILD_GFX12
+        std::min(KmCnt, Other.KmCnt), std::min(VaVdst, Other.VaVdst),
+        std::min(VmVsrc, Other.VmVsrc));
+#else /* LLPC_BUILD_GFX12 */
         std::min(KmCnt, Other.KmCnt));
+#endif /* LLPC_BUILD_GFX12 */
   }
 };
 
@@ -1114,6 +1150,14 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI);
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
+#if LLPC_BUILD_GFX12
+
+/// \returns Maximum VaVdst value that can be encoded.
+unsigned getVaVdstBitMask();
+
+/// \returns Maximum VmVsrc value that can be encoded.
+unsigned getVmVsrcBitMask();
+#endif /* LLPC_BUILD_GFX12 */
 
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);

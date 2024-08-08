@@ -228,6 +228,11 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
+  // Spill frame pointer and/or base pointer registers if they are clobbered.
+  // It is placed before call frame instruction elimination so it will not mess
+  // with stack arguments.
+  TFI->spillFPBP(MF);
+
   // Calculate the MaxCallFrameSize value for the function's frame
   // information. Also eliminates call frame pseudo instructions.
   calculateCallFrameInfo(MF);
@@ -476,7 +481,11 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
     for (auto &CS : CSI) {
       // If the target has spilled this register to another register, we don't
       // need to allocate a stack slot.
+#if LLPC_BUILD_GFX12
+      if (CS.isSpilledToReg() || CS.isHandledByTarget())
+#else /* LLPC_BUILD_GFX12 */
       if (CS.isSpilledToReg())
+#endif /* LLPC_BUILD_GFX12 */
         continue;
 
       unsigned Reg = CS.getReg();
@@ -602,6 +611,10 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   MachineBasicBlock::iterator I = SaveBlock.begin();
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
+#if LLPC_BUILD_GFX12
+      if (CS.isHandledByTarget())
+        continue;
+#endif /* LLPC_BUILD_GFX12 */
       // Insert the spill to the stack frame.
       unsigned Reg = CS.getReg();
 
@@ -632,6 +645,11 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
+#if LLPC_BUILD_GFX12
+      if (CI.isHandledByTarget())
+        continue;
+
+#endif /* LLPC_BUILD_GFX12 */
       unsigned Reg = CI.getReg();
       if (CI.isSpilledToReg()) {
         BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)

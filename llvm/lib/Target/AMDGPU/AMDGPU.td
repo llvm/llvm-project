@@ -1097,10 +1097,34 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
+#ifdef LLPC_BUILD_GFX12
+def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
+  "DynamicVGPR",
+  "true",
+  "Enable dynamic VGPR mode"
+>;
+
+def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
+  "DynamicVGPRBlockSize32",
+  "true",
+  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
+>;
+
+#endif /* LLPC_BUILD_GFX12 */
 def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "RequiresCOV6",
   "true",
   "Target Requires Code Object V6"
+#ifdef LLPC_BUILD_GFX12
+>;
+
+// Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
+// restoring the callee-saved registers.
+def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
+  "UseBlockVGPROpsForCSR",
+  "true",
+  "Use block load/store for VGPR callee saved registers"
+#endif /* LLPC_BUILD_GFX12 */
 >;
 
 // Dummy feature used to disable assembler instructions.

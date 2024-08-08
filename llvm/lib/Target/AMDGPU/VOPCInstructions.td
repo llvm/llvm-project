@@ -420,8 +420,15 @@ multiclass VOPC_F16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_F32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_F32_F32, cond, revOp, 0>;
 
+#ifdef LLPC_BUILD_GFX12
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
+    VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
+}
+#else /* LLPC_BUILD_GFX12 */
 multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
+#endif /* LLPC_BUILD_GFX12 */
 
 multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
                      string revOp = opName> {
@@ -436,7 +443,11 @@ multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
+#ifdef LLPC_BUILD_GFX12
+let IsInvalidSingleUseConsumer = 1, IsDPMACCInstruction = 1 in {
+#else /* LLPC_BUILD_GFX12 */
 let IsInvalidSingleUseConsumer = 1 in {
+#endif /* LLPC_BUILD_GFX12 */
   multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
     VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
 }
@@ -453,8 +464,15 @@ multiclass VOPCX_F16<string opName, string revOp = opName> {
 multiclass VOPCX_F32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_F32_F32, VOPC_F32_F32, COND_NULL, revOp>;
 
+#ifdef LLPC_BUILD_GFX12
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPCX_F64 <string opName, string revOp = opName> :
+    VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
+}
+#else /* LLPC_BUILD_GFX12 */
 multiclass VOPCX_F64 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
+#endif /* LLPC_BUILD_GFX12 */
 
 multiclass VOPCX_I16<string opName, string revOp = opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
@@ -468,7 +486,11 @@ multiclass VOPCX_I16<string opName, string revOp = opName> {
 multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
+#ifdef LLPC_BUILD_GFX12
+let IsInvalidSingleUseConsumer = 1, IsDPMACCInstruction = 1 in {
+#else /* LLPC_BUILD_GFX12 */
 let IsInvalidSingleUseConsumer = 1 in {
+#endif /* LLPC_BUILD_GFX12 */
   multiclass VOPCX_I64 <string opName, string revOp = opName> :
     VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
 }
@@ -968,11 +990,23 @@ multiclass VOPC_CLASS_F32 <string opName> :
 multiclass VOPCX_CLASS_F32 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F32_I32, VOPC_F32_I32>;
 
+#ifdef LLPC_BUILD_GFX12
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPC_CLASS_F64 <string opName> :
+    VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
+#else /* LLPC_BUILD_GFX12 */
 multiclass VOPC_CLASS_F64 <string opName> :
   VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
+#endif /* LLPC_BUILD_GFX12 */
 
+#ifdef LLPC_BUILD_GFX12
+  multiclass VOPCX_CLASS_F64 <string opName> :
+    VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
+}
+#else /* LLPC_BUILD_GFX12 */
 multiclass VOPCX_CLASS_F64 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
+#endif /* LLPC_BUILD_GFX12 */
 
 // cmp_class ignores the FP mode and faithfully reports the unmodified
 // source value.

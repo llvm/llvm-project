@@ -48,6 +48,9 @@ private:
   const SIRegisterInfo &TRI;
   TargetSchedModel TSchedModel;
   bool RunLdsBranchVmemWARHazardFixup;
+#if LLPC_BUILD_GFX12
+  BitVector VALUReadHazardSGPRs;
+#endif /* LLPC_BUILD_GFX12 */
 
   /// RegUnits of uses in the current soft memory clause.
   BitVector ClauseUses;
@@ -108,6 +111,10 @@ private:
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
+#if LLPC_BUILD_GFX12
+  void computeVALUHazardSGPRs(MachineFunction *MMF);
+  bool fixVALUReadSGPRHazard(MachineInstr *MI);
+#endif /* LLPC_BUILD_GFX12 */
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);

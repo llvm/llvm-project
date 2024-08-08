@@ -183,6 +183,10 @@ protected:
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
+#if LLPC_BUILD_GFX12
+  bool DynamicVGPR = false;
+  bool DynamicVGPRBlockSize32 = false;
+#endif /* LLPC_BUILD_GFX12 */
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -241,6 +245,9 @@ protected:
   bool HasRequiredExportPriority = false;
 
   bool RequiresCOV6 = false;
+#if LLPC_BUILD_GFX12
+  bool UseBlockVGPROpsForCSR = false;
+#endif /* LLPC_BUILD_GFX12 */
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1246,8 +1253,16 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+#if LLPC_BUILD_GFX12
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
+#endif /* LLPC_BUILD_GFX12 */
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
+#if LLPC_BUILD_GFX12
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+
+#endif /* LLPC_BUILD_GFX12 */
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
@@ -1291,6 +1306,12 @@ public:
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
 
+#if LLPC_BUILD_GFX12
+  /// \returns true if the target supports using software to avoid hazards
+  /// between VMEM and VALU instructions in some instances.
+  bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+#endif /* LLPC_BUILD_GFX12 */
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
@@ -1583,6 +1604,10 @@ public:
     // the nop.
     return true;
   }
+#if LLPC_BUILD_GFX12
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+#endif /* LLPC_BUILD_GFX12 */
 };
 
 class GCNUserSGPRUsageInfo {

@@ -4287,6 +4287,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   SDValue N = getValue(Op0);
   SDLoc dl = getCurSDLoc();
   auto &TLI = DAG.getTargetLoweringInfo();
+  GEPNoWrapFlags NW = cast<GEPOperator>(I).getNoWrapFlags();
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
@@ -4314,7 +4315,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         // In an inbounds GEP with an offset that is nonnegative even when
         // interpreted as signed, assume there is no unsigned overflow.
         SDNodeFlags Flags;
-        if (int64_t(Offset) >= 0 && cast<GEPOperator>(I).isInBounds())
+        if (NW.hasNoUnsignedWrap() ||
+            (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
           Flags.setNoUnsignedWrap(true);
 
         N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
@@ -4355,7 +4357,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         // In an inbounds GEP with an offset that is nonnegative even when
         // interpreted as signed, assume there is no unsigned overflow.
         SDNodeFlags Flags;
-        if (Offs.isNonNegative() && cast<GEPOperator>(I).isInBounds())
+        if (NW.hasNoUnsignedWrap() ||
+            (Offs.isNonNegative() && NW.hasNoUnsignedSignedWrap()))
           Flags.setNoUnsignedWrap(true);
 
         OffsVal = DAG.getSExtOrTrunc(OffsVal, dl, N.getValueType());
@@ -7854,10 +7857,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::amdgcn_cs_chain: {
+#if LLPC_BUILD_GFX12
+#else /* LLPC_BUILD_GFX12 */
     assert(I.arg_size() == 5 && "Additional args not supported yet");
     assert(cast<ConstantInt>(I.getOperand(4))->isZero() &&
            "Non-zero flags not supported yet");
 
+#endif /* LLPC_BUILD_GFX12 */
     // At this point we don't care if it's amdgpu_cs_chain or
     // amdgpu_cs_chain_preserve.
     CallingConv::ID CC = CallingConv::AMDGPU_CS_Chain;
@@ -7883,6 +7889,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(Args[0].IsInReg && "SGPR args should be marked inreg");
     assert(!Args[1].IsInReg && "VGPR args should not be marked inreg");
     Args[2].IsInReg = true; // EXEC should be inreg
+#if LLPC_BUILD_GFX12
+
+    // Forward the flags and any additional arguments.
+    for (unsigned Idx = 4; Idx < I.arg_size(); ++Idx) {
+      TargetLowering::ArgListEntry Arg;
+      Arg.Node = getValue(I.getOperand(Idx));
+      Arg.Ty = I.getOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+#endif /* LLPC_BUILD_GFX12 */
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(getCurSDLoc())
