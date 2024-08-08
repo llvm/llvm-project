@@ -21828,7 +21828,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
 bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
     IntrinsicInst *II, StoreInst *SI,
-    SmallVectorImpl<Instruction *> &DeadInstructions) const {
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   assert(SI->isSimple());
   IRBuilder<> Builder(SI);
 

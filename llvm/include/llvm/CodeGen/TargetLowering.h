@@ -3169,7 +3169,7 @@ public:
   /// \p SI is the accompanying store instruction
   virtual bool lowerInterleaveIntrinsicToStore(
       IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInstructions) const {
+      SmallVectorImpl<Instruction *> &DeadInsts) const {
     return false;
   }
 
