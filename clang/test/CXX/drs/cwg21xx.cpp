@@ -144,7 +144,7 @@ namespace cwg2126 { // cwg2126: 12
 #endif
 }
 
-namespace cwg2137 { // cwg2137: 19
+namespace cwg2137 { // cwg2137: 20
 #if __cplusplus >= 201103L
   struct Q {
     Q();
