@@ -2217,7 +2217,7 @@ functions:
   - name: scalblnf
     standards:
       - stdc
-    return_type: long double
+    return_type: float
     arguments:
       - type: float
       - type: long
