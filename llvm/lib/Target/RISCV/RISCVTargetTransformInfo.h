@@ -60,9 +60,6 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  bool getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
-                        IntrinsicInst *II) const;
-
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
