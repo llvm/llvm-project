@@ -264,6 +264,16 @@ private:
   }
 };
 } // namespace
+
+namespace cir {
+void computeSPIRKernelABIInfo(CIRGenModule &CGM, CIRGenFunctionInfo &FI) {
+  if (CGM.getTarget().getTriple().isSPIRV())
+    SPIRVABIInfo(CGM.getTypes()).computeInfo(FI);
+  else
+    CommonSPIRABIInfo(CGM.getTypes()).computeInfo(FI);
+}
+} // namespace cir
+
 namespace {
 
 class CommonSPIRTargetCIRGenInfo : public TargetCIRGenInfo {
