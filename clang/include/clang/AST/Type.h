@@ -3989,6 +3989,10 @@ enum class VectorKind {
 
   /// is RISC-V RVV fixed-length mask vector
   RVVFixedLengthMask,
+
+  RVVFixedLengthMask_1,
+  RVVFixedLengthMask_2,
+  RVVFixedLengthMask_4
 };
 
 /// Represents a GCC generic vector type. This type is created using
