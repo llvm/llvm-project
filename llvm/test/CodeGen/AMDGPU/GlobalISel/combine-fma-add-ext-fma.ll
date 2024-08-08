@@ -446,28 +446,28 @@ define amdgpu_ps float @test_matching_source_from_unmerge(ptr addrspace(3) %aptr
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX9-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v2, v2, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v2, v3, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: test_matching_source_from_unmerge:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_fma_mix_f32 v0, v2, v2, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-NEXT:    v_fma_mix_f32 v0, v2, v3, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-CONTRACT-LABEL: test_matching_source_from_unmerge:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v0, v2, v2, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v0, v2, v3, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
 ; GFX10-CONTRACT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_matching_source_from_unmerge:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, v2, v2, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, v2, v3, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 .entry:
     %a = load <4 x half>, ptr addrspace(3) %aptr, align 16
