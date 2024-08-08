@@ -5963,6 +5963,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::llround: {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
+    auto *VTy = dyn_cast<VectorType>(ValTy);
+    auto *RTy = dyn_cast<VectorType>(ResultTy);
     Check(
         ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
         "llvm.lround, llvm.llround: argument must be floating-point or vector "
@@ -5972,9 +5974,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         ValTy->isVectorTy() == ResultTy->isVectorTy(),
         "llvm.lround, llvm.llround: argument and result disagree on vector use",
         &Call);
-    if (ValTy->isVectorTy()) {
-      Check(cast<VectorType>(ValTy)->getElementCount() ==
-                cast<VectorType>(ResultTy)->getElementCount(),
+    if (VTy) {
+      Check(VTy->getElementCount() == RTy->getElementCount(),
             "llvm.lround, llvm.llround: argument must be same length as result",
             &Call);
     }
