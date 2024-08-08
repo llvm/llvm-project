@@ -121,24 +121,33 @@ set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSIO
 # Exclude Windows specific BAT scripts from install/packaging for Linux.
 if (NOT WIN32)
   # AMD specific.
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
-    DESTINATION .
-    USE_SOURCE_PERMISSIONS
-    DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    COMPONENT AMD
-    FILES_MATCHING
-    PATTERN "*"
-    PATTERN "*.bat" EXCLUDE)
+  file(GLOB install_bin_files "${CMAKE_CURRENT_SOURCE_DIR}/bin/*")
+  foreach(ITEM ${install_bin_files})
+    # Exclude *.bat files
+    if(NOT "${ITEM}" MATCHES ".bat$")
+      # For *.pm files not require binary permissions
+      if("${ITEM}" MATCHES ".pm$")
+        LIST( APPEND gen_files "${ITEM}" )
+      else()
+        LIST( APPEND bin_files "${ITEM}" )
+      endif()
+    endif()
+  endforeach()
+  # Install with right type and Permissions
+  install(PROGRAMS ${bin_files}
+    DESTINATION ./bin
+    COMPONENT AMD)
+  install(FILES ${gen_files}
+    DESTINATION ./bin
+    COMPONENT AMD)
 
   # NVIDIA specific.
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
-    DESTINATION .
-    USE_SOURCE_PERMISSIONS
-    DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    COMPONENT NVIDIA
-    FILES_MATCHING
-    PATTERN "*"
-    PATTERN "*.bat" EXCLUDE)
+  install(PROGRAMS ${bin_files}
+    DESTINATION ./bin
+    COMPONENT NVIDIA)
+  install(FILES ${gen_files}
+    DESTINATION ./bin
+    COMPONENT NVIDIA)
 else ()
   # AMD specific.
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
