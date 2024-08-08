@@ -149,8 +149,8 @@ def b(x: str | bytes) -> bytes:
 # this by marshalling object arguments as void**.
 c_object_p: TType[_Pointer[Any]] = POINTER(c_void_p)
 
-### Exception Classes ###
 
+### Exception Classes ###
 
 class TranslationUnitLoadError(Exception):
     """Represents an error that occurred when loading a TranslationUnit.
@@ -161,7 +161,35 @@ class TranslationUnitLoadError(Exception):
     FIXME: Make libclang expose additional error information in this scenario.
     """
 
-    pass
+    # A generic error code, no further details are available.
+    #
+    # Errors of this kind can get their own specific error codes in future
+    # libclang versions.
+    ERROR_FAILURE = 1
+
+    # libclang crashed while performing the requested operation.
+    ERROR_CRASHED = 2
+
+    # The function detected that the arguments violate the function
+    # contract.
+    ERROR_INVALID_ARGUMENTS = 3
+
+    # An AST deserialization error has occurred.
+    ERROR_AST_READ_ERROR = 4
+
+    def __init__(self, enumeration: int | None, message: str):
+        if enumeration is not None:
+            assert isinstance(enumeration, int)
+
+            if enumeration < 1 or enumeration > 4:
+                raise Exception(
+                    "Encountered undefined CXError "
+                    "constant: %d. Please file a bug to have this "
+                    "value supported." % enumeration
+                )
+
+        self.error_code = enumeration
+        Exception.__init__(self, "Error %d: %s" % (enumeration or 0, message))
 
 
 class TranslationUnitSaveError(Exception):
@@ -3094,7 +3122,8 @@ class TranslationUnit(ClangObject):
         )
 
         if not ptr:
-            raise TranslationUnitLoadError("Error parsing translation unit.")
+            # FIXME: use clang_parseTranslationUnit2 to preserve error code
+            raise TranslationUnitLoadError(None, "Error parsing translation unit.")
 
         return cls(ptr, index=index)
 
@@ -3118,7 +3147,8 @@ class TranslationUnit(ClangObject):
 
         ptr = conf.lib.clang_createTranslationUnit(index, os.fspath(filename))
         if not ptr:
-            raise TranslationUnitLoadError(filename)
+            # FIXME: use clang_createTranslationUnit2 to preserve error code
+            raise TranslationUnitLoadError(None, filename)
 
         return cls(ptr=ptr, index=index)
 
@@ -3263,9 +3293,11 @@ class TranslationUnit(ClangObject):
             unsaved_files = []
 
         unsaved_files_array = self.process_unsaved_files(unsaved_files)
-        ptr = conf.lib.clang_reparseTranslationUnit(
+        result = conf.lib.clang_reparseTranslationUnit(
             self, len(unsaved_files), unsaved_files_array, options
         )
+        if result != 0:
+            raise TranslationUnitLoadError(result, 'Error reparsing TranslationUnit.')
 
     def save(self, filename):
         """Saves the TranslationUnit to a file.
