@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -triple x86_64-linux-gnu -fdump-record-layouts %s | FileCheck %s --check-prefix=NEW --check-prefix=CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=18.0 -DOLD_ABI=1 -std=c++2a -fsyntax-only -triple x86_64-linux-gnu -fdump-record-layouts %s | FileCheck %s --check-prefix=OLD --check-prefix=CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=19.0 -DOLD_ABI=1 -std=c++2a -fsyntax-only -triple x86_64-linux-gnu -fdump-record-layouts %s | FileCheck %s --check-prefix=OLD --check-prefix=CHECK
 
 namespace Empty {
   struct A {};

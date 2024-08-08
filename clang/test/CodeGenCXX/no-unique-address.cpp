@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=NEW --allow-unused-prefixes
-// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-OPT --check-prefix=NEW-OPT --allow-unused-prefixes
-// RUN: %clang_cc1 -fclang-abi-compat=18.0 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=OLD --allow-unused-prefixes
-// RUN: %clang_cc1 -fclang-abi-compat=18.0 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-OPT --check-prefix=OLD-OPT --allow-unused-prefixes
+// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,NEW --allow-unused-prefixes
+// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK-OPT,NEW-OPT --allow-unused-prefixes
+// RUN: %clang_cc1 -fclang-abi-compat=19.0 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,OLD --allow-unused-prefixes
+// RUN: %clang_cc1 -fclang-abi-compat=19.0 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK-OPT,OLD-OPT --allow-unused-prefixes
 
 struct A { ~A(); int n; char c[3]; };
 struct B { [[no_unique_address]] A a; char k; };

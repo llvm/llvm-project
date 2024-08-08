@@ -2481,10 +2481,10 @@ static bool mustSkipTailPadding(const ASTContext &Context, TargetCXXABI ABI,
   case TargetCXXABI::GenericMIPS:
     if (!RD->isPOD())
       return false;
-    // Prior to Clang 19, over-large bitfields and potentially overlapping
+    // Prior to Clang 20, over-large bitfields and potentially overlapping
     // members were not checked
     return (Context.getLangOpts().getClangABICompat() <=
-            LangOptions::ClangABI::Ver18) ||
+            LangOptions::ClangABI::Ver19) ||
            isItaniumPOD(Context, RD);
 
   // The same as generic Itanium but does not honor the exception about classes
@@ -2500,7 +2500,7 @@ static bool mustSkipTailPadding(const ASTContext &Context, TargetCXXABI ABI,
     if (!IsCXX11PODType())
       return false;
     return (Context.getLangOpts().getClangABICompat() <=
-            LangOptions::ClangABI::Ver18) ||
+            LangOptions::ClangABI::Ver19) ||
            isItaniumPOD(Context, RD);
 
   // Also use C++11 POD but without honoring the exception about classes with
