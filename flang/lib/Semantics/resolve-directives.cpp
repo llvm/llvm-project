@@ -1623,9 +1623,11 @@ bool OmpAttributeVisitor::Pre(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &standaloneDir{
       std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
+  const auto &parentContext{GetContextIf()};
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_scan:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
   case llvm::omp::Directive::OMPD_target_update:
@@ -1635,6 +1637,20 @@ bool OmpAttributeVisitor::Pre(
     break;
   default:
     break;
+  }
+  if (standaloneDir.v == llvm::omp::Directive::OMPD_scan) {
+    if ((std::get<parser::OmpClauseList>(x.t).v.size() != 1)) {
+      context_.Say(standaloneDir.source,
+          "Exactly one of `exclusive` or `inclusive` clause is expected"_err_en_US);
+    }
+    if (!parentContext ||
+        (llvm::omp::getDirectiveAssociation(parentContext->directive) !=
+            llvm::omp::Association::Loop)) {
+      context_.Say(standaloneDir.source,
+          "Orphaned `omp scan` directives are prohibited; perhaps you forgot "
+          "to enclose the directive in to a worksharing loop, a worksharing "
+          "loop simd or a simd directive."_err_en_US);
+    }
   }
   ClearDataSharingAttributeObjects();
   return true;
