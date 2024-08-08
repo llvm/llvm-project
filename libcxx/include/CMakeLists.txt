@@ -1018,6 +1018,12 @@ set(files
   wctype.h
   )
 
+if (LIBCXX_ENABLE_SHARED_RECURSIVE_MUTEX)
+  list(APPEND files
+    shared_recursive_mutex
+    )
+endif()
+
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
