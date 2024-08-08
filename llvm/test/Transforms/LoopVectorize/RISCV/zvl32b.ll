@@ -4,8 +4,8 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64"
 
-; We can't use vectorize with Zvl32b due to RVVBitsPerBlock being
-; 64. Since our vscale value is vlen/RVVBitsPerBlock this makes vscale 0.
+; We can't vectorize with Zvl32b due to RVVBitsPerBlock being 64. Since our
+; vscale value is vlen/RVVBitsPerBlock this makes vscale 0.
 define void @vector_add_i16(ptr noalias nocapture %a, i16 %v, i64 %n) {
 ; CHECK-LABEL: @vector_add_i16(
 ; CHECK-NEXT:  entry:
