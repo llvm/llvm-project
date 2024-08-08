@@ -2602,6 +2602,22 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
+void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,
+                        ValueRange iterSpaces, ValueRange initArgs,
+                        unsigned numCases) {
+  unsigned rank =
+      cast<IterSpaceType>(iterSpaces.front().getType()).getSpaceDim();
+  // All ones.
+  I64BitSet set((1 << rank) - 1);
+  // Fake cases bits. We need to preallocate all the regions as Region can not
+  // be dynamically added later after the operation is created.
+  SmallVector<int64_t> caseBits(numCases, 0);
+  ArrayAttr cases = builder.getI64ArrayAttr(caseBits);
+  return CoIterateOp::build(builder, odsState, initArgs.getTypes(), iterSpaces,
+                            initArgs, set, cases,
+                            /*caseRegionsCount=*/numCases);
+}
+
 ParseResult CoIterateOp::parse(OpAsmParser &parser, OperationState &result) {
 
   SmallVector<Value> spaces;
