@@ -2433,9 +2433,17 @@ DiagnosticBuilder ItaniumRecordLayoutBuilder::Diag(SourceLocation Loc,
 /// This function does not check if the type is POD first
 static bool isItaniumPOD(const ASTContext &Context, const CXXRecordDecl *RD) {
   const auto IsDisqualifying = [&](const FieldDecl *FD) -> bool {
-    if (FD->isBitField())
-      if (FD->getBitWidthValue(Context) > Context.getTypeSize(FD->getType()))
+    if (FD->isBitField()) {
+      QualType DeclaredType = FD->getType();
+      unsigned DeclaredWidth;
+      if (const BitIntType *BIT = DeclaredType->getAs<BitIntType>())
+        DeclaredWidth = BIT->getNumBits();
+      else
+        DeclaredWidth = Context.getTypeSize(FD->getType());
+
+      if (FD->getBitWidthValue(Context) > DeclaredWidth)
         return true;
+    }
 
     return FD->isPotentiallyOverlapping();
   };
