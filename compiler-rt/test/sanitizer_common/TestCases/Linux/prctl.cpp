@@ -41,6 +41,14 @@ int main() {
     assert(cookie != 0);
   }
 
+  int signum;
+  res = prctl(PR_GET_PDEATHSIG, reinterpret_cast<unsigned long>(&signum));
+  if (res < 0) {
+    assert(errno == EINVAL);
+  } else {
+    assert(signum == 0);
+  }
+
   char invname[81], vlname[] = "prctl";
   for (auto i = 0; i < sizeof(invname); i++) {
     invname[i] = 0x1e;
