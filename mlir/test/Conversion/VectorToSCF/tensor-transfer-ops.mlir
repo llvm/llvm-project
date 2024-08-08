@@ -44,8 +44,8 @@ func.func @transfer_write_2d(%A : tensor<?x?xf32>, %vec : vector<2x3xf32>,
 //       CHECK:   %[[WRITE_SLICE:.*]] = vector.transfer_write %{{.*}} %[[ITER_ARG]]
 //       CHECK:   scf.yield %[[WRITE_SLICE]]
 //       CHECK: return %[[RESULT]]
-func.func @scalable_transpose_store(%vec: vector<4x[4]xf32>, %dest: tensor<?x?xf32>, %i: index, %j: index) -> tensor<?x?xf32> {
+func.func @scalable_transpose_store(%vec: vector<4x[4]xf32>, %A: tensor<?x?xf32>, %base1: index, %base2: index) -> tensor<?x?xf32> {
   %transpose = vector.transpose %vec, [1, 0] : vector<4x[4]xf32> to vector<[4]x4xf32>
-  %result = vector.transfer_write %transpose, %dest[%i, %j] {in_bounds = [true, true]} : vector<[4]x4xf32>,  tensor<?x?xf32>
+  %result = vector.transfer_write %transpose, %A[%base1, %base2] {in_bounds = [true, true]} : vector<[4]x4xf32>,  tensor<?x?xf32>
   return %result : tensor<?x?xf32>
 }

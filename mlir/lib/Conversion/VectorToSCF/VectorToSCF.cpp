@@ -1016,7 +1016,7 @@ getMaskDimSizes(Value mask, VscaleConstantBuilder &createVscaleMultiple) {
 }
 
 /// Scalable vector lowering of transfer_write(transpose). This lowering only
-/// supports rank 2 (scalable) vectors, but can be used in in conjunction with
+/// supports rank 2 (scalable) vectors, but can be used in conjunction with
 /// `UnrollTransferWriteConversion` to support n-D cases. The unroll conversion
 /// unrolls until the first scalable dimension.
 ///
@@ -1063,9 +1063,9 @@ struct ScalableTransposeTransferWriteConversion
           writeOp, "lowering tensor transfers is disabled");
     }
 
-    auto vector = writeOp.getVector();
-    auto vectorType = vector.getType();
-    auto scalableFlags = vectorType.getScalableDims();
+    Value vector = writeOp.getVector();
+    VectorType vectorType = writeOp.getVectorType();
+    ArrayRef<bool> scalableFlags = vectorType.getScalableDims();
     if (scalableFlags != ArrayRef<bool>{true, false}) {
       return rewriter.notifyMatchFailure(
           writeOp, "expected vector of the form vector<[N]xMxty>");
