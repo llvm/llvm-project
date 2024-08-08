@@ -204,21 +204,6 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
-CallBrInstSetDefaultDest::CallBrInstSetDefaultDest(CallBrInst *CallBr,
-                                                   Tracker &Tracker)
-    : IRChangeBase(Tracker), CallBr(CallBr) {
-  OrigDefaultDest = CallBr->getDefaultDest();
-}
-void CallBrInstSetDefaultDest::revert() {
-  CallBr->setDefaultDest(OrigDefaultDest);
-}
-#ifndef NDEBUG
-void CallBrInstSetDefaultDest::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif
-
 CallBrInstSetIndirectDest::CallBrInstSetIndirectDest(CallBrInst *CallBr,
                                                      unsigned Idx,
                                                      Tracker &Tracker)
@@ -230,35 +215,6 @@ void CallBrInstSetIndirectDest::revert() {
 }
 #ifndef NDEBUG
 void CallBrInstSetIndirectDest::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif
-
-SetVolatile::SetVolatile(Instruction *I, Tracker &Tracker)
-    : IRChangeBase(Tracker) {
-  if (auto *Load = dyn_cast<LoadInst>(I)) {
-    WasVolatile = Load->isVolatile();
-    StoreOrLoad = Load;
-  } else if (auto *Store = dyn_cast<StoreInst>(I)) {
-    WasVolatile = Store->isVolatile();
-    StoreOrLoad = Store;
-  } else {
-    llvm_unreachable("Expected LoadInst or StoreInst");
-  }
-}
-
-void SetVolatile::revert() {
-  if (auto *Load = StoreOrLoad.dyn_cast<LoadInst *>()) {
-    Load->setVolatile(WasVolatile);
-  } else if (auto *Store = StoreOrLoad.dyn_cast<StoreInst *>()) {
-    Store->setVolatile(WasVolatile);
-  } else {
-    llvm_unreachable("Expected LoadInst or StoreInst");
-  }
-}
-#ifndef NDEBUG
-void SetVolatile::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }

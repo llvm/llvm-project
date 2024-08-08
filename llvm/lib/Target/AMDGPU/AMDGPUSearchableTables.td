@@ -387,3 +387,7 @@ def : AlwaysUniform<int_amdgcn_waterfall_last_use>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_z>;
+def : AlwaysUniform<int_amdgcn_s_getpc>;
+def : AlwaysUniform<int_amdgcn_s_getreg>;
+def : AlwaysUniform<int_amdgcn_s_memrealtime>;
+def : AlwaysUniform<int_amdgcn_s_memtime>;

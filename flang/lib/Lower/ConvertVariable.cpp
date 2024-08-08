@@ -1860,9 +1860,10 @@ static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
       return kPinnedAllocatorPos;
     if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
       return kDeviceAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed ||
-        *cudaAttr == Fortran::common::CUDADataAttr::Unified)
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
       return kManagedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
+      return kUnifiedAllocatorPos;
   }
   return kDefaultAllocator;
 }

@@ -17,7 +17,7 @@
 
 #include "cuda.h"
 
-namespace Fortran::runtime::cuf {
+namespace Fortran::runtime::cuda {
 
 void CUFRegisterAllocator() {
   allocatorRegistry.Register(
@@ -26,6 +26,8 @@ void CUFRegisterAllocator() {
       kDeviceAllocatorPos, {&CUFAllocDevice, CUFFreeDevice});
   allocatorRegistry.Register(
       kManagedAllocatorPos, {&CUFAllocManaged, CUFFreeManaged});
+  allocatorRegistry.Register(
+      kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
 }
 
 void *CUFAllocPinned(std::size_t sizeInBytes) {
@@ -57,4 +59,14 @@ void CUFFreeManaged(void *p) {
   CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(p)));
 }
 
-} // namespace Fortran::runtime::cuf
+void *CUFAllocUnified(std::size_t sizeInBytes) {
+  // Call alloc managed for the time being.
+  return CUFAllocManaged(sizeInBytes);
+}
+
+void CUFFreeUnified(void *p) {
+  // Call free managed for the time being.
+  CUFFreeManaged(p);
+}
+
+} // namespace Fortran::runtime::cuda

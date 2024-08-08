@@ -24,6 +24,7 @@ namespace llvm {
 class AArch64MCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
+    // clang-format off
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
     // symbol. E.g. direct, via the GOT, ...
@@ -38,6 +39,7 @@ public:
     VK_SECREL   = 0x009,
     VK_AUTH     = 0x00a,
     VK_AUTHADDR = 0x00b,
+    VK_GOT_AUTH = 0x00c,
     VK_SymLocBits = 0x00f,
 
     // Variants specifying which part of the final address calculation is
@@ -88,6 +90,8 @@ public:
     VK_GOT_LO12          = VK_GOT      | VK_PAGEOFF | VK_NC,
     VK_GOT_PAGE          = VK_GOT      | VK_PAGE,
     VK_GOT_PAGE_LO15     = VK_GOT      | VK_LO15    | VK_NC,
+    VK_GOT_AUTH_LO12     = VK_GOT_AUTH | VK_PAGEOFF | VK_NC,
+    VK_GOT_AUTH_PAGE     = VK_GOT_AUTH | VK_PAGE,
     VK_DTPREL_G2         = VK_DTPREL   | VK_G2,
     VK_DTPREL_G1         = VK_DTPREL   | VK_G1,
     VK_DTPREL_G1_NC      = VK_DTPREL   | VK_G1      | VK_NC,
@@ -114,6 +118,7 @@ public:
     VK_SECREL_HI12       = VK_SECREL   | VK_HI12,
 
     VK_INVALID  = 0xfff
+    // clang-format on
   };
 
 private:

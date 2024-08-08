@@ -151,10 +151,27 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
     for (Register Reg : Assignments[PhysReg]) {
       LiveInterval &LI = LIS->getInterval(Reg);
 
-      // Must be single value range with no subranges
-      CanMerge = !LI.hasSubRanges() && LI.containsOneValue();
+      // Must have no subranges
+      CanMerge = !LI.hasSubRanges();
       if (!CanMerge)
         break;
+
+      // Out of an abundance of caution check that there are no PHI values,
+      // and all values beyond the initial definition are tied operands.
+      if (!LI.containsOneValue()) {
+        for (unsigned Idx = 0; CanMerge && Idx < LI.getNumValNums(); ++Idx) {
+          auto *VN = LI.getValNumInfo(Idx);
+          MachineInstr *DefMI = LIS->getInstructionFromIndex(VN->def);
+          CanMerge = !VN->isPHIDef() && DefMI;
+          if (!CanMerge || Idx == 0)
+            continue;
+          MachineOperand &DefOp = DefMI->getOperand(0);
+          CanMerge = DefOp.isReg() && DefOp.getReg() == Reg && DefOp.isTied() &&
+                     DefMI->isRegTiedToUseOperand(0);
+        }
+        if (!CanMerge)
+          break;
+      }
 
       // Must be contained in a single basic block
       SlotIndex DefIdx = LI.beginIndex();
