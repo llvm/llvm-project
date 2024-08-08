@@ -132,6 +132,11 @@ cl::opt<bool> AtomicFirstCounter(
              "the entry counter)"),
     cl::init(false));
 
+cl::opt<bool> ConditionalCounterUpdate(
+    "conditional-counter-update",
+    cl::desc("Do conditional counter updates in single byte counters mode)"),
+    cl::init(false));
+
 // If the option is not specified, the default behavior about whether
 // counter promotion is done depends on how instrumentaiton lowering
 // pipeline is setup, i.e., the default value of true of this option
@@ -1213,6 +1218,18 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
+  if (ConditionalCounterUpdate) {
+    Instruction *SplitBefore = CoverInstruction->getNextNode();
+    auto &Ctx = CoverInstruction->getParent()->getContext();
+    auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
+    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    Value *Cmp = Builder.CreateICmpNE(Load, ConstantInt::get(Int8Ty, 0),
+                                      "pgocount.ifnonzero");
+    Instruction *ThenBranch =
+        SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
+    Builder.SetInsertPoint(ThenBranch);
+  }
+
   // We store zero to represent that this block is covered.
   Builder.CreateStore(Builder.getInt8(0), Addr);
   CoverInstruction->eraseFromParent();
