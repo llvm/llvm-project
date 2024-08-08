@@ -3862,6 +3862,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  getpayloadl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    getpayloadl_test.cpp
+  HDRS
+    GetPayloadTest.h
+  DEPENDS
+    libc.src.math.getpayloadl
+)
+
+add_fp_unittest(
   getpayloadf16_test
   SUITE
     libc-math-smoke-tests
