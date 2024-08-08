@@ -3645,7 +3645,6 @@ add_fp_unittest(
     libc.src.math.scalblnf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.limits
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
 
