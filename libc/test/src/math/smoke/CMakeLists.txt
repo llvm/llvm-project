@@ -2841,7 +2841,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.hypotf
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.properties.architectures    
+    libc.src.__support.macros.properties.architectures
 )
 
 add_fp_unittest(
