@@ -3038,7 +3038,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     SmallSet<MCPhysReg, 5> AddressRegisters;
     for (Register R : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
       AddressRegisters.insert(R);
-    if (!(Subtarget->isThumb1Only() or
+    if (!(Subtarget->isThumb1Only() ||
           MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true)))
       AddressRegisters.insert(ARM::R12);
     for (const CCValAssign &AL : ArgLocs)
