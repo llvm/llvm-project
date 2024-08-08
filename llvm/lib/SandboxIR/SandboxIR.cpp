@@ -18,14 +18,14 @@ using namespace llvm::sandboxir;
 Value *Use::get() const { return Ctx->getValue(LLVMUse->get()); }
 
 void Use::set(Value *V) {
-  Ctx->getTracker().tryTrack<UseSet>(*this);
+  Ctx->getTracker().emplaceIfTracking<UseSet>(*this);
   LLVMUse->set(V->Val);
 }
 
 unsigned Use::getOperandNo() const { return Usr->getUseOperandNo(*this); }
 
 void Use::swap(Use &OtherUse) {
-  Ctx->getTracker().tryTrack<UseSwap>(*this, OtherUse);
+  Ctx->getTracker().emplaceIfTracking<UseSwap>(*this, OtherUse);
   LLVMUse->swap(*OtherUse.LLVMUse);
 }
 
@@ -148,7 +148,7 @@ void Value::replaceUsesWithIf(
         Use UseToReplace(&LLVMUse, DstU, Ctx);
         if (!ShouldReplace(UseToReplace))
           return false;
-        Ctx.getTracker().tryTrack<UseSet>(UseToReplace);
+        Ctx.getTracker().emplaceIfTracking<UseSet>(UseToReplace);
         return true;
       });
 }
@@ -251,7 +251,7 @@ bool User::classof(const Value *From) {
 
 void User::setOperand(unsigned OperandIdx, Value *Operand) {
   assert(isa<llvm::User>(Val) && "No operands!");
-  Ctx.getTracker().tryTrack<UseSet>(getOperandUse(OperandIdx));
+  Ctx.getTracker().emplaceIfTracking<UseSet>(getOperandUse(OperandIdx));
   // We are delegating to llvm::User::setOperand().
   cast<llvm::User>(Val)->setOperand(OperandIdx, Operand->Val);
 }
@@ -262,7 +262,7 @@ bool User::replaceUsesOfWith(Value *FromV, Value *ToV) {
     for (auto OpIdx : seq<unsigned>(0, getNumOperands())) {
       auto Use = getOperandUse(OpIdx);
       if (Use.get() == FromV)
-        Tracker.tryTrack<UseSet>(Use);
+        Tracker.emplaceIfTracking<UseSet>(Use);
     }
   }
   // We are delegating RUOW to LLVM IR's RUOW.
@@ -356,7 +356,7 @@ Instruction *Instruction::getPrevNode() const {
 }
 
 void Instruction::removeFromParent() {
-  Ctx.getTracker().tryTrack<RemoveFromParent>(this);
+  Ctx.getTracker().emplaceIfTracking<RemoveFromParent>(this);
 
   // Detach all the LLVM IR instructions from their parent BB.
   for (llvm::Instruction *I : getLLVMInstrs())
@@ -393,7 +393,7 @@ void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
     // Destination is same as origin, nothing to do.
     return;
 
-  Ctx.getTracker().tryTrack<MoveInstr>(this);
+  Ctx.getTracker().emplaceIfTracking<MoveInstr>(this);
 
   auto *LLVMBB = cast<llvm::BasicBlock>(BB.Val);
   llvm::BasicBlock::iterator It;
@@ -419,7 +419,7 @@ void Instruction::insertBefore(Instruction *BeforeI) {
                    [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
          "Expected program order!");
 
-  Ctx.getTracker().tryTrack<InsertIntoBB>(this);
+  Ctx.getTracker().emplaceIfTracking<InsertIntoBB>(this);
 
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
@@ -445,7 +445,7 @@ void Instruction::insertInto(BasicBlock *BB, const BBIterator &WhereIt) {
     LLVMBeforeIt = LLVMBB->end();
   }
 
-  Ctx.getTracker().tryTrack<InsertIntoBB>(this);
+  Ctx.getTracker().emplaceIfTracking<InsertIntoBB>(this);
 
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
@@ -610,8 +610,8 @@ void BranchInst::dump() const {
 
 void LoadInst::setVolatile(bool V) {
   Ctx.getTracker()
-      .tryTrack<GenericSetter<&LoadInst::isVolatile, &LoadInst::setVolatile>>(
-          this);
+      .emplaceIfTracking<
+          GenericSetter<&LoadInst::isVolatile, &LoadInst::setVolatile>>(this);
   cast<llvm::LoadInst>(Val)->setVolatile(V);
 }
 
@@ -672,8 +672,8 @@ void LoadInst::dump() const {
 
 void StoreInst::setVolatile(bool V) {
   Ctx.getTracker()
-      .tryTrack<GenericSetter<&StoreInst::isVolatile, &StoreInst::setVolatile>>(
-          this);
+      .emplaceIfTracking<
+          GenericSetter<&StoreInst::isVolatile, &StoreInst::setVolatile>>(this);
   cast<llvm::StoreInst>(Val)->setVolatile(V);
 }
 
@@ -1026,12 +1026,12 @@ llvm::SmallVector<BasicBlock *, 16> CallBrInst::getIndirectDests() const {
 }
 void CallBrInst::setDefaultDest(BasicBlock *BB) {
   Ctx.getTracker()
-      .tryTrack<GenericSetter<&CallBrInst::getDefaultDest,
-                              &CallBrInst::setDefaultDest>>(this);
+      .emplaceIfTracking<GenericSetter<&CallBrInst::getDefaultDest,
+                                       &CallBrInst::setDefaultDest>>(this);
   cast<llvm::CallBrInst>(Val)->setDefaultDest(cast<llvm::BasicBlock>(BB->Val));
 }
 void CallBrInst::setIndirectDest(unsigned Idx, BasicBlock *BB) {
-  Ctx.getTracker().tryTrack<CallBrInstSetIndirectDest>(this, Idx);
+  Ctx.getTracker().emplaceIfTracking<CallBrInstSetIndirectDest>(this, Idx);
   cast<llvm::CallBrInst>(Val)->setIndirectDest(Idx,
                                                cast<llvm::BasicBlock>(BB->Val));
 }
@@ -1276,14 +1276,14 @@ AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
 
 void AllocaInst::setAllocatedType(Type *Ty) {
   Ctx.getTracker()
-      .tryTrack<GenericSetter<&AllocaInst::getAllocatedType,
-                              &AllocaInst::setAllocatedType>>(this);
+      .emplaceIfTracking<GenericSetter<&AllocaInst::getAllocatedType,
+                                       &AllocaInst::setAllocatedType>>(this);
   cast<llvm::AllocaInst>(Val)->setAllocatedType(Ty);
 }
 
 void AllocaInst::setAlignment(Align Align) {
   Ctx.getTracker()
-      .tryTrack<
+      .emplaceIfTracking<
           GenericSetter<&AllocaInst::getAlign, &AllocaInst::setAlignment>>(
           this);
   cast<llvm::AllocaInst>(Val)->setAlignment(Align);
@@ -1291,8 +1291,8 @@ void AllocaInst::setAlignment(Align Align) {
 
 void AllocaInst::setUsedWithInAlloca(bool V) {
   Ctx.getTracker()
-      .tryTrack<GenericSetter<&AllocaInst::isUsedWithInAlloca,
-                              &AllocaInst::setUsedWithInAlloca>>(this);
+      .emplaceIfTracking<GenericSetter<&AllocaInst::isUsedWithInAlloca,
+                                       &AllocaInst::setUsedWithInAlloca>>(this);
   cast<llvm::AllocaInst>(Val)->setUsedWithInAlloca(V);
 }
 
@@ -1465,7 +1465,7 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   // meaning that the instructions need to be inserted into a block upon
   // creation. This is why the tracker class combines creation and insertion.
   if (auto *I = dyn_cast<Instruction>(VPtr.get()))
-    getTracker().tryTrack<CreateAndInsertInst>(I);
+    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
 
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =

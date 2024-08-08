@@ -392,12 +392,13 @@ public:
 #endif
   }
   /// A convenience wrapper for `track()` that constructs and tracks the Change
-  /// object if tracking is enabled.
+  /// object if tracking is enabled. \Returns true if tracking is enabled.
   template <typename ChangeT, typename... ArgsT>
-  void tryTrack(ArgsT... ChangeArgs) {
+  bool emplaceIfTracking(ArgsT... ChangeArgs) {
     if (!isTracking())
-      return;
+      return false;
     track(std::make_unique<ChangeT>(ChangeArgs..., *this));
+    return true;
   }
   /// \Returns true if the tracker is recording changes.
   bool isTracking() const { return State == TrackerState::Record; }
