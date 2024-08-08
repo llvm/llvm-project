@@ -1395,6 +1395,256 @@ define i32 @uadd_sat(i32 %x, i32 %y) {
   %r = select i1 %c, i32 -1, i32 %a
   ret i32 %r
 }
+
+define i32 @uadd_sat_flipped(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -11
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %x, -11
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+define i32 @uadd_sat_flipped2(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -10
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %x, -10
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+define i32 @uadd_sat_flipped3(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped3(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -8
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %x, -8
+  %add = add nuw i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+; Negative Test
+
+define i32 @uadd_sat_flipped3_neg_no_nuw(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped3_neg_no_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -8
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %x, -8
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+define i32 @uadd_sat_negative_one(i32 %x) {
+; CHECK-LABEL: @uadd_sat_negative_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp eq i32 %x, -1
+  %add = add i32 %x, 1
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+define <2 x i8> @uadd_sat_flipped4_vector(<2 x i8> %x) {
+; CHECK-LABEL: @uadd_sat_flipped4_vector(
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 9, i8 9>)
+; CHECK-NEXT:    ret <2 x i8> [[COND]]
+;
+  %cmp = icmp ult <2 x i8> %x, <i8 -10, i8 -10>
+  %add = add <2 x i8> %x, <i8 9, i8 9>
+  %cond = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> <i8 -1, i8 -1>
+  ret <2 x i8> %cond
+}
+
+define <2 x i8> @uadd_sat_flipped4_poison_vector(<2 x i8> %x) {
+; CHECK-LABEL: @uadd_sat_flipped4_poison_vector(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X:%.*]], <i8 -10, i8 poison>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 9, i8 9>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> [[COND]]
+;
+  %cmp = icmp ult <2 x i8> %x, <i8 -10, i8 poison>
+  %add = add <2 x i8> %x, <i8 9, i8 9>
+  %cond = select <2 x i1> %cmp, <2 x i8> %add,<2 x i8> <i8 -1, i8 -1>
+  ret <2 x i8> %cond
+}
+
+define <2 x i8> @uadd_sat_flipped4_poison_vector_compare(<2 x i8> %x) {
+; CHECK-LABEL: @uadd_sat_flipped4_poison_vector_compare(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X:%.*]], <i8 -10, i8 poison>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 9, i8 poison>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> [[COND]]
+;
+  %cmp = icmp ult <2 x i8> %x, <i8 -10, i8 poison>
+  %add = add <2 x i8> %x, <i8 9, i8 poison>
+  %cond = select <2 x i1> %cmp, <2 x i8> %add,<2 x i8> <i8 -1, i8 -1>
+  ret <2 x i8> %cond
+}
+
+define <2 x i8> @uadd_sat_flipped4_poison_vector_compare2(<2 x i8> %x) {
+; CHECK-LABEL: @uadd_sat_flipped4_poison_vector_compare2(
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+;
+  %cmp = icmp ult <2 x i8> %x, <i8 -10, i8 poison>
+  %add = add <2 x i8> %x, <i8 poison, i8 poison>
+  %cond = select <2 x i1> %cmp, <2 x i8> %add,<2 x i8> <i8 -1, i8 -1>
+  ret <2 x i8> %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_too_big(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_too_big(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], -8
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -1
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ult i32 %x, -8
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 %add, i32 -1
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -13
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp uge i32 %x, -12
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds2(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -12
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %x, -12
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds3(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds3(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -12
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %x, -12
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds4(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds4(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -9
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp uge i32 %x, -8
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds5(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds5(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], -8
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -1
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ult i32 %x, -8
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 %add, i32 -1
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds6(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds6(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], -11
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -1
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ule i32 %x, -12
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 %add, i32 -1
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds7(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds7(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], -11
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -1
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ule i32 %x, -12
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 %add, i32 -1
+  ret i32 %cond
+}
+
+; Negative test:
+
+define i32 @uadd_sat_flipped_wrong_bounds8(i32 %x) {
+; CHECK-LABEL: @uadd_sat_flipped_wrong_bounds8(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], -12
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -1
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ult i32 %x, -12
+  %add = add i32 %x, 9
+  %cond = select i1 %cmp, i32 %add, i32 -1
+  ret i32 %cond
+}
+
 define i32 @uadd_sat_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_nonstrict(
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
