@@ -101,6 +101,9 @@ C++2c Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Allow floating-point promotions and conversions in converted constant expressions.
+  (`CWG2851 Allow floating-point conversions in converted constant expressions <https://cplusplus.github.io/CWG/issues/2851.html>`_).
+
 C Language Changes
 ------------------
 
