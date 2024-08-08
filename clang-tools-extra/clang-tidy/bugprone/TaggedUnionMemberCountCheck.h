@@ -31,9 +31,8 @@ private:
   const std::vector<StringRef> CountingEnumPrefixes;
   const std::vector<StringRef> CountingEnumSuffixes;
 
-  std::size_t getNumberOfValidEnumValues(
-      const EnumDecl *ED,
-      const EnumConstantDecl *&OutCountingEnumConstantDecl);
+  std::pair<const std::size_t, const EnumConstantDecl *>
+  getNumberOfEnumValues(const EnumDecl *ED);
   bool isCountingEnumLikeName(StringRef Name) const;
 };
 

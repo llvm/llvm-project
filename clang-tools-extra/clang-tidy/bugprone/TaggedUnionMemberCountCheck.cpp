@@ -76,11 +76,11 @@ TaggedUnionMemberCountCheck::TaggedUnionMemberCountCheck(
           Options.get(CountingEnumSuffixesOptionName,
                       CountingEnumSuffixesOptionDefaultValue))) {
   if (!EnableCountingEnumHeuristic) {
-    if (Options.get(CountingEnumPrefixesOptionName).has_value())
+    if (Options.get(CountingEnumPrefixesOptionName))
       configurationDiag("%0: Counting enum heuristic is disabled but "
                         "%1 is set")
           << Name << CountingEnumPrefixesOptionName;
-    if (Options.get(CountingEnumSuffixesOptionName).has_value())
+    if (Options.get(CountingEnumSuffixesOptionName))
       configurationDiag("%0: Counting enum heuristic is disabled but "
                         "%1 is set")
           << Name << CountingEnumSuffixesOptionName;
@@ -112,19 +112,7 @@ void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static bool signEquals(const llvm::APSInt &A, const llvm::APSInt &B) {
-  return (A.isNegative() == B.isNegative()) &&
-         (A.isStrictlyPositive() == B.isStrictlyPositive()) &&
-         (A.isZero() == B.isZero());
-}
-
-static bool greaterBySign(const llvm::APSInt &A, const llvm::APSInt &B) {
-  return (A.isNonNegative() && B.isNegative()) ||
-         (A.isStrictlyPositive() && B.isNonPositive());
-}
-
-bool TaggedUnionMemberCountCheck::isCountingEnumLikeName(
-    StringRef Name) const {
+bool TaggedUnionMemberCountCheck::isCountingEnumLikeName(StringRef Name) const {
   if (llvm::any_of(CountingEnumPrefixes, [Name](StringRef Prefix) -> bool {
         return Name.starts_with_insensitive(Prefix);
       }))
@@ -136,63 +124,25 @@ bool TaggedUnionMemberCountCheck::isCountingEnumLikeName(
   return false;
 }
 
-std::size_t TaggedUnionMemberCountCheck::getNumberOfValidEnumValues(
-    const EnumDecl *ED,
-    const EnumConstantDecl *&OutCountingEnumConstantDecl) {
-  bool FoundMax = false;
-  llvm::APSInt MaxTagValue;
+std::pair<const std::size_t, const EnumConstantDecl *>
+TaggedUnionMemberCountCheck::getNumberOfEnumValues(const EnumDecl *ED) {
   llvm::SmallSet<llvm::APSInt, 32> EnumValues;
 
-  // Heuristic for counter enum constants.
-  //
-  //   enum tag_with_counter {
-  //     tag1,
-  //     tag2,
-  //     tag_count, <-- Searching for these enum constants
-  //   };
-  //
-  // The final tag count is decreased by 1 if and only if:
-  // 1. There is only one counting enum constant,
-  // 2. The counting enum constant is the last enum constant that is defined,
-  // 3. The value of the counting enum constant is the largest out of every enum
-  //    constant.
-  // The 'ce' prefix is a shorthand for 'counting enum'.
-  std::size_t CeCount = 0;
-  bool CeIsLast = false;
-  llvm::APSInt CeValue = llvm::APSInt::get(0);
+  const EnumConstantDecl *LastEnumConstant = nullptr;
+  for (const auto Enumerator : ED->enumerators()) {
+    EnumValues.insert(Enumerator->getInitVal());
+    LastEnumConstant = Enumerator;
+  }
 
-  for (const auto &Enumerator : ED->enumerators()) {
-    const llvm::APSInt Val = Enumerator->getInitVal();
-    EnumValues.insert(Val);
-    if (FoundMax) {
-      if (greaterBySign(Val, MaxTagValue) ||
-          (signEquals(Val, MaxTagValue) && Val > MaxTagValue))
-        MaxTagValue = Val;
-    } else {
-      MaxTagValue = Val;
-      FoundMax = true;
-    }
-
-    if (EnableCountingEnumHeuristic) {
-      if (isCountingEnumLikeName(Enumerator->getName())) {
-        CeIsLast = true;
-        CeValue = Val;
-        CeCount += 1;
-        OutCountingEnumConstantDecl = Enumerator;
-      } else {
-        CeIsLast = false;
+  if (EnableCountingEnumHeuristic && LastEnumConstant) {
+    if (isCountingEnumLikeName(LastEnumConstant->getName())) {
+      if (LastEnumConstant->getInitVal() == (EnumValues.size() - 1)) {
+        return {EnumValues.size() - 1, LastEnumConstant};
       }
     }
   }
 
-  std::size_t ValidValuesCount = EnumValues.size();
-  if (CeCount == 1 && CeIsLast && CeValue == MaxTagValue) {
-    ValidValuesCount -= 1;
-  } else {
-    OutCountingEnumConstantDecl = nullptr;
-  }
-
-  return ValidValuesCount;
+  return {EnumValues.size(), nullptr};
 }
 
 void TaggedUnionMemberCountCheck::check(
@@ -201,18 +151,25 @@ void TaggedUnionMemberCountCheck::check(
   const auto *UnionField =
       Result.Nodes.getNodeAs<FieldDecl>(UnionMatchBindName);
   const auto *TagField = Result.Nodes.getNodeAs<FieldDecl>(TagMatchBindName);
-  assert(Root && UnionField && TagField);
+
+  assert(Root && "Root is missing!");
+  assert(UnionField && "UnionField is missing!");
+  assert(TagField && "TagField is missing!");
+  if (!Root || !UnionField || !TagField)
+    return;
 
   const auto *UnionDef =
       UnionField->getType().getCanonicalType().getTypePtr()->getAsRecordDecl();
   const auto *EnumDef = llvm::dyn_cast<EnumDecl>(
       TagField->getType().getCanonicalType().getTypePtr()->getAsTagDecl());
-  assert(UnionDef && EnumDef && "Declarations missing!");
 
-  const EnumConstantDecl *CountingEnumConstantDecl = nullptr;
+  assert(UnionDef && "UnionDef is missing!");
+  assert(EnumDef && "EnumDef is missing!");
+  if (!UnionDef || !EnumDef)
+    return;
+
   const std::size_t UnionMemberCount = llvm::range_size(UnionDef->fields());
-  const std::size_t TagCount =
-      getNumberOfValidEnumValues(EnumDef, CountingEnumConstantDecl);
+  auto [TagCount, CountingEnumConstantDecl] = getNumberOfEnumValues(EnumDef);
 
   if (UnionMemberCount > TagCount) {
     diag(Root->getLocation(),

@@ -90,3 +90,67 @@ struct CountingEnumCaseInsensitivityTest2 {
   } Kind;
   union Union4 Data;
 };
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
+struct TagWhereCountingEnumIsAliased {
+  enum {
+    tag_alias_counter1 = 1,
+    tag_alias_counter2 = 2,
+    tag_alias_counter3 = 3,
+    tag_alias_other_count = 3,
+  } Kind;
+  union {
+    char C;
+    short S;
+    int I;
+    long L;
+  } Data;
+};
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (2)
+struct TagWithCountingEnumButOtherValueIsAliased {
+  enum {
+    tag_alias_other1 = 1,
+    tag_alias_other2 = 1,
+    tag_alias_other3 = 3,
+    tag_alias_other_count = 2,
+  } Kind;
+  union {
+    char C;
+    short S;
+    int I;
+    long L;
+  } Data;
+};
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
+struct TagWhereCounterIsTheSmallest {
+  enum {
+    tag_large1 = 1000,
+    tag_large2 = 1001,
+    tag_large3 = 1002,
+    tag_large_count = 3,
+  } Kind;
+  union {
+    char C;
+    short S;
+    int I;
+    long L;
+  } Data;
+};
+
+// No warnings expected, only the last enum constant can be a counting enum constant
+struct TagWhereCounterLikeNameIsNotLast {
+  enum {
+    kind_count,
+    kind2,
+    last_kind1,
+    kind3,
+  } Kind;
+  union {
+    char C;
+    short S;
+    int I;
+    long L;
+  } Data;
+};

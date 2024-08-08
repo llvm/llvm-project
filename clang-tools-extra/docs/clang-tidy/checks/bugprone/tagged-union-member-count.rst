@@ -32,12 +32,12 @@ How enum constants are counted
 ------------------------------
 
 The main complicating factor when counting the number of enum constants is that
-some of them might be auxiliary values that purposely don't have a corresponding union
+some of them might be auxiliary values that purposefully don't have a corresponding union
 data member and are used for something else. For example the last enum constant
 sometimes explicitly "points to" the last declared valid enum constant or
 tracks how many enum constants have been declared.
 
-For an illsutration:
+For an illustration:
 
 .. code-block:: c++
 
@@ -56,17 +56,16 @@ For an illsutration:
   };
 
 The check counts the number of distinct values among the enum constants and not the enum
-constants themselves. This way enum constants that are essentially just aliases of other
+constants themselves. This way the enum constants that are essentially just aliases of other
 enum constants are not included in the final count.
 
-Counting enum constants are detected using the following heuristic. The counting enum
-constant has to be the last enum constant to be declared. It's value must be the largest
-out of every enum constant. It's name must start with a prefix or must end with a suffix
-from :option:`CountingEnumPrefixes/Suffixes`. If the heuristic can be applied to multiple
-enum constants, then the enum count is not modified, otherwise when only one counting 
-enum constant is found, then the final count is decreased by one. When the final count is decremented
-based on this heuristic, a diagnostic note is emitted, that shows which enum constant 
-matched the criteria.
+Handling of counting enum constants (ones like :code:`TagCount` in the previous code example)
+is done by decreasing the number of enum values by one if the name of the last enum constant
+starts with a prefix or ends with a suffix specified in :option:`CountingEnumPrefixes/Suffixes`
+and it's value is one less than the total number of distinct values in the enum.
+
+When the final count is adjusted based on this heuristic then a diagnostic note is emitted
+that shows which enum constant matched the criteria.
 
 The heuristic can be disabled entirely (:option:`EnableCountingEnumHeuristic`) or
 configured to follow your naming convention (:option:`CountingEnumPrefixes/Suffixes`).

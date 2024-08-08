@@ -19,8 +19,8 @@ union Union4 {
   float *Floats;
 };
 
-// No warning expected, because Kind has multiple counting enum candidates,
-// therefore the enum count is left unchanged.
+// The heuristic only considers the last enum constant
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
 struct TaggedUnionPrefixAndSuffixMatch {
   enum {
     tags1,
