@@ -354,6 +354,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     }
   }
 
+  Relocation::Arch = TheTriple.getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
       TheTriple, File->getFileName(), Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
@@ -955,13 +956,13 @@ void RewriteInstance::discoverFileObjects() {
     uint64_t SymbolSize = ELFSymbolRef(Symbol).getSize();
     uint64_t SymbolAlignment = Symbol.getAlignment();
 
-    auto registerName = [&](uint64_t FinalSize) {
+    auto registerName = [&](uint64_t FinalSize, BinarySection *Section = NULL) {
       // Register names even if it's not a function, e.g. for an entry point.
       BC->registerNameAtAddress(UniqueName, SymbolAddress, FinalSize,
-                                SymbolAlignment, SymbolFlags);
+                                SymbolAlignment, SymbolFlags, Section);
       if (!AlternativeName.empty())
         BC->registerNameAtAddress(AlternativeName, SymbolAddress, FinalSize,
-                                  SymbolAlignment, SymbolFlags);
+                                  SymbolAlignment, SymbolFlags, Section);
     };
 
     section_iterator Section =
@@ -986,12 +987,25 @@ void RewriteInstance::discoverFileObjects() {
                       << " for function\n");
 
     if (SymbolAddress == Section->getAddress() + Section->getSize()) {
+      ErrorOr<BinarySection &> SectionOrError =
+          BC->getSectionForAddress(Section->getAddress());
+
+      // Skip symbols from invalid sections
+      if (!SectionOrError) {
+        BC->errs() << "BOLT-WARNING: " << UniqueName << " (0x"
+                   << Twine::utohexstr(SymbolAddress)
+                   << ") does not have any section\n";
+        continue;
+      }
+
       assert(SymbolSize == 0 &&
              "unexpect non-zero sized symbol at end of section");
-      LLVM_DEBUG(
-          dbgs()
-          << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
-      registerName(SymbolSize);
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: rejecting as symbol " << UniqueName
+               << " points to end of " << SectionOrError->getName()
+               << " section\n";
+      });
+      registerName(SymbolSize, &SectionOrError.get());
       continue;
     }
 
@@ -2612,7 +2626,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       Expected<StringRef> SectionName = Section->getName();
       if (SectionName && !SectionName->empty())
         ReferencedSection = BC->getUniqueSectionByName(*SectionName);
-    } else if (ReferencedSymbol && ContainingBF &&
+    } else if (BC->isRISCV() && ReferencedSymbol && ContainingBF &&
                (cantFail(Symbol.getFlags()) & SymbolRef::SF_Absolute)) {
       // This might be a relocation for an ABS symbols like __global_pointer$ on
       // RISC-V
@@ -2620,6 +2634,30 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                   Rel.getType(), 0,
                                   cantFail(Symbol.getValue()));
       return;
+    }
+  }
+
+  if (Relocation::isGOT(RType) && !Relocation::isTLS(RType)) {
+    auto exitOnGotEndSymol = [&](StringRef Name) {
+      BC->errs() << "BOLT-ERROR: GOT table contains currently unsupported "
+                    "section end symbol "
+                 << Name << "\n";
+      exit(1);
+    };
+
+    if (SymbolIter != InputFile->symbol_end() && ReferencedSection) {
+      if (cantFail(SymbolIter->getAddress()) ==
+          ReferencedSection->getEndAddress())
+        exitOnGotEndSymol(cantFail(SymbolIter->getName()));
+    } else {
+      // If no section and symbol are provided by relocation, try to find the
+      // symbol by its name, including the possibility that the symbol is local.
+      BinaryData *BD = BC->getBinaryDataByName(SymbolName);
+      if (!BD && NR.getUniquifiedNameCount(SymbolName) == 1)
+        BD = BC->getBinaryDataByName(NR.getUniqueName(SymbolName, 1));
+
+      if ((BD && BD->getAddress() == BD->getSection().getEndAddress()))
+        exitOnGotEndSymol(BD->getName());
     }
   }
 

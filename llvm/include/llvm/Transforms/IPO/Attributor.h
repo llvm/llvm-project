@@ -1448,7 +1448,7 @@ struct AttributorConfig {
   /// Callback function to determine if an indirect call targets should be made
   /// direct call targets (with an if-cascade).
   std::function<bool(Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-                     Function &AssumedCallee, unsigned NumAssumedCallees)>
+                     Function &AssummedCallee)>
       IndirectCalleeSpecializationCallback = nullptr;
 
   /// Helper to update an underlying call graph and to delete functions.
@@ -1718,11 +1718,10 @@ struct Attributor {
   /// Return true if we should specialize the call site \b CB for the potential
   /// callee \p Fn.
   bool shouldSpecializeCallSiteForCallee(const AbstractAttribute &AA,
-                                         CallBase &CB, Function &Callee,
-                                         unsigned NumAssumedCallees) {
+                                         CallBase &CB, Function &Callee) {
     return Configuration.IndirectCalleeSpecializationCallback
-               ? Configuration.IndirectCalleeSpecializationCallback(
-                     *this, AA, CB, Callee, NumAssumedCallees)
+               ? Configuration.IndirectCalleeSpecializationCallback(*this, AA,
+                                                                    CB, Callee)
                : true;
   }
 
