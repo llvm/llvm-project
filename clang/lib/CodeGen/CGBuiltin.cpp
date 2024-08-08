@@ -2639,45 +2639,6 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
   return RValue::get(CGF->Builder.CreateCall(UBF, Args));
 }
 
-namespace {
-
-/// MemberExprVisitor - Find the MemberExpr through all of the casts, array
-/// subscripts, and unary ops. This intentionally avoids all of them because
-/// we're interested only in the MemberExpr to check if it's a flexible array
-/// member.
-class MemberExprVisitor
-    : public ConstStmtVisitor<MemberExprVisitor, const Expr *> {
-public:
-  //===--------------------------------------------------------------------===//
-  //                            Visitor Methods
-  //===--------------------------------------------------------------------===//
-
-  const Expr *Visit(const Expr *E) {
-    return ConstStmtVisitor<MemberExprVisitor, const Expr *>::Visit(E);
-  }
-  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
-
-  const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
-
-  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    return Visit(E->getBase());
-  }
-  const Expr *VisitCastExpr(const CastExpr *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitParenExpr(const ParenExpr *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
-    return Visit(E->getSubExpr());
-  }
-};
-
-} // anonymous namespace
-
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -3735,11 +3696,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Result = llvm::ConstantPointerNull::get(
         cast<llvm::PointerType>(ConvertType(E->getType())));
 
-    if (const Expr *Ptr = MemberExprVisitor().Visit(E->getArg(0))) {
-      const MemberExpr *ME = cast<MemberExpr>(Ptr);
+    if (const MemberExpr *ME = E->getArg(0)->getMemberExpr()) {
       bool IsFlexibleArrayMember = ME->isFlexibleArrayMemberLike(
-          getContext(), getLangOpts().getStrictFlexArraysLevel(),
-          /*IgnoreTemplateOrMacroSubstitution=*/false);
+          getContext(), getLangOpts().getStrictFlexArraysLevel());
 
       if (!ME->HasSideEffects(getContext()) && IsFlexibleArrayMember &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {

@@ -537,14 +537,20 @@ public:
   /// semantically correspond to a bool.
   bool isKnownToHaveBooleanValue(bool Semantic = true) const;
 
-  /// Check whether this array fits the idiom of a flexible array member,
-  /// depending on the value of -fstrict-flex-array.
+  /// isFlexibleArrayMemberLike - Check whether this array fits the idiom of a
+  /// flexible array member, depending on the value of -fstrict-flex-array.
   /// When IgnoreTemplateOrMacroSubstitution is set, it doesn't consider sizes
   /// resulting from the substitution of a macro or a template as special sizes.
   bool isFlexibleArrayMemberLike(
       ASTContext &Context,
       LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution = false) const;
+
+  /// getMemberExpr - Find the first MemberExpr of the Expr. This method
+  /// intentionally looks through all casts, array subscripts, and unary
+  /// operators to find an underlying MemberExpr. If one doesn't exist, it
+  /// returns a nullptr.
+  const MemberExpr *getMemberExpr() const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
   /// integer constant expression.  If not a valid i-c-e, return std::nullopt
