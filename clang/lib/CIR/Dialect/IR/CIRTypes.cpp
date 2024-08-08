@@ -946,8 +946,8 @@ PointerType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   return mlir::success();
 }
 
-mlir::ParseResult parsePointerAddrSpace(mlir::AsmParser &p,
-                                        mlir::Attribute &addrSpaceAttr) {
+mlir::ParseResult parseAddrSpaceAttribute(mlir::AsmParser &p,
+                                          mlir::Attribute &addrSpaceAttr) {
   using mlir::cir::AddressSpaceAttr;
   auto attrLoc = p.getCurrentLocation();
 
@@ -979,8 +979,8 @@ mlir::ParseResult parsePointerAddrSpace(mlir::AsmParser &p,
   return mlir::success();
 }
 
-void printPointerAddrSpace(mlir::AsmPrinter &p,
-                           mlir::Attribute rawAddrSpaceAttr) {
+void printAddrSpaceAttribute(mlir::AsmPrinter &p,
+                             mlir::Attribute rawAddrSpaceAttr) {
   using mlir::cir::AddressSpaceAttr;
   auto addrSpaceAttr = mlir::cast<AddressSpaceAttr>(rawAddrSpaceAttr);
   if (addrSpaceAttr.isTarget()) {
@@ -989,6 +989,16 @@ void printPointerAddrSpace(mlir::AsmPrinter &p,
   } else {
     p << AddressSpaceAttr::stringifyValue(addrSpaceAttr.getValue());
   }
+}
+
+mlir::ParseResult parsePointerAddrSpace(mlir::AsmParser &p,
+                                        mlir::Attribute &addrSpaceAttr) {
+  return parseAddrSpaceAttribute(p, addrSpaceAttr);
+}
+
+void printPointerAddrSpace(mlir::AsmPrinter &p,
+                           mlir::Attribute rawAddrSpaceAttr) {
+  printAddrSpaceAttribute(p, rawAddrSpaceAttr);
 }
 
 //===----------------------------------------------------------------------===//
