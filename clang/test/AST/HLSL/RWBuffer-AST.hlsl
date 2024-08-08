@@ -33,7 +33,6 @@ RWBuffer<float> Buffer;
 // CHECK-NEXT: FieldDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'element_type *'
 // CHECK-NEXT: HLSLResourceClassAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit UAV
 // CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit TypedBuffer
-// CHECK-NEXT: HLSLROVAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit
 
 // CHECK: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> operator[] 'element_type &const (unsigned int) const'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Idx 'unsigned int'
@@ -63,4 +62,3 @@ RWBuffer<float> Buffer;
 // CHECK-NEXT: FieldDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'float *'
 // CHECK-NEXT: HLSLResourceClassAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit UAV
 // CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit TypedBuffer
-// CHECK-NEXT: HLSLROVAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit

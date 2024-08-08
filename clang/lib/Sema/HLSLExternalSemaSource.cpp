@@ -116,15 +116,17 @@ struct BuiltinTypeDeclBuilder {
             QualType(TTD->getTypeForDecl(), 0));
     }
     // add handle member
-    llvm::SmallVector<Attr *, 2> Attrs;
     Attr *ResourceClassAttr =
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC);
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
-    Attr *ROVAttr = HLSLROVAttr::CreateImplicit(Record->getASTContext(), IsROV);
+    if (IsROV) {
+      Attr *ROVAttr = HLSLROVAttr::CreateImplicit(Record->getASTContext());
+      addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr, ROVAttr},
+                        Access);
+    } else
+      addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr}, Access);
 
-    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr, ROVAttr},
-                      Access);
     return *this;
   }
 

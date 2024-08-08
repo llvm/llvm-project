@@ -4607,10 +4607,7 @@ def HLSLResource : InheritableAttr {
 def HLSLROV : InheritableAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let Subjects = SubjectList<[Struct]>;
-  let LangOpts = [HLSL];
-  let Args = [
-	BoolArgument<"IsROV">
-  ];
+  let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 

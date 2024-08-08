@@ -437,29 +437,6 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-void SemaHLSL::handleROVAttr(Decl *D, const ParsedAttr &AL) {
-  if (!AL.isArgExpr(0)) {
-    Diag(AL.getLoc(), diag::err_attribute_argument_type)
-        << AL << AANT_ArgumentIntOrBool;
-    return;
-  }
-
-  clang::Expr *E = AL.getArgAsExpr(0);
-  bool isROV = false;
-  bool isBooleanCondition =
-      E->EvaluateAsBooleanCondition(isROV, getASTContext());
-  SourceLocation ArgLoc = E->getExprLoc();
-  SourceRange ArgRange = E->getSourceRange();
-
-  // Validate.
-  if (!isBooleanCondition) {
-    Diag(ArgLoc, diag::warn_attribute_type_not_supported) << "ROV" << ArgRange;
-    return;
-  }
-
-  D->addAttr(HLSLROVAttr::Create(getASTContext(), isROV, ArgLoc));
-}
-
 void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
   if (!AL.isArgIdent(0)) {
     Diag(AL.getLoc(), diag::err_attribute_argument_type)
