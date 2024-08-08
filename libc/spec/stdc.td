@@ -761,7 +761,10 @@ def StdC : StandardSpec<"stdc"> {
           GuardedFunctionSpec<"setpayloadf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 	  GuardedFunctionSpec<"setpayloadf128", RetValSpec<IntType>, [ArgSpec<Float128Ptr>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
+          FunctionSpec<"setpayloadsig", RetValSpec<IntType>, [ArgSpec<DoublePtr>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"setpayloadsigf", RetValSpec<IntType>, [ArgSpec<FloatPtr>, ArgSpec<FloatType>]>,
           GuardedFunctionSpec<"setpayloadsigf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
+	  GuardedFunctionSpec<"setpayloadsigf128", RetValSpec<IntType>, [ArgSpec<Float128Ptr>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           GuardedFunctionSpec<"f16addf128", RetValSpec<Float16Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128">,
 

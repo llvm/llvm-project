@@ -439,7 +439,10 @@ add_math_entrypoint_object(setpayloadf)
 add_math_entrypoint_object(setpayloadf16)
 add_math_entrypoint_object(setpayloadf128)
 
+add_math_entrypoint_object(setpayloadsig)
+add_math_entrypoint_object(setpayloadsigf)
 add_math_entrypoint_object(setpayloadsigf16)
+add_math_entrypoint_object(setpayloadsigf128)
 
 add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
