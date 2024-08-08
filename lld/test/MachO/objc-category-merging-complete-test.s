@@ -1,6 +1,3 @@
-# `-no_objc_relative_method_lists` needs to be explicitly added to this test to avoid crashing after `-objc_relative_method_lists` was made default.
-# TODO: Make this test compatible with default `-objc_relative_method_lists` and remove the `-no_objc_relative_method_lists` flag. Issue #101419
-
 # REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
@@ -10,10 +7,10 @@
 # RUN: %lld -arch arm64 a64_file1.o -o a64_file1.dylib -dylib
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_file2.o a64_file2.s
-# RUN: %lld -no_objc_relative_method_lists -arch arm64 -o a64_file2_no_merge.exe a64_file1.dylib a64_file2.o
-# RUN: %lld -no_objc_relative_method_lists -arch arm64 -o a64_file2_no_merge_v2.exe a64_file1.dylib a64_file2.o -no_objc_category_merging
-# RUN: %lld -no_objc_relative_method_lists -arch arm64 -o a64_file2_no_merge_v3.exe a64_file1.dylib a64_file2.o -objc_category_merging -no_objc_category_merging
-# RUN: %lld -no_objc_relative_method_lists -arch arm64 -o a64_file2_merge.exe -objc_category_merging a64_file1.dylib a64_file2.o
+# RUN: %lld -arch arm64 -o a64_file2_no_merge.exe a64_file1.dylib a64_file2.o
+# RUN: %lld -arch arm64 -o a64_file2_no_merge_v2.exe a64_file1.dylib a64_file2.o -no_objc_category_merging
+# RUN: %lld -arch arm64 -o a64_file2_no_merge_v3.exe a64_file1.dylib a64_file2.o -objc_category_merging -no_objc_category_merging
+# RUN: %lld -arch arm64 -o a64_file2_merge.exe -objc_category_merging a64_file1.dylib a64_file2.o
 
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_no_merge.exe | FileCheck %s --check-prefixes=NO_MERGE_CATS
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_no_merge_v2.exe | FileCheck %s --check-prefixes=NO_MERGE_CATS
@@ -21,7 +18,7 @@
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge.exe | FileCheck %s --check-prefixes=MERGE_CATS
 
 ############ Test merging multiple categories into the base class ############
-# RUN: %lld -no_objc_relative_method_lists -arch arm64 -o a64_file2_merge_into_class.exe -objc_category_merging a64_file1.o a64_file2.o
+# RUN: %lld -arch arm64 -o a64_file2_merge_into_class.exe -objc_category_merging a64_file1.o a64_file2.o
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge_into_class.exe | FileCheck %s --check-prefixes=MERGE_CATS_CLS
 
 

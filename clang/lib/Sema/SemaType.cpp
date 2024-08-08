@@ -8355,14 +8355,28 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
     NumElts = VecSize / S.Context.getCharWidth();
-    VecKind = VectorKind::RVVFixedLengthMask;
+    if (!NumElts) {
+      NumElts = 1;
+      switch (VecSize) {
+      case 1:
+        VecKind = VectorKind::RVVFixedLengthMask_1;
+        break;
+      case 2:
+        VecKind = VectorKind::RVVFixedLengthMask_2;
+        break;
+      case 4:
+        VecKind = VectorKind::RVVFixedLengthMask_4;
+        break;
+      }
+    } else
+      VecKind = VectorKind::RVVFixedLengthMask;
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
   }
 
   // The attribute vector size must match -mrvv-vector-bits.
-  if (ExpectedSize % 8 != 0 || VecSize != ExpectedSize) {
+  if (VecSize != ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
         << VecSize << ExpectedSize;
     Attr.setInvalid();
