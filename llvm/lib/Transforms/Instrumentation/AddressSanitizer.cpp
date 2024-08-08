@@ -1736,7 +1736,21 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   if (O.MaybeOffset) {
     Type *Ty = Type::getInt8Ty(*C);
     IRBuilder IB(O.getInsn());
-    Addr = IB.CreateGEP(Ty, Addr, {O.MaybeOffset});
+
+    Value *OffsetOp = O.MaybeOffset;
+    if (TargetTriple.isRISCV()) {
+      Type *OffsetTy = OffsetOp->getType();
+      // RVV indexed loads/stores zero-extend offset operands which are narrower
+      // than XLEN to XLEN.
+      if (OffsetTy->getScalarType()->getIntegerBitWidth() <
+          static_cast<unsigned>(LongSize)) {
+        VectorType *OrigType = cast<VectorType>(OffsetTy);
+        Type *ExtendTy = VectorType::get(IntptrTy, OrigType);
+        OffsetOp = IB.CreateZExt(OffsetOp, ExtendTy);
+      }
+    }
+
+    Addr = IB.CreateGEP(Ty, Addr, {OffsetOp});
   }
 
   unsigned Granularity = 1 << Mapping.Scale;
