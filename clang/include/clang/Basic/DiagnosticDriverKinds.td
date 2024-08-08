@@ -99,7 +99,8 @@ def warn_drv_amdgpu_cov6: Warning<
   " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via "
-  "'%2'">;
+  "'%2' or increasing the tool timeout using the environment variable "
+  "'CLANG_TOOL_CHAIN_PROGRAM_WAIT' (in secs, <=0 is inifinite)">;
 def warn_drv_multi_gpu_arch : Warning<
   "multiple %0 architectures are detected: %1; only the first one is used for "
   "'%2'">, InGroup<MultiGPU>;

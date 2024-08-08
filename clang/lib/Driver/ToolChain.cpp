@@ -123,6 +123,8 @@ ToolChain::executeToolChainProgram(StringRef Executable,
     int Val = std::atoi(Str->c_str());
     if (Val > 0)
       SecondsToWait = Val;
+    else if (Val <= 0)
+      SecondsToWait = 0; // infinite
   }
   if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
                                 /*MemoryLimit=*/0, &ErrorMessage))
