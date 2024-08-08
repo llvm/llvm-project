@@ -75,8 +75,8 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
-- Allow single element access of GCC vector/ext_vector_type object to be 
-  constant expression. Supports the `V.xyzw` syntax and other tidbits 
+- Allow single element access of GCC vector/ext_vector_type object to be
+  constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
 C++17 Feature Support
@@ -166,7 +166,6 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
 
 - -Wdangling-assignment-gsl is enabled by default.
-- Clang now does a better job preserving the template arguments as written when specializing concepts.
 - Clang now always preserves the template arguments as written used
   to specialize template type aliases.
 
