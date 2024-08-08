@@ -435,8 +435,11 @@ def FeatureMEC : Extension<"mec", "MEC", "FEAT_MEC",
 def FeatureSVE2p1: ExtensionWithMArch<"sve2p1", "SVE2p1", "FEAT_SVE2p1",
   "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
 
-def FeatureB16B16 : ExtensionWithMArch<"b16b16", "B16B16", "FEAT_SVE_B16B16",
-  "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions", [FeatureBF16]>;
+def FeatureB16B16 : ExtensionWithMArch<"b16b16", "B16B16", "FEAT_B16B16",
+  "Enable SME2.1 ZA-targeting non-widening BFloat16 to BFloat16 instructions", [FeatureBF16]>;
+
+def FeatureSVEB16B16: ExtensionWithMArch<"sve-b16b16", "SVEB16B16", "FEAT_SVE_B16B16",
+  "Enable SVE2.1 non-widening and SME2.1 Z-targeting non-widening BFloat16 to BFloat16 instructions">;
 
 def FeatureSMEF16F16 : ExtensionWithMArch<"sme-f16f16", "SMEF16F16", "FEAT_SME_F16F16",
   "Enable SME non-widening Float16 instructions", [FeatureSME2]>;

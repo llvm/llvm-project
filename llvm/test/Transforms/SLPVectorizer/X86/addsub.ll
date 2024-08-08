@@ -65,6 +65,62 @@ entry:
   ret void
 }
 
+define void @addsub_freeze() #0 {
+; CHECK-LABEL: @addsub_freeze(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @b, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @c, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @d, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr @e, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <4 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP8]]
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr @a, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, ptr @b, align 4
+  %1 = load i32, ptr @c, align 4
+  %add = add nsw i32 %0, %1
+  %2 = load i32, ptr @d, align 4
+  %3 = load i32, ptr @e, align 4
+  %add1 = add nsw i32 %2, %3
+  %add2 = add nsw i32 %add, %add1
+  %freeze.add2 = freeze i32 %add2
+  store i32 %freeze.add2, ptr @a, align 4
+  %4 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 1), align 4
+  %5 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 1), align 4
+  %add3 = add nsw i32 %4, %5
+  %6 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 1), align 4
+  %7 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 1), align 4
+  %add4 = add nsw i32 %6, %7
+  %sub = sub nsw i32 %add3, %add4
+  %freeze.sub = freeze i32 %sub
+  store i32 %freeze.sub, ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 1), align 4
+  %8 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 2), align 4
+  %9 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 2), align 4
+  %add5 = add nsw i32 %8, %9
+  %10 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 2), align 4
+  %11 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 2), align 4
+  %add6 = add nsw i32 %10, %11
+  %add7 = add nsw i32 %add5, %add6
+  %freeze.add7 = freeze i32 %add7
+  store i32 %freeze.add7, ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 2), align 4
+  %12 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 3), align 4
+  %13 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 3), align 4
+  %add8 = add nsw i32 %12, %13
+  %14 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 3), align 4
+  %15 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 3), align 4
+  %add9 = add nsw i32 %14, %15
+  %sub10 = sub nsw i32 %add8, %add9
+  %freeze.sub10 = freeze i32 %sub10
+  store i32 %freeze.sub10, ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 3), align 4
+  ret void
+}
+
 ; Function Attrs: nounwind uwtable
 define void @subadd() #0 {
 ; CHECK-LABEL: @subadd(
@@ -301,14 +357,14 @@ define void @reorder_alt_subTree() #0 {
 
 define void @reorder_alt_rightsubTree(ptr nocapture %c, ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture readonly %d) {
 ; CHECK-LABEL: @reorder_alt_rightsubTree(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[D:%.*]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x double> [[TMP10]], ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[D:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> [[TMP6]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = load double, ptr %a
@@ -332,20 +388,20 @@ define void @reorder_alt_rightsubTree(ptr nocapture %c, ptr noalias nocapture re
 
 define void @vec_shuff_reorder() #0 {
 ; CHECK-LABEL: @vec_shuff_reorder(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr @fa, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr @fb, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fb, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fa, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr @fa, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr @fb, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fb, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fa, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd <4 x float> [[TMP10]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = fsub <4 x float> [[TMP10]], [[TMP14]]
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    store <4 x float> [[TMP17]], ptr @fc, align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP7]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fsub <4 x float> [[TMP7]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP11]], <4 x float> [[TMP12]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x float> [[TMP13]], ptr @fc, align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = load float, ptr @fb, align 4

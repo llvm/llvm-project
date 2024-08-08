@@ -75,6 +75,9 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- Allow single element access of GCC vector/ext_vector_type object to be 
+  constant expression. Supports the `V.xyzw` syntax and other tidbits 
+  as seen in OpenCL. Selecting multiple elements is left as a future work.
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -106,6 +109,9 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+Non-comprehensive list of changes in this release
+-------------------------------------------------
 
 New Compiler Flags
 ------------------
@@ -154,6 +160,8 @@ Improvements to Clang's diagnostics
 - Clang now always preserves the template arguments as written used
   to specialize template type aliases.
 
+- Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -166,6 +174,7 @@ Bug Fixes in This Version
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
 - Fixed a failed assertion when checking required literal types in C context. (#GH101304).
+- Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
