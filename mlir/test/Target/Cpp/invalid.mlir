@@ -140,58 +140,6 @@ func.func @emitc_switch() {
 // -----
 
 func.func @emitc_switch() {
-  %0 = "emitc.variable"(){value = 1 : i8} : () -> i8
-
-  // expected-error@+1 {{'emitc.switch' op operand #0 must be integer type for switch operation, but got 'i8'}}
-  emitc.switch %0 : i8
-  case 2: {
-    %1 = emitc.call_opaque "func_b" () : () -> i32
-    emitc.yield
-  }
-  case 5: {
-    %2 = emitc.call_opaque "func_a" () : () -> i32
-    emitc.yield
-  }
-  default: {
-    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
-    emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
-    emitc.yield
-  }
-  return
-}
-
-// -----
-
-func.func @emitc_switch() {
-  %0 = "emitc.variable"(){value = 1 : i1} : () -> i1
-
-  // expected-error@+1 {{'emitc.switch' op operand #0 must be integer type for switch operation, but got 'i1'}}
-  emitc.switch %0 : i1
-  case 2: {
-    %1 = emitc.call_opaque "func_b" () : () -> i32
-    emitc.yield
-  }
-  case 5: {
-    %2 = emitc.call_opaque "func_a" () : () -> i32
-    emitc.yield
-  }
-  default: {
-    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
-    emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
-    emitc.yield
-  }
-  return
-}
-
-// -----
-
-func.func @emitc_switch() {
   %0 = "emitc.variable"(){value = 1 : i16} : () -> i16
 
   emitc.switch %0 : i16

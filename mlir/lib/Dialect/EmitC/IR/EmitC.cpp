@@ -133,9 +133,7 @@ bool mlir::emitc::isPointerWideType(Type type) {
 
 bool mlir::emitc::isSwitchOperandType(Type type) {
   auto intType = llvm::dyn_cast<IntegerType>(type);
-  return isa<emitc::OpaqueType>(type) ||
-         (isSupportedIntegerType(type) && intType.getWidth() != 1 &&
-          intType.getWidth() != 8);
+  return isa<emitc::OpaqueType>(type) || isSupportedIntegerType(type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
