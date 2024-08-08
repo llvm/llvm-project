@@ -700,3 +700,47 @@ func.func @negative_out_of_bound_transfer_write(
 }
 // CHECK:     func.func @negative_out_of_bound_transfer_write
 // CHECK-NOT:   memref.collapse_shape
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// [Pattern: DropUnitDimsFromTransposeOp]
+/// TODO: Move to a dedicated file - there's no "flattening" in the following tests
+///----------------------------------------------------------------------------------------
+
+func.func @transpose_with_internal_unit_dims(%vec: vector<1x1x4x[4]xf32>) -> vector<[4]x1x1x4xf32> {
+  %res = vector.transpose %vec, [3, 0, 1, 2] : vector<1x1x4x[4]xf32> to vector<[4]x1x1x4xf32>
+  return %res : vector<[4]x1x1x4xf32>
+}
+
+// CHECK-LABEL: func.func @transpose_with_internal_unit_dims(
+// CHECK-SAME:                                               %[[VEC:.*]]: vector<1x1x4x[4]xf32>)
+// CHECK-NEXT:    %[[DROP_DIMS:.*]] = vector.shape_cast %arg0 : vector<1x1x4x[4]xf32> to vector<4x[4]xf32>
+// CHECK-NEXT:    %[[TRANSPOSE:.*]] = vector.transpose %0, [1, 0] : vector<4x[4]xf32> to vector<[4]x4xf32>
+// CHECK-NEXT:    %[[RESTORE_DIMS:.*]] = vector.shape_cast %1 : vector<[4]x4xf32> to vector<[4]x1x1x4xf32>
+// CHECK-NEXT:    return %[[RESTORE_DIMS]] : vector<[4]x1x1x4xf32>
+
+// -----
+
+func.func @transpose_with_scalable_unit_dims(%vec: vector<[1]x1x2x4x1xf32>) -> vector<1x1x4x2x[1]xf32>
+{
+  %res = vector.transpose %vec, [4, 1, 3, 2, 0]  : vector<[1]x1x2x4x1xf32> to vector<1x1x4x2x[1]xf32>
+  return %res: vector<1x1x4x2x[1]xf32>
+}
+
+// CHECK-LABEL: func.func @transpose_with_scalable_unit_dims(
+// CHECK-SAME:                                               %[[VEC:.*]]: vector<[1]x1x2x4x1xf32>)
+// CHECK-NEXT:    %[[DROP_DIMS:.*]] = vector.shape_cast %[[VEC]] : vector<[1]x1x2x4x1xf32> to vector<[1]x2x4xf32>
+// CHECK-NEXT:    %[[TRANSPOSE:.*]] = vector.transpose %[[DROP_DIMS]], [2, 1, 0] : vector<[1]x2x4xf32> to vector<4x2x[1]xf32>
+// CHECK-NEXT:    %[[RESTORE_DIMS:.*]] = vector.shape_cast %[[TRANSPOSE]] : vector<4x2x[1]xf32> to vector<1x1x4x2x[1]xf32>
+// CHECK-NEXT:    return %[[RESTORE_DIMS]] : vector<1x1x4x2x[1]xf32>
+
+// -----
+
+func.func @negative_transpose_with_no_unit_dims(%vec: vector<4x2x3xf32>) -> vector<4x3x2xf32> {
+  %res = vector.transpose %vec, [0, 2, 1] : vector<4x2x3xf32> to vector<4x3x2xf32>
+  return %res : vector<4x3x2xf32>
+}
+
+// CHECK-LABEL: func.func @negative_transpose_with_no_unit_dims
+// CHECK-NOT: vector.shape_cast
