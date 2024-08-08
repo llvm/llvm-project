@@ -1,7 +1,7 @@
-; This file contains the new semantic of the branch-target-enforcement, sign-return-address.
-; Used for test mixing a mixed link case and also verify the import too in llc.
+;; This file contains the new semantic of the branch-target-enforcement, sign-return-address.
+;; Used for test mixing a mixed link case and also verify the import too in llc.
 
-; RUN: llc %s -o - | FileCheck %s
+; RUN: llc -mattr=+pauth -mattr=+bti %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
@@ -21,7 +21,7 @@ entry:
 }
 
 ; CHECK-LABEL: baz:
-; CHECK:           hint
+; CHECK:           bti c
 ; CHECK:           ret
 
 attributes #0 = { noinline nounwind optnone uwtable }

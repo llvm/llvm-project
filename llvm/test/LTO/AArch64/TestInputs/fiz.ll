@@ -6,22 +6,25 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-define i32 @foo_on() #0 {
+declare void @func()
+
+define i32 @fiz_on() #0 {
 entry:
+  call void @func()
   ret i32 42
 }
 
-; CHECK-LABEL: foo_on:
-; CHECK:           pacibsp
-; CHECK:           mov
-; CHECK:           retab
+; CHECK-LABEL: fiz_on:
+; CHECK:           paciasp
+; CHECK:           bl func
+; CHECK:           retaa
 
-define i32 @foo_off() #1 {
+define i32 @fiz_off() #1 {
 entry:
   ret i32 43
 }
 
-; CHECK-LABEL: foo_off:
+; CHECK-LABEL: fiz_off:
 ; CHECK-NOT:       pac
 ; CHECK-NOT:       hint
 ; CHECK-NOT:       bti
@@ -34,5 +37,5 @@ attributes #1 = { noinline nounwind optnone uwtable "branch-target-enforcement"=
 
 !0 = !{i32 8, !"branch-target-enforcement", i32 1}
 !1 = !{i32 8, !"sign-return-address", i32 1}
-!2 = !{i32 8, !"sign-return-address-all", i32 1}
-!3 = !{i32 8, !"sign-return-address-with-bkey", i32 1}
+!2 = !{i32 8, !"sign-return-address-all", i32 0}
+!3 = !{i32 8, !"sign-return-address-with-bkey", i32 0}

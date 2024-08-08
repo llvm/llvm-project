@@ -30,7 +30,7 @@
 ; CHECK: !3 = !{i32 8, !"sign-return-address-with-bkey", i32 2}
 
 
-;--- foo.s
+;--- foo.ll
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -46,7 +46,7 @@ attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memor
 !2 = !{i32 8, !"sign-return-address-all", i32 1}
 !3 = !{i32 8, !"sign-return-address-with-bkey", i32 1}
 
-;--- bar.s
+;--- bar.ll
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -62,7 +62,7 @@ attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memor
 !2 = !{i32 8, !"sign-return-address-all", i32 2}
 !3 = !{i32 8, !"sign-return-address-with-bkey", i32 2}
 
-;--- main.s
+;--- main.ll
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
