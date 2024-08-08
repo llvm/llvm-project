@@ -99,6 +99,8 @@ public:
   virtual ~TargetCIRGenInfo() {}
 };
 
+void computeSPIRKernelABIInfo(CIRGenModule &CGM, CIRGenFunctionInfo &FI);
+
 } // namespace cir
 
 #endif

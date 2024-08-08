@@ -783,11 +783,16 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   (void)inserted;
   assert(inserted && "Recursively being processed?");
 
-  // Compute ABI inforamtion.
-  assert(info.getCC() != clang::CallingConv::CC_SpirFunction && "NYI");
-  assert(info.getCC() != CC_Swift && info.getCC() != CC_SwiftAsync &&
-         "Swift NYI");
-  getABIInfo().computeInfo(*FI);
+  // Compute ABI information.
+  if (CC == mlir::cir::CallingConv::SpirKernel) {
+    // Force target independent argument handling for the host visible
+    // kernel functions.
+    computeSPIRKernelABIInfo(CGM, *FI);
+  } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
+    llvm_unreachable("Swift NYI");
+  } else {
+    getABIInfo().computeInfo(*FI);
+  }
 
   // Loop over all of the computed argument and return value info. If any of
   // them are direct or extend without a specified coerce type, specify the
