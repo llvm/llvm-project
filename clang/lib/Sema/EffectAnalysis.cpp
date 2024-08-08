@@ -64,7 +64,7 @@ struct Violation {
 };
 
 enum class SpecialFuncType : uint8_t { None, OperatorNew, OperatorDelete };
-enum class CallType {
+enum class CallableType {
   // unknown: probably function pointer
   Unknown,
   Function,
@@ -91,32 +91,39 @@ static bool isNoexcept(const FunctionDecl *FD) {
 }
 
 // Transitory, more extended information about a callable, which can be a
-// function, block, function pointer, etc.
+// function, block, or function pointer.
 struct CallableInfo {
   // CDecl holds the function's definition, if any.
-  // FunctionDecl if CallType::Function or Virtual
-  // BlockDecl if CallType::Block
+  // FunctionDecl if CallableType::Function or Virtual
+  // BlockDecl if CallableType::Block
   const Decl *CDecl;
+
+  // Remember whether the callable is a function, block, virtual method,
+  // or (presumed) function pointer.
+  CallableType CType = CallableType::Unknown;
+
+  // Remember whether the callable is an operator new or delete function,
+  // so that calls to them are reported more meaningfully, as memory
+  // allocations.
   SpecialFuncType FuncType = SpecialFuncType::None;
-  FunctionEffectsRef DeclEffects;
+
+  // We inevitably want to know the callable's declared effects, so cache them.
   FunctionEffectKindSet Effects;
-  CallType CType = CallType::Unknown;
 
-  CallableInfo(Sema &SemaRef, const Decl &CD,
-               SpecialFuncType FT = SpecialFuncType::None)
+  CallableInfo(const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
-
+    FunctionEffectsRef DeclEffects;
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl)) {
       // Use the function's definition, if any.
       if (const FunctionDecl *Def = FD->getDefinition())
         CDecl = FD = Def;
-      CType = CallType::Function;
+      CType = CallableType::Function;
       if (auto *Method = dyn_cast<CXXMethodDecl>(FD);
           Method && Method->isVirtual())
-        CType = CallType::Virtual;
+        CType = CallableType::Virtual;
       DeclEffects = FD->getFunctionEffects();
     } else if (auto *BD = dyn_cast<BlockDecl>(CDecl)) {
-      CType = CallType::Block;
+      CType = CallableType::Block;
       DeclEffects = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at its type.
@@ -125,21 +132,21 @@ struct CallableInfo {
     Effects = FunctionEffectKindSet(DeclEffects);
   }
 
-  bool isDirectCall() const {
-    return CType == CallType::Function || CType == CallType::Block;
+  bool isCalledDirectly() const {
+    return CType == CallableType::Function || CType == CallableType::Block;
   }
 
   bool isVerifiable() const {
     switch (CType) {
-    case CallType::Unknown:
-    case CallType::Virtual:
+    case CallableType::Unknown:
+    case CallableType::Virtual:
       return false;
-    case CallType::Block:
+    case CallableType::Block:
       return true;
-    case CallType::Function:
+    case CallableType::Function:
       return functionIsVerifiable(dyn_cast<FunctionDecl>(CDecl));
     }
-    llvm_unreachable("undefined CallType");
+    llvm_unreachable("undefined CallableType");
   }
 
   /// Generate a name for logging and diagnostics.
@@ -250,7 +257,7 @@ public:
 
     for (const FunctionEffect &effect : AllInferrableEffectsToVerify) {
       std::optional<FunctionEffect> ProblemCalleeEffect =
-          effect.effectProhibitingInference(*CInfo.CDecl, CInfo.DeclEffects);
+          effect.effectProhibitingInference(*CInfo.CDecl, CInfo.Effects);
       if (!ProblemCalleeEffect)
         InferrableFX.insert(effect);
       else {
@@ -306,7 +313,7 @@ public:
     if (!UnverifiedDirectCalls.empty()) {
       OS << "; Calls: ";
       for (const DirectCall &Call : UnverifiedDirectCalls) {
-        CallableInfo CI(SemaRef, *Call.Callee);
+        CallableInfo CI(*Call.Callee);
         OS << " " << CI.name(SemaRef);
       }
     }
@@ -405,7 +412,7 @@ class Analyzer {
     void dump(Sema &SemaRef, llvm::raw_ostream &OS) {
       OS << "\nAnalysisMap:\n";
       for (const auto &item : *this) {
-        CallableInfo CI(SemaRef, *item.first);
+        CallableInfo CI(*item.first);
         const auto AP = item.second;
         OS << item.first << " " << CI.name(SemaRef) << " : ";
         if (AP.isNull())
@@ -499,7 +506,7 @@ private:
   // Verify a single Decl. Return the pending structure if that was the result,
   // else null. This method must not recurse.
   PendingFunctionAnalysis *verifyDecl(const Decl *D) {
-    CallableInfo CInfo(Sem, *D);
+    CallableInfo CInfo(*D);
     bool isExternC = false;
 
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
@@ -576,7 +583,7 @@ private:
   // not. Repeats calls to FunctionBodyASTVisitor::followCall() but without
   // the possibility of inference. Deletes Pending.
   void finishPendingAnalysis(const Decl *D, PendingFunctionAnalysis *Pending) {
-    CallableInfo Caller(Sem, *D);
+    CallableInfo Caller(*D);
     LLVM_DEBUG(llvm::dbgs()
                    << "finishPendingAnalysis for " << Caller.name(Sem) << " : ";
                Pending->dump(Sem, llvm::dbgs()); llvm::dbgs() << "\n";);
@@ -585,7 +592,7 @@ private:
       if (Call.Recursed)
         continue;
 
-      CallableInfo Callee(Sem, *Call.Callee);
+      CallableInfo Callee(*Call.Callee);
       followCall(Caller, *Pending, Callee, Call.CallLoc,
                  /*AssertNoFurtherInference=*/true);
     }
@@ -598,21 +605,20 @@ private:
   void followCall(const CallableInfo &Caller, PendingFunctionAnalysis &PFA,
                   const CallableInfo &Callee, SourceLocation CallLoc,
                   bool AssertNoFurtherInference) {
-    const bool DirectCall = Callee.isDirectCall();
+    const bool DirectCall = Callee.isCalledDirectly();
 
     // Initially, the declared effects; inferred effects will be added.
     FunctionEffectKindSet CalleeEffects = Callee.Effects;
 
     bool IsInferencePossible = DirectCall;
 
-    if (DirectCall) {
+    if (DirectCall)
       if (CompleteFunctionAnalysis *CFA =
               DeclAnalysis.completedAnalysisForDecl(Callee.CDecl)) {
         // Combine declared effects with those which may have been inferred.
         CalleeEffects.insert(CFA->VerifiedEffects);
         IsInferencePossible = false; // we've already traversed it
       }
-    }
 
     if (AssertNoFurtherInference) {
       assert(!IsInferencePossible);
@@ -635,25 +641,23 @@ private:
                llvm::dbgs() << "\n";);
 
     auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
-      FunctionEffect::Flags Flags = Effect.flags();
-      bool Diagnose =
-          Effect.shouldDiagnoseFunctionCall(DirectCall, CalleeEffects);
-      if (Diagnose) {
-        // If inference is not allowed, or the target is indirect (virtual
-        // method/function ptr?), generate a Violation now.
-        if (!IsInferencePossible ||
-            !(Flags & FunctionEffect::FE_InferrableOnCallees)) {
-          if (Callee.FuncType == SpecialFuncType::None)
-            PFA.checkAddViolation(Inferring,
-                                  {Effect, ViolationID::CallsDeclWithoutEffect,
-                                   CallLoc, Callee.CDecl});
-          else
-            PFA.checkAddViolation(
-                Inferring, {Effect, ViolationID::AllocatesMemory, CallLoc});
-        } else {
-          // Inference is allowed and necessary; defer it.
-          PFA.addUnverifiedDirectCall(Callee.CDecl, CallLoc);
-        }
+      if (!Effect.shouldDiagnoseFunctionCall(DirectCall, CalleeEffects))
+        return;
+
+      // If inference is not allowed, or the target is indirect (virtual
+      // method/function ptr?), generate a Violation now.
+      if (!IsInferencePossible ||
+          !(Effect.flags() & FunctionEffect::FE_InferrableOnCallees)) {
+        if (Callee.FuncType == SpecialFuncType::None)
+          PFA.checkAddViolation(Inferring,
+                                {Effect, ViolationID::CallsDeclWithoutEffect,
+                                 CallLoc, Callee.CDecl});
+        else
+          PFA.checkAddViolation(
+              Inferring, {Effect, ViolationID::AllocatesMemory, CallLoc});
+      } else {
+        // Inference is allowed and necessary; defer it.
+        PFA.addUnverifiedDirectCall(Callee.CDecl, CallLoc);
       }
     };
 
@@ -664,7 +668,8 @@ private:
       check1Effect(Effect, true);
   }
 
-  // Should only be called when determined to be complete.
+  // Should only be called when function's analysis is determined to be
+  // complete.
   void emitDiagnostics(SmallVector<Violation, 0> &Viols,
                        const CallableInfo &CInfo, Sema &S) {
     if (Viols.empty())
@@ -725,7 +730,7 @@ private:
         break;
 
       case ViolationID::CallsDeclWithoutEffect: {
-        CallableInfo CalleeInfo(S, *Viol1.Callee);
+        CallableInfo CalleeInfo(*Viol1.Callee);
         std::string CalleeName = CalleeInfo.name(S);
 
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
@@ -743,10 +748,10 @@ private:
             // - non-inline
             // - indirect (virtual or through function pointer)
             // - effect has been explicitly disclaimed (e.g. "blocking")
-            if (CalleeInfo.CType == CallType::Virtual)
+            if (CalleeInfo.CType == CallableType::Virtual)
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_virtual)
                   << effectName;
-            else if (CalleeInfo.CType == CallType::Unknown)
+            else if (CalleeInfo.CType == CallableType::Unknown)
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
                   << effectName;
@@ -799,7 +804,7 @@ private:
             S.Diag(Viol2.Loc, diag::note_func_effect_calls_objc) << effectName;
             break;
           case ViolationID::CallsDeclWithoutEffect:
-            MaybeNextCallee.emplace(S, *Viol2.Callee);
+            MaybeNextCallee.emplace(*Viol2.Callee);
             S.Diag(Viol2.Loc, diag::note_func_effect_calls_func_without_effect)
                 << effectName << MaybeNextCallee->name(S);
             break;
@@ -853,15 +858,15 @@ private:
     // Handle a language construct forbidden by some effects. Only effects whose
     // flags include the specified flag receive a violation. \p Flag describes
     // the construct.
-    void diagnoseLanguageConstruct(FunctionEffect::FlagBit Flag, ViolationID D,
-                                   SourceLocation Loc,
+    void diagnoseLanguageConstruct(FunctionEffect::FlagBit Flag,
+                                   ViolationID VID, SourceLocation Loc,
                                    const Decl *Callee = nullptr) {
       // If there are any declared verifiable effects which forbid the construct
       // represented by the flag, store just one violation..
       for (const FunctionEffect &Effect :
            CurrentFunction.DeclaredVerifiableEffects) {
         if (Effect.flags() & Flag) {
-          addViolation(/*inferring=*/false, Effect, D, Loc, Callee);
+          addViolation(/*inferring=*/false, Effect, VID, Loc, Callee);
           break;
         }
       }
@@ -869,7 +874,7 @@ private:
       // violation, if we don't already have a violation for that effect.
       for (const FunctionEffect &Effect : CurrentFunction.FXToInfer)
         if (Effect.flags() & Flag)
-          addViolation(/*inferring=*/true, Effect, D, Loc, Callee);
+          addViolation(/*inferring=*/true, Effect, VID, Loc, Callee);
     }
 
     void addViolation(bool Inferring, const FunctionEffect &Effect,
@@ -892,8 +897,7 @@ private:
                        /*AssertNoFurtherInference=*/false);
     }
 
-    void checkIndirectCall(CallExpr *Call, Expr *CalleeExpr) {
-      const QualType CalleeType = CalleeExpr->getType();
+    void checkIndirectCall(CallExpr *Call, QualType CalleeType) {
       auto *FPT =
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
       FunctionEffectKindSet CalleeFX;
@@ -942,7 +946,7 @@ private:
       if (Ty->isRecordType()) {
         if (const CXXRecordDecl *Class = Ty->getAsCXXRecordDecl()) {
           if (CXXDestructorDecl *Dtor = Class->getDestructor()) {
-            CallableInfo CI(Outer.Sem, *Dtor);
+            CallableInfo CI(*Dtor);
             followCall(CI, OuterDtor->getLocation());
           }
         }
@@ -999,7 +1003,7 @@ private:
 
       Expr *CalleeExpr = Call->getCallee();
       if (const Decl *Callee = CalleeExpr->getReferencedDeclOfCallee()) {
-        CallableInfo CI(Outer.Sem, *Callee);
+        CallableInfo CI(*Callee);
         followCall(CI, Call->getBeginLoc());
         return true;
       }
@@ -1009,7 +1013,7 @@ private:
         return true;
 
       // No Decl, just an Expr. Just check based on its type.
-      checkIndirectCall(Call, CalleeExpr);
+      checkIndirectCall(Call, CalleeExpr->getType());
 
       return true;
     }
@@ -1033,7 +1037,7 @@ private:
           if (const auto *CxxRec =
                   dyn_cast<CXXRecordDecl>(ClsType->getDecl())) {
             if (const CXXDestructorDecl *Dtor = CxxRec->getDestructor()) {
-              CallableInfo CI(Outer.Sem, *Dtor);
+              CallableInfo CI(*Dtor);
               followCall(CI, Var->getLocation());
             }
           }
@@ -1046,7 +1050,7 @@ private:
       // BUG? It seems incorrect that RecursiveASTVisitor does not
       // visit the call to operator new.
       if (FunctionDecl *FD = New->getOperatorNew()) {
-        CallableInfo CI(Outer.Sem, *FD, SpecialFuncType::OperatorNew);
+        CallableInfo CI(*FD, SpecialFuncType::OperatorNew);
         followCall(CI, New->getBeginLoc());
       }
 
@@ -1062,7 +1066,7 @@ private:
       // BUG? It seems incorrect that RecursiveASTVisitor does not
       // visit the call to operator delete.
       if (FunctionDecl *FD = Delete->getOperatorDelete()) {
-        CallableInfo CI(Outer.Sem, *FD, SpecialFuncType::OperatorDelete);
+        CallableInfo CI(*FD, SpecialFuncType::OperatorDelete);
         followCall(CI, Delete->getBeginLoc());
       }
 
@@ -1080,15 +1084,8 @@ private:
       // BUG? It seems incorrect that RecursiveASTVisitor does not
       // visit the call to the constructor.
       const CXXConstructorDecl *Ctor = Construct->getConstructor();
-      CallableInfo CI(Outer.Sem, *Ctor);
+      CallableInfo CI(*Ctor);
       followCall(CI, Construct->getLocation());
-
-      return true;
-    }
-
-    bool VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DEI) {
-      if (Expr *E = DEI->getExpr())
-        TraverseStmt(E);
 
       return true;
     }

@@ -5138,18 +5138,17 @@ StringRef FunctionEffect::name() const {
 }
 
 std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
-    const Decl &Callee, const FunctionEffectsRef &CalleeFX) const {
+    const Decl &Callee, const FunctionEffectKindSet &CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
-    for (const FunctionEffectWithCondition &CalleeEC : CalleeFX) {
+    for (const FunctionEffect &Effect : CalleeFX) {
       // nonblocking/nonallocating cannot call allocating.
-      if (CalleeEC.Effect.kind() == Kind::Allocating)
-        return CalleeEC.Effect;
+      if (Effect.kind() == Kind::Allocating)
+        return Effect;
       // nonblocking cannot call blocking.
-      if (kind() == Kind::NonBlocking &&
-          CalleeEC.Effect.kind() == Kind::Blocking)
-        return CalleeEC.Effect;
+      if (kind() == Kind::NonBlocking && Effect.kind() == Kind::Blocking)
+        return Effect;
     }
     return std::nullopt;
   }

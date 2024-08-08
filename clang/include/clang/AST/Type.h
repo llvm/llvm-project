@@ -4766,7 +4766,7 @@ public:
   /// function.
   std::optional<FunctionEffect>
   effectProhibitingInference(const Decl &Callee,
-                             const FunctionEffectsRef &CalleeFX) const;
+                             const FunctionEffectKindSet &CalleeFX) const;
 
   // Return false for success. When true is returned for a direct call, then the
   // FE_InferrableOnCallees flag may trigger inference rather than an immediate
