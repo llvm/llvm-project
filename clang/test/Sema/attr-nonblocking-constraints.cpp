@@ -28,7 +28,7 @@ void nb3() [[clang::nonblocking]]
 }
 
 void nb4_inline() {}
-void nb4_not_inline(); // expected-note {{function cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+void nb4_not_inline(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
 void nb4() [[clang::nonblocking]]
 {
@@ -47,7 +47,7 @@ void nb5() [[clang::nonblocking]]
  	hv.unsafe(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 }
 
-void nb6_unsafe(); // expected-note {{function cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+void nb6_unsafe(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 void nb6_transitively_unsafe()
 {
 	nb6_unsafe(); // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function}}
@@ -211,8 +211,8 @@ void nb18(void (^block)() [[clang::nonblocking]]) [[clang::nonblocking]]
 
 // Verify traversal of implicit code paths - constructors and destructors.
 struct Unsafe {
-  static void problem1(); // expected-note {{function cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
-  static void problem2(); // expected-note {{function cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+  static void problem1(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+  static void problem2(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
   Unsafe() { problem1(); } // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem1'}}
   ~Unsafe() { problem2(); } // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem2'}}

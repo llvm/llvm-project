@@ -8,7 +8,7 @@ void f1() [[clang::nonblocking]] {
 }
 
 struct S {
-    int get_x(); // expected-note {{function cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+    int get_x(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
     __declspec(property(get = get_x)) int x;
 
     int get_nb() { return 42; }

@@ -10975,7 +10975,7 @@ def warn_func_effect_calls_expr_without_effect : Warning<
 def note_func_effect_calls_func_without_effect : Note<
   "function cannot be inferred '%0' because it calls non-'%0' function '%1'">;
 def note_func_effect_call_extern : Note<
-  "function cannot be inferred '%0' because it has no definition in this translation unit">;
+  "declaration cannot be inferred '%0' because it has no definition in this translation unit">;
 def note_func_effect_call_disallows_inference : Note<
   "function does not permit inference of '%0' because it is declared '%1'">;
 def note_func_effect_call_virtual : Note<
