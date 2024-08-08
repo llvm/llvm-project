@@ -83,6 +83,10 @@ static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Enables autovectorization of some loops containing histograms"));
 
+static cl::opt<bool>
+    EnableCSA("enable-csa-vectorization", cl::init(false), cl::Hidden,
+              cl::desc("Control whether CSA loop vectorization is enabled"));
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -750,6 +754,15 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
   return llvm::all_of(Header->phis(), IsSupportedPhi);
 }
 
+void LoopVectorizationLegality::addCSAPhi(
+    PHINode *Phi, const CSADescriptor &CSADesc,
+    SmallPtrSetImpl<Value *> &AllowedExit) {
+  assert(CSADesc.isValid() && "Expected Valid CSADescriptor");
+  LLVM_DEBUG(dbgs() << "LV: found legal CSA opportunity" << *Phi << "\n");
+  AllowedExit.insert(Phi);
+  CSAs.insert({Phi, CSADesc});
+}
+
 /// Checks if a function is scalarizable according to the TLI, in
 /// the sense that it should be vectorized and then expanded in
 /// multiple scalar calls. This is represented in the
@@ -867,12 +880,21 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        // As a last resort, coerce the PHI to a AddRec expression
-        // and re-try classifying it a an induction PHI.
+        // Try to coerce the PHI to a AddRec expression and re-try classifying
+        // it a an induction PHI.
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
             !IsDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
           continue;
+        }
+
+        // Check if the PHI can be classified as a CSA PHI.
+        if (EnableCSA || (TTI->enableCSAVectorization() &&
+                          EnableCSA.getNumOccurrences() == 0)) {
+          if (auto CSADesc = CSADescriptor::isCSAPhi(Phi, TheLoop)) {
+            addCSAPhi(Phi, CSADesc, AllowedExit);
+            continue;
+          }
         }
 
         reportVectorizationFailure("Found an unidentified PHI",
@@ -1858,11 +1880,15 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
+  SmallPtrSet<const Value *, 8> CSALiveOuts;
+  for (const auto &CSA : getCSAs())
+    CSALiveOuts.insert(CSA.second.getAssignment());
+
   // TODO: handle non-reduction outside users when tail is folded by masking.
   for (auto *AE : AllowedExit) {
     // Check that all users of allowed exit values are inside the loop or
-    // are the live-out of a reduction.
-    if (ReductionLiveOuts.count(AE))
+    // are the live-out of a reduction or a CSA
+    if (ReductionLiveOuts.count(AE) || CSALiveOuts.count(AE))
       continue;
     for (User *U : AE->users()) {
       Instruction *UI = cast<Instruction>(U);
