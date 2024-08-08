@@ -36,7 +36,7 @@ RealtimeSanitizerPass::RealtimeSanitizerPass(
 
 PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
                                              AnalysisManager<Function> &AM) {
-  if (F.hasFnAttribute(Attribute::NonBlocking)) {
+  if (F.hasFnAttribute(Attribute::SanitizeRealtime)) {
     insertCallAtFunctionEntryPoint(F, "__rtsan_realtime_enter");
     insertCallAtAllFunctionExitPoints(F, "__rtsan_realtime_exit");
     return PreservedAnalyses::none();

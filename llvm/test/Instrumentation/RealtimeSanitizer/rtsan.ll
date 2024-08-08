@@ -16,7 +16,7 @@ define noundef i32 @main() #2 {
   ret i32 0
 }
 
-attributes #0 = { mustprogress noinline nonblocking optnone ssp uwtable(sync) }
+attributes #0 = { mustprogress noinline sanitize_realtime optnone ssp uwtable(sync) }
 
 ; RealtimeSanitizer pass should insert __rtsan_realtime_enter right after function definition
 ; CHECK-LABEL: @violation()
