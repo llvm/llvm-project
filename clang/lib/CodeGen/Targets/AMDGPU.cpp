@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -550,6 +551,16 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
     CodeGenFunction &CGF, llvm::AtomicRMWInst &RMW) const {
+
+  if (RMW.getPointerAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS &&
+      CGF.CGM.getLangOpts().threadPrivateMemoryAtomicsAreUndefined()) {
+    llvm::MDBuilder MDHelper(CGF.getLLVMContext());
+    llvm::MDNode *ASRange = MDHelper.createRange(
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+    RMW.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
+  }
+
   if (!CGF.getTarget().allowAMDGPUUnsafeFPAtomics())
     return;
 

@@ -70,19 +70,19 @@ void test_addr(global atomic_int *ig, private atomic_int *ip, local atomic_int *
 
 void fi3(atomic_int *i, atomic_uint *ui) {
   // CHECK-LABEL: @fi3
-  // CHECK: atomicrmw and ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4
+  // CHECK: atomicrmw and ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[NOPRIVATE:![0-9]+]]{{$}}
   int x = __opencl_atomic_fetch_and(i, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw min ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4
+  // CHECK: atomicrmw min ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[NOPRIVATE:![0-9]+]]{{$}}
   x = __opencl_atomic_fetch_min(i, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw max ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4
+  // CHECK: atomicrmw max ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[NOPRIVATE:![0-9]+]]{{$}}
   x = __opencl_atomic_fetch_max(i, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw umin ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4
+  // CHECK: atomicrmw umin ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[NOPRIVATE:![0-9]+]]{{$}}
   x = __opencl_atomic_fetch_min(ui, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw umax ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4
+  // CHECK: atomicrmw umax ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[NOPRIVATE:![0-9]+]]{{$}}
   x = __opencl_atomic_fetch_max(ui, 1, memory_order_seq_cst, memory_scope_work_group);
 }
 
@@ -186,19 +186,19 @@ void ff2(atomic_float *d) {
 
 float ff3(atomic_float *d) {
   // CHECK-LABEL: @ff3
-  // CHECK: atomicrmw xchg ptr {{.*}} syncscope("workgroup") seq_cst, align 4
+  // CHECK: atomicrmw xchg ptr {{.*}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[NOPRIVATE:![0-9]+]]{{$}}
   return __opencl_atomic_exchange(d, 2, memory_order_seq_cst, memory_scope_work_group);
 }
 
 float ff4(global atomic_float *d, float a) {
   // CHECK-LABEL: @ff4
-  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic
+  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 4{{$}}
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 float ff5(global atomic_double *d, double a) {
   // CHECK-LABEL: @ff5
-  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic
+  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 8{{$}}
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
@@ -342,3 +342,5 @@ int test_volatile(volatile atomic_int *i) {
 }
 
 #endif
+
+// CHECK: [[NOPRIVATE]] = !{i32 5, i32 6}
