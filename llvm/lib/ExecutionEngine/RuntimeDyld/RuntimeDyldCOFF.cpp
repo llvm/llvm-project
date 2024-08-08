@@ -119,15 +119,14 @@ bool RuntimeDyldCOFF::isCompatibleFile(const object::ObjectFile &Obj) const {
   return Obj.isCOFF();
 }
 
-bool RuntimeDyldCOFF::relocationNeedsDLLImportStub(const RelocationRef &R) const {
+bool RuntimeDyldCOFF::relocationNeedsDLLImportStub(
+    const RelocationRef &R) const {
   object::symbol_iterator Symbol = R.getSymbol();
   Expected<StringRef> TargetNameOrErr = Symbol->getName();
   if (!TargetNameOrErr)
     return false;
 
-  StringRef TargetName = *TargetNameOrErr;
-
-  return TargetName.startswith(getImportSymbolPrefix());
+  return TargetNameOrErr->startswith(getImportSymbolPrefix());
 }
 
 } // namespace llvm
