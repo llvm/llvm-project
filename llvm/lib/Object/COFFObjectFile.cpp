@@ -2013,7 +2013,6 @@ uint8_t Arm64XRelocRef::getEntrySize() const {
   switch (getType()) {
   case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
     return (1u << getArg()) / sizeof(uint16_t) + 1;
-    break;
   case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
     return 2;
   default:
