@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.PointerSub -analyzer-output=text-minimal -verify %s
 
 void f1(void) {
-  int x, y, z[10];
+  int x, y, z[10]; // expected-note2{{Array of size 10 declared here}}
   int d = &y - &x; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   d = z - &y; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   d = &x - &x; // no-warning (subtraction of any two identical pointers is allowed)
@@ -9,18 +9,23 @@ void f1(void) {
   d = (&x + 1) - &x; // no-warning ('&x' is like a single-element array)
   d = &x - (&x + 1); // no-warning
   d = (&x + 0) - &x; // no-warning
-  d = (&x - 1) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}}
-  d = (&x + 2) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}}
+  d = (&x - 1) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}} \
+                     // expected-note{{Memory object indexed with -1}}
+  d = (&x + 2) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}} \
+                     // expected-note{{Memory object indexed with 2}}
 
   d = (z + 9) - z; // no-warning (pointers to same array)
   d = (z + 10) - z; // no-warning (pointer to "one after the end")
-  d = (z + 11) - z; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}}
-  d = (z - 1) - z; // expected-warning{{Using a negative array index at pointer subtraction is undefined behavior}}
+  d = (z + 11) - z; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}} \
+                    // expected-note{{Memory object indexed with 11}}
+  d = (z - 1) - z; // expected-warning{{Using a negative array index at pointer subtraction is undefined behavior}} \
+                   // expected-note{{Memory object indexed with -1}}
 }
 
 void f2(void) {
   int a[10], b[10], c; // expected-note{{Array at the left-hand side of subtraction}} \
-                       // expected-note2{{Array at the right-hand side of subtraction}}
+                       // expected-note2{{Array at the right-hand side of subtraction}} \
+                       // expected-note{{Array of size 10 declared here}}
   int *p = &a[2];
   int *q = &a[8];
   int d = q - p; // no-warning (pointers into the same array)
@@ -31,7 +36,8 @@ void f2(void) {
   q = a + 10;
   d = q - p; // no warning (use of pointer to one after the end is allowed)
   q = a + 11;
-  d = q - a; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}}
+  d = q - a; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}} \
+             // expected-note{{Memory object indexed with 11}}
 
   d = &a[4] - a; // no-warning
   d = &a[2] - p; // no-warning
@@ -153,4 +159,16 @@ int f12() {
   struct S2 s;
   init_S2(&s);
   return s.p1 - s.p2; // no-warning (pointers are unknown)
+}
+
+void f13() {
+  int a[0]; // expected-note2{{Array of size 0 declared here}}
+  int *p1 = a, *p2 = a, *p3 = a;
+  --p1;
+  ++p2;
+  int d1 = a - p1; // expected-warning{{negative array index}} \
+                   // expected-note{{Memory object indexed with -1}}
+  int d2 = a - p2; // expected-warning{{array index greater}} \
+                   // expected-note{{Memory object indexed with 1}}
+  int d3 = a - p3;
 }

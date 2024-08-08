@@ -73,31 +73,47 @@ bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
   if (!ElemReg)
     return true;
 
+  ProgramStateRef State = C.getState();
+  SValBuilder &SVB = C.getSValBuilder();
+
   const MemRegion *SuperReg = ElemReg->getSuperRegion();
   if (!isArrayVar(SuperReg))
     return true;
+  DefinedOrUnknownSVal ElemCount =
+      getDynamicElementCount(State, SuperReg, SVB, ElemReg->getElementType());
+
+  const ValueDecl *SuperDecl = nullptr;
+  if (auto *DR = dyn_cast<DeclRegion>(SuperReg))
+    SuperDecl = DR->getDecl();
+  const llvm::APSInt *ElemCountKnown = SVB.getKnownValue(State, ElemCount);
+  const llvm::APSInt *IndexKnown =
+      SVB.getKnownValue(State, ElemReg->getIndex());
 
   auto ReportBug = [&](const llvm::StringLiteral &Msg) {
     if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
       auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
       R->addRange(E->getSourceRange());
+      if (SuperDecl && ElemCountKnown && SuperDecl->getType()->isArrayType()) {
+        std::string Msg =
+            llvm::formatv("Array of size {0} declared here", *ElemCountKnown);
+        R->addNote(Msg, {SuperDecl, C.getSourceManager()});
+      }
+      if (IndexKnown) {
+        std::string Msg =
+            llvm::formatv("Memory object indexed with {0}", *IndexKnown);
+        R->addNote(Msg, {E, C.getSourceManager(), C.getLocationContext()});
+      }
       C.emitReport(std::move(R));
     }
   };
 
-  ProgramStateRef State = C.getState();
-  SValBuilder &SVB = C.getSValBuilder();
-
   if (SuperReg == Reg) {
     // Case like `(&x + 1) - &x`. Only 1 or 0 is allowed as index.
-    if (const llvm::APSInt *I = SVB.getKnownValue(State, ElemReg->getIndex());
-        I && (!I->isOne() && !I->isZero()))
+    if (IndexKnown && (!IndexKnown->isOne() && !IndexKnown->isZero()))
       ReportBug(Msg_BadVarIndex);
     return false;
   }
 
-  DefinedOrUnknownSVal ElemCount =
-      getDynamicElementCount(State, SuperReg, SVB, ElemReg->getElementType());
   auto IndexTooLarge = SVB.evalBinOp(C.getState(), BO_GT, ElemReg->getIndex(),
                                      ElemCount, SVB.getConditionType())
                            .getAs<DefinedOrUnknownSVal>();
