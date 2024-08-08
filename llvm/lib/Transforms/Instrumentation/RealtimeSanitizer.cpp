@@ -41,13 +41,12 @@ static void insertCallAtAllFunctionExitPoints(Function &Fn,
                                               const char *InsertFnName) {
   for (auto &BB : Fn)
     for (auto &I : BB)
-      if (auto *RI = dyn_cast<ReturnInst>(&I))
+      if (isa<ReturnInst>(&I))
         insertCallBeforeInstruction(Fn, I, InsertFnName);
 }
 
 RealtimeSanitizerPass::RealtimeSanitizerPass(
-    const RealtimeSanitizerOptions &Options)
-    : Options{Options} {}
+    const RealtimeSanitizerOptions &Options) {}
 
 PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
                                              AnalysisManager<Function> &AM) {
