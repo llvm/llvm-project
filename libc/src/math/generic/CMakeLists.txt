@@ -587,6 +587,31 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  faddl
+  SRCS
+    faddl.cpp
+  HDRS
+    ../faddl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  faddf128
+  SRCS
+    faddf128.cpp
+  HDRS
+    ../faddf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.properties.types
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   trunc
   SRCS
     trunc.cpp
