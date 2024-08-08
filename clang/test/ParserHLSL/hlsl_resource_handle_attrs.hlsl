@@ -5,10 +5,12 @@
 // CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'element_type *'
 // CHECK: -HLSLResourceClassAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit UAV
 // CHECK: -HLSLResourceAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit TypedBuffer
+// CHECK: -HLSLROVAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit
 RasterizerOrderedBuffer<vector<float, 4> > BufferArray3[4] : register(u4, space1);
 
 // CHECK: -ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> class RWBuffer definition implicit_instantiation
 // CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'float *'
 // CHECK: -HLSLResourceClassAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit UAV
 // CHECK: -HLSLResourceAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit TypedBuffer
+// CHECK: -HLSLROVAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit
 RWBuffer<float> Buffer1;

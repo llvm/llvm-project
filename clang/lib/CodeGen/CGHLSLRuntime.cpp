@@ -296,12 +296,13 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   for (auto *FD : RD->fields()) {
     const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
     const auto *HLSLResClassAttr = FD->getAttr<HLSLResourceClassAttr>();
-    if (!HLSLResAttr || !HLSLResClassAttr)
+    const auto *ROVAttr = FD->getAttr<HLSLROVAttr>();
+    if (!HLSLResAttr || !HLSLResClassAttr || !ROVAttr)
       continue;
 
     llvm::hlsl::ResourceClass RC = HLSLResClassAttr->getResourceClass();
     llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
-    bool IsROV = HLSLResAttr->getIsROV();
+    bool IsROV = ROVAttr->getIsROV();
     llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
 
     BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());

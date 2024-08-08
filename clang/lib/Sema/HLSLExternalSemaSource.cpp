@@ -120,8 +120,11 @@ struct BuiltinTypeDeclBuilder {
     Attr *ResourceClassAttr =
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC);
     Attr *ResourceAttr =
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV);
-    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr}, Access);
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
+    Attr *ROVAttr = HLSLROVAttr::CreateImplicit(Record->getASTContext(), IsROV);
+
+    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr, ROVAttr},
+                      Access);
     return *this;
   }
 
