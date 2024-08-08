@@ -108,8 +108,11 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
   if (Hi20Op1.getTargetFlags() != LoongArchII::MO_PCREL_HI)
     return false;
 
-  if (!(Hi20Op1.isGlobal() || Hi20Op1.isCPI() || Hi20Op1.isBlockAddress()) ||
-      Hi20Op1.getOffset() != 0)
+  auto isGlobalOrCPIOrBlockAddress = [](const MachineOperand &Op) {
+    return Op.isGlobal() || Op.isCPI() || Op.isBlockAddress();
+  };
+
+  if (!isGlobalOrCPIOrBlockAddress(Hi20Op1) || Hi20Op1.getOffset() != 0)
     return false;
 
   Register HiDestReg = Hi20.getOperand(0).getReg();
@@ -126,12 +129,14 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
     assert(ST->is64Bit());
     Last = UseInst;
 
-    Hi12 = MRI->getVRegDef(Last->getOperand(1).getReg());
+    Register LastOp1Reg = Last->getOperand(1).getReg();
+    if (!LastOp1Reg.isVirtual())
+      return false;
+    Hi12 = MRI->getVRegDef(LastOp1Reg);
     const MachineOperand &Hi12Op2 = Hi12->getOperand(2);
     if (Hi12Op2.getTargetFlags() != LoongArchII::MO_PCREL64_HI)
       return false;
-    if (!(Hi12Op2.isGlobal() || Hi12Op2.isCPI() || Hi12Op2.isBlockAddress()) ||
-        Hi12Op2.getOffset() != 0)
+    if (!isGlobalOrCPIOrBlockAddress(Hi12Op2) || Hi12Op2.getOffset() != 0)
       return false;
     if (!MRI->hasOneUse(Hi12->getOperand(0).getReg()))
       return false;
@@ -140,8 +145,7 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
     const MachineOperand &Lo20Op2 = Lo20->getOperand(2);
     if (Lo20Op2.getTargetFlags() != LoongArchII::MO_PCREL64_LO)
       return false;
-    if (!(Lo20Op2.isGlobal() || Lo20Op2.isCPI() || Lo20Op2.isBlockAddress()) ||
-        Lo20Op2.getOffset() != 0)
+    if (!isGlobalOrCPIOrBlockAddress(Lo20Op2) || Lo20Op2.getOffset() != 0)
       return false;
     if (!MRI->hasOneUse(Lo20->getOperand(0).getReg()))
       return false;
@@ -154,8 +158,7 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
   const MachineOperand &Lo12Op2 = Lo12->getOperand(2);
   assert(Hi20.getOpcode() == LoongArch::PCALAU12I);
   if (Lo12Op2.getTargetFlags() != LoongArchII::MO_PCREL_LO ||
-      !(Lo12Op2.isGlobal() || Lo12Op2.isCPI() || Lo12Op2.isBlockAddress() ||
-        Lo12Op2.isMCSymbol()) ||
+      !(isGlobalOrCPIOrBlockAddress(Lo12Op2) || Lo12Op2.isMCSymbol()) ||
       Lo12Op2.getOffset() != 0)
     return false;
 
