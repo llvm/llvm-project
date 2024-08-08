@@ -30,3 +30,5 @@ Consider the following code:
 
 When ``using_not_public()`` is called, this code will crash without exception 
 handling.
+
+Also checks for ``std::`` in ``std::enable_shared_from_this``.

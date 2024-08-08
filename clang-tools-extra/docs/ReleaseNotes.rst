@@ -136,7 +136,8 @@ New checks
 
   Check if class/structs publicly inherits from ``std::enable_shared_from_this``,
   because otherwise when ``shared_from_this`` is called, the code will throw 
-  ``std::bad_weak_ptr``.
+  ``std::bad_weak_ptr``. Also checks for ``std::`` in 
+  ``std::enable_shared_from_this``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
