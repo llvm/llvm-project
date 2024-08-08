@@ -4188,6 +4188,133 @@ bb5:
   EXPECT_EQ(NewPHI->getNumIncomingValues(), PHI->getNumIncomingValues());
 }
 
+void checkSwapOperands(sandboxir::Context &Ctx, llvm::sandboxir::CmpInst *SBCmp,
+                       llvm::CmpInst *LLVMCmp) {
+  auto OrigOp0 = SBCmp->getOperand(0);
+  auto OrigOp1 = SBCmp->getOperand(1);
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp0);
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp1);
+  // This checks the dispatch mechanism in CmpInst, as well as
+  // the specific implementations.
+  SBCmp->swapOperands();
+  EXPECT_NE(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp0);
+  EXPECT_NE(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp1);
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(1)), OrigOp0);
+  EXPECT_EQ(Ctx.getValue(LLVMCmp->getOperand(0)), OrigOp1);
+  // Undo it to keep the rest of the test consistent
+  SBCmp->swapOperands();
+}
+
+void checkCommonPredicates(sandboxir::CmpInst *SBCmp, llvm::CmpInst *LLVMCmp) {
+  // Check proper creation
+  auto SBPred = SBCmp->getPredicate();
+  auto LLVMPred = LLVMCmp->getPredicate();
+  EXPECT_EQ(SBPred, LLVMPred);
+  // Check setPredicate
+  SBCmp->setPredicate(llvm::CmpInst::FCMP_FALSE);
+  EXPECT_EQ(LLVMCmp->getPredicate(), llvm::CmpInst::FCMP_FALSE);
+  SBCmp->setPredicate(SBPred);
+  EXPECT_EQ(LLVMCmp->getPredicate(), SBPred);
+  // Ensure the accessors properly forward to the underlying implementation
+  EXPECT_STREQ(sandboxir::CmpInst::getPredicateName(SBPred).data(),
+               llvm::CmpInst::getPredicateName(LLVMPred).data());
+  EXPECT_EQ(SBCmp->isFPPredicate(), LLVMCmp->isFPPredicate());
+  EXPECT_EQ(SBCmp->isIntPredicate(), LLVMCmp->isIntPredicate());
+  EXPECT_EQ(SBCmp->getInversePredicate(), LLVMCmp->getInversePredicate());
+  EXPECT_EQ(SBCmp->getOrderedPredicate(), LLVMCmp->getOrderedPredicate());
+  EXPECT_EQ(SBCmp->getUnorderedPredicate(), LLVMCmp->getUnorderedPredicate());
+  EXPECT_EQ(SBCmp->getSwappedPredicate(), LLVMCmp->getSwappedPredicate());
+  EXPECT_EQ(SBCmp->isStrictPredicate(), LLVMCmp->isStrictPredicate());
+  EXPECT_EQ(SBCmp->isNonStrictPredicate(), LLVMCmp->isNonStrictPredicate());
+  EXPECT_EQ(SBCmp->isRelational(), LLVMCmp->isRelational());
+  if (SBCmp->isRelational()) {
+    EXPECT_EQ(SBCmp->getFlippedStrictnessPredicate(),
+              LLVMCmp->getFlippedStrictnessPredicate());
+  }
+  EXPECT_EQ(SBCmp->isCommutative(), LLVMCmp->isCommutative());
+  EXPECT_EQ(SBCmp->isTrueWhenEqual(), LLVMCmp->isTrueWhenEqual());
+  EXPECT_EQ(SBCmp->isFalseWhenEqual(), LLVMCmp->isFalseWhenEqual());
+  EXPECT_EQ(sandboxir::CmpInst::isOrdered(SBPred),
+            llvm::CmpInst::isOrdered(LLVMPred));
+  EXPECT_EQ(sandboxir::CmpInst::isUnordered(SBPred),
+            llvm::CmpInst::isUnordered(LLVMPred));
+}
+
+TEST_F(SandboxIRTest, ICmpInst) {
+  SCOPED_TRACE("SandboxIRTest sandboxir::ICmpInst tests");
+  parseIR(C, R"IR(
+define void @foo(float %f0, float %f1, i32 %i0, i32 %i1) {
+ bb:
+  %ine  = icmp ne i32 %i0, %i1
+  %iugt = icmp ugt i32 %i0, %i1
+  %iuge = icmp uge i32 %i0, %i1
+  %iult = icmp ult i32 %i0, %i1
+  %iule = icmp ule i32 %i0, %i1
+  %isgt = icmp sgt i32 %i0, %i1
+  %isle = icmp sle i32 %i0, %i1
+  %ieg  = icmp eq i32 %i0, %i1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+
+  auto *LLVMBB = getBasicBlockByName(LLVMF, "bb");
+  auto LLVMIt = LLVMBB->begin();
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  // Check classof()
+  while (auto *ICmp = dyn_cast<sandboxir::ICmpInst>(&*It++)) {
+    auto *LLVMICmp = cast<llvm::ICmpInst>(&*LLVMIt++);
+    checkSwapOperands(Ctx, ICmp, LLVMICmp);
+    checkCommonPredicates(ICmp, LLVMICmp);
+    EXPECT_EQ(ICmp->isSigned(), LLVMICmp->isSigned());
+    EXPECT_EQ(ICmp->isUnsigned(), LLVMICmp->isUnsigned());
+    EXPECT_EQ(ICmp->getSignedPredicate(), LLVMICmp->getSignedPredicate());
+    EXPECT_EQ(ICmp->getUnsignedPredicate(), LLVMICmp->getUnsignedPredicate());
+  }
+}
+
+TEST_F(SandboxIRTest, FCmpInst) {
+  SCOPED_TRACE("SandboxIRTest sandboxir::FCmpInst tests");
+  parseIR(C, R"IR(
+define void @foo(float %f0, float %f1) {
+bb:
+  %ffalse = fcmp false float %f0, %f1
+  %foeq = fcmp oeq float %f0, %f1
+  %fogt = fcmp ogt float %f0, %f1
+  %folt = fcmp olt float %f0, %f1
+  %fole = fcmp ole float %f0, %f1
+  %fone = fcmp one float %f0, %f1
+  %ford = fcmp ord float %f0, %f1
+  %funo = fcmp uno float %f0, %f1
+  %fueq = fcmp ueq float %f0, %f1
+  %fugt = fcmp ugt float %f0, %f1
+  %fuge = fcmp uge float %f0, %f1
+  %fult = fcmp ult float %f0, %f1
+  %fule = fcmp ule float %f0, %f1
+  %fune = fcmp une float %f0, %f1
+  %ftrue = fcmp true float %f0, %f1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+
+  auto *LLVMBB = getBasicBlockByName(LLVMF, "bb");
+  auto LLVMIt = LLVMBB->begin();
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  // Check classof()
+  while (auto *FCmp = dyn_cast<sandboxir::ICmpInst>(&*It++)) {
+    auto *LLVMFCmp = cast<llvm::ICmpInst>(&*LLVMIt++);
+    checkSwapOperands(Ctx, FCmp, LLVMFCmp);
+    checkCommonPredicates(FCmp, LLVMFCmp);
+  }
+}
+
 TEST_F(SandboxIRTest, UnreachableInst) {
   parseIR(C, R"IR(
 define void @foo() {

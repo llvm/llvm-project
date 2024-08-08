@@ -54,11 +54,17 @@
 //                                      |                   |
 //                                      |                   +- ZExtInst
 //                                      |
-//                                      +- CallBase -----------+- CallBrInst
-//                                      |                      |
-//                                      +- CmpInst             +- CallInst
-//                                      |                      |
-//                                      +- ExtractElementInst  +- InvokeInst
+//                                      +- CallBase --------+- CallBrInst
+//                                      |                   |
+//                                      |                   +- CallInst
+//                                      |                   |
+//                                      |                   +- InvokeInst
+//                                      |
+//                                      +- CmpInst ---------+- ICmpInst
+//                                      |                   |
+//                                      |                   +- FCmpInst
+//                                      |
+//                                      +- ExtractElementInst
 //                                      |
 //                                      +- GetElementPtrInst
 //                                      |
@@ -150,6 +156,9 @@ class BinaryOperator;
 class PossiblyDisjointInst;
 class AtomicRMWInst;
 class AtomicCmpXchgInst;
+class CmpInst;
+class ICmpInst;
+class FCmpInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -294,6 +303,9 @@ protected:
   friend class PHINode;               // For getting `Val`.
   friend class UnreachableInst;       // For getting `Val`.
   friend class CatchSwitchAddHandler; // For `Val`.
+  friend class CmpInst;               // For getting `Val`.
+  friend class ICmpInst;              // For getting `Val`.
+  friend class FCmpInst;              // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -730,6 +742,9 @@ protected:
   friend class CastInst;           // For getTopmostLLVMInstruction().
   friend class PHINode;            // For getTopmostLLVMInstruction().
   friend class UnreachableInst;    // For getTopmostLLVMInstruction().
+  friend class CmpInst;            // For getTopmostLLVMInstruction().
+  friend class ICmpInst;           // For getTopmostLLVMInstruction().
+  friend class FCmpInst;           // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -2974,6 +2989,187 @@ public:
   //                         uint32_t ToIdx = 0)
 };
 
+// Wraps a static function that takes a single Predicate parameter
+// LLVMValType should be the type of the wrapped class
+#define WRAP_STATIC_PREDICATE(FunctionName)                                    \
+  static auto FunctionName(Predicate P) { return LLVMValType::FunctionName(P); }
+// Wraps a member function that takes no parameters
+// LLVMValType should be the type of the wrapped class
+#define WRAP_MEMBER(FunctionName)                                              \
+  auto FunctionName() { return cast<LLVMValType>(Val)->FunctionName(); }
+// Wraps both--a common idiom in the CmpInst classes
+#define WRAP_BOTH(FunctionName)                                                \
+  WRAP_STATIC_PREDICATE(FunctionName)                                          \
+  WRAP_MEMBER(FunctionName)
+
+class CmpInst : public Instruction {
+protected:
+  using LLVMValType = llvm::CmpInst;
+  /// Use Context::createCmpInst(). Don't call the
+  /// constructor directly.
+  CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id = ClassID::Cmp,
+          Opcode Opc = Opcode::Cmp)
+      : Instruction(Id, Opc, CI, Ctx) {}
+  friend Context; // for CmpInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+  static Value *createCommon(Value *Cond, Value *True, Value *False,
+                             const Twine &Name, IRBuilder<> &Builder,
+                             Context &Ctx);
+
+public:
+  using Predicate = llvm::CmpInst::Predicate;
+  using PredicateField = llvm::CmpInst::PredicateField;
+  using OtherOps = llvm::Instruction::OtherOps;
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static CmpInst *create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
+                         const Twine &Name = "",
+                         InsertPosition InsertBefore = nullptr);
+  static CmpInst *CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                                        Value *S2,
+                                        const Instruction *FlagsSource,
+                                        const Twine &Name = "",
+                                        InsertPosition InsertBefore = nullptr);
+  OtherOps getOpcode() const {
+    return static_cast<OtherOps>(Instruction::getOpcode());
+  }
+  void setPredicate(Predicate P);
+  void swapOperands();
+
+  WRAP_MEMBER(getPredicate);
+  WRAP_BOTH(isFPPredicate);
+  WRAP_BOTH(isIntPredicate);
+  WRAP_STATIC_PREDICATE(getPredicateName);
+  WRAP_BOTH(getInversePredicate);
+  WRAP_BOTH(getOrderedPredicate);
+  WRAP_BOTH(getUnorderedPredicate);
+  WRAP_BOTH(getSwappedPredicate);
+  WRAP_BOTH(isStrictPredicate);
+  WRAP_BOTH(isNonStrictPredicate);
+  WRAP_BOTH(getStrictPredicate);
+  WRAP_BOTH(getNonStrictPredicate);
+  WRAP_BOTH(getFlippedStrictnessPredicate);
+  WRAP_MEMBER(isCommutative);
+  WRAP_BOTH(isEquality);
+  WRAP_BOTH(isRelational);
+  WRAP_BOTH(isSigned);
+  WRAP_BOTH(getSignedPredicate);
+  WRAP_BOTH(getUnsignedPredicate);
+  WRAP_BOTH(getFlippedSignednessPredicate);
+  WRAP_BOTH(isTrueWhenEqual);
+  WRAP_BOTH(isFalseWhenEqual);
+  WRAP_BOTH(isUnsigned);
+  WRAP_STATIC_PREDICATE(isOrdered);
+  WRAP_STATIC_PREDICATE(isUnordered);
+
+  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+    return llvm::CmpInst::isImpliedTrueByMatchingCmp(Pred1, Pred2);
+  }
+  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+    return llvm::CmpInst::isImpliedFalseByMatchingCmp(Pred1, Pred2);
+  }
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *From) {
+    return isa<ICmpInst>(From) || isa<FCmpInst>(From);
+  }
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) && classof(cast<Instruction>(From));
+  }
+  /// Create a result type for fcmp/icmp
+  static Type *makeCmpResultType(Type *opnd_type) {
+    if (VectorType *vt = dyn_cast<VectorType>(opnd_type)) {
+      return VectorType::get(Type::getInt1Ty(opnd_type->getContext()),
+                             vt->getElementCount());
+    }
+    return Type::getInt1Ty(opnd_type->getContext());
+  }
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<LLVMValType>(Val) && "Expected CmpInst!");
+  }
+  void dumpOS(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+};
+
+class ICmpInst : public CmpInst {
+  /// Use Context::createICmpInst(). Don't call the
+  /// constructor directly.
+  ICmpInst(llvm::ICmpInst *CI, Context &Ctx)
+      : CmpInst(CI, Ctx, ClassID::ICmp, Opcode::ICmp) {}
+  friend class Context; // For constructor.
+  using LLVMValType = llvm::ICmpInst;
+
+public:
+  void swapOperands();
+
+  WRAP_BOTH(getSignedPredicate);
+  WRAP_BOTH(getUnsignedPredicate);
+  WRAP_BOTH(isEquality);
+  WRAP_MEMBER(isCommutative);
+  WRAP_MEMBER(isRelational);
+  WRAP_STATIC_PREDICATE(isGT);
+  WRAP_STATIC_PREDICATE(isLT);
+  WRAP_STATIC_PREDICATE(isGE);
+  WRAP_STATIC_PREDICATE(isLE);
+
+  static auto predicates() { return llvm::ICmpInst::predicates(); }
+  static bool compare(const APInt &LHS, const APInt &RHS,
+                      ICmpInst::Predicate Pred) {
+    return llvm::ICmpInst::compare(LHS, RHS, Pred);
+  }
+
+  static bool classof(const Instruction *From) {
+    return From->getSubclassID() == ClassID::ICmp;
+  }
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) && classof(cast<Instruction>(From));
+  }
+};
+
+class FCmpInst : public CmpInst {
+  /// Use Context::createFCmpInst(). Don't call the
+  /// constructor directly.
+  FCmpInst(llvm::FCmpInst *CI, Context &Ctx)
+      : CmpInst(CI, Ctx, ClassID::FCmp, Opcode::FCmp) {}
+  friend class Context; // For constructor.
+  using LLVMValType = llvm::FCmpInst;
+
+public:
+  void swapOperands();
+
+  WRAP_BOTH(isEquality);
+  WRAP_MEMBER(isCommutative);
+  WRAP_MEMBER(isRelational);
+
+  static auto predicates() { return llvm::FCmpInst::predicates(); }
+  static bool compare(const APFloat &LHS, const APFloat &RHS,
+                      FCmpInst::Predicate Pred) {
+    return llvm::FCmpInst::compare(LHS, RHS, Pred);
+  }
+
+  static bool classof(const Instruction *From) {
+    return From->getSubclassID() == ClassID::FCmp;
+  }
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::FCmp;
+  }
+};
+
+#undef WRAP_STATIC_PREDICATE
+#undef WRAP_MEMBER
+#undef WRAP_BOTH
+
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
 /// an OpaqueInstr.
 class OpaqueInst : public SingleLLVMInstructionImpl<llvm::Instruction> {
@@ -3101,6 +3297,12 @@ protected:
   friend PHINode; // For createPHINode()
   UnreachableInst *createUnreachableInst(llvm::UnreachableInst *UI);
   friend UnreachableInst; // For createUnreachableInst()
+  CmpInst *createCmpInst(llvm::CmpInst *I);
+  friend CmpInst; // For createCmpInst()
+  ICmpInst *createICmpInst(llvm::ICmpInst *I);
+  friend ICmpInst; // For createICmpInst()
+  FCmpInst *createFCmpInst(llvm::FCmpInst *I);
+  friend FCmpInst; // For createFCmpInst()
 
 public:
   Context(LLVMContext &LLVMCtx)

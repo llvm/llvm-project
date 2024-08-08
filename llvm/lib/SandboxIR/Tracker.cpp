@@ -248,6 +248,24 @@ void ShuffleVectorSetMask::dump() const {
 }
 #endif
 
+CmpSetPredicate::CmpSetPredicate(CmpInst *Cmp)
+    : IRChangeBase(), Cmp(Cmp), OldP(Cmp->getPredicate()) {}
+
+void CmpSetPredicate::revert(Tracker &Tracker) { Cmp->setPredicate(OldP); }
+
+void CmpSetPredicate::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+
+CmpSwapOperands::CmpSwapOperands(CmpInst *Cmp) : Cmp(Cmp) {}
+
+void CmpSwapOperands::revert(Tracker &Tracker) { Cmp->swapOperands(); }
+void CmpSwapOperands::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+
 void Tracker::save() { State = TrackerState::Record; }
 
 void Tracker::revert() {
