@@ -257,7 +257,6 @@ class StructurizeCFG {
   BBPhiMap DeletedPhis;
   BB2BBVecMap AddedPhis;
 
-
   PredMap Predicates;
   BranchVector Conditions;
 
