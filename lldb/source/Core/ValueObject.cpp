@@ -615,6 +615,11 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
       m_synthetic_value->UpdateValueIfNeeded(); // the summary might depend on
                                                 // the synthetic children being
                                                 // up-to-date (e.g. ${svar%#})
+    StatsDuration &summary_duration = GetExecutionContextRef()
+                                        .GetProcessSP()
+                                        ->GetTarget()
+                                        .GetSummaryProviderDuration(GetTypeName());
+    ElapsedTime elapsed(summary_duration);
     summary_ptr->FormatObject(this, destination, actual_options);
   }
   m_flags.m_is_getting_summary = false;
