@@ -572,10 +572,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   }
 
   // Pass on -mllvm options to the linker invocation.
-  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm)) {
+  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(
                                     "-mllvm=" + StringRef(Arg->getValue()))});
-  }
 
   if (Args.hasArg(OPT_debug))
     CmdArgs.push_back("-g");
