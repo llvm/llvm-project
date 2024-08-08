@@ -54,7 +54,7 @@
 #include "ParentVirtualCallCheck.h"
 #include "PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "PosixReturnCheck.h"
-#include "PublicEnableSharedFromThisCheck.h"
+#include "IncorrectEnableSharedFromThisCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
 #include "ReturnConstRefFromParameterCheck.h"
@@ -144,8 +144,8 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectEnableIfCheck>(
         "bugprone-incorrect-enable-if");
-    CheckFactories.registerCheck<PublicEnableSharedFromThisCheck>(
-        "bugprone-public-enable-shared-from-this");
+    CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
+        "bugprone-incorrect-enable-shared-from-this");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
         "bugprone-return-const-ref-from-parameter");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(

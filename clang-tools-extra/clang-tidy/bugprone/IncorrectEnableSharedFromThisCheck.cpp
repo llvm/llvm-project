@@ -1,4 +1,4 @@
-//===--- PublicEnableSharedFromThisCheck.cpp - clang-tidy -------------------------===//
+//===--- IncorrectEnableSharedFromThisCheck.cpp - clang-tidy -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PublicEnableSharedFromThisCheck.h"
+#include "IncorrectEnableSharedFromThisCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-  void PublicEnableSharedFromThisCheck::registerMatchers(MatchFinder *match_finder) {
+  void IncorrectEnableSharedFromThisCheck::registerMatchers(MatchFinder *match_finder) {
       match_finder->addMatcher(
               cxxRecordDecl(
                   hasAnyBase(
@@ -26,7 +26,7 @@ namespace clang::tidy::bugprone {
               .bind("not-public-enable-shared"), this);
   }
 
-  void PublicEnableSharedFromThisCheck::check(const MatchFinder::MatchResult &result) {
+  void IncorrectEnableSharedFromThisCheck::check(const MatchFinder::MatchResult &result) {
       const auto *EnableSharedClassDecl =
           result.Nodes.getNodeAs<CXXRecordDecl>("not-public-enable-shared");
 
@@ -35,7 +35,7 @@ namespace clang::tidy::bugprone {
           if (BaseType && BaseType->getQualifiedNameAsString() == "std::enable_shared_from_this") {
               SourceLocation InsertLoc = Base.getBeginLoc();
               FixItHint Hint = FixItHint::CreateInsertion(InsertLoc, "public ");
-              diag(EnableSharedClassDecl->getLocation(), "class %0 is not public even though it's derived from std::enable_shared_from_this", DiagnosticIDs::Warning)
+              diag(EnableSharedClassDecl->getLocation(), "inheritance from std::enable_shared_from_this should be public inheritance", DiagnosticIDs::Warning)
               << EnableSharedClassDecl->getNameAsString()
               << Hint;
               break;
