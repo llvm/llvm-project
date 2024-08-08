@@ -155,6 +155,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ddivl
+  SRCS
+    ddivl.cpp
+  HDRS
+    ../ddivl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
   ddivf128
   SRCS
     ddivf128.cpp

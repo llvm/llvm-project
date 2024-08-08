@@ -2465,6 +2465,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ddivl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ddivl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ddivl
+)
+
+add_fp_unittest(
   dfmal_test
   NEED_MPFR
   SUITE
@@ -2517,7 +2530,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fdivl
 )
-
 
 add_fp_unittest(
   ffma_test
