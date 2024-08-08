@@ -12,7 +12,6 @@
 
 #include <ranges>
 
-#include <concepts>
 #include <memory>
 #include <vector>
 
@@ -20,30 +19,63 @@
 #include "test_allocator.h"
 #include "test_iterators.h"
 
-template <typename Range>
-constexpr bool test_range() {
-  std::same_as<std::ranges::elements_of<Range&&, std::allocator<std::byte>>> decltype(auto) elements_of =
-      std::ranges::elements_of(Range());
-  [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_range = std::move(elements_of.range);
-  [[maybe_unused]] std::same_as<std::allocator<std::byte>> decltype(auto) elements_of_allocator = elements_of.allocator;
-  return true;
-}
+template <class Iterator>
+struct Range {
+  using Sentinel = sentinel_wrapper<Iterator>;
 
-template <typename Range, typename Allocator>
-constexpr bool test_range_with_allocator() {
-  std::same_as< std::ranges::elements_of< Range&&, Allocator >> decltype(auto) elements_of =
-      std::ranges::elements_of(Range(), Allocator());
-  [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_range       = std::move(elements_of.range);
-  [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
+  Iterator begin() { return Iterator(data.data()); }
+
+  sentinel_wrapper<Iterator> end() { return Sentinel(Iterator(data.data() + data.size())); }
+
+  std::vector<int> data = {0, 1, 2, 3};
+};
+
+template <class Range, class Allocator>
+constexpr bool test_range() {
+  Range r;
+
+  using elements_of_t = std::ranges::elements_of<Range&, Allocator>;
+  {
+    // constructor
+    std::same_as<elements_of_t> decltype(auto) elements_of                 = std::ranges::elements_of(r, Allocator());
+    [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_range = elements_of.range;
+    [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
+  }
+  {
+    // designated initializer
+    std::same_as<elements_of_t> decltype(auto) elements_of = std::ranges::elements_of{
+        .range     = r,
+        .allocator = Allocator(),
+    };
+    [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_range        = elements_of.range;
+    [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
+  }
+  {
+    // copy constructor
+    std::same_as<elements_of_t> decltype(auto) elements_of_1                 = std::ranges::elements_of(r, Allocator());
+    std::same_as<elements_of_t> auto elements_of_2                           = elements_of_1;
+    [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_1_range = elements_of_1.range;
+    [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_2_range = elements_of_2.range;
+    [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_2_allocator = elements_of_2.allocator;
+  }
+
+  using elements_of_r_t = std::ranges::elements_of<Range&&, Allocator>;
+  {
+    // move constructor
+    std::same_as<elements_of_r_t> decltype(auto) elements_of_1 = std::ranges::elements_of(std::move(r), Allocator());
+    std::same_as<elements_of_r_t> auto elements_of_2           = std::move(elements_of_1);
+    [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_1_range       = std::move(elements_of_1.range);
+    [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_2_range       = std::move(elements_of_2.range);
+    [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_2_allocator = elements_of_2.allocator;
+  }
   return true;
 }
 
 constexpr bool test() {
   types::for_each(types::type_list<std::allocator<std::byte>, min_allocator<std::byte>, test_allocator<std::byte>>{},
                   []<class Allocator> {
-                    types::for_each(types::type_list<std::vector<int>>{}, []<class Range> {
-                      test_range<Range>();
-                      test_range_with_allocator<Range, Allocator>();
+                    types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iterator> {
+                      test_range<Range<Iterator>, Allocator>();
                     });
                   });
 
