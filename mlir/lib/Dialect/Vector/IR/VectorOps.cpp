@@ -2405,7 +2405,10 @@ BroadcastableToResult mlir::vector::isBroadcastableTo(
     bool srcDimScalableFlag = srcVectorType.getScalableDims()[dimIdx];
     bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + dimIdx];
     if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
-        (srcDimScalableFlag != dstDimScalableFlag))
+        // 1 -> [N] is fine, everything else should be rejected when mixing
+        // fixed-width and scalable dims
+        (srcDimScalableFlag != dstDimScalableFlag &&
+         (srcDim != 1 || srcDimScalableFlag)))
       foundMismatchingDims = true;
 
     if (foundMismatchingDims) {
