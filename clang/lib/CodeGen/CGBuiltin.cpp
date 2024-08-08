@@ -14390,10 +14390,7 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
     return FeaturesBit;
   };
 
-  std::pair<int, int> BitsInfo =
-      RISCVISAInfo::getRISCVFeaturesBitsInfo(FeatureStr);
-  int GroupID = BitsInfo.first;
-  int BitPos = BitsInfo.second;
+  auto [GroupID, BitPos] = RISCVISAInfo::getRISCVFeaturesBitsInfo(FeatureStr);
   assert(BitPos != -1 && "validation should have rejected this feature");
   Value *MaskV = Builder.getInt64(1ULL << BitPos);
   Value *Bitset = Builder.CreateAnd(LoadFeatureBit(GroupID), MaskV);
