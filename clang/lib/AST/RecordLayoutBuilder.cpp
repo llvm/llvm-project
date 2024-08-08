@@ -2436,10 +2436,10 @@ static bool isItaniumPOD(const ASTContext &Context, const CXXRecordDecl *RD) {
     if (FD->isBitField()) {
       QualType DeclaredType = FD->getType();
       unsigned DeclaredWidth;
-      if (const BitIntType *BIT = DeclaredType->getAs<BitIntType>())
+      if (const auto *BIT = DeclaredType->getAs<BitIntType>())
         DeclaredWidth = BIT->getNumBits();
       else
-        DeclaredWidth = Context.getTypeSize(FD->getType());
+        DeclaredWidth = Context.getTypeSize(DeclaredType);
 
       if (FD->getBitWidthValue(Context) > DeclaredWidth)
         return true;
