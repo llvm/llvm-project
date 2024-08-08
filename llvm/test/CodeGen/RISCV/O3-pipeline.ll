@@ -116,6 +116,7 @@
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
+; CHECK-NEXT:       RISC-V Landing Pad Setup
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
