@@ -1061,6 +1061,20 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
   }
 }
 
+/// Indicator of a suffix inserted by LTO. Each symbol is matched against the
+/// symbol ordering file after stripping out such a suffix. This is similar to
+/// canonicalization in SampleProf.h.
+static constexpr const char *LLVMSuffix = ".llvm.";
+
+// Strips out suffixes commonly added by optimization passes.
+static StringRef getCanonicalSymbolName(StringRef symbolName) {
+  StringRef ret(symbolName);
+  auto it = ret.rfind(LLVMSuffix);
+  if (it != StringRef::npos)
+    ret = ret.substr(0, it);
+  return ret;
+}
+
 // Builds section order for handling --symbol-ordering-file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   DenseMap<const InputSectionBase *, int> sectionOrder;
@@ -1086,7 +1100,8 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 
   // Build a map from sections to their priorities.
   auto addSym = [&](Symbol &sym) {
-    auto it = symbolOrder.find(CachedHashStringRef(sym.getName()));
+    auto it = symbolOrder.find(
+        CachedHashStringRef(getCanonicalSymbolName(sym.getName())));
     if (it == symbolOrder.end())
       return;
     SymbolOrderEntry &ent = it->second;
