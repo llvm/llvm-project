@@ -1675,7 +1675,8 @@ Currently, only the following parameter attributes are defined:
     -  The pair ``a,b`` represents the range ``[a,b)``.
     -  Both ``a`` and ``b`` are constants.
     -  The range is allowed to wrap.
-    -  The range should not represent the full or empty set. That is, ``a!=b``.
+    -  The empty range is represented using ``0,0``.
+    -  Otherwise, ``a`` and ``b`` are not allowed to be equal.
     
     This attribute may only be applied to parameters or return values with integer 
     or vector of integer types.
@@ -2309,6 +2310,10 @@ example:
     This attribute indicates that MemTagSanitizer checks
     (dynamic address safety analysis based on Armv8 MTE) are enabled for
     this function.
+``sanitize_realtime``
+    This attribute indicates that RealtimeSanitizer checks
+    (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
+    for this function.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_

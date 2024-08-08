@@ -2135,21 +2135,17 @@ public:
       return Cost;
     }
     case Intrinsic::smax:
+      ISD = ISD::SMAX;
+      break;
     case Intrinsic::smin:
+      ISD = ISD::SMIN;
+      break;
     case Intrinsic::umax:
-    case Intrinsic::umin: {
-      // minmax(X,Y) = select(icmp(X,Y),X,Y)
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-      bool IsUnsigned = IID == Intrinsic::umax || IID == Intrinsic::umin;
-      CmpInst::Predicate Pred =
-          IsUnsigned ? CmpInst::ICMP_UGT : CmpInst::ICMP_SGT;
-      InstructionCost Cost = 0;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                          Pred, CostKind);
-      return Cost;
-    }
+      ISD = ISD::UMAX;
+      break;
+    case Intrinsic::umin:
+      ISD = ISD::UMIN;
+      break;
     case Intrinsic::sadd_sat:
       ISD = ISD::SADDSAT;
       break;
@@ -2344,6 +2340,22 @@ public:
         Intrinsic::experimental_constrained_fadd, RetTy, Tys);
       return thisT()->getIntrinsicInstrCost(FMulAttrs, CostKind) +
              thisT()->getIntrinsicInstrCost(FAddAttrs, CostKind);
+    }
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+    case Intrinsic::umin:
+    case Intrinsic::umax: {
+      // minmax(X,Y) = select(icmp(X,Y),X,Y)
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      bool IsUnsigned = IID == Intrinsic::umax || IID == Intrinsic::umin;
+      CmpInst::Predicate Pred =
+          IsUnsigned ? CmpInst::ICMP_UGT : CmpInst::ICMP_SGT;
+      InstructionCost Cost = 0;
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          Pred, CostKind);
+      return Cost;
     }
     case Intrinsic::sadd_sat:
     case Intrinsic::ssub_sat: {

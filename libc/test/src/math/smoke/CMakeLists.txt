@@ -4615,7 +4615,7 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  daddl
+  daddl_test
   SUITE
     libc-math-smoke-tests
   SRCS
@@ -4627,7 +4627,7 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  daddf128
+  daddf128_test
   SUITE
     libc-math-smoke-tests
   SRCS
@@ -4639,7 +4639,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  ddivf128
+  ddivl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ddivl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ddivl
+)
+
+add_fp_unittest(
+  ddivf128_test
   SUITE
     libc-math-smoke-tests
   SRCS

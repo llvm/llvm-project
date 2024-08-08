@@ -1782,7 +1782,7 @@ struct DropUnitDimsFromTransposeOp final
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         op, op.getResultVectorType(), tranposeWithoutUnitDims);
 
-    return failure();
+    return success();
   }
 };
 

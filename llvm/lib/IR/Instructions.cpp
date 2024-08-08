@@ -2484,8 +2484,9 @@ void ExtractValueInst::init(ArrayRef<unsigned> Idxs, const Twine &Name) {
 }
 
 ExtractValueInst::ExtractValueInst(const ExtractValueInst &EVI)
-  : UnaryInstruction(EVI.getType(), ExtractValue, EVI.getOperand(0)),
-    Indices(EVI.Indices) {
+    : UnaryInstruction(EVI.getType(), ExtractValue, EVI.getOperand(0),
+                       (BasicBlock *)nullptr),
+      Indices(EVI.Indices) {
   SubclassOptionalData = EVI.SubclassOptionalData;
 }
 
