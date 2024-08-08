@@ -158,7 +158,7 @@ public:
       DCHECK_EQ((Mask & (static_cast<uptr>(1) << Buf.BufferIndex)), 0U);
       Mask |= static_cast<uptr>(1) << Buf.BufferIndex;
     } else {
-      Buf.MemMap.unmap(Buf.MemMap.getBase(), Buf.MemMap.getCapacity());
+      Buf.MemMap.unmap();
     }
   }
 

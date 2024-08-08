@@ -61,7 +61,6 @@
 ; LAXX-NEXT:       Constant Hoisting
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
 ; LAXX-NEXT:       Partially inline calls to library functions
-; LAXX-NEXT:       Expand vector predication intrinsics
 ; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics
 ; LAXX-NEXT:       Expand reduction intrinsics
@@ -106,6 +105,7 @@
 ; LAXX-NEXT:       Remove dead machine instructions
 ; LA64-NEXT:       LoongArch Optimize W Instructions
 ; LAXX-NEXT:       LoongArch Pre-RA pseudo instruction expansion pass
+; LAXX-NEXT:       LoongArch Merge Base Offset
 ; LAXX-NEXT:       Detect Dead Lanes
 ; LAXX-NEXT:       Init Undef Pass
 ; LAXX-NEXT:       Process Implicit Definitions

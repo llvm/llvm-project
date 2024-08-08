@@ -76,8 +76,11 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1150 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1150 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1151 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1151 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1152 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1152 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx115F < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX115F %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1200 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1200 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx120F < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX120F %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1201 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1201 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx120E < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX120E %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1210 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1210 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1211 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1211 %s
 
@@ -164,6 +167,10 @@
 ; GFX1201:       EF_AMDGPU_MACH_AMDGCN_GFX1201 (0x4E)
 ; GFX1210:       EF_AMDGPU_MACH_AMDGCN_GFX1210 (0x49)
 ; GFX1211:       EF_AMDGPU_MACH_AMDGCN_GFX1211 (0x5A)
+
+; GFX120E:       EF_AMDGPU_MACH_AMDGCN_GFX120E (0xF3)
+; GFX120F:       EF_AMDGPU_MACH_AMDGCN_GFX120F (0xF4)
+; GFX115F:       EF_AMDGPU_MACH_AMDGCN_GFX115F (0xF7)
 
 ; GFX9_GENERIC:       EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC (0x51)
 ; GFX10_1_GENERIC:    EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC (0x52)

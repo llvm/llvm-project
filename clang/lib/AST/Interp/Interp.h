@@ -1504,6 +1504,12 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    return true;
+  }
+
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1526,6 +1532,11 @@ inline bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    return true;
+  }
 
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
@@ -2410,7 +2421,7 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!Ptr.isZero()) {
+  if (!Ptr.isZero() && !Offset.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
   }
@@ -2426,7 +2437,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!Ptr.isZero()) {
+  if (!Ptr.isZero() && !Offset.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
   }
@@ -2701,7 +2712,7 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   }
 
   if (!FuncPtr.isValid())
-    return false;
+    return Invalid(S, OpPC);
 
   assert(F);
 

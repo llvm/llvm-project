@@ -35,6 +35,27 @@ func.func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 // -----
 
+func.func @broadcast_scalable_unit_dim(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. [4])}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<[4]xf32>
+}
+
+// -----
+
+func.func @broadcast_fixed_to_scalable(%arg0: vector<2xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch (2 vs. [2])}}
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<[2]xf32>
+}
+
+// -----
+
+func.func @broadcast_scalable_to_fixed(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. 1)}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<4x1xf32>
+}
+
+// -----
+
 func.func @broadcast_unknown(%arg0: memref<4x8xf32>) {
   // expected-error@+1 {{'vector.broadcast' op source type is not a vector}}
   %1 = vector.broadcast %arg0 : memref<4x8xf32> to vector<1x8xf32>
