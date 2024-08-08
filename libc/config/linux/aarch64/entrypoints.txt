@@ -406,7 +406,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
-    libc.src.math.fadd 
+    libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
@@ -461,8 +461,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpxl
     libc.src.math.fsqrt
     libc.src.math.fsqrtl
+    libc.src.math.fsub
+    libc.src.math.fsubl
     libc.src.math.getpayload
     libc.src.math.getpayloadf
+    libc.src.math.getpayloadl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -700,6 +703,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128
     libc.src.math.fsqrtf128
+    libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
@@ -715,6 +719,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
+    libc.src.math.remainderf128
     libc.src.math.remquof128
     libc.src.math.rintf128
     libc.src.math.roundevenf128
@@ -807,6 +812,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_rwlockattr_init
     libc.src.pthread.pthread_rwlockattr_setkind_np
     libc.src.pthread.pthread_rwlockattr_setpshared
+    libc.src.pthread.pthread_spin_destroy
+    libc.src.pthread.pthread_spin_init
+    libc.src.pthread.pthread_spin_lock
+    libc.src.pthread.pthread_spin_trylock
+    libc.src.pthread.pthread_spin_unlock
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setname_np
     libc.src.pthread.pthread_setspecific

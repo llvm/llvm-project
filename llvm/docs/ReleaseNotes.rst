@@ -107,6 +107,7 @@ Changes to the RISC-V Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 * Added Syntacore SCR4 CPUs: ``-mcpu=syntacore-scr4-rv32/64``
+* ``-mcpu=sifive-p470`` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

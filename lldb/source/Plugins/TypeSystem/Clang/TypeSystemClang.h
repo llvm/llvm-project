@@ -29,6 +29,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -50,7 +51,6 @@ class ModuleMap;
 
 namespace lldb_private {
 
-class ClangASTMetadata;
 class ClangASTSource;
 class Declaration;
 
@@ -325,13 +325,13 @@ public:
                                                bool is_framework = false,
                                                bool is_explicit = false);
 
-  CompilerType CreateRecordType(clang::DeclContext *decl_ctx,
-                                OptionalClangModuleID owning_module,
-                                lldb::AccessType access_type,
-                                llvm::StringRef name, int kind,
-                                lldb::LanguageType language,
-                                ClangASTMetadata *metadata = nullptr,
-                                bool exports_symbols = false);
+  CompilerType
+  CreateRecordType(clang::DeclContext *decl_ctx,
+                   OptionalClangModuleID owning_module,
+                   lldb::AccessType access_type, llvm::StringRef name, int kind,
+                   lldb::LanguageType language,
+                   std::optional<ClangASTMetadata> metadata = std::nullopt,
+                   bool exports_symbols = false);
 
   class TemplateParameterInfos {
   public:
@@ -455,11 +455,10 @@ public:
 
   bool BaseSpecifierIsEmpty(const clang::CXXBaseSpecifier *b);
 
-  CompilerType CreateObjCClass(llvm::StringRef name,
-                               clang::DeclContext *decl_ctx,
-                               OptionalClangModuleID owning_module,
-                               bool isForwardDecl, bool isInternal,
-                               ClangASTMetadata *metadata = nullptr);
+  CompilerType
+  CreateObjCClass(llvm::StringRef name, clang::DeclContext *decl_ctx,
+                  OptionalClangModuleID owning_module, bool isInternal,
+                  std::optional<ClangASTMetadata> metadata = std::nullopt);
 
   // Returns a mask containing bits from the TypeSystemClang::eTypeXXX
   // enumerations
@@ -1005,7 +1004,7 @@ public:
                                    const char *property_setter_name,
                                    const char *property_getter_name,
                                    uint32_t property_attributes,
-                                   ClangASTMetadata *metadata);
+                                   ClangASTMetadata metadata);
 
   static clang::ObjCMethodDecl *AddMethodToObjCObjectType(
       const CompilerType &type,

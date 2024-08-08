@@ -985,11 +985,14 @@ def err_main_arg_wrong : Error<"%select{first|second|third|fourth}0 "
 def warn_main_returns_bool_literal : Warning<"bool literal returned from "
     "'main'">, InGroup<Main>;
 def err_main_global_variable :
-    Error<"main cannot be declared as global variable">;
+    Error<"main cannot be declared as a variable %select{in the global scope|with C language linkage}0">;
 def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
     "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
+def ext_main_invalid_linkage_specification : ExtWarn<
+  "'main' should not be "
+  "'extern \"%select{C|C++}0\"'">, InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,

@@ -14,6 +14,7 @@ types:
   - type_name: __pthread_start_t
   - type_name: __pthread_once_func_t
   - type_name: __atfork_callback_t
+  - type_name: pthread_spinlock_t
 enums: []
 functions:
   - name: pthread_atfork
@@ -404,3 +405,29 @@ functions:
     return_type: int
     arguments:
       - type: pthread_rwlock_t *
+  - name: pthread_spin_init
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_spinlock_t *
+      - type: int
+  - name: pthread_spin_destroy
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_spinlock_t *
+  - name: pthread_spin_lock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_spinlock_t *
+  - name: pthread_spin_trylock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_spinlock_t *
+  - name: pthread_spin_unlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_spinlock_t *
