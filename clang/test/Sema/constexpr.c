@@ -217,13 +217,6 @@ struct S8 {
 constexpr struct S8 DesigInit = {.b = {299, 7, 8}, .a = {-1, 7, 8}};
 // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned char'}}
 
-struct S9 {
-  signed long long i : 8;
-};
-constexpr struct S9 c = { 255 };
-// FIXME-expected-error@-1 {{constexpr initializer evaluates to 255 which is not exactly representable in 'long long' bit-field with width 8}}
-// See: GH#101299
-
 void f5() {
   constexpr char V50 = 300;
   // expected-error@-1 {{constexpr initializer evaluates to 300 which is not exactly representable in type 'const char'}}
@@ -367,3 +360,10 @@ void infsNaNs() {
 
 constexpr struct S9 s9 = {  }; // expected-error {{variable has incomplete type 'const struct S9'}} \
                                // expected-note {{forward declaration of 'struct S9'}}
+
+struct S10 {
+  signed long long i : 8;
+};
+constexpr struct S10 c = { 255 };
+// FIXME-expected-error@-1 {{constexpr initializer evaluates to 255 which is not exactly representable in 'long long' bit-field with width 8}}
+// See: GH#101299
