@@ -73,6 +73,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void runOnOp(Operation *op);
   void lowerUnaryOp(UnaryOp op);
   void lowerBinOp(BinOp op);
+  void lowerCastOp(CastOp op);
   void lowerComplexBinOp(ComplexBinOp op);
   void lowerThreeWayCmpOp(CmpThreeWayOp op);
   void lowerVAArgOp(VAArgOp op);
@@ -420,6 +421,137 @@ void LoweringPreparePass::lowerBinOp(BinOp op) {
   auto result = builder.createComplexCreate(loc, resultReal, resultImag);
 
   op.replaceAllUsesWith(result);
+  op.erase();
+}
+
+static mlir::Value lowerScalarToComplexCast(MLIRContext &ctx, CastOp op) {
+  CIRBaseBuilderTy builder(ctx);
+  builder.setInsertionPoint(op);
+
+  auto src = op.getSrc();
+  auto imag = builder.getNullValue(src.getType(), op.getLoc());
+  return builder.createComplexCreate(op.getLoc(), src, imag);
+}
+
+static mlir::Value lowerComplexToScalarCast(MLIRContext &ctx, CastOp op) {
+  CIRBaseBuilderTy builder(ctx);
+  builder.setInsertionPoint(op);
+
+  auto src = op.getSrc();
+
+  if (!mlir::isa<mlir::cir::BoolType>(op.getType()))
+    return builder.createComplexReal(op.getLoc(), src);
+
+  // Complex cast to bool: (bool)(a+bi) => (bool)a || (bool)b
+  auto srcReal = builder.createComplexReal(op.getLoc(), src);
+  auto srcImag = builder.createComplexImag(op.getLoc(), src);
+
+  mlir::cir::CastKind elemToBoolKind;
+  if (op.getKind() == mlir::cir::CastKind::float_complex_to_bool)
+    elemToBoolKind = mlir::cir::CastKind::float_to_bool;
+  else if (op.getKind() == mlir::cir::CastKind::int_complex_to_bool)
+    elemToBoolKind = mlir::cir::CastKind::int_to_bool;
+  else
+    llvm_unreachable("invalid complex to bool cast kind");
+
+  auto boolTy = builder.getBoolTy();
+  auto srcRealToBool =
+      builder.createCast(op.getLoc(), elemToBoolKind, srcReal, boolTy);
+  auto srcImagToBool =
+      builder.createCast(op.getLoc(), elemToBoolKind, srcImag, boolTy);
+
+  // srcRealToBool || srcImagToBool
+  return builder
+      .create<mlir::cir::TernaryOp>(
+          op.getLoc(), srcRealToBool,
+          [&](mlir::OpBuilder &, mlir::Location) {
+            builder.createYield(op.getLoc(),
+                                builder.getTrue(op.getLoc()).getResult());
+          },
+          [&](mlir::OpBuilder &, mlir::Location) {
+            auto inner =
+                builder
+                    .create<mlir::cir::TernaryOp>(
+                        op.getLoc(), srcImagToBool,
+                        [&](mlir::OpBuilder &, mlir::Location) {
+                          builder.createYield(
+                              op.getLoc(),
+                              builder.getTrue(op.getLoc()).getResult());
+                        },
+                        [&](mlir::OpBuilder &, mlir::Location) {
+                          builder.createYield(
+                              op.getLoc(),
+                              builder.getFalse(op.getLoc()).getResult());
+                        })
+                    .getResult();
+            builder.createYield(op.getLoc(), inner);
+          })
+      .getResult();
+}
+
+static mlir::Value lowerComplexToComplexCast(MLIRContext &ctx, CastOp op) {
+  CIRBaseBuilderTy builder(ctx);
+  builder.setInsertionPoint(op);
+
+  auto src = op.getSrc();
+  auto dstComplexElemTy =
+      mlir::cast<mlir::cir::ComplexType>(op.getType()).getElementTy();
+
+  auto srcReal = builder.createComplexReal(op.getLoc(), src);
+  auto srcImag = builder.createComplexReal(op.getLoc(), src);
+
+  mlir::cir::CastKind scalarCastKind;
+  switch (op.getKind()) {
+  case mlir::cir::CastKind::float_complex:
+    scalarCastKind = mlir::cir::CastKind::floating;
+    break;
+  case mlir::cir::CastKind::float_complex_to_int_complex:
+    scalarCastKind = mlir::cir::CastKind::float_to_int;
+    break;
+  case mlir::cir::CastKind::int_complex:
+    scalarCastKind = mlir::cir::CastKind::integral;
+    break;
+  case mlir::cir::CastKind::int_complex_to_float_complex:
+    scalarCastKind = mlir::cir::CastKind::int_to_float;
+    break;
+  default:
+    llvm_unreachable("invalid complex to complex cast kind");
+  }
+
+  auto dstReal = builder.createCast(op.getLoc(), scalarCastKind, srcReal,
+                                    dstComplexElemTy);
+  auto dstImag = builder.createCast(op.getLoc(), scalarCastKind, srcImag,
+                                    dstComplexElemTy);
+  return builder.createComplexCreate(op.getLoc(), dstReal, dstImag);
+}
+
+void LoweringPreparePass::lowerCastOp(CastOp op) {
+  mlir::Value loweredValue;
+  switch (op.getKind()) {
+  case mlir::cir::CastKind::float_to_complex:
+  case mlir::cir::CastKind::int_to_complex:
+    loweredValue = lowerScalarToComplexCast(getContext(), op);
+    break;
+
+  case mlir::cir::CastKind::float_complex_to_real:
+  case mlir::cir::CastKind::int_complex_to_real:
+  case mlir::cir::CastKind::float_complex_to_bool:
+  case mlir::cir::CastKind::int_complex_to_bool:
+    loweredValue = lowerComplexToScalarCast(getContext(), op);
+    break;
+
+  case mlir::cir::CastKind::float_complex:
+  case mlir::cir::CastKind::float_complex_to_int_complex:
+  case mlir::cir::CastKind::int_complex:
+  case mlir::cir::CastKind::int_complex_to_float_complex:
+    loweredValue = lowerComplexToComplexCast(getContext(), op);
+    break;
+
+  default:
+    return;
+  }
+
+  op.replaceAllUsesWith(loweredValue);
   op.erase();
 }
 
@@ -988,6 +1120,8 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerUnaryOp(unary);
   } else if (auto bin = dyn_cast<BinOp>(op)) {
     lowerBinOp(bin);
+  } else if (auto cast = dyn_cast<CastOp>(op)) {
+    lowerCastOp(cast);
   } else if (auto complexBin = dyn_cast<ComplexBinOp>(op)) {
     lowerComplexBinOp(complexBin);
   } else if (auto threeWayCmp = dyn_cast<CmpThreeWayOp>(op)) {
@@ -1027,9 +1161,9 @@ void LoweringPreparePass::runOnOperation() {
   SmallVector<Operation *> opsToTransform;
 
   op->walk([&](Operation *op) {
-    if (isa<UnaryOp, BinOp, ComplexBinOp, CmpThreeWayOp, VAArgOp, GlobalOp,
-            DynamicCastOp, StdFindOp, IterEndOp, IterBeginOp, ArrayCtor,
-            ArrayDtor, mlir::cir::FuncOp>(op))
+    if (isa<UnaryOp, BinOp, CastOp, ComplexBinOp, CmpThreeWayOp, VAArgOp,
+            GlobalOp, DynamicCastOp, StdFindOp, IterEndOp, IterBeginOp,
+            ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(op))
       opsToTransform.push_back(op);
   });
 

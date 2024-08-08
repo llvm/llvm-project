@@ -113,6 +113,9 @@ public:
     return CGF.buildCheckedLValue(E, TCK);
   }
 
+  mlir::Value buildComplexToScalarConversion(mlir::Location Loc, mlir::Value V,
+                                             CastKind Kind, QualType DestTy);
+
   /// Emit a value that corresponds to null for the given type.
   mlir::Value buildNullValue(QualType Ty, mlir::Location loc);
 
@@ -1797,13 +1800,13 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_MemberPointerToBoolean:
     llvm_unreachable("NYI");
   case CK_FloatingComplexToReal:
-    llvm_unreachable("NYI");
   case CK_IntegralComplexToReal:
-    llvm_unreachable("NYI");
   case CK_FloatingComplexToBoolean:
-    llvm_unreachable("NYI");
-  case CK_IntegralComplexToBoolean:
-    llvm_unreachable("NYI");
+  case CK_IntegralComplexToBoolean: {
+    mlir::Value V = CGF.buildComplexExpr(E);
+    return buildComplexToScalarConversion(CGF.getLoc(CE->getExprLoc()), V, Kind,
+                                          DestTy);
+  }
   case CK_ZeroToOCLOpaqueType:
     llvm_unreachable("NYI");
   case CK_IntToOCLSampler:
@@ -2159,6 +2162,29 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
     CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF,
                                                                   E->getLHS());
   return LHSLV;
+}
+
+mlir::Value ScalarExprEmitter::buildComplexToScalarConversion(
+    mlir::Location Loc, mlir::Value V, CastKind Kind, QualType DestTy) {
+  mlir::cir::CastKind CastOpKind;
+  switch (Kind) {
+  case CK_FloatingComplexToReal:
+    CastOpKind = mlir::cir::CastKind::float_complex_to_real;
+    break;
+  case CK_IntegralComplexToReal:
+    CastOpKind = mlir::cir::CastKind::int_complex_to_real;
+    break;
+  case CK_FloatingComplexToBoolean:
+    CastOpKind = mlir::cir::CastKind::float_complex_to_bool;
+    break;
+  case CK_IntegralComplexToBoolean:
+    CastOpKind = mlir::cir::CastKind::int_complex_to_bool;
+    break;
+  default:
+    llvm_unreachable("invalid complex-to-scalar cast kind");
+  }
+
+  return Builder.createCast(Loc, CastOpKind, V, CGF.ConvertType(DestTy));
 }
 
 mlir::Value ScalarExprEmitter::buildNullValue(QualType Ty, mlir::Location loc) {

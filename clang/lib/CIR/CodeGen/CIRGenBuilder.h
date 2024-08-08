@@ -136,11 +136,6 @@ public:
     return mlir::cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
-  mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
-    assert(mlir::isa<mlir::cir::PointerType>(t) && "expected cir.ptr");
-    return getConstPtrAttr(t, 0);
-  }
-
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
                             unsigned size = 0) {
     unsigned finalSize = size ? size : str.size();
@@ -244,31 +239,6 @@ public:
   mlir::cir::DataMemberAttr
   getNullDataMemberAttr(mlir::cir::DataMemberType ty) {
     return mlir::cir::DataMemberAttr::get(getContext(), ty, std::nullopt);
-  }
-
-  mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
-    if (mlir::isa<mlir::cir::IntType>(ty))
-      return mlir::cir::IntAttr::get(ty, 0);
-    if (auto fltType = mlir::dyn_cast<mlir::cir::SingleType>(ty))
-      return mlir::cir::FPAttr::getZero(fltType);
-    if (auto fltType = mlir::dyn_cast<mlir::cir::DoubleType>(ty))
-      return mlir::cir::FPAttr::getZero(fltType);
-    if (auto fltType = mlir::dyn_cast<mlir::cir::FP16Type>(ty))
-      return mlir::cir::FPAttr::getZero(fltType);
-    if (auto fltType = mlir::dyn_cast<mlir::cir::BF16Type>(ty))
-      return mlir::cir::FPAttr::getZero(fltType);
-    if (auto complexType = mlir::dyn_cast<mlir::cir::ComplexType>(ty))
-      return getZeroAttr(complexType);
-    if (auto arrTy = mlir::dyn_cast<mlir::cir::ArrayType>(ty))
-      return getZeroAttr(arrTy);
-    if (auto ptrTy = mlir::dyn_cast<mlir::cir::PointerType>(ty))
-      return getConstNullPtrAttr(ptrTy);
-    if (auto structTy = mlir::dyn_cast<mlir::cir::StructType>(ty))
-      return getZeroAttr(structTy);
-    if (mlir::isa<mlir::cir::BoolType>(ty)) {
-      return getCIRBoolAttr(false);
-    }
-    llvm_unreachable("Zero initializer for given type is NYI");
   }
 
   // TODO(cir): Once we have CIR float types, replace this by something like a
@@ -554,26 +524,10 @@ public:
                                          mlir::cir::IntAttr::get(t, C));
   }
 
-  mlir::cir::ConstantOp getBool(bool state, mlir::Location loc) {
-    return create<mlir::cir::ConstantOp>(loc, getBoolTy(),
-                                         getCIRBoolAttr(state));
-  }
-  mlir::cir::ConstantOp getFalse(mlir::Location loc) {
-    return getBool(false, loc);
-  }
-  mlir::cir::ConstantOp getTrue(mlir::Location loc) {
-    return getBool(true, loc);
-  }
-
   /// Create constant nullptr for pointer-to-data-member type ty.
   mlir::cir::ConstantOp getNullDataMemberPtr(mlir::cir::DataMemberType ty,
                                              mlir::Location loc) {
     return create<mlir::cir::ConstantOp>(loc, ty, getNullDataMemberAttr(ty));
-  }
-
-  // Creates constant null value for integral type ty.
-  mlir::cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
-    return create<mlir::cir::ConstantOp>(loc, ty, getZeroInitAttr(ty));
   }
 
   mlir::cir::ConstantOp getZero(mlir::Location loc, mlir::Type ty) {

@@ -71,6 +71,18 @@ def CK_BooleanToIntegral : I32EnumAttrCase<"bool_to_int", 11>;
 def CK_IntegralToFloat : I32EnumAttrCase<"int_to_float", 12>;
 def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 13>;
 def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 14>;
+def CK_FloatToComplex : I32EnumAttrCase<"float_to_complex", 15>;
+def CK_IntegralToComplex : I32EnumAttrCase<"int_to_complex", 16>;
+def CK_FloatComplexToReal : I32EnumAttrCase<"float_complex_to_real", 17>;
+def CK_IntegralComplexToReal : I32EnumAttrCase<"int_complex_to_real", 18>;
+def CK_FloatComplexToBoolean : I32EnumAttrCase<"float_complex_to_bool", 19>;
+def CK_IntegralComplexToBoolean : I32EnumAttrCase<"int_complex_to_bool", 20>;
+def CK_FloatComplexCast : I32EnumAttrCase<"float_complex", 21>;
+def CK_FloatComplexToIntegralComplex
+    : I32EnumAttrCase<"float_complex_to_int_complex", 22>;
+def CK_IntegralComplexCast : I32EnumAttrCase<"int_complex", 23>;
+def CK_IntegralComplexToFloatComplex
+    : I32EnumAttrCase<"int_complex_to_float_complex", 24>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
@@ -79,7 +91,11 @@ def CastKind : I32EnumAttr<
      CK_BitCast, CK_FloatingCast, CK_PtrToBoolean, CK_FloatToIntegral,
      CK_IntegralToPointer, CK_PointerToIntegral, CK_FloatToBoolean,
      CK_BooleanToIntegral, CK_IntegralToFloat, CK_BooleanToFloat,
-     CK_AddressSpaceConversion]> {
+     CK_AddressSpaceConversion, CK_FloatToComplex, CK_IntegralToComplex,
+     CK_FloatComplexToReal, CK_IntegralComplexToReal, CK_FloatComplexToBoolean,
+     CK_IntegralComplexToBoolean, CK_FloatComplexCast,
+     CK_FloatComplexToIntegralComplex, CK_IntegralComplexCast,
+     CK_IntegralComplexToFloatComplex]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -104,6 +120,16 @@ def CastOp : CIR_Op<"cast",
     - `bool_to_int`
     - `bool_to_float`
     - `address_space`
+    - `float_to_complex`
+    - `int_to_complex`
+    - `float_complex_to_real`
+    - `int_complex_to_real`
+    - `float_complex_to_bool`
+    - `int_complex_to_bool`
+    - `float_complex`
+    - `float_complex_to_int_complex`
+    - `int_complex`
+    - `int_complex_to_float_complex`
 
     This is effectively a subset of the rules from
     `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some

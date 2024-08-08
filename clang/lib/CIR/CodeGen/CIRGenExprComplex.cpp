@@ -385,20 +385,43 @@ mlir::Value ComplexExprEmitter::buildComplexToComplexCast(mlir::Value Val,
                                                           QualType SrcType,
                                                           QualType DestType,
                                                           SourceLocation Loc) {
-  // Get the src/dest element type.
-  SrcType = SrcType->castAs<ComplexType>()->getElementType();
-  DestType = DestType->castAs<ComplexType>()->getElementType();
   if (SrcType == DestType)
     return Val;
 
-  llvm_unreachable("complex cast is NYI");
+  // Get the src/dest element type.
+  QualType SrcElemTy = SrcType->castAs<ComplexType>()->getElementType();
+  QualType DestElemTy = DestType->castAs<ComplexType>()->getElementType();
+
+  mlir::cir::CastKind CastOpKind;
+  if (SrcElemTy->isFloatingType() && DestElemTy->isFloatingType())
+    CastOpKind = mlir::cir::CastKind::float_complex;
+  else if (SrcElemTy->isFloatingType() && DestElemTy->isIntegerType())
+    CastOpKind = mlir::cir::CastKind::float_complex_to_int_complex;
+  else if (SrcElemTy->isIntegerType() && DestElemTy->isFloatingType())
+    CastOpKind = mlir::cir::CastKind::int_complex_to_float_complex;
+  else if (SrcElemTy->isIntegerType() && DestElemTy->isIntegerType())
+    CastOpKind = mlir::cir::CastKind::int_complex;
+  else
+    llvm_unreachable("unexpected src type or dest type");
+
+  return Builder.createCast(CGF.getLoc(Loc), CastOpKind, Val,
+                            CGF.ConvertType(DestType));
 }
 
 mlir::Value ComplexExprEmitter::buildScalarToComplexCast(mlir::Value Val,
                                                          QualType SrcType,
                                                          QualType DestType,
                                                          SourceLocation Loc) {
-  llvm_unreachable("complex cast is NYI");
+  mlir::cir::CastKind CastOpKind;
+  if (SrcType->isFloatingType())
+    CastOpKind = mlir::cir::CastKind::float_to_complex;
+  else if (SrcType->isIntegerType())
+    CastOpKind = mlir::cir::CastKind::int_to_complex;
+  else
+    llvm_unreachable("unexpected src type");
+
+  return Builder.createCast(CGF.getLoc(Loc), CastOpKind, Val,
+                            CGF.ConvertType(DestType));
 }
 
 mlir::Value ComplexExprEmitter::buildCast(CastKind CK, Expr *Op,
@@ -480,14 +503,20 @@ mlir::Value ComplexExprEmitter::buildCast(CastKind CK, Expr *Op,
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:
-  case CK_IntegralRealToComplex:
-    llvm_unreachable("NYI");
+  case CK_IntegralRealToComplex: {
+    assert(!MissingFeatures::CGFPOptionsRAII());
+    return buildScalarToComplexCast(CGF.buildScalarExpr(Op), Op->getType(),
+                                    DestTy, Op->getExprLoc());
+  }
 
   case CK_FloatingComplexCast:
   case CK_FloatingComplexToIntegralComplex:
   case CK_IntegralComplexCast:
-  case CK_IntegralComplexToFloatingComplex:
-    llvm_unreachable("NYI");
+  case CK_IntegralComplexToFloatingComplex: {
+    assert(!MissingFeatures::CGFPOptionsRAII());
+    return buildComplexToComplexCast(Visit(Op), Op->getType(), DestTy,
+                                     Op->getExprLoc());
+  }
   }
 
   llvm_unreachable("unknown cast resulting in complex value");
