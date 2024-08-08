@@ -53,8 +53,208 @@ static bool isUsedAsMemCpySource(const Value *V, bool &OtherUse) {
   return UsedAsMemCpySource;
 }
 
+static void countNumMemAccesses(const Value *Ptr, unsigned &NumStores,
+                                unsigned &NumLoads, const Function *F = nullptr) {
+  if (!isa<PointerType>(Ptr->getType()))
+    return;
+  for (const User *U : Ptr->users())
+    if (const Instruction *User = dyn_cast<Instruction>(U)) {
+      if (User->getParent()->getParent() == F || !F) {
+        if (const auto *SI = dyn_cast<StoreInst>(User)) {
+          if (SI->getPointerOperand() == Ptr && !SI->isVolatile())
+            NumStores++;
+        }
+        else if (const auto *LI = dyn_cast<LoadInst>(User)) {
+          if (LI->getPointerOperand() == Ptr && !LI->isVolatile())
+            NumLoads++;
+        }
+        else if (const auto *GEP = dyn_cast<GetElementPtrInst>(User)) {
+          if (GEP->getPointerOperand() == Ptr)
+            countNumMemAccesses(GEP, NumStores, NumLoads);
+        }
+      }
+    }
+}
+
+static unsigned usesAroundCall(const CallBase *CB, const GlobalVariable *GV) {
+  unsigned Uses = 0;
+  std::set<const Value *> Ptrs;
+  Ptrs.insert(GV);
+
+  const BasicBlock *BB = CB->getParent();
+  const unsigned CutOff = 20;
+  BasicBlock::const_iterator II = CB->getIterator();
+  for (unsigned N = 0; N < CutOff && II != BB->begin(); N++)
+    II--;
+  BasicBlock::const_iterator EE = CB->getIterator();
+  for (unsigned N = 0; N < CutOff && EE != BB->end(); N++)
+    EE++;
+  
+  for (; II != EE; ++II) {
+    if (const auto *SI = dyn_cast<StoreInst>(II)) {
+      if (Ptrs.count(SI->getPointerOperand()) && !SI->isVolatile())
+        Uses++;
+    }
+    else if (const auto *LI = dyn_cast<LoadInst>(II)) {
+      if (Ptrs.count(LI->getPointerOperand()) && !LI->isVolatile())
+        Uses++;
+    }
+    else if (const auto *GEP = dyn_cast<GetElementPtrInst>(II)) {
+      if (Ptrs.count(GEP->getPointerOperand()))
+        Ptrs.insert(GEP);
+    }
+  }
+  return Uses;
+}
+
+static unsigned usesEntryExit(const Function *F, const GlobalVariable *GV) {
+  unsigned Uses = 0;
+  std::set<const Value *> Ptrs;
+  Ptrs.insert(GV);
+
+  const unsigned CutOff = 100;
+  const BasicBlock *BB = &F->getEntryBlock();
+  unsigned N = 0;
+  for (BasicBlock::const_iterator II = BB->begin();
+       II != BB->end() && N < CutOff; ++II, N++) {
+    if (const auto *SI = dyn_cast<StoreInst>(II)) {
+      if (Ptrs.count(SI->getPointerOperand()) && !SI->isVolatile())
+        Uses++;
+    }
+    else if (const auto *LI = dyn_cast<LoadInst>(II)) {
+      if (Ptrs.count(LI->getPointerOperand()) && !LI->isVolatile())
+        Uses++;
+    }
+    else if (const auto *GEP = dyn_cast<GetElementPtrInst>(II)) {
+      if (Ptrs.count(GEP->getPointerOperand()))
+        Ptrs.insert(GEP);
+    }
+  }
+
+  Ptrs.clear();
+  Ptrs.insert(GV);
+  unsigned ReturnBlockUses = 0;
+  unsigned NumReturnBlocks = 0;
+  for (auto &BBII : *F) {
+    if (isa<ReturnInst>(BBII.getTerminator())) {
+      if (NumReturnBlocks++ > 0) {
+        ReturnBlockUses = 0;
+        break;
+      }
+      BasicBlock::const_iterator EE = BBII.getTerminator()->getIterator();
+      BasicBlock::const_iterator II = EE;
+      for (unsigned N = 0; N < CutOff && II != BBII.begin(); N++)
+        II--;
+      for (; II != EE; ++II) {
+        if (const auto *SI = dyn_cast<StoreInst>(II)) {
+          if (Ptrs.count(SI->getPointerOperand()) && !SI->isVolatile())
+            ReturnBlockUses++;
+        }
+        else if (const auto *LI = dyn_cast<LoadInst>(II)) {
+          if (Ptrs.count(LI->getPointerOperand()) && !LI->isVolatile())
+            ReturnBlockUses++;
+        }
+        else if (const auto *GEP = dyn_cast<GetElementPtrInst>(II)) {
+          if (Ptrs.count(GEP->getPointerOperand()))
+            Ptrs.insert(GEP);
+        }
+      }
+    }
+  }
+
+  return Uses + ReturnBlockUses;
+}
+
 unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   unsigned Bonus = 0;
+
+
+  // dbgs() << "INSTRCOUNT: " << CB->getCalledFunction()->getInstructionCount()
+  //        << CB->getCalledFunction()->getName() << "\n";
+  // if (CB->getCalledFunction()->getInstructionCount() == 216)
+  //   Bonus = 300;
+
+  // if (Function *Callee = CB->getCalledFunction()) {
+  //   const char *CallerFunName = CB->getParent()->getParent()->getName().data();
+  //   const char *CalleeFunName = Callee->getName().data();
+
+  //   if (std::strcmp(CallerFunName , "S_regmatch") == 0) {
+  //     if (std::strcmp(CalleeFunName, "S_reghopmaybe3") == 0 ||  // less important
+  //         std::strcmp(CalleeFunName, "S_regcppop") == 0 ||
+  //         std::strcmp(CalleeFunName, "S_regcppush") == 0)
+  //       return 250;
+  //   }
+  // }
+
+  // Check inlining with memory accesses common to caller and callee
+  // - Around call in caller?  entry/exit blocks in callee?
+  // - Globals used (much?) in both caller and callee
+  // - Specific type of pattern: load; inc/dec; store ?
+  // - non-volatile loads/stores?
+  // - int/fp loads/stores?  ptr?
+  // - num occurences in caller?
+  // - or specifically 2+ functions inlined if many common accesses?
+  // - specifically 2+ functions getting same adress as argument (ptr)?
+  // - (ptr-args generally?)
+  if (const Function *Callee = CB->getCalledFunction()) {
+    const Function *Caller = CB->getParent()->getParent();
+    const Module *M = Caller->getParent();
+    std::set<const GlobalVariable *> CalleeGlobals;
+    std::set<const GlobalVariable *> CallerGlobals;
+    for (const GlobalVariable &Global : M->globals())
+      for (const User *U : Global.users())
+        if (const Instruction *User = dyn_cast<Instruction>(U)) {
+          if (User->getParent()->getParent() == Callee)
+            CalleeGlobals.insert(&Global);
+          if (User->getParent()->getParent() == Caller)
+            CallerGlobals.insert(&Global);
+        }
+
+    for (auto *GV : CalleeGlobals)
+      if (CallerGlobals.count(GV)) {
+        unsigned CalleeStores = 0, CalleeLoads = 0;
+        unsigned CallerStores = 0, CallerLoads = 0;
+        countNumMemAccesses(GV, CalleeStores, CalleeLoads, Callee);
+        countNumMemAccesses(GV, CallerStores, CallerLoads, Caller);
+        if ((CalleeStores || CalleeLoads) && (CallerStores || CallerLoads)) {
+          // dbgs() << "GV: @" << GV->getName()
+          //        << " " << *GV->getValueType()
+          //        << "  Callee: " << Callee->getName() << " S: " << CalleeStores
+          //        << " L: " << CalleeLoads << " MEE: " << (CalleeStores + CalleeLoads)
+          //        << " Callee-size: " << Callee->getInstructionCount()
+          //        << "  Caller: " << Caller->getName() << " S: " << CallerStores
+          //        << " L: " << CallerLoads << " MER: " << (CallerStores + CallerLoads)
+          //        << " Uses-around-call: " << usesAroundCall(CB, GV)
+          //        << " Uses-entry-exit-callee: " << usesEntryExit(Callee, GV)
+          //        << "\n";
+
+          // const char *CallerFunName = CB->getParent()->getParent()->getName().data();
+          // const char *CalleeFunName = Callee->getName().data();
+          //            if (std::strcmp(CallerFunName , "S_regmatch") == 0) {
+          // if (std::strcmp(CalleeFunName, "S_regcppop") == 0) {
+          //     return 250;
+          // }
+          // if (std::strcmp(CalleeFunName, "S_regcppush") == 0) {
+          //     return 250;
+          // }
+          if (//usesEntryExit(Callee, GV) >= 5 &&
+              Callee->getInstructionCount() < 250 &&
+
+              //              (CalleeStores >= 5 && CalleeLoads >= 5) && 
+              (CalleeStores + CalleeLoads) > 10 &&
+
+              // CallerLoads > 25)
+              (CallerStores + CallerLoads) > 10)
+            return 500;
+
+          //  if 
+          // if ((CallerStores + CallerLoads) > 25)
+          //                 if (CallerLoads) > 25)
+
+          //}
+        }
+      }
+  }
 
   // Increase the threshold if an incoming argument is used only as a memcpy
   // source.
@@ -62,11 +262,32 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
     for (Argument &Arg : Callee->args()) {
       bool OtherUse = false;
       if (isUsedAsMemCpySource(&Arg, OtherUse) && !OtherUse)
-        Bonus += 150;
+        Bonus += 1000;
     }
+
+  if (!Bonus) {
+    if (Function *Callee = CB->getCalledFunction()) {
+      unsigned NumStores = 0;
+      unsigned NumLoads = 0;
+      for (unsigned OpIdx = 0; OpIdx != Callee->arg_size(); ++OpIdx) {
+        Value    *CallerArg = CB->getArgOperand(OpIdx);
+        Argument *CalleeArg = Callee->getArg(OpIdx);
+        if (isa<AllocaInst>(CallerArg))
+          countNumMemAccesses(CalleeArg, NumStores, NumLoads);
+      }
+      //      dbgs() << "NUM: " << NumStores << " " << NumLoads << "\n";
+      // Best on povray, but not doing stores slightly better on blender.
+      if (NumLoads > 10)
+        Bonus += NumLoads * 50;
+      if (NumStores > 10)
+        Bonus += NumStores * 50;
+      Bonus = std::min(Bonus, unsigned(1000));
+    }
+  }
 
   LLVM_DEBUG(if (Bonus)
                dbgs() << "++ SZTTI Adding inlining bonus: " << Bonus << "\n";);
+
   return Bonus;
 }
 
