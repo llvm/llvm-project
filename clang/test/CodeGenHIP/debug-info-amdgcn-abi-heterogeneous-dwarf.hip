@@ -1,8 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -O0 -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
 
-// XFAIL:*
-
 // Notes:
 // * There is no test involving transparent_union, as this isn't supported in
 // C++, and so is not supported in HIP.
@@ -197,11 +195,7 @@ __device__ void Test_Func_Struct2Bytes(StructNBytes<2>) {}
 __global__ void Test_Kern_Struct2Bytes(StructNBytes<2>) {}
 // CHECK: define dso_local void @_Z22Test_Func_Struct3Bytes12StructNBytesILj3EE(i32 %.coerce)
 // CHECK: %[[#ALLOCA:]] = alloca %struct.StructNBytes.0, align 1, addrspace(5)
-// CHECK: store i32 %.coerce,
-// FIXME: I'm unsure why there is a second alloca, and both a store and a memcpy,
-// but I assume it relates to padding; ; it should have the same result as e.g.
-// the code from Test_Func_Struct2Bytes
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 4 %{{.+}}, i64 3, i1 false)
+// CHECK: store i24 %coerce.val.ii,
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct3Bytes(StructNBytes<3>) {}
 // CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct3Bytes12StructNBytesILj3EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.0) align 1 %0)
