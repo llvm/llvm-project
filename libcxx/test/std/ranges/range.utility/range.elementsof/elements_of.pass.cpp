@@ -13,6 +13,7 @@
 #include <ranges>
 
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "min_allocator.h"
@@ -23,11 +24,12 @@ template <class Iterator>
 struct Range {
   using Sentinel = sentinel_wrapper<Iterator>;
 
-  Iterator begin() { return Iterator(data.data()); }
+  Iterator begin() { return Iterator(data_.data()); }
 
-  sentinel_wrapper<Iterator> end() { return Sentinel(Iterator(data.data() + data.size())); }
+  sentinel_wrapper<Iterator> end() { return Sentinel(Iterator(data_.data() + data_.size())); }
 
-  std::vector<int> data = {0, 1, 2, 3};
+private:
+  std::vector<int> data_ = {0, 1, 2, 3};
 };
 
 template <class Range, class Allocator>
@@ -39,6 +41,9 @@ constexpr bool test_range() {
     // constructor
     std::same_as<elements_of_t> decltype(auto) elements_of                 = std::ranges::elements_of(r, Allocator());
     [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_range = elements_of.range;
+    if (!std::is_constant_evaluated()) {
+      assert(std::ranges::distance(elements_of_range) == 4);
+    }
     [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
   }
   {
@@ -47,7 +52,10 @@ constexpr bool test_range() {
         .range     = r,
         .allocator = Allocator(),
     };
-    [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_range        = elements_of.range;
+    [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_range = elements_of.range;
+    if (!std::is_constant_evaluated()) {
+      assert(std::ranges::distance(elements_of_range) == 4);
+    }
     [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
   }
   {
@@ -56,6 +64,10 @@ constexpr bool test_range() {
     std::same_as<elements_of_t> auto elements_of_2                           = elements_of_1;
     [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_1_range = elements_of_1.range;
     [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_2_range = elements_of_2.range;
+    if (!std::is_constant_evaluated()) {
+      assert(std::ranges::distance(elements_of_1_range) == 4);
+      assert(std::ranges::distance(elements_of_2_range) == 4);
+    }
     [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_2_allocator = elements_of_2.allocator;
   }
 
@@ -64,8 +76,12 @@ constexpr bool test_range() {
     // move constructor
     std::same_as<elements_of_r_t> decltype(auto) elements_of_1 = std::ranges::elements_of(std::move(r), Allocator());
     std::same_as<elements_of_r_t> auto elements_of_2           = std::move(elements_of_1);
-    [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_1_range       = std::move(elements_of_1.range);
-    [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_2_range       = std::move(elements_of_2.range);
+    [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_1_range = std::move(elements_of_1.range);
+    [[maybe_unused]] std::same_as<Range&&> decltype(auto) elements_of_2_range = std::move(elements_of_2.range);
+    if (!std::is_constant_evaluated()) {
+      assert(std::ranges::distance(elements_of_1_range) == 4);
+      assert(std::ranges::distance(elements_of_2_range) == 4);
+    }
     [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_2_allocator = elements_of_2.allocator;
   }
   return true;
