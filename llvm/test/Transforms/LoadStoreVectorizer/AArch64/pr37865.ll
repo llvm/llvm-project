@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: not --crash opt -mtriple=aarch64 -passes=load-store-vectorizer -disable-output %s
+; RUN: not --crash opt -mtriple=aarch64 -passes=load-store-vectorizer \
+; RUN:   -disable-output %s 2>&1 | FileCheck %s
 
 define i32 @load_cycle(ptr %x) {
 ; CHECK: Unexpected cycle while re-ordering instructions
