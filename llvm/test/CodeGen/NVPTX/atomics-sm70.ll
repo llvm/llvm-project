@@ -94,7 +94,8 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    and.b32 %r10, %r22, -4;
 ; CHECKPTX62-NEXT:    shl.b32 %r38, %r22, 3;
 ; CHECKPTX62-NEXT:    and.b32 %r11, %r38, 24;
-; CHECKPTX62-NEXT:    shl.b32 %r40, %r26, %r11;
+; CHECKPTX62-NEXT:    mov.b32 %r39, 65535;
+; CHECKPTX62-NEXT:    shl.b32 %r40, %r39, %r11;
 ; CHECKPTX62-NEXT:    not.b32 %r12, %r40;
 ; CHECKPTX62-NEXT:    ld.global.u32 %r56, [%r10];
 ; CHECKPTX62-NEXT:  $L__BB0_5: // %atomicrmw.start27
@@ -114,7 +115,8 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    and.b32 %r16, %r23, -4;
 ; CHECKPTX62-NEXT:    shl.b32 %r46, %r23, 3;
 ; CHECKPTX62-NEXT:    and.b32 %r17, %r46, 24;
-; CHECKPTX62-NEXT:    shl.b32 %r48, %r26, %r17;
+; CHECKPTX62-NEXT:    mov.b32 %r47, 65535;
+; CHECKPTX62-NEXT:    shl.b32 %r48, %r47, %r17;
 ; CHECKPTX62-NEXT:    not.b32 %r18, %r48;
 ; CHECKPTX62-NEXT:    ld.shared.u32 %r57, [%r16];
 ; CHECKPTX62-NEXT:  $L__BB0_7: // %atomicrmw.start45
