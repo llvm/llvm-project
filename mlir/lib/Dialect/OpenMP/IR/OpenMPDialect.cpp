@@ -1546,7 +1546,7 @@ LogicalResult ParallelOp::verify() {
     if (!isWrapper())
       return emitOpError() << "must take a loop wrapper role if nested inside "
                               "of 'omp.distribute'";
-    if (!llvm::cast<ComposableOpInterface>(getOperation()).isComposite())
+    if (!isComposite())
       return emitError()
              << "'omp.composite' attribute missing from composite wrapper";
 
@@ -1558,7 +1558,7 @@ LogicalResult ParallelOp::verify() {
     } else {
       return emitOpError() << "must not wrap an 'omp.loop_nest' directly";
     }
-  } else if (llvm::cast<ComposableOpInterface>(getOperation()).isComposite()) {
+  } else if (isComposite()) {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
   }
@@ -1754,8 +1754,13 @@ LogicalResult WsloopOp::verify() {
   if (!isWrapper())
     return emitOpError() << "must be a loop wrapper";
 
+  auto wrapper =
+      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
+  bool isCompositeWrapper = wrapper && wrapper.isWrapper() &&
+                            (!llvm::isa<ParallelOp>(wrapper) ||
+                             llvm::isa<DistributeOp>(wrapper->getParentOp()));
   if (LoopWrapperInterface nested = getNestedWrapper()) {
-    if (!llvm::cast<ComposableOpInterface>(getOperation()).isComposite())
+    if (!isComposite())
       return emitError()
              << "'omp.composite' attribute missing from composite wrapper";
 
@@ -1764,9 +1769,12 @@ LogicalResult WsloopOp::verify() {
     if (!isa<SimdOp>(nested))
       return emitError() << "only supported nested wrapper is 'omp.simd'";
 
-  } else if (llvm::cast<ComposableOpInterface>(getOperation()).isComposite()) {
+  } else if (isComposite() && !isCompositeWrapper) {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
+  } else if (!isComposite() && isCompositeWrapper) {
+    return emitError()
+           << "'omp.composite' attribute missing from composite wrapper";
   }
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
@@ -1810,7 +1818,17 @@ LogicalResult SimdOp::verify() {
   if (getNestedWrapper())
     return emitOpError() << "must wrap an 'omp.loop_nest' directly";
 
-  if (llvm::cast<ComposableOpInterface>(getOperation()).isComposite())
+  auto wrapper =
+      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
+  bool isCompositeWrapper = wrapper && wrapper.isWrapper() &&
+                            (!llvm::isa<ParallelOp>(wrapper) ||
+                             llvm::isa<DistributeOp>(wrapper->getParentOp()));
+
+  if (!isComposite() && isCompositeWrapper)
+    return emitError()
+           << "'omp.composite' attribute missing from composite wrapper";
+
+  if (isComposite() && !isCompositeWrapper)
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
 
@@ -1843,7 +1861,7 @@ LogicalResult DistributeOp::verify() {
     return emitOpError() << "must be a loop wrapper";
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
-    if (!llvm::cast<ComposableOpInterface>(getOperation()).isComposite())
+    if (!isComposite())
       return emitError()
              << "'omp.composite' attribute missing from composite wrapper";
     // Check for the allowed leaf constructs that may appear in a composite
@@ -1851,7 +1869,7 @@ LogicalResult DistributeOp::verify() {
     if (!isa<ParallelOp, SimdOp>(nested))
       return emitError() << "only supported nested wrappers are 'omp.parallel' "
                             "and 'omp.simd'";
-  } else if (llvm::cast<ComposableOpInterface>(getOperation()).isComposite()) {
+  } else if (isComposite()) {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
   }
@@ -2055,7 +2073,7 @@ LogicalResult TaskloopOp::verify() {
     return emitOpError() << "must be a loop wrapper";
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
-    if (!llvm::cast<ComposableOpInterface>(getOperation()).isComposite())
+    if (!isComposite())
       return emitError()
              << "'omp.composite' attribute missing from composite wrapper";
 
@@ -2063,7 +2081,7 @@ LogicalResult TaskloopOp::verify() {
     // construct directly after TASKLOOP.
     if (!isa<SimdOp>(nested))
       return emitError() << "only supported nested wrapper is 'omp.simd'";
-  } else if (llvm::cast<ComposableOpInterface>(getOperation()).isComposite()) {
+  } else if (isComposite()) {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
   }

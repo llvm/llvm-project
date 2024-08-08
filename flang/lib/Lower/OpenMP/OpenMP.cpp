@@ -2063,14 +2063,12 @@ static void genCompositeDistributeSimd(
   // TODO: Populate entry block arguments with private variables.
   auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
       converter, loc, distributeClauseOps, /*blockArgTypes=*/{});
-  llvm::cast<mlir::omp::ComposableOpInterface>(distributeOp.getOperation())
-      .setComposite(/*val=*/true);
+  distributeOp.setComposite(/*val=*/true);
 
   // TODO: Populate entry block arguments with reduction and private variables.
   auto simdOp = genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps,
                                                 /*blockArgTypes=*/{});
-  llvm::cast<mlir::omp::ComposableOpInterface>(simdOp.getOperation())
-      .setComposite(/*val=*/true);
+  simdOp.setComposite(/*val=*/true);
 
   // Construct wrapper entry block list and associated symbols. It is important
   // that the symbol order and the block argument order match, so that the
@@ -2115,14 +2113,12 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   // TODO: Add private variables to entry block arguments.
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
       converter, loc, wsloopClauseOps, wsloopReductionTypes);
-  llvm::cast<mlir::omp::ComposableOpInterface>(wsloopOp.getOperation())
-      .setComposite(/*val=*/true);
+  wsloopOp.setComposite(/*val=*/true);
 
   // TODO: Populate entry block arguments with reduction and private variables.
   auto simdOp = genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps,
                                                 /*blockArgTypes=*/{});
-  llvm::cast<mlir::omp::ComposableOpInterface>(simdOp.getOperation())
-      .setComposite(/*val=*/true);
+  simdOp.setComposite(/*val=*/true);
 
   // Construct wrapper entry block list and associated symbols. It is important
   // that the symbol and block argument order match, so that the symbol-value
