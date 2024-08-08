@@ -4623,8 +4623,9 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   });
 }
 
-bool FieldDecl::isPotentiallyOverlapping() const {
-  return hasAttr<NoUniqueAddressAttr>() && getType()->getAsCXXRecordDecl();
+bool FieldDecl::isPotentiallyOverlapping(bool ClassOnly) const {
+  return hasAttr<NoUniqueAddressAttr>() &&
+         (!ClassOnly || getType()->getAsCXXRecordDecl());
 }
 
 unsigned FieldDecl::getFieldIndex() const {

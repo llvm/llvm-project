@@ -2445,7 +2445,7 @@ static bool isItaniumPOD(const ASTContext &Context, const CXXRecordDecl *RD) {
         return true;
     }
 
-    return FD->isPotentiallyOverlapping();
+    return FD->isPotentiallyOverlapping(/*ClassOnly=*/false);
   };
 
   if (llvm::any_of(RD->fields(), IsDisqualifying))
