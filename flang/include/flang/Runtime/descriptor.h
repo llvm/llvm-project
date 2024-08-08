@@ -436,14 +436,6 @@ public:
   RT_API_ATTRS inline int GetAllocIdx() const {
     return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ALLOCATOR_IDX_SHIFT;
   }
-  RT_API_ATTRS inline int GetNormalizedAllocIdx() const {
-#ifdef RT_DEVICE_COMPILATION
-    // Force default allocator in device code.
-    return kDefaultAllocator;
-#else
-    return GetAllocIdx();
-#endif
-  }
   RT_API_ATTRS inline void SetAllocIdx(int pos) {
     raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
     raw_.extra |= (pos << _CFI_ALLOCATOR_IDX_SHIFT);
