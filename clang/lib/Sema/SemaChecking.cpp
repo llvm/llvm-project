@@ -2804,6 +2804,52 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(Magnitude.get()->getType());
     break;
   }
+  case Builtin::BI__builtin_experimental_vectorcompress: {
+    unsigned NumArgs = TheCall->getNumArgs();
+    if (NumArgs < 2 || NumArgs > 3)
+      return ExprError();
+
+    Expr *VecArg = TheCall->getArg(0);
+    QualType VecTy = VecArg->getType();
+    if (!VecTy->isVectorType() && !VecTy->isSizelessVectorType()) {
+      Diag(VecArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector ty*/ 4 << VecTy;
+      return ExprError();
+    }
+
+    Expr *MaskArg = TheCall->getArg(1);
+    QualType MaskTy = MaskArg->getType();
+    if (!MaskTy->isVectorType() && !MaskTy->isSizelessVectorType()) {
+      Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector ty*/ 4 << MaskTy;
+      return ExprError();
+    }
+
+    if (VecTy->isVectorType() != MaskTy->isVectorType()) {
+      // TODO: diag
+      return ExprError();
+    }
+
+    if (VecTy->isVectorType() && VecTy->getAs<VectorType>()->getNumElements() != MaskTy->getAs<VectorType>()->getNumElements()) {
+        // TODO: diag
+        return ExprError();
+    }
+
+    // TODO: find way to compare MinKnownElements for sizeless vectors.
+    // if (VecTy->isSizelessVectorType() && VecTy->getAs<VectorType>()->getNumElements() != MaskTy->getAs<VectorType>()->getNumElements()) {}
+
+    if (NumArgs == 3) {
+      Expr *PassthruArg = TheCall->getArg(2);
+      QualType PassthruTy = PassthruArg->getType();
+      if (PassthruTy != VecTy) {
+        // TODO: diag
+        return ExprError();
+      }
+    }
+    TheCall->setType(VecTy);
+
+    break;
+  }
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min: {
     if (PrepareBuiltinReduceMathOneArgCall(TheCall))
