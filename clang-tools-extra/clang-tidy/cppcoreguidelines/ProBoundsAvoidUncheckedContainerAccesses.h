@@ -13,7 +13,8 @@
 
 namespace clang::tidy::cppcoreguidelines {
 
-/// Flags the unsafe ``operator[]`` and suggests replacing it with ``at()``.
+/// Flags the unsafe ``operator[]``. Can suggests fixing it with ``at()`` or a
+/// user-provided function.
 ///
 /// See
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
@@ -30,11 +31,27 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
+  enum SubscriptFixModes { None, At, Function };
+
 private:
   // A list of class names that are excluded from the warning
   std::vector<llvm::StringRef> SubscriptExcludedClasses;
+  // Setting which fix to suggest
+  SubscriptFixModes SubscriptFixMode;
+  llvm::StringRef SubscriptFixFunction;
 };
-
 } // namespace clang::tidy::cppcoreguidelines
 
+namespace clang::tidy {
+template <>
+struct OptionEnumMapping<
+    cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::
+        SubscriptFixModes> {
+  static ArrayRef<
+      std::pair<cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::
+                    SubscriptFixModes,
+                StringRef>>
+  getEnumMapping();
+};
+} // namespace clang::tidy
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESSES_H
