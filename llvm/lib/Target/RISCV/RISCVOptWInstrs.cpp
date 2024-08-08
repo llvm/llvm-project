@@ -350,8 +350,7 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, const RISCVSubtarget &ST,
 
 // This function returns true if the machine instruction always outputs a value
 // where bits 63:32 match bit 31.
-static bool isSignExtendingOpW(const MachineInstr &MI,
-                               const MachineRegisterInfo &MRI, unsigned OpNo) {
+static bool isSignExtendingOpW(const MachineInstr &MI, unsigned OpNo) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
   // Instructions that can be determined from opcode are marked in tablegen.
@@ -426,7 +425,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     assert(OpNo != -1 && "Couldn't find register");
 
     // If this is a sign extending operation we don't need to look any further.
-    if (isSignExtendingOpW(*MI, MRI, OpNo))
+    if (isSignExtendingOpW(*MI, OpNo))
       continue;
 
     // Is this an instruction that propagates sign extend?
