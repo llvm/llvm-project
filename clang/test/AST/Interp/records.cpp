@@ -1576,3 +1576,13 @@ namespace ctorOverrider {
   constexpr Covariant1 cb;
 }
 #endif
+
+namespace IncompleteStaticStructMember {
+  struct Foo;
+  struct Bar {
+    static const Foo x;
+    static const Foo y;
+  };
+  static_assert(&Bar::x != nullptr, ""); // both-warning {{always true}}
+  static_assert(&Bar::x != &Bar::y, "");
+}
