@@ -289,9 +289,6 @@ private:
 /// the compiler instance when compiling the `std` module.
 static llvm::Expected<bool>
 sdkSupportsBuiltinModules(lldb_private::Target &target) {
-#ifndef __APPLE__
-  return false;
-#else
   auto arch_spec = target.GetArchitecture();
   auto const &triple = arch_spec.GetTriple();
   auto module_sp = target.GetExecutableModule();
@@ -327,7 +324,6 @@ sdkSupportsBuiltinModules(lldb_private::Target &target) {
     return llvm::createStringError("Couldn't find Darwin SDK info.");
 
   return XcodeSDK::SDKSupportsBuiltinModules(triple, maybe_sdk->getVersion());
-#endif
 }
 
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
