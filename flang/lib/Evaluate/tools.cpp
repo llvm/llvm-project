@@ -1697,7 +1697,7 @@ bool IsSaved(const Symbol &original) {
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
               symbol.size() > 32)) &&
-      !Fortran::evaluate::IsCUDADeviceSymbol(symbol)) {
+      Fortran::evaluate::CanCUDASymbolHasSave(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and
@@ -1715,7 +1715,7 @@ bool IsSaved(const Symbol &original) {
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-             object && object->init()) {
+      object && object->init()) {
     return true;
   } else if (IsProcedurePointer(symbol) && symbol.has<ProcEntityDetails>() &&
       symbol.get<ProcEntityDetails>().init()) {
@@ -1723,7 +1723,7 @@ bool IsSaved(const Symbol &original) {
   } else if (scope.hasSAVE()) {
     return true; // bare SAVE statement
   } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
-             block && block->attrs().test(Attr::SAVE)) {
+      block && block->attrs().test(Attr::SAVE)) {
     return true; // in COMMON with SAVE
   } else {
     return false;
