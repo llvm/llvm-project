@@ -8,7 +8,7 @@
 // contructors, with constructors of dynamic runtime.
 // XFAIL: asan-dynamic-runtime
 
-// CHECK: DynInitPoison module: {{.*}}initialization-nobug.cpp
-// CHECK: DynInitPoison module: {{.*}}initialization-nobug-extra.cpp
-// CHECK: AfterDynamicInit
+// CHECK: DynInitPoison
+// CHECK: DynInitPoison
+// CHECK: UnpoisonBeforeMain
 // CHECK: DynInitUnpoison
