@@ -521,15 +521,21 @@ void __asan_before_dynamic_init(const char *module_name) {
 }
 
 // Maybe SANITIZER_CAN_USE_PREINIT_ARRAY is to conservative for `.init_array`,
-// however we should not make mistake here. If `AfterDynamicInit` was not
+// however we should not make mistake here. If `UnpoisonBeforeMain` was not
 // executed at all we will have false reports on globals.
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
-// This is optimization. We will ignore all `__asan_after_dynamic_init`, but the
-// last `__asan_after_dynamic_init`. We don't need number of
-// `__asan_{before,after}_dynamic_init` matches, but we need that the last call
-// was to `__asan_after_dynamic_init`, as it will unpoison all global preparing
-// program for `main` execution. To run `__asan_after_dynamic_init` later, we
-// will register in `.init_array`.
+// This optimization aims to reduce the overhead of `__asan_after_dynamic_init`
+// calls by leveraging incremental unpoisoning/poisoning in
+// `__asan_before_dynamic_init`. We expect most `__asan_after_dynamic_init
+// calls` to be no-ops. However, to ensure all globals are unpoisoned before the
+// `main`, we force `UnpoisonBeforeMain` to fully execute
+// `__asan_after_dynamic_init`.
+
+// With lld, `UnpoisonBeforeMain` runs after standard `.init_array`, making it
+// the final `__asan_after_dynamic_init` call for the static runtime. In
+// contrast, GNU ld executes it earlier, causing subsequent
+// `__asan_after_dynamic_init` calls to perform full unpoisoning, losing the
+// optimization.
 bool allow_after_dynamic_init SANITIZER_GUARDED_BY(mu_for_globals) = false;
 
 static void UnpoisonBeforeMain(void) {
@@ -540,14 +546,10 @@ static void UnpoisonBeforeMain(void) {
     allow_after_dynamic_init = true;
   }
   if (flags()->report_globals >= 3)
-    Printf("AfterDynamicInit\n");
+    Printf("UnpoisonBeforeMain\n");
   __asan_after_dynamic_init();
 }
 
-// 65537 will make it run after constructors with default priority, but it
-// requires ld.lld. With ld.bfd it can be called to early, and fail the
-// optimization. However, correctness should not be affected, as after the first
-// call all subsequent `__asan_after_dynamic_init` will be allowed.
 __attribute__((section(".init_array.65537"), used)) static void (
     *asan_after_init_array)(void) = UnpoisonBeforeMain;
 #else
