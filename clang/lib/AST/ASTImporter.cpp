@@ -3659,6 +3659,10 @@ public:
     return {};
   }
 
+  std::optional<bool> VisitUnaryTransformType(const UnaryTransformType *T) {
+    return CheckType(T->getBaseType());
+  }
+
   std::optional<bool>
   VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
     // The "associated declaration" can be the same as ParentDC.
