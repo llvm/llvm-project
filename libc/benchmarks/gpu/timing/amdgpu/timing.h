@@ -43,9 +43,6 @@ template <typename F, typename T>
   volatile T storage = t;
   T arg = storage;
 
-  // VGPR constraints can only accept primitive values.
-  asm("" ::"v"(&arg));
-
   // The AMDGPU architecture needs to wait on pending results.
   gpu::memory_fence();
   // Get the current timestamp from the clock.
@@ -53,15 +50,22 @@ template <typename F, typename T>
 
   // This forces the compiler to load the input argument and run the clock
   // cycle counter before the profiling region.
-  asm("" ::"s"(start), "v"(&arg));
+  asm("" ::"s"(start));
 
   // Run the function under test and return its value.
   auto result = f(arg);
 
   // This inline assembly performs a no-op which forces the result to both
   // be used and prevents us from exiting this region before it's complete.
-  asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
-      static_cast<uint32_t>(result)));
+  if constexpr (cpp::is_same_v<decltype(result), char> ||
+                cpp::is_same_v<decltype(result), bool>)
+    // AMDGPU does not support input register constraints for i1 and i8, so we
+    // cast it to a 32-bit integer. This does not add an additional assembly
+    // instruction (https://godbolt.org/z/zxGqv8G91).
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
+        static_cast<uint32_t>(result)));
+  else
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(result));
 
   // Obtain the current timestamp after running the calculation and force
   // ordering.
@@ -80,17 +84,19 @@ template <typename F, typename T1, typename T2>
   T1 arg1 = storage1;
   T2 arg2 = storage2;
 
-  asm("" ::"v"(&arg1), "v"(&arg2));
-
   gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
-  asm("" ::"s"(start), "v"(&arg1), "v"(&arg2));
+  asm("" ::"s"(start));
 
   auto result = f(arg1, arg2);
 
-  asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
-      static_cast<uint32_t>(result)));
+  if constexpr (cpp::is_same_v<decltype(result), char> ||
+                cpp::is_same_v<decltype(result), bool>)
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
+        static_cast<uint32_t>(result)));
+  else
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(result));
 
   uint64_t stop = gpu::processor_clock();
   asm("" ::"s"(stop));
@@ -102,22 +108,18 @@ template <typename F, typename T1, typename T2>
 // Provides throughput benchmarking.
 template <typename F, typename T, size_t N>
 [[gnu::noinline]] static LIBC_INLINE uint64_t
-latency(F f, const cpp::array<T, N> &inputs) {
-  volatile auto storage = &inputs;
-  auto array_pointer = storage;
-  asm("" ::"v"(array_pointer));
-  auto register_array = *array_pointer;
+throughput(F f, const cpp::array<T, N> &inputs) {
+  asm("" ::"v"(&inputs));
 
   gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
-  asm("" ::"s"(start), "v"(array_pointer));
+  asm("" ::"s"(start));
 
-  for (auto input : register_array) {
+  for (auto input : inputs) {
     auto result = f(input);
 
-    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
-        static_cast<uint32_t>(result)));
+    asm("" ::"v"(result));
   }
 
   uint64_t stop = gpu::processor_clock();
