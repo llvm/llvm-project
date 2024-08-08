@@ -18077,10 +18077,10 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     }
 
     // If we're defining a dynamic class in a module interface unit, we always
-    // need to produce the vtable for it even if the vtable is not used in the
+    // need to produce the vtable for it, even if the vtable is not used in the
     // current TU.
     //
-    // The case that the current class is not dynamic is handled in
+    // The case where the current class is not dynamic is handled in
     // MarkVTableUsed.
     if (getCurrentModule() && getCurrentModule()->isInterfaceOrPartition())
       MarkVTableUsed(RD->getLocation(), RD, /*DefinitionRequired=*/true);
