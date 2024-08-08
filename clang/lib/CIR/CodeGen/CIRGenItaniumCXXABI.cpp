@@ -2149,13 +2149,19 @@ void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
   // Now allocate the exception object.
   auto &builder = CGF.getBuilder();
   QualType clangThrowType = E->getSubExpr()->getType();
-  auto throwTy = CGF.ConvertType(clangThrowType);
+  auto throwTy = builder.getPointerTo(CGF.ConvertType(clangThrowType));
+  uint64_t typeSize =
+      CGF.getContext().getTypeSizeInChars(clangThrowType).getQuantity();
   auto subExprLoc = CGF.getLoc(E->getSubExpr()->getSourceRange());
   // Defer computing allocation size to some later lowering pass.
   auto exceptionPtr =
       builder
-          .create<mlir::cir::AllocException>(
-              subExprLoc, builder.getPointerTo(throwTy), throwTy)
+          .create<mlir::cir::AllocExceptionOp>(
+              subExprLoc, throwTy,
+              mlir::IntegerAttr::get(
+                  mlir::IntegerType::get(builder.getContext(), 64,
+                                         mlir::IntegerType::Unsigned),
+                  typeSize))
           .getAddr();
 
   // Build expression and store its result into exceptionPtr.
