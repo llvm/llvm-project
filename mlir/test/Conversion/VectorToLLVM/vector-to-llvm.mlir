@@ -739,8 +739,8 @@ func.func @masked_float_add_outerprod_scalable(%arg0: vector<[2]xf32>, %arg1: f3
   return %0 : vector<[2]xf32>
 }
 
-// CHECK-LABEL:   func.func @masked_float_add_outerprod_scalable
-// CHECK-SAME:                                          %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
+// CHECK-LABEL:   func.func @masked_float_add_outerprod_scalable(
+// CHECK-SAME:                                                   %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
 // CHECK:           %[[VAL_8:.*]] = llvm.intr.fmuladd(%[[VAL_0]], %{{.*}}, %[[VAL_2]])  : (vector<[2]xf32>, vector<[2]xf32>, vector<[2]xf32>) -> vector<[2]xf32>
 // CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_3]], %[[VAL_8]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xf32>
 
@@ -762,8 +762,8 @@ func.func @masked_float_mul_outerprod_scalable(%arg0: vector<[2]xf32>, %arg1: f3
   return %0 : vector<[2]xf32>
 }
 
-// CHECK-LABEL:   func.func @masked_float_mul_outerprod_scalable
-// CHECK-SAME:                                          %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
+// CHECK-LABEL:   func.func @masked_float_mul_outerprod_scalable(
+// CHECK-SAME:                                                   %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
 // CHECK:           %[[VAL_8:.*]] = arith.mulf %[[VAL_0]], %{{.*}} : vector<[2]xf32>
 // CHECK:           %[[VAL_9:.*]] = arith.mulf %[[VAL_8]], %[[VAL_2]] : vector<[2]xf32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xf32>
@@ -786,8 +786,8 @@ func.func @masked_float_max_outerprod_scalable(%arg0: vector<[2]xf32>, %arg1: f3
   return %0 : vector<[2]xf32>
 }
 
-// CHECK-LABEL:   func.func @masked_float_max_outerprod_scalable
-// CHECK-SAME:                                          %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
+// CHECK-LABEL:   func.func @masked_float_max_outerprod_scalable(
+// CHECK-SAME:                                                   %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
 // CHECK:           %[[VAL_8:.*]] = arith.mulf %[[VAL_0]], %{{.*}} : vector<[2]xf32>
 // CHECK:           %[[VAL_9:.*]] = arith.maxnumf %[[VAL_8]], %[[VAL_2]] : vector<[2]xf32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xf32>
@@ -810,8 +810,8 @@ func.func @masked_float_min_outerprod_scalable(%arg0: vector<[2]xf32>, %arg1: f3
   return %0 : vector<[2]xf32>
 }
 
-// CHECK-LABEL:   func.func @masked_float_min_outerprod_scalable
-// CHECK-SAME:                                          %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
+// CHECK-LABEL:   func.func @masked_float_min_outerprod_scalable(
+// CHECK-SAME:                                                   %[[VAL_0:.*]]: vector<[2]xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<[2]xf32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xf32> {
 // CHECK:           %[[VAL_8:.*]] = arith.mulf %[[VAL_0]], %{{.*}} : vector<[2]xf32>
 // CHECK:           %[[VAL_9:.*]] = arith.minnumf %[[VAL_8]], %[[VAL_2]] : vector<[2]xf32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xf32>
@@ -834,8 +834,8 @@ func.func @masked_int_add_outerprod_scalable(%arg0: vector<[2]xi32>, %arg1: i32,
   return %0 : vector<[2]xi32>
 }
 
-// CHECK-LABEL:   func.func @masked_int_add_outerprod_scalable
-// CHECK-SAME:                                        %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
+// CHECK-LABEL:   func.func @masked_int_add_outerprod_scalable(
+// CHECK-SAME:                                                 %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
 // CHECK:           %[[VAL_8:.*]] = arith.muli %[[VAL_0]], %{{.*}} : vector<[2]xi32>
 // CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_2]] : vector<[2]xi32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xi32>
@@ -858,8 +858,8 @@ func.func @masked_int_mul_outerprod_scalable(%arg0: vector<[2]xi32>, %arg1: i32,
   return %0 : vector<[2]xi32>
 }
 
-// CHECK-LABEL:   func.func @masked_int_mul_outerprod_scalable
-// CHECK-SAME:                                        %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
+// CHECK-LABEL:   func.func @masked_int_mul_outerprod_scalable(
+// CHECK-SAME:                                                 %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
 // CHECK:           %[[VAL_8:.*]] = arith.muli %[[VAL_0]], %{{.*}} : vector<[2]xi32>
 // CHECK:           %[[VAL_9:.*]] = arith.muli %[[VAL_8]], %[[VAL_2]] : vector<[2]xi32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xi32>
@@ -882,8 +882,8 @@ func.func @masked_int_max_outerprod_scalable(%arg0: vector<[2]xi32>, %arg1: i32,
   return %0 : vector<[2]xi32>
 }
 
-// CHECK-LABEL:   func.func @masked_int_max_outerprod_scalable
-// CHECK-SAME:                                        %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
+// CHECK-LABEL:   func.func @masked_int_max_outerprod_scalable(
+// CHECK-SAME:                                                 %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
 // CHECK:           %[[VAL_8:.*]] = arith.muli %[[VAL_0]], %{{.*}} : vector<[2]xi32>
 // CHECK:           %[[VAL_9:.*]] = arith.maxsi %[[VAL_8]], %[[VAL_2]] : vector<[2]xi32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xi32>
@@ -906,8 +906,8 @@ func.func @masked_int_min_outerprod_scalable(%arg0: vector<[2]xi32>, %arg1: i32,
   return %0 : vector<[2]xi32>
 }
 
-// CHECK-LABEL:   func.func @masked_int_min_outerprod_scalable
-// CHECK-SAME:                                        %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
+// CHECK-LABEL:   func.func @masked_int_min_outerprod_scalable(
+// CHECK-SAME:                                                 %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
 // CHECK:           %[[VAL_8:.*]] = arith.muli %[[VAL_0]], %{{.*}} : vector<[2]xi32>
 // CHECK:           %[[VAL_9:.*]] = arith.minui %[[VAL_8]], %[[VAL_2]] : vector<[2]xi32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xi32>
@@ -930,8 +930,8 @@ func.func @masked_int_and_outerprod_scalable(%arg0: vector<[2]xi32>, %arg1: i32,
   return %0 : vector<[2]xi32>
 }
 
-// CHECK-LABEL:   func.func @masked_int_and_outerprod_scalable
-// CHECK-SAME:                                        %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
+// CHECK-LABEL:   func.func @masked_int_and_outerprod_scalable(
+// CHECK-SAME:                                                 %[[VAL_0:.*]]: vector<[2]xi32>, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: vector<[2]xi32>, %[[VAL_3:.*]]: vector<[2]xi1>) -> vector<[2]xi32> {
 // CHECK:           %[[VAL_8:.*]] = arith.muli %[[VAL_0]], %{{.*}} : vector<[2]xi32>
 // CHECK:           %[[VAL_9:.*]] = arith.andi %[[VAL_8]], %[[VAL_2]] : vector<[2]xi32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<[2]xi1>, vector<[2]xi32>
