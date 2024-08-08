@@ -396,6 +396,11 @@ public:
     return {};
   }
 
+  bool getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
+                        IntrinsicInst *II) const {
+    return false;
+  }
+
   bool enableSelectOptimize() const { return true; }
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) {
