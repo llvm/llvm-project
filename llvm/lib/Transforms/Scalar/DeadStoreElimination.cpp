@@ -806,63 +806,6 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
   return false;
 }
 
-/// Returns true if \p I is a memory terminator instruction like
-/// llvm.lifetime.end or free.
-bool isMemTerminatorInst(Instruction *I, const TargetLibraryInfo &TLI) {
-  auto *CB = dyn_cast<CallBase>(I);
-  return CB && (CB->getIntrinsicID() == Intrinsic::lifetime_end ||
-                getFreedOperand(CB, &TLI) != nullptr);
-}
-
-struct DSEState;
-enum class ChangeStateEnum : uint8_t {
-  NoChange,
-  DeleteByMemTerm,
-  CompleteDeleteByNonMemTerm,
-  PartiallyDeleteByNonMemTerm,
-};
-
-// A memory location wrapper that represents a MemoryLocation, `MemLoc`,
-// defined by `MemDef`.
-class MemoryLocationWrapper {
-public:
-  MemoryLocationWrapper(MemoryLocation MemLoc, DSEState &State,
-                        MemoryDef *MemDef)
-      : MemLoc(MemLoc), State(State), MemDef(MemDef) {
-    assert(MemLoc.Ptr && "MemLoc should be not null");
-    UnderlyingObject = getUnderlyingObject(MemLoc.Ptr);
-    DefInst = MemDef->getMemoryInst();
-  }
-
-  // Try to eliminate dead defs killed by this MemoryLocation and return the
-  // change state.
-  ChangeStateEnum eliminateDeadDefs();
-  MemoryAccess *GetDefiningAccess() const {
-    return MemDef->getDefiningAccess();
-  }
-
-  MemoryLocation MemLoc;
-  const Value *UnderlyingObject;
-  DSEState &State;
-  MemoryDef *MemDef;
-  Instruction *DefInst;
-};
-
-// A memory def wrapper that represents a MemoryDef and the MemoryLocation(s)
-// defined by this MemoryDef.
-class MemoryDefWrapper {
-public:
-  MemoryDefWrapper(MemoryDef *MemDef, DSEState &State);
-  // Try to eliminate dead defs killed by this MemoryDef and return the
-  // change state.
-  bool eliminateDeadDefs();
-
-  MemoryDef *MemDef;
-  Instruction *DefInst;
-  DSEState &State;
-  std::optional<MemoryLocationWrapper> DefinedLocation = std::nullopt;
-};
-
 struct DSEState {
   Function &F;
   AliasAnalysis &AA;
@@ -919,6 +862,72 @@ struct DSEState {
   /// Dead instructions to be removed at the end of DSE.
   SmallVector<Instruction *> ToRemove;
 
+  enum class ChangeStateEnum : uint8_t {
+    NoChange,
+    DeleteByMemTerm,
+    CompleteDeleteByNonMemTerm,
+    PartiallyDeleteByNonMemTerm,
+  };
+
+  // A memory location wrapper that represents a MemoryLocation, `MemLoc`,
+  // defined by `MemDef`.
+  class MemoryLocationWrapper {
+  public:
+    MemoryLocationWrapper(MemoryLocation MemLoc, DSEState &State,
+                          MemoryDef *MemDef)
+        : MemLoc(MemLoc), State(State), MemDef(MemDef) {
+      assert(MemLoc.Ptr && "MemLoc should be not null");
+      UnderlyingObject = getUnderlyingObject(MemLoc.Ptr);
+      DefInst = MemDef->getMemoryInst();
+    }
+
+    // Try to eliminate dead defs killed by this MemoryLocation and return the
+    // change state.
+    ChangeStateEnum eliminateDeadDefs();
+
+    MemoryAccess *GetDefiningAccess() const {
+      return MemDef->getDefiningAccess();
+    }
+
+    MemoryLocation MemLoc;
+    const Value *UnderlyingObject;
+    DSEState &State;
+    MemoryDef *MemDef;
+    Instruction *DefInst;
+  };
+
+  // A memory def wrapper that represents a MemoryDef and the MemoryLocation(s)
+  // defined by this MemoryDef.
+  class MemoryDefWrapper {
+  public:
+    MemoryDefWrapper(MemoryDef *MemDef, DSEState &State)
+        : MemDef(MemDef), State(State) {
+      DefInst = MemDef->getMemoryInst();
+
+      if (State.isMemTerminatorInst(DefInst)) {
+        if (auto KillingLoc = State.getLocForTerminator(DefInst)) {
+          DefinedLocation.emplace(
+              MemoryLocationWrapper(KillingLoc->first, State, MemDef));
+        }
+        return;
+      }
+
+      if (auto KillingLoc = State.getLocForWrite(DefInst)) {
+        DefinedLocation.emplace(
+            MemoryLocationWrapper(*KillingLoc, State, MemDef));
+      }
+    }
+
+    // Try to eliminate dead defs killed by this MemoryDef and return the
+    // change state.
+    bool eliminateDeadDefs();
+
+    MemoryDef *MemDef;
+    Instruction *DefInst;
+    DSEState &State;
+    std::optional<MemoryLocationWrapper> DefinedLocation = std::nullopt;
+  };
+
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
   DSEState &operator=(const DSEState &) = delete;
@@ -940,7 +949,7 @@ struct DSEState {
 
         auto *MD = dyn_cast_or_null<MemoryDef>(MA);
         if (MD && MemDefs.size() < MemorySSADefsPerBlockLimit &&
-            (getLocForWrite(&I) || isMemTerminatorInst(&I, TLI)))
+            (getLocForWrite(&I) || isMemTerminatorInst(&I)))
           MemDefs.push_back(MD);
       }
     }
@@ -1282,6 +1291,14 @@ struct DSEState {
     return std::nullopt;
   }
 
+  /// Returns true if \p I is a memory terminator instruction like
+  /// llvm.lifetime.end or free.
+  bool isMemTerminatorInst(Instruction *I) {
+    auto *CB = dyn_cast<CallBase>(I);
+    return CB && (CB->getIntrinsicID() == Intrinsic::lifetime_end ||
+                  getFreedOperand(CB, &TLI) != nullptr);
+  }
+
   /// Returns true if \p MaybeTerm is a memory terminator for \p Loc from
   /// instruction \p AccessI.
   bool isMemTerminator(const MemoryLocation &Loc, Instruction *AccessI,
@@ -1496,7 +1513,7 @@ struct DSEState {
         continue;
       }
 
-      if (isMemTerminatorInst(KillingLoc.DefInst, TLI)) {
+      if (isMemTerminatorInst(KillingLoc.DefInst)) {
         // If the killing def is a memory terminator (e.g. lifetime.end), check
         // the next candidate if the current Current does not write the same
         // underlying object as the terminator.
@@ -2187,24 +2204,7 @@ struct DSEState {
   }
 };
 
-MemoryDefWrapper::MemoryDefWrapper(MemoryDef *MemDef, DSEState &State)
-    : MemDef(MemDef), State(State) {
-  DefInst = MemDef->getMemoryInst();
-
-  if (isMemTerminatorInst(DefInst, State.TLI)) {
-    if (auto KillingLoc = State.getLocForTerminator(DefInst)) {
-      DefinedLocation.emplace(
-          MemoryLocationWrapper(KillingLoc->first, State, MemDef));
-    }
-    return;
-  }
-
-  if (auto KillingLoc = State.getLocForWrite(DefInst)) {
-    DefinedLocation.emplace(MemoryLocationWrapper(*KillingLoc, State, MemDef));
-  }
-}
-
-ChangeStateEnum MemoryLocationWrapper::eliminateDeadDefs() {
+DSEState::ChangeStateEnum DSEState::MemoryLocationWrapper::eliminateDeadDefs() {
   ChangeStateEnum ChangeState = ChangeStateEnum::NoChange;
   unsigned ScanLimit = MemorySSAScanLimit;
   unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
@@ -2251,7 +2251,7 @@ ChangeStateEnum MemoryLocationWrapper::eliminateDeadDefs() {
 
     if (!DebugCounter::shouldExecute(MemorySSACounter))
       continue;
-    if (isMemTerminatorInst(DefInst, State.TLI)) {
+    if (State.isMemTerminatorInst(DefInst)) {
       if (!(UnderlyingObject == DeadLoc.UnderlyingObject))
         continue;
       LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
@@ -2314,7 +2314,7 @@ ChangeStateEnum MemoryLocationWrapper::eliminateDeadDefs() {
   return ChangeState;
 }
 
-bool MemoryDefWrapper::eliminateDeadDefs() {
+bool DSEState::MemoryDefWrapper::eliminateDeadDefs() {
   if (!DefinedLocation.has_value()) {
     LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
                       << *DefInst << "\n");
@@ -2358,7 +2358,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     if (State.SkipStores.count(KillingDef))
       continue;
 
-    MemoryDefWrapper KillingDefWrapper(KillingDef, State);
+    DSEState::MemoryDefWrapper KillingDefWrapper(KillingDef, State);
     MadeChange |= KillingDefWrapper.eliminateDeadDefs();
   }
 
