@@ -617,7 +617,7 @@ add_entrypoint_object(
   HDRS
     ../faddf128.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
