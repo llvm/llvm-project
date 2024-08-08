@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
-
 #ifndef LLVM_LIBC_SRC_MATH_FADDF128_H
 #define LLVM_LIBC_SRC_MATH_FADDF128_H
 
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 namespace LIBC_NAMESPACE_DECL {
 
 float faddf128(float128 x, float128 y);
