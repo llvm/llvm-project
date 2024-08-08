@@ -2313,6 +2313,43 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT128
+  - name: scalbln
+    standards: 
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
+      - type: long
+  - name: scalblnl
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: long
+  - name: scalblnf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
+      - type: long
+  - name: scalblnf16
+    standards:
+      - stdc
+    return_type: float16
+    arguments:
+      - type: float16
+      - type: long
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: scalblnf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: long
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: lgamma
     standards:
       - stdc
