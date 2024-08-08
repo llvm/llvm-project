@@ -2042,6 +2042,7 @@ uint8_t Arm64XRelocRef::getSize() const {
   case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
     return sizeof(uint32_t);
   }
+  llvm_unreachable("Unknown Arm64XFixupType enum");
 }
 
 uint64_t Arm64XRelocRef::getValue() const {
