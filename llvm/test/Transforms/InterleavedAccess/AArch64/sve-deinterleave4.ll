@@ -53,6 +53,8 @@ define void @wide_deinterleave4(ptr %src) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP15]], i64 4)
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP17]], i64 4)
+; CHECK-NEXT:    [[SUM:%.*]] = add <vscale x 8 x i32> [[TMP12]], [[TMP14]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <vscale x 8 x i32> [[TMP16]], [[TMP18]]
 ; CHECK-NEXT:    ret void
 ;
   %load = load <vscale x 32 x i32>, ptr %src, align 4
@@ -65,6 +67,8 @@ define void @wide_deinterleave4(ptr %src) {
   %deinterleave_half2 = tail call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> %4)
   %7 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %deinterleave_half2, 0
   %8 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %deinterleave_half2, 1
+  %sum = add <vscale x 8 x i32> %5, %7
+  %sub = sub <vscale x 8 x i32> %6, %8
   ret void
 }
 
