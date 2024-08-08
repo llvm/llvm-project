@@ -65,9 +65,7 @@ template <typename Config> static Header *getHeader(const void *Ptr) {
 
 } // namespace LargeBlock
 
-static inline void unmap(MemMapT &MemMap) {
-  MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
-}
+static inline void unmap(MemMapT &MemMap) { MemMap.unmap(); }
 
 namespace {
 
@@ -825,7 +823,11 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     Cache.store(Options, H->CommitBase, H->CommitSize,
                 reinterpret_cast<uptr>(H + 1), H->MemMap);
   } else {
-    unmap(H->MemMap);
+    // Note that the `H->MemMap` is stored on the pages managed by itself. Take
+    // over the ownership before unmap() so that any operation along with
+    // unmap() won't touch inaccessible pages.
+    MemMapT MemMap = H->MemMap;
+    unmap(MemMap);
   }
 }
 

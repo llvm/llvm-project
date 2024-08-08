@@ -1220,7 +1220,8 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     AccessType access_type, llvm::StringRef name, int kind,
-    LanguageType language, ClangASTMetadata *metadata, bool exports_symbols) {
+    LanguageType language, std::optional<ClangASTMetadata> metadata,
+    bool exports_symbols) {
   ASTContext &ast = getASTContext();
 
   if (decl_ctx == nullptr)
@@ -1228,10 +1229,8 @@ CompilerType TypeSystemClang::CreateRecordType(
 
   if (language == eLanguageTypeObjC ||
       language == eLanguageTypeObjC_plus_plus) {
-    bool isForwardDecl = true;
     bool isInternal = false;
-    return CreateObjCClass(name, decl_ctx, owning_module, isForwardDecl,
-                           isInternal, metadata);
+    return CreateObjCClass(name, decl_ctx, owning_module, isInternal, metadata);
   }
 
   // NOTE: Eventually CXXRecordDecl will be merged back into RecordDecl and
@@ -1798,8 +1797,8 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
 
 CompilerType TypeSystemClang::CreateObjCClass(
     llvm::StringRef name, clang::DeclContext *decl_ctx,
-    OptionalClangModuleID owning_module, bool isForwardDecl, bool isInternal,
-    ClangASTMetadata *metadata) {
+    OptionalClangModuleID owning_module, bool isInternal,
+    std::optional<ClangASTMetadata> metadata) {
   ASTContext &ast = getASTContext();
   assert(!name.empty());
   if (!decl_ctx)
@@ -1809,7 +1808,6 @@ CompilerType TypeSystemClang::CreateObjCClass(
       ObjCInterfaceDecl::CreateDeserialized(ast, GlobalDeclID());
   decl->setDeclContext(decl_ctx);
   decl->setDeclName(&ast.Idents.get(name));
-  /*isForwardDecl,*/
   decl->setImplicit(isInternal);
   SetOwningModule(decl, owning_module);
 
@@ -7986,7 +7984,7 @@ bool TypeSystemClang::AddObjCClassProperty(
     const CompilerType &type, const char *property_name,
     const CompilerType &property_clang_type, clang::ObjCIvarDecl *ivar_decl,
     const char *property_setter_name, const char *property_getter_name,
-    uint32_t property_attributes, ClangASTMetadata *metadata) {
+    uint32_t property_attributes, ClangASTMetadata metadata) {
   if (!type || !property_clang_type.IsValid() || property_name == nullptr ||
       property_name[0] == '\0')
     return false;
@@ -8030,8 +8028,7 @@ bool TypeSystemClang::AddObjCClassProperty(
   if (!property_decl)
     return false;
 
-  if (metadata)
-    ast->SetMetadata(property_decl, *metadata);
+  ast->SetMetadata(property_decl, metadata);
 
   class_interface_decl->addDecl(property_decl);
 
@@ -8123,8 +8120,7 @@ bool TypeSystemClang::AddObjCClassProperty(
     SetMemberOwningModule(getter, class_interface_decl);
 
     if (getter) {
-      if (metadata)
-        ast->SetMetadata(getter, *metadata);
+      ast->SetMetadata(getter, metadata);
 
       getter->setMethodParams(clang_ast, llvm::ArrayRef<clang::ParmVarDecl *>(),
                               llvm::ArrayRef<clang::SourceLocation>());
@@ -8166,8 +8162,7 @@ bool TypeSystemClang::AddObjCClassProperty(
     SetMemberOwningModule(setter, class_interface_decl);
 
     if (setter) {
-      if (metadata)
-        ast->SetMetadata(setter, *metadata);
+      ast->SetMetadata(setter, metadata);
 
       llvm::SmallVector<clang::ParmVarDecl *, 1> params;
       params.push_back(clang::ParmVarDecl::Create(

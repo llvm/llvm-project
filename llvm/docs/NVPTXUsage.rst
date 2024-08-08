@@ -251,6 +251,41 @@ Overview:
 The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
 instruction, equivalent to the ``__syncthreads()`` call in CUDA.
 
+Membar/Fences
+-------------
+
+
+'``llvm.nvvm.fence.proxy.tensormap_generic.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
+
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr %addr, i32 %size)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence used to establish ordering between a prior memory access performed via the generic `proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>_` and a subsequent memory access performed via the tensormap proxy. ``nvvm.fence.proxy.tensormap_generic.release`` can form a release sequence that synchronizes with an acquire sequence that contains the ``nvvm.fence.proxy.tensormap_generic.acquire`` proxy fence. The following table describes the mapping between LLVM Intrinsic and the PTX instruction:
+
+  ====================================================== =========================================================
+  NVVM Intrinsic                                         PTX Instruction
+  ====================================================== =========================================================
+  ``@llvm.nvvm.fence.proxy.tensormap_generic.release.*`` ``fence.proxy.tensormap::generic.release.*``
+  ``@llvm.nvvm.fence.proxy.tensormap_generic.acquire.*`` ``fence.proxy.tensormap::generic.acquire.* [addr], size``
+  ====================================================== =========================================================
+
+The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
 
 Other Intrinsics
 ----------------

@@ -101,6 +101,7 @@ jobs:
   release-sources:
     name: Package Release Sources
     permissions:
+      contents: read
       id-token: write
       attestations: write
     needs:

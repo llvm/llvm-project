@@ -626,8 +626,11 @@ void BranchInst::dump() const {
 
 void LoadInst::setVolatile(bool V) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(std::make_unique<
+                  GenericSetter<&LoadInst::isVolatile, &LoadInst::setVolatile>>(
+        this, Tracker));
+  }
   cast<llvm::LoadInst>(Val)->setVolatile(V);
 }
 
@@ -688,8 +691,12 @@ void LoadInst::dump() const {
 
 void StoreInst::setVolatile(bool V) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<SetVolatile>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<
+            GenericSetter<&StoreInst::isVolatile, &StoreInst::setVolatile>>(
+            this, Tracker));
+  }
   cast<llvm::StoreInst>(Val)->setVolatile(V);
 }
 
@@ -1042,8 +1049,11 @@ llvm::SmallVector<BasicBlock *, 16> CallBrInst::getIndirectDests() const {
 }
 void CallBrInst::setDefaultDest(BasicBlock *BB) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<CallBrInstSetDefaultDest>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(std::make_unique<GenericSetter<&CallBrInst::getDefaultDest,
+                                                 &CallBrInst::setDefaultDest>>(
+        this, Tracker));
+  }
   cast<llvm::CallBrInst>(Val)->setDefaultDest(cast<llvm::BasicBlock>(BB->Val));
 }
 void CallBrInst::setIndirectDest(unsigned Idx, BasicBlock *BB) {
@@ -1295,22 +1305,34 @@ AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
 
 void AllocaInst::setAllocatedType(Type *Ty) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<AllocaSetAllocatedType>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<GenericSetter<&AllocaInst::getAllocatedType,
+                                       &AllocaInst::setAllocatedType>>(
+            this, Tracker));
+  }
   cast<llvm::AllocaInst>(Val)->setAllocatedType(Ty);
 }
 
 void AllocaInst::setAlignment(Align Align) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<AllocaSetAlignment>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<
+            GenericSetter<&AllocaInst::getAlign, &AllocaInst::setAlignment>>(
+            this, Tracker));
+  }
   cast<llvm::AllocaInst>(Val)->setAlignment(Align);
 }
 
 void AllocaInst::setUsedWithInAlloca(bool V) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<AllocaSetUsedWithInAlloca>(this, Tracker));
+  if (Tracker.isTracking()) {
+    Tracker.track(
+        std::make_unique<GenericSetter<&AllocaInst::isUsedWithInAlloca,
+                                       &AllocaInst::setUsedWithInAlloca>>(
+            this, Tracker));
+  }
   cast<llvm::AllocaInst>(Val)->setUsedWithInAlloca(V);
 }
 
