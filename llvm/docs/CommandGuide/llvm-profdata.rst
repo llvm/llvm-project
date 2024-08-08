@@ -162,7 +162,7 @@ OPTIONS
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
-.. option:: --split_layout=[true|false]
+.. option:: --split-layout=[true|false]
 
  Split the profile data section to two with one containing sample profiles with
  inlined functions and the other not. This option can only be used with
