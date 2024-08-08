@@ -3206,9 +3206,10 @@ ExprResult SemaObjC::BuildInstanceMessage(
     }
     if (!isDesignatedInitChain) {
       const ObjCMethodDecl *InitMethod = nullptr;
+      auto *CurMD = SemaRef.getCurMethodDecl();
+      assert(CurMD && "Current method declaration should not be null");
       bool isDesignated =
-          SemaRef.getCurMethodDecl()->isDesignatedInitializerForTheInterface(
-              &InitMethod);
+          CurMD->isDesignatedInitializerForTheInterface(&InitMethod);
       assert(isDesignated && InitMethod);
       (void)isDesignated;
       Diag(SelLoc, SuperLoc.isValid() ?

@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -480,8 +480,12 @@ namespace cwg1872 { // cwg1872: 9
   static_assert(y == 0);
 #endif
   constexpr int z = A<Z>().f();
-  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
-  //   since-cxx11-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}a
+#if __cplusplus < 202302L
+  //   since-cxx11-note@-3 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+#else
+  //   since-cxx23-note@-5 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
+#endif
 #endif
 }
 

@@ -67,20 +67,19 @@ constexpr auto obsoleteExecutionPartConstruct{recovery(ignoredStatementPrefix >>
                 parenthesized(nonemptyList(Parser<AllocateShapeSpec>{}))))))};
 
 TYPE_PARSER(recovery(
-    withMessage("expected execution part construct"_err_en_US,
-        CONTEXT_PARSER("execution part construct"_en_US,
-            first(construct<ExecutionPartConstruct>(executableConstruct),
+    CONTEXT_PARSER("execution part construct"_en_US,
+        first(construct<ExecutionPartConstruct>(executableConstruct),
+            construct<ExecutionPartConstruct>(statement(indirect(formatStmt))),
+            construct<ExecutionPartConstruct>(statement(indirect(entryStmt))),
+            construct<ExecutionPartConstruct>(statement(indirect(dataStmt))),
+            extension<LanguageFeature::ExecutionPartNamelist>(
+                "nonstandard usage: NAMELIST in execution part"_port_en_US,
                 construct<ExecutionPartConstruct>(
-                    statement(indirect(formatStmt))),
-                construct<ExecutionPartConstruct>(
-                    statement(indirect(entryStmt))),
-                construct<ExecutionPartConstruct>(
-                    statement(indirect(dataStmt))),
-                extension<LanguageFeature::ExecutionPartNamelist>(
-                    "nonstandard usage: NAMELIST in execution part"_port_en_US,
-                    construct<ExecutionPartConstruct>(
-                        statement(indirect(Parser<NamelistStmt>{})))),
-                obsoleteExecutionPartConstruct))),
+                    statement(indirect(Parser<NamelistStmt>{})))),
+            obsoleteExecutionPartConstruct,
+            lookAhead(declarationConstruct) >> SkipTo<'\n'>{} >>
+                fail<ExecutionPartConstruct>(
+                    "misplaced declaration in the execution part"_err_en_US))),
     construct<ExecutionPartConstruct>(executionPartErrorRecovery)))
 
 // R509 execution-part -> executable-construct [execution-part-construct]...

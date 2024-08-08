@@ -16,7 +16,8 @@ define void @gather(ptr noalias nocapture %A, ptr noalias nocapture readonly %B)
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -58,7 +59,8 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> [[MASKEDOFF:%.*]], ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> [[MASKEDOFF:%.*]], i32 32)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -100,7 +102,8 @@ define void @gather_negative_stride(ptr noalias nocapture %A, ptr noalias nocapt
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 155, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr [[TMP0]], i64 -5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 -5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -142,7 +145,8 @@ define void @gather_zero_stride(ptr noalias nocapture %A, ptr noalias nocapture 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr [[TMP0]], i64 0, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 0, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -190,9 +194,10 @@ define void @scatter(ptr noalias nocapture %A, ptr noalias nocapture readonly %B
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.v32i8.p0.i64(<32 x i8> [[I4]], ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v32i8.p0.i64(<32 x i8> [[I4]], ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 32)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 160
 ; CHECK-NEXT:    [[I5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -232,9 +237,10 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> [[MASKEDOFF:%.*]], ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> [[MASKEDOFF:%.*]], i32 32)
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.v32i8.p0.i64(<32 x i8> [[I4]], ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v32i8.p0.i64(<32 x i8> [[I4]], ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, i32 32)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 160
 ; CHECK-NEXT:    [[I5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -276,7 +282,8 @@ define void @gather_pow2(ptr noalias nocapture %A, ptr noalias nocapture readonl
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP1]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -321,7 +328,8 @@ define void @gather_unknown_pow2(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP1]], i64 [[TMP0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP1]], i64 [[TMP0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP2]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -418,9 +426,10 @@ define void @scatter_pow2(ptr noalias nocapture %A, ptr noalias nocapture readon
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP1]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.v8i32.p0.i64(<8 x i32> [[I4]], ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I4]], ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 32
 ; CHECK-NEXT:    [[I5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -468,8 +477,10 @@ define void @struct_gather(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    [[VEC_IND_SCALAR1:%.*]] = phi i64 [ 8, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_FOO]], ptr [[B]], i64 [[VEC_IND_SCALAR1]], i32 1
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP1]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP2]], <8 x i32> undef, i32 8)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP1]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP3]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 4
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i32, ptr [[I2]], i64 8
@@ -537,29 +548,37 @@ define void @gather_unroll(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    [[VEC_IND_SCALAR11:%.*]] = phi i64 [ 12, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR13:%.*]] = phi i64 [ 3, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR14:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP0]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER52:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP1]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP1]], <8 x i32> undef, i32 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP2]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER52:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP3]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I3:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER52]], [[WIDE_MASKED_GATHER]]
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.v8i32.p0.i64(<8 x i32> [[I3]], ptr [[TMP1]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR3]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER53:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP2]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR5]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER54:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP3]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I3]], ptr [[TMP2]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP4]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER53:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP5]], <8 x i32> undef, i32 8)
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP6]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER54:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP7]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I8:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER54]], [[WIDE_MASKED_GATHER53]]
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.v8i32.p0.i64(<8 x i32> [[I8]], ptr [[TMP3]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR7]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER55:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP4]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR9]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER56:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP5]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I8]], ptr [[TMP6]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP8]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER55:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP9]], <8 x i32> undef, i32 8)
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP10]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER56:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP11]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I13:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER56]], [[WIDE_MASKED_GATHER55]]
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.v8i32.p0.i64(<8 x i32> [[I13]], ptr [[TMP5]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR11]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER57:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP6]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR13]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER58:%.*]] = call <8 x i32> @llvm.riscv.masked.strided.load.v8i32.p0.i64(<8 x i32> undef, ptr [[TMP7]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I13]], ptr [[TMP10]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP12]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER57:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP13]], <8 x i32> undef, i32 8)
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP14]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER58:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> [[TMP15]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I18:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER58]], [[WIDE_MASKED_GATHER57]]
-; CHECK-NEXT:    call void @llvm.riscv.masked.strided.store.v8i32.p0.i64(<8 x i32> [[I18]], ptr [[TMP7]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I18]], ptr [[TMP14]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 128
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR2]] = add i64 [[VEC_IND_SCALAR1]], 32
@@ -636,8 +655,10 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; V-NEXT:    [[I3_SCALAR1:%.*]] = phi i64 [ 10, [[BB]] ], [ [[I16_SCALAR2:%.*]], [[BB2]] ]
 ; V-NEXT:    [[TMP0:%.*]] = getelementptr ptr, ptr [[ARG1:%.*]], i64 [[I3_SCALAR]]
 ; V-NEXT:    [[TMP1:%.*]] = getelementptr ptr, ptr [[ARG1]], i64 [[I3_SCALAR1]]
-; V-NEXT:    [[I9:%.*]] = call <2 x ptr> @llvm.riscv.masked.strided.load.v2p0.p0.i64(<2 x ptr> undef, ptr [[TMP0]], i64 40, <2 x i1> <i1 true, i1 true>)
-; V-NEXT:    [[I10:%.*]] = call <2 x ptr> @llvm.riscv.masked.strided.load.v2p0.p0.i64(<2 x ptr> undef, ptr [[TMP1]], i64 40, <2 x i1> <i1 true, i1 true>)
+; V-NEXT:    [[TMP2:%.*]] = call <2 x ptr> @llvm.experimental.vp.strided.load.v2p0.p0.i64(ptr [[TMP0]], i64 40, <2 x i1> <i1 true, i1 true>, i32 2)
+; V-NEXT:    [[I9:%.*]] = call <2 x ptr> @llvm.vp.select.v2p0(<2 x i1> <i1 true, i1 true>, <2 x ptr> [[TMP2]], <2 x ptr> undef, i32 2)
+; V-NEXT:    [[TMP3:%.*]] = call <2 x ptr> @llvm.experimental.vp.strided.load.v2p0.p0.i64(ptr [[TMP1]], i64 40, <2 x i1> <i1 true, i1 true>, i32 2)
+; V-NEXT:    [[I10:%.*]] = call <2 x ptr> @llvm.vp.select.v2p0(<2 x i1> <i1 true, i1 true>, <2 x ptr> [[TMP3]], <2 x ptr> undef, i32 2)
 ; V-NEXT:    [[I11:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], i64 [[I]]
 ; V-NEXT:    store <2 x ptr> [[I9]], ptr [[I11]], align 8
 ; V-NEXT:    [[I13:%.*]] = getelementptr inbounds ptr, ptr [[I11]], i64 2
@@ -717,8 +738,8 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; V-NEXT:    [[I9:%.*]] = load <2 x ptr>, ptr [[I7]], align 8
 ; V-NEXT:    [[TMP0:%.*]] = getelementptr ptr, ptr [[ARG:%.*]], i64 [[I3_SCALAR]]
 ; V-NEXT:    [[TMP1:%.*]] = getelementptr ptr, ptr [[ARG]], i64 [[I3_SCALAR1]]
-; V-NEXT:    call void @llvm.riscv.masked.strided.store.v2p0.p0.i64(<2 x ptr> [[I6]], ptr [[TMP0]], i64 40, <2 x i1> <i1 true, i1 true>)
-; V-NEXT:    call void @llvm.riscv.masked.strided.store.v2p0.p0.i64(<2 x ptr> [[I9]], ptr [[TMP1]], i64 40, <2 x i1> <i1 true, i1 true>)
+; V-NEXT:    call void @llvm.experimental.vp.strided.store.v2p0.p0.i64(<2 x ptr> [[I6]], ptr [[TMP0]], i64 40, <2 x i1> <i1 true, i1 true>, i32 2)
+; V-NEXT:    call void @llvm.experimental.vp.strided.store.v2p0.p0.i64(<2 x ptr> [[I9]], ptr [[TMP1]], i64 40, <2 x i1> <i1 true, i1 true>, i32 2)
 ; V-NEXT:    [[I15]] = add nuw i64 [[I]], 4
 ; V-NEXT:    [[I16_SCALAR]] = add i64 [[I3_SCALAR]], 20
 ; V-NEXT:    [[I16_SCALAR2]] = add i64 [[I3_SCALAR1]], 20
@@ -801,7 +822,8 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    [[I17_SCALAR:%.*]] = phi i64 [ [[START]], [[BB9]] ], [ [[I28_SCALAR:%.*]], [[BB15]] ]
 ; CHECK-NEXT:    [[I18:%.*]] = add i64 [[I16]], [[I4]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[I17_SCALAR]]
-; CHECK-NEXT:    [[I21:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 32)
+; CHECK-NEXT:    [[I21:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I22:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 [[I18]]
 ; CHECK-NEXT:    [[I24:%.*]] = load <32 x i8>, ptr [[I22]], align 1
 ; CHECK-NEXT:    [[I25:%.*]] = add <32 x i8> [[I24]], [[I21]]
@@ -909,7 +931,8 @@ define void @gather_no_scalar_remainder(ptr noalias nocapture noundef %arg, ptr 
 ; CHECK-NEXT:    [[I5:%.*]] = phi i64 [ [[I13:%.*]], [[BB4]] ], [ 0, [[BB2]] ]
 ; CHECK-NEXT:    [[I6_SCALAR:%.*]] = phi i64 [ 0, [[BB2]] ], [ [[I14_SCALAR:%.*]], [[BB4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[I6_SCALAR]]
-; CHECK-NEXT:    [[I9:%.*]] = call <16 x i8> @llvm.riscv.masked.strided.load.v16i8.p0.i64(<16 x i8> undef, ptr [[TMP0]], i64 5, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.experimental.vp.strided.load.v16i8.p0.i64(ptr [[TMP0]], i64 5, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 16)
+; CHECK-NEXT:    [[I9:%.*]] = call <16 x i8> @llvm.vp.select.v16i8(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> [[TMP1]], <16 x i8> undef, i32 16)
 ; CHECK-NEXT:    [[I10:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 [[I5]]
 ; CHECK-NEXT:    [[I11:%.*]] = load <16 x i8>, ptr [[I10]], align 1
 ; CHECK-NEXT:    [[I12:%.*]] = add <16 x i8> [[I11]], [[I9]]
@@ -951,8 +974,9 @@ bb16:                                             ; preds = %bb4, %bb
 define <8 x i8> @broadcast_ptr_base(ptr %a) {
 ; CHECK-LABEL: @broadcast_ptr_base(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i8> @llvm.riscv.masked.strided.load.v8i8.p0.i64(<8 x i8> poison, ptr [[A:%.*]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    ret <8 x i8> [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr [[A:%.*]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.vp.select.v8i8(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i8> [[TMP0]], <8 x i8> poison, i32 8)
+; CHECK-NEXT:    ret <8 x i8> [[TMP1]]
 ;
 entry:
   %0 = insertelement <8 x ptr> poison, ptr %a, i64 0

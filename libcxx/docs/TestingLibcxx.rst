@@ -84,6 +84,12 @@ flags to use, and how to run an executable. This system is meant to be easily
 extended for custom needs, in particular when porting the libc++ test suite to
 new platforms.
 
+.. note::
+  If you run the test suite on Apple platforms, we recommend adding the terminal application
+  used to run the test suite to the list of "Developer Tools". This prevents the system from
+  trying to scan each individual test binary for malware and dramatically speeds up the test
+  suite.
+
 Using a Custom Site Configuration
 ---------------------------------
 
@@ -449,9 +455,9 @@ An example build would look like:
 
   $ ninja -C build cxx-benchmarks
 
-This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
+This will build all of the benchmarks under ``<libcxx>/test/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
-``build/projects/libcxx/benchmarks``.
+``build/libcxx/test/benchmarks``.
 
 Also See:
 
@@ -468,9 +474,9 @@ For example:
 
 .. code-block:: bash
 
-  $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.bench.out # Runs all the benchmarks
-  $ ./algorithms.bench.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
+  $ cd build/libcxx/test/benchmarks
+  $ ./find.bench.out # Runs all the benchmarks
+  $ ./find.bench.out --benchmark_filter="bm_ranges_find<std::vector<char>>" # Only runs that specific benchmark
 
 For more information about running benchmarks see `Google Benchmark`_.
 

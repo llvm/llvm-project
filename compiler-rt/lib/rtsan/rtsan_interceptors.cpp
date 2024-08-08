@@ -10,13 +10,29 @@
 
 #include "rtsan/rtsan_interceptors.h"
 
+#include "interception/interception.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_platform.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
+#include "rtsan/rtsan.h"
 #include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
+
+#if TARGET_OS_MAC
+// On MacOS OSSpinLockLock is deprecated and no longer present in the headers,
+// but the symbol still exists on the system. Forward declare here so we
+// don't get compilation errors.
+#include <stdint.h>
+extern "C" {
+typedef int32_t OSSpinLock;
+void OSSpinLockLock(volatile OSSpinLock *__lock);
+}
+#endif
+
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
 #endif
@@ -34,6 +50,15 @@
 #include <unistd.h>
 
 using namespace __sanitizer;
+
+using __rtsan::rtsan_init_is_running;
+using __rtsan::rtsan_initialized;
+
+namespace {
+struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return !rtsan_initialized; }
+};
+} // namespace
 
 void ExpectNotRealtime(const char *intercepted_function_name) {
   __rtsan::GetContextForThisThread().ExpectNotRealtime(
@@ -238,11 +263,17 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(num, size);
+
   ExpectNotRealtime("calloc");
   return REAL(calloc)(num, size);
 }
 
 INTERCEPTOR(void, free, void *ptr) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+
   if (ptr != NULL) {
     ExpectNotRealtime("free");
   }
@@ -250,11 +281,17 @@ INTERCEPTOR(void, free, void *ptr) {
 }
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
+
   ExpectNotRealtime("malloc");
   return REAL(malloc)(size);
 }
 
 INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
+
   ExpectNotRealtime("realloc");
   return REAL(realloc)(ptr, size);
 }

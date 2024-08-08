@@ -358,7 +358,7 @@ namespace delete_random_things {
                                              // both-note {{delete of pointer to subobject }}
   static_assert((delete (new int + 1), true)); // both-error {{}} \
                                                // ref-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}} \
-                                               // expected-note {{delete of pointer '&new int + 1' that does not point to complete object}}
+                                               // expected-note {{delete of pointer '&{*new int#1} + 1' that does not point to complete object}}
   static_assert((delete[] (new int[3] + 1), true)); // both-error {{}} \
                                                     // both-note {{delete of pointer to subobject}}
   static_assert((delete &(int&)(int&&)0, true)); // both-error {{}} \
@@ -551,6 +551,40 @@ namespace FaultyDtorCalledByDelete {
                               // both-note {{in call to 'abc()'}}
 }
 
+namespace DeleteThis {
+  constexpr bool super_secret_double_delete() {
+    struct A {
+      constexpr ~A() { delete this; } // both-note {{destruction of object that is already being destroyed}} \
+                                      // ref-note {{in call to}}
+    };
+    delete new A; // both-note {{in call to}}
+    return true;
+  }
+  static_assert(super_secret_double_delete()); // both-error {{not an integral constant expression}} \
+                                               // both-note {{in call to 'super_secret_double_delete()'}}
+}
+
+/// FIXME: This is currently diagnosed, but should work.
+/// If the destructor for S is _not_ virtual however, it should fail.
+namespace CastedDelete {
+  struct S {
+    constexpr S(int *p) : p(p) {}
+    constexpr virtual ~S() { *p = 1; }
+    int *p;
+  };
+  struct T: S {
+    // implicit destructor defined eagerly because it is constexpr and virtual
+    using S::S;
+  };
+
+  constexpr int vdtor_1() {
+    int a;
+    delete (S*)new T(&a); // expected-note {{delete of pointer to subobject}}
+    return a;
+  }
+  static_assert(vdtor_1() == 1); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{in call to}}
+}
 
 #else
 /// Make sure we reject this prior to C++20
@@ -560,4 +594,9 @@ constexpr int a() { // both-error {{never produces a constant expression}}
 }
 static_assert(a() == 1, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to 'a()'}}
+
+
+static_assert(true ? *new int : 4, ""); // both-error {{expression is not an integral constant expression}} \
+                                        // both-note {{read of uninitialized object is not allowed in a constant expression}}
+
 #endif

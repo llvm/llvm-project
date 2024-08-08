@@ -36,6 +36,27 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call float @llvm.experimental.constrained.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call x86_fp80 @llvm.experimental.constrained.ldexp.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
+  __builtin_acos(f);        __builtin_acosf(f);       __builtin_acosl(f); __builtin_acosf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.acos.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.acos.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.acos.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.acos.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
+__builtin_asin(f);        __builtin_asinf(f);       __builtin_asinl(f); __builtin_asinf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.asin.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.asin.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.asin.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.asin.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
+__builtin_atan(f);        __builtin_atanf(f);       __builtin_atanl(f); __builtin_atanf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.atan.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.atan.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.atan.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.atan.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
   __builtin_ceil(f);       __builtin_ceilf(f);      __builtin_ceill(f); __builtin_ceilf128(f);
 
 // CHECK: call double @llvm.experimental.constrained.ceil.f64(double %{{.*}}, metadata !"fpexcept.strict")
@@ -49,6 +70,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call float @llvm.experimental.constrained.cos.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call x86_fp80 @llvm.experimental.constrained.cos.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.cos.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
+  __builtin_cosh(f);        __builtin_coshf(f);       __builtin_coshl(f); __builtin_coshf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.cosh.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.cosh.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.cosh.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.cosh.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
   __builtin_exp(f);        __builtin_expf(f);       __builtin_expl(f); __builtin_expf128(f);
 
@@ -177,6 +205,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call x86_fp80 @llvm.experimental.constrained.sin.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.sin.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
+  __builtin_sinh(f);        __builtin_sinhf(f);       __builtin_sinhl(f); __builtin_sinhf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.sinh.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.sinh.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.sinh.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.sinh.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
   __builtin_sqrt(f);       __builtin_sqrtf(f);      __builtin_sqrtl(f); __builtin_sqrtf128(f);
 
 // CHECK: call double @llvm.experimental.constrained.sqrt.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -191,6 +226,12 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.tan.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
+  __builtin_tanh(f);        __builtin_tanhf(f);       __builtin_tanhl(f); __builtin_tanhf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.tanh.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.tanh.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.tanh.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.tanh.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
   __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin_truncf128(f);
 

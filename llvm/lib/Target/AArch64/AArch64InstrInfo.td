@@ -143,6 +143,8 @@ def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->isSVEAvailable()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE), "sve">;
+def HasSVEB16B16     : Predicate<"Subtarget->hasSVEB16B16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEB16B16), "sve-b16b16">;
 def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2p1        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()">,
@@ -276,6 +278,8 @@ def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulFP32), "f32mm">;
 def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulFP64), "f64mm">;
+def HasFPAC          : Predicate<"Subtarget->hasFPAC())">,
+                       AssemblerPredicateWithAll<(all_of FeatureFPAC), "fpac">;
 def HasXS            : Predicate<"Subtarget->hasXS()">,
                        AssemblerPredicateWithAll<(all_of FeatureXS), "xs">;
 def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
@@ -1143,6 +1147,33 @@ def JumpTableDest8 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
                      Sched<[]>;
 }
 
+// A hardened but more expensive version of jump-table dispatch.
+// This combines the target address computation (otherwise done using the
+// JumpTableDest pseudos above) with the branch itself (otherwise done using
+// a plain BR) in a single non-attackable sequence.
+//
+// We take the final entry index as an operand to allow isel freedom. This does
+// mean that the index can be attacker-controlled.  To address that, we also do
+// limited checking of the offset, mainly ensuring it still points within the
+// jump-table array.  When it doesn't, this branches to the first entry.
+// We might want to trap instead.
+//
+// This is intended for use in conjunction with ptrauth for other code pointers,
+// to avoid signing jump-table entries and turning them into pointers.
+//
+// Entry index is passed in x16.  Clobbers x16/x17/nzcv.
+let isNotDuplicable = 1 in
+def BR_JumpTable : Pseudo<(outs), (ins i32imm:$jti), []>, Sched<[]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isIndirectBranch = 1;
+  let isBarrier = 1;
+  let isNotDuplicable = 1;
+  let Defs = [X16,X17,NZCV];
+  let Uses = [X16];
+  let Size = 44; // 28 fixed + 16 variable, for table size materialization
+}
+
 // Space-consuming pseudo to aid testing of placement and reachability
 // algorithms. Immediate operand is the number of bytes this "instruction"
 // occupies; register operands can be used to enforce dependency and constrain
@@ -1766,6 +1797,24 @@ let Predicates = [HasPAuth] in {
     let Uses = [SP];
   }
 
+  // BRA pseudo, generalized version of BRAA/BRAB/Z.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def BRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                                GPR64noip:$AddrDisc), []>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let hasNoSchedulingInfo = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let isBranch = 1;
+    let isTerminator = 1;
+    let isBarrier = 1;
+    let isIndirectBranch = 1;
+    let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
+    let Defs = [X17];
+  }
+
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;
@@ -1775,6 +1824,37 @@ let Predicates = [HasPAuth] in {
 
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
+
+  // AUT pseudo.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUT : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
+                   []>, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 32;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
+
+  // AUT and re-PAC a value, using different keys/data.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
+                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
+               []>, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 48;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
 
   // Materialize a signed global address, with adrp+add and PAC.
   def MOVaddrPAC : Pseudo<(outs),
@@ -1833,7 +1913,6 @@ let Predicates = [HasPAuth] in {
                                 tcGPR64:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
                                  imm:$Disc, tcGPR64:$AddrDisc)>;
-
 }
 
 // v9.5-A pointer authentication extensions
@@ -5363,6 +5442,17 @@ def : Pat<(v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
                               (v4i32 VImm8000)))),
           (SQXTNv4i16 V128:$Vn)>;
 
+// concat_vectors(Vd, trunc(umin(X, 255))) -> UQXTRN(Vd, Vn)
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (trunc (umin (v8i16 V128:$Vn), (v8i16 VImmFF)))))),
+          (UQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+// concat_vectors(Vd, trunc(umin(X, 65535))) -> UQXTRN(Vd, Vn)
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (trunc (umin (v4i32 V128:$Vn), (v4i32 VImmFFFF)))))),
+          (UQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
 // concat_vectors(Vd, trunc(smin(smax Vm, -128), 127) ~> SQXTN2(Vd, Vn)
 // with reversed min/max
 def : Pat<(v16i8 (concat_vectors
@@ -8040,6 +8130,20 @@ def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
                                                     vecshiftR64Narrow:$imm)))),
           (SHRNv4i32_shift (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
                            V128:$Rn, vecshiftR32Narrow:$imm)>;
+
+def : Pat<(shl (v8i16 (zext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (USHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
+def : Pat<(shl (v4i32 (zext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (USHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
+def : Pat<(shl (v2i64 (zext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (USHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
+
+def : Pat<(shl (v8i16 (sext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (SSHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
+def : Pat<(shl (v4i32 (sext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (SSHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
+def : Pat<(shl (v2i64 (sext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (SSHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
 
 // Vector sign and zero extensions are implemented with SSHLL and USSHLL.
 // Anyexts are implemented as zexts.

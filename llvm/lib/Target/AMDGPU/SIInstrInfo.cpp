@@ -472,6 +472,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     Offset = 0;
     // Get appropriate operand, and compute width accordingly.
     DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
+    if (DataOpIdx == -1)
+      return false; // no return sampler
     Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
@@ -4597,6 +4599,10 @@ static bool shouldReadExec(const MachineInstr &MI) {
   return true;
 }
 
+static bool isRegOrFI(const MachineOperand &MO) {
+  return MO.isReg() || MO.isFI();
+}
+
 static bool isSubRegOf(const SIRegisterInfo &TRI,
                        const MachineOperand &SuperVec,
                        const MachineOperand &SubReg) {
@@ -4931,7 +4937,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
             ++ConstantBusCount;
             SGPRsUsed.push_back(SGPRUsed);
           }
-        } else {
+        } else if (!MO.isFI()) { // Treat FI like a register.
           if (!UsesLiteral) {
             ++ConstantBusCount;
             UsesLiteral = true;
@@ -5024,7 +5030,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MachineOperand &Src0 = MI.getOperand(Src0Idx);
     const MachineOperand &Src1 = MI.getOperand(Src1Idx);
 
-    if (!Src0.isReg() && !Src1.isReg() &&
+    if (!isRegOrFI(Src0) && !isRegOrFI(Src1) &&
         !isInlineConstant(Src0, Desc.operands()[Src0Idx]) &&
         !isInlineConstant(Src1, Desc.operands()[Src1Idx]) &&
         !Src0.isIdenticalTo(Src1)) {

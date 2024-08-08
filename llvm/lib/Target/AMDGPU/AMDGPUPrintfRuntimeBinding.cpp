@@ -437,7 +437,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
     return false;
 
   auto PrintfFunction = M.getFunction("printf");
-  if (!PrintfFunction || !PrintfFunction->isDeclaration())
+  if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
+      M.getModuleFlag("openmp"))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {

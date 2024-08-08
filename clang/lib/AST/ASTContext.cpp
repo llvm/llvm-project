@@ -1384,6 +1384,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
+  if (LangOpts.HLSL) {
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
+  }
+
   if (Target.hasAArch64SVETypes() ||
       (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId) \
@@ -1983,7 +1989,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       // Adjust the alignment for fixed-length SVE predicates.
       Align = 16;
     else if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask)
+             VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
     break;
@@ -2242,6 +2251,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = ALIGN;                                                             \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      Width = 0;
+      Align = 8;
+      break;
     }
     break;
   case Type::ObjCObjectPointer:
@@ -3223,14 +3237,16 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << "<objc_object>";
     return;
 
-  case Type::Enum:
+  case Type::Enum: {
     // C11 6.7.2.2p4:
     //   Each enumerated type shall be compatible with char, a signed integer
     //   type, or an unsigned integer type.
     //
     // So we have to treat enum types as integers.
+    QualType UnderlyingType = cast<EnumType>(T)->getDecl()->getIntegerType();
     return encodeTypeForFunctionPointerAuth(
-        Ctx, OS, cast<EnumType>(T)->getDecl()->getIntegerType());
+        Ctx, OS, UnderlyingType.isNull() ? Ctx.IntTy : UnderlyingType);
+  }
 
   case Type::FunctionNoProto:
   case Type::FunctionProto: {
@@ -3281,7 +3297,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     return;
 
   case Type::Builtin: {
-    const auto *BTy = T->getAs<BuiltinType>();
+    const auto *BTy = T->castAs<BuiltinType>();
     switch (BTy->getKind()) {
 #define SIGNED_TYPE(Id, SingletonId)                                           \
   case BuiltinType::Id:                                                        \
@@ -3353,6 +3369,10 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case BuiltinType::Id:                                                        \
     return;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    return;
+#include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
     case BuiltinType::AMDGPUBufferRsrc:
@@ -3361,9 +3381,10 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/RISCVVTypes.def"
       llvm_unreachable("not yet implemented");
     }
+    llvm_unreachable("should never get here");
   }
   case Type::Record: {
-    const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
+    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
     const IdentifierInfo *II = RD->getIdentifier();
 
     // In C++, an immediate typedef of an anonymous struct or union
@@ -3405,7 +3426,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   }
 }
 
-uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
   assert(!T->isDependentType() &&
          "cannot compute type discriminator of a dependent type");
 
@@ -3415,11 +3436,13 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
   if (T->isFunctionPointerType() || T->isFunctionReferenceType())
     T = T->getPointeeType();
 
-  if (T->isFunctionType())
+  if (T->isFunctionType()) {
     encodeTypeForFunctionPointerAuth(*this, Out, T);
-  else
-    llvm_unreachable(
-        "type discrimination of non-function type not implemented yet");
+  } else {
+    T = T.getUnqualifiedType();
+    std::unique_ptr<MangleContext> MC(createMangleContext());
+    MC->mangleCanonicalTypeName(T, Out);
+  }
 
   return llvm::getPointerAuthStableSipHash(Str);
 }
@@ -5583,11 +5606,19 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     // of a real template argument.
     // FIXME: It would be more faithful to model this as something like an
     // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
-    if (T->isRecordType())
+    ExprValueKind VK;
+    if (T->isRecordType()) {
+      // C++ [temp.param]p8: An id-expression naming a non-type
+      // template-parameter of class type T denotes a static storage duration
+      // object of type const T.
       T.addConst();
-    Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*RefersToEnclosingVariableOrCapture*/ false, T,
-        Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
+      VK = VK_LValue;
+    } else {
+      VK = Expr::getValueKindForType(NTTP->getType());
+    }
+    Expr *E = new (*this)
+        DeclRefExpr(*this, NTTP, /*RefersToEnclosingVariableOrCapture=*/false,
+                    T, VK, NTTP->getLocation());
 
     if (NTTP->isParameterPack())
       E = new (*this)
@@ -8539,6 +8570,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 #define BUILTIN_TYPE(KIND, ID)
 #define PLACEHOLDER_TYPE(KIND, ID) \
     case BuiltinType::KIND:
@@ -9892,7 +9925,13 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       First->getVectorKind() != VectorKind::RVVFixedLengthData &&
       Second->getVectorKind() != VectorKind::RVVFixedLengthData &&
       First->getVectorKind() != VectorKind::RVVFixedLengthMask &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask)
+      Second->getVectorKind() != VectorKind::RVVFixedLengthMask &&
+      First->getVectorKind() != VectorKind::RVVFixedLengthMask_1 &&
+      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_1 &&
+      First->getVectorKind() != VectorKind::RVVFixedLengthMask_2 &&
+      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_2 &&
+      First->getVectorKind() != VectorKind::RVVFixedLengthMask_4 &&
+      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_4)
     return true;
 
   return false;
@@ -10010,7 +10049,25 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
           BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
           return FirstType->isRVVVLSBuiltinType() &&
                  Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == getRVVTypeSize(*this, BT);
+                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)));
+        }
+        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1) {
+          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
+          return FirstType->isRVVVLSBuiltinType() &&
+                 Info.ElementType == BoolTy &&
+                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT) * 8));
+        }
+        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2) {
+          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
+          return FirstType->isRVVVLSBuiltinType() &&
+                 Info.ElementType == BoolTy &&
+                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)) * 4);
+        }
+        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
+          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
+          return FirstType->isRVVVLSBuiltinType() &&
+                 Info.ElementType == BoolTy &&
+                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)) * 2);
         }
         if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
             VT->getVectorKind() == VectorKind::Generic)
@@ -12401,8 +12458,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       !isMSStaticDataMemberInlineDefinition(VD))
     return false;
 
-  // Variables in other module units shouldn't be forced to be emitted.
-  if (VD->isInAnotherModuleUnit())
+  if (VD->shouldEmitInExternalSource())
     return false;
 
   // Variables that can be needed in other TUs are required.

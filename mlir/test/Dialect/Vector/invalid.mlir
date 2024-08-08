@@ -35,6 +35,27 @@ func.func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 // -----
 
+func.func @broadcast_scalable_unit_dim(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. [4])}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<[4]xf32>
+}
+
+// -----
+
+func.func @broadcast_fixed_to_scalable(%arg0: vector<2xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch (2 vs. [2])}}
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<[2]xf32>
+}
+
+// -----
+
+func.func @broadcast_scalable_to_fixed(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. 1)}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<4x1xf32>
+}
+
+// -----
+
 func.func @broadcast_unknown(%arg0: memref<4x8xf32>) {
   // expected-error@+1 {{'vector.broadcast' op source type is not a vector}}
   %1 = vector.broadcast %arg0 : memref<4x8xf32> to vector<1x8xf32>
@@ -1094,66 +1115,6 @@ func.func @cannot_print_string_with_source_set(%vec: vector<[4]xf32>) {
 
 // -----
 
-func.func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{invalid input shape for vector type}}
-  %1 = vector.reshape %arg0, [%c3, %c6, %c3], [%c2, %c9], [4]
-    : vector<3x2x4xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_output_shape(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{invalid output shape for vector type}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9, %c3], [4]
-    : vector<3x2x4xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_input_output_shape_product(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{product of input and output shape sizes must match}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c6], [4]
-    : vector<3x2x4xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_input_fixed_size(%arg0 : vector<3x2x5xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{fixed vector size must match input vector for dim 0}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
-    : vector<3x2x5xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_output_fixed_size(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{fixed vector size must match output vector for dim 0}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
-    : vector<3x2x4xf32> to vector<2x3x5xf32>
-}
-
-// -----
-
 func.func @shape_cast_wrong_element_type(%arg0 : vector<5x1x3x2xf32>) {
   // expected-error@+1 {{op source/result vectors must have same element type}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xi32>
@@ -1178,6 +1139,20 @@ func.func @shape_cast_invalid_rank_reduction(%arg0 : vector<5x1x3x2xf32>) {
 func.func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
   // expected-error@+1 {{invalid shape cast}}
   %0 = vector.shape_cast %arg0 : vector<15x2xf32> to vector<5x2x3x1xf32>
+}
+
+// -----
+
+func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<15x[2]xf32>) {
+  // expected-error@+1 {{different number of scalable dims at source (1) and result (0)}}
+  %0 = vector.shape_cast %arg0 : vector<15x[2]xf32> to vector<30xf32>
+}
+
+// -----
+
+func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<2x[15]x[2]xf32>) {
+  // expected-error@+1 {{different number of scalable dims at source (2) and result (1)}}
+  %0 = vector.shape_cast %arg0 : vector<2x[15]x[2]xf32> to vector<30x[2]xf32>
 }
 
 // -----

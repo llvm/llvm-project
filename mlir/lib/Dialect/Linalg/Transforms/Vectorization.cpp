@@ -522,9 +522,11 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case<arith::MaxSIOp>([&](auto op) { return CombiningKind::MAXSI; })
       .Case<arith::MaxUIOp>([&](auto op) { return CombiningKind::MAXUI; })
       .Case<arith::MaximumFOp>([&](auto op) { return CombiningKind::MAXIMUMF; })
+      .Case<arith::MaxNumFOp>([&](auto op) { return CombiningKind::MAXNUMF; })
       .Case<arith::MinSIOp>([&](auto op) { return CombiningKind::MINSI; })
       .Case<arith::MinUIOp>([&](auto op) { return CombiningKind::MINUI; })
       .Case<arith::MinimumFOp>([&](auto op) { return CombiningKind::MINIMUMF; })
+      .Case<arith::MinNumFOp>([&](auto op) { return CombiningKind::MINNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
@@ -584,6 +586,14 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
   return llvm::to_vector(
       llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
+}
+
+/// Check if `op` is a linalg.reduce or a linalg.generic that has at least one
+/// reduction iterator.
+static bool hasReductionIterator(LinalgOp &op) {
+  return isa<linalg::ReduceOp>(op) ||
+         (isa<linalg::GenericOp>(op) &&
+          llvm::any_of(op.getIteratorTypesArray(), isReductionIterator));
 }
 
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
@@ -804,11 +814,9 @@ enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val) {
 
   auto targetShape = linalgOp.getStaticLoopRanges();
-  assert(((llvm::count_if(targetShape,
-                          [](int64_t dimSize) { return dimSize > 1; }) == 1)) &&
+  assert(llvm::count_if(targetShape,
+                        [](int64_t dimSize) { return dimSize > 1; }) == 1 &&
          "n-D vectors are not yet supported");
-  assert(targetShape.back() != 1 &&
-         "1-D vectors with the trailing dim eqaual 1 are not yet supported");
 
   // Blocks outside _this_ linalg.generic are effectively loop invariant.
   // However, analysing block arguments for _this_ linalg.generic Op is a bit
@@ -869,8 +877,6 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   assert(((llvm::count_if(targetShape,
                           [](int64_t dimSize) { return dimSize > 1; }) == 1)) &&
          "n-D vectors are not yet supported");
-  assert(targetShape.back() != 1 &&
-         "1-D vectors with the trailing dim 1 are not yet supported");
 
   // Blocks outside _this_ linalg.generic are effectively loop invariant.
   // However, analysing block arguments for _this_ linalg.generic Op is a bit
@@ -936,27 +942,22 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   if (linalgOp.hasDynamicShape())
     return VectorMemoryAccessKind::Gather;
 
-  // 1. Assume that it's a gather load when reading _into_:
-  //    * an n-D "vector", like `tensor<1x2x4xi32` or `tensor<2x1x4xi32>`, or
-  //    * a 1-D "vector" with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
-  // TODO: Relax these conditions.
-  // FIXME: This condition assumes non-dynamic sizes.
-  if ((llvm::count_if(targetShape,
-                      [](int64_t dimSize) { return dimSize > 1; }) != 1) ||
-      targetShape.back() == 1)
-    return VectorMemoryAccessKind::Gather;
+  // True for vectors that are effectively 1D, e.g. `vector<1x4x1xi32>`, false
+  // otherwise.
+  bool isOutput1DVector = (llvm::count_if(targetShape, [](int64_t dimSize) {
+                             return dimSize > 1;
+                           }) == 1);
 
-  // 2. Assume that it's a gather load when reading _from_ a tensor for which
-  // the trailing dimension is 1, e.g. `tensor<1x4x1xi32>`.
-  // TODO: Relax this condition.
-  if (inputShape.getShape().back() == 1)
+  // 1. Assume that it's a gather load when reading non-1D vector.
+  if (!isOutput1DVector)
     return VectorMemoryAccessKind::Gather;
 
   bool leadingIdxsLoopInvariant = true;
 
-  // 3. Analyze the leading indices of `extractOp`.
+  // 2. Analyze the leading indices of `extractOp`.
   // Look at the way each index is calculated and decide whether it is suitable
-  // for a contiguous load, i.e. whether it's loop invariant.
+  // for a contiguous load, i.e. whether it's loop invariant. If not, it's a
+  // gather load.
   auto indices = extractOp.getIndices();
   auto leadIndices = indices.drop_back(1);
 
@@ -972,13 +973,13 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
     return VectorMemoryAccessKind::Gather;
   }
 
-  // 4. Analyze the trailing index for `extractOp`.
+  // 3. Analyze the trailing index for `extractOp`.
   // At this point we know that the leading indices are loop invariant. This
   // means that is potentially a scalar or a contiguous load. We can decide
   // based on the trailing idx.
   auto extractOpTrailingIdx = indices.back();
 
-  // 4a. Scalar broadcast load
+  // 3a. Scalar broadcast load
   // If the trailing index is loop invariant then this is a scalar load.
   if (leadingIdxsLoopInvariant &&
       isLoopInvariantIdx(linalgOp, extractOpTrailingIdx)) {
@@ -987,7 +988,7 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
     return VectorMemoryAccessKind::ScalarBroadcast;
   }
 
-  // 4b. Contiguous loads
+  // 3b. Contiguous loads
   // The trailing `extractOp` index should increment with every loop iteration.
   // This effectively means that it must be based on the trailing loop index.
   // This is what the following bool captures.
@@ -1001,7 +1002,7 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
     return VectorMemoryAccessKind::Contiguous;
   }
 
-  // 5. Fallback case - gather load.
+  // 4. Fallback case - gather load.
   LDBG("Found gather load: " << extractOp);
   return VectorMemoryAccessKind::Gather;
 }
@@ -1069,19 +1070,20 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //   * for vector indices (e.g. `vector<1x1x4xindex>`) - extract the bottom
   //    (0th) element and use that.
   SmallVector<Value> transferReadIdxs;
-  auto resTrailingDim = resultType.getShape().back();
   auto zero = rewriter.create<arith::ConstantOp>(
       loc, rewriter.getI32Type(), rewriter.getZeroAttr(rewriter.getI32Type()));
   for (size_t i = 0; i < extractOp.getIndices().size(); i++) {
-    auto idx = bvm.lookup(extractOp.getIndices()[i]);
+    Value idx = bvm.lookup(extractOp.getIndices()[i]);
     if (idx.getType().isIndex()) {
       transferReadIdxs.push_back(idx);
       continue;
     }
 
     auto indexAs1dVector = rewriter.create<vector::ShapeCastOp>(
-        loc, VectorType::get({resTrailingDim}, rewriter.getIndexType()),
-        bvm.lookup(extractOp.getIndices()[i]));
+        loc,
+        VectorType::get(resultType.getShape().back(), rewriter.getIndexType(),
+                        resultType.getScalableDims().back()),
+        idx);
     transferReadIdxs.push_back(
         rewriter.create<vector::ExtractElementOp>(loc, indexAs1dVector, zero));
   }
@@ -1787,6 +1789,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
   if (isa<ConvolutionOpInterface>(op.getOperation()))
     return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
+  if (hasReductionIterator(op))
+    return reductionPreconditions(op);
+
   // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
   // linalg.copy ops and ops that implement ContractionOpInterface for now.
   if (!isElementwise(op) &&
@@ -1976,6 +1981,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   //  1. exactly 1 dim is scalable and that's the _last_ parallel dim
   //  2. exactly 2 dims are scalable and those are the _last two adjacent_
   //     parallel dims
+  //  3. exactly 1 reduction dim is scalable and that's the last (innermost) dim
   // The 2nd restriction above means that only Matmul-like Ops are supported
   // when 2 dims are scalable, e.g. :
   //    * iterators = [parallel, parallel, reduction]
@@ -1992,19 +1998,45 @@ vectorizeScalableVectorPrecondition(Operation *op,
     scalableFlags.pop_back();
   }
 
-  // TODO: Support scalable vectorisation for reduction dims
-  if (iterators.back() == utils::IteratorType::reduction)
-    return failure();
-
-  // If this is not the _last_ parallel dim, 1. above is not met
-  if (seenParalell)
-    return failure();
+  switch (iterators.back()) {
+  case utils::IteratorType::reduction: {
+    // Check 3. above is met.
+    if (iterators.size() != inputVectorSizes.size()) {
+      LDBG("Non-trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    if (isa<linalg::MatmulOp>(op) || isa<linalg::MatmulTransposeAOp>(op)) {
+      LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
+           "is not supported\n");
+      return failure();
+    }
+    break;
+  }
+  case utils::IteratorType::parallel: {
+    // Check 1. and 2. above are met.
+    if (seenParalell) {
+      LDBG("Inner parallel dim not requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    break;
+  }
+  }
 
   // If present, check the 2nd scalable dim. ATM, only Matmul-like Ops are
   // supported for which expect the folowing config:
   //    * iterators = [parallel, parallel, reduction]
   //    * scalable flags = [true, true, false]
   if (numOfScalableDims == 2) {
+    // Disallow below case which breaks 3. above:
+    //    * iterators = [..., parallel, reduction]
+    //    * scalable flags = [..., true, true]
+    if (iterators.back() == utils::IteratorType::reduction) {
+      LDBG("Higher dim than the trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
     scalableFlags.pop_back();
     iterators.pop_back();
 
@@ -2017,7 +2049,8 @@ vectorizeScalableVectorPrecondition(Operation *op,
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
                  isa<linalg::MatmulTransposeAOp>(op) ||
-                 isa<linalg::DepthwiseConv1DNwcWcOp>(op));
+                 isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
+                 isa<linalg::MatvecOp>(op) || hasReductionIterator(linalgOp));
 }
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(

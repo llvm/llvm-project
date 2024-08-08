@@ -735,8 +735,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo  &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  MachineModuleInfo &MMI = MF.getMMI();
-  MCContext &Context = MMI.getContext();
+  MCContext &Context = MF.getContext();
   const TargetMachine &TM = MF.getTarget();
   const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseRegisterInfo *RegInfo = STI.getRegisterInfo();
@@ -1167,7 +1166,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         if (STI.splitFramePushPop(MF)) {
           unsigned DwarfReg = MRI->getDwarfRegNum(
               Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
-          unsigned Offset = MFI.getObjectOffset(FI);
+          int64_t Offset = MFI.getObjectOffset(FI);
           unsigned CFIIndex = MF.addFrameInst(
               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
           BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1189,7 +1188,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       if ((Reg >= ARM::D0 && Reg <= ARM::D31) &&
           (Reg < ARM::D8 || Reg >= ARM::D8 + AFI->getNumAlignedDPRCS2Regs())) {
         unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-        unsigned Offset = MFI.getObjectOffset(FI);
+        int64_t Offset = MFI.getObjectOffset(FI);
         unsigned CFIIndex = MF.addFrameInst(
             MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
         BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -2995,8 +2994,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     report_fatal_error("Segmented stacks not supported on this platform.");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  MCContext &Context = MMI.getContext();
+  MCContext &Context = MF.getContext();
   const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseInstrInfo &TII =
       *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());

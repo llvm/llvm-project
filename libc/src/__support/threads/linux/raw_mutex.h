@@ -13,6 +13,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/sleep.h"

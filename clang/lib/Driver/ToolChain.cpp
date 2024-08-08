@@ -1031,11 +1031,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64: {
     llvm::Triple Triple = getTriple();
+    tools::aarch64::setPAuthABIInTriple(getDriver(), Args, Triple);
     if (!Triple.isOSBinFormatMachO())
-      return getTripleString();
+      return Triple.getTriple();
 
     if (Triple.isArm64e())
-      return getTripleString();
+      return Triple.getTriple();
 
     // FIXME: older versions of ld64 expect the "arm64" component in the actual
     // triple string and query it to determine whether an LTO file can be
@@ -1380,7 +1381,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       SanitizerKind::Nullability | SanitizerKind::LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
-      getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
+      getTriple().getArch() == llvm::Triple::arm ||
+      getTriple().getArch() == llvm::Triple::thumb || getTriple().isWasm() ||
       getTriple().isAArch64() || getTriple().isRISCV() ||
       getTriple().isLoongArch64())
     Res |= SanitizerKind::CFIICall;

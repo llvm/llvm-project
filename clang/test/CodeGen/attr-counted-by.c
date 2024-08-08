@@ -754,11 +754,11 @@ size_t test7_bdos(struct union_of_fams *p) {
 // SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = zext i8 [[DOT_COUNTED_BY_LOAD]] to i64, !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDXPROM]], [[TMP0]], !nosanitize [[META2]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP1]], label [[CONT9:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP1]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
 // SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB12:[0-9]+]], i64 [[IDXPROM]]) #[[ATTR10]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
-// SANITIZE-WITH-ATTR:       cont9:
+// SANITIZE-WITH-ATTR:       cont7:
 // SANITIZE-WITH-ATTR-NEXT:    [[INTS:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 9
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[INTS]], i64 0, i64 [[IDXPROM]]
 // SANITIZE-WITH-ATTR-NEXT:    store i8 [[DOT_COUNTED_BY_LOAD]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
@@ -908,11 +908,11 @@ size_t test9_bdos(struct union_of_fams *p) {
 // SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = zext i32 [[DOT_COUNTED_BY_LOAD]] to i64, !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IDXPROM]], [[TMP0]], !nosanitize [[META2]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP1]], label [[CONT9:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP1]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
 // SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB15:[0-9]+]], i64 [[IDXPROM]]) #[[ATTR10]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
-// SANITIZE-WITH-ATTR:       cont9:
+// SANITIZE-WITH-ATTR:       cont7:
 // SANITIZE-WITH-ATTR-NEXT:    [[BYTES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[BYTES]], i64 0, i64 [[IDXPROM]]
 // SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = tail call i32 @llvm.smax.i32(i32 [[DOT_COUNTED_BY_LOAD]], i32 0)
@@ -1905,4 +1905,52 @@ struct test30_struct {
 //
 void test30(struct test30_struct *ptr, int idx) {
   ptr->pcpu_refcnt.__padding[idx] = __builtin_dynamic_object_size(ptr, 1);
+}
+
+struct test31_empty {};
+
+struct test31_struct {
+  struct test31_empty y;
+  int s;
+  int x[] __counted_by(s);
+};
+
+// SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test31(
+// SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// SANITIZE-WITH-ATTR-NEXT:  entry:
+// SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i32, ptr [[PTR]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = sext i32 [[DOT_COUNTED_BY_LOAD]] to i64
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP1]], i64 0)
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 4
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[DOT_COUNTED_BY_LOAD]], 0
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP4]]
+// SANITIZE-WITH-ATTR-NEXT:    ret i32 [[CONV]]
+//
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test31(
+// NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// NO-SANITIZE-WITH-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i32, ptr [[PTR]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = sext i32 [[DOT_COUNTED_BY_LOAD]] to i64
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP1]], i64 0)
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[DOT_COUNTED_BY_LOAD]], 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP4]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    ret i32 [[CONV]]
+//
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test31(
+// SANITIZE-WITHOUT-ATTR-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// SANITIZE-WITHOUT-ATTR-NEXT:    ret i32 -1
+//
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test31(
+// NO-SANITIZE-WITHOUT-ATTR-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i32 -1
+//
+int test31(struct test31_struct *ptr, int idx) {
+  return __builtin_dynamic_object_size(ptr, 0);
 }

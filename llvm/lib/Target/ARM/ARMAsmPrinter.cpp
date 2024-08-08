@@ -153,9 +153,9 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OptimizationGoals = 0;
 
   if (Subtarget->isTargetCOFF()) {
-    bool Internal = F.hasInternalLinkage();
-    COFF::SymbolStorageClass Scl = Internal ? COFF::IMAGE_SYM_CLASS_STATIC
-                                            : COFF::IMAGE_SYM_CLASS_EXTERNAL;
+    bool Local = F.hasLocalLinkage();
+    COFF::SymbolStorageClass Scl =
+        Local ? COFF::IMAGE_SYM_CLASS_STATIC : COFF::IMAGE_SYM_CLASS_EXTERNAL;
     int Type = COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
     OutStreamer->beginCOFFSymbolDef(CurrentFnSym);
@@ -1447,8 +1447,10 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitUnwindingInstruction(MI);
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
+  }
 
   assert(!convertAddSubFlagsOpcode(MI->getOpcode()) &&
          "Pseudo flag setting opcode should be expanded early");

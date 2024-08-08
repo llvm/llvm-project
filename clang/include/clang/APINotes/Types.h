@@ -656,6 +656,12 @@ public:
   GlobalFunctionInfo() {}
 };
 
+/// Describes API notes data for a C++ method.
+class CXXMethodInfo : public FunctionInfo {
+public:
+  CXXMethodInfo() {}
+};
+
 /// Describes API notes data for an enumerator.
 class EnumConstantInfo : public CommonEntityInfo {
 public:
@@ -789,6 +795,7 @@ enum class ContextKind : uint8_t {
   ObjCClass = 0,
   ObjCProtocol = 1,
   Namespace = 2,
+  Tag = 3,
 };
 
 struct Context {

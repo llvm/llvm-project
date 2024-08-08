@@ -83,6 +83,8 @@ struct InlineDescriptor {
   /// Flag indicating if the field is an embedded base class.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsBase : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsVirtualBase : 1;
   /// Flag indicating if the field is the active member of a union.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;

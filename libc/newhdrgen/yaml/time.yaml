@@ -17,67 +17,67 @@ functions:
     arguments:
       - type: const struct tm *
   - name: asctime_r
-    standard: 
+    standard:
       - stdc
     return_type: char *
     arguments:
       - type: struct tm *
       - type: char *
   - name: clock_gettime
-    standard: 
+    standard:
       - POSIX
     return_type: int
     arguments:
       - type: clockid_t
       - type: struct timespec *
   - name: clock
-    standard: 
+    standard:
       - stdc
     return_type: clock_t
     arguments:
       - type: void
   - name: difftime
-    standard: 
+    standard:
       - stdc
     return_type: double
     arguments:
       - type: time_t
       - type: time_t
   - name: gettimeofday
-    standard: 
+    standard:
       - POSIX
     return_type: int
     arguments:
       - type: struct timeval *
       - type: void *
   - name: gmtime
-    standard: 
+    standard:
       - stdc
     return_type: struct tm *
     arguments:
       - type: time_t *
   - name: gmtime_r
-    standard: 
+    standard:
       - stdc
     return_type: struct tm *
     arguments:
       - type: time_t *
       - type: struct tm *
   - name: mktime
-    standard: 
+    standard:
       - stdc
     return_type: time_t
     arguments:
       - type: struct tm *
   - name: nanosleep
-    standard: 
+    standard:
       - POSIX
     return_type: int
     arguments:
       - type: const struct timespec *
       - type: struct timespec *
   - name: time
-    standard: 
+    standard:
       - stdc
     return_type: time_t
     arguments:

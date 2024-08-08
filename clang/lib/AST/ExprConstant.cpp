@@ -222,6 +222,11 @@ namespace {
         ArraySize = 2;
         MostDerivedLength = I + 1;
         IsArray = true;
+      } else if (const auto *VT = Type->getAs<VectorType>()) {
+        Type = VT->getElementType();
+        ArraySize = VT->getNumElements();
+        MostDerivedLength = I + 1;
+        IsArray = true;
       } else if (const FieldDecl *FD = getAsField(Path[I])) {
         Type = FD->getType();
         ArraySize = 0;
@@ -268,7 +273,6 @@ namespace {
     /// If the current array is an unsized array, the value of this is
     /// undefined.
     uint64_t MostDerivedArraySize;
-
     /// The type of the most derived object referred to by this address.
     QualType MostDerivedType;
 
@@ -442,6 +446,16 @@ namespace {
       MostDerivedArraySize = 2;
       MostDerivedPathLength = Entries.size();
     }
+
+    void addVectorElementUnchecked(QualType EltTy, uint64_t Size,
+                                   uint64_t Idx) {
+      Entries.push_back(PathEntry::ArrayIndex(Idx));
+      MostDerivedType = EltTy;
+      MostDerivedPathLength = Entries.size();
+      MostDerivedArraySize = 0;
+      MostDerivedIsArrayElement = false;
+    }
+
     void diagnoseUnsizedArrayPointerArithmetic(EvalInfo &Info, const Expr *E);
     void diagnosePointerArithmetic(EvalInfo &Info, const Expr *E,
                                    const APSInt &N);
@@ -1737,6 +1751,11 @@ namespace {
       if (checkSubobject(Info, E, Imag ? CSK_Imag : CSK_Real))
         Designator.addComplexUnchecked(EltTy, Imag);
     }
+    void addVectorElement(EvalInfo &Info, const Expr *E, QualType EltTy,
+                          uint64_t Size, uint64_t Idx) {
+      if (checkSubobject(Info, E, CSK_VectorElement))
+        Designator.addVectorElementUnchecked(EltTy, Size, Idx);
+    }
     void clearIsNullPointer() {
       IsNullPtr = false;
     }
@@ -2401,6 +2420,10 @@ static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
 /// produce an appropriate diagnostic.
 static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
                              const LValue *This = nullptr) {
+  // The restriction to literal types does not exist in C++23 anymore.
+  if (Info.getLangOpts().CPlusPlus23)
+    return true;
+
   if (!E->isPRValue() || E->getType()->isLiteralType(Info.Ctx))
     return true;
 
@@ -2839,6 +2862,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such
       // a shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_right;
     }
@@ -2849,19 +2874,23 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
     } else if (LHS.isSigned() && !Info.getLangOpts().CPlusPlus20) {
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
       // E1 x 2^E2 module 2^N.
-      if (LHS.isNegative())
+      if (LHS.isNegative()) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS;
-      else if (LHS.countl_zero() < SA)
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      } else if (LHS.countl_zero() < SA) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_discards);
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      }
     }
-    if (Info.EvalStatus.Diag && !Info.EvalStatus.Diag->empty() &&
-        Info.getLangOpts().CPlusPlus11)
-      return false;
     Result = LHS << SA;
     return true;
   }
@@ -2875,6 +2904,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such a
       // shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_left;
     }
@@ -2882,13 +2913,13 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     // C++11 [expr.shift]p1: Shift width must be less than the bit width of the
     // shifted type.
     unsigned SA = (unsigned) RHS.getLimitedValue(LHS.getBitWidth()-1);
-    if (SA != RHS)
+    if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
+    }
 
-    if (Info.EvalStatus.Diag && !Info.EvalStatus.Diag->empty() &&
-        Info.getLangOpts().CPlusPlus11)
-      return false;
     Result = LHS >> SA;
     return true;
   }
@@ -3295,6 +3326,19 @@ static bool HandleLValueComplexElement(EvalInfo &Info, const Expr *E,
     LVal.Offset += SizeOfComponent;
   }
   LVal.addComplex(Info, E, EltTy, Imag);
+  return true;
+}
+
+static bool HandleLValueVectorElement(EvalInfo &Info, const Expr *E,
+                                      LValue &LVal, QualType EltTy,
+                                      uint64_t Size, uint64_t Idx) {
+  if (Idx) {
+    CharUnits SizeOfElement;
+    if (!HandleSizeof(Info, E->getExprLoc(), EltTy, SizeOfElement))
+      return false;
+    LVal.Offset += SizeOfElement * Idx;
+  }
+  LVal.addVectorElement(Info, E, EltTy, Size, Idx);
   return true;
 }
 
@@ -3843,6 +3887,27 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         return handler.found(Index ? O->getComplexFloatImag()
                                    : O->getComplexFloatReal(), ObjType);
       }
+    } else if (const auto *VT = ObjType->getAs<VectorType>()) {
+      uint64_t Index = Sub.Entries[I].getAsArrayIndex();
+      unsigned NumElements = VT->getNumElements();
+      if (Index == NumElements) {
+        if (Info.getLangOpts().CPlusPlus11)
+          Info.FFDiag(E, diag::note_constexpr_access_past_end)
+              << handler.AccessKind;
+        else
+          Info.FFDiag(E);
+        return handler.failed();
+      }
+
+      if (Index > NumElements) {
+        Info.CCEDiag(E, diag::note_constexpr_array_index)
+            << Index << /*array*/ 0 << NumElements;
+        return handler.failed();
+      }
+
+      ObjType = VT->getElementType();
+      assert(I == N - 1 && "extracting subobject of scalar?");
+      return handler.found(O->getVectorElt(Index), ObjType);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
           !Obj.mayAccessMutableMembers(Info, handler.AccessKind)) {
@@ -8497,6 +8562,7 @@ public:
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
   bool VisitArraySubscriptExpr(const ArraySubscriptExpr *E);
+  bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitUnaryDeref(const UnaryOperator *E);
   bool VisitUnaryReal(const UnaryOperator *E);
   bool VisitUnaryImag(const UnaryOperator *E);
@@ -8838,14 +8904,62 @@ bool LValueExprEvaluator::VisitMemberExpr(const MemberExpr *E) {
   return LValueExprEvaluatorBaseTy::VisitMemberExpr(E);
 }
 
+bool LValueExprEvaluator::VisitExtVectorElementExpr(
+    const ExtVectorElementExpr *E) {
+  bool Success = true;
+
+  APValue Val;
+  if (!Evaluate(Val, Info, E->getBase())) {
+    if (!Info.noteFailure())
+      return false;
+    Success = false;
+  }
+
+  SmallVector<uint32_t, 4> Indices;
+  E->getEncodedElementAccess(Indices);
+  // FIXME: support accessing more than one element
+  if (Indices.size() > 1)
+    return false;
+
+  if (Success) {
+    Result.setFrom(Info.Ctx, Val);
+    const auto *VT = E->getBase()->getType()->castAs<VectorType>();
+    HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
+                              VT->getNumElements(), Indices[0]);
+  }
+
+  return Success;
+}
+
 bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-  // FIXME: Deal with vectors as array subscript bases.
-  if (E->getBase()->getType()->isVectorType() ||
-      E->getBase()->getType()->isSveVLSBuiltinType())
+  if (E->getBase()->getType()->isSveVLSBuiltinType())
     return Error(E);
 
   APSInt Index;
   bool Success = true;
+
+  if (const auto *VT = E->getBase()->getType()->getAs<VectorType>()) {
+    APValue Val;
+    if (!Evaluate(Val, Info, E->getBase())) {
+      if (!Info.noteFailure())
+        return false;
+      Success = false;
+    }
+
+    if (!EvaluateInteger(E->getIdx(), Index, Info)) {
+      if (!Info.noteFailure())
+        return false;
+      Success = false;
+    }
+
+    if (Success) {
+      Result.setFrom(Info.Ctx, Val);
+      HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
+                                VT->getNumElements(), Index.getExtValue());
+    }
+
+    return Success;
+  }
 
   // C++17's rules require us to evaluate the LHS first, regardless of which
   // side is the base.
@@ -11867,6 +11981,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -12949,19 +13065,35 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           Info.Ctx.getTargetInfo().getMaxAtomicInlineWidth();
       if (Size <= Info.Ctx.toCharUnitsFromBits(InlineWidthBits)) {
         if (BuiltinOp == Builtin::BI__c11_atomic_is_lock_free ||
-            Size == CharUnits::One() ||
-            E->getArg(1)->isNullPointerConstant(Info.Ctx,
-                                                Expr::NPC_NeverValueDependent))
-          // OK, we will inline appropriately-aligned operations of this size,
-          // and _Atomic(T) is appropriately-aligned.
+            Size == CharUnits::One())
           return Success(1, E);
 
-        QualType PointeeType = E->getArg(1)->IgnoreImpCasts()->getType()->
-          castAs<PointerType>()->getPointeeType();
-        if (!PointeeType->isIncompleteType() &&
-            Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
-          // OK, we will inline operations on this object.
+        // If the pointer argument can be evaluated to a compile-time constant
+        // integer (or nullptr), check if that value is appropriately aligned.
+        const Expr *PtrArg = E->getArg(1);
+        Expr::EvalResult ExprResult;
+        APSInt IntResult;
+        if (PtrArg->EvaluateAsRValue(ExprResult, Info.Ctx) &&
+            ExprResult.Val.toIntegralConstant(IntResult, PtrArg->getType(),
+                                              Info.Ctx) &&
+            IntResult.isAligned(Size.getAsAlign()))
           return Success(1, E);
+
+        // Otherwise, check if the type's alignment against Size.
+        if (auto *ICE = dyn_cast<ImplicitCastExpr>(PtrArg)) {
+          // Drop the potential implicit-cast to 'const volatile void*', getting
+          // the underlying type.
+          if (ICE->getCastKind() == CK_BitCast)
+            PtrArg = ICE->getSubExpr();
+        }
+
+        if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+          QualType PointeeType = PtrTy->getPointeeType();
+          if (!PointeeType->isIncompleteType() &&
+              Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
+            // OK, we will inline operations on this object.
+            return Success(1, E);
+          }
         }
       }
     }
@@ -14038,6 +14170,12 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
                      E);
   }
 
+  case UETT_PtrAuthTypeDiscriminator: {
+    if (E->getArgumentType()->isDependentType())
+      return false;
+    return Success(
+        Info.Ctx.getPointerAuthTypeDiscriminator(E->getArgumentType()), E);
+  }
   case UETT_VecStep: {
     QualType Ty = E->getTypeOfArgument();
 

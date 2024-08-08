@@ -67,6 +67,7 @@ def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
 def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
+def ArgTypePtr : ArgType { let Name = "const Type *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -231,6 +232,9 @@ def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
 }
+def InitScope : Opcode {
+  let Args = [ArgUint32];
+}
 
 //===----------------------------------------------------------------------===//
 // Constants
@@ -394,6 +398,10 @@ def CheckEnumValue : Opcode {
   let Args = [ArgEnumDecl];
   let Types = [FixedSizeIntegralTypeClass];
   let HasGroup = 1;
+}
+
+def CheckLiteralType : Opcode {
+  let Args = [ArgTypePtr];
 }
 
 // [] -> [Value]
@@ -721,17 +729,24 @@ def Dup : Opcode {
   let HasGroup = 1;
 }
 
+def Flip : Opcode {
+  let Types = [AllTypeClass, AllTypeClass];
+  let HasGroup = 1;
+}
+
 // [] -> []
 def Invalid : Opcode {}
 def Unsupported : Opcode {}
 def Error : Opcode {}
 def InvalidCast : Opcode {
-  let Args = [ArgCastKind];
+  let Args = [ArgCastKind, ArgBool];
 }
 
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
+
+def SizelessVectorElementSize : Opcode;
 
 def Assume : Opcode;
 

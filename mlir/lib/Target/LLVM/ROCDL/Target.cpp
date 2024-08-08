@@ -324,8 +324,7 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   mcStreamer.reset(target->createMCObjectStreamer(
       triple, ctx, std::unique_ptr<llvm::MCAsmBackend>(mab),
       mab->createObjectWriter(os), std::unique_ptr<llvm::MCCodeEmitter>(ce),
-      *sti, mcOptions.MCRelaxAll, mcOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false));
+      *sti));
 
   std::unique_ptr<llvm::MCAsmParser> parser(
       createMCAsmParser(srcMgr, ctx, *mcStreamer, *mai));

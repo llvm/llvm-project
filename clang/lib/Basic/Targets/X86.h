@@ -92,6 +92,8 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasF16C = false;
   bool HasAVX10_1 = false;
   bool HasAVX10_1_512 = false;
+  bool HasAVX10_2 = false;
+  bool HasAVX10_2_512 = false;
   bool HasEVEX512 = false;
   bool HasAVX512CD = false;
   bool HasAVX512VPOPCNTDQ = false;
@@ -513,15 +515,6 @@ class LLVM_LIBRARY_VISIBILITY NetBSDI386TargetInfo
 public:
   NetBSDI386TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : NetBSDTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
-
-  LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
-    VersionTuple OsVersion = getTriple().getOSVersion();
-    // New NetBSD uses the default rounding mode.
-    if (OsVersion >= VersionTuple(6, 99, 26) || OsVersion.getMajor() == 0)
-      return X86_32TargetInfo::getFPEvalMethod();
-    // NetBSD before 6.99.26 defaults to "double" rounding.
-    return LangOptions::FPEvalMethodKind::FEM_Double;
-  }
 };
 
 class LLVM_LIBRARY_VISIBILITY OpenBSDI386TargetInfo

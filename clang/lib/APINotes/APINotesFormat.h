@@ -24,7 +24,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 27; // SingleDeclTableKey
+const uint16_t VERSION_MINOR = 28; // nested tags
 
 const uint8_t kSwiftCopyable = 1;
 const uint8_t kSwiftNonCopyable = 2;
@@ -62,6 +62,10 @@ enum BlockID {
   /// (class name, selector, is_instance_method) tuples to information
   /// about the method.
   OBJC_METHOD_BLOCK_ID,
+
+  /// The C++ method data block, which maps C++ (context id, method name) pairs
+  /// to information about the method.
+  CXX_METHOD_BLOCK_ID,
 
   /// The Objective-C selector data block, which maps Objective-C
   /// selector names (# of pieces, identifier IDs) to the selector ID
@@ -181,6 +185,20 @@ using ObjCMethodDataLayout =
                          >;
 } // namespace objc_method_block
 
+namespace cxx_method_block {
+enum {
+  CXX_METHOD_DATA = 1,
+};
+
+using CXXMethodDataLayout =
+    llvm::BCRecordLayout<CXX_METHOD_DATA, // record ID
+                         llvm::BCVBR<16>, // table offset within the blob (see
+                                          // below)
+                         llvm::BCBlob     // map from C++ (context id, name)
+                                          // tuples to C++ method information
+                         >;
+} // namespace cxx_method_block
+
 namespace objc_selector_block {
 enum {
   OBJC_SELECTOR_DATA = 1,
@@ -268,6 +286,17 @@ struct ContextTableKey {
                   uint32_t contextID)
       : parentContextID(parentContextID), contextKind(contextKind),
         contextID(contextID) {}
+
+  ContextTableKey(std::optional<ContextID> ParentContextID, ContextKind Kind,
+                  uint32_t ContextID)
+      : parentContextID(ParentContextID ? ParentContextID->Value : -1),
+        contextKind(static_cast<uint8_t>(Kind)), contextID(ContextID) {}
+
+  ContextTableKey(std::optional<Context> ParentContext, ContextKind Kind,
+                  uint32_t ContextID)
+      : ContextTableKey(ParentContext ? std::make_optional(ParentContext->id)
+                                      : std::nullopt,
+                        Kind, ContextID) {}
 
   llvm::hash_code hashValue() const {
     return llvm::hash_value(

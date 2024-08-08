@@ -83,10 +83,8 @@ static void placeSplitBlockCarefully(BasicBlock *NewBB,
                                      Loop *L) {
   // Check to see if NewBB is already well placed.
   Function::iterator BBI = --NewBB->getIterator();
-  for (BasicBlock *Pred : SplitPreds) {
-    if (&*BBI == Pred)
-      return;
-  }
+  if (llvm::is_contained(SplitPreds, &*BBI))
+    return;
 
   // If it isn't already after an outside block, move it after one.  This is
   // always good as it makes the uncond branch from the outside block into a
@@ -659,7 +657,7 @@ ReprocessLoop:
       // The block has now been cleared of all instructions except for
       // a comparison and a conditional branch. SimplifyCFG may be able
       // to fold it now.
-      if (!FoldBranchToCommonDest(BI, /*DTU=*/nullptr, MSSAU))
+      if (!foldBranchToCommonDest(BI, /*DTU=*/nullptr, MSSAU))
         continue;
 
       // Success. The block is now dead, so remove it from the loop,

@@ -1725,7 +1725,8 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
   // preferable because it allows the C2 << Y expression to be hoisted out of a
   // loop if Y is invariant and X is not.
   if (Shift->hasOneUse() && C1.isZero() && Cmp.isEquality() &&
-      !Shift->isArithmeticShift() && !isa<Constant>(Shift->getOperand(0))) {
+      !Shift->isArithmeticShift() &&
+      ((!IsShl && C2.isOne()) || !isa<Constant>(Shift->getOperand(0)))) {
     // Compute C2 << Y.
     Value *NewShift =
         IsShl ? Builder.CreateLShr(And->getOperand(1), Shift->getOperand(1))
@@ -3528,6 +3529,52 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
       Constant *NotBOC = ConstantExpr::getNot(cast<Constant>(BOp1));
       Value *And = Builder.CreateAnd(BOp0, NotBOC);
       return new ICmpInst(Pred, And, NotBOC);
+    }
+    // (icmp eq (or (select cond, 0, NonZero), Other), 0)
+    //  -> (and cond, (icmp eq Other, 0))
+    // (icmp ne (or (select cond, NonZero, 0), Other), 0)
+    //  -> (or cond, (icmp ne Other, 0))
+    Value *Cond, *TV, *FV, *Other, *Sel;
+    if (C.isZero() &&
+        match(BO,
+              m_OneUse(m_c_Or(m_CombineAnd(m_Value(Sel),
+                                           m_Select(m_Value(Cond), m_Value(TV),
+                                                    m_Value(FV))),
+                              m_Value(Other))))) {
+      const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
+      // Easy case is if eq/ne matches whether 0 is trueval/falseval.
+      if (Pred == ICmpInst::ICMP_EQ
+              ? (match(TV, m_Zero()) && isKnownNonZero(FV, Q))
+              : (match(FV, m_Zero()) && isKnownNonZero(TV, Q))) {
+        Value *Cmp = Builder.CreateICmp(
+            Pred, Other, Constant::getNullValue(Other->getType()));
+        return BinaryOperator::Create(
+            Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or, Cmp,
+            Cond);
+      }
+      // Harder case is if eq/ne matches whether 0 is falseval/trueval. In this
+      // case we need to invert the select condition so we need to be careful to
+      // avoid creating extra instructions.
+      // (icmp ne (or (select cond, 0, NonZero), Other), 0)
+      //  -> (or (not cond), (icmp ne Other, 0))
+      // (icmp eq (or (select cond, NonZero, 0), Other), 0)
+      //  -> (and (not cond), (icmp eq Other, 0))
+      //
+      // Only do this if the inner select has one use, in which case we are
+      // replacing `select` with `(not cond)`. Otherwise, we will create more
+      // uses. NB: Trying to freely invert cond doesn't make sense here, as if
+      // cond was freely invertable, the select arms would have been inverted.
+      if (Sel->hasOneUse() &&
+          (Pred == ICmpInst::ICMP_EQ
+               ? (match(FV, m_Zero()) && isKnownNonZero(TV, Q))
+               : (match(TV, m_Zero()) && isKnownNonZero(FV, Q)))) {
+        Value *NotCond = Builder.CreateNot(Cond);
+        Value *Cmp = Builder.CreateICmp(
+            Pred, Other, Constant::getNullValue(Other->getType()));
+        return BinaryOperator::Create(
+            Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or, Cmp,
+            NotCond);
+      }
     }
     break;
   }
@@ -5772,8 +5819,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   //    -> icmp eq/ne X, rotate-left(X)
   // We generally try to convert rotate-right -> rotate-left, this just
   // canonicalizes another case.
-  CmpInst::Predicate PredUnused = Pred;
-  if (match(&I, m_c_ICmp(PredUnused, m_Value(A),
+  if (match(&I, m_c_ICmp(m_Value(A),
                          m_OneUse(m_Intrinsic<Intrinsic::fshr>(
                              m_Deferred(A), m_Deferred(A), m_Value(B))))))
     return new ICmpInst(
@@ -5783,8 +5829,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   // Canonicalize:
   // icmp eq/ne OneUse(A ^ Cst), B --> icmp eq/ne (A ^ B), Cst
   Constant *Cst;
-  if (match(&I, m_c_ICmp(PredUnused,
-                         m_OneUse(m_Xor(m_Value(A), m_ImmConstant(Cst))),
+  if (match(&I, m_c_ICmp(m_OneUse(m_Xor(m_Value(A), m_ImmConstant(Cst))),
                          m_CombineAnd(m_Value(B), m_Unless(m_ImmConstant())))))
     return new ICmpInst(Pred, Builder.CreateXor(A, B), Cst);
 
@@ -5795,13 +5840,12 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                                 m_c_Xor(m_Value(B), m_Deferred(A))),
                     m_Sub(m_Value(B), m_Deferred(A)));
     std::optional<bool> IsZero = std::nullopt;
-    if (match(&I, m_c_ICmp(PredUnused, m_OneUse(m_c_And(m_Value(A), m_Matcher)),
+    if (match(&I, m_c_ICmp(m_OneUse(m_c_And(m_Value(A), m_Matcher)),
                            m_Deferred(A))))
       IsZero = false;
     // (icmp eq/ne (and (add/sub/xor X, P2), P2), 0)
     else if (match(&I,
-                   m_ICmp(PredUnused, m_OneUse(m_c_And(m_Value(A), m_Matcher)),
-                          m_Zero())))
+                   m_ICmp(m_OneUse(m_c_And(m_Value(A), m_Matcher)), m_Zero())))
       IsZero = true;
 
     if (IsZero && isKnownToBeAPowerOfTwo(A, /* OrZero */ true, /*Depth*/ 0, &I))
@@ -7983,6 +8027,67 @@ static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   }
 }
 
+/// Optimize sqrt(X) compared with zero.
+static Instruction *foldSqrtWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *X;
+  if (!match(I.getOperand(0), m_Sqrt(m_Value(X))))
+    return nullptr;
+
+  if (!match(I.getOperand(1), m_PosZeroFP()))
+    return nullptr;
+
+  auto ReplacePredAndOp0 = [&](FCmpInst::Predicate P) {
+    I.setPredicate(P);
+    return IC.replaceOperand(I, 0, X);
+  };
+
+  // Clear ninf flag if sqrt doesn't have it.
+  if (!cast<Instruction>(I.getOperand(0))->hasNoInfs())
+    I.setHasNoInfs(false);
+
+  switch (I.getPredicate()) {
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_UGE:
+    // sqrt(X) < 0.0 --> false
+    // sqrt(X) u>= 0.0 --> true
+    llvm_unreachable("fcmp should have simplified");
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_ULE:
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_UNE:
+    // sqrt(X) u< 0.0 --> X u< 0.0
+    // sqrt(X) u<= 0.0 --> X u<= 0.0
+    // sqrt(X) > 0.0 --> X > 0.0
+    // sqrt(X) >= 0.0 --> X >= 0.0
+    // sqrt(X) == 0.0 --> X == 0.0
+    // sqrt(X) u!= 0.0 --> X u!= 0.0
+    return IC.replaceOperand(I, 0, X);
+
+  case FCmpInst::FCMP_OLE:
+    // sqrt(X) <= 0.0 --> X == 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_OEQ);
+  case FCmpInst::FCMP_UGT:
+    // sqrt(X) u> 0.0 --> X u!= 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_UNE);
+  case FCmpInst::FCMP_UEQ:
+    // sqrt(X) u== 0.0 --> X u<= 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_ULE);
+  case FCmpInst::FCMP_ONE:
+    // sqrt(X) != 0.0 --> X > 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_OGT);
+  case FCmpInst::FCMP_ORD:
+    // !isnan(sqrt(X)) --> X >= 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_OGE);
+  case FCmpInst::FCMP_UNO:
+    // isnan(sqrt(X)) --> X u< 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_ULT);
+  default:
+    llvm_unreachable("Unexpected predicate!");
+  }
+}
+
 static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
   CmpInst::Predicate Pred = I.getPredicate();
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -8248,6 +8353,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   }
 
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
+    return R;
+
+  if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
     return R;
 
   if (match(Op0, m_FNeg(m_Value(X)))) {
