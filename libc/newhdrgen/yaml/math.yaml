@@ -1787,6 +1787,13 @@ functions:
     arguments:
       - type: float *
       - type: float
+  - name: setpayloadsigl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: long double *
+      - type: long double
   - name: setpayloadsigf16
     standards:
       - stdc
