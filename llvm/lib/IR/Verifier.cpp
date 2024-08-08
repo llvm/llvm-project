@@ -4142,8 +4142,10 @@ void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
     ConstantInt *High =
         mdconst::dyn_extract<ConstantInt>(Range->getOperand(2 * i + 1));
     Check(High, "The upper limit must be an integer!", High);
-    Check(High->getType() == Low->getType() &&
-          High->getType() == Ty->getScalarType(),
+
+    Check(High->getType() == Low->getType(), "Range pair types must match!",
+          &I);
+    Check(High->getType() == Ty->getScalarType(),
           "Range types must match instruction type!", &I);
 
     APInt HighV = High->getValue();

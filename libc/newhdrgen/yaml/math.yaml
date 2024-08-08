@@ -1571,24 +1571,24 @@ functions:
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: fsub
-    standards: 
+    standards:
       - stdc
     return_type: float
-    arguments: 
+    arguments:
       - type: double
       - type: double
   - name: fsubl
-    standards: 
+    standards:
       - stdc
     return_type: float
-    arguments: 
+    arguments:
       - type: long double
       - type: long double
   - name: fsubf128
-    standards: 
+    standards:
       - llvm_libc_ext
     return_type: float
-    arguments: 
+    arguments:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
@@ -1787,6 +1787,27 @@ functions:
       - type: _Float16
       - type: int
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: setpayload
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: double *
+      - type: double
+  - name: setpayloadf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float *
+      - type: float
+  - name: setpayloadl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: long double *
+      - type: long double
   - name: setpayloadf16
     standards:
       - stdc
@@ -1795,6 +1816,35 @@ functions:
       - type: _Float16 *
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: setpayloadf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float128 *
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: setpayloadsig
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double *
+      - type: double
+  - name: setpayloadsigf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float *
+      - type: float
+  - name: setpayloadsigl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: long double *
+      - type: long double
   - name: setpayloadsigf16
     standards:
       - stdc
@@ -1803,6 +1853,14 @@ functions:
       - type: _Float16 *
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: setpayloadsigf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float128 *
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: totalorderf16
     standards:
       - stdc
@@ -1930,14 +1988,14 @@ functions:
       - type: double
       - type: double
   - name: fdivl
-    standards: 
+    standards:
       - stdc
     return_type: float
     arguments:
       - type: long double
       - type: long double
   - name: fdivf128
-    standards: 
+    standards:
       - llvm_libc_ext
     return_type: float
     arguments:
@@ -1945,7 +2003,7 @@ functions:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
   - name: ffma
-    standards: 
+    standards:
       - stdc
     return_type: float
     arguments:
@@ -2278,41 +2336,48 @@ functions:
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT128
   - name: lgamma
-    standards: 
+    standards:
       - stdc
     return_type: double
     arguments:
       - type: double
   - name: lgammaf
-    standards: 
+    standards:
       - stdc
     return_type: float
     arguments:
       - type: float
   - name: lgammal
-    standards: 
+    standards:
       - stdc
     return_type: long double
     arguments:
       - type: long double
   - name: lgamma_r
-    standards: 
+    standards:
       - gnu
     return_type: double
     arguments:
       - type: double
       - type: int *
   - name: lgammaf_r
-    standards: 
+    standards:
       - gnu
     return_type: float
     arguments:
       - type: float
       - type: int *
   - name: lgammal_r
-    standards: 
+    standards:
       - gnu
     return_type: long double
     arguments:
       - type: long double
       - type: int *
+  - name: ddivl
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: long double

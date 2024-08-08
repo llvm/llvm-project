@@ -595,8 +595,6 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #0 {
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; GFX90A-NEXT:    br label [[ATOMICRMW_CHECK_SHARED:%.*]]
-; GFX90A:       atomicrmw.check.shared:
 ; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[PTR:%.*]])
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
@@ -609,18 +607,18 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #0 {
 ; GFX90A:       atomicrmw.private:
 ; GFX90A-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
 ; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP3]], align 4
-; GFX90A-NEXT:    [[VAL_NEW:%.*]] = fadd float [[LOADED_PRIVATE]], [[VALUE]]
-; GFX90A-NEXT:    store float [[VAL_NEW]], ptr addrspace(5) [[TMP3]], align 4
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED_PRIVATE]], [[VALUE]]
+; GFX90A-NEXT:    store float [[NEW]], ptr addrspace(5) [[TMP3]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VALUE]] syncscope("wavefront") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
-; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
+; GFX90A-NEXT:    [[RES:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    ret float [[LOADED_PHI]]
+; GFX90A-NEXT:    ret float [[RES]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
 ; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
