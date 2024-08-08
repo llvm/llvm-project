@@ -34,7 +34,7 @@ function(add_startup_object name)
       RUNTIME_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
       RUNTIME_OUTPUT_NAME ${name}.o)
     target_link_options(${fq_target_name}.exe PRIVATE
-                        "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+                        "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
   endif()
 endfunction()
 
