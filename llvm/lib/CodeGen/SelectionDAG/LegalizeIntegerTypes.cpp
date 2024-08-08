@@ -659,43 +659,53 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Constant(SDNode *N) {
 // - (VP_CTLZ (VP_XOR Op -1 Mask VecLen) Mask VecLen))
 static SDValue ExtendCtlzNot(SDNode *Node, SDLoc &dl, EVT OVT, EVT NVT,
                              SelectionDAG &DAG) {
-  SDValue SrcOp;
-  if (sd_match(Node->getOperand(0), m_Not(m_Value(SrcOp)))) {
-  } else if (Node->isVPOpcode() &&
-             Node->getOperand(0).getOpcode() == ISD::VP_XOR) {
-    SDValue VPXor = Node->getOperand(0);
+  // helper to create both the any extend Src and the shift amount
+  auto ExtSrcAndShiftConst = [&](SDValue SrcOp) {
+    SDValue ExtSrc = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, SrcOp);
+    unsigned SHLAmount = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
+    SDValue ShiftConst =
+        DAG.getShiftAmountConstant(SHLAmount, ExtSrc.getValueType(), dl);
 
-    SDValue Mask = Node->getOperand(1);
-    SDValue EVL = Node->getOperand(2);
-
-    SDValue VPXorMask = VPXor->getOperand(2);
-    SDValue VPXorEVL = VPXor->getOperand(3);
-
-    if (VPXorMask != Mask || VPXorEVL != EVL)
-      return SDValue();
-
-    if (isAllOnesOrAllOnesSplat(VPXor->getOperand(1))) {
-      SrcOp = VPXor->getOperand(0);
-    } else if (isAllOnesOrAllOnesSplat(VPXor->getOperand(0))) {
-      SrcOp = VPXor->getOperand(1);
-    } else
-      return SDValue();
-  } else
-    return SDValue();
-
-  SDValue ExtSrc = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, SrcOp);
-  unsigned SHLAmount = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  SDValue ShiftConst =
-      DAG.getShiftAmountConstant(SHLAmount, ExtSrc.getValueType(), dl);
+    return std::make_pair(ExtSrc, ShiftConst);
+  };
 
   if (!Node->isVPOpcode()) {
+    SDValue SrcOp;
+
+    if (!sd_match(Node->getOperand(0), m_Not(m_Value(SrcOp))))
+      return SDValue();
+
+    auto [ExtSrc, ShiftConst] = ExtSrcAndShiftConst(SrcOp);
+
     SDValue LShift = DAG.getNode(ISD::SHL, dl, NVT, ExtSrc, ShiftConst);
     SDValue Not = DAG.getNOT(dl, LShift, NVT);
     return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, NVT, Not);
   }
 
+  if (Node->getOperand(0).getOpcode() != ISD::VP_XOR) {
+    return SDValue();
+  }
+
+  SDValue VPXor = Node->getOperand(0);
+
   SDValue Mask = Node->getOperand(1);
   SDValue EVL = Node->getOperand(2);
+
+  SDValue VPXorMask = VPXor->getOperand(2);
+  SDValue VPXorEVL = VPXor->getOperand(3);
+
+  if (VPXorMask != Mask || VPXorEVL != EVL)
+    return SDValue();
+
+  SDValue SrcOp;
+  if (isAllOnesOrAllOnesSplat(VPXor->getOperand(1))) {
+    SrcOp = VPXor->getOperand(0);
+  } else if (isAllOnesOrAllOnesSplat(VPXor->getOperand(0))) {
+    SrcOp = VPXor->getOperand(1);
+  } else
+    return SDValue();
+
+  auto [ExtSrc, ShiftConst] = ExtSrcAndShiftConst(SrcOp);
 
   SDValue LShift =
       DAG.getNode(ISD::VP_SHL, dl, NVT, ExtSrc, ShiftConst, Mask, EVL);
