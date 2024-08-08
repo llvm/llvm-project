@@ -597,8 +597,8 @@ OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
 
 Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
   // X / 0 => UB
-  return matchPattern(getRhs(), m_NonZero()) ? Speculation::Speculatable
-                                             : Speculation::NotSpeculatable;
+  return matchPattern(getRhs(), m_NonZeroU()) ? Speculation::Speculatable
+                                              : Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -676,8 +676,8 @@ OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
 
 Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
   // X / 0 => UB
-  return matchPattern(getRhs(), m_NonZero()) ? Speculation::Speculatable
-                                             : Speculation::NotSpeculatable;
+  return matchPattern(getRhs(), m_NonZeroU()) ? Speculation::Speculatable
+                                              : Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
