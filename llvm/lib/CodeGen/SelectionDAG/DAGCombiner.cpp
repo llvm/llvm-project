@@ -4091,13 +4091,13 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   }
 
   // smax(a,b) - smin(a,b) --> abds(a,b)
-  if (hasOperation(ISD::ABDS, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::ABDS, VT)) &&
       sd_match(N0, m_SMax(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_SMin(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDS, DL, VT, A, B);
 
   // umax(a,b) - umin(a,b) --> abdu(a,b)
-  if (hasOperation(ISD::ABDU, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
       sd_match(N0, m_UMax(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_UMin(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDU, DL, VT, A, B);
@@ -5261,6 +5261,10 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
 
   // fold (abd x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
+    return DAG.getConstant(0, DL, VT);
+
+  // fold (abd x, x) -> 0
+  if (N0 == N1)
     return DAG.getConstant(0, DL, VT);
 
   SDValue X;
@@ -10924,6 +10928,7 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
       (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND &&
        Opc0 != ISD::SIGN_EXTEND_INREG)) {
     // fold (abs (sub nsw x, y)) -> abds(x, y)
+    // Don't fold this for unsupported types as we lose the NSW handling.
     if (AbsOp1->getFlags().hasNoSignedWrap() && hasOperation(ISD::ABDS, VT) &&
         TLI.preferABDSToABSWithNSW(VT)) {
       SDValue ABD = DAG.getNode(ISD::ABDS, DL, VT, Op0, Op1);
@@ -10946,7 +10951,8 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
   // fold abs(zext(x) - zext(y)) -> zext(abdu(x, y))
   EVT MaxVT = VT0.bitsGT(VT1) ? VT0 : VT1;
   if ((VT0 == MaxVT || Op0->hasOneUse()) &&
-      (VT1 == MaxVT || Op1->hasOneUse()) && hasOperation(ABDOpcode, MaxVT)) {
+      (VT1 == MaxVT || Op1->hasOneUse()) &&
+      (!LegalTypes || hasOperation(ABDOpcode, MaxVT))) {
     SDValue ABD = DAG.getNode(ABDOpcode, DL, MaxVT,
                               DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op0),
                               DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op1));
@@ -10956,7 +10962,7 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
 
   // fold abs(sext(x) - sext(y)) -> abds(sext(x), sext(y))
   // fold abs(zext(x) - zext(y)) -> abdu(zext(x), zext(y))
-  if (hasOperation(ABDOpcode, VT)) {
+  if (!LegalOperations || hasOperation(ABDOpcode, VT)) {
     SDValue ABD = DAG.getNode(ABDOpcode, DL, VT, Op0, Op1);
     return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
   }
@@ -11580,7 +11586,7 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   unsigned ABDOpc = IsSigned ? ISD::ABDS : ISD::ABDU;
   EVT VT = LHS.getValueType();
 
-  if (!hasOperation(ABDOpc, VT))
+  if (LegalOperations && !hasOperation(ABDOpc, VT))
     return SDValue();
 
   switch (CC) {
