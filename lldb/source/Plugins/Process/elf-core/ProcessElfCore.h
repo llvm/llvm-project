@@ -111,6 +111,9 @@ protected:
 
   bool SupportsMemoryTagging() override { return !m_core_tag_ranges.IsEmpty(); }
 
+  llvm::ArrayRef<uint8_t> PeekMemory(lldb::addr_t low,
+                                     lldb::addr_t high) override;
+
 private:
   struct NT_FILE_Entry {
     lldb::addr_t start;
@@ -122,13 +125,6 @@ private:
     // easy access.
     lldb_private::UUID uuid;
   };
-
-  // For ProcessElfCore only
-  typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
-  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
-      VMRangeToFileOffset;
-  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
-      VMRangeToPermissions;
 
   lldb::ModuleSP m_core_module_sp;
   std::string m_dyld_plugin_name;

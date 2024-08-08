@@ -84,6 +84,9 @@ protected:
   DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                         lldb_private::MemoryRegionInfo &region_info) override;
 
+  llvm::ArrayRef<uint8_t> PeekMemory(lldb::addr_t low,
+                                     lldb::addr_t high) override;
+
 private:
   void CreateMemoryRegions();
 
@@ -119,13 +122,6 @@ private:
     // process dyld in one of its pages.
     return eKernelCorefile;
   }
-
-  // For ProcessMachCore only
-  typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
-  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
-      VMRangeToFileOffset;
-  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
-      VMRangeToPermissions;
 
   VMRangeToFileOffset m_core_aranges;
   VMRangeToPermissions m_core_range_infos;

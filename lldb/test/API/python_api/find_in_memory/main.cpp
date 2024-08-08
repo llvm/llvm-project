@@ -35,6 +35,6 @@ int main() {
 
   (void)stack_pointer;
   (void)heap_pointer1;
-  (void)heap_pointer2; // break here
-  return 0;
+  (void)heap_pointer2;
+  return 0; // break here
 }

@@ -2703,8 +2703,8 @@ void PruneThreadPlans();
   ///
   /// \return The address where the pattern was found or LLDB_INVALID_ADDRESS if
   /// not found.
-  lldb::addr_t FindInMemory(lldb::addr_t low, lldb::addr_t high,
-                            const uint8_t *buf, size_t size);
+  virtual lldb::addr_t FindInMemory(lldb::addr_t low, lldb::addr_t high,
+                                    const uint8_t *buf, size_t size);
 
   AddressRanges FindRangesInMemory(const uint8_t *buf, uint64_t size,
                                    const AddressRanges &ranges,
@@ -2834,6 +2834,36 @@ protected:
                               const uint8_t *buf, size_t size,
                               AddressRanges &matches, size_t alignment,
                               size_t max_matches);
+
+  template <typename IT>
+  lldb::addr_t FindInMemoryGeneric(IT &&iterator, lldb::addr_t low,
+                                   lldb::addr_t high, const uint8_t *buf,
+                                   size_t size) {
+    // This function implements the Boyer-Moore-Horspool algorithm for efficient
+    // string searching.
+    const size_t region_size = high - low;
+
+    if (region_size < size)
+      return LLDB_INVALID_ADDRESS;
+
+    std::vector<size_t> bad_char_heuristic(256, size);
+
+    for (size_t idx = 0; idx < size - 1; idx++) {
+      decltype(bad_char_heuristic)::size_type bcu_idx = buf[idx];
+      bad_char_heuristic[bcu_idx] = size - idx - 1;
+    }
+    for (size_t s = 0; s <= (region_size - size);) {
+      int64_t j = size - 1;
+      while (j >= 0 && buf[j] == iterator[s + j])
+        j--;
+      if (j < 0)
+        return low + s;
+      else
+        s += bad_char_heuristic[iterator[s + size - 1]];
+    }
+
+    return LLDB_INVALID_ADDRESS;
+  }
 
   /// DoGetMemoryRegionInfo is called by GetMemoryRegionInfo after it has
   /// removed non address bits from load_addr. Override this method in

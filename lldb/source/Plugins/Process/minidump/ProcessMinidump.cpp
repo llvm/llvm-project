@@ -564,6 +564,11 @@ JITLoaderList &ProcessMinidump::GetJITLoaders() {
 #define APPEND_OPT(VAR) \
     m_option_group.Append(&VAR, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1)
 
+llvm::ArrayRef<uint8_t> ProcessMinidump::PeekMemory(lldb::addr_t low,
+                                                    lldb::addr_t high) {
+  return m_minidump_parser->GetMemory(low, high - low);
+}
+
 class CommandObjectProcessMinidumpDump : public CommandObjectParsed {
 private:
   OptionGroupOptions m_option_group;

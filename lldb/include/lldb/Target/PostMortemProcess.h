@@ -10,6 +10,7 @@
 #define LLDB_TARGET_POSTMORTEMPROCESS_H
 
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/RangeMap.h"
 
 namespace lldb_private {
 
@@ -33,6 +34,22 @@ public:
   FileSpec GetCoreFile() const override { return m_core_file; }
 
 protected:
+  typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
+  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
+      VMRangeToFileOffset;
+  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
+      VMRangeToPermissions;
+
+  virtual llvm::ArrayRef<uint8_t> PeekMemory(lldb::addr_t low,
+                                             lldb::addr_t high);
+
+  lldb::addr_t FindInMemory(lldb::addr_t low, lldb::addr_t high,
+                            const uint8_t *buf, size_t size) override;
+
+  llvm::ArrayRef<uint8_t> DoPeekMemory(lldb::ModuleSP &core_module_sp,
+                                       VMRangeToFileOffset &core_aranges,
+                                       lldb::addr_t low, lldb::addr_t high);
+
   FileSpec m_core_file;
 };
 

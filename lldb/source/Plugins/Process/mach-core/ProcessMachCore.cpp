@@ -776,3 +776,8 @@ addr_t ProcessMachCore::GetImageInfoAddress() {
 lldb_private::ObjectFile *ProcessMachCore::GetCoreObjectFile() {
   return m_core_module_sp->GetObjectFile();
 }
+
+llvm::ArrayRef<uint8_t> ProcessMachCore::PeekMemory(lldb::addr_t low,
+                                                    lldb::addr_t high) {
+  return DoPeekMemory(m_core_module_sp, m_core_aranges, low, high);
+}

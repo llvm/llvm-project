@@ -13,49 +13,53 @@ class FindInMemoryTestCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
+        live_pi = ProcessInfo()
 
         self.build()
         (
-            self.target,
-            self.process,
-            self.thread,
-            self.bp,
+            live_pi.target,
+            live_pi.process,
+            live_pi.thread,
+            live_pi.bp,
         ) = lldbutil.run_to_source_breakpoint(
             self,
             "break here",
             lldb.SBFileSpec("main.cpp"),
         )
-        self.assertTrue(self.bp.IsValid())
+        live_pi.frame = live_pi.thread.GetFrameAtIndex(0)
+        self.assertTrue(live_pi.bp.IsValid())
+        self.assertTrue(live_pi.process, PROCESS_IS_VALID)
+        self.assertState(
+            live_pi.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED
+        )
+
+        self.live_pi = live_pi
 
     def test_check_stack_pointer(self):
         """Make sure the 'stack_pointer' variable lives on the stack"""
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        frame = self.thread.GetSelectedFrame()
-        ex = frame.EvaluateExpression("&stack_pointer")
+        ex = self.live_pi.frame.EvaluateExpression("&stack_pointer")
         variable_region = lldb.SBMemoryRegionInfo()
         self.assertTrue(
-            self.process.GetMemoryRegionInfo(
+            self.live_pi.process.GetMemoryRegionInfo(
                 ex.GetValueAsUnsigned(), variable_region
             ).Success(),
         )
 
         stack_region = lldb.SBMemoryRegionInfo()
         self.assertTrue(
-            self.process.GetMemoryRegionInfo(frame.GetSP(), stack_region).Success(),
+            self.live_pi.process.GetMemoryRegionInfo(
+                self.live_pi.frame.GetSP(), stack_region
+            ).Success(),
         )
 
         self.assertEqual(variable_region, stack_region)
 
     def test_find_in_memory_ok(self):
         """Make sure a match exists in the heap memory and the right address ranges are provided"""
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
         error = lldb.SBError()
-        addr = self.process.FindInMemory(
+        addr = self.live_pi.process.FindInMemory(
             SINGLE_INSTANCE_PATTERN_STACK,
-            GetStackRange(self),
+            GetStackRange(self, self.live_pi),
             1,
             error,
         )
@@ -65,12 +69,10 @@ class FindInMemoryTestCase(TestBase):
 
     def test_find_in_memory_double_instance_ok(self):
         """Make sure a match exists in the heap memory and the right address ranges are provided"""
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
         error = lldb.SBError()
-        addr = self.process.FindInMemory(
+        addr = self.live_pi.process.FindInMemory(
             DOUBLE_INSTANCE_PATTERN_HEAP,
-            GetHeapRanges(self)[0],
+            GetHeapRanges(self, self.live_pi)[0],
             1,
             error,
         )
@@ -80,13 +82,10 @@ class FindInMemoryTestCase(TestBase):
 
     def test_find_in_memory_invalid_alignment(self):
         """Make sure the alignment 0 is failing"""
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
         error = lldb.SBError()
-        addr = self.process.FindInMemory(
+        addr = self.live_pi.process.FindInMemory(
             SINGLE_INSTANCE_PATTERN_STACK,
-            GetStackRange(self),
+            GetStackRange(self, self.live_pi),
             0,
             error,
         )
@@ -96,11 +95,8 @@ class FindInMemoryTestCase(TestBase):
 
     def test_find_in_memory_invalid_address_range(self):
         """Make sure invalid address range is failing"""
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
         error = lldb.SBError()
-        addr = self.process.FindInMemory(
+        addr = self.live_pi.process.FindInMemory(
             SINGLE_INSTANCE_PATTERN_STACK,
             lldb.SBAddressRange(),
             1,
@@ -112,13 +108,10 @@ class FindInMemoryTestCase(TestBase):
 
     def test_find_in_memory_invalid_buffer(self):
         """Make sure the empty buffer is failing"""
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
         error = lldb.SBError()
-        addr = self.process.FindInMemory(
+        addr = self.live_pi.process.FindInMemory(
             "",
-            GetStackRange(self),
+            GetStackRange(self, self.live_pi),
             1,
             error,
         )
@@ -128,13 +121,11 @@ class FindInMemoryTestCase(TestBase):
 
     def test_find_in_memory_unaligned(self):
         """Make sure the unaligned match exists in the heap memory and is not found with alignment 8"""
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        error = lldb.SBError()
-        range = GetAlignedRange(self)
+        range = GetAlignedRange(self, self.live_pi)
 
         # First we make sure the pattern is found with alignment 1
-        addr = self.process.FindInMemory(
+        error = lldb.SBError()
+        addr = self.live_pi.process.FindInMemory(
             UNALIGNED_INSTANCE_PATTERN_HEAP,
             range,
             1,
@@ -144,7 +135,7 @@ class FindInMemoryTestCase(TestBase):
         self.assertNotEqual(addr, lldb.LLDB_INVALID_ADDRESS)
 
         # With alignment 8 the pattern should not be found
-        addr = self.process.FindInMemory(
+        addr = self.live_pi.process.FindInMemory(
             UNALIGNED_INSTANCE_PATTERN_HEAP,
             range,
             8,

@@ -106,6 +106,9 @@ protected:
 
   JITLoaderList &GetJITLoaders() override;
 
+  llvm::ArrayRef<uint8_t> PeekMemory(lldb::addr_t low,
+                                     lldb::addr_t high) override;
+
 private:
   lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<minidump::Thread> m_thread_list;
