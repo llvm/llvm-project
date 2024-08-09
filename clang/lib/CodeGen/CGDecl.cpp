@@ -1425,6 +1425,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   bool isEscapingByRef = D.isEscapingByref();
   emission.IsEscapingByRef = isEscapingByRef;
+  emission.IsCapturedByOwnInit = D.isCapturedByOwnInit();
+  emission.NeedsInitOnHeap = D.needsInitOnHeap();
 
   CharUnits alignment = getContext().getDeclAlign(&D);
 
@@ -1667,68 +1669,6 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   return emission;
 }
 
-static bool isCapturedBy(const VarDecl &, const Expr *);
-
-/// Determines whether the given __block variable is potentially
-/// captured by the given statement.
-static bool isCapturedBy(const VarDecl &Var, const Stmt *S) {
-  if (const Expr *E = dyn_cast<Expr>(S))
-    return isCapturedBy(Var, E);
-  for (const Stmt *SubStmt : S->children())
-    if (isCapturedBy(Var, SubStmt))
-      return true;
-  return false;
-}
-
-/// Determines whether the given __block variable is potentially
-/// captured by the given expression.
-static bool isCapturedBy(const VarDecl &Var, const Expr *E) {
-  // Skip the most common kinds of expressions that make
-  // hierarchy-walking expensive.
-  E = E->IgnoreParenCasts();
-
-  if (const BlockExpr *BE = dyn_cast<BlockExpr>(E)) {
-    const BlockDecl *Block = BE->getBlockDecl();
-    for (const auto &I : Block->captures()) {
-      if (I.getVariable() == &Var)
-        return true;
-    }
-
-    // No need to walk into the subexpressions.
-    return false;
-  }
-
-  if (const StmtExpr *SE = dyn_cast<StmtExpr>(E)) {
-    const CompoundStmt *CS = SE->getSubStmt();
-    for (const auto *BI : CS->body())
-      if (const auto *BIE = dyn_cast<Expr>(BI)) {
-        if (isCapturedBy(Var, BIE))
-          return true;
-      }
-      else if (const auto *DS = dyn_cast<DeclStmt>(BI)) {
-          // special case declarations
-          for (const auto *I : DS->decls()) {
-              if (const auto *VD = dyn_cast<VarDecl>((I))) {
-                const Expr *Init = VD->getInit();
-                if (Init && isCapturedBy(Var, Init))
-                  return true;
-              }
-          }
-      }
-      else
-        // FIXME. Make safe assumption assuming arbitrary statements cause capturing.
-        // Later, provide code to poke into statements for capture analysis.
-        return true;
-    return false;
-  }
-
-  for (const Stmt *SubStmt : E->children())
-    if (isCapturedBy(Var, SubStmt))
-      return true;
-
-  return false;
-}
-
 /// Determine whether the given initializer is trivial in the sense
 /// that it requires no code to be generated.
 bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
@@ -1893,8 +1833,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   // Check whether this is a byref variable that's potentially
   // captured and moved by its own initializer.  If so, we'll need to
   // emit the initializer first, then copy into the variable.
-  bool capturedByInit =
-      Init && emission.IsEscapingByRef && isCapturedBy(D, Init);
+  bool capturedByInit = emission.IsCapturedByOwnInit;
 
   bool locIsByrefHeader = !capturedByInit;
   const Address Loc =
@@ -1926,8 +1865,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   llvm::Constant *constant = nullptr;
   if (emission.IsConstantAggregate ||
       D.mightBeUsableInConstantExpressions(getContext())) {
-    assert(!capturedByInit && "constant init contains a capturing block?");
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
+    assert(!(constant && capturedByInit) &&
+           "constant init contains a capturing block?");
     if (constant && !constant->isZeroValue() &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
@@ -1975,6 +1915,10 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     }
     LValue lv = MakeAddrLValue(Loc, type);
     lv.setNonGC(true);
+    if (emission.NeedsInitOnHeap) {
+      drillIntoBlockVariable(*this, lv, &D);
+      capturedByInit = false; // We don't need to drill again.
+    }
     return EmitExprAsInit(Init, &D, lv, capturedByInit);
   }
 
@@ -2023,6 +1967,9 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
     return;
   }
   case TEK_Aggregate:
+    assert(
+        !capturedByInit &&
+        "Capture-by-initializer should have been handled by NeedsInitOnHeap!");
     if (type->isAtomicType()) {
       EmitAtomicInit(const_cast<Expr*>(init), lvalue);
     } else {
@@ -2031,7 +1978,6 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
         Overlap = AggValueSlot::DoesNotOverlap;
       else if (auto *FD = dyn_cast<FieldDecl>(D))
         Overlap = getOverlapForFieldInit(FD);
-      // TODO: how can we delay here if D is captured by its initializer?
       EmitAggExpr(init,
                   AggValueSlot::forLValue(lvalue, AggValueSlot::IsDestructed,
                                           AggValueSlot::DoesNotNeedGCBarriers,
@@ -2122,9 +2068,30 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
 
   const VarDecl &D = *emission.Variable;
 
-  // Check the type for a cleanup.
-  if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext()))
-    emitAutoVarTypeCleanup(emission, dtorKind);
+  if (emission.NeedsInitOnHeap) {
+    // If this is a __block variable that we initialized directly on the heap,
+    // then the stack object is uninitialized and doesn't need destruction.
+    // But we do need to tell the destroy helper that the real byref is
+    // successfully initialized.
+    emitByrefMarkInitialized(emission);
+  } else {
+    // Check the type for a cleanup.
+    if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext()))
+      emitAutoVarTypeCleanup(emission, dtorKind);
+
+    // If this is a block variable, call _Block_object_destroy (on the
+    // unforwarded address). Don't enter this cleanup if we're in pure-GC
+    // mode.
+    if (emission.IsEscapingByRef &&
+        CGM.getLangOpts().getGC() != LangOptions::GCOnly) {
+      BlockFieldFlags Flags = BLOCK_FIELD_IS_BYREF;
+      if (D.getType().isObjCGCWeak())
+        Flags |= BLOCK_FIELD_IS_WEAK;
+      enterByrefCleanup(NormalAndEHCleanup, emission.Addr, Flags,
+                        /*LoadBlockVarAddr*/ false,
+                        cxxDestructorCanThrow(D.getType()));
+    }
+  }
 
   // In GC mode, honor objc_precise_lifetime.
   if (getLangOpts().getGC() != LangOptions::NonGC &&
@@ -2141,19 +2108,6 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
 
     const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
     EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D);
-  }
-
-  // If this is a block variable, call _Block_object_destroy
-  // (on the unforwarded address). Don't enter this cleanup if we're in pure-GC
-  // mode.
-  if (emission.IsEscapingByRef &&
-      CGM.getLangOpts().getGC() != LangOptions::GCOnly) {
-    BlockFieldFlags Flags = BLOCK_FIELD_IS_BYREF;
-    if (emission.Variable->getType().isObjCGCWeak())
-      Flags |= BLOCK_FIELD_IS_WEAK;
-    enterByrefCleanup(NormalAndEHCleanup, emission.Addr, Flags,
-                      /*LoadBlockVarAddr*/ false,
-                      cxxDestructorCanThrow(emission.Variable->getType()));
   }
 }
 
