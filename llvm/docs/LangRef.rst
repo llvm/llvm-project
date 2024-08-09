@@ -8057,13 +8057,14 @@ attached to memory instructions, including :ref:`atomicrmw
 <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, and :ref:`call <i_call>`
 instructions.
 
-This follows the same form as :ref:`range metadata <_range-metadata>`,
+This follows the same form as :ref:`range metadata <range-metadata>`,
 except the field entries must be of type `i32`. The interpretation is
 the same numeric address spaces as applied to IR values.
 
 Example:
 
 .. code-block:: llvm
+
     ; %ptr cannot point to an object allocated in addrspace(5)
     %rmw.valid = atomicrmw and ptr %ptr, i64 %value seq_cst, !noalias.addrspace !0
 
