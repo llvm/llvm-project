@@ -33,6 +33,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -1354,18 +1355,37 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   auto &Context = CalledFunction->getContext();
 
   // Collect valid attributes for all params.
-  SmallVector<AttrBuilder> ValidParamAttrs;
+  SmallVector<AttrBuilder> ValidObjParamAttrs, ValidExactParamAttrs;
   bool HasAttrToPropagate = false;
 
+  // Attributes we can only propagate if the exact parameter is forwarded.
+  // We can propagate both poison generating and UB generating attributes
+  // without any extra checks. The only attribute that is tricky to propagate
+  // is `noundef` (skipped for now) as that can create new UB where previous
+  // behavior was just using a poison value.
+  static const Attribute::AttrKind ExactAttrsToPropagate[] = {
+      Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
+      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
+
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
-    ValidParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    ValidExactParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
     // Access attributes can be propagated to any param with the same underlying
     // object as the argument.
     if (CB.paramHasAttr(I, Attribute::ReadNone))
-      ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
+      ValidObjParamAttrs.back().addAttribute(Attribute::ReadNone);
     if (CB.paramHasAttr(I, Attribute::ReadOnly))
-      ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
-    HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
+      ValidObjParamAttrs.back().addAttribute(Attribute::ReadOnly);
+    HasAttrToPropagate |= ValidObjParamAttrs.back().hasAttributes();
+
+    for (Attribute::AttrKind AK : ExactAttrsToPropagate) {
+      Attribute Attr = CB.getParamAttr(I, AK);
+      if (Attr.isValid())
+        ValidExactParamAttrs.back().addAttribute(Attr);
+    }
+
+    HasAttrToPropagate |= ValidObjParamAttrs.back().hasAttributes();
+    HasAttrToPropagate |= ValidExactParamAttrs.back().hasAttributes();
   }
 
   // Won't be able to propagate anything.
@@ -1382,22 +1402,60 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         continue;
       AttributeList AL = NewInnerCB->getAttributes();
       for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
-        // Check if the underlying value for the parameter is an argument.
-        const Value *UnderlyingV =
-            getUnderlyingObject(InnerCB->getArgOperand(I));
-        const Argument *Arg = dyn_cast<Argument>(UnderlyingV);
-        if (!Arg)
-          continue;
-
+        // It's unsound or requires special handling to propagate attributes to
+        // byval arguments. For reach even if CalledFunction doesn't e.g. write
+        // to the argument (readonly), the call to NewInnerCB may write to its
+        // by-value copy.
         if (AL.hasParamAttr(I, Attribute::ByVal))
-          // It's unsound to propagate memory attributes to byval arguments.
-          // Even if CalledFunction doesn't e.g. write to the argument,
-          // the call to NewInnerCB may write to its by-value copy.
           continue;
 
-        unsigned ArgNo = Arg->getArgNo();
+        // Check if the underlying value for the parameter is an argument.
+        const Argument *Arg = dyn_cast<Argument>(InnerCB->getArgOperand(I));
+        unsigned ArgNo;
+        if (Arg) {
+          ArgNo = Arg->getArgNo();
+          // For dereferenceable, dereferenceable_or_null, align, etc...
+          // we don't want to propagate if the existing param has the same
+          // attribute with "better" constraints. So  remove from the
+          // new AL if the region of the existing param is larger than
+          // what we can propagate.
+          AttrBuilder NewAL(Context);
+          for (auto Attr : ValidExactParamAttrs[ArgNo].attrs())
+            NewAL.addAttribute(Attr);
+          if (AL.getParamDereferenceableBytes(I) >
+              NewAL.getDereferenceableBytes())
+            NewAL.removeAttribute(Attribute::Dereferenceable);
+          if (AL.getParamDereferenceableOrNullBytes(I) >
+              NewAL.getDereferenceableOrNullBytes())
+            NewAL.removeAttribute(Attribute::Dereferenceable);
+          if (AL.getParamAlignment(I).valueOrOne() >
+              NewAL.getAlignment().valueOrOne())
+            NewAL.removeAttribute(Attribute::Alignment);
+
+          auto ExistingRange = AL.getParamRange(I);
+          AL = AL.addParamAttributes(Context, I, NewAL);
+
+          // For range we use the intersection.
+          if (ExistingRange.has_value()) {
+            if (auto NewRange = NewAL.getRange()) {
+              ConstantRange CombinedRange =
+                  ExistingRange->intersectWith(*NewRange);
+              AL = AL.removeParamAttribute(Context, I, Attribute::Range);
+              AL = AL.addRangeParamAttr(Context, I, CombinedRange);
+            }
+          }
+        } else {
+          // Check if the underlying value for the parameter is an argument.
+          const Value *UnderlyingV =
+              getUnderlyingObject(InnerCB->getArgOperand(I));
+          Arg = dyn_cast<Argument>(UnderlyingV);
+          if (!Arg)
+            continue;
+          ArgNo = Arg->getArgNo();
+        }
+
         // If so, propagate its access attributes.
-        AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);
+        AL = AL.addParamAttributes(Context, I, ValidObjParamAttrs[ArgNo]);
         // We can have conflicting attributes from the inner callsite and
         // to-be-inlined callsite. In that case, choose the most
         // restrictive.
