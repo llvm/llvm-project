@@ -302,6 +302,11 @@ static cl::opt<bool> EnableSIModeRegisterPass(
   cl::init(true),
   cl::Hidden);
 
+static cl::opt<bool>
+    EnableAMDGPUAttributor("amdgpu-attributor-enable",
+                           cl::desc("Enable AMDGPUAttributorPass"),
+                           cl::init(true), cl::Hidden);
+
 // Enable GFX11.5+ s_singleuse_vdst insertion
 static cl::opt<bool>
     EnableInsertSingleUseVDST("amdgpu-enable-single-use-vdst",
@@ -735,14 +740,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
 
-  // FIXME: Why is AMDGPUAttributor not in CGSCC?
-  PB.registerOptimizerLastEPCallback(
-      [this](ModulePassManager &MPM, OptimizationLevel Level) {
-        if (Level != OptimizationLevel::O0) {
-          MPM.addPass(AMDGPUAttributorPass(*this));
-        }
-      });
-
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         // We want to support the -lto-partitions=N option as "best effort".
@@ -750,6 +747,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // module is partitioned for codegen.
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
       });
 
   PB.registerRegClassFilterParsingCallback(
