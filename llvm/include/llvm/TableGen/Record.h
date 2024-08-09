@@ -2112,8 +2112,7 @@ struct LessRecordByID {
   }
 };
 
-/// Sorting predicate to sort record pointers by their
-/// name field.
+/// Sorting predicate to sort record pointers by their Name field.
 struct LessRecordFieldName {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
     return Rec1->getValueAsString("Name") < Rec2->getValueAsString("Name");
