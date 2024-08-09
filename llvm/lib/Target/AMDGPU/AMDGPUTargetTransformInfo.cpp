@@ -753,7 +753,9 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat: {
-    // TODO: Full rate for i32/i16
+    if (SLT == MVT::i16 || SLT == MVT::i32)
+      InstRate = getFullRateInstrCost();
+
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
     if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
       NElts = 1;
