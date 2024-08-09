@@ -350,24 +350,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
 
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
-              const ModuleSummaryIndex *ImportSummary,
-              const std::vector<uint8_t> &CmdArgs) {
+              const ModuleSummaryIndex *ImportSummary) {
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
-    // FIXME: the motivation for capturing post-merge bitcode and command line
-    // is replicating the compilation environment from bitcode, without needing
-    // to understand the dependencies (the functions to be imported). This
-    // assumes a clang - based invocation, case in which we have the command
-    // line.
-    // It's not very clear how the above motivation would map in the
-    // linker-based case, so we currently don't plumb the command line args in
-    // that case.
-    if (CmdArgs.empty())
+    if (Conf.EmbedCmdArgs.empty())
       LLVM_DEBUG(
           dbgs() << "Post-(Thin)LTO merge bitcode embedding was requested, but "
                     "command line arguments are not available");
     llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
-                               /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
-                               /*Cmdline*/ CmdArgs);
+                               /*EmbedBitcode*/ true,
+                               /*EmbedCmdline*/ true,
+                               /*CmdArgs*/ Conf.EmbedCmdArgs);
   }
   // FIXME: Plumb the combined index into the new pass manager.
   runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
@@ -385,7 +377,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true,
                                /*EmbedCmdline*/ false,
-                               /*CmdArgs*/ std::vector<uint8_t>());
+                               /*CmdArgs*/ Conf.EmbedCmdArgs);
 
   std::unique_ptr<ToolOutputFile> DwoOut;
   SmallString<1024> DwoFile(Conf.SplitDwarfOutput);
@@ -525,8 +517,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   if (!C.CodeGenOnly) {
     if (!opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
-             /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-             /*CmdArgs*/ std::vector<uint8_t>()))
+             /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr))
       return Error::success();
   }
 
@@ -564,8 +555,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
-                       MapVector<StringRef, BitcodeModule> *ModuleMap,
-                       const std::vector<uint8_t> &CmdArgs) {
+                       MapVector<StringRef, BitcodeModule> *ModuleMap) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -598,8 +588,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
       [&](Module &Mod, TargetMachine *TM,
           std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
-                 /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs))
+                 /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
         codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);

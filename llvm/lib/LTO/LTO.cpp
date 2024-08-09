@@ -146,8 +146,7 @@ void llvm::computeLTOCacheKey(
     AddUnsigned(*Conf.CodeModel);
   else
     AddUnsigned(-1);
-  for (const auto &S : Conf.MllvmArgs)
-    AddString(S);
+  Hasher.update(Conf.EmbedCmdArgs);
   AddUnsigned(static_cast<int>(Conf.CGOptLevel));
   AddUnsigned(static_cast<int>(Conf.CGFileType));
   AddUnsigned(Conf.OptLevel);
