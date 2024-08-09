@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
+
 #include "MoveSharedPointerContentsCheck.h"
 #include "../ClangTidyCheck.h"
 #include "../utils/Matchers.h"
@@ -52,15 +54,15 @@ void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
 
   auto resolvedType = callExpr(anyOf(
       // Resolved type, direct move.
-      callExpr(
-          isStdMove,
-          hasArgument(
-              0,
-              cxxOperatorCallExpr(
-                  hasOverloadedOperatorName("*"),
-                  hasDescendant(declRefExpr(hasType(qualType(isSharedPointer(
-                      matchers::matchesAnyListedName(SharedPointerClasses)))))),
-                  callee(cxxMethodDecl()))))
+      callExpr(isStdMove,
+               hasArgument(
+                   0, cxxOperatorCallExpr(
+                          hasOverloadedOperatorName("*"),
+                          hasArgument(
+                              0, declRefExpr(hasType(qualType(isSharedPointer(
+                                     matchers::matchesAnyListedName(
+                                         SharedPointerClasses)))))),
+                          callee(cxxMethodDecl()))))
           .bind("call"),
       // Resolved type, move out of get().
       callExpr(
@@ -113,30 +115,23 @@ void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
 
 void MoveSharedPointerContentsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  clang::SourceLocation Loc;
-  if (const auto *UnresolvedCall =
-          Result.Nodes.getNodeAs<CallExpr>("unresolved_call");
-      UnresolvedCall != nullptr) {
-    Loc = UnresolvedCall->getBeginLoc();
-  } else if (const auto *UnresolvedGetCall =
-                 Result.Nodes.getNodeAs<CallExpr>("unresolved_get_call");
-             UnresolvedGetCall != nullptr) {
-    Loc = UnresolvedGetCall->getBeginLoc();
-  } else if (const auto *GetCall = Result.Nodes.getNodeAs<CallExpr>("get_call");
-             GetCall != nullptr) {
-    Loc = GetCall->getBeginLoc();
-  } else if (const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
-             Call != nullptr) {
-    Loc = Call->getBeginLoc();
-  } else {
+  const CallExpr *Call = nullptr;
+  for (const llvm::StringRef binding :
+       {"unresolved_call", "unresolved_get_call", "get_call", "call"}) {
+    if (const auto *C = Result.Nodes.getNodeAs<CallExpr>(binding);
+        C != nullptr) {
+      Call = C;
+      break;
+    }
+  }
+
+  if (Call == nullptr && !Call->getBeginLoc().isValid()) {
     return;
   }
 
-  if (Loc.isValid()) {
-    diag(Loc,
-         "don't move the contents out of a shared pointer, as other accessors "
-         "expect them to remain in a determinate state");
-  }
+  diag(Call->getBeginLoc(),
+       "don't move the contents out of a shared pointer, as other accessors "
+       "expect them to remain in a determinate state");
 }
 
 } // namespace clang::tidy::bugprone

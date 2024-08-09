@@ -141,3 +141,10 @@ HasASharedPtrField returnsStruct() {
 void subfield() {
   int x = std::move(returnsStruct().x->x);
 }
+
+Nontrivial* dummy(int, std::shared_ptr<Nontrivial>) { return nullptr; }
+
+void sharedPointerIsOtherParameter() {
+  std::shared_ptr<Nontrivial> p;
+  Nontrivial n = std::move(*dummy(1, p));
+}
