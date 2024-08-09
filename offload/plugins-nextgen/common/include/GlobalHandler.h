@@ -13,10 +13,11 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 
-#include <string>
+#include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/ProfileData/InstrProf.h"
 
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
@@ -53,6 +54,31 @@ public:
 
   void setSize(int32_t S) { Size = S; }
   void setPtr(void *P) { Ptr = P; }
+};
+
+using IntPtrT = void *;
+struct __llvm_profile_data {
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
+  std::remove_const<Type>::type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
+extern "C" {
+extern int __attribute__((weak)) __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+}
+
+/// PGO profiling data extracted from a GPU device
+struct GPUProfGlobals {
+  SmallVector<int64_t> Counts;
+  SmallVector<__llvm_profile_data> Data;
+  SmallVector<uint8_t> NamesData;
+  Triple TargetTriple;
+
+  void dump() const;
+  Error write() const;
 };
 
 /// Subclass of GlobalTy that holds the memory for a global of \p Ty.
@@ -164,6 +190,15 @@ public:
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
                                           /*D2H=*/false);
   }
+
+  /// Checks whether a given image contains profiling globals.
+  bool hasProfilingGlobals(GenericDeviceTy &Device, DeviceImageTy &Image);
+
+  /// Reads profiling data from a GPU image to supplied profdata struct.
+  /// Iterates through the image symbol table and stores global values
+  /// with profiling prefixes.
+  Expected<GPUProfGlobals> readProfilingGlobals(GenericDeviceTy &Device,
+                                                DeviceImageTy &Image);
 };
 
 } // namespace plugin

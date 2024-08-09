@@ -540,6 +540,17 @@ static FILE *getFileObject(const char *OutputName) {
   return fopen(OutputName, "ab");
 }
 
+static void closeFileObject(FILE *OutputFile) {
+  if (OutputFile == getProfileFile()) {
+    fflush(OutputFile);
+    if (doMerging() && !__llvm_profile_is_continuous_mode_enabled()) {
+      lprofUnlockFileHandle(OutputFile);
+    }
+  } else {
+    fclose(OutputFile);
+  }
+}
+
 /* Write profile data to file \c OutputName.  */
 static int writeFile(const char *OutputName) {
   int RetVal;
@@ -561,15 +572,7 @@ static int writeFile(const char *OutputName) {
   initFileWriter(&fileWriter, OutputFile);
   RetVal = lprofWriteData(&fileWriter, lprofGetVPDataReader(), MergeDone);
 
-  if (OutputFile == getProfileFile()) {
-    fflush(OutputFile);
-    if (doMerging() && !__llvm_profile_is_continuous_mode_enabled()) {
-      lprofUnlockFileHandle(OutputFile);
-    }
-  } else {
-    fclose(OutputFile);
-  }
-
+  closeFileObject(OutputFile);
   return RetVal;
 }
 
@@ -1309,6 +1312,98 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
     setProfileMergeRequested(EnableMerge);
   }
   return 0;
+}
+
+int __llvm_write_custom_profile(const char *Target,
+                                const __llvm_profile_data *DataBegin,
+                                const __llvm_profile_data *DataEnd,
+                                const char *CountersBegin,
+                                const char *CountersEnd, const char *NamesBegin,
+                                const char *NamesEnd) {
+  int ReturnValue = 0, FilenameLength, TargetLength;
+  char *FilenameBuf, *TargetFilename;
+  const char *Filename;
+
+  /* Save old profile data */
+  FILE *oldFile = getProfileFile();
+
+  // Temporarily suspend getting SIGKILL when the parent exits.
+  int PDeathSig = lprofSuspendSigKill();
+
+  if (lprofProfileDumped() || __llvm_profile_is_continuous_mode_enabled()) {
+    PROF_NOTE("Profile data not written to file: %s.\n", "already written");
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return 0;
+  }
+
+  /* Get current filename */
+  FilenameLength = getCurFilenameLength();
+  FilenameBuf = (char *)COMPILER_RT_ALLOCA(FilenameLength + 1);
+  Filename = getCurFilename(FilenameBuf, 0);
+
+  /* Check the filename. */
+  if (!Filename) {
+    PROF_ERR("Failed to write file : %s\n", "Filename not set");
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return -1;
+  }
+
+  /* Allocate new space for our target-specific PGO filename */
+  TargetLength = strlen(Target);
+  TargetFilename =
+      (char *)COMPILER_RT_ALLOCA(FilenameLength + TargetLength + 2);
+
+  /* Prepend "TARGET." to current filename */
+  memcpy(TargetFilename, Target, TargetLength);
+  TargetFilename[TargetLength] = '.';
+  memcpy(TargetFilename + 1 + TargetLength, Filename, FilenameLength);
+  TargetFilename[FilenameLength + 1 + TargetLength] = 0;
+
+  /* Check if there is llvm/runtime version mismatch.  */
+  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
+    PROF_ERR("Runtime and instrumentation version mismatch : "
+             "expected %d, but get %d\n",
+             INSTR_PROF_RAW_VERSION,
+             (int)GET_VERSION(__llvm_profile_get_version()));
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return -1;
+  }
+
+  /* Open and truncate target-specific PGO file */
+  FILE *OutputFile = fopen(TargetFilename, "w");
+  setProfileFile(OutputFile);
+
+  if (!OutputFile) {
+    PROF_ERR("Failed to open file : %s\n", TargetFilename);
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return -1;
+  }
+
+  FreeHook = &free;
+  setupIOBuffer();
+
+  /* Write custom data */
+  ProfDataWriter fileWriter;
+  initFileWriter(&fileWriter, OutputFile);
+
+  /* Write custom data to the file */
+  ReturnValue = lprofWriteDataImpl(
+      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
+      lprofGetVPDataReader(), NULL, NULL, NULL, NULL, NamesBegin, NamesEnd, 0);
+  closeFileObject(OutputFile);
+
+  // Restore SIGKILL.
+  if (PDeathSig == 1)
+    lprofRestoreSigKill();
+
+  /* Restore old profiling file */
+  setProfileFile(oldFile);
+
+  return ReturnValue;
 }
 
 #endif

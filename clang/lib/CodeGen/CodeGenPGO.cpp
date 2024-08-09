@@ -1195,10 +1195,15 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
 
   unsigned Counter = (*RegionCounterMap)[S];
 
-  llvm::Value *Args[] = {FuncNameVar,
-                         Builder.getInt64(FunctionHash),
-                         Builder.getInt32(NumRegionCounters),
-                         Builder.getInt32(Counter), StepV};
+  // Make sure that pointer to global is passed in with zero addrspace
+  // This is relevant during GPU profiling
+  auto *NormalizedFuncNameVarPtr =
+      llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          FuncNameVar, llvm::PointerType::get(CGM.getLLVMContext(), 0));
+
+  llvm::Value *Args[] = {
+      NormalizedFuncNameVarPtr, Builder.getInt64(FunctionHash),
+      Builder.getInt32(NumRegionCounters), Builder.getInt32(Counter), StepV};
 
   if (llvm::EnableSingleByteCoverage)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
