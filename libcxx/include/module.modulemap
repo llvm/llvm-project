@@ -233,6 +233,10 @@ module std_span [system] {
   export std_version
   export std_private_span_span_fwd
 }
+module std_spanstream [system] {
+  header "spanstream"
+  export *
+}
 module std_sstream [system] {
   header "sstream"
   export *
@@ -1377,14 +1381,15 @@ module std_private_functional_unary_function             [system] { header "__fu
 module std_private_functional_unary_negate               [system] { header "__functional/unary_negate.h" }
 module std_private_functional_weak_result_type           [system] { header "__functional/weak_result_type.h" }
 
-module std_private_ios_fpos [system] { header "__ios/fpos.h" }
+module std_private_ios_fpos                         [system] { header "__ios/fpos.h" }
 
-module std_private_iosfwd_fstream_fwd   [system] { header "__fwd/fstream.h" }
-module std_private_iosfwd_ios_fwd       [system] { header "__fwd/ios.h" }
-module std_private_iosfwd_istream_fwd   [system] { header "__fwd/istream.h" }
-module std_private_iosfwd_ostream_fwd   [system] { header "__fwd/ostream.h" }
-module std_private_iosfwd_sstream_fwd   [system] { header "__fwd/sstream.h" }
-module std_private_iosfwd_streambuf_fwd [system] { header "__fwd/streambuf.h" }
+module std_private_iosfwd_fstream_fwd               [system] { header "__fwd/fstream.h" }
+module std_private_iosfwd_ios_fwd                   [system] { header "__fwd/ios.h" }
+module std_private_iosfwd_istream_fwd               [system] { header "__fwd/istream.h" }
+module std_private_iosfwd_ostream_fwd               [system] { header "__fwd/ostream.h" }
+module std_private_iosfwd_spanstream_fwd            [system] { header "__fwd/spanstream.h" }
+module std_private_iosfwd_sstream_fwd               [system] { header "__fwd/sstream.h" }
+module std_private_iosfwd_streambuf_fwd             [system] { header "__fwd/streambuf.h" }
 
 module std_private_iterator_access                  [system] { header "__iterator/access.h" }
 module std_private_iterator_advance                 [system] { header "__iterator/advance.h" }

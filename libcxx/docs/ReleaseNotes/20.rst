@@ -38,7 +38,7 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
-- TODO
+- P0448R4 - A ``strstream`` replacement using ``span<charT>`` as buffer
 
 
 Improvements and New Features

@@ -163,6 +163,9 @@
 #include <source_location>
 #include <span>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <spanstream>
+#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <sstream>
 #endif
 #include <stack>
