@@ -280,14 +280,12 @@ int *mallocRegion(void) {
 
 int *custom_calloc(size_t a, size_t b) {
   size_t res;
-  if (__builtin_mul_overflow(a, b, &res))
-    return 0;
 
-  return malloc(res);
+  return __builtin_mul_overflow(a, b, &res) ? 0 : malloc(res);
 }
 
 int *mallocRegionOverflow(void) {
-  int *mem = (int*)custom_calloc(4, 10);
+  int *mem = (int*)custom_calloc(10, sizeof(int));
 
   mem[20] = 10;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}

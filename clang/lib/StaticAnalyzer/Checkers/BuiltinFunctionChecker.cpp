@@ -30,6 +30,14 @@ using namespace ento;
 
 namespace {
 
+QualType getSufficientTypeForOverflowOp(CheckerContext &C, const QualType &T) {
+  assert(T->isIntegerType());
+  ASTContext &ACtx = C.getASTContext();
+
+  unsigned BitWidth = ACtx.getIntWidth(T);
+  return ACtx.getIntTypeForBitwidth(BitWidth * 2, T->isSignedIntegerType());
+}
+
 QualType getOverflowBuiltinResultType(const CallEvent &Call) {
   assert(Call.getNumArgs() == 3);
 
@@ -73,15 +81,18 @@ QualType getOverflowBuiltinResultType(const CallEvent &Call, CheckerContext &C,
     return getOverflowBuiltinResultType(Call);
   default:
     assert(false && "Unknown overflow builtin");
+    return Ast.IntTy;
   }
 }
 
 class BuiltinFunctionChecker : public Checker<eval::Call> {
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
-  void HandleOverflowBuiltin(const CallEvent &Call, CheckerContext &C,
+  void handleOverflowBuiltin(const CallEvent &Call, CheckerContext &C,
                              BinaryOperator::Opcode Op,
                              QualType ResultType) const;
+  std::pair<bool, bool> checkOverflow(CheckerContext &C, SVal RetVal,
+                                      QualType Res) const;
 
 private:
   // From: clang/include/clang/Basic/Builtins.def
@@ -101,7 +112,36 @@ private:
 
 } // namespace
 
-void BuiltinFunctionChecker::HandleOverflowBuiltin(const CallEvent &Call,
+std::pair<bool, bool>
+BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
+                                      QualType Res) const {
+  ProgramStateRef State = C.getState();
+  SValBuilder &SVB = C.getSValBuilder();
+  auto SvalToBool = [&](SVal val) {
+    return State->isNonNull(val).isConstrainedTrue();
+  };
+  ASTContext &ACtx = C.getASTContext();
+
+  assert(Res->isIntegerType());
+
+  unsigned BitWidth = ACtx.getIntWidth(Res);
+  SVal MinType = nonloc::ConcreteInt(
+      llvm::APSInt::getMinValue(BitWidth, Res->isUnsignedIntegerType()));
+  SVal MaxType = nonloc::ConcreteInt(
+      llvm::APSInt::getMaxValue(BitWidth, Res->isUnsignedIntegerType()));
+
+  bool IsGreaterMax =
+      SvalToBool(SVB.evalBinOp(State, BO_GT, RetVal, MaxType, Res));
+  bool IsLessMin =
+      SvalToBool(SVB.evalBinOp(State, BO_LT, RetVal, MinType, Res));
+
+  bool IsLeMax = SvalToBool(SVB.evalBinOp(State, BO_LE, RetVal, MaxType, Res));
+  bool IsGeMin = SvalToBool(SVB.evalBinOp(State, BO_GE, RetVal, MinType, Res));
+
+  return {IsGreaterMax || IsLessMin, IsLeMax && IsGeMin};
+}
+
+void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
                                                    CheckerContext &C,
                                                    BinaryOperator::Opcode Op,
                                                    QualType ResultType) const {
@@ -115,14 +155,12 @@ void BuiltinFunctionChecker::HandleOverflowBuiltin(const CallEvent &Call,
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
 
+  SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2,
+                                 getSufficientTypeForOverflowOp(C, ResultType));
   SVal RetVal = SVB.evalBinOp(State, Op, Arg1, Arg2, ResultType);
 
-  // TODO: Handle overflows with values that known to overflow. Like INT_MAX + 1
-  // should not produce state for non-overflow case and threat it as
-  // unreachable.
-
-  // Handle non-overflow case.
-  {
+  auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
+  if (NotOverflow) {
     ProgramStateRef StateSuccess =
         State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(false));
 
@@ -132,11 +170,9 @@ void BuiltinFunctionChecker::HandleOverflowBuiltin(const CallEvent &Call,
     C.addTransition(StateSuccess);
   }
 
-  // Handle overflow case.
-  {
+  if (Overflow)
     C.addTransition(
         State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true)));
-  }
 }
 
 bool BuiltinFunctionChecker::isBuiltinLikeFunction(
@@ -183,7 +219,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   case Builtin::BI__builtin_umul_overflow:
   case Builtin::BI__builtin_umull_overflow:
   case Builtin::BI__builtin_umulll_overflow:
-    HandleOverflowBuiltin(Call, C, BO_Mul,
+    handleOverflowBuiltin(Call, C, BO_Mul,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
   case Builtin::BI__builtin_sub_overflow:
@@ -193,7 +229,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   case Builtin::BI__builtin_usub_overflow:
   case Builtin::BI__builtin_usubl_overflow:
   case Builtin::BI__builtin_usubll_overflow:
-    HandleOverflowBuiltin(Call, C, BO_Sub,
+    handleOverflowBuiltin(Call, C, BO_Sub,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
   case Builtin::BI__builtin_add_overflow:
@@ -203,7 +239,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   case Builtin::BI__builtin_uadd_overflow:
   case Builtin::BI__builtin_uaddl_overflow:
   case Builtin::BI__builtin_uaddll_overflow:
-    HandleOverflowBuiltin(Call, C, BO_Add,
+    handleOverflowBuiltin(Call, C, BO_Add,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
   case Builtin::BI__builtin_assume:
