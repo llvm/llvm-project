@@ -7242,6 +7242,7 @@ public:
     virtual SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
                                                  SourceLocation Loc) = 0;
     virtual SemaDiagnosticBuilder diagnoseFold(Sema &S, SourceLocation Loc);
+    virtual SemaDiagnosticBuilder diagnoseOverflow(Sema &S, SourceLocation Loc);
     virtual ~VerifyICEDiagnoser() {}
   };
 
