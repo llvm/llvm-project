@@ -6,6 +6,8 @@
 ///----------------------------------------------------------------------------------------
 /// vector.transfer_read
 /// [Pattern: FlattenContiguousRowMajorTransferReadPattern]
+///
+/// NOTE: Scalable vectors are not supported
 ///----------------------------------------------------------------------------------------
 
 func.func @transfer_read_dims_match_contiguous(
@@ -27,6 +29,22 @@ func.func @transfer_read_dims_match_contiguous(
 
 // CHECK-128B-LABEL: func @transfer_read_dims_match_contiguous
 //       CHECK-128B:   memref.collapse_shape
+
+func.func @transfer_read_dims_match_contiguous_scalable(
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x[2]xi8> {
+
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
+    memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x[2]xi8>
+  return %res : vector<5x4x3x[2]xi8>
+}
+
+// CHECK-LABEL: func @transfer_read_dims_match_contiguous_scalable
+// CHECK-NOT: memref.collapse_shape
+
+// CHECK-128B-LABEL: func @transfer_read_dims_match_contiguous_scalable
+//   CHECK-128B-NOT:   memref.collapse_shape
 
 // -----
 
@@ -259,6 +277,8 @@ func.func @transfer_read_non_contiguous_src(
 ///----------------------------------------------------------------------------------------
 /// vector.transfer_write
 /// [Pattern: FlattenContiguousRowMajorTransferWritePattern]
+///
+/// NOTE: Scalable vectors are not supported
 ///----------------------------------------------------------------------------------------
 
 func.func @transfer_write_dims_match_contiguous(
@@ -280,6 +300,22 @@ func.func @transfer_write_dims_match_contiguous(
 
 // CHECK-128B-LABEL: func @transfer_write_dims_match_contiguous(
 //       CHECK-128B:   memref.collapse_shape
+
+func.func @transfer_write_dims_match_contiguous_scalable(
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %vec : vector<5x4x3x[2]xi8>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
+    vector<5x4x3x[2]xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+  return
+}
+
+// CHECK-LABEL: func @transfer_write_dims_match_contiguous_scalable(
+// CHECK-NOT:   memref.collapse_shape
+
+// CHECK-128B-LABEL: func @transfer_write_dims_match_contiguous_scalable
+//   CHECK-128B-NOT:   memref.collapse_shape
 
 // -----
 
@@ -504,7 +540,11 @@ func.func @transfer_write_non_contiguous_src(
 
 ///----------------------------------------------------------------------------------------
 /// [Pattern: DropUnitDimFromElementwiseOps]
+///
 /// TODO: Move to a dedicated file - there's no "flattening" in the following tests
+/// TODO: Potential duplication with tests from:
+///   * "vector-dropleadunitdim-transforms.mlir" 
+///   * "vector-transfer-drop-unit-dims-patterns.mlir"
 ///----------------------------------------------------------------------------------------
 
 func.func @fold_unit_dim_add_basic(%vec : vector<1x8xi32>) -> vector<1x8xi32> {
