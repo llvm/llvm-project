@@ -10565,6 +10565,47 @@ bool clang::isBetterOverloadCandidate(
     auto *Guide1 = dyn_cast_or_null<CXXDeductionGuideDecl>(Cand1.Function);
     auto *Guide2 = dyn_cast_or_null<CXXDeductionGuideDecl>(Cand2.Function);
     if (Guide1 && Guide2) {
+      //  -- F1 and F2 are generated from class template argument deduction
+      //  for a class D, and F2 is generated from inheriting constructors
+      //  from a base class of D while F1 is not, ...
+      bool G1Inherited =
+          Guide1->getSourceDeductionGuide() &&
+          Guide1->getSourceKind() ==
+              CXXDeductionGuideDecl::SourceKind::InheritedConstructor;
+      bool G2Inherited =
+          Guide2->getSourceDeductionGuide() &&
+          Guide2->getSourceKind() ==
+              CXXDeductionGuideDecl::SourceKind::InheritedConstructor;
+      if (Guide1->isImplicit() && Guide2->isImplicit() &&
+          G1Inherited != G2Inherited) {
+        const FunctionProtoType *FPT1 =
+            Guide1->getType()->getAs<FunctionProtoType>();
+        const FunctionProtoType *FPT2 =
+            Guide2->getType()->getAs<FunctionProtoType>();
+        assert(FPT1 && FPT2);
+
+        // ... and for each explicit function argument, the parameters of F1 and
+        // F2 are either both ellipses or have the same type
+        if (FPT1->isVariadic() == FPT2->isVariadic() &&
+            FPT1->getNumParams() == FPT2->getNumParams()) {
+          bool ParamsHaveSameType = true;
+          const auto &A1 = FPT1->getParamTypes();
+          const auto &A2 = FPT2->getParamTypes();
+          for (unsigned I = 0, N = FPT1->getNumParams(); I != N; ++I) {
+            llvm::FoldingSetNodeID ID1, ID2;
+            S.Context.getCanonicalType(A1[I]).Profile(ID1);
+            S.Context.getCanonicalType(A2[I]).Profile(ID2);
+            if (ID1 != ID2) {
+              ParamsHaveSameType = false;
+              break;
+            }
+          }
+
+          if (ParamsHaveSameType)
+            return G2Inherited;
+        }
+      }
+
       //  -- F1 is generated from a deduction-guide and F2 is not
       if (Guide1->isImplicit() != Guide2->isImplicit())
         return Guide2->isImplicit();
@@ -11704,6 +11745,40 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       S.Diag(Templated->getLocation(),
              diag::note_ovl_candidate_disabled_by_requirement)
         << PDiag->second.getStringArg(0) << TemplateArgString;
+      return;
+    }
+
+    // Errors in deduction guides from inherited constructors
+    // will present as substitution failures in the mapping
+    // partial specialization, so we show a generic diagnostic
+    // in this case.
+    if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(Templated);
+        DG && DG->getSourceKind() ==
+                  CXXDeductionGuideDecl::SourceKind::InheritedConstructor) {
+      CXXDeductionGuideDecl *Source = DG->getSourceDeductionGuide();
+      assert(Source &&
+             "Inherited constructor deduction guides must have a source");
+      auto DeducedRecordType =
+          QualType(cast<ClassTemplateDecl>(DG->getDeducedTemplate())
+                       ->getTemplatedDecl()
+                       ->getTypeForDecl(),
+                   0);
+      auto InheritedRecordType =
+          QualType(cast<ClassTemplateDecl>(Source->getDeducedTemplate())
+                       ->getTemplatedDecl()
+                       ->getTypeForDecl(),
+                   0);
+      S.Diag(Templated->getLocation(),
+             diag::note_ovl_candidate_inherited_constructor_deduction_failure)
+          << DeducedRecordType << InheritedRecordType << TemplateArgString;
+
+      CXXConstructorDecl *Ctor = DG->getCorrespondingConstructor();
+      if (Ctor && Ctor->getBeginLoc().isValid())
+        S.Diag(
+            Ctor->getBeginLoc(),
+            diag::
+                note_ovl_candidate_inherited_constructor_deduction_failure_source)
+            << InheritedRecordType;
       return;
     }
 
