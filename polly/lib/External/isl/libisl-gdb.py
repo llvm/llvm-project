@@ -70,7 +70,7 @@ class IslPrintCommand(gdb.Command):
         arg = gdb.parse_and_eval(arg)
         printer = str_lookup_function(arg)
 
-        if printer == None:
+        if printer is None:
             print("No isl printer for this type")
             return
 
@@ -90,7 +90,7 @@ def str_lookup_function(val):
     lookup_tag = val.type.target()
     regex = re.compile("^isl_(.*)$")
 
-    if lookup_tag == None:
+    if lookup_tag is None:
         return None
 
     m = regex.match(str(lookup_tag))
