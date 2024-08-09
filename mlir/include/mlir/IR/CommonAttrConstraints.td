@@ -408,10 +408,18 @@ class ElementsAttrBase<Pred condition, string summary> :
   let storageType = [{ ::mlir::ElementsAttr }];
   let returnType = [{ ::mlir::ElementsAttr }];
   let convertFromStorage = "$_self";
+
+  // The underlying C++ value type of each element.
+  string elementReturnType = ?;
+
+  // The number of dimensions represented by the element collection.
+  int rank = 1;
 }
 
 def ElementsAttr : ElementsAttrBase<CPred<"::llvm::isa<::mlir::ElementsAttr>($_self)">,
-                                    "constant vector/tensor attribute">;
+                                    "constant vector/tensor attribute"> {
+  let elementReturnType = [{ ::mlir::Attribute }];
+}
 
 class IntElementsAttrBase<Pred condition, string summary> :
     ElementsAttrBase<And<[CPred<"::llvm::isa<::mlir::DenseIntElementsAttr>($_self)">,
@@ -419,6 +427,7 @@ class IntElementsAttrBase<Pred condition, string summary> :
                      summary> {
   let storageType = [{ ::mlir::DenseIntElementsAttr }];
   let returnType = [{ ::mlir::DenseIntElementsAttr }];
+  let elementReturnType = [{ ::llvm::APInt }];
 
   let convertFromStorage = "$_self";
 }
@@ -428,6 +437,7 @@ class DenseArrayAttrBase<string denseAttrName, string cppType, string summaryNam
                      summaryName # " dense array attribute"> {
   let storageType = "::mlir::" # denseAttrName;
   let returnType = "::llvm::ArrayRef<" # cppType # ">";
+  let elementReturnType = cppType;
   let constBuilderCall = "$_builder.get" # denseAttrName # "($0)";
 }
 def DenseBoolArrayAttr : DenseArrayAttrBase<"DenseBoolArrayAttr", "bool", "i1">;
@@ -486,6 +496,8 @@ class RankedSignlessIntElementsAttr<int width, list<int> dims> :
   let constBuilderCall = "::mlir::DenseIntElementsAttr::get("
     "::mlir::RankedTensorType::get({" # !interleave(dims, ", ") #
     "}, $_builder.getIntegerType(" # width # ")), ::llvm::ArrayRef($0))";
+  
+  let rank = !size(dims);
 }
 
 class RankedI32ElementsAttr<list<int> dims> :
@@ -501,6 +513,7 @@ class FloatElementsAttr<int width> : ElementsAttrBase<
 
   let storageType = [{ ::mlir::DenseElementsAttr }];
   let returnType = [{ ::mlir::DenseElementsAttr }];
+  let elementReturnType = [{ ::llvm::APFloat }];
 
   // Note that this is only constructing scalar elements attribute.
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
@@ -526,6 +539,8 @@ class RankedFloatElementsAttr<int width, list<int> dims> : ElementsAttrBase<
 
   let storageType = [{ ::mlir::DenseFPElementsAttr }];
   let returnType = [{ ::mlir::DenseFPElementsAttr }];
+  let elementReturnType = [{ ::llvm::APFloat }];
+  let rank = !size(dims);
 
   let constBuilderCall = "::llvm::cast<::mlir::DenseFPElementsAttr>("
   "::mlir::DenseElementsAttr::get("
@@ -544,6 +559,7 @@ def StringElementsAttr : ElementsAttrBase<
 
   let storageType = [{ ::mlir::DenseElementsAttr }];
   let returnType = [{ ::mlir::DenseElementsAttr }];
+  let elementReturnType = [{ ::llvm::SmallString }];
 
   let convertFromStorage = "$_self";
 }
