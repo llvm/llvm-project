@@ -402,7 +402,10 @@ def filter_symlinks(dictionary):
 
 def filter_ignored_files(dictionary, binary):
   """Delete every key in `dictionary` that is ignored by clang-format."""
-  ignored_files = run(binary, '-list-ignored', *dictionary.keys()).split('\n')
+  ignored_files = run(binary, '-list-ignored', *dictionary.keys())
+  if not ignored_files:
+    return
+  ignored_files = ignored_files.split('\n')
   for filename in ignored_files:
     del dictionary[filename]
 
