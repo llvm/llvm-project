@@ -1125,9 +1125,8 @@ Value *PHINode::getIncomingValue(unsigned Idx) const {
 }
 void PHINode::setIncomingValue(unsigned Idx, Value *V) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<PHISetIncoming>(
-        *this, Idx, PHISetIncoming::What::Value));
+  Tracker.emplaceIfTracking<PHISetIncoming>(this, Idx,
+                                            PHISetIncoming::What::Value);
 
   cast<llvm::PHINode>(Val)->setIncomingValue(Idx, V->Val);
 }
@@ -1142,24 +1141,21 @@ BasicBlock *PHINode::getIncomingBlock(const Use &U) const {
 }
 void PHINode::setIncomingBlock(unsigned Idx, BasicBlock *BB) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<PHISetIncoming>(
-        *this, Idx, PHISetIncoming::What::Block));
+  Tracker.emplaceIfTracking<PHISetIncoming>(this, Idx,
+                                            PHISetIncoming::What::Block);
   cast<llvm::PHINode>(Val)->setIncomingBlock(Idx,
                                              cast<llvm::BasicBlock>(BB->Val));
 }
 void PHINode::addIncoming(Value *V, BasicBlock *BB) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<PHIAddIncoming>(*this));
+  Tracker.emplaceIfTracking<PHIAddIncoming>(this);
 
   cast<llvm::PHINode>(Val)->addIncoming(V->Val,
                                         cast<llvm::BasicBlock>(BB->Val));
 }
 Value *PHINode::removeIncomingValue(unsigned Idx) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(std::make_unique<PHIRemoveIncoming>(*this, Idx));
+  Tracker.emplaceIfTracking<PHIRemoveIncoming>(this, Idx);
   llvm::Value *LLVMV =
       cast<llvm::PHINode>(Val)->removeIncomingValue(Idx,
                                                     /*DeletePHIIfEmpty=*/false);
@@ -1167,9 +1163,7 @@ Value *PHINode::removeIncomingValue(unsigned Idx) {
 }
 Value *PHINode::removeIncomingValue(BasicBlock *BB) {
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking())
-    Tracker.track(
-        std::make_unique<PHIRemoveIncoming>(*this, getBasicBlockIndex(BB)));
+  Tracker.emplaceIfTracking<PHIRemoveIncoming>(this, getBasicBlockIndex(BB));
 
   auto *LLVMBB = cast<llvm::BasicBlock>(BB->Val);
   llvm::Value *LLVMV =
