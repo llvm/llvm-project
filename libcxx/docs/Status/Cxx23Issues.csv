@@ -159,7 +159,7 @@
 "`LWG3660 <https://wg21.link/LWG3660>`__","``iterator_traits<common_iterator>::pointer`` should conform to §[iterator.traits]","February 2022","|Complete|","14.0","|ranges|"
 "`LWG3661 <https://wg21.link/LWG3661>`__","``constinit atomic<shared_ptr<T>> a(nullptr);`` should work","February 2022","","",""
 "","","","","",""
-"`LWG3564 <https://wg21.link/LWG3564>`__","``transform_view::iterator<true>::value_type`` and ``iterator_category`` should use ``const F&``","July 2022","","","|ranges|"
+"`LWG3564 <https://wg21.link/LWG3564>`__","``transform_view::iterator<true>::value_type`` and ``iterator_category`` should use ``const F&``","July 2022","|Complete|","20.0","|ranges|"
 "`LWG3617 <https://wg21.link/LWG3617>`__","``function``/``packaged_task`` deduction guides and deducing ``this``","July 2022","","",""
 "`LWG3656 <https://wg21.link/LWG3656>`__","Inconsistent bit operations returning a count","July 2022","|Complete|","15.0",""
 "`LWG3659 <https://wg21.link/LWG3659>`__","Consider ``ATOMIC_FLAG_INIT`` undeprecation","July 2022","|Complete|","15.0",""
