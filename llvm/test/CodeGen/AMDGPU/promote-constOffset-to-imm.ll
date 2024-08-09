@@ -2163,9 +2163,9 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX9-NEXT:    s_movk_i32 s0, 0x1000
 ; GFX9-NEXT:    v_add_co_u32_e32 v12, vcc, s0, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v13, vcc, 0, v1, vcc
-; GFX9-NEXT:    global_load_dwordx2 v[14:15], v[12:13], off
 ; GFX9-NEXT:    global_load_dwordx2 v[16:17], v[2:3], off
 ; GFX9-NEXT:    global_load_dwordx2 v[18:19], v[12:13], off offset:2048
+; GFX9-NEXT:    global_load_dwordx2 v[14:15], v[12:13], off
 ; GFX9-NEXT:    global_load_dwordx2 v[20:21], v[0:1], off offset:2048
 ; GFX9-NEXT:    s_waitcnt vmcnt(6)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v6, v4
@@ -2176,12 +2176,13 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v10, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v11, v1, vcc
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v16, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v17, v1, vcc
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v18, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v19, v1, vcc
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v14, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v15, v1, vcc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -2302,8 +2303,8 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_clause 0x4
 ; GFX11-NEXT:    global_load_b64 v[12:13], v[8:9], off offset:2048
-; GFX11-NEXT:    global_load_b64 v[14:15], v[10:11], off
 ; GFX11-NEXT:    global_load_b64 v[8:9], v[8:9], off
+; GFX11-NEXT:    global_load_b64 v[14:15], v[10:11], off
 ; GFX11-NEXT:    global_load_b64 v[10:11], v[10:11], off offset:2048
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off offset:2048
 ; GFX11-NEXT:    s_waitcnt vmcnt(6)
@@ -2318,7 +2319,7 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v12, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, v13, v3, vcc_lo
-; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v8, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, v9, v3, vcc_lo
