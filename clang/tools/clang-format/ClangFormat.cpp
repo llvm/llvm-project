@@ -722,7 +722,7 @@ int main(int argc, const char **argv) {
     const bool Ignored = isIgnored(FileName);
     if (ListIgnored) {
       if (Ignored)
-        outs() << FileName << "\n";
+        outs() << FileName << '\n';
       continue;
     }
     if (Ignored)
