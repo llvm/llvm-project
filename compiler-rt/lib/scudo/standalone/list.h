@@ -42,9 +42,10 @@ template <class T, bool LinkWithPtr = isPointer<decltype(T::Next)>::value>
 class LinkOp {
 public:
   LinkOp() = default;
-  LinkOp(UNUSED T *BaseT) {}
+  LinkOp(UNUSED T *BaseT, UNUSED uptr BaseSize) {}
   void init(UNUSED T *LinkBase, UNUSED uptr Size) {}
   T *getBase() const { return nullptr; }
+  uptr getSize() const { return 0; }
 
   T *getNext(T *X) const { return X->Next; }
   void setNext(T *X, T *Next) const { X->Next = Next; }
@@ -60,13 +61,14 @@ public:
   using LinkTy = decltype(T::Next);
 
   LinkOp() = default;
-  LinkOp(T *BaseT) : Base(BaseT) {}
+  LinkOp(T *BaseT, uptr BaseSize) : Base(BaseT), Size(BaseSize) {}
   void init(T *LinkBase, uptr BaseSize) {
     Base = LinkBase;
     // TODO: Check if the `BaseSize` can fit in `Size`.
     Size = static_cast<LinkTy>(BaseSize);
   }
   T *getBase() const { return Base; }
+  LinkTy getSize() const { return Size; }
 
   T *getNext(T *X) const {
     DCHECK_NE(getBase(), nullptr);
@@ -127,7 +129,6 @@ private:
 
 template <class T> struct IntrusiveList : public LinkOp<T> {
   IntrusiveList() = default;
-  IntrusiveList(T *Base) { init(Base); }
   void init(T *Base, uptr BaseSize) { LinkOp<T>::init(Base, BaseSize); }
 
   bool empty() const { return Size == 0; }
@@ -150,10 +151,10 @@ template <class T> struct IntrusiveList : public LinkOp<T> {
   Iterator end() { return Iterator(*this, this->getEndOfListVal()); }
 
   ConstIterator begin() const {
-    return ConstIterator(LinkOp<const T>(this->getBase()), First);
+    return ConstIterator(LinkOp<const T>(this->getBase(), this->getSize()), First);
   }
   ConstIterator end() const {
-    return ConstIterator(LinkOp<const T>(this->getBase()),
+    return ConstIterator(LinkOp<const T>(this->getBase(), this->getSize()),
                          this->getEndOfListVal());
   }
 
