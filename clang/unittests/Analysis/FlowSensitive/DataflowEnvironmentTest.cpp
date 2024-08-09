@@ -435,6 +435,8 @@ TEST_F(EnvironmentTest, CXXDefaultInitExprResultObjIsWrappedExprResultObj) {
   const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
   const auto *DefaultInit =
       selectFirst<CXXDefaultInitExpr>("default_init_expr", Results);
+  // We only propagate past the `CXXDefaultInitExpr` if it has a rewritten init.
+  ASSERT_TRUE(DefaultInit->hasRewrittenInit());
 
   Environment Env(DAContext, *Constructor);
   Env.initialize();
