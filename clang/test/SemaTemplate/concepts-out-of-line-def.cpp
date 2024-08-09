@@ -599,3 +599,24 @@ template <class DerT>
 unsigned long DerivedCollection<DerTs...>::index() {}
 
 } // namespace GH72557
+
+namespace GH102320 {
+
+template <class, class>
+concept Constrained = true;
+
+template <class T> class C {
+  template <Constrained<T>> class D;
+  template <class U>
+    requires Constrained<T, U>
+  class E;
+};
+
+template <class T> template <Constrained<T>> class C<T>::D {};
+
+template <class T>
+template <class U>
+  requires Constrained<T, U>
+class C<T>::E {};
+
+} // namespace GH102320

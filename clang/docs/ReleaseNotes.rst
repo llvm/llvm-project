@@ -186,6 +186,8 @@ Bug Fixes to C++ Support
   substitutions in concepts, so it doesn't incorrectly complain of missing
   module imports in those situations. (#GH60336)
 - Fix init-capture packs having a size of one before being instantiated. (#GH63677)
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. (#GH102320)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

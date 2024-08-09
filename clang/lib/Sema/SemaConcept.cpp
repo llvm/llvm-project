@@ -948,7 +948,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
     const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
+      DeclInfo.getDecl(), DeclInfo.getDeclContext(), /*Final=*/false,
       /*Innermost=*/std::nullopt,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
@@ -971,9 +971,12 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // this may happen while we're comparing two templates' constraint
   // equivalence.
   LocalInstantiationScope ScopeForParameters(S);
-  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
-    for (auto *PVD : FD->parameters())
-      ScopeForParameters.InstantiatedLocal(PVD, PVD);
+  if (const NamedDecl *D = DeclInfo.getDecl()) {
+    const FunctionDecl *FD = D->getAsFunction();
+    if (FD)
+      for (auto *PVD : FD->parameters())
+        ScopeForParameters.InstantiatedLocal(PVD, PVD);
+  }
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
 
