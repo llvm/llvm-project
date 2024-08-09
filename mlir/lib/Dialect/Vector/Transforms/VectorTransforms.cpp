@@ -548,13 +548,6 @@ struct ReorderElementwiseOpsOnTranspose final
   }
 };
 
-// Returns the values in `arrayAttr` as an integer vector.
-static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
-  return llvm::to_vector<4>(
-      llvm::map_range(arrayAttr.getAsRange<IntegerAttr>(),
-                      [](IntegerAttr attr) { return attr.getInt(); }));
-}
-
 // Shuffles vector.bitcast op after vector.extract op.
 //
 // This transforms IR like:
@@ -661,8 +654,7 @@ struct BubbleDownBitCastForStridedSliceExtract
       return failure();
 
     // Only accept all one strides for now.
-    if (llvm::any_of(extractOp.getStrides().getAsValueRange<IntegerAttr>(),
-                     [](const APInt &val) { return !val.isOne(); }))
+    if (extractOp.hasNonUnitStrides())
       return failure();
 
     unsigned rank = extractOp.getSourceVectorType().getRank();
@@ -673,34 +665,24 @@ struct BubbleDownBitCastForStridedSliceExtract
     // are selecting the full range for the last bitcasted dimension; other
     // dimensions aren't affected. Otherwise, we need to scale down the last
     // dimension's offset given we are extracting from less elements now.
-    ArrayAttr newOffsets = extractOp.getOffsets();
+    SmallVector<int64_t> newOffsets(extractOp.getOffsets());
     if (newOffsets.size() == rank) {
-      SmallVector<int64_t> offsets = getIntValueVector(newOffsets);
-      if (offsets.back() % expandRatio != 0)
+      if (newOffsets.back() % expandRatio != 0)
         return failure();
-      offsets.back() = offsets.back() / expandRatio;
-      newOffsets = rewriter.getI64ArrayAttr(offsets);
+      newOffsets.back() = newOffsets.back() / expandRatio;
     }
 
     // Similarly for sizes.
-    ArrayAttr newSizes = extractOp.getSizes();
+    SmallVector<int64_t> newSizes(extractOp.getSizes());
     if (newSizes.size() == rank) {
-      SmallVector<int64_t> sizes = getIntValueVector(newSizes);
-      if (sizes.back() % expandRatio != 0)
+      if (newSizes.back() % expandRatio != 0)
         return failure();
-      sizes.back() = sizes.back() / expandRatio;
-      newSizes = rewriter.getI64ArrayAttr(sizes);
+      newSizes.back() = newSizes.back() / expandRatio;
     }
 
-    SmallVector<int64_t> dims =
-        llvm::to_vector<4>(cast<VectorType>(extractOp.getType()).getShape());
-    dims.back() = dims.back() / expandRatio;
-    VectorType newExtractType =
-        VectorType::get(dims, castSrcType.getElementType());
-
     auto newExtractOp = rewriter.create<vector::ExtractStridedSliceOp>(
-        extractOp.getLoc(), newExtractType, castOp.getSource(), newOffsets,
-        newSizes, extractOp.getStrides());
+        extractOp.getLoc(), castOp.getSource(), newOffsets, newSizes,
+        extractOp.getStrides());
 
     rewriter.replaceOpWithNewOp<vector::BitCastOp>(
         extractOp, extractOp.getType(), newExtractOp);
@@ -818,8 +800,7 @@ struct BubbleUpBitCastForStridedSliceInsert
       return failure();
 
     // Only accept all one strides for now.
-    if (llvm::any_of(insertOp.getStrides().getAsValueRange<IntegerAttr>(),
-                     [](const APInt &val) { return !val.isOne(); }))
+    if (insertOp.hasNonUnitStrides())
       return failure();
 
     unsigned rank = insertOp.getSourceVectorType().getRank();
@@ -836,13 +817,11 @@ struct BubbleUpBitCastForStridedSliceInsert
     if (insertOp.getSourceVectorType().getNumElements() % numElements != 0)
       return failure();
 
-    ArrayAttr newOffsets = insertOp.getOffsets();
+    SmallVector<int64_t> newOffsets(insertOp.getOffsets());
     assert(newOffsets.size() == rank);
-    SmallVector<int64_t> offsets = getIntValueVector(newOffsets);
-    if (offsets.back() % shrinkRatio != 0)
+    if (newOffsets.back() % shrinkRatio != 0)
       return failure();
-    offsets.back() = offsets.back() / shrinkRatio;
-    newOffsets = rewriter.getI64ArrayAttr(offsets);
+    newOffsets.back() = newOffsets.back() / shrinkRatio;
 
     SmallVector<int64_t> srcDims =
         llvm::to_vector<4>(insertOp.getSourceVectorType().getShape());
@@ -863,7 +842,7 @@ struct BubbleUpBitCastForStridedSliceInsert
         bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
 
     rewriter.replaceOpWithNewOp<vector::InsertStridedSliceOp>(
-        bitcastOp, bitcastOp.getType(), newCastSrcOp, newCastDstOp, newOffsets,
+        bitcastOp, newCastSrcOp, newCastDstOp, newOffsets,
         insertOp.getStrides());
 
     return success();
