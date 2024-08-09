@@ -802,7 +802,8 @@ protected:
   /// \param Field The field whose offset is being queried.
   /// \param ComputedOffset The offset that we've computed for this field.
   uint64_t updateExternalFieldOffset(const FieldDecl *Field,
-                                     uint64_t ComputedOffset);
+                                     uint64_t ComputedOffset,
+                                     uint64_t PreviousOffset);
 
   void CheckFieldPadding(uint64_t Offset, uint64_t UnpaddedOffset,
                           uint64_t UnpackedOffset, unsigned UnpackedAlign,
@@ -1296,13 +1297,6 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     bool Allowed = EmptySubobjects->CanPlaceBaseAtOffset(Base, Offset);
     (void)Allowed;
     assert(Allowed && "Base subobject externally placed at overlapping offset");
-
-    if (InferAlignment && Offset < getDataSize().alignTo(AlignTo)) {
-      // The externally-supplied base offset is before the base offset we
-      // computed. Assume that the structure is packed.
-      Alignment = CharUnits::One();
-      InferAlignment = false;
-    }
   }
 
   if (!Base->Class->isEmpty()) {
@@ -1770,7 +1764,8 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   // If we're using external layout, give the external layout a chance
   // to override this information.
   if (UseExternalLayout)
-    FieldOffset = updateExternalFieldOffset(D, FieldOffset);
+    FieldOffset = updateExternalFieldOffset(
+        D, FieldOffset, FieldOffsets.empty() ? 0 : FieldOffsets.back());
 
   // Okay, place the bitfield at the calculated offset.
   FieldOffsets.push_back(FieldOffset);
@@ -2063,8 +2058,9 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   UnpackedFieldOffset = UnpackedFieldOffset.alignTo(UnpackedFieldAlign);
 
   if (UseExternalLayout) {
-    FieldOffset = Context.toCharUnitsFromBits(
-        updateExternalFieldOffset(D, Context.toBits(FieldOffset)));
+    FieldOffset = Context.toCharUnitsFromBits(updateExternalFieldOffset(
+        D, Context.toBits(FieldOffset),
+        FieldOffsets.empty() ? 0 : FieldOffsets.back()));
 
     if (!IsUnion && EmptySubobjects) {
       // Record the fact that we're placing a field at this offset.
@@ -2250,14 +2246,18 @@ void ItaniumRecordLayoutBuilder::UpdateAlignment(
   }
 }
 
-uint64_t
-ItaniumRecordLayoutBuilder::updateExternalFieldOffset(const FieldDecl *Field,
-                                                      uint64_t ComputedOffset) {
+uint64_t ItaniumRecordLayoutBuilder::updateExternalFieldOffset(
+    const FieldDecl *Field, uint64_t ComputedOffset, uint64_t PreviousOffset) {
   uint64_t ExternalFieldOffset = External.getExternalFieldOffset(Field);
 
-  if (InferAlignment && ExternalFieldOffset < ComputedOffset) {
-    // The externally-supplied field offset is before the field offset we
-    // computed. Assume that the structure is packed.
+  // If the externally-supplied field offset is before the field offset we
+  // computed. Check against the previous field offset to make sure we don't
+  // misinterpret overlapping fields as packedness of the structure.
+  const bool assume_packed = ExternalFieldOffset > 0 &&
+                             ExternalFieldOffset < ComputedOffset &&
+                             ExternalFieldOffset > PreviousOffset;
+
+  if (InferAlignment && assume_packed) {
     Alignment = CharUnits::One();
     PreferredAlignment = CharUnits::One();
     InferAlignment = false;
