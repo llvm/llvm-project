@@ -10148,8 +10148,8 @@ let Predicates = [HasFP8] in {
 } // End let Predicates = [HasFP8]
 
 let Predicates = [HasFAMINMAX] in {
- defm FAMAX : SIMDThreeSameVectorFP<0b0, 0b1, 0b011, "famax", null_frag>;
- defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", null_frag>;
+  defm FAMAX : SIMDThreeSameVectorFP<0b0, 0b1, 0b011, "famax", int_aarch64_neon_famax>;
+  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", int_aarch64_neon_famin>;
 } // End let Predicates = [HasFAMAXMIN]
 
 let Predicates = [HasFP8FMA] in {

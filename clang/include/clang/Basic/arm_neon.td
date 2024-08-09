@@ -2096,3 +2096,8 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "r
   def VLDAP1_LANE : WInst<"vldap1_lane", ".(c*!).I", "QUlQlUlldQdPlQPl">;
   def VSTL1_LANE  : WInst<"vstl1_lane", "v*(.!)I", "QUlQlUlldQdPlQPl">;
 }
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "faminmax" in {
+  def FAMIN : WInst<"vamin", "...", "fhQdQfQh">;
+  def FAMAX : WInst<"vamax", "...", "fhQdQfQh">;
+}
