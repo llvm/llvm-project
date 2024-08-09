@@ -166,6 +166,9 @@ struct PointerAuthOptions {
   /// Should return addresses be authenticated?
   bool ReturnAddresses = false;
 
+  /// Do authentication failures cause a trap?
+  bool AuthTraps = false;
+
   /// Do indirect goto label addresses need to be authenticated?
   bool IndirectGotos = false;
 
