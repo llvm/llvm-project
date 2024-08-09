@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Transforms/PassBuilder.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -28,11 +29,14 @@ class LLVMPassBuilderOptions {
 public:
   explicit LLVMPassBuilderOptions(
       bool DebugLogging = false, bool VerifyEach = false,
+      const char *AAPipeline = nullptr,
       PipelineTuningOptions PTO = PipelineTuningOptions())
-      : DebugLogging(DebugLogging), VerifyEach(VerifyEach), PTO(PTO) {}
+      : DebugLogging(DebugLogging), VerifyEach(VerifyEach),
+        AAPipeline(AAPipeline), PTO(PTO) {}
 
   bool DebugLogging;
   bool VerifyEach;
+  const char *AAPipeline;
   PipelineTuningOptions PTO;
 };
 } // namespace llvm
@@ -61,6 +65,15 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   PB.registerLoopAnalyses(LAM);
+  if (PassOpts->AAPipeline) {
+    // If we have a custom AA pipeline, we need to register it _before_ calling
+    // registerFunctionAnalyses, or the default alias analysis pipeline is used.
+    AAManager AA;
+    if (auto Err = PB.parseAAPipeline(AA, PassOpts->AAPipeline)) {
+      return wrap(std::move(Err));
+    }
+    FAM.registerPass([&] { return std::move(AA); });
+  }
   PB.registerFunctionAnalyses(FAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerModuleAnalyses(MAM);
@@ -92,6 +105,11 @@ void LLVMPassBuilderOptionsSetVerifyEach(LLVMPassBuilderOptionsRef Options,
 void LLVMPassBuilderOptionsSetDebugLogging(LLVMPassBuilderOptionsRef Options,
                                            LLVMBool DebugLogging) {
   unwrap(Options)->DebugLogging = DebugLogging;
+}
+
+void LLVMPassBuilderOptionsSetAAPipeline(LLVMPassBuilderOptionsRef Options,
+                                         const char *AAPipeline) {
+  unwrap(Options)->AAPipeline = AAPipeline;
 }
 
 void LLVMPassBuilderOptionsSetLoopInterleaving(
