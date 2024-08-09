@@ -4,14 +4,6 @@ types: []
 enums: []
 objects: []
 functions:
-  - name: rpc_host_call
-    standards:
-      - GPUExtensions
-    return_type: void
-    arguments:
-      - type: void *
-      - type: void *
-      - type: size_t
   - name: rpc_fprintf
     standards:
       - GPUExtensions
@@ -19,5 +11,13 @@ functions:
     arguments:
       - type: ::FILE *__restrict
       - type: const char *__restrict
+      - type: void *
+      - type: size_t
+  - name: rpc_host_call
+    standards:
+      - GPUExtensions
+    return_type: void
+    arguments:
+      - type: void *
       - type: void *
       - type: size_t

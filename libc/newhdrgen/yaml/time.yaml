@@ -23,6 +23,12 @@ functions:
     arguments:
       - type: struct tm *
       - type: char *
+  - name: clock
+    standard:
+      - stdc
+    return_type: clock_t
+    arguments:
+      - type: void
   - name: clock_gettime
     standard:
       - POSIX
@@ -30,12 +36,6 @@ functions:
     arguments:
       - type: clockid_t
       - type: struct timespec *
-  - name: clock
-    standard:
-      - stdc
-    return_type: clock_t
-    arguments:
-      - type: void
   - name: difftime
     standard:
       - stdc

@@ -20,143 +20,14 @@ objects:
   - object_name: stderr
     object_type: FILE *
 functions:
-  - name: remove
+  - name: asprintf
     standards:
-      - stdc
+      - GNUExtensions
     return_type: int
     arguments:
-      - type: const char *
-  - name: rename
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *
-      - type: const char *
-  - name: sprintf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: char *__restrict
+      - type: char **__restrict
       - type: const char *__restrict
-      - type: ...
-  - name: snprintf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: char *__restrict
-      - type: size_t
-      - type: const char *__restrict
-      - type: ...
-  - name: fprintf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: FILE *__restrict
-      - type: const char *__restrict
-      - type: ...
-  - name: printf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *__restrict
-      - type: ...
-  - name: vsprintf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: char *__restrict
-      - type: const char *__restrict
-      - type: va_list
-  - name: vsnprintf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: char *__restrict
-      - type: size_t
-      - type: const char *__restrict
-      - type: va_list
-  - name: vfprintf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: FILE *__restrict
-      - type: const char *__restrict
-      - type: va_list
-  - name: vprintf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *__restrict
-      - type: va_list
-  - name: asprintf 
-    standards:
-      - GNUExtensions 
-    return_type: int 
-    arguments: 
-      - type: char **__restrict 
-      - type: const char *__restrict 
-      - type: ... 
-  - name: vasprintf 
-    standards:
-      - GNUExtensions 
-    return_type: int 
-    arguments: 
-      - type: char **__restrict 
-      - type: const char *__restrict 
-      - type: va_list
-  - name: sscanf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *__restrict
-      - type: const char *__restrict
-      - type: ...
-  - name: vsscanf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *__restrict
-      - type: const char *__restrict
-      - type: va_list
-  - name: scanf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *__restrict
-      - type: ...
-  - name: fscanf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: FILE *__restrict
-      - type: const char *__restrict
-      - type: ...
-  - name: fileno
-    standards:
-      - POSIX
-    return_type: int
-    arguments:
-      - type: FILE *
-  - name: fdopen
-    standards:
-      - POSIX
-    return_type: FILE *
-    arguments:
-      - type: int
-      - type: const char *
+      - type: '...'
   - name: clearerr
     standards:
       - stdc
@@ -175,12 +46,13 @@ functions:
     return_type: int
     arguments:
       - type: FILE *
-  - name: flockfile
+  - name: fdopen
     standards:
       - POSIX
-    return_type: void
+    return_type: FILE *
     arguments:
-      - type: FILE *
+      - type: int
+      - type: const char *
   - name: feof
     standards:
       - stdc
@@ -205,6 +77,12 @@ functions:
     return_type: int
     arguments:
       - type: FILE *
+  - name: fflush
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: FILE *
   - name: fgetc
     standards:
       - stdc
@@ -225,10 +103,16 @@ functions:
       - type: char *__restrict
       - type: int
       - type: FILE *__restrict
-  - name: fflush
+  - name: fileno
     standards:
-      - stdc
+      - POSIX
     return_type: int
+    arguments:
+      - type: FILE *
+  - name: flockfile
+    standards:
+      - POSIX
+    return_type: void
     arguments:
       - type: FILE *
   - name: fopen
@@ -238,6 +122,22 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
+  - name: fopencookie
+    standards:
+      - GNUExtensions
+    return_type: FILE *
+    arguments:
+      - type: void *
+      - type: const char *
+      - type: cookie_io_functions_t
+  - name: fprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: FILE *__restrict
+      - type: const char *__restrict
+      - type: '...'
   - name: fputc
     standards:
       - stdc
@@ -252,14 +152,6 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: FILE *__restrict
-  - name: fopencookie
-    standards:
-      - GNUExtensions
-    return_type: FILE *
-    arguments:
-      - type: void *
-      - type: const char *
-      - type: cookie_io_functions_t
   - name: fread
     standards:
       - stdc
@@ -278,6 +170,14 @@ functions:
       - type: size_t
       - type: size_t
       - type: FILE *__restrict
+  - name: fscanf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: FILE *__restrict
+      - type: const char *__restrict
+      - type: '...'
   - name: fseek
     standards:
       - stdc
@@ -338,6 +238,13 @@ functions:
       - POSIX
     return_type: int
     arguments: []
+  - name: printf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: '...'
   - name: putc
     standards:
       - stdc
@@ -357,6 +264,26 @@ functions:
     return_type: int
     arguments:
       - type: const char *
+  - name: remove
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+  - name: rename
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+  - name: scanf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: '...'
   - name: setbuf
     standards:
       - stdc
@@ -373,6 +300,31 @@ functions:
       - type: char *__restrict
       - type: int
       - type: size_t
+  - name: snprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *__restrict
+      - type: size_t
+      - type: const char *__restrict
+      - type: '...'
+  - name: sprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+      - type: '...'
+  - name: sscanf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: '...'
   - name: ungetc
     standards:
       - stdc
@@ -380,3 +332,51 @@ functions:
     arguments:
       - type: int
       - type: FILE *
+  - name: vasprintf
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: char **__restrict
+      - type: const char *__restrict
+      - type: va_list
+  - name: vfprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: FILE *__restrict
+      - type: const char *__restrict
+      - type: va_list
+  - name: vprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: va_list
+  - name: vsnprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *__restrict
+      - type: size_t
+      - type: const char *__restrict
+      - type: va_list
+  - name: vsprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+      - type: va_list
+  - name: vsscanf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: va_list
