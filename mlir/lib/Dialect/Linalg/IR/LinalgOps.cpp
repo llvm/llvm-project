@@ -2678,116 +2678,42 @@ void SoftmaxOp::getEffects(
 
 // Helper functions for softmax decomposition.
 // @{
-
-// Helper function to produce the iterator types (reduction or parallel) and
-// affine maps for the iterators used in the decomposition of softmax.
-// This method creates:
-// If allParallel == true:
-// - iterator type: {parallel, ..., parallel}
-// - affine maps:
-// -- identity with inputRank dimensions.
-// -- (d0, ..., dN) -> (d0, ..., d_dim-1, d_dim+1, ..., dN),
-//    where N == inputRank.
-//
-// If allParallel == false:
-// - iterator type at dim(i) == parallel for i != \p dim and
-//   dim(dim) == reduction.
-// - affine map:
-// -- identity with inputRank dimensions.
-// -- (d0, ..., dN) -> (d0, ..., d_dim-1, d_dim+1, ..., dN),
-//    where N == inputRank.
-static std::tuple<SmallVector<utils::IteratorType>, SmallVector<AffineMap>>
-computeIteratorTypesAndIndexingMaps(OpBuilder &builder, int64_t inputRank,
-                                    int64_t dim, bool allParallel = false) {
-  SmallVector<utils::IteratorType> iteratorTypes(inputRank,
-                                                 utils::IteratorType::parallel);
-  if (!allParallel)
-    iteratorTypes[dim] = utils::IteratorType::reduction;
-  MLIRContext *ctxt = builder.getContext();
-  auto identityMap = AffineMap::getMultiDimIdentityMap(inputRank, ctxt);
-  SmallVector<AffineExpr, 2> affineExprs;
-  for (int i = 0; i < inputRank; i++) {
-    if (i != dim)
-      affineExprs.push_back(mlir::getAffineDimExpr(i, ctxt));
-  }
-  auto reductionMap =
-      AffineMap::get(inputRank, /*symbols=*/0, affineExprs, ctxt);
-  SmallVector<AffineMap> indexingMaps{identityMap, reductionMap};
-  return std::make_tuple(iteratorTypes, indexingMaps);
+static TypedAttr createInitValueForReduceMaxOp(Type type, OpBuilder &b) {
+  if (isa<FloatType>(type))
+    return b.getFloatAttr(
+        type, APFloat::getLargest(cast<FloatType>(type).getFloatSemantics(),
+                                  /*Negative=*/true));
+  if (isa<IntegerType>(type))
+    return b.getIntegerAttr(
+        type, APInt::getSignedMinValue(type.getIntOrFloatBitWidth()));
+  return {};
 }
 
-// Helper function to produce a linalg.generic that computes a reduction on
-// dimension \p dim with the operation type \p T.
-template <typename T>
-static Value reduce(OpBuilder &builder, Location loc, Value input, Value output,
-                    int64_t dim) {
-  auto inputType = cast<ShapedType>(input.getType());
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-  int64_t inputRank = inputShape.size();
-  auto [iteratorTypes, indexingMaps] =
-      computeIteratorTypesAndIndexingMaps(builder, inputRank, dim);
-  assert(indexingMaps.size() == 2 &&
-         "We should have two maps: 1 for the input, 1 for the output");
-  assert(indexingMaps[0].isIdentity() && "input map should be identity");
-
-  auto genericOp = builder.create<linalg::GenericOp>(
-      loc, output.getType(), input, output, indexingMaps, iteratorTypes,
-      [&](OpBuilder &b, Location loc, ValueRange args) {
-        Value result = b.create<T>(loc, args[0], args[1]);
-        b.create<linalg::YieldOp>(loc, result);
-      });
-  return genericOp.getResult(0);
+static TypedAttr createInitValueForReduceSumOp(Type type, OpBuilder &b) {
+  if (isa<FloatType>(type))
+    return b.getFloatAttr(
+        type, APFloat::getZero(cast<FloatType>(type).getFloatSemantics()));
+  if (isa<IntegerType>(type))
+    return b.getIntegerAttr(type, APInt::getZero(type.getIntOrFloatBitWidth()));
+  return {};
 }
 
-/// Produce a linalg generic that computes the second step of the softmax
-/// decomposition: res = exp(input - max), where \p max is the max of \p input
-/// on dimension \p dim.
-static Value buildSubAndExpOp(OpBuilder &builder, Location loc, Value input,
-                              Value max, Value output, int64_t dim) {
-  auto inputType = cast<ShapedType>(input.getType());
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-  int64_t inputRank = inputShape.size();
-  auto [iteratorTypes, indexingMaps] = computeIteratorTypesAndIndexingMaps(
-      builder, inputRank, dim, /*allParallel=*/true);
-  assert(indexingMaps.size() == 2 && "We should have one map for each input");
-  assert(indexingMaps[0].isIdentity() && "input map should be identity");
-  // Add the affine map for the output argument.
-  indexingMaps.push_back(indexingMaps[0]);
-  auto genericOp = builder.create<linalg::GenericOp>(
-      loc, input.getType(), ValueRange{input, max}, output, indexingMaps,
-      iteratorTypes, [&](OpBuilder &b, Location loc, ValueRange args) {
-        Value diff = b.create<arith::SubFOp>(loc, args[0], args[1]);
-        Value result = b.create<math::ExpOp>(loc, diff);
-        b.create<linalg::YieldOp>(loc, result);
-      });
-  return genericOp.getResult(0);
+static Value createLinalgReduceMaxBody(OpBuilder b, Location loc,
+                                       ValueRange args, Type elementTy) {
+  if (isa<FloatType>(elementTy))
+    return b.create<arith::MaxNumFOp>(loc, args[0], args[1]);
+  if (isa<IntegerType>(elementTy))
+    return b.create<arith::MaxSIOp>(loc, args[0], args[1]);
+  return {};
 }
 
-/// Produce a linalg generic that computes the final step of the softmax
-/// decomposition.
-/// \returns  linalg.generic ins(\p numerator, \p denominator) outs(\p output) {
-///   yield  n / d
-/// }
-static Value buildDivOp(OpBuilder &builder, Location loc, Value numerator,
-                        Value denominator, Value output, int64_t dim) {
-  auto inputType = cast<ShapedType>(numerator.getType());
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-  int64_t inputRank = inputShape.size();
-  auto [iteratorTypes, indexingMaps] = computeIteratorTypesAndIndexingMaps(
-      builder, inputRank, dim, /*allParallel=*/true);
-  assert(indexingMaps.size() == 2 &&
-         "We should have one map for each input (2)");
-  assert(indexingMaps[0].isIdentity() && "Numerator map should be identity");
-  // Add the affine map for the output tensor.
-  indexingMaps.push_back(indexingMaps[0]);
-  auto genericOp = builder.create<linalg::GenericOp>(
-      loc, numerator.getType(), ValueRange{numerator, denominator}, output,
-      indexingMaps, iteratorTypes,
-      [&](OpBuilder &b, Location loc, ValueRange args) {
-        Value result = b.create<arith::DivFOp>(loc, args[0], args[1]);
-        b.create<linalg::YieldOp>(loc, result);
-      });
-  return genericOp.getResult(0);
+static Value createLinalgReduceSumBody(OpBuilder &b, Location loc,
+                                       ValueRange args, Type elementTy) {
+  if (isa<FloatType>(elementTy))
+    return b.create<arith::AddFOp>(loc, args[0], args[1]);
+  if (isa<IntegerType>(elementTy))
+    return b.create<arith::AddIOp>(loc, args[0], args[1]);
+  return {};
 }
 // @} End helper functions for softmax decomposition.
 
@@ -2809,7 +2735,12 @@ static Value buildDivOp(OpBuilder &builder, Location loc, Value numerator,
 /// 4. Divide z and l. This gives the N-dimensional softmax.
 ///    softmax = z / l
 ///
-FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
+FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
+  if (!hasPureTensorSemantics()) {
+    // The decomposition assumes ranked tensors as input.
+    return failure();
+  }
+
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(*this);
   Location loc = getLoc();
@@ -2817,35 +2748,75 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   ShapedType inputType = getInputOperandType();
   Type elementType = inputType.getElementType();
   int64_t reductionDim = getDimension();
-  SmallVector<OpFoldResult> dims = tensor::getMixedSizes(b, loc, input);
   Value output = getOutput();
-  dims.erase(dims.begin() + reductionDim);
+
+  SmallVector<int64_t> reduceShape;
+  SmallVector<Value> dynReduceDims;
+  for (unsigned i = 0, e = inputType.getRank(); i < e; i++) {
+    if (reductionDim == i)
+      continue;
+    reduceShape.push_back(inputType.getDimSize(i));
+    if (inputType.isDynamicDim(i))
+      dynReduceDims.push_back(b.create<tensor::DimOp>(loc, input, i));
+  }
+
   // Step 1: Compute max along dim.
-  Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
-  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maximumf,
-                                                 elementType, b, loc,
-                                                 /*useOnlyFiniteValue=*/true);
-  Value neutralForMaxFInit =
-      b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
-          .result();
-  Value max =
-      reduce<arith::MaxNumFOp>(b, loc, input, neutralForMaxFInit, reductionDim);
+  Value outputReduce =
+      b.create<tensor::EmptyOp>(loc, reduceShape, elementType, dynReduceDims);
+  TypedAttr maxFillValAttr = createInitValueForReduceMaxOp(elementType, b);
+  auto maxFillValue = b.create<arith::ConstantOp>(loc, maxFillValAttr);
+  auto neutralMaxInitOp = b.create<linalg::FillOp>(
+      loc, ValueRange{maxFillValue}, ValueRange{outputReduce});
+
+  auto reduceMaxOp = b.create<linalg::ReduceOp>(
+      loc, input, neutralMaxInitOp.result(), reductionDim,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+        Value result =
+            createLinalgReduceMaxBody(b, nestedLoc, args, elementType);
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, result);
+      });
 
   // Step 2: Subtract max from input and exponentiate.
-  Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
+  auto maxBroadcastOp = b.create<linalg::BroadcastOp>(
+      loc, reduceMaxOp.getResult(0), output, reduceMaxOp.getDimensionsAttr());
+
+  auto subOp = b.create<linalg::SubOp>(
+      loc, ValueRange{input, maxBroadcastOp.getResults().front()},
+      ValueRange{output});
+  auto expOp = b.create<linalg::ExpOp>(loc, ValueRange{subOp.getResult(0)},
+                                       ValueRange{output});
 
   // Step 3: Compute sum along dim.
-  Value zero = arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType,
-                                       b, loc, /*useOnlyFiniteValue=*/true);
-  Value zeroInit =
-      b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
-  Value denominator =
-      reduce<arith::AddFOp>(b, loc, numerator, zeroInit, reductionDim);
+  TypedAttr sumFillValAttr = createInitValueForReduceSumOp(elementType, b);
+  auto sumFillValue = b.create<arith::ConstantOp>(loc, sumFillValAttr);
+  auto neutralSumInitOp = b.create<linalg::FillOp>(
+      loc, ValueRange{sumFillValue}, ValueRange{outputReduce});
+  auto reduceSumOp = b.create<linalg::ReduceOp>(
+      loc, expOp.getResults(), neutralSumInitOp.result(), reductionDim,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+        auto result =
+            createLinalgReduceSumBody(b, nestedLoc, args, elementType);
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, result);
+      });
 
   // Step 4: Compute softmax.
-  Value result =
-      buildDivOp(b, loc, numerator, denominator, output, reductionDim);
-  return SmallVector<Value>{result};
+  SmallVector<Value> dynDims;
+  for (unsigned i = 0, e = inputType.getRank(); i < e; i++) {
+    if (inputType.isDynamicDim(i))
+      dynDims.push_back(b.create<tensor::DimOp>(loc, input, i));
+  }
+  auto sumBcastOutput = b.create<tensor::EmptyOp>(
+      loc, getOutputOperandType().getShape(), elementType, dynDims);
+  auto sumBroadcastOp = b.create<linalg::BroadcastOp>(
+      loc, reduceSumOp.getResult(0), sumBcastOutput,
+      reduceSumOp.getDimensionsAttr());
+  auto divOp = b.create<linalg::DivOp>(
+      loc, ValueRange{expOp.getResult(0), sumBroadcastOp.getResults().front()},
+      ValueRange{output});
+  return DecompositionResult{{neutralMaxInitOp, reduceMaxOp, maxBroadcastOp,
+                              subOp, expOp, neutralSumInitOp, reduceSumOp,
+                              sumBroadcastOp, divOp},
+                             {divOp.getResults().front()}};
 }
 
 //===----------------------------------------------------------------------===//

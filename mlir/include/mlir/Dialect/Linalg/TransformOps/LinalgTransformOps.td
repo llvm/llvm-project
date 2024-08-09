@@ -1317,11 +1317,15 @@ def ConvertToLoopsOp : Op<Transform_Dialect, "structured.convert_to_loops",
 def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface",
     [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
-     TransformOpInterface,
-     TransformEachOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    TODO
+    Decomposes high-level named ops into a sequence of non-aggregate named ops
+    via `AggregatedOpInterface`.
+
+    The operation ignores non-decomposable ops. The return handle points to
+    a sequence of named ops produced by the all decompositions (i.e. the 
+    information about decomposed op origin is lost).
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
@@ -1329,13 +1333,6 @@ def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface
   let assemblyFormat =
       "$target attr-dict `:` functional-type(operands, results)";
 
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::Operation *target,
-        ::mlir::transform::ApplyToEachResultList &results,
-        ::mlir::transform::TransformState &state);
-  }];
 }
 //===----------------------------------------------------------------------===//
 // RewriteInDestinationPassingStyleOp.

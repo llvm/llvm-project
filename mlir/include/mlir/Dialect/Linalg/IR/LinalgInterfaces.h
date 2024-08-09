@@ -30,6 +30,17 @@ class IteratorTypeAttr;
 class LinalgOp;
 class GenericOp;
 
+/// Container for result values of decomposition.
+/// - `decomposedOps` contains operations created by the decomposition that are
+/// returned to the caller for further transformations.
+/// - `decomposedValues` contains the values corresponding to the result of the
+/// aggregate operation.
+struct DecompositionResult {
+  /// TODO: can be further constrained to LinalgOp.
+  SmallVector<Operation *> replacementOps;
+  SmallVector<Value> replacementValues;
+};
+
 namespace detail {
 /// Implementation of the method that check if given operands
 /// can be dropped, i.e. the remaining operands can compute the loop
