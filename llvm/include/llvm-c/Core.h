@@ -1964,6 +1964,13 @@ void LLVMDumpValue(LLVMValueRef Val);
 char *LLVMPrintValueToString(LLVMValueRef Val);
 
 /**
+ * Obtain the context to which this value is associated.
+ *
+ * @see llvm::Value::getContext()
+ */
+LLVMContextRef LLVMGetValueContext(LLVMValueRef Val);
+
+/**
  * Return a string representation of the DbgRecord. Use
  * LLVMDisposeMessage to free the string.
  *
@@ -3499,6 +3506,13 @@ void LLVMMoveBasicBlockBefore(LLVMBasicBlockRef BB, LLVMBasicBlockRef MovePos);
 void LLVMMoveBasicBlockAfter(LLVMBasicBlockRef BB, LLVMBasicBlockRef MovePos);
 
 /**
+ * Obtain the context to which this basic block is associated.
+ *
+ * @see llvm::Module::getContext()
+ */
+LLVMContextRef LLVMGetBasicBlockContext(LLVMBasicBlockRef BB);
+
+/**
  * Obtain the first instruction in a basic block.
  *
  * The returned LLVMValueRef corresponds to a llvm::Instruction
@@ -4147,6 +4161,13 @@ LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder);
  */
 void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
                                     LLVMMetadataRef FPMathTag);
+
+/**
+ * Obtain the context to which this builder is associated.
+ *
+ * @see llvm::IRBuilder::getContext()
+ */
+LLVMContextRef LLVMGetBuilderContext(LLVMBuilderRef Builder);
 
 /**
  * Deprecated: Passing the NULL location will crash.

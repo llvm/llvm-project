@@ -1044,6 +1044,10 @@ char* LLVMPrintValueToString(LLVMValueRef Val) {
   return strdup(buf.c_str());
 }
 
+LLVMContextRef LLVMGetValueContext(LLVMValueRef Val) {
+  return wrap(&unwrap(Val)->getContext());
+}
+
 char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record) {
   std::string buf;
   raw_string_ostream os(buf);
@@ -2876,6 +2880,10 @@ void LLVMMoveBasicBlockAfter(LLVMBasicBlockRef BB, LLVMBasicBlockRef MovePos) {
   unwrap(BB)->moveAfter(unwrap(MovePos));
 }
 
+LLVMContextRef LLVMGetBasicBlockContext(LLVMBasicBlockRef BB) {
+  return wrap(&unwrap(BB)->getContext());
+}
+
 /*--.. Operations on instructions ..........................................--*/
 
 LLVMBasicBlockRef LLVMGetInstructionParent(LLVMValueRef Inst) {
@@ -3317,6 +3325,10 @@ void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
   unwrap(Builder)->setDefaultFPMathTag(FPMathTag
                                        ? unwrap<MDNode>(FPMathTag)
                                        : nullptr);
+}
+
+LLVMContextRef LLVMGetBuilderContext(LLVMBuilderRef Builder) {
+  return wrap(&unwrap(Builder)->getContext());
 }
 
 LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder) {
