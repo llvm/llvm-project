@@ -1099,9 +1099,13 @@ struct CounterCoverageMappingBuilder
   }
 
   /// Determine whether the given condition can be constant folded.
-  bool ConditionFoldsToBool(const Expr *Cond) {
+  bool ConditionFoldsToBool(const Expr *Cond, bool &ResultBool) {
     Expr::EvalResult Result;
-    return (Cond->EvaluateAsInt(Result, CVM.getCodeGenModule().getContext()));
+    if (Cond->EvaluateAsInt(Result, CVM.getCodeGenModule().getContext())) {
+      ResultBool = Result.Val.getInt().getBoolValue();
+      return true;
+    }
+    return false;
   }
 
   /// Create a Branch Region around an instrumentable condition for coverage
@@ -1128,15 +1132,22 @@ struct CounterCoverageMappingBuilder
         BranchParams = mcdc::BranchParameters{ID, Conds};
 
       // If a condition can fold to true or false, the corresponding branch
-      // will be removed.  Create a region with both counters hard-coded to
-      // zero. This allows us to visualize them in a special way.
+      // will be removed. Create a region with the relative counter hard-coded
+      // to zero. This allows us to visualize them in a special way.
       // Alternatively, we can prevent any optimization done via
       // constant-folding by ensuring that ConstantFoldsToSimpleInteger() in
       // CodeGenFunction.c always returns false, but that is very heavy-handed.
-      if (ConditionFoldsToBool(C))
-        popRegions(pushRegion(Counter::getZero(), getStart(C), getEnd(C),
-                              Counter::getZero(), BranchParams));
-      else
+      bool ConstantBool = false;
+      if (ConditionFoldsToBool(C, ConstantBool)) {
+        if (ConstantBool) {
+          popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C),
+                                Counter::getZero(), BranchParams));
+        } else {
+          popRegions(pushRegion(Counter::getZero(), getStart(C), getEnd(C),
+                                FalseCnt, BranchParams));
+        }
+
+      } else
         // Otherwise, create a region with the True counter and False counter.
         popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt,
                               BranchParams));

@@ -384,6 +384,13 @@ struct MCDCRecord {
   /// are effectively ignored.
   enum CondState { MCDC_DontCare = -1, MCDC_False = 0, MCDC_True = 1 };
 
+  enum CondResult {
+    MCDC_Normal = 0x1,
+    MCDC_Constant = 0x2,
+    MCDC_Uncoverable = 0x4,
+    MCDC_Unreachable = 0x8
+  };
+
   /// Emulate SmallVector<CondState> with a pair of BitVector.
   ///
   ///          True  False DontCare (Impossible)
@@ -442,30 +449,36 @@ struct MCDCRecord {
   using TVPairMap = llvm::DenseMap<unsigned, TVRowPair>;
   using CondIDMap = llvm::DenseMap<unsigned, unsigned>;
   using LineColPairMap = llvm::DenseMap<unsigned, LineColPair>;
+  using ResultVector = llvm::SmallVector<CondResult>;
 
 private:
   CounterMappingRegion Region;
   TestVectors TV;
   TVPairMap IndependencePairs;
-  BoolVector Folded;
+  ResultVector CondResults;
   CondIDMap PosToID;
   LineColPairMap CondLoc;
 
 public:
   MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
-             TVPairMap &&IndependencePairs, BoolVector &&Folded,
+             TVPairMap &&IndependencePairs, ResultVector &&CondResults,
              CondIDMap &&PosToID, LineColPairMap &&CondLoc)
       : Region(Region), TV(std::move(TV)),
         IndependencePairs(std::move(IndependencePairs)),
-        Folded(std::move(Folded)), PosToID(std::move(PosToID)),
-        CondLoc(std::move(CondLoc)){};
+        CondResults(std::move(CondResults)), PosToID(std::move(PosToID)),
+        CondLoc(std::move(CondLoc)) {};
 
   CounterMappingRegion getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
-  bool isCondFolded(unsigned Condition) const { return Folded[Condition]; }
+  bool isCondConstant(unsigned Condition) const {
+    return getCondResult(Condition) == CondResult::MCDC_Constant;
+  }
+  CondResult getCondResult(unsigned Condition) const {
+    return CondResults[Condition];
+  }
 
   /// Return the evaluation of a condition (indicated by Condition) in an
   /// executed test vector (indicated by TestVectorIndex), which will be True,
@@ -505,20 +518,26 @@ public:
     return IndependencePairs[PosToID[Condition]];
   }
 
-  float getPercentCovered() const {
-    unsigned Folded = 0;
+  /// Return if the decision is coverable and percent of covered conditions.
+  /// Only coverable conditions are counted as denominator.
+  std::pair<bool, float> getPercentCovered(int32_t CountedStates) const {
+    unsigned Excluded = 0;
     unsigned Covered = 0;
+    auto ExcludedStates = ~CountedStates;
     for (unsigned C = 0; C < getNumConditions(); C++) {
-      if (isCondFolded(C))
-        Folded++;
+      if (getCondResult(C) & ExcludedStates)
+        Excluded++;
       else if (isConditionIndependencePairCovered(C))
         Covered++;
     }
 
-    unsigned Total = getNumConditions() - Folded;
+    unsigned Total = getNumConditions() - Excluded;
     if (Total == 0)
-      return 0.0;
-    return (static_cast<double>(Covered) / static_cast<double>(Total)) * 100.0;
+      return {false, 0.0};
+    return {
+        true,
+        (static_cast<double>(Covered) / static_cast<double>(Total)) * 100.0,
+    };
   }
 
   std::string getConditionHeaderString(unsigned Condition) {
@@ -553,7 +572,7 @@ public:
     // Add individual condition values to the string.
     OS << "  " << TestVectorIndex + 1 << " { ";
     for (unsigned Condition = 0; Condition < NumConditions; Condition++) {
-      if (isCondFolded(Condition))
+      if (isCondConstant(Condition))
         OS << "C";
       else {
         switch (getTVCondition(TestVectorIndex, Condition)) {
@@ -589,14 +608,25 @@ public:
     std::ostringstream OS;
 
     OS << "  C" << Condition + 1 << "-Pair: ";
-    if (isCondFolded(Condition)) {
+    switch (getCondResult(Condition)) {
+    case CondResult::MCDC_Normal:
+      if (isConditionIndependencePairCovered(Condition)) {
+        TVRowPair rows = getConditionIndependencePair(Condition);
+        OS << "covered: (" << rows.first << ",";
+        OS << rows.second << ")\n";
+      } else
+        OS << "not covered\n";
+      break;
+    case CondResult::MCDC_Constant:
       OS << "constant folded\n";
-    } else if (isConditionIndependencePairCovered(Condition)) {
-      TVRowPair rows = getConditionIndependencePair(Condition);
-      OS << "covered: (" << rows.first << ",";
-      OS << rows.second << ")\n";
-    } else
-      OS << "not covered\n";
+      break;
+    case CondResult::MCDC_Uncoverable:
+      OS << "uncoverable\n";
+      break;
+    case CondResult::MCDC_Unreachable:
+      OS << "unreachable\n";
+      break;
+    }
 
     return OS.str();
   }
@@ -719,9 +749,9 @@ struct FunctionRecord {
         Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
       CountedBranchRegions.emplace_back(Region, Count, FalseCount,
                                         HasSingleByteCoverage);
-      // If both counters are hard-coded to zero, then this region represents a
+      // If either counter is hard-coded to zero, then this region represents a
       // constant-folded branch.
-      if (Region.Count.isZero() && Region.FalseCount.isZero())
+      if (Region.Count.isZero() || Region.FalseCount.isZero())
         CountedBranchRegions.back().Folded = true;
       return;
     }

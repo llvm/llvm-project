@@ -1200,7 +1200,13 @@ void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
     for (unsigned i = 0; i < Record.getNumConditions(); i++)
       OS << Record.getConditionCoverageString(i);
     OS << "  MC/DC Coverage for Expression: ";
-    OS << format("%0.2f", Record.getPercentCovered()) << "%\n";
+    const auto [Coverable, Percent] =
+        Record.getPercentCovered(Options.MCDCCountedStates);
+    if (Coverable) {
+      OS << format("%0.2f", Percent) << "%\n";
+    } else {
+      OS << "Folded\n";
+    }
     OS << EndPre;
     OS << EndExpansionDiv;
   }
