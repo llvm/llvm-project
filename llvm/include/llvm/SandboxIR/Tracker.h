@@ -239,71 +239,45 @@ public:
 #endif // NDEBUG
 };
 
-class CallBrInstSetDefaultDest : public IRChangeBase {
-  CallBrInst *CallBr;
-  BasicBlock *OrigDefaultDest;
+/// This class can be used for tracking most instruction setters.
+/// The two template arguments are:
+/// - GetterFn: The getter member function pointer (e.g., `&Foo::get`)
+/// - SetterFn: The setter member function pointer (e.g., `&Foo::set`)
+/// Upon construction, it saves a copy of the original value by calling the
+/// getter function. Revert sets the value back to the one saved, using the
+/// setter function provided.
+///
+/// Example:
+///  Tracker.track(std::make_unique<
+///                GenericSetter<&FooInst::get, &FooInst::set>>(I, Tracker));
+///
+template <auto GetterFn, auto SetterFn>
+class GenericSetter final : public IRChangeBase {
+  /// Helper for getting the class type from the getter
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)() const);
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)());
+
+  using InstrT = decltype(getClassTypeFromGetter(GetterFn));
+  using SavedValT = std::invoke_result_t<decltype(GetterFn), InstrT>;
+  InstrT *I;
+  SavedValT OrigVal;
 
 public:
-  CallBrInstSetDefaultDest(CallBrInst *CallBr, Tracker &Tracker);
-  void revert() final;
+  GenericSetter(InstrT *I, Tracker &Tracker)
+      : IRChangeBase(Tracker), I(I), OrigVal((I->*GetterFn)()) {}
+  void revert() final { (I->*SetterFn)(OrigVal); }
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final {
     dumpCommon(OS);
-    OS << "CallBrInstSetDefaultDest";
+    OS << "GenericSetter";
   }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
-class AllocaSetAllocatedType final : public IRChangeBase {
-  AllocaInst *Alloca;
-  Type *OrigType;
-
-public:
-  AllocaSetAllocatedType(AllocaInst *Alloca, Tracker &Tracker);
-  void revert() final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "AllocaSetAllocatedType";
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
   }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
-class AllocaSetAlignment final : public IRChangeBase {
-  AllocaInst *Alloca;
-  Align OrigAlign;
-
-public:
-  AllocaSetAlignment(AllocaInst *Alloca, Tracker &Tracker);
-  void revert() final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "AllocaSetAlignment";
-  }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
-class AllocaSetUsedWithInAlloca final : public IRChangeBase {
-  AllocaInst *Alloca;
-  bool Orig;
-
-public:
-  AllocaSetUsedWithInAlloca(AllocaInst *Alloca, Tracker &Tracker);
-  void revert() final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "AllocaSetUsedWithInAlloca";
-  }
-  LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
@@ -320,25 +294,6 @@ public:
   void dump(raw_ostream &OS) const final {
     dumpCommon(OS);
     OS << "CallBrInstSetIndirectDest";
-  }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
-class SetVolatile : public IRChangeBase {
-  /// This holds the properties of whether LoadInst or StoreInst was volatile
-  bool WasVolatile;
-  /// This could either be StoreInst or LoadInst
-  PointerUnion<StoreInst *, LoadInst *> StoreOrLoad;
-
-public:
-  SetVolatile(Instruction *I, Tracker &Tracker);
-  void revert() final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "SetVolatile";
   }
   LLVM_DUMP_METHOD void dump() const final;
 #endif

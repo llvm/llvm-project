@@ -2161,10 +2161,6 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   };
 
   const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
-  const bool IsELFSignedGOT = MI.getParent()
-                                  ->getParent()
-                                  ->getInfo<AArch64FunctionInfo>()
-                                  ->hasELFSignedGOT();
   MachineOperand GAOp = MI.getOperand(0);
   const uint64_t KeyC = MI.getOperand(1).getImm();
   assert(KeyC <= AArch64PACKey::LAST &&
@@ -2181,16 +2177,9 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   // Emit:
   // target materialization:
   // - via GOT:
-  //   - unsigned GOT:
-  //       adrp x16, :got:target
-  //       ldr x16, [x16, :got_lo12:target]
-  //       add offset to x16 if offset != 0
-  //   - ELF signed GOT:
-  //       adrp x17, :got:target
-  //       add x17, x17, :got_auth_lo12:target
-  //       ldr x16, [x17]
-  //       aut{i|d}a x16, x17
-  //       add offset to x16 if offset != 0
+  //     adrp x16, :got:target
+  //     ldr x16, [x16, :got_lo12:target]
+  //     add offset to x16 if offset != 0
   //
   // - direct:
   //     adrp x16, target
@@ -2233,40 +2222,13 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   MCInstLowering.lowerOperand(GAMOLo, GAMCLo);
 
   EmitAndIncrement(
-      MCInstBuilder(AArch64::ADRP)
-          .addReg(IsGOTLoad && IsELFSignedGOT ? AArch64::X17 : AArch64::X16)
-          .addOperand(GAMCHi));
+      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
 
   if (IsGOTLoad) {
-    if (IsELFSignedGOT) {
-      EmitAndIncrement(MCInstBuilder(AArch64::ADDXri)
-                           .addReg(AArch64::X17)
-                           .addReg(AArch64::X17)
-                           .addOperand(GAMCLo)
-                           .addImm(0));
-
-      EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
-                           .addReg(AArch64::X16)
-                           .addReg(AArch64::X17)
-                           .addImm(0));
-
-      assert(GAOp.isGlobal());
-      assert(GAOp.getGlobal()->getValueType() != nullptr);
-      unsigned AuthOpcode = GAOp.getGlobal()->getValueType()->isFunctionTy()
-                                ? AArch64::AUTIA
-                                : AArch64::AUTDA;
-
-      EmitAndIncrement(MCInstBuilder(AuthOpcode)
-                           .addReg(AArch64::X16)
-                           .addReg(AArch64::X16)
-                           .addReg(AArch64::X17));
-
-    } else {
-      EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
-                           .addReg(AArch64::X16)
-                           .addReg(AArch64::X16)
-                           .addOperand(GAMCLo));
-    }
+    EmitAndIncrement(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addOperand(GAMCLo));
   } else {
     EmitAndIncrement(MCInstBuilder(AArch64::ADDXri)
                          .addReg(AArch64::X16)

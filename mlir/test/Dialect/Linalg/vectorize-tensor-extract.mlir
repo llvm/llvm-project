@@ -37,6 +37,7 @@ module attributes {transform.with_named_sequence} {
 }
 
 // -----
+
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg2: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
   %c0 = arith.constant 1 : index
@@ -74,20 +75,24 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-func.func @vectorize_nd_tensor_extract_transfer_read_basic(%arg0: tensor<3x3x3xf32>, %arg2: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
-  %1 = linalg.generic {
-    indexing_maps = [#map1],
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+func.func @vectorize_nd_tensor_extract_transfer_read_basic(
+    %arg0: tensor<3x3x3xf32>,
+    %arg1: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
+
+  %res = linalg.generic {
+    indexing_maps = [#map],
     iterator_types = ["parallel", "parallel", "parallel"]
-  } outs(%arg2 : tensor<1x1x3xf32>) {
-  ^bb0(%arg4: f32):
-    %2 = linalg.index 0 : index
-    %3 = linalg.index 1 : index
-    %4 = linalg.index 2 : index
-    %5 = tensor.extract %arg0[%2, %3, %4] : tensor<3x3x3xf32>
-    linalg.yield %5 : f32
+  } outs(%arg1 : tensor<1x1x3xf32>) {
+  ^bb0(%out: f32):
+    %1 = linalg.index 0 : index
+    %2 = linalg.index 1 : index
+    %3 = linalg.index 2 : index
+    %4 = tensor.extract %arg0[%1, %2, %3] : tensor<3x3x3xf32>
+    linalg.yield %4 : f32
   } -> tensor<1x1x3xf32>
-  return %1 : tensor<1x1x3xf32>
+
+  return %res : tensor<1x1x3xf32>
 }
 
 // CHECK-LABEL: func.func @vectorize_nd_tensor_extract_transfer_read_basic
@@ -103,6 +108,38 @@ func.func @vectorize_nd_tensor_extract_transfer_read_basic(%arg0: tensor<3x3x3xf
 // CHECK:   %[[IDX2:.*]] = vector.extractelement %[[IDX_VEC]][%[[C0_i32]] : i32] : vector<3xindex>
 // CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[IDX1]], %[[IDX2]], %[[C0:.*]]], %[[CST_0]] {in_bounds = [true, true, true]} : tensor<3x3x3xf32>, vector<1x1x3xf32>
 // CHECK:   vector.transfer_write %[[READ]], %[[ARG1]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x1x3xf32>, tensor<1x1x3xf32>
+
+// Same as example above, but reading into a column tensor. Note that after the
+// vectorizatoin, the `TransferOpReduceRank` will replace
+// `vector.transfer_read` with `tensor.extract -> scalar`.
+
+// TODO: Currently this fails to vectorise when the indices are non-constant.
+
+func.func @vectorize_nd_tensor_extract_transfer_read_basic_column(
+    %input: tensor<3x3x3xf32>,
+    %output: tensor<3x1x1xf32>) -> tensor<3x1x1xf32> {
+
+  %c0 = arith.constant 0 : index
+  %res = linalg.generic {
+    indexing_maps = [#map],
+    iterator_types = ["parallel", "parallel", "parallel"]
+  } outs(%output : tensor<3x1x1xf32>) {
+  ^bb0(%out: f32):
+    %5 = tensor.extract %input[%c0, %c0, %c0] : tensor<3x3x3xf32>
+    linalg.yield %5 : f32
+  } -> tensor<3x1x1xf32>
+
+  return %res : tensor<3x1x1xf32>
+}
+
+// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_transfer_read_basic_column(
+// CHECK-SAME:      %[[INPUT:.*]]: tensor<3x3x3xf32>,
+// CHECK-SAME:      %[[OUTPUT:.*]]: tensor<3x1x1xf32>)
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract %[[INPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] : tensor<3x3x3xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTRACT]] : f32 to vector<3x1x1xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[BCAST]], %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<3x1x1xf32>, tensor<3x1x1xf32>
+// CHECK:           return %[[RES]] : tensor<3x1x1xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -594,4 +631,60 @@ module attributes {transform.with_named_sequence} {
      %2 = transform.structured.vectorize_children_and_apply_patterns %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
      transform.yield
    }
+}
+
+
+// -----
+
+func.func @vectorize_scalar_broadcast_column_tensor(%in: tensor<1x1x4xi32>) -> tensor<1x1x4xi32> {
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<[[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]]> : tensor<15x1xi32>
+
+  %out = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} outs(%in : tensor<1x1x4xi32>) {
+  ^bb0(%out: i32):
+    %8 = linalg.index 0 : index
+    %idx_0 = linalg.index 0 : index
+    %extracted = tensor.extract %cst[%idx_0, %c0] : tensor<15x1xi32>
+    linalg.yield %extracted : i32
+  } -> tensor<1x1x4xi32>
+
+  return %out:tensor<1x1x4xi32>
+}
+
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1) -> (0, 0, 0)>
+// CHECK-LABEL:   func.func @vectorize_scalar_broadcast_column_tensor(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<1x1x4xi32>) -> tensor<1x1x4xi32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 4 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant dense<{{\[\[}}0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]]> : tensor<15x1xi32>
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_6:.*]] = arith.constant 4 : index
+// CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_8:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_9:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_7]], %[[VAL_7]], %[[VAL_7]]], %[[VAL_8]] : tensor<1x1x4xi32>, vector<1x1x4xi32>
+// CHECK:           %[[VAL_10:.*]] = vector.step : vector<1xindex>
+// CHECK:           %[[VAL_11:.*]] = vector.broadcast %[[VAL_10]] : vector<1xindex> to vector<4x1x1xindex>
+// CHECK:           %[[VAL_12:.*]] = vector.transpose %[[VAL_11]], [2, 1, 0] : vector<4x1x1xindex> to vector<1x1x4xindex>
+// CHECK:           %[[VAL_13:.*]] = vector.step : vector<1xindex>
+// CHECK:           %[[VAL_14:.*]] = vector.broadcast %[[VAL_13]] : vector<1xindex> to vector<4x1x1xindex>
+// CHECK:           %[[VAL_15:.*]] = vector.transpose %[[VAL_14]], [2, 1, 0] : vector<4x1x1xindex> to vector<1x1x4xindex>
+// CHECK:           %[[VAL_16:.*]] = arith.constant dense<true> : vector<1x1x4xi1>
+// CHECK:           %[[VAL_17:.*]] = arith.constant dense<0> : vector<1x1x4xi32>
+// CHECK:           %[[VAL_18:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_19:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_20:.*]] = vector.shape_cast %[[VAL_15]] : vector<1x1x4xindex> to vector<4xindex>
+// CHECK:           %[[VAL_21:.*]] = vector.extractelement %[[VAL_20]]{{\[}}%[[VAL_19]] : i32] : vector<4xindex>
+// CHECK:           %[[VAL_22:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_23:.*]] = vector.transfer_read %[[VAL_3]]{{\[}}%[[VAL_21]], %[[VAL_2]]], %[[VAL_22]] {in_bounds = [true, true, true], permutation_map = #[[$ATTR_1]]} : tensor<15x1xi32>, vector<1x1x4xi32>
+// CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_25:.*]] = vector.transfer_write %[[VAL_23]], %[[VAL_0]]{{\[}}%[[VAL_24]], %[[VAL_24]], %[[VAL_24]]] : vector<1x1x4xi32>, tensor<1x1x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0  vector_sizes [1, 1, 4]{ vectorize_nd_extract } : !transform.any_op
+    transform.yield
+  }
 }
