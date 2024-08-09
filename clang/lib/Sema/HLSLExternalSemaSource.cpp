@@ -252,8 +252,8 @@ struct BuiltinTypeDeclBuilder {
 
     IdentifierInfo &II = AST.Idents.get("Idx", tok::TokenKind::identifier);
     auto *IdxParam = ParmVarDecl::Create(
-        AST, MethodDecl->getDeclContext(), SourceLocation(), SourceLocation(),
-        &II, AST.UnsignedIntTy,
+        AST, MethodDecl, SourceLocation(), SourceLocation(), &II,
+        AST.UnsignedIntTy,
         AST.getTrivialTypeSourceInfo(AST.UnsignedIntTy, SourceLocation()),
         SC_None, nullptr);
     MethodDecl->setParams({IdxParam});

@@ -77,7 +77,8 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
   clang::FunctionDecl *func_decl = FunctionDecl::Create(
       ast, context, SourceLocation(), SourceLocation(), decl_name, qual_type,
-      nullptr, SC_Extern, /*UsesFPIntrin=*/false, isInlineSpecified, hasWrittenPrototype,
+      nullptr, SC_None, /*UsesFPIntrin=*/false, isInlineSpecified,
+      hasWrittenPrototype,
       isConstexprSpecified ? ConstexprSpecKind::Constexpr
                            : ConstexprSpecKind::Unspecified);
 
@@ -97,10 +98,9 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
     for (ArgIndex = 0; ArgIndex < NumArgs; ++ArgIndex) {
       QualType arg_qual_type(func_proto_type->getParamType(ArgIndex));
 
-      parm_var_decls.push_back(
-          ParmVarDecl::Create(ast, const_cast<DeclContext *>(context),
-                              SourceLocation(), SourceLocation(), nullptr,
-                              arg_qual_type, nullptr, SC_Static, nullptr));
+      parm_var_decls.push_back(ParmVarDecl::Create(
+          ast, func_decl, SourceLocation(), SourceLocation(), nullptr,
+          arg_qual_type, nullptr, SC_Static, nullptr));
     }
 
     func_decl->setParams(ArrayRef<ParmVarDecl *>(parm_var_decls));
