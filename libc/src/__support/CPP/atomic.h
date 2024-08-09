@@ -41,7 +41,8 @@ enum class MemoryScope : int {
 
 template <typename T> struct Atomic {
   // For now, we will restrict to only arithmetic types.
-  static_assert(is_arithmetic_v<T>, "Only arithmetic types can be atomic.");
+  static_assert(is_arithmetic_v<T> || is_pointer_v<T>,
+                "Only arithmetic types or pointer types can be atomic.");
 
 private:
   // The value stored should be appropriately aligned so that

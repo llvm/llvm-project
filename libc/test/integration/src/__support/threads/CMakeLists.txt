@@ -25,3 +25,17 @@ add_integration_test(
   DEPENDS
     libc.src.__support.threads.thread
 )
+
+add_integration_test(
+  lambda_lock_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    lambda_lock_test.cpp
+  DEPENDS
+    libc.src.__support.threads.lambda_lock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.__support.CPP.stringstream
+    libc.src.__support.CPP.limits
+)
