@@ -2660,9 +2660,10 @@ def Calloc : LibBuiltin<"stdlib.h"> {
 }
 
 def Exit : LibBuiltin<"stdlib.h"> {
-  let Spellings = ["exit", "_Exit"];
+  let Spellings = ["exit"];
   let Attributes = [NoReturn];
   let Prototype = "void(int)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def Malloc : LibBuiltin<"stdlib.h"> {
@@ -3266,9 +3267,10 @@ def StrnCaseCmp : GNULibBuiltin<"strings.h"> {
 }
 
 def GNU_Exit : GNULibBuiltin<"unistd.h"> {
-  let Spellings = ["_exit"];
+  let Spellings = ["_exit", "_Exit"];
   let Attributes = [NoReturn];
   let Prototype = "void(int)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def VFork : LibBuiltin<"unistd.h"> {
