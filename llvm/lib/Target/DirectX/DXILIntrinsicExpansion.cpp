@@ -255,6 +255,7 @@ static bool expandNormalizeIntrinsic(CallInst *Orig) {
   Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
   unsigned XVecSize = XVec->getNumElements();
   Value *DotProduct = nullptr;
+  // use the dot intrinsic corresponding to the vector size
   switch (XVecSize) {
   case 1:
     report_fatal_error(Twine("Invalid input vector: length is zero"),
