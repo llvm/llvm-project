@@ -293,6 +293,48 @@ To silence reports from unsigned integer overflow, you can set
 ``-fsanitize-recover=unsigned-integer-overflow``, is particularly useful for
 providing fuzzing signal without blowing up logs.
 
+Disabling instrumentation for common overflow patterns
+------------------------------------------------------
+
+There are certain overflow-dependent or overflow-prone code patterns which
+produce a lot of noise for integer overflow/truncation sanitizers. Negated
+unsigned constants, post-decrements in a while loop condition and simple
+overflow checks are accepted and pervasive code patterns. However, the signal
+received from sanitizers instrumenting these code patterns may be too noisy for
+some projects. To disable instrumentation for these common patterns one should
+use ``-fsanitize-overflow-pattern-exclusion=``.
+
+Currently, this option supports three overflow-dependent code idioms:
+
+``negated-unsigned-const``
+
+.. code-block:: c++
+
+    /// -fsanitize-overflow-pattern-exclusion=negated-unsigned-const
+    unsigned long foo = -1UL; // No longer causes a negation overflow warning
+    unsigned long bar = -2UL; // and so on...
+
+``post-decr-while``
+
+.. code-block:: c++
+
+    /// -fsanitize-overflow-pattern-exclusion=post-decr-while
+    unsigned char count = 16;
+    while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
+
+``add-overflow-test``
+
+.. code-block:: c++
+
+    /// -fsanitize-overflow-pattern-exclusion=add-overflow-test
+    if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings,
+                                            // won't be instrumented (same for signed types)
+
+You can enable all exclusions with
+``-fsanitize-overflow-pattern-exclusion=all`` or disable all exclusions with
+``-fsanitize-overflow-pattern-exclusion=none``. Specifying ``none`` has
+precedence over other values.
+
 Issue Suppression
 =================
 

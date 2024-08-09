@@ -3860,6 +3860,7 @@ public:
 class BinaryOperator : public Expr {
   enum { LHS, RHS, END_EXPR };
   Stmt *SubExprs[END_EXPR];
+  bool ExcludedOverflowPattern = false;
 
 public:
   typedef BinaryOperatorKind Opcode;
@@ -4017,6 +4018,8 @@ public:
   bool isShiftAssignOp() const {
     return isShiftAssignOp(getOpcode());
   }
+
+  bool ignoreOverflowSanitizers() const { return ExcludedOverflowPattern; }
 
   /// Return true if a binary operator using the specified opcode and operands
   /// would match the 'p = (i8*)nullptr + n' idiom for casting a pointer-sized
