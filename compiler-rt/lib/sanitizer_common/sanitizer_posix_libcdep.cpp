@@ -293,7 +293,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   // Checking too large memory ranges is slow.
   CHECK_LT(size, page_size * 10);
   int sock_pair[2];
-  if (pipe(sock_pair))
+  if (internal_pipe(sock_pair))
     return false;
   uptr bytes_written =
       internal_write(sock_pair[1], reinterpret_cast<void *>(beg), size);

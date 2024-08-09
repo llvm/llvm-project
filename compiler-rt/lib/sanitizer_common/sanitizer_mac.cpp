@@ -213,6 +213,8 @@ uptr internal_unlink(const char *path) {
   return unlink(path);
 }
 
+uptr internal_pipe(fd_t fildes[2]) { return pipe(fildes); }
+
 uptr internal_sched_yield() {
   return sched_yield();
 }
