@@ -1086,10 +1086,9 @@ static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
   }
 
   auto &Context = M.getContext();
-  llvm::Type *I8Ty = Type::getInt8Ty(Context);
-  llvm::PointerType *I8PtrTy = PointerType::get(I8Ty, 0);
-  llvm::StructType *SizedPtrTy = llvm::StructType::get(
-      Context, {I8PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
+  PointerType *PtrTy = PointerType::get(Context, 0);
+  StructType *SizedPtrTy = StructType::get(
+      Context, {PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
   return FTy.getReturnType() == SizedPtrTy;
 }
 
