@@ -1077,24 +1077,33 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                      SrcLT.second, CostKind);
     }
     [[fallthrough]];
-  case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
-    // Counts of narrow/widen instructions.
+    // Counts of narrowing instructions.
     unsigned SrcEltSize = Src->getScalarSizeInBits();
     unsigned DstEltSize = Dst->getScalarSizeInBits();
 
-    unsigned Op = (ISD == ISD::TRUNCATE)    ? RISCV::VNSRL_WI
-                  : (ISD == ISD::FP_EXTEND) ? RISCV::VFWCVT_F_F_V
-                                            : RISCV::VFNCVT_F_F_W;
+    const unsigned Op =
+        (ISD == ISD::TRUNCATE) ? RISCV::VNSRL_WI : RISCV::VFNCVT_F_F_W;
     InstructionCost Cost = 0;
-    for (; SrcEltSize != DstEltSize;) {
+    for (; SrcEltSize != DstEltSize; SrcEltSize = SrcEltSize >> 1) {
       MVT ElementMVT = (ISD == ISD::TRUNCATE)
-                           ? MVT::getIntegerVT(DstEltSize)
-                           : MVT::getFloatingPointVT(DstEltSize);
+                           ? MVT::getIntegerVT(SrcEltSize)
+                           : MVT::getFloatingPointVT(SrcEltSize);
+      MVT SrcMVT = SrcLT.second.changeVectorElementType(ElementMVT);
+      Cost += getRISCVInstructionCost(Op, SrcMVT, CostKind);
+    }
+    return Cost;
+  }
+  case ISD::FP_EXTEND: {
+    // Counts of widening instructions.
+    unsigned SrcEltSize = Src->getScalarSizeInBits();
+    unsigned DstEltSize = Dst->getScalarSizeInBits();
+
+    InstructionCost Cost = 0;
+    for (; SrcEltSize != DstEltSize; DstEltSize = DstEltSize >> 1) {
+      MVT ElementMVT = MVT::getFloatingPointVT(DstEltSize);
       MVT DstMVT = DstLT.second.changeVectorElementType(ElementMVT);
-      DstEltSize =
-          (DstEltSize > SrcEltSize) ? DstEltSize >> 1 : DstEltSize << 1;
-      Cost += getRISCVInstructionCost(Op, DstMVT, CostKind);
+      Cost += getRISCVInstructionCost(RISCV::VFWCVT_F_F_V, DstMVT, CostKind);
     }
     return Cost;
   }
