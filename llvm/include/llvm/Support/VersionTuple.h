@@ -24,6 +24,7 @@ namespace llvm {
 template <typename HasherT, llvm::endianness Endianness> class HashBuilder;
 class raw_ostream;
 class StringRef;
+enum class endianness;
 
 /// Represents a version number in the form major[.minor[.subminor[.build]]].
 class VersionTuple {

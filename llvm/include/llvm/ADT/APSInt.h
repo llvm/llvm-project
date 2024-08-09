@@ -16,8 +16,17 @@
 #define LLVM_ADT_APSINT_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
+#include <assert.h>
+#include <optional>
+#include <stdint.h>
+#include <utility>
 
 namespace llvm {
+class FoldingSetNodeID;
+class raw_ostream;
+template <typename T, typename Enable> struct DenseMapInfo;
+template <typename T> class SmallVectorImpl;
 
 /// An arbitrary precision integer that knows its signedness.
 class [[nodiscard]] APSInt : public APInt {

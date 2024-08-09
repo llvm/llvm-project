@@ -42,9 +42,10 @@
 // (June 2024).
 
 #include "llvm/Support/xxhash.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
-
+#include <assert.h>
 #include <stdlib.h>
 
 #if !defined(LLVM_XXH_USE_NEON)

@@ -7,11 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ARMAttributeParser.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <iterator>
 #include <optional>
+#include <string>
+#include <system_error>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::ARMBuildAttrs;

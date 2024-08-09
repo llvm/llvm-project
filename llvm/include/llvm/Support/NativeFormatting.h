@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stddef.h>
 
 namespace llvm {
 class raw_ostream;

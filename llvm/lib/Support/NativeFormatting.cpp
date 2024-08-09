@@ -10,11 +10,16 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-
+#include <algorithm>
+#include <assert.h>
 #include <cmath>
+#include <cstring>
+#include <iterator>
+#include <type_traits>
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include <float.h> // For _fpclass in llvm::write_double.

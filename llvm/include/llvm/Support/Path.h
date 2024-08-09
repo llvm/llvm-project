@@ -15,12 +15,16 @@
 #ifndef LLVM_SUPPORT_PATH_H
 #define LLVM_SUPPORT_PATH_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/DataTypes.h"
 #include <iterator>
+#include <stddef.h>
+#include <string>
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
+
 namespace sys {
 namespace path {
 

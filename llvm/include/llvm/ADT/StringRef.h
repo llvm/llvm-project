@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstring>
 #include <limits>
+#include <stdint.h>
 #include <string>
 #include <string_view>
 #include <type_traits>

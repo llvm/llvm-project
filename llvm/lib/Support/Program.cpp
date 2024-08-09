@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Program.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/raw_ostream.h"
+#include <assert.h>
+
 using namespace llvm;
 using namespace sys;
 

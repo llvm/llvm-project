@@ -16,6 +16,9 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <utility>
 
 namespace llvm {

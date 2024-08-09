@@ -9,16 +9,19 @@
 #ifndef LLVM_SUPPORT_CHRONO_H
 #define LLVM_SUPPORT_CHRONO_H
 
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/FormatProviders.h"
-
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadicDetails.h"
+#include "llvm/Support/raw_ostream.h"
+#include <assert.h>
 #include <chrono>
 #include <ctime>
 #include <ratio>
+#include <stdint.h>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace llvm {
-
-class raw_ostream;
 
 namespace sys {
 

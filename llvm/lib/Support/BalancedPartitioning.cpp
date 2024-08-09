@@ -12,10 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BalancedPartitioning.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <assert.h>
+#include <cmath>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 #define DEBUG_TYPE "balanced-partitioning"

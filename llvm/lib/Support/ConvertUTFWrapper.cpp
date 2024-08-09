@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SwapByteOrder.h"
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
 #include <string>
 #include <vector>
 

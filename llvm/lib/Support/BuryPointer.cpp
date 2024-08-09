@@ -9,6 +9,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include <atomic>
+#include <stddef.h>
 
 namespace llvm {
 

@@ -8,6 +8,8 @@
 
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringExtras.h"
+#include <assert.h>
+#include <utility>
 
 using namespace llvm;
 

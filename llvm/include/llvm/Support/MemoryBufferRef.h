@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_MEMORYBUFFERREF_H
 
 #include "llvm/ADT/StringRef.h"
+#include <stddef.h>
 
 namespace llvm {
 

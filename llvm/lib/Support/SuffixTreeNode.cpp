@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SuffixTreeNode.h"
-#include "llvm/Support/Casting.h"
+#include <assert.h>
 
 using namespace llvm;
 

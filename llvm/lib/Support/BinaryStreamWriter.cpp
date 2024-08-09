@@ -7,11 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BinaryStreamWriter.h"
-
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <assert.h>
+
+namespace llvm {
+class WritableBinaryStream;
+enum class endianness;
+} // namespace llvm
 
 using namespace llvm;
 

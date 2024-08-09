@@ -15,9 +15,12 @@
 #define LLVM_SUPPORT_KNOWNBITS_H
 
 #include "llvm/ADT/APInt.h"
+#include <assert.h>
 #include <optional>
+#include <utility>
 
 namespace llvm {
+class raw_ostream;
 
 // Struct for tracking the known zeros and ones of a value.
 struct KnownBits {

@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Timer.h"
-
 #include "DebugOptions.h"
-
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringMapEntry.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -26,7 +28,13 @@
 #include "llvm/Support/Signposts.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <chrono>
+#include <inttypes.h>
 #include <limits>
+#include <ratio>
+#include <stddef.h>
+#include <system_error>
+#include <utility>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>

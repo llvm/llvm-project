@@ -16,7 +16,6 @@
 #define LLVM_SUPPORT_PRETTYSTACKTRACE_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
 
 namespace llvm {
   class raw_ostream;

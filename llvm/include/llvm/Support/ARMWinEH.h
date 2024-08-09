@@ -11,6 +11,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Endian.h"
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <utility>
 
 namespace llvm {
 namespace ARM {

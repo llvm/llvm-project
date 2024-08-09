@@ -12,17 +12,30 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
+#include <algorithm>
+#include <assert.h>
 #include <cctype>
+#include <stdint.h>
+#include <sys/types.h>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>

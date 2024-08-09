@@ -13,17 +13,27 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringMapEntry.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <stddef.h>
+#include <stdint.h>
 #include <string>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 using namespace llvm;

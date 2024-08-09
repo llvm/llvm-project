@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_DJB_H
 
 #include "llvm/ADT/StringRef.h"
+#include <stdint.h>
 
 namespace llvm {
 

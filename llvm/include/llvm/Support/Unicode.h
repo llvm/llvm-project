@@ -15,7 +15,10 @@
 #define LLVM_SUPPORT_UNICODE_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include <cstddef>
 #include <optional>
+#include <stdint.h>
 #include <string>
 
 namespace llvm {

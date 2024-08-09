@@ -11,15 +11,20 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <assert.h>
+#include <stdint.h>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
+class BinaryStream;
+enum class endianness;
 
 /// Provides read only access to a subclass of `BinaryStream`.  Provides
 /// bounds checking and helpers for writing certain common data types such as

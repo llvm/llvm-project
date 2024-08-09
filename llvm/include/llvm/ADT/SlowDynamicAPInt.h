@@ -19,10 +19,13 @@
 #define LLVM_ADT_SLOWDYNAMICAPINT_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Compiler.h"
+#include <stdint.h>
 
 namespace llvm {
 class DynamicAPInt;
+class raw_ostream;
 } // namespace llvm
 
 namespace llvm::detail {

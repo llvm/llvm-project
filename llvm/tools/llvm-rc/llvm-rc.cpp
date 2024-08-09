@@ -17,6 +17,7 @@
 #include "ResourceScriptStmt.h"
 #include "ResourceScriptToken.h"
 
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"

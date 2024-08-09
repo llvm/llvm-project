@@ -13,7 +13,7 @@
 #ifndef LLVM_SUPPORT_CRC_H
 #define LLVM_SUPPORT_CRC_H
 
-#include "llvm/Support/DataTypes.h"
+#include <stdint.h>
 
 namespace llvm {
 template <typename T> class ArrayRef;

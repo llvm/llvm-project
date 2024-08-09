@@ -24,13 +24,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Debug.h"
+#include "DebugOptions.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "DebugOptions.h"
+#include <stddef.h>
+#include <string>
+#include <vector>
 
 #undef isCurrentDebugType
 #undef setCurrentDebugType

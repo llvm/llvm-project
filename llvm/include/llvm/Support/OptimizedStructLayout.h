@@ -35,8 +35,10 @@
 #ifndef LLVM_SUPPORT_OPTIMIZEDSTRUCTLAYOUT_H
 #define LLVM_SUPPORT_OPTIMIZEDSTRUCTLAYOUT_H
 
-#include "llvm/Support/Alignment.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Alignment.h"
+#include <assert.h>
+#include <stdint.h>
 #include <utility>
 
 namespace llvm {

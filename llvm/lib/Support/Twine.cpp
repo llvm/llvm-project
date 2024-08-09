@@ -8,10 +8,10 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 std::string Twine::str() const {

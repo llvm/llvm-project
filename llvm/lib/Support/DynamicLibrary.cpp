@@ -12,10 +12,16 @@
 
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm-c/Support.h"
+#include "llvm-c/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringMapEntry.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Mutex.h"
+#include <assert.h>
 #include <vector>
 
 using namespace llvm;

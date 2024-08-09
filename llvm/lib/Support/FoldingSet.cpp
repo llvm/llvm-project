@@ -13,12 +13,16 @@
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
 #include <cstring>
+#include <memory>
+#include <stdlib.h>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//

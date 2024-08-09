@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <string.h>
 #include <system_error>
 
 using namespace llvm;

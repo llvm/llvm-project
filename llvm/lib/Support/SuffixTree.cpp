@@ -11,9 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SuffixTree.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/SuffixTreeNode.h"
+#include <assert.h>
+#include <new>
+#include <stddef.h>
+#include <tuple>
+#include <utility>
 
 using namespace llvm;
 

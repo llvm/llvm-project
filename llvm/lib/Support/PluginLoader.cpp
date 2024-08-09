@@ -15,7 +15,9 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
+#include <assert.h>
 #include <vector>
+
 using namespace llvm;
 
 namespace {

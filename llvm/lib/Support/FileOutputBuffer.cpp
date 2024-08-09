@@ -11,14 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 #include <system_error>
+#include <utility>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
 #else
 #include <io.h>
 #endif

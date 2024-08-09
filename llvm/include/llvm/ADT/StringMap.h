@@ -15,11 +15,19 @@
 #define LLVM_ADT_STRINGMAP_H
 
 #include "llvm/ADT/StringMapEntry.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/AllocatorBase.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <assert.h>
 #include <initializer_list>
 #include <iterator>
+#include <optional>
+#include <stdint.h>
+#include <stdlib.h>
+#include <type_traits>
+#include <utility>
 
 namespace llvm {
 

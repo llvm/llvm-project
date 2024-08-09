@@ -11,14 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/GraphWriter.h"
-
 #include "DebugOptions.h"
-
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -31,6 +28,8 @@
 #include "llvm/Support/ManagedStatic.h"
 #endif
 
+#include <algorithm>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>

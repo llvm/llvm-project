@@ -18,9 +18,22 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
+#include <assert.h>
+#include <limits.h>
 #include <memory>
+#include <new>
+#include <stdint.h>
+#include <type_traits>
+#include <utility>
+
+namespace llvm {
+class FoldingSetNodeID;
+} // namespace llvm
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -38,8 +51,6 @@ class APSInt;
 class StringRef;
 class APFloat;
 class raw_ostream;
-
-template <typename T> class Expected;
 template <typename T> class SmallVectorImpl;
 
 /// Enum that represents what fraction of the LSB truncated bits of an fp number

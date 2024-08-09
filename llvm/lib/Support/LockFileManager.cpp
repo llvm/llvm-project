@@ -9,6 +9,7 @@
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/ExponentialBackoff.h"
@@ -19,12 +20,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cerrno>
 #include <chrono>
-#include <ctime>
 #include <memory>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <system_error>
-#include <thread>
 #include <tuple>
 
 #ifdef _WIN32

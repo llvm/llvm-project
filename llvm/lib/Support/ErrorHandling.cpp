@@ -14,20 +14,20 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
 #include <mutex>
 #include <new>
+#include <string.h>
+#include <string>
+#include <sys/types.h>
 
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
@@ -236,8 +236,10 @@ void LLVMResetFatalErrorHandler() {
 
 #ifdef _WIN32
 
+#include "llvm/Support/Errc.h"
 #define WIN32_NO_STATUS
 #include "llvm/Support/Windows/WindowsSupport.h"
+
 #undef WIN32_NO_STATUS
 #include <ntstatus.h>
 #include <winerror.h>

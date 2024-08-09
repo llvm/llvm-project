@@ -11,8 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
+#include <limits>
+#include <stdint.h>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 

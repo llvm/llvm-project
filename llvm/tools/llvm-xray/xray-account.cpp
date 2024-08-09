@@ -19,6 +19,7 @@
 #include "xray-account.h"
 #include "xray-registry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"

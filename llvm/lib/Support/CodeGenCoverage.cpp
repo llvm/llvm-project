@@ -10,7 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CodeGenCoverage.h"
-
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -18,6 +19,11 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
+#include <iterator>
+#include <memory>
+#include <string>
+#include <system_error>
 
 using namespace llvm;
 

@@ -11,10 +11,12 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-
 #include <string>
+#include <system_error>
 
 namespace llvm {
+class raw_ostream;
+
 enum class stream_error_code {
   unspecified,
   stream_too_short,

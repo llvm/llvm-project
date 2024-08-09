@@ -13,15 +13,17 @@
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
 class MemoryBuffer;
-class StringRef;
 
 namespace vfs {
 class FileSystem;

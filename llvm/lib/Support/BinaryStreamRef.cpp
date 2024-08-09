@@ -9,6 +9,10 @@
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/BinaryByteStream.h"
 
+namespace llvm {
+enum class endianness;
+} // namespace llvm
+
 using namespace llvm;
 
 namespace {

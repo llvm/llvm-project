@@ -8,6 +8,8 @@
 
 #define INVALID_BASE64_BYTE 64
 #include "llvm/Support/Base64.h"
+#include <inttypes.h>
+#include <system_error>
 
 static char decodeBase64Byte(uint8_t Ch) {
   constexpr char Inv = INVALID_BASE64_BYTE;

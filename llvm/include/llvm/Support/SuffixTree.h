@@ -33,8 +33,10 @@
 #define LLVM_SUPPORT_SUFFIXTREE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SuffixTreeNode.h"
+#include <vector>
 
 namespace llvm {
 class SuffixTree {

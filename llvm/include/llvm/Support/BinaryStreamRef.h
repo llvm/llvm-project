@@ -10,14 +10,20 @@
 #define LLVM_SUPPORT_BINARYSTREAMREF_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
+#include <algorithm>
+#include <assert.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <utility>
 
 namespace llvm {
+enum class endianness;
 
 /// Common stuff for mutable and immutable StreamRefs.
 template <class RefType, class StreamType> class BinaryStreamRefBase {

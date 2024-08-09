@@ -1,6 +1,8 @@
 #include "llvm/Support/ScopedPrinter.h"
-
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Format.h"
+#include <optional>
+#include <utility>
 
 using namespace llvm::support;
 

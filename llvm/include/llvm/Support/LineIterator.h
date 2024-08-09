@@ -10,10 +10,11 @@
 #define LLVM_SUPPORT_LINEITERATOR_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include <cstddef>
 #include <iterator>
 #include <optional>
+#include <stdint.h>
 
 namespace llvm {
 

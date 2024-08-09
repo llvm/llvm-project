@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ExponentialBackoff.h"
+#include <algorithm>
 #include <thread>
 
 using namespace llvm;

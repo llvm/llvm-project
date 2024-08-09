@@ -11,12 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ThreadPool.h"
-
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/thread.h"
+#include <algorithm>
 
 using namespace llvm;
 

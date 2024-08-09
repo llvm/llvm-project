@@ -13,6 +13,7 @@
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include <cassert>
+#include <stddef.h>
 
 using namespace llvm;
 

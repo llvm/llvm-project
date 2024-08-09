@@ -19,6 +19,7 @@
 #include "llvm/TargetParser/Triple.h"
 
 #ifdef _WIN32
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 

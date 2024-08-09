@@ -40,6 +40,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include <stdint.h>
 
 namespace llvm {
 

@@ -12,9 +12,12 @@
 
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <stddef.h>
 
 using namespace llvm;
 using namespace llvm::ScaledNumbers;

@@ -13,10 +13,18 @@
 #ifndef LLVM_SUPPORT_TOOLOUTPUTFILE_H
 #define LLVM_SUPPORT_TOOLOUTPUTFILE_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
+#include <system_error>
 
 namespace llvm {
+namespace sys {
+namespace fs {
+enum OpenFlags : unsigned int;
+} // namespace fs
+} // namespace sys
 
 class CleanupInstaller {
 public:

@@ -21,8 +21,10 @@
 #ifndef LLVM_SUPPORT_SCALEDNUMBER_H
 #define LLVM_SUPPORT_SCALEDNUMBER_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <assert.h>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -417,6 +419,7 @@ inline std::pair<uint64_t, int16_t> getDifference64(uint64_t LDigits,
 namespace llvm {
 
 class raw_ostream;
+
 class ScaledNumberBase {
 public:
   static constexpr int DefaultPrecision = 10;

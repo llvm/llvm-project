@@ -50,15 +50,34 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include <assert.h>
 #include <cmath>
+#include <cstddef>
+#include <initializer_list>
+#include <limits>
 #include <map>
+#include <memory>
+#include <new>
+#include <optional>
+#include <stdint.h>
+#include <string>
+#include <system_error>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 namespace json {
+class Array;
+class Object;
+class ObjectKey;
+class Value;
 
 // === String encodings ===
 //
@@ -91,6 +110,7 @@ std::string fixUTF8(llvm::StringRef S);
 class Array;
 class ObjectKey;
 class Value;
+
 template <typename T> Value toJSON(const std::optional<T> &Opt);
 
 /// An Object is a JSON object, which maps strings to heterogenous JSON values.
@@ -110,6 +130,7 @@ public:
   // KV is a trivial key-value struct for list-initialization.
   // (using std::pair forces extra copies).
   struct KV;
+
   explicit Object(std::initializer_list<KV> Properties);
 
   iterator begin() { return M.begin(); }

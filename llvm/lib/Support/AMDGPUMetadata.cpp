@@ -14,6 +14,8 @@
 
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
+#include <limits>
 #include <optional>
 
 using namespace llvm::AMDGPU;

@@ -9,10 +9,15 @@
 #ifndef LLVM_SUPPORT_RISCVATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_RISCVATTRIBUTEPARSER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/RISCVAttributes.h"
+#include <stdint.h>
 
 namespace llvm {
+class ScopedPrinter;
+
 class RISCVAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     RISCVAttrs::AttrType attribute;

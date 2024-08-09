@@ -12,6 +12,9 @@
 #define LLVM_SUPPORT_CODEGENCOVERAGE_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
+#include <stdint.h>
 
 namespace llvm {
 class MemoryBuffer;

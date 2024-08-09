@@ -14,8 +14,11 @@
 #define LLVM_SUPPORT_FILEOUTPUTBUFFER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
+#include <memory>
+#include <stddef.h>
+#include <stdint.h>
+#include <string>
 
 namespace llvm {
 /// FileOutputBuffer - This interface provides simple way to create an in-memory
