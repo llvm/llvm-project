@@ -24,17 +24,11 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cassert>
-#include <iterator>
-#include <tuple>
-#include <utility>
 
 using namespace llvm;
 
@@ -133,7 +127,7 @@ MachineTraceMetrics::getResources(const MachineBasicBlock *MBB) {
 
   // Scale the resource cycles so they are comparable.
   unsigned PROffset = MBB->getNumber() * PRKinds;
-  for (unsigned K = 0; K != PRKinds; ++K)
+  for (unsigned K = 0; K < PRKinds; ++K)
     ProcReleaseAtCycles[PROffset + K] =
       PRCycles[K] * SchedModel.getResourceFactor(K);
 
@@ -153,8 +147,7 @@ MachineTraceMetrics::getProcReleaseAtCycles(unsigned MBBNum) const {
 //                         Ensemble utility functions
 //===----------------------------------------------------------------------===//
 
-MachineTraceMetrics::Ensemble::Ensemble(MachineTraceMetrics *ct)
-  : MTM(*ct) {
+MachineTraceMetrics::Ensemble::Ensemble(MachineTraceMetrics *CT) : MTM(*CT) {
   BlockInfo.resize(MTM.BlockInfo.size());
   unsigned PRKinds = MTM.SchedModel.getNumProcResourceKinds();
   ProcResourceDepths.resize(MTM.BlockInfo.size() * PRKinds);
@@ -198,7 +191,7 @@ computeDepthResources(const MachineBasicBlock *MBB) {
   // Compute per-resource depths.
   ArrayRef<unsigned> PredPRDepths = getProcResourceDepths(PredNum);
   ArrayRef<unsigned> PredPRCycles = MTM.getProcReleaseAtCycles(PredNum);
-  for (unsigned K = 0; K != PRKinds; ++K)
+  for (unsigned K = 0; K < PRKinds; ++K)
     ProcResourceDepths[PROffset + K] = PredPRDepths[K] + PredPRCycles[K];
 }
 
@@ -231,7 +224,7 @@ computeHeightResources(const MachineBasicBlock *MBB) {
 
   // Compute per-resource heights.
   ArrayRef<unsigned> SuccPRHeights = getProcResourceHeights(SuccNum);
-  for (unsigned K = 0; K != PRKinds; ++K)
+  for (unsigned K = 0; K < PRKinds; ++K)
     ProcResourceHeights[PROffset + K] = SuccPRHeights[K] + PRCycles[K];
 }
 
@@ -314,8 +307,8 @@ class MinInstrCountEnsemble : public MachineTraceMetrics::Ensemble {
   const MachineBasicBlock *pickTraceSucc(const MachineBasicBlock*) override;
 
 public:
-  MinInstrCountEnsemble(MachineTraceMetrics *mtm)
-    : MachineTraceMetrics::Ensemble(mtm) {}
+  MinInstrCountEnsemble(MachineTraceMetrics *MTM)
+      : MachineTraceMetrics::Ensemble(MTM) {}
 };
 
 /// Pick only the current basic block for the trace and do not choose any
@@ -395,15 +388,15 @@ MinInstrCountEnsemble::pickTraceSucc(const MachineBasicBlock *MBB) {
 
 // Get an Ensemble sub-class for the requested trace strategy.
 MachineTraceMetrics::Ensemble *
-MachineTraceMetrics::getEnsemble(MachineTraceStrategy strategy) {
-  assert(strategy < MachineTraceStrategy::TS_NumStrategies &&
+MachineTraceMetrics::getEnsemble(MachineTraceStrategy Strategy) {
+  assert(Strategy < MachineTraceStrategy::TS_NumStrategies &&
          "Invalid trace strategy enum");
-  Ensemble *&E = Ensembles[static_cast<size_t>(strategy)];
+  Ensemble *&E = Ensembles[static_cast<size_t>(Strategy)];
   if (E)
     return E;
 
   // Allocate new Ensemble on demand.
-  switch (strategy) {
+  switch (Strategy) {
   case MachineTraceStrategy::TS_MinInstrCount:
     return (E = new MinInstrCountEnsemble(this));
   case MachineTraceStrategy::TS_Local:
@@ -448,8 +441,9 @@ struct LoopBounds {
   const MachineLoopInfo *Loops;
   bool Downward = false;
 
-  LoopBounds(MutableArrayRef<MachineTraceMetrics::TraceBlockInfo> blocks,
-             const MachineLoopInfo *loops) : Blocks(blocks), Loops(loops) {}
+  LoopBounds(MutableArrayRef<MachineTraceMetrics::TraceBlockInfo> Blocks,
+             const MachineLoopInfo *Loops)
+      : Blocks(Blocks), Loops(Loops) {}
 };
 
 } // end anonymous namespace
@@ -463,7 +457,7 @@ class po_iterator_storage<LoopBounds, true> {
   LoopBounds &LB;
 
 public:
-  po_iterator_storage(LoopBounds &lb) : LB(lb) {}
+  po_iterator_storage(LoopBounds &LB) : LB(LB) {}
 
   void finishPostorder(const MachineBasicBlock*) {}
 
@@ -546,7 +540,7 @@ MachineTraceMetrics::Ensemble::invalidate(const MachineBasicBlock *BadMBB) {
   if (BadTBI.hasValidHeight()) {
     BadTBI.invalidateHeight();
     WorkList.push_back(BadMBB);
-    do {
+    while (!WorkList.empty()) {
       const MachineBasicBlock *MBB = WorkList.pop_back_val();
       LLVM_DEBUG(dbgs() << "Invalidate " << printMBBReference(*MBB) << ' '
                         << getName() << " height.\n");
@@ -564,14 +558,14 @@ MachineTraceMetrics::Ensemble::invalidate(const MachineBasicBlock *BadMBB) {
         // Verify that TBI.Succ is actually a *I successor.
         assert((!TBI.Succ || Pred->isSuccessor(TBI.Succ)) && "CFG changed");
       }
-    } while (!WorkList.empty());
+    }
   }
 
   // Invalidate depth resources of blocks below MBB.
   if (BadTBI.hasValidDepth()) {
     BadTBI.invalidateDepth();
     WorkList.push_back(BadMBB);
-    do {
+    while (!WorkList.empty()) {
       const MachineBasicBlock *MBB = WorkList.pop_back_val();
       LLVM_DEBUG(dbgs() << "Invalidate " << printMBBReference(*MBB) << ' '
                         << getName() << " depth.\n");
@@ -589,7 +583,7 @@ MachineTraceMetrics::Ensemble::invalidate(const MachineBasicBlock *BadMBB) {
         // Verify that TBI.Pred is actually a *I predecessor.
         assert((!TBI.Pred || Succ->isPredecessor(TBI.Pred)) && "CFG changed");
       }
-    } while (!WorkList.empty());
+    }
   }
 
   // Clear any per-instruction data. We only have to do this for BadMBB itself
@@ -605,7 +599,7 @@ void MachineTraceMetrics::Ensemble::verify() const {
 #ifndef NDEBUG
   assert(BlockInfo.size() == MTM.MF->getNumBlockIDs() &&
          "Outdated BlockInfo size");
-  for (unsigned Num = 0, e = BlockInfo.size(); Num != e; ++Num) {
+  for (unsigned Num = 0; Num < BlockInfo.size(); ++Num) {
     const TraceBlockInfo &TBI = BlockInfo[Num];
     if (TBI.hasValidDepth() && TBI.Pred) {
       const MachineBasicBlock *MBB = MTM.MF->getBlockNumbered(Num);
@@ -686,7 +680,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
     }
     // Collect virtual register reads.
     if (MO.readsReg())
-      Deps.push_back(DataDep(MRI, Reg, MO.getOperandNo()));
+      Deps.emplace_back(MRI, Reg, MO.getOperandNo());
   }
   return HasPhysRegs;
 }
@@ -702,10 +696,10 @@ static void getPHIDeps(const MachineInstr &UseMI,
   if (!Pred)
     return;
   assert(UseMI.isPHI() && UseMI.getNumOperands() % 2 && "Bad PHI");
-  for (unsigned i = 1; i != UseMI.getNumOperands(); i += 2) {
-    if (UseMI.getOperand(i + 1).getMBB() == Pred) {
-      Register Reg = UseMI.getOperand(i).getReg();
-      Deps.push_back(DataDep(MRI, Reg, i));
+  for (unsigned Idx = 1; Idx < UseMI.getNumOperands(); Idx += 2) {
+    if (UseMI.getOperand(Idx + 1).getMBB() == Pred) {
+      Register Reg = UseMI.getOperand(Idx).getReg();
+      Deps.emplace_back(MRI, Reg, Idx);
       return;
     }
   }
@@ -739,7 +733,7 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
       SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
-      Deps.push_back(DataDep(I->MI, I->Op, MO.getOperandNo()));
+      Deps.emplace_back(I->MI, I->Op, MO.getOperandNo());
       break;
     }
   }
@@ -852,14 +846,14 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
   // implies Head->HasValidInstrDepths, so we only need to start from the first
   // block in the trace that needs to be recomputed.
   SmallVector<const MachineBasicBlock*, 8> Stack;
-  do {
+  while (MBB) {
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     assert(TBI.hasValidDepth() && "Incomplete trace");
     if (TBI.HasValidInstrDepths)
       break;
     Stack.push_back(MBB);
     MBB = TBI.Pred;
-  } while (MBB);
+  }
 
   // FIXME: If MBB is non-null at this point, it is the last pre-computed block
   // in the trace. We should track any live-out physregs that were defined in
@@ -880,7 +874,7 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
     LLVM_DEBUG({
       dbgs() << format("%7u Instructions\n", TBI.InstrDepth);
       ArrayRef<unsigned> PRDepths = getProcResourceDepths(MBB->getNumber());
-      for (unsigned K = 0; K != PRDepths.size(); ++K)
+      for (unsigned K = 0; K < PRDepths.size(); ++K)
         if (PRDepths[K]) {
           unsigned Factor = MTM.SchedModel.getResourceFactor(K);
           dbgs() << format("%6uc @ ", MTM.getCycles(PRDepths[K]))
@@ -969,10 +963,8 @@ static bool pushDepHeight(const DataDep &Dep, const MachineInstr &UseMI,
                                                   Dep.UseOp);
 
   // Update Heights[DefMI] to be the maximum height seen.
-  MIHeightMap::iterator I;
-  bool New;
-  std::tie(I, New) = Heights.insert(std::make_pair(Dep.DefMI, UseHeight));
-  if (New)
+  const auto &[I, Inserted] = Heights.insert({Dep.DefMI, UseHeight});
+  if (Inserted)
     return true;
 
   // DefMI has been pushed before. Give it the max height.
@@ -1010,7 +1002,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
   // The bottom of the trace may already be computed.
   // Find the blocks that need updating.
   SmallVector<const MachineBasicBlock*, 8> Stack;
-  do {
+  while (MBB) {
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     assert(TBI.hasValidHeight() && "Incomplete trace");
     if (TBI.HasValidInstrHeights)
@@ -1018,7 +1010,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
     Stack.push_back(MBB);
     TBI.LiveIns.clear();
     MBB = TBI.Succ;
-  } while (MBB);
+  }
 
   // As we move upwards in the trace, keep track of instructions that are
   // required by deeper trace instructions. Map MI -> height required so far.
@@ -1060,7 +1052,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
     LLVM_DEBUG({
       dbgs() << format("%7u Instructions\n", TBI.InstrHeight);
       ArrayRef<unsigned> PRHeights = getProcResourceHeights(MBB->getNumber());
-      for (unsigned K = 0; K != PRHeights.size(); ++K)
+      for (unsigned K = 0; K < PRHeights.size(); ++K)
         if (PRHeights[K]) {
           unsigned Factor = MTM.SchedModel.getResourceFactor(K);
           dbgs() << format("%6uc @ ", MTM.getCycles(PRHeights[K]))
@@ -1145,7 +1137,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
 
     // Transfer the live regunits to the live-in list.
     for (const LiveRegUnit &RU : RegUnits) {
-      TBI.LiveIns.push_back(LiveInReg(RU.RegUnit, RU.Cycle));
+      TBI.LiveIns.emplace_back(RU.RegUnit, RU.Cycle);
       LLVM_DEBUG(dbgs() << ' ' << printRegUnit(RU.RegUnit, MTM.TRI) << '@'
                         << RU.Cycle);
     }
@@ -1205,7 +1197,7 @@ unsigned MachineTraceMetrics::Trace::getResourceDepth(bool Bottom) const {
   ArrayRef<unsigned> PRDepths = TE.getProcResourceDepths(getBlockNum());
   if (Bottom) {
     ArrayRef<unsigned> PRCycles = TE.MTM.getProcReleaseAtCycles(getBlockNum());
-    for (unsigned K = 0; K != PRDepths.size(); ++K)
+    for (unsigned K = 0; K < PRDepths.size(); ++K)
       PRMax = std::max(PRMax, PRDepths[K] + PRCycles[K]);
   } else {
     for (unsigned PRD : PRDepths)
@@ -1235,9 +1227,8 @@ unsigned MachineTraceMetrics::Trace::getResourceLength(
   unsigned PRMax = 0;
 
   // Capture computing cycles from extra instructions
-  auto extraCycles = [this](ArrayRef<const MCSchedClassDesc *> Instrs,
-                            unsigned ResourceIdx)
-                         ->unsigned {
+  auto ExtraCycles = [this](ArrayRef<const MCSchedClassDesc *> Instrs,
+                            unsigned ResourceIdx) -> unsigned {
     unsigned Cycles = 0;
     for (const MCSchedClassDesc *SC : Instrs) {
       if (!SC->isValid())
@@ -1255,12 +1246,12 @@ unsigned MachineTraceMetrics::Trace::getResourceLength(
     return Cycles;
   };
 
-  for (unsigned K = 0; K != PRDepths.size(); ++K) {
+  for (unsigned K = 0; K < PRDepths.size(); ++K) {
     unsigned PRCycles = PRDepths[K] + PRHeights[K];
     for (const MachineBasicBlock *MBB : Extrablocks)
       PRCycles += TE.MTM.getProcReleaseAtCycles(MBB->getNumber())[K];
-    PRCycles += extraCycles(ExtraInstrs, K);
-    PRCycles -= extraCycles(RemoveInstrs, K);
+    PRCycles += ExtraCycles(ExtraInstrs, K);
+    PRCycles -= ExtraCycles(RemoveInstrs, K);
     PRMax = std::max(PRMax, PRCycles);
   }
   // Convert to cycle count.
@@ -1292,9 +1283,9 @@ bool MachineTraceMetrics::Trace::isDepInTrace(const MachineInstr &DefMI,
 
 void MachineTraceMetrics::Ensemble::print(raw_ostream &OS) const {
   OS << getName() << " ensemble:\n";
-  for (unsigned i = 0, e = BlockInfo.size(); i != e; ++i) {
-    OS << "  %bb." << i << '\t';
-    BlockInfo[i].print(OS);
+  for (unsigned Idx = 0; Idx < BlockInfo.size(); ++Idx) {
+    OS << "  %bb." << Idx << '\t';
+    BlockInfo[Idx].print(OS);
     OS << '\n';
   }
 }
