@@ -270,20 +270,30 @@ int test_ppc(int a) {
 // CHECK-RV32-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
 // CHECK-RV32-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 2097152
 // CHECK-RV32-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 2097152
-// CHECK-RV32-NEXT:    br i1 [[TMP8]], label [[IF_THEN3:%.*]], label [[IF_END:%.*]]
+// CHECK-RV32-NEXT:    br i1 [[TMP8]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 // CHECK-RV32:       if.then3:
 // CHECK-RV32-NEXT:    store i32 11, ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    br label [[RETURN]]
+// CHECK-RV32:       if.else4:
+// CHECK-RV32-NEXT:    [[TMP9:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 1), align 8
+// CHECK-RV32-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 8
+// CHECK-RV32-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 8
+// CHECK-RV32-NEXT:    br i1 [[TMP11]], label [[IF_THEN5:%.*]], label [[IF_END:%.*]]
+// CHECK-RV32:       if.then5:
+// CHECK-RV32-NEXT:    store i32 13, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    br label [[RETURN]]
 // CHECK-RV32:       if.end:
-// CHECK-RV32-NEXT:    br label [[IF_END4:%.*]]
-// CHECK-RV32:       if.end4:
-// CHECK-RV32-NEXT:    br label [[IF_END5:%.*]]
-// CHECK-RV32:       if.end5:
+// CHECK-RV32-NEXT:    br label [[IF_END6:%.*]]
+// CHECK-RV32:       if.end6:
+// CHECK-RV32-NEXT:    br label [[IF_END7:%.*]]
+// CHECK-RV32:       if.end7:
+// CHECK-RV32-NEXT:    br label [[IF_END8:%.*]]
+// CHECK-RV32:       if.end8:
 // CHECK-RV32-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    br label [[RETURN]]
 // CHECK-RV32:       return:
-// CHECK-RV32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-RV32-NEXT:    ret i32 [[TMP9]]
+// CHECK-RV32-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-RV32-NEXT:    ret i32 [[TMP12]]
 //
 // CHECK-RV64-LABEL: define dso_local signext i32 @test_riscv(
 // CHECK-RV64-SAME: i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -311,20 +321,30 @@ int test_ppc(int a) {
 // CHECK-RV64-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
 // CHECK-RV64-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 2097152
 // CHECK-RV64-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 2097152
-// CHECK-RV64-NEXT:    br i1 [[TMP8]], label [[IF_THEN3:%.*]], label [[IF_END:%.*]]
+// CHECK-RV64-NEXT:    br i1 [[TMP8]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 // CHECK-RV64:       if.then3:
 // CHECK-RV64-NEXT:    store i32 11, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    br label [[RETURN]]
+// CHECK-RV64:       if.else4:
+// CHECK-RV64-NEXT:    [[TMP9:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 1), align 8
+// CHECK-RV64-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 8
+// CHECK-RV64-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 8
+// CHECK-RV64-NEXT:    br i1 [[TMP11]], label [[IF_THEN5:%.*]], label [[IF_END:%.*]]
+// CHECK-RV64:       if.then5:
+// CHECK-RV64-NEXT:    store i32 13, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    br label [[RETURN]]
 // CHECK-RV64:       if.end:
-// CHECK-RV64-NEXT:    br label [[IF_END4:%.*]]
-// CHECK-RV64:       if.end4:
-// CHECK-RV64-NEXT:    br label [[IF_END5:%.*]]
-// CHECK-RV64:       if.end5:
+// CHECK-RV64-NEXT:    br label [[IF_END6:%.*]]
+// CHECK-RV64:       if.end6:
+// CHECK-RV64-NEXT:    br label [[IF_END7:%.*]]
+// CHECK-RV64:       if.end7:
+// CHECK-RV64-NEXT:    br label [[IF_END8:%.*]]
+// CHECK-RV64:       if.end8:
 // CHECK-RV64-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    br label [[RETURN]]
 // CHECK-RV64:       return:
-// CHECK-RV64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-RV64-NEXT:    ret i32 [[TMP9]]
+// CHECK-RV64-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-RV64-NEXT:    ret i32 [[TMP12]]
 //
 int test_riscv(int a) {
   __builtin_cpu_init();
@@ -334,6 +354,8 @@ int test_riscv(int a) {
     return 7;
   else if (__builtin_cpu_supports("v"))
     return 11;
+  else if (__builtin_cpu_supports("zcb"))
+    return 13;
   return 0;
 }
 #endif

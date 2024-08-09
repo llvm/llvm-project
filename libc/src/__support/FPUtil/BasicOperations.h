@@ -377,7 +377,8 @@ setpayload(T &res, T pl) {
   }
 
   using StorageType = typename FPBits::StorageType;
-  StorageType v(pl_bits.get_explicit_mantissa() >> (FPBits::SIG_LEN - pl_exp));
+  StorageType v(pl_bits.get_explicit_mantissa() >>
+                (FPBits::FRACTION_LEN - pl_exp));
 
   if constexpr (IsSignaling)
     res = FPBits::signaling_nan(Sign::POS, v).get_val();

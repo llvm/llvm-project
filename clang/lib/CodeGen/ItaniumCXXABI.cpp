@@ -2308,6 +2308,9 @@ bool ItaniumCXXABI::canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const {
   if (!canSpeculativelyEmitVTableAsBaseClass(RD))
     return false;
 
+  if (RD->shouldEmitInExternalSource())
+    return false;
+
   // For a complete-object vtable (or more specifically, for the VTT), we need
   // to be able to speculatively emit the vtables of all dynamic virtual bases.
   for (const auto &B : RD->vbases()) {

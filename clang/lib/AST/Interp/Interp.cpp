@@ -301,10 +301,11 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
   auto IsConstType = [&S](const VarDecl *VD) -> bool {
-    if (VD->isConstexpr())
+    QualType T = VD->getType();
+
+    if (T.isConstant(S.getCtx()))
       return true;
 
-    QualType T = VD->getType();
     if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
       return (T->isSignedIntegerOrEnumerationType() ||
               T->isUnsignedIntegerOrEnumerationType()) &&
@@ -325,7 +326,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (const auto *D = Desc->asVarDecl();
       D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
     diagnoseNonConstVariable(S, OpPC, D);
-    return S.inConstantContext();
+    return false;
   }
 
   return true;

@@ -99,22 +99,24 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   const DataLayout &DL = F->getDataLayout();
   BranchInst *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  AllocaInst *Alloca =
-      new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca", Br);
+  AllocaInst *Alloca = new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca",
+                                      Br->getIterator());
   ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
   GetElementPtrInst *Gep0 =
-      GetElementPtrInst::Create(I32Ty, Alloca, Ci32, "gep0", Br);
-  CastInst *CastA =
-      CastInst::CreateBitOrPointerCast(Gep0, I8PtrTy, "bitcast1", Br);
+      GetElementPtrInst::Create(I32Ty, Alloca, Ci32, "gep0", Br->getIterator());
+  CastInst *CastA = CastInst::CreateBitOrPointerCast(Gep0, I8PtrTy, "bitcast1",
+                                                     Br->getIterator());
   GetElementPtrInst *Gep1 =
-      GetElementPtrInst::Create(I8Ty, CastA, Ci32, "gep1", Br);
+      GetElementPtrInst::Create(I8Ty, CastA, Ci32, "gep1", Br->getIterator());
   GetElementPtrInst *Gep2 = GetElementPtrInst::Create(
-      I8Ty, UndefValue::get(I8PtrTy), Ci32, "gep2", Br);
+      I8Ty, UndefValue::get(I8PtrTy), Ci32, "gep2", Br->getIterator());
   CmpInst *Cmp = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_ULT,
-                                 UndefValue::get(I8PtrTy), CastA, "cmp", Br);
-  SelectInst *Sel = SelectInst::Create(Cmp, Gep1, Gep2, "select", Br);
-  CastInst *CastB =
-      CastInst::CreateBitOrPointerCast(Sel, I32PtrTy, "bitcast2", Br);
+                                 UndefValue::get(I8PtrTy), CastA, "cmp",
+                                 Br->getIterator());
+  SelectInst *Sel =
+      SelectInst::Create(Cmp, Gep1, Gep2, "select", Br->getIterator());
+  CastInst *CastB = CastInst::CreateBitOrPointerCast(Sel, I32PtrTy, "bitcast2",
+                                                     Br->getIterator());
 
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(CastB);
