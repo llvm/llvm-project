@@ -9,22 +9,19 @@
 #ifndef LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 #define LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Matrix.h"
 #include "llvm/Support/MathExtras.h"
-
-#include <string>
 
 namespace llvm {
 
 class Value;
 class ConstraintSystem {
   struct Entry {
-    int64_t Coefficient;
-    uint16_t Id;
+    int64_t Coefficient = 0;
+    uint16_t Id = 0;
 
+    Entry() = default;
     Entry(int64_t Coefficient, uint16_t Id)
         : Coefficient(Coefficient), Id(Id) {}
   };
@@ -48,7 +45,10 @@ class ConstraintSystem {
   /// Current linear constraints in the system.
   /// An entry of the form c0, c1, ... cn represents the following constraint:
   ///   c0 >= v0 * c1 + .... + v{n-1} * cn
-  SmallVector<SmallVector<Entry, 8>, 4> Constraints;
+  MatrixStorage<Entry, 64> Constraints;
+
+  /// Constraints is only ever manipulated via this View.
+  JaggedArrayView<Entry, 16, 64> View;
 
   /// A map of variables (IR values) to their corresponding index in the
   /// constraint system.
@@ -64,18 +64,41 @@ class ConstraintSystem {
   SmallVector<std::string> getVarNamesList() const;
 
 public:
-  ConstraintSystem() {}
-  ConstraintSystem(ArrayRef<Value *> FunctionArgs) {
+  // The Matrix Constraints should always be initialized with an upper-bound
+  // number of columns. The default constructor hard-codes an upper-bound of 6,
+  // as it is only used in unit tests, and not in the actual
+  // ConstraintElimination Analysis.
+  ConstraintSystem() : Constraints(6), View(Constraints) {}
+
+  // This constructor is used by ConstraintElimination, inside ConstraintInfo.
+  // Unfortunately, due to calls to addFact, that adds local variables, it is
+  // impossible to know how many local variables there are in advance.
+  // ConstraintElimination has a fixed upper-bound on the number of columns,
+  // configurable as a cl::opt, so use that number, and don't add the constraint
+  // if it exceeds that number.
+  ConstraintSystem(ArrayRef<Value *> FunctionArgs, size_t NRows, size_t NCols)
+      : Constraints(NCols), View(Constraints) {
+    Constraints.reserve(NRows);
     NumVariables += FunctionArgs.size();
     for (auto *Arg : FunctionArgs) {
       Value2Index.insert({Arg, Value2Index.size() + 1});
     }
   }
-  ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
-      : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
+
+  // This constructor is only used by the dump function in
+  // ConstraintElimination.
+  ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index,
+                   unsigned NVars)
+      : NumVariables(Value2Index.size()),
+        Constraints(std::max(Value2Index.size(), NVars)), View(Constraints),
+        Value2Index(Value2Index) {}
+
+  ConstraintSystem(const ConstraintSystem &Other)
+      : NumVariables(Other.NumVariables), Constraints(Other.Constraints),
+        View(Other.View, Constraints), Value2Index(Other.Value2Index) {}
 
   bool addVariableRow(ArrayRef<int64_t> R) {
-    assert(Constraints.empty() || R.size() == NumVariables);
+    assert(View.empty() || R.size() == NumVariables);
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
     if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
@@ -87,9 +110,15 @@ public:
         continue;
       NewRow.emplace_back(C, Idx);
     }
-    if (Constraints.empty())
+
+    // There is no correctness issue if we don't add a constraint.
+    if (NewRow.size() > Constraints.getNumCols())
+      return false;
+
+    if (View.empty())
       NumVariables = R.size();
-    Constraints.push_back(std::move(NewRow));
+
+    View.addRow(std::move(NewRow));
     return true;
   }
 
@@ -145,21 +174,21 @@ public:
   bool isConditionImplied(SmallVector<int64_t, 8> R) const;
 
   SmallVector<int64_t> getLastConstraint() const {
-    assert(!Constraints.empty() && "Constraint system is empty");
+    assert(!View.empty() && "Constraint system is empty");
     SmallVector<int64_t> Result(NumVariables, 0);
-    for (auto &Entry : Constraints.back())
+    for (auto &Entry : View.lastRow())
       Result[Entry.Id] = Entry.Coefficient;
     return Result;
   }
 
-  void popLastConstraint() { Constraints.pop_back(); }
+  void popLastConstraint() { View.dropLastRow(); }
   void popLastNVariables(unsigned N) {
     assert(NumVariables > N);
     NumVariables -= N;
   }
 
   /// Returns the number of rows in the constraint system.
-  unsigned size() const { return Constraints.size(); }
+  unsigned size() const { return View.getRowSpan(); }
 
   /// Print the constraints in the system.
   void dump() const;

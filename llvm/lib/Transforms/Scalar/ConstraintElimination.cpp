@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
-#include <cmath>
 #include <optional>
 #include <string>
 
@@ -56,6 +55,10 @@ DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
 static cl::opt<unsigned>
     MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
             cl::desc("Maximum number of rows to keep in constraint system"));
+
+static cl::opt<unsigned> MaxColumns(
+    "constraint-elimination-max-cols", cl::init(50), cl::Hidden,
+    cl::desc("Maximum number of columns to keep in constraint system"));
 
 static cl::opt<bool> DumpReproducers(
     "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
@@ -273,8 +276,10 @@ class ConstraintInfo {
   const DataLayout &DL;
 
 public:
-  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
-      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
+  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs,
+                 unsigned MaxRows, unsigned MaxColumns)
+      : UnsignedCS(FunctionArgs, MaxRows, MaxColumns),
+        SignedCS(FunctionArgs, MaxRows, MaxColumns), DL(DL) {
     auto &Value2Index = getValue2Index(false);
     // Add Arg > -1 constraints to unsigned system for all function arguments.
     for (Value *Arg : FunctionArgs) {
@@ -303,6 +308,7 @@ public:
   void popLastNVariables(bool Signed, unsigned N) {
     getCS(Signed).popLastNVariables(N);
   }
+  const DataLayout &getDataLayout() const { return DL; }
 
   bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B) const;
 
@@ -894,7 +900,7 @@ void ConstraintInfo::transferToOtherSystem(
 
 static void dumpConstraint(ArrayRef<int64_t> C,
                            const DenseMap<Value *, unsigned> &Value2Index) {
-  ConstraintSystem CS(Value2Index);
+  ConstraintSystem CS(Value2Index, C.size());
   CS.addVariableRowFill(C);
   CS.dump();
 }
@@ -1491,7 +1497,7 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
 /// Check if either the first condition of an AND or OR is implied by the
 /// (negated in case of OR) second condition or vice versa.
 static bool checkOrAndOpImpliedByOther(
-    FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
+    const FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
     SmallVectorImpl<StackEntry> &DFSInStack) {
 
@@ -1671,18 +1677,92 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   return Changed;
 }
 
-static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
-                                 ScalarEvolution &SE,
-                                 OptimizationRemarkEmitter &ORE) {
-  bool Changed = false;
+/// Performs a dry run of AddFact, computing a conservative estimate of the
+/// number of new variables introduced.
+static void dryRunAddFact(CmpInst::Predicate Pred, Value *A, Value *B,
+                          const ConstraintInfo &Info, unsigned &EstimatedRowsA,
+                          unsigned &EstimatedRowsB,
+                          unsigned &EstimatedColumns) {
+  auto UpdateEstimate = [&Info, &EstimatedRowsA, &EstimatedRowsB,
+                         &EstimatedColumns](CmpInst::Predicate Pred, Value *A,
+                                            Value *B) {
+    SmallVector<Value *> NewVars;
+    auto R = Info.getConstraint(Pred, A, B, NewVars);
+
+    // We offset it by 1 due to logic in addFact.
+    unsigned NewEstimate =
+        count_if(R.Coefficients, [](int64_t C) { return C != 0; }) + 1;
+
+    EstimatedColumns = std::max(EstimatedColumns, NewEstimate);
+    if (R.IsSigned)
+      ++EstimatedRowsA;
+    else
+      ++EstimatedRowsB;
+  };
+
+  UpdateEstimate(Pred, A, B);
+
+  // What follows is a dry-run of transferToOtherSystem.
+  auto IsKnownNonNegative = [&Info](Value *V) {
+    return Info.doesHold(CmpInst::ICMP_SGE, V,
+                         ConstantInt::get(V->getType(), 0)) ||
+           isKnownNonNegative(V, Info.getDataLayout(),
+                              MaxAnalysisRecursionDepth - 1);
+  };
+
+  if (!A->getType()->isIntegerTy())
+    return;
+
+  switch (Pred) {
+  default:
+    break;
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_ULE:
+    if (IsKnownNonNegative(B)) {
+      UpdateEstimate(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0));
+      UpdateEstimate(CmpInst::getSignedPredicate(Pred), A, B);
+    }
+    break;
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_UGT:
+    if (IsKnownNonNegative(A)) {
+      UpdateEstimate(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0));
+      UpdateEstimate(CmpInst::getSignedPredicate(Pred), A, B);
+    }
+    break;
+  case CmpInst::ICMP_SLT:
+    if (IsKnownNonNegative(A))
+      UpdateEstimate(CmpInst::ICMP_ULT, A, B);
+    break;
+  case CmpInst::ICMP_SGT:
+    if (Info.doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), -1)))
+      UpdateEstimate(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0));
+    if (IsKnownNonNegative(B))
+      UpdateEstimate(CmpInst::ICMP_UGT, A, B);
+    break;
+  case CmpInst::ICMP_SGE:
+    if (IsKnownNonNegative(B))
+      UpdateEstimate(CmpInst::ICMP_UGE, A, B);
+    break;
+  }
+}
+
+/// Performs a dry run of the transform, computing a conservative estimate of
+/// the total number of columns we need in the underlying storage.
+static std::tuple<State, unsigned, unsigned>
+dryRun(Function &F, DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE) {
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs;
   for (Value &Arg : F.args())
     FunctionArgs.push_back(&Arg);
-  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE);
-  std::unique_ptr<Module> ReproducerModule(
-      DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
+  unsigned EstimatedColumns = FunctionArgs.size() + 1;
+
+  // EstimatedRowsA corresponds to SignedCS, and EstimatedRowsB corresponds to
+  // UnsignedCS.
+  unsigned EstimatedRowsA = 0, EstimatedRowsB = 1;
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs, EstimatedRowsB,
+                      EstimatedColumns);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
@@ -1725,12 +1805,91 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     return A.NumIn < B.NumIn;
   });
 
+  for (const FactOrCheck &CB : S.WorkList) {
+    ICmpInst::Predicate Pred;
+    Value *A, *B;
+    if (CB.isCheck()) {
+      // What follows is a dry-run of checkOrAndOpImpliedByOther, without
+      // assuming that instructions have been simplified, as they would have
+      // during the course of normal operation.
+      auto *ContextInst = CB.getContextInst();
+      if (auto *Cmp =
+              dyn_cast_or_null<ICmpInst>(CB.getInstructionToSimplify())) {
+        unsigned OtherOpIdx = ContextInst->getOperand(0) == Cmp ? 1 : 0;
+        if (match(ContextInst, m_LogicalOp()) &&
+            match(ContextInst->getOperand(OtherOpIdx),
+                  m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+          if (match(ContextInst, m_LogicalOr()))
+            Pred = CmpInst::getInversePredicate(Pred);
+          dryRunAddFact(Pred, A, B, Info, EstimatedRowsA, EstimatedRowsB,
+                        EstimatedColumns);
+        }
+      }
+      continue;
+    }
+    if (!CB.isConditionFact()) {
+      Value *X;
+      if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
+        if (cast<ConstantInt>(CB.Inst->getOperand(1))->isOne())
+          dryRunAddFact(CmpInst::ICMP_SGE, CB.Inst,
+                        ConstantInt::get(CB.Inst->getType(), 0), Info,
+                        EstimatedRowsA, EstimatedRowsB, EstimatedColumns);
+        dryRunAddFact(CmpInst::ICMP_SGE, CB.Inst, X, Info, EstimatedRowsA,
+                      EstimatedRowsB, EstimatedColumns);
+        continue;
+      }
+
+      if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
+        Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
+        dryRunAddFact(Pred, MinMax, MinMax->getLHS(), Info, EstimatedRowsA,
+                      EstimatedRowsB, EstimatedColumns);
+        dryRunAddFact(Pred, MinMax, MinMax->getRHS(), Info, EstimatedRowsA,
+                      EstimatedRowsB, EstimatedColumns);
+        continue;
+      }
+    }
+
+    if (CB.isConditionFact()) {
+      Pred = CB.Cond.Pred;
+      A = CB.Cond.Op0;
+      B = CB.Cond.Op1;
+    } else {
+      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
+                                        m_ICmp(Pred, m_Value(A), m_Value(B))));
+      (void)Matched;
+      assert(Matched && "Must have an assume intrinsic with a icmp operand");
+    }
+    dryRunAddFact(Pred, A, B, Info, EstimatedRowsA, EstimatedRowsB,
+                  EstimatedColumns);
+  }
+  return {S, std::max(EstimatedRowsA, EstimatedRowsB), EstimatedColumns};
+}
+
+static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
+                                 ScalarEvolution &SE,
+                                 OptimizationRemarkEmitter &ORE) {
+  bool Changed = false;
+  const auto &[S, EstimatedRows, EstimatedColumns] = dryRun(F, DT, LI, SE);
+
+  // Fail early if estimates exceed limits. Row estimate could be off by up to
+  // 40%.
+  if (EstimatedRows > 1.4 * MaxRows || EstimatedColumns > MaxColumns)
+    return false;
+
+  SmallVector<Value *> FunctionArgs;
+  for (Value &Arg : F.args())
+    FunctionArgs.push_back(&Arg);
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs, EstimatedRows,
+                      EstimatedColumns);
+  std::unique_ptr<Module> ReproducerModule(
+      DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
+
   SmallVector<Instruction *> ToRemove;
 
   // Finally, process ordered worklist and eliminate implied conditions.
   SmallVector<StackEntry, 16> DFSInStack;
   SmallVector<ReproducerEntry> ReproducerCondStack;
-  for (FactOrCheck &CB : S.WorkList) {
+  for (const FactOrCheck &CB : S.WorkList) {
     // First, pop entries from the stack that are out-of-scope for CB. Remove
     // the corresponding entry from the constraint system.
     while (!DFSInStack.empty()) {
