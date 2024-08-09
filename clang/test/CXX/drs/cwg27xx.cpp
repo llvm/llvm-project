@@ -134,7 +134,7 @@ void test() {
 }
 
 namespace cwg2798 { // cwg2798: 17
-#if __cpp_static_assert >= 202306
+#if __cplusplus > 202302L
 struct string {
   constexpr string() {
     data_ = new char[6]();

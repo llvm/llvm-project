@@ -128,6 +128,8 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
+
 New Compiler Flags
 ------------------
 
