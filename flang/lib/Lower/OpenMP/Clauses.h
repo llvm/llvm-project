@@ -250,6 +250,7 @@ using Shared = tomp::clause::SharedT<TypeTy, IdTy, ExprTy>;
 using Simdlen = tomp::clause::SimdlenT<TypeTy, IdTy, ExprTy>;
 using Simd = tomp::clause::SimdT<TypeTy, IdTy, ExprTy>;
 using Sizes = tomp::clause::SizesT<TypeTy, IdTy, ExprTy>;
+using Permutation = tomp::clause::PermutationT<TypeTy, IdTy, ExprTy>;
 using TaskReduction = tomp::clause::TaskReductionT<TypeTy, IdTy, ExprTy>;
 using ThreadLimit = tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy>;
 using Threads = tomp::clause::ThreadsT<TypeTy, IdTy, ExprTy>;
