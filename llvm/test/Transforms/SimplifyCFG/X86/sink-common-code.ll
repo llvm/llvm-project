@@ -518,24 +518,26 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !11 = !DILocation(line: 1, column: 14, scope: !8)
 
 
-; The load should be commoned.
+; The load should not be commoned, as this would increase the number of phis.
 define i32 @test15(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, ptr %s) {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @bar(i32 1)
+; CHECK-NEXT:    [[SV1:%.*]] = load i32, ptr [[S:%.*]], align 4
+; CHECK-NEXT:    [[EXT1:%.*]] = zext i32 [[SV1]] to i64
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[EXT1]], 56
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    call void @bar(i32 4)
-; CHECK-NEXT:    [[GEPB:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[S:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[GEPB:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[S]], i32 0, i32 1
+; CHECK-NEXT:    [[SV2:%.*]] = load i32, ptr [[GEPB]], align 4
+; CHECK-NEXT:    [[EXT2:%.*]] = zext i32 [[SV2]] to i64
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[EXT2]], 57
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[GEPB_SINK:%.*]] = phi ptr [ [[GEPB]], [[IF_ELSE]] ], [ [[S]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ 57, [[IF_ELSE]] ], [ 56, [[IF_THEN]] ]
-; CHECK-NEXT:    [[SV2:%.*]] = load i32, ptr [[GEPB_SINK]], align 4
-; CHECK-NEXT:    [[EXT2:%.*]] = zext i32 [[SV2]] to i64
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[EXT2]], [[DOTSINK]]
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[CMP1]], [[IF_THEN]] ], [ [[CMP2]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -2035,22 +2037,25 @@ join:
 
 define i32 @many_indirect_phis(i1 %cond, i32 %a, i32 %b) {
 ; CHECK-LABEL: @many_indirect_phis(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[ADD_0_A:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[ADD_1_A:%.*]] = add i32 [[ADD_0_A]], 10
+; CHECK-NEXT:    [[ADD_2_A:%.*]] = add i32 [[ADD_1_A]], 20
+; CHECK-NEXT:    [[ADD_3_A:%.*]] = add i32 [[ADD_2_A]], 30
+; CHECK-NEXT:    [[ADD_4_A:%.*]] = add i32 [[ADD_3_A]], 40
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[ADD_0_B:%.*]] = add i32 [[B:%.*]], 1
+; CHECK-NEXT:    [[ADD_1_B:%.*]] = add i32 [[ADD_0_B]], 11
+; CHECK-NEXT:    [[ADD_2_B:%.*]] = add i32 [[ADD_1_B]], 21
+; CHECK-NEXT:    [[ADD_3_B:%.*]] = add i32 [[ADD_2_B]], 31
+; CHECK-NEXT:    [[ADD_4_B:%.*]] = add i32 [[ADD_3_B]], 41
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi i32 [ [[A:%.*]], [[IF]] ], [ [[B:%.*]], [[TMP0:%.*]] ]
-; CHECK-NEXT:    [[DOTSINK3:%.*]] = phi i32 [ 10, [[IF]] ], [ 11, [[TMP0]] ]
-; CHECK-NEXT:    [[DOTSINK2:%.*]] = phi i32 [ 20, [[IF]] ], [ 21, [[TMP0]] ]
-; CHECK-NEXT:    [[DOTSINK1:%.*]] = phi i32 [ 30, [[IF]] ], [ 31, [[TMP0]] ]
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi i32 [ 40, [[IF]] ], [ 41, [[TMP0]] ]
-; CHECK-NEXT:    [[ADD_0_B:%.*]] = add i32 [[B_SINK]], 1
-; CHECK-NEXT:    [[ADD_1_B:%.*]] = add i32 [[ADD_0_B]], [[DOTSINK3]]
-; CHECK-NEXT:    [[ADD_2_B:%.*]] = add i32 [[ADD_1_B]], [[DOTSINK2]]
-; CHECK-NEXT:    [[ADD_3_B:%.*]] = add i32 [[ADD_2_B]], [[DOTSINK1]]
-; CHECK-NEXT:    [[ADD_4_B:%.*]] = add i32 [[ADD_3_B]], [[DOTSINK]]
-; CHECK-NEXT:    ret i32 [[ADD_4_B]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD_4_A]], [[IF]] ], [ [[ADD_4_B]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
 ;
   br i1 %cond, label %if, label %else
 
@@ -2111,19 +2116,16 @@ join:
 
 define i32 @store_and_related_many_phi_add(i1 %cond, ptr %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @store_and_related_many_phi_add(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[A:%.*]], 2
-; CHECK-NEXT:    br label [[JOIN:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[B:%.*]], 3
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[ADD_2_SINK:%.*]] = phi i32 [ [[ADD_2]], [[ELSE]] ], [ [[ADD_1]], [[IF]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD_1]], [[IF]] ], [ [[ADD_2]], [[ELSE]] ]
-; CHECK-NEXT:    store i32 [[ADD_2_SINK]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi i32 [ 2, [[IF]] ], [ 3, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi i32 [ [[A:%.*]], [[IF]] ], [ [[B:%.*]], [[TMP0]] ]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[B_SINK]], [[DOTSINK]]
+; CHECK-NEXT:    store i32 [[ADD_2]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[ADD_2]]
 ;
   br i1 %cond, label %if, label %else
 
@@ -2143,21 +2145,20 @@ join:
   ret i32 %phi
 }
 
+; FIXME: It would be better not to sink in this case.
 define i32 @store_and_unrelated_many_phi_add2(i1 %cond, ptr %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @store_and_unrelated_many_phi_add2(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[A:%.*]], 2
-; CHECK-NEXT:    br label [[JOIN:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[B:%.*]], 3
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD_1]], [[IF]] ], [ [[ADD_2]], [[ELSE]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi i32 [ 2, [[IF]] ], [ 3, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi i32 [ [[A:%.*]], [[IF]] ], [ [[B:%.*]], [[TMP0]] ]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[B_SINK]], [[DOTSINK]]
 ; CHECK-NEXT:    [[ADD_A_2:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    store i32 [[ADD_A_2]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 [[ADD_2]]
 ;
   br i1 %cond, label %if, label %else
 
