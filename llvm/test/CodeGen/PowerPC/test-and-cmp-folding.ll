@@ -30,7 +30,8 @@ if.then.i.i.i636:                                 ; preds = %if.then14.i
 dummy.exit.i:               ; preds = %if.then.i.i.i636, %if.then14.i
 ; CHECK: # %dummy.exit.i
 ; CHECK-NEXT: andi.
-; CHECK-NEXT: bc 12
+; CHECK-NEXT: .LBB0_6:
+; CHECK-NEXT: trap
   %cond82.i = icmp eq i64 %and.i126.i, 0
   br i1 %cond82.i, label %if.end50.i, label %dummy.exit
 

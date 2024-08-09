@@ -11,7 +11,11 @@ entry:
 
 ; CHECK: # %land.lhs.true
 ; Test updated due D63152 where any load/store prevents shrink-wrapping
-; CHECK-NEXT: bc
+; CHECK-NEXT:   bc 4, 20, .LBB0_4
+; CHECK-NEXT: # %bb.2:
+; CHECK-NEXT:   blr
+; CHECK-NEXT: .LBB0_3:                                # %if.end
+; CHECK:      beqlr
 ; CHECK-NEXT: # %if.end4
 land.lhs.true:                                    ; preds = %entry
   br i1 undef, label %return, label %if.end4
@@ -22,7 +26,7 @@ if.end:                                           ; preds = %entry
 
 if.end4:                                          ; preds = %if.end, %land.lhs.true
   %call5 = tail call ptr @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(ptr nonnull @_ZN11__sanitizer16BackgroundThreadEPv, ptr null) #7
-  unreachable
+  ret void
 
 return:                                           ; preds = %if.end, %land.lhs.true
   ret void
