@@ -483,6 +483,34 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(const char *I,
   return false;
 }
 
+unsigned clang::analyze_format_string::ParseFormatStringFirstSArgIndex(
+    const char *&I, const char *E, unsigned ArgIndex, const LangOptions &LO,
+    const TargetInfo &Target) {
+  unsigned argIndex = ArgIndex;
+
+  // Keep looking for a %s format specifier until we have exhausted the string.
+  FormatStringHandler H;
+  while (I != E) {
+    const PrintfSpecifierResult &FSR =
+        ParsePrintfSpecifier(H, I, E, argIndex, LO, Target, false, false);
+    // Did a fail-stop error of any kind occur when parsing the specifier?
+    // If so, don't do any more processing.
+    if (FSR.shouldStop())
+      return false;
+    // Did we exhaust the string or encounter an error that
+    // we can recover from?
+    if (!FSR.hasValue())
+      continue;
+    const analyze_printf::PrintfSpecifier &FS = FSR.getValue();
+    // Return true if this a %s format specifier.
+    if (FS.getConversionSpecifier().getKind() ==
+        ConversionSpecifier::Kind::sArg) {
+      return FS.getPositionalArgIndex();
+    }
+  }
+  return false;
+}
+
 bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
     const char *Begin, const char *End, const LangOptions &LO,
     const TargetInfo &Target) {
