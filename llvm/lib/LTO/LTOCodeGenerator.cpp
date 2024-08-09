@@ -406,7 +406,12 @@ bool LTOCodeGenerator::determineTarget() {
   // Construct LTOModule, hand over ownership of module and target. Use MAttr as
   // the default set of features.
   SubtargetFeatures Features(join(Config.MAttrs, ""));
-  Features.getDefaultSubtargetFeatures(Triple);
+  StringRef TargetABI = "";
+  if (auto TargetABIMD =
+          dyn_cast_or_null<MDString>(MergedModule->getModuleFlag("target-abi")))
+    TargetABI = TargetABIMD->getString();
+
+  Features.getDefaultSubtargetFeatures(Triple, TargetABI);
   FeatureStr = Features.getString();
   if (Config.CPU.empty())
     Config.CPU = lto::getThinLTODefaultCPU(Triple);

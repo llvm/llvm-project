@@ -201,7 +201,12 @@ static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   StringRef TheTriple = M.getTargetTriple();
   SubtargetFeatures Features;
-  Features.getDefaultSubtargetFeatures(Triple(TheTriple));
+  StringRef TargetABI = "";
+  if (auto TargetABIMD =
+          dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    TargetABI = TargetABIMD->getString();
+
+  Features.getDefaultSubtargetFeatures(Triple(TheTriple), TargetABI);
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 

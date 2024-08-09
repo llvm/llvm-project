@@ -195,7 +195,8 @@ public:
   void dump() const;
 
   /// Adds the default features for the specified target triple.
-  void getDefaultSubtargetFeatures(const Triple& Triple);
+  void getDefaultSubtargetFeatures(const Triple &Triple,
+                                   const StringRef ABIInfo);
 
   /// Determine if a feature has a flag; '+' or '-'
   static bool hasFlag(StringRef Feature) {
