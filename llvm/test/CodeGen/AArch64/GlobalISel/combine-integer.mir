@@ -250,3 +250,120 @@ body:             |
     %add:_(<2 x s64>) = G_ADD %a, %sub1
     $q0 = COPY %add
     RET_ReallyLR implicit $x0
+
+...
+---
+name:   APlusC1MinusC2
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: APlusC1MinusC2
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -2
+    ; CHECK-NEXT: %sub:_(s64) = G_ADD %a, [[C]]
+    ; CHECK-NEXT: $x0 = COPY %sub(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %c1:_(s64) = G_CONSTANT i64 5
+    %c2:_(s64) = G_CONSTANT i64 7
+    %add:_(s64) = G_ADD %a, %c1
+    %sub:_(s64) = G_SUB %add, %c2
+    $x0 = COPY %sub
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   C2MinusAPlusC1
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: C2MinusAPlusC1
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB [[C]], %a
+    ; CHECK-NEXT: $x0 = COPY %sub(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %c1:_(s64) = G_CONSTANT i64 4
+    %c2:_(s64) = G_CONSTANT i64 9
+    %add:_(s64) = G_ADD %a, %c1
+    %sub:_(s64) = G_SUB %c2, %add
+    $x0 = COPY %sub
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   AMinusC1MinusC2
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: AMinusC1MinusC2
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 71
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB %a, [[C]]
+    ; CHECK-NEXT: $x0 = COPY %sub(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %c1:_(s64) = G_CONSTANT i64 11
+    %c2:_(s64) = G_CONSTANT i64 60
+    %sub1:_(s64) = G_SUB %a, %c1
+    %sub:_(s64) = G_SUB %sub1, %c2
+    $x0 = COPY %sub
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   C1Minus2MinusC2
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: C1Minus2MinusC2
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -49
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB [[C]], %a
+    ; CHECK-NEXT: $x0 = COPY %sub(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %c1:_(s64) = G_CONSTANT i64 11
+    %c2:_(s64) = G_CONSTANT i64 60
+    %sub1:_(s64) = G_SUB %c1, %a
+    %sub:_(s64) = G_SUB %sub1, %c2
+    $x0 = COPY %sub
+    RET_ReallyLR implicit $x0
+
+
+...
+---
+name:   AMinusC2PlusC2
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: AMinusC2PlusC2
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 43
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %a, [[C]]
+    ; CHECK-NEXT: $x0 = COPY %add(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %c1:_(s64) = G_CONSTANT i64 13
+    %c2:_(s64) = G_CONSTANT i64 56
+    %sub:_(s64) = G_SUB %a, %c1
+    %add:_(s64) = G_ADD %sub, %c2
+    $x0 = COPY %add
+    RET_ReallyLR implicit $x0
+
