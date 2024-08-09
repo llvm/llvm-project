@@ -19,6 +19,7 @@
 #include <__memory/allocator_traits.h> // __pointer
 #include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/tombstone_traits.h>
 #include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
@@ -294,6 +295,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void swap(unique_ptr& __u) _NOEXCEPT { __ptr_.swap(__u.__ptr_); }
 };
+
+template <class _Tp>
+struct __tombstone_memory_layout<__enable_specialization_if<__has_tombstone_v<_Tp*>, unique_ptr<_Tp>>>
+    : __tombstone_memory_layout<_Tp*> {};
+
+template <class _Tp>
+struct __tombstone_memory_layout<__enable_specialization_if<__has_tombstone_v<_Tp*>, unique_ptr<_Tp[]>>>
+    : __tombstone_memory_layout<_Tp*> {};
 
 template <class _Tp, class _Dp>
 class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp> {

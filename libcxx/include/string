@@ -611,6 +611,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
+#include <__memory/tombstone_traits.h>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
@@ -2300,6 +2301,16 @@ template <ranges::input_range _Range,
 basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
     -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;
 #endif
+
+template <class _CharT, class _Traits, class _Allocator>
+struct __tombstone_memory_layout< basic_string<_CharT, _Traits, _Allocator>> {
+  static constexpr uint8_t __disengaged_value_ = 65;
+#ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+  static constexpr size_t __is_disengaged_offset_ = -1;
+#else
+  static constexpr size_t __is_disengaged_offset_ = 0;
+#endif
+};
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void

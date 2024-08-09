@@ -10,12 +10,15 @@
 #ifndef _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
 #define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
 
+#include <__bit/bit_cast.h>
 #include <__compare/synth_three_way.h>
 #include <__concepts/boolean_testable.h>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
+#include <__memory/tombstone_traits.h>
+#include <__type_traits/datasizeof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -121,6 +124,12 @@ public:
 template <class _Tp>
 reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
 #endif
+
+template <class _Tp>
+struct __tombstone_memory_layout<reference_wrapper<_Tp>> {
+  static constexpr uintptr_t __disengaged_value_  = 0;
+  static constexpr size_t __is_disengaged_offset_ = 0;
+};
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp> ref(_Tp& __t) _NOEXCEPT {

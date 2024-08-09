@@ -1040,6 +1040,11 @@ template <ranges::input_range _Range,
 vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_t<_Range>, _Alloc>;
 #endif
 
+template <class _Tp, class _Allocator>
+struct __tombstone_memory_layout<
+    __enable_specialization_if<__has_tombstone_v<typename vector<_Tp, _Allocator>::pointer>, vector<_Tp, _Allocator>>>
+    : __tombstone_memory_layout<typename vector<_Tp>::pointer> {};
+
 // __swap_out_circular_buffer relocates the objects in [__begin_, __end_) into the front of __v and swaps the buffers of
 // *this and __v. It is assumed that __v provides space for exactly (__end_ - __begin_) objects in the front. This
 // function has a strong exception guarantee.

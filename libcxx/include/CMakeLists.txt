@@ -545,6 +545,7 @@ set(files
   __memory/swap_allocator.h
   __memory/temp_value.h
   __memory/temporary_buffer.h
+  __memory/tombstone_traits.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h

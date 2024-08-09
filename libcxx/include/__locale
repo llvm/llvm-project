@@ -13,6 +13,7 @@
 #include <__config>
 #include <__locale_dir/locale_base_api.h>
 #include <__memory/shared_ptr.h> // __shared_count
+#include <__memory/tombstone_traits.h>
 #include <__mutex/once_flag.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/no_destroy.h>
@@ -113,6 +114,9 @@ private:
   template <class _Facet>
   friend const _Facet& use_facet(const locale&);
 };
+
+template <>
+struct __tombstone_memory_layout<locale> : __tombstone_pointer_layout {};
 
 class _LIBCPP_EXPORTED_FROM_ABI locale::facet : public __shared_count {
 protected:

@@ -700,6 +700,12 @@ template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
 #endif // _LIBCPP_STD_VER >= 20
 
+template <class _CharT, class _Traits>
+struct __tombstone_memory_layout<basic_string_view<_CharT, _Traits>> {
+  static constexpr size_t __disengaged_value_     = basic_string_view<_CharT, _Traits>::npos;
+  static constexpr size_t __is_disengaged_offset_ = sizeof(void*);
+};
+
 // [string.view.deduct]
 
 #if _LIBCPP_STD_VER >= 20
