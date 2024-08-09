@@ -144,16 +144,24 @@ void f() {
   static_assert(test_in_constexpr(i), "");
 }
 
-struct Incomplete; // expected-note {{forward declaration}}
+struct Incomplete;
 struct IncompleteMember {
   Incomplete &i;
 };
 void test_incomplete(Incomplete *i, IncompleteMember *im) {
-  // expected-error@+1 {{incomplete type 'Incomplete' where a complete type is required}}
-  __builtin_launder(i);
+  __builtin_launder(i); // OK
   __builtin_launder(&i); // OK
   __builtin_launder(im); // OK
 }
+extern Incomplete incomplete;
+extern IncompleteMember incomplete_member;
+static_assert(test_constexpr_launder(&incomplete) == &incomplete, "");
+static_assert(test_constexpr_launder(&incomplete_member) == &incomplete_member, "");
+template<typename> struct X { static_assert(false, ""); };
+extern X<void> x;
+static_assert(__builtin_launder(__builtin_addressof(x)) == __builtin_addressof(x), "");
+static_assert((test_constexpr_launder)(__builtin_addressof(x)) == __builtin_addressof(x), "");
+template<> struct X<void> {};
 
 void test_noexcept(int *i) {
   static_assert(noexcept(__builtin_launder(i)), "");

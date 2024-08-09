@@ -1793,15 +1793,8 @@ static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
   //  * The type of the argument if it's not an array or function type,
   //  Otherwise,
   //  * The decayed argument type.
-  QualType ParamTy = [&]() {
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (const ArrayType *Ty = ArgTy->getAsArrayTypeUnsafe())
-      return S.Context.getPointerType(Ty->getElementType());
-    if (ArgTy->isFunctionType()) {
-      return S.Context.getPointerType(ArgTy);
-    }
-    return ArgTy;
-  }();
+  QualType ParamTy =
+      S.Context.getAdjustedParameterType(TheCall->getArg(0)->getType());
 
   TheCall->setType(ParamTy);
 
@@ -1819,16 +1812,6 @@ static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
         << *DiagSelect << TheCall->getSourceRange();
     return ExprError();
   }
-
-  // We either have an incomplete class type, or we have a class template
-  // whose instantiation has not been forced. Example:
-  //
-  //   template <class T> struct Foo { T value; };
-  //   Foo<int> *p = nullptr;
-  //   auto *d = __builtin_launder(p);
-  if (S.RequireCompleteType(TheCall->getBeginLoc(), ParamTy->getPointeeType(),
-                            diag::err_incomplete_type))
-    return ExprError();
 
   assert(ParamTy->getPointeeType()->isObjectType() &&
          "Unhandled non-object pointer case");
