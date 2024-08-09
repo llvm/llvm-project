@@ -924,9 +924,7 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
 void DefFormat::genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
                                      MethodBody &os) {
   if (el->getValue() == "\\n") {
-    // FIXME: The newline should be `printer.printNewLine()`, i.e., handled by
-    // the printer.
-    os << tgfmt("$_printer << '\\n';\n", &ctx);
+    os << tgfmt("$_printer.printNewline();\n", &ctx);
   } else if (!el->getValue().empty()) {
     os << tgfmt("$_printer << \"$0\";\n", &ctx, el->getValue());
   } else {
