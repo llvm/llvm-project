@@ -4742,12 +4742,13 @@ enum class SourceLocIdentKind {
   FileName,
   Line,
   Column,
-  SourceLocStruct
+  SourceLocStruct,
+  VariableName,
 };
 
 /// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
 /// __builtin_FUNCTION(), __builtin_FUNCSIG(), __builtin_FILE(),
-/// __builtin_FILE_NAME() or __builtin_source_location().
+/// __builtin_FILE_NAME(), __builtin_source_location() or __builtin_VARIABLE_NAME().
 class SourceLocExpr final : public Expr {
   SourceLocation BuiltinLoc, RParenLoc;
   DeclContext *ParentContext;
@@ -4779,6 +4780,7 @@ public:
     case SourceLocIdentKind::Function:
     case SourceLocIdentKind::FuncSig:
     case SourceLocIdentKind::SourceLocStruct:
+    case SourceLocIdentKind::VariableName:
       return false;
     case SourceLocIdentKind::Line:
     case SourceLocIdentKind::Column:
@@ -4813,6 +4815,7 @@ public:
     case SourceLocIdentKind::Function:
     case SourceLocIdentKind::FuncSig:
     case SourceLocIdentKind::SourceLocStruct:
+    case SourceLocIdentKind::VariableName:
       return true;
     default:
       return false;
