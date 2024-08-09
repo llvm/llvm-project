@@ -12789,6 +12789,9 @@ def err_sycl_entry_point_deduced_return_type : Error<
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
   "%1 attribute">, InGroup<IgnoredAttributes>;
+def err_builtin_invalid_argument_count : Error<"builtin requires exactly 1 argument">;
+def err_builtin_invalid_argument : Error<"invalid argument; argument must be a class or struct type"
+                                         " with a member type alias named 'type'">;
 
 // VTable pointer authentication errors
 def err_non_polymorphic_vtable_pointer_auth : Error<

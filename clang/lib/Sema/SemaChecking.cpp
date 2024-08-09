@@ -2219,6 +2219,25 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+// The argument must be a class or struct with a member
+// named type.
+static bool CheckBuiltinSyclKernelName(Sema &S, CallExpr *TheCall) {
+  QualType ArgTy = TheCall->getArg(0)->getType();
+  const auto *RT = ArgTy->getAs<RecordType>();
+
+  if(!RT)
+    return true;
+
+  RecordDecl *RD = RT->getDecl();
+  IdentifierTable &IdentTable = S.Context.Idents;
+  auto Name = DeclarationName(&(IdentTable.get("type")));
+  DeclContext::lookup_result Lookup = RD->lookup(Name);
+  if (Lookup.empty() || !Lookup.isSingleResult() || !isa<TypeAliasDecl>(Lookup.front()))
+    return true;
+
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3028,6 +3047,20 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
            diag::err_hip_invalid_args_builtin_mangled_name);
       return ExprError();
     }
+    break;
+  }
+  case Builtin::BI__builtin_sycl_kernel_name: {
+    // Builtin takes 1 argument
+    if (TheCall->getNumArgs() != 1) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_invalid_argument_count);
+      return ExprError();
+    }
+
+    if (CheckBuiltinSyclKernelName(*this, TheCall)) {
+      Diag(TheCall->getArg(0)->getBeginLoc(), diag::err_builtin_invalid_argument);
+      return ExprError();
+    }
+
     break;
   }
   case Builtin::BI__builtin_popcountg:

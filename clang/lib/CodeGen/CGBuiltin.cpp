@@ -29,6 +29,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
@@ -6217,6 +6218,25 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Name = CGM.getCUDARuntime().getDeviceSideName(
         cast<DeclRefExpr>(E->getArg(0)->IgnoreImpCasts())->getDecl());
     auto Str = CGM.GetAddrOfConstantCString(Name, "");
+    return RValue::get(Str.getPointer());
+  }
+  case Builtin::BI__builtin_sycl_kernel_name: {
+    ASTContext &Ctx = getContext();
+    // Argument to the builtin is a kernel_id_t type trait which is used
+    // to retrieve the kernel name type.
+    RecordDecl *RD = E->getArg(0)->getType()->castAs<RecordType>()->getDecl();
+    IdentifierTable &IdentTable = Ctx.Idents;
+    auto Name = DeclarationName(&(IdentTable.get("type")));
+    NamedDecl *ND = (RD->lookup(Name)).front();
+    TypeAliasDecl *TD = cast<TypeAliasDecl>(ND);
+    QualType KernelNameType = TD->getUnderlyingType().getCanonicalType();
+
+    // Retrieve the mangled name corresponding to kernel name type.
+    const SYCLKernelInfo *KernelInfo = Ctx.findSYCLKernelInfo(KernelNameType);
+    assert(KernelInfo && "Type does not correspond to a SYCL kernel name.");
+    
+    // Emit the mangled name.
+    auto Str = CGM.GetAddrOfConstantCString(KernelInfo->GetKernelName(), "");
     return RValue::get(Str.getPointer());
   }
   }
