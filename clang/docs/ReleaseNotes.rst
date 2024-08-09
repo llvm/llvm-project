@@ -176,6 +176,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
+- Clang now emits ``-Wnewline-eof`` when the last newline follows a splicing backslash. #GH41571.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

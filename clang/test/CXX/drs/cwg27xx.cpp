@@ -18,6 +18,8 @@ void f(B b) {
 struct D : B {};
 } // namespace cwg2718
 
+// cwg2747 is in cwg2747.cpp
+
 namespace cwg2759 { // cwg2759: 19
 #if __cplusplus >= 201103L
 
