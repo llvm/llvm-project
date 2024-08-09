@@ -579,6 +579,65 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    cf::SwitchOp switchOp) {
+  raw_indented_ostream &os = emitter.ostream();
+  auto iteratorCaseValues = (*switchOp.getCaseValues()).begin();
+  auto iteratorCaseValuesEnd = (*switchOp.getCaseValues()).end();
+  size_t caseIndex = 0;
+
+  os << "\nswitch(" << emitter.getOrCreateName(switchOp.getFlag()) << ") {";
+
+  for (const auto caseBlock : switchOp.getCaseDestinations()) {
+    if (iteratorCaseValues == iteratorCaseValuesEnd)
+      return switchOp.emitOpError("case's value is absent for case block");
+
+    os << "\ncase "
+       << "(" << *(iteratorCaseValues++) << ")"
+       << ": {\n";
+    os.indent();
+
+    for (auto pair : llvm::zip(switchOp.getCaseOperands(caseIndex++),
+                               caseBlock->getArguments())) {
+      Value &operand = std::get<0>(pair);
+      BlockArgument &argument = std::get<1>(pair);
+      os << emitter.getOrCreateName(argument) << " = "
+         << emitter.getOrCreateName(operand) << ";\n";
+    }
+
+    os << "goto ";
+
+    if (!(emitter.hasBlockLabel(*caseBlock)))
+      return switchOp.emitOpError("unable to find label for case block");
+    os << emitter.getOrCreateName(*caseBlock) << ";\n";
+
+    os.unindent() << "}";
+  }
+
+  os << "\ndefault: {\n";
+  os.indent();
+
+  for (auto pair :
+       llvm::zip(switchOp.getDefaultOperands(),
+                 (switchOp.getDefaultDestination())->getArguments())) {
+    Value &operand = std::get<0>(pair);
+    BlockArgument &argument = std::get<1>(pair);
+    os << emitter.getOrCreateName(argument) << " = "
+       << emitter.getOrCreateName(operand) << ";\n";
+  }
+
+  os << "goto ";
+
+  if (!(emitter.hasBlockLabel(*switchOp.getDefaultDestination())))
+    return switchOp.emitOpError("unable to find label for default block");
+  os << emitter.getOrCreateName(*switchOp.getDefaultDestination()) << ";\n";
+
+  os.unindent() << "}\n";
+  os << "}\n";
+
+  return success();
+}
+
 static LogicalResult printCallOperation(CppEmitter &emitter, Operation *callOp,
                                         StringRef callee) {
   if (failed(emitter.emitAssignPrefix(*callOp)))
@@ -997,8 +1056,8 @@ static LogicalResult printFunctionBody(CppEmitter &emitter,
       // When generating code for an emitc.for and emitc.verbatim op, printing a
       // trailing semicolon is handled within the printOperation function.
       bool trailingSemicolon =
-          !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::ForOp,
-               emitc::IfOp, emitc::VerbatimOp>(op);
+          !isa<cf::CondBranchOp, cf::SwitchOp, emitc::DeclareFuncOp,
+               emitc::ForOp, emitc::IfOp, emitc::VerbatimOp>(op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -1496,7 +1555,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // Builtin ops.
           .Case<ModuleOp>([&](auto op) { return printOperation(*this, op); })
           // CF ops.
-          .Case<cf::BranchOp, cf::CondBranchOp>(
+          .Case<cf::BranchOp, cf::CondBranchOp, cf::SwitchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
           .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
