@@ -53,7 +53,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z7foo_ovli.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z7foo_ovli.resolver(
+// CHECK-SAME: ) #[[ATTR1:[0-9]+]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -68,12 +69,13 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z7foo_ovlv._Mls64Mls64_accdata(
-// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z7foo_ovlv.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z7foo_ovlv.resolver(
+// CHECK-SAME: ) #[[ATTR1]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -88,7 +90,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z3barv(
-// CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z7foo_ovli(i32 noundef 1)
 // CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z7foo_ovlv()
@@ -97,7 +99,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define dso_local void @_Z11run_foo_tmlv(
-// CHECK-SAME: ) #[[ATTR2]] {
+// CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MC1:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
 // CHECK-NEXT:    [[MC2:%.*]] = alloca [[STRUCT_MYCLASS_0:%.*]], align 1
@@ -111,7 +113,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIfsE7foo_tmlEv(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -120,7 +122,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIdfE7foo_tmlEv(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -129,7 +131,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z7foo_ovli.default(
-// CHECK-SAME: i32 noundef [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: i32 noundef [[TMP0:%.*]]) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[DOTADDR]], align 4
@@ -137,21 +139,12 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z7foo_ovlv.default(
-// CHECK-SAME: ) #[[ATTR2]] {
+// CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
 // CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
@@ -160,8 +153,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -169,7 +162,17 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN7MyClassIssE7foo_tmlEv.resolver() comdat {
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv.default(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define weak_odr ptr @_ZN7MyClassIssE7foo_tmlEv.resolver(
+// CHECK-SAME: ) #[[ATTR1]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -192,15 +195,6 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
 // CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR4]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
@@ -209,8 +203,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv.default(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR2]] comdat {
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR5]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -218,7 +212,17 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN7MyClassIisE7foo_tmlEv.resolver() comdat {
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv.default(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR3]] comdat {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK-LABEL: define weak_odr ptr @_ZN7MyClassIisE7foo_tmlEv.resolver(
+// CHECK-SAME: ) #[[ATTR1]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -241,10 +245,11 @@ void run_foo_tml() {
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
-// CHECK: attributes #[[ATTR2]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR3]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
-// CHECK: attributes #[[ATTR4]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
+// CHECK: attributes #[[ATTR1]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR2]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
+// CHECK: attributes #[[ATTR3]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR4]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
+// CHECK: attributes #[[ATTR5]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

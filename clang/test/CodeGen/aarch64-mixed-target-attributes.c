@@ -62,7 +62,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@explicit_default.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@explicit_default.resolver
+// CHECK-SAME: () #[[ATTR4:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -102,7 +103,7 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@explicit_default._Mrdm
-// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
@@ -136,7 +137,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@implicit_default.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@implicit_default.resolver
+// CHECK-SAME: () #[[ATTR4]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -176,7 +178,7 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@implicit_default._Mrdm
-// CHECK-SAME: () #[[ATTR4]] {
+// CHECK-SAME: () #[[ATTR5]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
@@ -203,7 +205,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver
+// CHECK-SAME: () #[[ATTR4]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -259,9 +262,9 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+jsconv,+neon,-v9.5a" }
 // CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon,-v9.5a" }
 // CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse,-v9.5a" }
-// CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+rdm,-v9.5a" }
-// CHECK: attributes #[[ATTR5:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon,-v9.5a" }
-// CHECK: attributes #[[ATTR6:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-v9.5a" }
+// CHECK: attributes #[[ATTR4]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-v9.5a" }
+// CHECK: attributes #[[ATTR5]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+rdm,-v9.5a" }
+// CHECK: attributes #[[ATTR6:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon,-v9.5a" }
 // CHECK: attributes #[[ATTR7:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse,-v9.5a" }
 // CHECK: attributes #[[ATTR8:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+jsconv,+neon,-v9.5a" }
 //.

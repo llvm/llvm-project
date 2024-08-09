@@ -24,7 +24,7 @@ int bar(void) {
 // IFUNC-ELF: call i32 (i32, ...) @foo.ifunc(i32 noundef 1, i32 noundef 97, double
 // IFUNC-ELF: call i32 (i32, ...) @foo.ifunc(i32 noundef 2, double noundef 2.2{{[0-9Ee+]+}}, ptr noundef
 
-// IFUNC-ELF: define weak_odr ptr @foo.resolver() comdat
+// IFUNC-ELF: define weak_odr ptr @foo.resolver() {{.*}} comdat
 // IFUNC-ELF: ret ptr @foo.arch_sandybridge
 // IFUNC-ELF: ret ptr @foo.arch_ivybridge
 // IFUNC-ELF: ret ptr @foo.sse4.2
@@ -59,8 +59,8 @@ int bar(void) {
 // NO-IFUNC: call i32 (i32, ...) @foo.resolver(i32 noundef 1, i32 noundef 97, double
 // NO-IFUNC: call i32 (i32, ...) @foo.resolver(i32 noundef 2, double noundef 2.2{{[0-9Ee+]+}}, ptr noundef
 
-// WINDOWS: define weak_odr dso_local i32 @foo.resolver(i32 %0, ...) comdat
-// NO-IFUNC-ELF: define weak_odr i32 @foo.resolver(i32 %0, ...) comdat
+// WINDOWS: define weak_odr dso_local i32 @foo.resolver(i32 %0, ...) {{.*}} comdat
+// NO-IFUNC-ELF: define weak_odr i32 @foo.resolver(i32 %0, ...) {{.*}} comdat
 // NO-IFUNC: musttail call i32 (i32, ...) @foo.arch_sandybridge
 // NO-IFUNC: musttail call i32 (i32, ...) @foo.arch_ivybridge
 // NO-IFUNC: musttail call i32 (i32, ...) @foo.sse4.2

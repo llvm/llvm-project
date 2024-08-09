@@ -270,7 +270,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @foo.sse4.2
 // ITANIUM: ret ptr @foo
 
-// WINDOWS: define weak_odr dso_local i32 @foo.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @foo.resolver() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @foo.arch_sandybridge
 // WINDOWS: call i32 @foo.arch_ivybridge
@@ -278,9 +278,9 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo
 
 /// Internal linkage resolvers do not use comdat.
-// ITANIUM: define internal ptr @foo_internal.resolver() {
+// ITANIUM: define internal ptr @foo_internal.resolver() #[[ATTR:[0-9]+]] {
 
-// WINDOWS: define internal i32 @foo_internal.resolver() {
+// WINDOWS: define internal i32 @foo_internal.resolver() {{.*}} {
 
 // ITANIUM: define{{.*}} i32 @bar2()
 // ITANIUM: call i32 @foo_inline.ifunc()
@@ -296,7 +296,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @foo_inline.sse4.2
 // ITANIUM: ret ptr @foo_inline
 
-// WINDOWS: define weak_odr dso_local i32 @foo_inline.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @foo_inline.resolver() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @foo_inline.arch_sandybridge
 // WINDOWS: call i32 @foo_inline.arch_ivybridge
@@ -314,7 +314,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @foo_decls.sse4.2
 // ITANIUM: ret ptr @foo_decls
 
-// WINDOWS: define weak_odr dso_local void @foo_decls.resolver() comdat
+// WINDOWS: define weak_odr dso_local void @foo_decls.resolver() {{.*}} comdat
 // WINDOWS: call void @foo_decls.sse4.2
 // WINDOWS: call void @foo_decls
 
@@ -338,7 +338,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @foo_multi.avx_sse4.2
 // ITANIUM: ret ptr @foo_multi
 
-// WINDOWS: define weak_odr dso_local void @foo_multi.resolver(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local void @foo_multi.resolver(i32 %0, double %1) {{.*}} comdat
 // WINDOWS: and i32 %{{.*}}, 4352
 // WINDOWS: icmp eq i32 %{{.*}}, 4352
 // WINDOWS: call void @foo_multi.fma4_sse4.2(i32 %0, double %1)
@@ -387,10 +387,10 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @fwd_decl_avx.avx
 // ITANIUM: ret ptr @fwd_decl_avx
 
-// WINDOWS: define weak_odr dso_local i32 @fwd_decl_default.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @fwd_decl_default.resolver() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @fwd_decl_default
-// WINDOWS: define weak_odr dso_local i32 @fwd_decl_avx.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @fwd_decl_avx.resolver() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @fwd_decl_avx.avx
 // WINDOWS: call i32 @fwd_decl_avx
@@ -468,7 +468,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @pr50025b
 // ITANIUM: define linkonce void @pr50025b()
 // ITANIUM: call void @must_be_emitted()
-// WINDOWS: define weak_odr dso_local void @pr50025b.resolver() comdat
+// WINDOWS: define weak_odr dso_local void @pr50025b.resolver() {{.*}} comdat
 // WINDOWS: musttail call void @pr50025b()
 // WINDOWS: define linkonce_odr dso_local void @pr50025b() #{{[0-9]*}} comdat
 // WINDOWS: call void @must_be_emitted()
