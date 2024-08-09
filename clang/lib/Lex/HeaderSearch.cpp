@@ -267,7 +267,6 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
     return {};
 
   SmallString<256> Result(CachePath);
-  llvm::sys::fs::make_absolute(Result);
 
   if (HSOpts->DisableModuleHash) {
     llvm::sys::path::append(Result, ModuleName + ".pcm");
