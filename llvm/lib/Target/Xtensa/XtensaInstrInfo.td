@@ -138,7 +138,8 @@ let Defs = [SAR] in {
 }
 
 def EXTUI : RRR_Inst<0x00, 0x04, 0x00, (outs AR:$r), (ins AR:$t, uimm5:$imm1, imm1_16:$imm2),
-                    "extui\t$r, $t, $imm1, $imm2", []> {
+                    "extui\t$r, $t, $imm1, $imm2",
+                    [(set AR:$r, (Xtensa_extui AR:$t, uimm5:$imm1, imm1_16:$imm2))]> {
   bits<5> imm1;
   bits<4> imm2;
 
@@ -187,6 +188,30 @@ def SSAI : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins uimm5:$imm),
   let s = imm{3-0};
   let t{3-1} = 0;
   let t{0} = imm{4};
+}
+
+// Shift Pseudo instructions:
+// SSL/SSR + Shift combination
+let usesCustomInserter = 1 in {
+  def SHL_P : Pseudo<(outs AR:$r), (ins AR:$s, AR:$sa),
+                    "# SHL_P $r, $s, $sa",
+                    [(set i32:$r, (shl i32:$s, i32:$sa))]>;
+
+  def SRA_P : Pseudo<(outs AR:$r), (ins AR:$t, AR:$sa),
+                    "# SRA_P $r, $t, $sa",
+                    [(set i32:$r, (sra i32:$t, i32:$sa))]>;
+
+  def SRL_P : Pseudo<(outs AR:$r), (ins AR:$t, AR:$sa),
+                    "# SRL_P $r, $t, $sa",
+                    [(set i32:$r, (srl i32:$t, i32:$sa))]>;
+
+  def SRCL_P : Pseudo<(outs AR:$r), (ins AR:$hi, AR:$lo, AR:$sa),
+                    "# SRCL_P $r, $hi, $lo, $sa",
+                    [(set i32:$r, (Xtensa_srcl i32:$hi, i32:$lo, i32:$sa))]>;
+
+  def SRCR_P : Pseudo<(outs AR:$r), (ins AR:$hi, AR:$lo, AR:$sa),
+                    "# SRCR_P $r, $hi, $lo, $sa",
+                    [(set i32:$r, (Xtensa_srcr i32:$hi, i32:$lo, i32:$sa))]>;
 }
 
 //===----------------------------------------------------------------------===//
