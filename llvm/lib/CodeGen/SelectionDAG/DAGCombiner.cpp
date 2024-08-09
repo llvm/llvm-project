@@ -486,7 +486,7 @@ namespace {
     SDValue visitSIGN_EXTEND_INREG(SDNode *N);
     SDValue visitEXTEND_VECTOR_INREG(SDNode *N);
     SDValue visitTRUNCATE(SDNode *N);
-    SDValue visitTRUNCATE_USAT(SDNode *N);
+    SDValue visitTRUNCATE_USAT_U(SDNode *N);
     SDValue visitBITCAST(SDNode *N);
     SDValue visitFREEZE(SDNode *N);
     SDValue visitBUILD_PAIR(SDNode *N);
@@ -1909,6 +1909,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::ANY_EXTEND_VECTOR_INREG: return visitEXTEND_VECTOR_INREG(N);
   case ISD::TRUNCATE:           return visitTRUNCATE(N);
+  case ISD::TRUNCATE_USAT_U:    return visitTRUNCATE_USAT_U(N);
   case ISD::BITCAST:            return visitBITCAST(N);
   case ISD::BUILD_PAIR:         return visitBUILD_PAIR(N);
   case ISD::FADD:               return visitFADD(N);
@@ -14916,6 +14917,29 @@ SDValue DAGCombiner::visitEXTEND_VECTOR_INREG(SDNode *N) {
     return R;
 
   return SDValue();
+}
+
+SDValue DAGCombiner::visitTRUNCATE_USAT_U(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+
+  std::function<SDValue(SDValue)> MatchFPTOINT = [&](SDValue Val) -> SDValue {
+    if (Val.getOpcode() == ISD::FP_TO_UINT)
+      return Val;
+    return SDValue();
+  };
+
+  SDValue FPInstr = MatchFPTOINT(N0);
+  if (!FPInstr)
+    return SDValue();
+
+  EVT FPVT = FPInstr.getOperand(0).getValueType();
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(ISD::FP_TO_UINT_SAT,
+                                                        FPVT, VT))
+    return SDValue();
+  return DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(FPInstr), VT,
+                     FPInstr.getOperand(0),
+                     DAG.getValueType(VT.getScalarType()));
 }
 
 /// Detect patterns of truncation with unsigned saturation:
