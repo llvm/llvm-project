@@ -208,7 +208,8 @@ static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
       arg.dropAllUses();
 
   // Do (2).
-  funcOp.eraseArguments(nonLiveArgs);
+  if (nonLiveArgs.size())
+    funcOp.eraseArguments(nonLiveArgs);
 
   // Do (3).
   SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
@@ -224,6 +225,9 @@ static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
       nonLiveCallOperands.set(callOpOperands[index]->getOperandNumber());
     callOp->eraseOperands(nonLiveCallOperands);
   }
+
+  if (funcOp.isExternal())
+    return;
 
   // Get the list of unnecessary terminator operands (return values that are
   // non-live across all callers) in `nonLiveRets`. There is a very important
