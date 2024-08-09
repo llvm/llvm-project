@@ -234,9 +234,20 @@ public:
         fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-
-    target.addIllegalOp<cuf::AllocOp, cuf::AllocateOp, cuf::DeallocateOp,
-                        cuf::FreeOp>();
+    target.addDynamicallyLegalOp<cuf::AllocOp>([](::cuf::AllocOp op) {
+      return !mlir::isa<fir::BaseBoxType>(op.getInType());
+    });
+    target.addDynamicallyLegalOp<cuf::FreeOp>([](::cuf::FreeOp op) {
+      if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(
+              op.getDevptr().getType())) {
+        return !mlir::isa<fir::BaseBoxType>(refTy.getEleTy());
+      }
+      return true;
+    });
+    target.addDynamicallyLegalOp<cuf::AllocateOp>(
+        [](::cuf::AllocateOp op) { return isBoxGlobal(op); });
+    target.addDynamicallyLegalOp<cuf::DeallocateOp>(
+        [](::cuf::DeallocateOp op) { return isBoxGlobal(op); });
     patterns.insert<CufAllocOpConversion>(ctx, &*dl, &typeConverter);
     patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
                     CufFreeOpConversion>(ctx);

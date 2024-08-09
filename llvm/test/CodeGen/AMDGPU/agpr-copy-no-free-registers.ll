@@ -577,11 +577,11 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[0:1]
 ; GFX908-NEXT:    v_mov_b32_e32 v4, s8
 ; GFX908-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v6
-; GFX908-NEXT:    v_mov_b32_e32 v6, s8
 ; GFX908-NEXT:    v_mov_b32_e32 v8, s8
+; GFX908-NEXT:    v_mov_b32_e32 v6, s8
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s9
-; GFX908-NEXT:    v_mov_b32_e32 v7, s9
 ; GFX908-NEXT:    v_mov_b32_e32 v9, s9
+; GFX908-NEXT:    v_mov_b32_e32 v7, s9
 ; GFX908-NEXT:    v_cmp_lt_i64_e64 s[16:17], s[4:5], 0
 ; GFX908-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX908-NEXT:    s_mov_b64 s[18:19], s[10:11]
@@ -642,10 +642,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_add_f32_e32 v12, v20, v12
 ; GFX908-NEXT:    v_add_f32_e32 v5, v5, v25
 ; GFX908-NEXT:    v_add_f32_e32 v4, v4, v24
-; GFX908-NEXT:    v_add_f32_e32 v7, v7, v27
-; GFX908-NEXT:    v_add_f32_e32 v6, v6, v26
-; GFX908-NEXT:    v_add_f32_e32 v8, v8, v14
-; GFX908-NEXT:    v_add_f32_e32 v9, v9, v15
+; GFX908-NEXT:    v_add_f32_e32 v9, v9, v27
+; GFX908-NEXT:    v_add_f32_e32 v8, v8, v26
+; GFX908-NEXT:    v_add_f32_e32 v6, v6, v14
+; GFX908-NEXT:    v_add_f32_e32 v7, v7, v15
 ; GFX908-NEXT:    v_add_f32_e32 v10, v10, v12
 ; GFX908-NEXT:    v_add_f32_e32 v11, v11, v13
 ; GFX908-NEXT:    s_mov_b64 s[20:21], -1
@@ -655,6 +655,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_andn2_b64 vcc, exec, s[20:21]
 ; GFX908-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX908-NEXT:  ; %bb.8: ; in Loop: Header=BB3_2 Depth=1
+; GFX908-NEXT:    ; implicit-def: $vgpr10_vgpr11
+; GFX908-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX908-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; GFX908-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX908-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX908-NEXT:  .LBB3_9: ; %loop.exit.guard
@@ -740,8 +744,8 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    v_cndmask_b32_e64 v8, 0, 1, s[0:1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], s[8:9], s[8:9] op_sel:[0,1]
 ; GFX90A-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v8
-; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], s[8:9], s[8:9] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[10:11], s[8:9], s[8:9] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], s[8:9], s[8:9] op_sel:[0,1]
 ; GFX90A-NEXT:    v_cmp_lt_i64_e64 s[16:17], s[4:5], 0
 ; GFX90A-NEXT:    s_mov_b64 s[18:19], s[10:11]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], v[6:7], v[6:7] op_sel:[0,1]
@@ -797,8 +801,8 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    v_pk_add_f32 v[16:17], v[22:23], v[16:17]
 ; GFX90A-NEXT:    v_pk_add_f32 v[14:15], v[20:21], v[14:15]
 ; GFX90A-NEXT:    v_pk_add_f32 v[6:7], v[6:7], v[24:25]
-; GFX90A-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[26:27]
-; GFX90A-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[16:17]
+; GFX90A-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[26:27]
+; GFX90A-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[16:17]
 ; GFX90A-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[14:15]
 ; GFX90A-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX90A-NEXT:    s_branch .LBB3_4
@@ -807,6 +811,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    s_andn2_b64 vcc, exec, s[20:21]
 ; GFX90A-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX90A-NEXT:  ; %bb.8: ; in Loop: Header=BB3_2 Depth=1
+; GFX90A-NEXT:    ; implicit-def: $vgpr12_vgpr13
+; GFX90A-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; GFX90A-NEXT:    ; implicit-def: $vgpr10_vgpr11
+; GFX90A-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX90A-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX90A-NEXT:  .LBB3_9: ; %loop.exit.guard
