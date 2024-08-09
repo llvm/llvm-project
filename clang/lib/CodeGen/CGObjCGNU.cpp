@@ -2092,10 +2092,10 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         auto *classStart =
             llvm::StructType::get(PtrTy, PtrTy, PtrTy, LongTy, LongTy);
         auto &astContext = CGM.getContext();
-        auto flags = Builder.CreateLoad(
-            Address{Builder.CreateStructGEP(classStart, selfValue, 4), LongTy,
-                    CharUnits::fromQuantity(
-                        astContext.getTypeAlign(astContext.UnsignedLongTy))});
+        llvm::Value *Val = Builder.CreateStructGEP(classStart, selfValue, 4);
+        auto Align = CharUnits::fromQuantity(
+            astContext.getTypeAlign(astContext.UnsignedLongTy));
+        auto flags = Builder.CreateLoad(Address{Val, LongTy, Align});
         auto isInitialized =
             Builder.CreateAnd(flags, ClassFlags::ClassFlagInitialized);
         llvm::BasicBlock *notInitializedBlock =
