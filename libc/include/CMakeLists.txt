@@ -717,6 +717,18 @@ add_header_macro(
     .llvm-libc-types.wchar_t
 )
 
+add_header_macro(
+  locale
+  ../libc/newhdrgen/yaml/locale.yaml
+  locale.h.def
+  locale.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.locale_macros
+    .llvm-libc-types.locale_t
+    .llvm-libc-types.struct_lconv
+)
+
 if(LIBC_TARGET_OS_IS_GPU)
   file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
 

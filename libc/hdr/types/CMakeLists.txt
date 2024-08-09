@@ -162,3 +162,12 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.cookie_io_functions_t
     libc.include.stdio
 )
+
+add_proxy_header_library(
+  locale_t
+  HDRS
+    locale_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.locale_t
+    libc.include.locale
+)

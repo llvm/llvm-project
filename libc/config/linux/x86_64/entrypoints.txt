@@ -982,6 +982,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.nanosleep
     libc.src.time.time
 
+    # locale.h entrypoints
+    libc.src.locale.localeconv
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
+
     # unistd.h entrypoints
     libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd._exit
