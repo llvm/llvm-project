@@ -62,18 +62,31 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 
-  // If not DWORD aligned or size is more than the threshold, call the library.
-  // The libc version is likely to be faster for these cases. It can use the
-  // address value and run time information about the CPU.
-  if (Alignment < Align(4) || !ConstantSize ||
-      ConstantSize->getZExtValue() > Subtarget.getMaxInlineSizeThreshold())
+  // If we have minsize, then don't care about the alignment.
+  // On x86, the CPU doesn't care and neither should you.
+  // As long as the count is aligned, we can use the minimum number of
+  // instructions without always having to resort to stosb.
+  //
+  // Because this is a feature specific to x86, we must handle it here.
+  if (!ConstantSize)
     return SDValue();
 
   uint64_t SizeVal = ConstantSize->getZExtValue();
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
+    Alignment = commonAlignment(Align(Subtarget.is64Bit() ? 8 : 4), SizeVal);
+
+  // If not DWORD aligned or size is more than the threshold, call the library.
+  // The libc version is likely to be faster for these cases. It can use the
+  // address value and run time information about the CPU.
+
+  if (!AlwaysInline &&
+      (Alignment < Align(4) || SizeVal > Subtarget.getMaxInlineSizeThreshold()))
+    return SDValue();
+
   SDValue InGlue;
   EVT AVT;
   SDValue Count;
-  unsigned BytesLeft = 0;
+  uint64_t BytesLeft = 0;
   if (auto *ValC = dyn_cast<ConstantSDNode>(Val)) {
     unsigned ValReg;
     uint64_t Val = ValC->getZExtValue() & 255;
@@ -99,14 +112,12 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
       // Byte aligned
       AVT = MVT::i8;
       ValReg = X86::AL;
-      Count = DAG.getIntPtrConstant(SizeVal, dl);
     }
 
-    if (AVT.bitsGT(MVT::i8)) {
-      unsigned UBytes = AVT.getSizeInBits() / 8;
-      Count = DAG.getIntPtrConstant(SizeVal / UBytes, dl);
-      BytesLeft = SizeVal % UBytes;
-    }
+    const uint64_t UBytes = AVT.getSizeInBits() / 8;
+    const uint64_t BlockCount = SizeVal / UBytes;
+    BytesLeft = SizeVal % UBytes;
+    Count = DAG.getIntPtrConstant(BlockCount, dl);
 
     Chain = DAG.getCopyToReg(Chain, dl, ValReg, DAG.getConstant(Val, dl, AVT),
                              InGlue);
@@ -119,11 +130,11 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   }
 
   bool Use64BitRegs = Subtarget.isTarget64BitLP64();
-  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RCX : X86::ECX,
-                           Count, InGlue);
+  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RCX : X86::ECX, Count,
+                           InGlue);
   InGlue = Chain.getValue(1);
-  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RDI : X86::EDI,
-                           Dst, InGlue);
+  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RDI : X86::EDI, Dst,
+                           InGlue);
   InGlue = Chain.getValue(1);
 
   SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
@@ -131,6 +142,10 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   SDValue RepStos = DAG.getNode(X86ISD::REP_STOS, dl, Tys, Ops);
 
   /// RepStos can process the whole length.
+  //
+  // Because we changed the alignment earlier in the function to work on size
+  // when we have the minsize attribute, this is guaranteed to be 0 when we get
+  // here.
   if (BytesLeft == 0)
     return RepStos;
 
@@ -146,8 +161,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
                     DAG.getNode(ISD::ADD, dl, AddrVT, Dst,
                                 DAG.getConstant(Offset, dl, AddrVT)),
                     Val, DAG.getConstant(BytesLeft, dl, SizeVT), Alignment,
-                    isVolatile, AlwaysInline,
-                    /* CI */ nullptr, DstPtrInfo.getWithOffset(Offset)));
+                    isVolatile, /*AlwaysInline*/ true, /* CI */ nullptr,
+                    /* isTailCall */ false, DstPtrInfo.getWithOffset(Offset)));
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Results);
 }
@@ -222,13 +237,19 @@ static SDValue emitConstantSizeRepmov(
   assert(!Subtarget.hasERMSB() && "No efficient RepMovs");
   /// We assume runtime memcpy will do a better job for unaligned copies when
   /// ERMS is not present.
-  if (!AlwaysInline && (Alignment.value() & 3) != 0)
+  if (!AlwaysInline && (Alignment < Align(4)))
     return SDValue();
+
+  /// In case we optimize for size we use repmovsb even if it's less efficient
+  /// so we can save the loads/stores of the leftover.
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
+    return emitRepmovsB(Subtarget, DAG, dl, Chain, Dst, Src, Size);
 
   const MVT BlockType = getOptimalRepmovsType(Subtarget, Alignment);
   const uint64_t BlockBytes = BlockType.getSizeInBits() / 8;
   const uint64_t BlockCount = Size / BlockBytes;
   const uint64_t BytesLeft = Size % BlockBytes;
+
   SDValue RepMovs =
       emitRepmovs(Subtarget, DAG, dl, Chain, Dst, Src,
                   DAG.getIntPtrConstant(BlockCount, dl), BlockType);
@@ -238,11 +259,6 @@ static SDValue emitConstantSizeRepmov(
     return RepMovs;
 
   assert(BytesLeft && "We have leftover at this point");
-
-  /// In case we optimize for size we use repmovsb even if it's less efficient
-  /// so we can save the loads/stores of the leftover.
-  if (DAG.getMachineFunction().getFunction().hasMinSize())
-    return emitRepmovsB(Subtarget, DAG, dl, Chain, Dst, Src, Size);
 
   // Handle the last 1 - 7 bytes.
   SmallVector<SDValue, 4> Results;
