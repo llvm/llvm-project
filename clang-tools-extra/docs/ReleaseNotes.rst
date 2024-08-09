@@ -95,6 +95,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved handling of `--driver-mode=`, now automatically deducing it from
+  the compiler name after `--`, or properly utilizing it when passed as an
+  extra argument during :program:`clang-tidy` invocation with explicit compiler
+  arguments.
+
 New checks
 ^^^^^^^^^^
 
