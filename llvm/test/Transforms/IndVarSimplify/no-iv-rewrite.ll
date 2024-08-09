@@ -380,18 +380,13 @@ define i32 @isomorphic(i32 %init, i32 %step, i32 %lim) nounwind {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[INIT]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[II_NEXT]] = add i32 [[II]], [[STEP1]]
 ; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], [[STEP1]]
-; CHECK-NEXT:    [[L_STEP:%.*]] = add i32 [[J]], [[STEP]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[II_NEXT]], [[LIM:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[J]], [[LOOP]] ]
 ; CHECK-NEXT:    [[J_NEXT_LCSSA:%.*]] = phi i32 [ [[J_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    [[K_NEXT_LCSSA:%.*]] = phi i32 [ [[II_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    [[L_STEP_LCSSA:%.*]] = phi i32 [ [[L_STEP]], [[LOOP]] ]
 ; CHECK-NEXT:    [[L_NEXT_LCSSA:%.*]] = phi i32 [ [[J_NEXT]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i32 [[I_LCSSA]], [[J_NEXT_LCSSA]]
-; CHECK-NEXT:    [[SUM2:%.*]] = add i32 [[SUM1]], [[K_NEXT_LCSSA]]
-; CHECK-NEXT:    [[SUM3:%.*]] = add i32 [[SUM1]], [[L_STEP_LCSSA]]
 ; CHECK-NEXT:    [[SUM4:%.*]] = add i32 [[SUM1]], [[L_NEXT_LCSSA]]
 ; CHECK-NEXT:    ret i32 [[SUM4]]
 ;

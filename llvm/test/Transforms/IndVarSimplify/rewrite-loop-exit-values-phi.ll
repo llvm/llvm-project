@@ -22,16 +22,12 @@ define dso_local void @hoge() local_unnamed_addr {
 ; CHECK:       inner.preheader:
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[INNER]] ], [ 0, [[INNER_PREHEADER]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[INNER]] ], [ [[N]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], 1
 ; CHECK-NEXT:    store i64 undef, ptr @ptr, align 8
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp slt i64 [[J]], [[IDX]]
 ; CHECK-NEXT:    br i1 [[COND1]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner_exit:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[I_NEXT]], [[INNER]] ]
-; CHECK-NEXT:    [[INDVAR_USE:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i64 [[IDX]], -1

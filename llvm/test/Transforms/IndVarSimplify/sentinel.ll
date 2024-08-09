@@ -11,7 +11,6 @@ define void @test() personality ptr @snork {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB4]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ undef, [[BB1:%.*]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP6:%.*]] = invoke i32 @quux() [ "deopt"(i32 0, i32 0, i32 0, i32 180, i32 0, i32 25, i32 0, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null, i32 3, i32 undef, i32 3, i32 undef, i32 7, ptr null, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 4, double undef, i32 7, ptr null, i32 4, i64 undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 3, i32 undef, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 7, ptr null) ]
@@ -19,7 +18,7 @@ define void @test() personality ptr @snork {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    br i1 true, label [[BB1]], label [[BB9]]
+; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB9]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    [[TMP16:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
