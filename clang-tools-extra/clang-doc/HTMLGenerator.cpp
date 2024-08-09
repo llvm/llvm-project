@@ -48,6 +48,12 @@ public:
     TAG_SPAN,
     TAG_TITLE,
     TAG_UL,
+    TAG_TABLE,
+    TAG_THEAD,
+    TAG_TBODY,
+    TAG_TR,
+    TAG_TD,
+    TAG_TH
   };
 
   HTMLTag() = default;
@@ -133,6 +139,12 @@ bool HTMLTag::isSelfClosing() const {
   case HTMLTag::TAG_SPAN:
   case HTMLTag::TAG_TITLE:
   case HTMLTag::TAG_UL:
+  case HTMLTag::TAG_TABLE:
+  case HTMLTag::TAG_THEAD:
+  case HTMLTag::TAG_TBODY:
+  case HTMLTag::TAG_TR:
+  case HTMLTag::TAG_TD:
+  case HTMLTag::TAG_TH:
     return false;
   }
   llvm_unreachable("Unhandled HTMLTag::TagType");
@@ -174,6 +186,18 @@ StringRef HTMLTag::toString() const {
     return "title";
   case HTMLTag::TAG_UL:
     return "ul";
+  case HTMLTag::TAG_TABLE:
+    return "table";
+  case HTMLTag::TAG_THEAD:
+    return "thead";
+  case HTMLTag::TAG_TBODY:
+    return "tbody";
+  case HTMLTag::TAG_TR:
+    return "tr";
+  case HTMLTag::TAG_TD:
+    return "td";
+  case HTMLTag::TAG_TH:
+    return "th";
   }
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
@@ -352,6 +376,7 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx);
 static std::vector<std::unique_ptr<TagNode>>
 genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
         StringRef ParentInfoDir);
+static std::unique_ptr<TagNode> genHTML(const std::vector<CommentInfo> &C);
 
 static std::vector<std::unique_ptr<TagNode>>
 genEnumsBlock(const std::vector<EnumInfo> &Enums,
@@ -372,14 +397,33 @@ genEnumsBlock(const std::vector<EnumInfo> &Enums,
 }
 
 static std::unique_ptr<TagNode>
-genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members) {
+genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members,
+                    bool HasComments) {
   if (Members.empty())
     return nullptr;
 
-  auto List = std::make_unique<TagNode>(HTMLTag::TAG_UL);
-  for (const auto &M : Members)
-    List->Children.emplace_back(
-        std::make_unique<TagNode>(HTMLTag::TAG_LI, M.Name));
+  auto List = std::make_unique<TagNode>(HTMLTag::TAG_TBODY);
+
+  for (const auto &M : Members) {
+    auto TRNode = std::make_unique<TagNode>(HTMLTag::TAG_TR);
+    TRNode->Children.emplace_back(
+        std::make_unique<TagNode>(HTMLTag::TAG_TD, M.Name));
+    // Use user supplied value if it exists, otherwise use the value
+    if (!M.ValueExpr.empty()) {
+      TRNode->Children.emplace_back(
+          std::make_unique<TagNode>(HTMLTag::TAG_TD, M.ValueExpr));
+    } else {
+      TRNode->Children.emplace_back(
+          std::make_unique<TagNode>(HTMLTag::TAG_TD, M.Value));
+    }
+
+    if (HasComments) {
+      auto TD = std::make_unique<TagNode>(HTMLTag::TAG_TD);
+      TD->Children.emplace_back(genHTML(M.Description));
+      TRNode->Children.emplace_back(std::move(TD));
+    }
+    List->Children.emplace_back(std::move(TRNode));
+  }
   return List;
 }
 
@@ -653,15 +697,35 @@ static std::vector<std::unique_ptr<TagNode>>
 genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
   std::string EnumType = I.Scoped ? "enum class " : "enum ";
+  // Determine if enum members have comments attached
+  bool HasComments = false;
+  for (const auto &M : I.Members) {
+    if (!M.Description.empty()) {
+      HasComments = true;
+      break;
+    }
+  }
+  std::unique_ptr<TagNode> Table =
+      std::make_unique<TagNode>(HTMLTag::TAG_TABLE);
+  std::unique_ptr<TagNode> Thead =
+      std::make_unique<TagNode>(HTMLTag::TAG_THEAD);
+  std::unique_ptr<TagNode> TRow = std::make_unique<TagNode>(HTMLTag::TAG_TR);
+  std::unique_ptr<TagNode> TD =
+      std::make_unique<TagNode>(HTMLTag::TAG_TH, EnumType + I.Name);
+  // Span 3 columns if enum has comments
+  TD->Attributes.emplace_back("colspan", HasComments ? "3" : "2");
 
-  Out.emplace_back(
-      std::make_unique<TagNode>(HTMLTag::TAG_H3, EnumType + I.Name));
-  Out.back()->Attributes.emplace_back("id",
-                                      llvm::toHex(llvm::toStringRef(I.USR)));
+  Table->Attributes.emplace_back("id", llvm::toHex(llvm::toStringRef(I.USR)));
+  TRow->Children.emplace_back(std::move(TD));
+  Thead->Children.emplace_back(std::move(TRow));
+  Table->Children.emplace_back(std::move(Thead));
 
-  std::unique_ptr<TagNode> Node = genEnumMembersBlock(I.Members);
+  std::unique_ptr<TagNode> Node = genEnumMembersBlock(I.Members, HasComments);
+
   if (Node)
-    Out.emplace_back(std::move(Node));
+    Table->Children.emplace_back(std::move(Node));
+
+  Out.emplace_back(std::move(Table));
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
