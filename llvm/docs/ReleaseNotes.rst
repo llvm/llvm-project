@@ -53,6 +53,8 @@ Changes to the LLVM IR
 * The ``x86_mmx`` IR type has been removed. It will be translated to
   the standard vector type ``<1 x i64>`` in bitcode upgrade.
 
+* Introduced `noalias.addrspace` metadata.
+
 Changes to LLVM infrastructure
 ------------------------------
 
