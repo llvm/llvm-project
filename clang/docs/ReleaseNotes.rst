@@ -116,6 +116,9 @@ Resolutions to C++ Defect Reports
   of the target type, even if the type of the bit-field is larger.
   (`CWG2627: Bit-fields and narrowing conversions <https://cplusplus.github.io/CWG/issues/2627.html>`_)
 
+- Allow ``void{}`` as a prvalue of type ``void``.
+  (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
 C Language Changes
 ------------------
 
