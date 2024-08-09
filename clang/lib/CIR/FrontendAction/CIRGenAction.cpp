@@ -74,6 +74,22 @@ static std::string sanitizePassOptions(llvm::StringRef o) {
 
 namespace cir {
 
+static BackendAction
+getBackendActionFromOutputType(CIRGenAction::OutputType action) {
+  switch (action) {
+  case CIRGenAction::OutputType::EmitAssembly:
+    return BackendAction::Backend_EmitAssembly;
+  case CIRGenAction::OutputType::EmitBC:
+    return BackendAction::Backend_EmitBC;
+  case CIRGenAction::OutputType::EmitLLVM:
+    return BackendAction::Backend_EmitLL;
+  case CIRGenAction::OutputType::EmitObj:
+    return BackendAction::Backend_EmitObj;
+  default:
+    llvm_unreachable("Unsupported action");
+  }
+}
+
 static std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(const clang::FrontendOptions &feOptions,
                      mlir::ModuleOp mlirMod,
@@ -258,35 +274,9 @@ public:
       loweredMlirModule->print(*outputStream, flags);
       break;
     }
-    case CIRGenAction::OutputType::EmitLLVM: {
-      llvm::LLVMContext llvmCtx;
-      auto llvmModule =
-          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
-                               feOptions.ClangIRDisableCIRVerifier);
-
-      llvmModule->setTargetTriple(targetOptions.Triple);
-
-      EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
-                        targetOptions, langOptions,
-                        C.getTargetInfo().getDataLayoutString(),
-                        llvmModule.get(), BackendAction::Backend_EmitLL, FS,
-                        std::move(outputStream));
-      break;
-    }
-    case CIRGenAction::OutputType::EmitObj: {
-      llvm::LLVMContext llvmCtx;
-      auto llvmModule =
-          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
-                               feOptions.ClangIRDisableCIRVerifier);
-
-      llvmModule->setTargetTriple(targetOptions.Triple);
-      EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
-                        targetOptions, langOptions,
-                        C.getTargetInfo().getDataLayoutString(),
-                        llvmModule.get(), BackendAction::Backend_EmitObj, FS,
-                        std::move(outputStream));
-      break;
-    }
+    case CIRGenAction::OutputType::EmitLLVM:
+    case CIRGenAction::OutputType::EmitBC:
+    case CIRGenAction::OutputType::EmitObj:
     case CIRGenAction::OutputType::EmitAssembly: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
@@ -294,11 +284,13 @@ public:
                                feOptions.ClangIRDisableCIRVerifier);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
-      EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
-                        targetOptions, langOptions,
-                        C.getTargetInfo().getDataLayoutString(),
-                        llvmModule.get(), BackendAction::Backend_EmitAssembly,
-                        FS, std::move(outputStream));
+
+      BackendAction backendAction = getBackendActionFromOutputType(action);
+
+      EmitBackendOutput(
+          diagnosticsEngine, headerSearchOptions, codeGenOptions, targetOptions,
+          langOptions, C.getTargetInfo().getDataLayoutString(),
+          llvmModule.get(), backendAction, FS, std::move(outputStream));
       break;
     }
     case CIRGenAction::OutputType::None:
@@ -364,6 +356,8 @@ getOutputStream(CompilerInstance &ci, StringRef inFile,
     return ci.createDefaultOutputFile(false, inFile, "mlir");
   case CIRGenAction::OutputType::EmitLLVM:
     return ci.createDefaultOutputFile(false, inFile, "llvm");
+  case CIRGenAction::OutputType::EmitBC:
+    return ci.createDefaultOutputFile(true, inFile, "bc");
   case CIRGenAction::OutputType::EmitObj:
     return ci.createDefaultOutputFile(true, inFile, "o");
   case CIRGenAction::OutputType::None:
@@ -468,6 +462,10 @@ EmitMLIRAction::EmitMLIRAction(mlir::MLIRContext *_MLIRContext)
 void EmitLLVMAction::anchor() {}
 EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::EmitLLVM, _MLIRContext) {}
+
+void EmitBCAction::anchor() {}
+EmitBCAction::EmitBCAction(mlir::MLIRContext *_MLIRContext)
+    : CIRGenAction(OutputType::EmitBC, _MLIRContext) {}
 
 void EmitObjAction::anchor() {}
 EmitObjAction::EmitObjAction(mlir::MLIRContext *_MLIRContext)
