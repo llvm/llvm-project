@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -1133,7 +1134,8 @@ public:
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Register:
-      OS << "<register " << getReg() << " mods: " << Reg.Mods << '>';
+      OS << "<register " << AMDGPUInstPrinter::getRegisterName(getReg())
+         << " mods: " << Reg.Mods << '>';
       break;
     case Immediate:
       OS << '<' << getImm();

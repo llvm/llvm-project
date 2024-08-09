@@ -63,7 +63,7 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
           GuardedFunctionSpec<"dsqrtf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
           GuardedFunctionSpec<"dsubf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
-	  
+
           GuardedFunctionSpec<"f16add", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16addf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16addl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
@@ -71,7 +71,7 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
           GuardedFunctionSpec<"f16sub", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16subf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16subl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
-          
+
           GuardedFunctionSpec<"fdivf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           GuardedFunctionSpec<"ffmaf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
@@ -97,6 +97,8 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
           GuardedFunctionSpec<"f16sqrtl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
 
           GuardedFunctionSpec<"fsqrtf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          GuardedFunctionSpec<"fsubf128", RetValSpec<FloatType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"powi", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"powif", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,

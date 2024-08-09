@@ -65,9 +65,7 @@ template <typename Config> static Header *getHeader(const void *Ptr) {
 
 } // namespace LargeBlock
 
-static inline void unmap(MemMapT &MemMap) {
-  MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
-}
+static inline void unmap(MemMapT &MemMap) { MemMap.unmap(); }
 
 namespace {
 
@@ -97,8 +95,11 @@ public:
     return {};
   }
   void store(UNUSED Options Options, UNUSED uptr CommitBase,
-             UNUSED uptr CommitSize, UNUSED uptr BlockBegin, MemMapT MemMap) {
-    unmap(MemMap);
+             UNUSED uptr CommitSize, UNUSED uptr BlockBegin,
+             UNUSED MemMapT MemMap) {
+    // This should never be called since canCache always returns false.
+    UNREACHABLE(
+        "It is not valid to call store on MapAllocatorNoCache objects.");
   }
 
   bool canCache(UNUSED uptr Size) { return false; }
@@ -177,7 +178,11 @@ public:
   T &operator[](uptr UNUSED Idx) { UNREACHABLE("Unsupported!"); }
 };
 
-template <typename Config> class MapAllocatorCache {
+// The default unmap callback is simply scudo::unmap.
+// In testing, a different unmap callback is used to
+// record information about unmaps in the cache
+template <typename Config, void (*unmapCallBack)(MemMapT &) = unmap>
+class MapAllocatorCache {
 public:
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
@@ -245,6 +250,7 @@ public:
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
     u64 Time;
     CachedBlock Entry;
+
     Entry.CommitBase = CommitBase;
     Entry.CommitSize = CommitSize;
     Entry.BlockBegin = BlockBegin;
@@ -289,7 +295,7 @@ public:
         // read Options and when we locked Mutex. We can't insert our entry into
         // the quarantine or the cache because the permissions would be wrong so
         // just unmap it.
-        unmap(Entry.MemMap);
+        unmapCallBack(Entry.MemMap);
         break;
       }
       if (Config::getQuarantineSize() && useMemoryTagging<Config>(Options)) {
@@ -320,7 +326,7 @@ public:
     } while (0);
 
     for (MemMapT &EvictMemMap : EvictionMemMaps)
-      unmap(EvictMemMap);
+      unmapCallBack(EvictMemMap);
 
     if (Interval >= 0) {
       // TODO: Add ReleaseToOS logic to LRU algorithm
@@ -422,7 +428,7 @@ public:
     for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
       if (Quarantine[I].isValid()) {
         MemMapT &MemMap = Quarantine[I].MemMap;
-        unmap(MemMap);
+        unmapCallBack(MemMap);
         Quarantine[I].invalidate();
       }
     }
@@ -516,7 +522,7 @@ private:
     }
     for (uptr I = 0; I < N; I++) {
       MemMapT &MemMap = MapInfo[I];
-      unmap(MemMap);
+      unmapCallBack(MemMap);
     }
   }
 
@@ -825,7 +831,11 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     Cache.store(Options, H->CommitBase, H->CommitSize,
                 reinterpret_cast<uptr>(H + 1), H->MemMap);
   } else {
-    unmap(H->MemMap);
+    // Note that the `H->MemMap` is stored on the pages managed by itself. Take
+    // over the ownership before unmap() so that any operation along with
+    // unmap() won't touch inaccessible pages.
+    MemMapT MemMap = H->MemMap;
+    unmap(MemMap);
   }
 }
 

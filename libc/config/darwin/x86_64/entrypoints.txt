@@ -120,6 +120,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.coshf
     #libc.src.math.cosf
     #libc.src.math.daddl
+    #libc.src.math.ddivl
     #libc.src.math.dfmal
     #libc.src.math.dsqrtl
     #libc.src.math.dsubl
@@ -152,6 +153,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.frexp
     #libc.src.math.frexpf
     #libc.src.math.frexpl
+    #libc.src.math.fsub
+    #libc.src.math.fsubl
     #libc.src.math.hypot
     #libc.src.math.hypotf
     #libc.src.math.ilogb

@@ -13,9 +13,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
@@ -26,6 +24,8 @@
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
+
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -525,10 +525,9 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   FPBits result;
   T float_mantissa;
   if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
-    float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
-        Sign::POS, 0,
-        fputil::DyadicFloat<128>::MantissaType(
-            {uint64_t(mantissa), uint64_t(mantissa >> 64)})));
+    float_mantissa =
+        (static_cast<T>(uint64_t(mantissa)) * static_cast<T>(0x1.0p64)) +
+        static_cast<T>(uint64_t(mantissa >> 64));
   } else {
     float_mantissa = static_cast<T>(mantissa);
   }

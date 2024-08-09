@@ -90,3 +90,14 @@ namespace Temporaries {
   };
   int &&s = S().w[1];
 }
+
+#ifdef __SIZEOF_INT128__
+namespace bigint {
+  typedef __attribute__((__ext_vector_type__(4))) __int128 bigint4;
+  constexpr bigint4 A = (bigint4)true;
+  static_assert(A[0] == -1, "");
+  static_assert(A[1] == -1, "");
+  static_assert(A[2] == -1, "");
+  static_assert(A[3] == -1, "");
+}
+#endif
