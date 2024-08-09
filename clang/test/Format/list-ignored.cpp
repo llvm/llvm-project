@@ -8,21 +8,21 @@
 
 // RUN: touch foo.cc
 // RUN: clang-format -list-ignored .clang-format-ignore foo.cc \
-// RUN:   | FileCheck %s -match-full-lines
+// RUN:   | FileCheck %s
 // CHECK: .clang-format-ignore
 // CHECK-NEXT: foo.cc
 
 // RUN: cd level1
 // RUN: touch bar.cc baz.c
 // RUN: clang-format -list-ignored bar.cc baz.c \
-// RUN:   | FileCheck %s -check-prefix=CHECK2 -match-full-lines
+// RUN:   | FileCheck %s -check-prefix=CHECK2
 // CHECK2: bar.cc
 // CHECK2-NEXT: baz.c
 
 // RUN: cd level2
 // RUN: touch foo.c foo.js
 // RUN: clang-format -list-ignored foo.c foo.js \
-// RUN:   | FileCheck %s -check-prefix=CHECK3 -match-full-lines
+// RUN:   | FileCheck %s -check-prefix=CHECK3
 // CHECK3: foo.c
 // CHECK3-NEXT: foo.js
 
@@ -34,27 +34,27 @@
 
 // RUN: echo "*.js" > .clang-format-ignore
 // RUN: clang-format -list-ignored foo.c foo.js \
-// RUN:   | FileCheck %s -check-prefix=CHECK5 -match-full-lines
+// RUN:   | FileCheck %s -check-prefix=CHECK5
 // CHECK5-NOT: foo.c
 // CHECK5: foo.js
 
 // RUN: cd ../..
 // RUN: clang-format -list-ignored *.cc level1/*.c* level1/level2/foo.* \
-// RUN:   | FileCheck %s -check-prefix=CHECK6 -match-full-lines
-// CHECK6-NOT: level1/levle2/foo.c
+// RUN:   | FileCheck %s -check-prefix=CHECK6
 // CHECK6: foo.cc
-// CHECK6-NEXT: level1/bar.cc
-// CHECK6-NEXT: level1/baz.c
-// CHECK6-NEXT: level1/level2/foo.js
+// CHECK6-NEXT: bar.cc
+// CHECK6-NEXT: baz.c
+// CHECK6-NOT: foo.c
+// CHECK6-NEXT: foo.js
 
 // RUN: rm .clang-format-ignore
 // RUN: clang-format -list-ignored *.cc level1/*.c* level1/level2/foo.* \
-// RUN:   | FileCheck %s -check-prefix=CHECK7 -match-full-lines
+// RUN:   | FileCheck %s -check-prefix=CHECK7
 // CHECK7-NOT: foo.cc
-// CHECK7-NOT: level1/bar.cc
-// CHECK7-NOT: level1/baz.c
-// CHECK7-NOT: level1/level2/foo.c
-// CHECK7: level1/level2/foo.js
+// CHECK7-NOT: bar.cc
+// CHECK7-NOT: baz.c
+// CHECK7-NOT: foo.c
+// CHECK7: foo.js
 
 // RUN: cd ..
 // RUN: rm -r %t.dir
