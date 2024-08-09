@@ -1901,6 +1901,9 @@ namespace llvm {
 
     SDValue getMOVL(SelectionDAG &DAG, const SDLoc &dl, MVT VT, SDValue V1,
                     SDValue V2) const;
+
+    bool isDesirableToCommuteWithShift(const SDNode *N,
+                                       CombineLevel Level) const override;
   };
 
   namespace X86 {

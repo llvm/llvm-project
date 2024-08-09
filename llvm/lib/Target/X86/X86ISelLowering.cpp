@@ -60673,3 +60673,19 @@ Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
   return TargetLowering::getPrefLoopAlignment();
 }
+
+bool X86TargetLowering::isDesirableToCommuteWithShift(
+    const SDNode *N, CombineLevel Level) const {
+  using namespace llvm::SDPatternMatch;
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
+  SDValue ShiftLHS = N->getOperand(0);
+  SDValue Add;
+  if (sd_match(ShiftLHS, m_OneUse(m_SExt(m_OneUse(m_Value(Add))))) ||
+      ShiftLHS->hasOneUse())
+    return true;
+
+  return false;
+}

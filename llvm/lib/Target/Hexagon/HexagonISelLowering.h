@@ -155,6 +155,9 @@ public:
 
   bool hasBitTest(SDValue X, SDValue Y) const override;
 
+  bool isDesirableToCommuteWithShift(const SDNode *N,
+                                     CombineLevel Level) const override;
+
   bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
 
   /// Return true if an FMA operation is faster than a pair of mul and add

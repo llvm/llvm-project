@@ -5,13 +5,11 @@
 define void @add_sext_shl_moreOneUse_add(ptr %array1, i32 %a, i32 %b) {
 ; RV64-LABEL: add_sext_shl_moreOneUse_add:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addiw a3, a1, 5
-; RV64-NEXT:    slli a4, a3, 2
-; RV64-NEXT:    add a4, a0, a4
-; RV64-NEXT:    sw a2, 0(a4)
+; RV64-NEXT:    addi a3, a1, 5
 ; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    sw a2, 20(a0)
 ; RV64-NEXT:    sw a2, 24(a0)
 ; RV64-NEXT:    sw a3, 140(a0)
 ; RV64-NEXT:    ret
@@ -35,15 +33,13 @@ define void @add_sext_shl_moreOneUse_addexceedsign12(ptr %array1, i32 %a, i32 %b
 ; RV64-LABEL: add_sext_shl_moreOneUse_addexceedsign12:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi a3, a1, 2047
-; RV64-NEXT:    addiw a3, a3, 1
-; RV64-NEXT:    slli a4, a3, 2
-; RV64-NEXT:    add a4, a0, a4
-; RV64-NEXT:    sw a2, 0(a4)
+; RV64-NEXT:    addi a3, a3, 1
+; RV64-NEXT:    lui a4, 2
 ; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    slli a1, a1, 2
-; RV64-NEXT:    lui a4, 2
 ; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    sw a2, 0(a0)
 ; RV64-NEXT:    sw a3, 4(a0)
 ; RV64-NEXT:    sw a2, 120(a0)
 ; RV64-NEXT:    ret
@@ -64,13 +60,11 @@ entry:
 define void @add_sext_shl_moreOneUse_sext(ptr %array1, i32 %a, i32 %b) {
 ; RV64-LABEL: add_sext_shl_moreOneUse_sext:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addiw a3, a1, 5
-; RV64-NEXT:    slli a4, a3, 2
-; RV64-NEXT:    add a4, a0, a4
-; RV64-NEXT:    sw a2, 0(a4)
 ; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    addi a3, a1, 5
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    sw a2, 20(a0)
 ; RV64-NEXT:    sw a2, 24(a0)
 ; RV64-NEXT:    sd a3, 140(a0)
 ; RV64-NEXT:    ret
@@ -94,18 +88,16 @@ entry:
 define void @add_sext_shl_moreOneUse_add_inSelect(ptr %array1, i32 signext  %a, i32 %b, i32 signext %x) {
 ; RV64-LABEL: add_sext_shl_moreOneUse_add_inSelect:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addiw a4, a1, 5
-; RV64-NEXT:    slli a5, a4, 2
-; RV64-NEXT:    add a5, a0, a5
-; RV64-NEXT:    mv a6, a4
+; RV64-NEXT:    addi a4, a1, 5
+; RV64-NEXT:    mv a5, a4
 ; RV64-NEXT:    bgtz a3, .LBB3_2
 ; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    mv a6, a2
+; RV64-NEXT:    mv a5, a2
 ; RV64-NEXT:  .LBB3_2: # %entry
-; RV64-NEXT:    sw a6, 0(a5)
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    sw a6, 24(a0)
+; RV64-NEXT:    sw a5, 20(a0)
+; RV64-NEXT:    sw a5, 24(a0)
 ; RV64-NEXT:    sw a4, 140(a0)
 ; RV64-NEXT:    ret
 entry:
@@ -130,20 +122,18 @@ define void @add_sext_shl_moreOneUse_add_inSelect_addexceedsign12(ptr %array1, i
 ; RV64-LABEL: add_sext_shl_moreOneUse_add_inSelect_addexceedsign12:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi a4, a1, 2047
-; RV64-NEXT:    addiw a4, a4, 1
-; RV64-NEXT:    slli a6, a4, 2
-; RV64-NEXT:    add a6, a0, a6
-; RV64-NEXT:    mv a5, a4
-; RV64-NEXT:    bgtz a3, .LBB4_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    mv a5, a2
-; RV64-NEXT:  .LBB4_2: # %entry
-; RV64-NEXT:    sw a5, 0(a6)
+; RV64-NEXT:    addi a4, a4, 1
+; RV64-NEXT:    lui a5, 2
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    lui a1, 2
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    sw a5, 4(a0)
+; RV64-NEXT:    add a0, a0, a5
+; RV64-NEXT:    mv a1, a4
+; RV64-NEXT:    bgtz a3, .LBB4_2
+; RV64-NEXT:  # %bb.1: # %entry
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:  .LBB4_2: # %entry
+; RV64-NEXT:    sw a1, 0(a0)
+; RV64-NEXT:    sw a1, 4(a0)
 ; RV64-NEXT:    sw a4, 120(a0)
 ; RV64-NEXT:    ret
 entry:
@@ -171,11 +161,9 @@ define void @add_shl_moreOneUse_inSelect(ptr %array1, i64 %a, i64 %b, i64 %x) {
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a5, a2
 ; RV64-NEXT:  .LBB5_2: # %entry
-; RV64-NEXT:    slli a2, a4, 3
-; RV64-NEXT:    add a2, a0, a2
-; RV64-NEXT:    sd a5, 0(a2)
 ; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    sd a5, 40(a0)
 ; RV64-NEXT:    sd a5, 48(a0)
 ; RV64-NEXT:    sd a4, 280(a0)
 ; RV64-NEXT:    ret

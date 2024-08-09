@@ -19,11 +19,9 @@ define void @add_shl_moreOneUse_inStore(ptr %array1, i32 %a, i32 %b)  {
 ; RV32-LABEL: add_shl_moreOneUse_inStore:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi a3, a1, 5
-; RV32-NEXT:    slli a4, a3, 2
-; RV32-NEXT:    add a4, a0, a4
-; RV32-NEXT:    sw a2, 0(a4)
 ; RV32-NEXT:    slli a1, a1, 2
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    sw a2, 20(a0)
 ; RV32-NEXT:    sw a2, 24(a0)
 ; RV32-NEXT:    sw a3, 140(a0)
 ; RV32-NEXT:    ret
@@ -44,13 +42,11 @@ define void @add_shl_moreOneUse_inStore_addexceedsign12(ptr %array1, i32 %a, i32
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi a3, a1, 2047
 ; RV32-NEXT:    addi a3, a3, 1
-; RV32-NEXT:    slli a4, a3, 2
-; RV32-NEXT:    add a4, a0, a4
-; RV32-NEXT:    sw a2, 0(a4)
+; RV32-NEXT:    lui a4, 2
 ; RV32-NEXT:    slli a1, a1, 2
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    lui a1, 2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a4
+; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a3, 4(a0)
 ; RV32-NEXT:    sw a2, 120(a0)
 ; RV32-NEXT:    ret
@@ -75,11 +71,9 @@ define void @add_shl_moreOneUse_inSelect(ptr %array1, i32 %a, i32 %b, i32 %x) {
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a5, a2
 ; RV32-NEXT:  .LBB3_2: # %entry
-; RV32-NEXT:    slli a2, a4, 2
-; RV32-NEXT:    add a2, a0, a2
-; RV32-NEXT:    sw a5, 0(a2)
 ; RV32-NEXT:    slli a1, a1, 2
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    sw a5, 20(a0)
 ; RV32-NEXT:    sw a5, 24(a0)
 ; RV32-NEXT:    sw a4, 140(a0)
 ; RV32-NEXT:    ret
@@ -107,13 +101,11 @@ define void @add_shl_moreOneUse_inSelect_addexceedsign12(ptr %array1, i32 %a, i3
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a5, a2
 ; RV32-NEXT:  .LBB4_2: # %entry
-; RV32-NEXT:    slli a2, a4, 2
-; RV32-NEXT:    add a2, a0, a2
-; RV32-NEXT:    sw a5, 0(a2)
+; RV32-NEXT:    lui a2, 2
 ; RV32-NEXT:    slli a1, a1, 2
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    lui a1, 2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a2
+; RV32-NEXT:    sw a5, 0(a0)
 ; RV32-NEXT:    sw a5, 4(a0)
 ; RV32-NEXT:    sw a4, 120(a0)
 ; RV32-NEXT:    ret
