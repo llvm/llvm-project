@@ -901,7 +901,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
     const addr_t offset = (i * 2 + 1) * GetAddressByteSize();
     const addr_t d_file_addr = m_dynamic_base_addr + offset;
     Address d_addr;
-    if (d_addr.ResolveAddressUsingFileSections(d_file_addr, GetSectionList()))
+    if (!d_addr.ResolveAddressUsingFileSections(d_file_addr, GetSectionList()))
       return Address();
     if (symbol.d_tag == DT_DEBUG)
       return d_addr;
@@ -3223,6 +3223,10 @@ void ObjectFileELF::Dump(Stream *s) {
   s->EOL();
   DumpELFDynamic(s);
   s->EOL();
+  Address image_info_addr = GetImageInfoAddress(nullptr);
+  if (image_info_addr.IsValid())
+    s->Printf("image_info_address = %#16.16" PRIx64 "\n",
+              image_info_addr.GetFileAddress());
 }
 
 // DumpELFHeader
