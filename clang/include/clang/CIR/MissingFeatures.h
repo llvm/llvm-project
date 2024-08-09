@@ -73,6 +73,7 @@ struct MissingFeatures {
 
   // Debug info
   static bool generateDebugInfo() { return false; }
+  static bool noDebugInfo() { return false; }
 
   // LLVM Attributes
   static bool setFunctionAttributes() { return false; }

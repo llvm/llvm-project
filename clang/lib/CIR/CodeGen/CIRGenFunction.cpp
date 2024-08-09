@@ -586,7 +586,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>()) {
-    llvm_unreachable("NYI");
+    assert(!MissingFeatures::noDebugInfo());
   }
 
   // The function might not have a body if we're generating thunks for a
