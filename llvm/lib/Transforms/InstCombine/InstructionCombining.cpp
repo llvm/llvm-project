@@ -3026,27 +3026,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           GEP, Builder.CreateGEP(GEP.getSourceElementType(), NewPtr, Idx2, "",
                                  IsInBounds));
     }
-    ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
-                                     m_Value(Idx1), m_ConstantInt(C))))))) {
-      // %add = add nsw i32 %idx1, idx2
-      // %sidx = sext i32 %add to i64
-      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
-      // as:
-      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
-      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
-      bool IsInBounds = CanPreserveInBounds(
-          /*IsNSW=*/true, Idx1, C);
-      auto *NewPtr = Builder.CreateGEP(
-          GEP.getSourceElementType(), GEP.getPointerOperand(),
-          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "",
-          IsInBounds);
-      return replaceInstUsesWith(
-          GEP,
-          Builder.CreateGEP(GEP.getSourceElementType(), NewPtr,
-                            Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
-                            "", IsInBounds));
-    }
   }
 
   if (!GEP.isInBounds()) {

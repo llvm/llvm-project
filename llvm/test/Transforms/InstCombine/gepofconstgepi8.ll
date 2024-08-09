@@ -86,10 +86,10 @@ define ptr @test_zero_sext_add_nsw(ptr %base, i32 %a) {
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[INDEX:%.*]] = add nsw i32 [[A]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P1]], i64 [[TMP0]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
-; CHECK-NEXT:    ret ptr [[P2]]
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
 entry:
   %p1 = getelementptr i8, ptr %base, i64 -4
