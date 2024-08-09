@@ -79,6 +79,9 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
+- The builtin type alias ``__common_type`` has been added to improve the
+  performance of ``std::common_type``.
+
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

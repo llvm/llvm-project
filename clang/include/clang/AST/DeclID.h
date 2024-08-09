@@ -84,13 +84,16 @@ enum PredefinedDeclIDs {
 
   /// The internal '__type_pack_element' template.
   PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 17,
+
+  /// The internal '__common_type' template.
+  PREDEF_DECL_COMMON_TYPE_ID = 18,
 };
 
 /// The number of declaration IDs that are predefined.
 ///
 /// For more information about predefined declarations, see the
 /// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
-const unsigned int NUM_PREDEF_DECL_IDS = 18;
+const unsigned int NUM_PREDEF_DECL_IDS = 19;
 
 /// GlobalDeclID means DeclID in the current ASTContext and LocalDeclID means
 /// DeclID specific to a certain ModuleFile. Specially, in ASTWriter, the
