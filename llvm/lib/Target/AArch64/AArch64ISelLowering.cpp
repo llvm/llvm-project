@@ -16949,7 +16949,7 @@ DeinterleaveIntrinsic tree:
 roots:  A       C         B         D
 roots in correct order of DI4 will be: A B C D.
 Returns true if `DI` is the top of an IR tree that represents a theoretical
-vector.deinterleave4 intrinsic. When true is returned, `DeinterleavedValues`
+vector.deinterleave4 intrinsic. When true is returned, \p `DeinterleavedValues`
 vector is populated with the results such an intrinsic would return: (i.e. {A,
 B, C, D } = vector.deinterleave4(...))
 */
@@ -17123,8 +17123,8 @@ InterleaveIntrinsic tree.
 
 values in correct order of interleave4: A B C D.
 Returns true if `II` is the root of an IR tree that represents a theoretical
-vector.interleave4 intrinsic. When true is returned, `InterleavedValues` vector
-is populated with the inputs such an intrinsic would take: (i.e.
+vector.interleave4 intrinsic. When true is returned, \p `InterleavedValues`
+vector is populated with the inputs such an intrinsic would take: (i.e.
 vector.interleave4(A, B, C, D)).
 */
 bool getValuesToInterleave(
