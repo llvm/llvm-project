@@ -1393,43 +1393,50 @@ void FIROpsDialect::registerTypes() {
       OpenACCPointerLikeModel<fir::LLVMPointerType>>(*getContext());
 }
 
-std::pair<std::uint64_t, unsigned short>
+std::optional<std::pair<uint64_t, unsigned short>>
 fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                              const mlir::DataLayout &dl,
                              const fir::KindMapping &kindMap) {
   if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(ty)) {
     llvm::TypeSize size = dl.getTypeSize(ty);
     unsigned short alignment = dl.getTypeABIAlignment(ty);
-    return {size, alignment};
+    return std::pair{size, alignment};
   }
   if (auto firCmplx = mlir::dyn_cast<fir::ComplexType>(ty)) {
-    auto [floatSize, floatAlign] =
+    auto result =
         getTypeSizeAndAlignment(loc, firCmplx.getEleType(kindMap), dl, kindMap);
-    return {llvm::alignTo(floatSize, floatAlign) + floatSize, floatAlign};
+    if (!result)
+      return result;
+    auto [floatSize, floatAlign] = *result;
+    return std::pair{llvm::alignTo(floatSize, floatAlign) + floatSize,
+                     floatAlign};
   }
   if (auto real = mlir::dyn_cast<fir::RealType>(ty))
     return getTypeSizeAndAlignment(loc, real.getFloatType(kindMap), dl,
                                    kindMap);
 
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
-    auto [eleSize, eleAlign] =
-        getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
-
+    auto result = getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
+    if (!result)
+      return result;
+    auto [eleSize, eleAlign] = *result;
     std::uint64_t size =
         llvm::alignTo(eleSize, eleAlign) * seqTy.getConstantArraySize();
-    return {size, eleAlign};
+    return std::pair{size, eleAlign};
   }
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
     unsigned short align = 1;
     for (auto component : recTy.getTypeList()) {
-      auto [compSize, compAlign] =
-          getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+      auto result = getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+      if (!result)
+        return result;
+      auto [compSize, compAlign] = *result;
       size =
           llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
       align = std::max(align, compAlign);
     }
-    return {size, align};
+    return std::pair{size, align};
   }
   if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
     mlir::Type intTy = mlir::IntegerType::get(
@@ -1440,7 +1447,24 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     mlir::Type intTy = mlir::IntegerType::get(
         character.getContext(),
         kindMap.getCharacterBitsize(character.getFKind()));
-    return getTypeSizeAndAlignment(loc, intTy, dl, kindMap);
+    auto result = getTypeSizeAndAlignment(loc, intTy, dl, kindMap);
+    if (!result)
+      return result;
+    auto [compSize, compAlign] = *result;
+    if (character.hasConstantLen())
+      compSize *= character.getLen();
+    return std::pair{compSize, compAlign};
   }
+  return std::nullopt;
+}
+
+std::pair<std::uint64_t, unsigned short>
+fir::getTypeSizeAndAlignmentOrCrash(mlir::Location loc, mlir::Type ty,
+                                    const mlir::DataLayout &dl,
+                                    const fir::KindMapping &kindMap) {
+  std::optional<std::pair<uint64_t, unsigned short>> result =
+      getTypeSizeAndAlignment(loc, ty, dl, kindMap);
+  if (result)
+    return *result;
   TODO(loc, "computing size of a component");
 }

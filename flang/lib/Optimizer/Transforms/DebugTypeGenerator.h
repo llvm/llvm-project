@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
@@ -23,7 +24,8 @@ namespace fir {
 /// This converts FIR/mlir type to DITypeAttr.
 class DebugTypeGenerator {
 public:
-  DebugTypeGenerator(mlir::ModuleOp module);
+  DebugTypeGenerator(mlir::ModuleOp module, mlir::SymbolTable *symbolTable,
+                     const mlir::DataLayout &dl);
 
   mlir::LLVM::DITypeAttr convertType(mlir::Type Ty,
                                      mlir::LLVM::DIFileAttr fileAttr,
@@ -31,6 +33,10 @@ public:
                                      mlir::Location loc);
 
 private:
+  mlir::LLVM::DITypeAttr convertRecordType(fir::RecordType Ty,
+                                           mlir::LLVM::DIFileAttr fileAttr,
+                                           mlir::LLVM::DIScopeAttr scope,
+                                           mlir::Location loc);
   mlir::LLVM::DITypeAttr convertSequenceType(fir::SequenceType seqTy,
                                              mlir::LLVM::DIFileAttr fileAttr,
                                              mlir::LLVM::DIScopeAttr scope,
@@ -57,6 +63,8 @@ private:
                          bool genAllocated, bool genAssociated);
 
   mlir::ModuleOp module;
+  mlir::SymbolTable *symbolTable;
+  const mlir::DataLayout *dataLayout;
   KindMapping kindMapping;
   std::uint64_t dimsSize;
   std::uint64_t dimsOffset;
@@ -65,5 +73,12 @@ private:
 };
 
 } // namespace fir
+
+static uint32_t getLineFromLoc(mlir::Location loc) {
+  uint32_t line = 1;
+  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+    line = fileLoc.getLine();
+  return line;
+}
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_DEBUGTYPEGENERATOR_H
