@@ -2096,3 +2096,9 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "r
   def VLDAP1_LANE : WInst<"vldap1_lane", ".(c*!).I", "QUlQlUlldQdPlQPl">;
   def VSTL1_LANE  : WInst<"vstl1_lane", "v*(.!)I", "QUlQlUlldQdPlQPl">;
 }
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8" in {
+  // fscale
+  def FSCALE_V128 : WInst<"vscale", "..(.S)", "QdQfQh">;
+  def FSCALE_V64 : WInst<"vscale", "(.q)(.q)(.qS)", "fh">;
+}
