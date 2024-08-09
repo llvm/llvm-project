@@ -1441,10 +1441,12 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // Check whether the loop-related control flow in the loop nest is expected by
   // vectorizer.
   if (!canVectorizeLoopNestCFG(TheLoop, UseVPlanNativePath)) {
-    if (DoExtraAnalysis)
+    if (DoExtraAnalysis) {
+      LLVM_DEBUG(dbgs() << "LV legality check failed: loop nest");
       Result = false;
-    else
+    } else {
       return false;
+    }
   }
 
   // We need to have a loop header.
@@ -1509,11 +1511,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
-                    << (LAI->getRuntimePointerChecking()->Need
-                            ? " (with a runtime bound check)"
-                            : "")
-                    << "!\n");
 
   unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
   if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
@@ -1527,6 +1524,13 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       Result = false;
     else
       return false;
+  }
+  if (Result) {
+    LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
+                      << (LAI->getRuntimePointerChecking()->Need
+                              ? " (with a runtime bound check)"
+                              : "")
+                      << "!\n");
   }
 
   // Okay! We've done all the tests. If any have failed, return false. Otherwise
