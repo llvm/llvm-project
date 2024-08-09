@@ -817,4 +817,9 @@ multiclass ZAReadzArray<string vg_num>{
 
 defm SVREADZ_VG2 :  ZAReadzArray<"2">;
 defm SVREADZ_VG4 :  ZAReadzArray<"4">;
+
+let SMETargetGuard = "sme2,sme-lutv2" in {
+  def SVWRITE_LANE_ZT : SInst<"svwrite_lane_zt[_{d}]", "vidi", "cUcsUsiUilUlfhdb", MergeNone, "aarch64_sme_write_lane_zt", [IsStreaming, IsInOutZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck1_3>]>;
+  def SVWRITE_ZT : SInst<"svwrite_zt[_{d}]", "vid", "cUcsUsiUilUlfhdb", MergeNone, "aarch64_sme_write_zt", [IsStreaming, IsOutZT0], [ImmCheck<0, ImmCheck0_0>]>;
+}
 } // let SVETargetGuard = InvalidMode
