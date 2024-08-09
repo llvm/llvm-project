@@ -767,7 +767,7 @@ module {
     %12 = cir.get_global @".str" : !cir.ptr<!cir.array<!u8i x 28>>
     %13 = cir.cast(array_to_ptrdecay, %12 : !cir.ptr<!cir.array<!u8i x 28>>), !cir.ptr<!u8i>
     cir.store %13, %11 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
-    cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>) // expected-error {{'type_info' symbol attribute missing}}
+    cir.throw %11 : !cir.ptr<!cir.ptr<!u8i>> // expected-error {{'type_info' symbol attribute missing}}
   }
 }
 

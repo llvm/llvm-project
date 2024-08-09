@@ -2157,11 +2157,7 @@ void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
   auto exceptionPtr =
       builder
           .create<mlir::cir::AllocExceptionOp>(
-              subExprLoc, throwTy,
-              mlir::IntegerAttr::get(
-                  mlir::IntegerType::get(builder.getContext(), 64,
-                                         mlir::IntegerType::Unsigned),
-                  typeSize))
+              subExprLoc, throwTy, builder.getI64IntegerAttr(typeSize))
           .getAddr();
 
   // Build expression and store its result into exceptionPtr.
@@ -2195,11 +2191,15 @@ void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
             .getSymNameAttr());
   }
 
+  // FIXME: When adding support for invoking, we should wrap the throw op
+  // below into a try, and let CFG flatten pass to generate a cir.try_call.
   assert(!CGF.getInvokeDest() && "landing pad like logic NYI");
 
   // Now throw the exception.
-  builder.create<mlir::cir::ThrowOp>(CGF.getLoc(E->getSourceRange()),
-                                     exceptionPtr, typeInfo.getSymbol(), dtor);
+  mlir::Location loc = CGF.getLoc(E->getSourceRange());
+  builder.create<mlir::cir::ThrowOp>(loc, exceptionPtr, typeInfo.getSymbol(),
+                                     dtor);
+  builder.create<mlir::cir::UnreachableOp>(loc);
 }
 
 static mlir::cir::FuncOp getBadCastFn(CIRGenFunction &CGF) {
