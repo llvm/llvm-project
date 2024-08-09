@@ -341,11 +341,11 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
 }
 
 def OMPMapInfoFinalizationPass
-    : Pass<"omp-map-info-finalization"> {
+    : Pass<"omp-map-info-finalization", "mlir::ModuleOp"> {
   let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
-    Expands MapInfo operations containing descriptor types into multiple 
-    MapInfo's for each pointer element in the descriptor that requires 
+    Expands MapInfo operations containing descriptor types into multiple
+    MapInfo's for each pointer element in the descriptor that requires
     explicit individual mapping by the OpenMP runtime.
   }];
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
