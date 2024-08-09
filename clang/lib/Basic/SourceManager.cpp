@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -166,8 +167,15 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // Unless this is a named pipe (in which case we can handle a mismatch),
   // check that the file's size is the same as in the file entry (which may
   // have come from a stat cache).
+#ifndef __MVS__
   if (!ContentsEntry->isNamedPipe() &&
       Buffer->getBufferSize() != (size_t)ContentsEntry->getSize()) {
+#else
+  // The buffer will always be larger than the file size on z/OS in the presence
+  // of characters outside the base character set.
+  if (!ContentsEntry->isNamedPipe() &&
+      Buffer->getBufferSize() < (size_t)ContentsEntry->getSize()) {
+#endif
     if (Diag.isDiagnosticInFlight())
       Diag.SetDelayedDiagnostic(diag::err_file_modified,
                                 ContentsEntry->getName());
@@ -616,6 +624,23 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
+#ifdef __MVS__
+  llvm::ErrorOr<bool> NeedConversion =
+      llvm::needConversion(Filename.str().c_str());
+  if (NeedConversion && *NeedConversion) {
+    // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
+    // conversion.
+    if (std::optional<llvm::MemoryBufferRef> Buffer =
+            File.getBufferOrNone(Diag, getFileManager())) {
+      unsigned BufSize = Buffer->getBufferSize();
+      if (BufSize > FileSize) {
+        if (File.ContentsEntry.has_value())
+          File.ContentsEntry->getFileEntry().setSize(BufSize);
+        FileSize = BufSize;
+      }
+    }
+  }
+#endif
   if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
     Diag.Report(IncludePos, diag::err_sloc_space_too_large);

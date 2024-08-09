@@ -70,6 +70,11 @@ public:
   const FileEntry &getFileEntry() const {
     return *getBaseMapEntry().second->V.get<FileEntry *>();
   }
+#ifdef __MVS__
+  FileEntry &getFileEntry() {
+    return *getBaseMapEntry().second->V.get<FileEntry *>();
+  }
+#endif
   DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
   inline off_t getSize() const;
@@ -323,6 +328,10 @@ public:
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }
+#ifdef __MVS__
+  // Size may increase due to potential z/OS EBCDIC -> UTF-8 conversion.
+  void setSize(off_t NewSize) { Size = NewSize; }
+#endif
   unsigned getUID() const { return UID; }
   const llvm::sys::fs::UniqueID &getUniqueID() const { return UniqueID; }
   time_t getModificationTime() const { return ModTime; }

@@ -326,7 +326,7 @@ ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
   SmallString<256> RealName, Storage;
   Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      adjustPath(Name, Storage), sys::fs::OF_None, &RealName);
+      adjustPath(Name, Storage), sys::fs::OF_Text, &RealName);
   if (!FDOrErr)
     return errorToErrorCode(FDOrErr.takeError());
   return std::unique_ptr<File>(
