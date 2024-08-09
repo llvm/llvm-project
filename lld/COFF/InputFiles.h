@@ -344,6 +344,7 @@ public:
   explicit ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m);
 
   static bool classof(const InputFile *f) { return f->kind() == ImportKind; }
+  MachineTypes getMachineType() const override;
 
   Symbol *impSym = nullptr;
   Symbol *thunkSym = nullptr;
