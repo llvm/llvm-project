@@ -124,7 +124,11 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   if (fir::isDummyArgument(declOp.getMemref())) {
     auto arg = llvm::cast<mlir::BlockArgument>(declOp.getMemref());
     argNo = arg.getArgNumber() + 1;
-  }
+  } else if (llvm::isa<mlir::BlockArgument>(declOp.getMemref()))
+    // FIXME: Handle arguments which are not dummy. These may be arguments
+    // to things like OpenMP regions. They may need some extra processing
+    // (e.g. to set the scope correctly).
+    return;
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
                                     fileAttr, scopeAttr, declOp.getLoc());

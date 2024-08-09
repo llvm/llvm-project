@@ -31,6 +31,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -39,8 +40,8 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -6569,10 +6570,41 @@ static Function *createOutlinedFunction(
       ParameterTypes.push_back(Arg->getType());
   }
 
+  auto BB = Builder.GetInsertBlock();
+  auto M = BB->getModule();
   auto FuncType = FunctionType::get(Builder.getVoidTy(), ParameterTypes,
                                     /*isVarArg*/ false);
-  auto Func = Function::Create(FuncType, GlobalValue::InternalLinkage, FuncName,
-                               Builder.GetInsertBlock()->getModule());
+  auto Func =
+      Function::Create(FuncType, GlobalValue::InternalLinkage, FuncName, M);
+
+  // If there's a DISubprogram associated with current function, then
+  // generate one for the outlined function.
+  if (Function *ParentFunc = BB->getParent()) {
+    if (DISubprogram *SP = ParentFunc->getSubprogram()) {
+      DICompileUnit *CU = SP->getUnit();
+      DIBuilder DB(*M, true, CU);
+      DebugLoc DL = Builder.getCurrentDebugLocation();
+      // TODO: We are using nullopt for arguments at the moment. This will need
+      // to be updated when debug data is being generated for variables.
+      DISubroutineType *Ty =
+          DB.createSubroutineType(DB.getOrCreateTypeArray(std::nullopt));
+      DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
+                                        DISubprogram::SPFlagOptimized |
+                                        DISubprogram::SPFlagLocalToUnit;
+
+      DISubprogram *OutlinedSP = DB.createFunction(
+          CU, FuncName, FuncName, SP->getFile(), DL.getLine(), Ty, DL.getLine(),
+          DINode::DIFlags::FlagArtificial, SPFlags);
+
+      // Attach subprogram to the function.
+      Func->setSubprogram(OutlinedSP);
+      // Update the CurrentDebugLocation in the builder so that right scope
+      // is used for things inside outlined function.
+      Builder.SetCurrentDebugLocation(
+          DILocation::get(Func->getContext(), DL.getLine(), DL.getCol(),
+                          OutlinedSP, DL.getInlinedAt()));
+    }
+  }
 
   // Save insert point.
   auto OldInsertPoint = Builder.saveIP();
