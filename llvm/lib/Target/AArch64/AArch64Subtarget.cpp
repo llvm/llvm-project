@@ -233,10 +233,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
-  case NeoverseN2:
-  case NeoverseN3:
   case NeoverseV2:
   case NeoverseV3:
+    MaxInterleaveFactor = 4;
+    LLVM_FALLTHROUGH;
+  case NeoverseN2:
+  case NeoverseN3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
