@@ -190,6 +190,11 @@ private:
   mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
   ArrayRef<MCPhysReg> getCachedAliasesOf(MCPhysReg R) const;
 
+  /// Look up a DWARF register number in the mapping table.
+  /// Returns the DWARF register number if found, or -1 if not found.
+  int getDwarfRegNumFromTable(MCRegister RegNum, const DwarfLLVMRegPair *M,
+                              unsigned Size) const;
+
   /// Iterator class that can traverse the differentially encoded values in
   /// DiffLists. Don't use this class directly, use one of the adaptors below.
   class DiffListIterator
@@ -414,10 +419,11 @@ public:
     return NumRegUnits;
   }
 
-  /// Map a target register to an equivalent dwarf register
-  /// number.  Returns -1 if there is no equivalent value.  The second
-  /// parameter allows targets to use different numberings for EH info and
-  /// debugging info.
+  /// Map a target register to an equivalent DWARF register number.
+  /// This function searches for a DWARF register number corresponding to the
+  /// given MCRegister. It checks the register itself, its super-registers, and
+  /// its sub-registers in that order. Returns the DWARF register number if
+  /// found, or -1 if there is no equivalent value.
   int getDwarfRegNum(MCRegister RegNum, bool isEH) const;
 
   /// Map a dwarf register back to a target register. Returns std::nullopt is
