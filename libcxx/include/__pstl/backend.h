@@ -24,6 +24,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__pstl/backends/serial.h>
 #elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
 #  include <__pstl/backends/default.h>
+#  include <__pstl/backends/forward_to_mem_funcs.h>
 #  include <__pstl/backends/std_thread.h>
 #elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 #  include <__pstl/backends/default.h>
