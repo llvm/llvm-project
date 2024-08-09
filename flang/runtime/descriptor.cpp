@@ -154,7 +154,7 @@ RT_API_ATTRS std::size_t Descriptor::Elements() const {
   return elements;
 }
 
-RT_API_ATTRS static int MapAllocIdx(const Descriptor &desc) {
+RT_API_ATTRS static inline int MapAllocIdx(const Descriptor &desc) {
 #ifdef RT_DEVICE_COMPILATION
   // Force default allocator in device code.
   return kDefaultAllocator;
