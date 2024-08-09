@@ -24,8 +24,6 @@
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 // Fix deque iterator type in order to support incomplete types.
 #  define _LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
-// Fix undefined behavior in how std::list stores its linked nodes.
-#  define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
 // Fix undefined behavior in  how __tree stores its end and parent nodes.
 #  define _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
 // Fix undefined behavior in how __hash_table stores its pointer types.
