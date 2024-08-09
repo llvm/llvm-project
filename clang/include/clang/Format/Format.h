@@ -659,7 +659,7 @@ struct FormatStyle {
 
   /// If the function declaration doesn't fit on a line,
   /// allow putting all parameters of a function declaration onto
-  /// the next line even if ``BinPackParameters`` is ``false``.
+  /// the next line even if ``BreakParameters`` is ``OnePerLine``.
   /// \code
   ///   true:
   ///   void myFunction(
@@ -1192,20 +1192,9 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackArguments;
 
-  /// If ``false``, a function declaration's or function definition's
-  /// parameters will either all be on the same line or will have one line each.
-  /// \code
-  ///   true:
-  ///   void f(int aaaaaaaaaaaaaaaaaaaa, int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
-  ///
-  ///   false:
-  ///   void f(int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaa,
-  ///          int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
-  /// \endcode
+  /// This option is **deprecated**. See ``BreakParameters``.
   /// \version 3.7
-  bool BinPackParameters;
+  // bool BinPackParameters;
 
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {
@@ -2386,6 +2375,37 @@ struct FormatStyle {
   /// \version 7
   BreakInheritanceListStyle BreakInheritanceList;
 
+  /// Different ways to break parameters.
+  enum BreakParametersStyle : int8_t {
+    /// Put all parameters on the current line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///    void f(int a, int b, int c);
+    ///
+    ///    void f(int a,
+    ///           int b,
+    ///           int ccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BRPS_OnePerLine,
+    /// Bin-pack parameters.
+    /// \code
+    ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+    ///           int ccccccccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BRPS_Never,
+    /// Always put each parameter on its own line.
+    /// \code
+    ///    void f(int a,
+    ///           int b,
+    ///           int c);
+    /// \endcode
+    BRPS_Always,
+  };
+
+  /// The break parameters style to use.
+  /// \version 20
+  BreakParametersStyle BreakParameters;
+
   /// The template declaration breaking style to use.
   /// \version 19
   BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
@@ -3378,7 +3398,7 @@ struct FormatStyle {
   /// items into as few lines as possible when they go over ``ColumnLimit``.
   ///
   /// If ``Auto`` (the default), delegates to the value in
-  /// ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  /// ``BreakParameters``. If that is ``Never``, bin-packs Objective-C
   /// protocol conformance list items into as few lines as possible
   /// whenever they go over ``ColumnLimit``.
   ///
@@ -3390,13 +3410,13 @@ struct FormatStyle {
   /// onto individual lines whenever they go over ``ColumnLimit``.
   ///
   /// \code{.objc}
-  ///    Always (or Auto, if BinPackParameters=true):
+  ///    Always (or Auto, if BreakParameters==Never):
   ///    @interface ccccccccccccc () <
   ///        ccccccccccccc, ccccccccccccc,
   ///        ccccccccccccc, ccccccccccccc> {
   ///    }
   ///
-  ///    Never (or Auto, if BinPackParameters=false):
+  ///    Never (or Auto, if BreakParameters!=Never):
   ///    @interface ddddddddddddd () <
   ///        ddddddddddddd,
   ///        ddddddddddddd,
@@ -5024,7 +5044,6 @@ struct FormatStyle {
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
-           BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
@@ -5041,6 +5060,7 @@ struct FormatStyle {
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
+           BreakParameters == R.BreakParameters &&
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&

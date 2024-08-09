@@ -1617,7 +1617,7 @@ the configuration (without a prefix: ``Auto``).
 **AllowAllParametersOfDeclarationOnNextLine** (``Boolean``) :versionbadge:`clang-format 3.3` :ref:`¶ <AllowAllParametersOfDeclarationOnNextLine>`
   If the function declaration doesn't fit on a line,
   allow putting all parameters of a function declaration onto
-  the next line even if ``BinPackParameters`` is ``false``.
+  the next line even if ``BreakParameters`` is ``OnePerLine``.
 
   .. code-block:: c++
 
@@ -2068,19 +2068,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BinPackParameters:
 
 **BinPackParameters** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
-  If ``false``, a function declaration's or function definition's
-  parameters will either all be on the same line or will have one line each.
-
-  .. code-block:: c++
-
-    true:
-    void f(int aaaaaaaaaaaaaaaaaaaa, int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
-
-    false:
-    void f(int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
+  This option is **deprecated**. See ``BreakParameters``.
 
 .. _BitFieldColonSpacing:
 
@@ -3398,6 +3386,44 @@ the configuration (without a prefix: ``Auto``).
        class Foo : Base1,
                    Base2
        {};
+
+
+
+.. _BreakParameters:
+
+**BreakParameters** (``BreakParametersStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakParameters>`
+  The break parameters style to use.
+
+  Possible values:
+
+  * ``BRPS_OnePerLine`` (in configuration: ``OnePerLine``)
+    Put all parameters on the current line if they fit.
+    Otherwise, put each one on its own line.
+
+    .. code-block:: c++
+
+       void f(int a, int b, int c);
+
+       void f(int a,
+              int b,
+              int ccccccccccccccccccccccccccccccccccccc);
+
+  * ``BRPS_Never`` (in configuration: ``Never``)
+    Bin-pack parameters.
+
+    .. code-block:: c++
+
+       void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+              int ccccccccccccccccccccccccccccccccccccccccccc);
+
+  * ``BRPS_Always`` (in configuration: ``Always``)
+    Always put each parameter on its own line.
+
+    .. code-block:: c++
+
+       void f(int a,
+              int b,
+              int c);
 
 
 
@@ -4776,7 +4802,7 @@ the configuration (without a prefix: ``Auto``).
   items into as few lines as possible when they go over ``ColumnLimit``.
 
   If ``Auto`` (the default), delegates to the value in
-  ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  ``BreakParameters``. If that is ``Never``, bin-packs Objective-C
   protocol conformance list items into as few lines as possible
   whenever they go over ``ColumnLimit``.
 
@@ -4790,13 +4816,13 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: objc
 
-     Always (or Auto, if BinPackParameters=true):
+     Always (or Auto, if BreakParameters==Never):
      @interface ccccccccccccc () <
          ccccccccccccc, ccccccccccccc,
          ccccccccccccc, ccccccccccccc> {
      }
 
-     Never (or Auto, if BinPackParameters=false):
+     Never (or Auto, if BreakParameters!=Never):
      @interface ddddddddddddd () <
          ddddddddddddd,
          ddddddddddddd,

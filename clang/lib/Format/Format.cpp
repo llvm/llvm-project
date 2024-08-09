@@ -134,6 +134,14 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::BreakParametersStyle> {
+  static void enumeration(IO &IO, FormatStyle::BreakParametersStyle &Value) {
+    IO.enumCase(Value, "OnePerLine", FormatStyle::BRPS_OnePerLine);
+    IO.enumCase(Value, "Never", FormatStyle::BRPS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::BRPS_Always);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::BinPackStyle> {
   static void enumeration(IO &IO, FormatStyle::BinPackStyle &Value) {
     IO.enumCase(Value, "Auto", FormatStyle::BPS_Auto);
@@ -852,6 +860,15 @@ template <> struct MappingTraits<FormatStyle> {
     bool OnCurrentLine = IsGoogleOrChromium;
     bool OnNextLine = true;
 
+    // For backward compatibility:
+    // The default value of BinPackParameters was true unless BasedOnStyle was
+    // Mozilla or Chromium. If BinPackParameters is true then the equilvalent
+    // value for BreakParameters is BRPS_Never and BRPS_OnePerLine otherwise.
+    const bool IsChromiumOrMozilla =
+        BasedOnStyle.equals_insensitive("chromium") ||
+        BasedOnStyle.equals_insensitive("mozilla");
+    bool BinPackParameters = !IsChromiumOrMozilla;
+
     bool BreakBeforeInheritanceComma = false;
     bool BreakConstructorInitializersBeforeComma = false;
 
@@ -870,6 +887,7 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("AlwaysBreakAfterReturnType", Style.BreakAfterReturnType);
       IO.mapOptional("AlwaysBreakTemplateDeclarations",
                      Style.BreakTemplateDeclarations);
+      IO.mapOptional("BinPackParameters", BinPackParameters);
       IO.mapOptional("BreakBeforeInheritanceComma",
                      BreakBeforeInheritanceComma);
       IO.mapOptional("BreakConstructorInitializersBeforeComma",
@@ -947,7 +965,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AlwaysBreakBeforeMultilineStrings);
     IO.mapOptional("AttributeMacros", Style.AttributeMacros);
     IO.mapOptional("BinPackArguments", Style.BinPackArguments);
-    IO.mapOptional("BinPackParameters", Style.BinPackParameters);
     IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BracedInitializerIndentWidth",
                    Style.BracedInitializerIndentWidth);
@@ -973,6 +990,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakFunctionDefinitionParameters",
                    Style.BreakFunctionDefinitionParameters);
     IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
+    IO.mapOptional("BreakParameters", Style.BreakParameters);
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("BreakTemplateDeclarations",
                    Style.BreakTemplateDeclarations);
@@ -1157,6 +1175,18 @@ template <> struct MappingTraits<FormatStyle> {
     if (BreakConstructorInitializersBeforeComma &&
         Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeColon) {
       Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
+    }
+
+    // If BinPackParameters was specified but BreakParameters was not,
+    // initialize the latter from the former for backwards compatibility.
+    if (IsChromiumOrMozilla) {
+      if (BinPackParameters &&
+          (Style.BreakParameters == FormatStyle::BRPS_OnePerLine)) {
+        Style.BreakParameters = FormatStyle::BRPS_Never;
+      }
+    } else if (!BinPackParameters &&
+               (Style.BreakParameters == FormatStyle::BRPS_Never)) {
+      Style.BreakParameters = FormatStyle::BRPS_OnePerLine;
     }
 
     if (!IsGoogleOrChromium) {
@@ -1449,7 +1479,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");
   LLVMStyle.BinPackArguments = true;
-  LLVMStyle.BinPackParameters = true;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BracedInitializerIndentWidth = std::nullopt;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
@@ -1483,6 +1512,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
+  LLVMStyle.BreakParameters = FormatStyle::BRPS_Never;
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
@@ -1823,7 +1853,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     ChromiumStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
-    ChromiumStyle.BinPackParameters = false;
+    ChromiumStyle.BreakParameters = FormatStyle::BRPS_OnePerLine;
     ChromiumStyle.DerivePointerAlignment = false;
     if (Language == FormatStyle::LK_ObjC)
       ChromiumStyle.ColumnLimit = 80;
@@ -1838,11 +1868,11 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.BinPackArguments = false;
-  MozillaStyle.BinPackParameters = false;
   MozillaStyle.BreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;
   MozillaStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
   MozillaStyle.BreakInheritanceList = FormatStyle::BILS_BeforeComma;
+  MozillaStyle.BreakParameters = FormatStyle::BRPS_OnePerLine;
   MozillaStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   MozillaStyle.ConstructorInitializerIndentWidth = 2;
   MozillaStyle.ContinuationIndentWidth = 2;

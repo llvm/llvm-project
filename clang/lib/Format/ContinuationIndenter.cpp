@@ -128,24 +128,6 @@ static bool startsSegmentOfBuilderTypeCall(const FormatToken &Tok) {
   return Tok.isMemberAccess() && Tok.Previous && Tok.Previous->closesScope();
 }
 
-// Returns \c true if \c Current starts a new parameter.
-static bool startsNextParameter(const FormatToken &Current,
-                                const FormatStyle &Style) {
-  const FormatToken &Previous = *Current.Previous;
-  if (Current.is(TT_CtorInitializerComma) &&
-      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
-    return true;
-  }
-  if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
-    return true;
-  return Previous.is(tok::comma) && !Current.isTrailingComment() &&
-         ((Previous.isNot(TT_CtorInitializerComma) ||
-           Style.BreakConstructorInitializers !=
-               FormatStyle::BCIS_BeforeComma) &&
-          (Previous.isNot(TT_InheritanceComma) ||
-           Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
-}
-
 static bool opensProtoMessageField(const FormatToken &LessTok,
                                    const FormatStyle &Style) {
   if (LessTok.isNot(tok::less))
@@ -411,7 +393,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         // sets BreakBeforeParameter to avoid bin packing and this creates a
         // completely unnecessary line break after a template type that isn't
         // line-wrapped.
-        (Previous.NestingLevel == 1 || Style.BinPackParameters)) ||
+        (Previous.NestingLevel == 1 ||
+         Style.BreakParameters == FormatStyle::BRPS_Never)) ||
        (Style.BreakBeforeTernaryOperators && Current.is(TT_ConditionalExpr) &&
         Previous.isNot(tok::question)) ||
        (!Style.BreakBeforeTernaryOperators &&
@@ -1914,15 +1897,16 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         Current.MatchingParen->getPreviousNonComment() &&
         Current.MatchingParen->getPreviousNonComment()->is(tok::comma);
 
-    // If ObjCBinPackProtocolList is unspecified, fall back to BinPackParameters
+    // If ObjCBinPackProtocolList is unspecified, fall back to BreakParameters
     // for backwards compatibility.
     bool ObjCBinPackProtocolList =
         (Style.ObjCBinPackProtocolList == FormatStyle::BPS_Auto &&
-         Style.BinPackParameters) ||
+         Style.BreakParameters == FormatStyle::BRPS_Never) ||
         Style.ObjCBinPackProtocolList == FormatStyle::BPS_Always;
 
     bool BinPackDeclaration =
-        (State.Line->Type != LT_ObjCDecl && Style.BinPackParameters) ||
+        (State.Line->Type != LT_ObjCDecl &&
+         Style.BreakParameters == FormatStyle::BRPS_Never) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
     bool GenericSelection =
