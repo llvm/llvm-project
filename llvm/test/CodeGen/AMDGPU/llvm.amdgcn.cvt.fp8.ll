@@ -375,6 +375,7 @@ define i32 @test_cvt_sr_bf8_f32_byte1(float %x, i32 %r, i32 %old) {
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 op_sel:[0,0,1,0]
+; GFX940-NEXT:    s_nop 0
 ; GFX940-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -469,6 +470,7 @@ define i32 @test_cvt_sr_fp8_f32_byte1(float %x, i32 %r, i32 %old) {
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 op_sel:[0,0,1,0]
+; GFX940-NEXT:    s_nop 0
 ; GFX940-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;

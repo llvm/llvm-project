@@ -385,6 +385,13 @@ struct SingleUseExceptionInfo {
   bool IsInvalidSingleUseProducer;
 };
 
+struct FP8DstByteSelInfo {
+  uint16_t Opcode;
+  bool HasFP8DstByteSel;
+};
+
+#define GET_FP8DstByteSelTable_DECL
+#define GET_FP8DstByteSelTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -627,6 +634,11 @@ bool isInvalidSingleUseConsumerInst(unsigned Opc) {
 bool isInvalidSingleUseProducerInst(unsigned Opc) {
   const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
   return Info && Info->IsInvalidSingleUseProducer;
+}
+
+bool isFP8DstSelInst(unsigned Opc) {
+  const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
+  return Info ? Info->HasFP8DstByteSel : false;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
