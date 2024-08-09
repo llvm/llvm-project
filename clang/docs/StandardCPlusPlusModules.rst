@@ -1230,6 +1230,57 @@ parsing their headers, those should be included after the import. If the
 imported modules don't provide such a header, one can be made manually for
 improved compile time performance.
 
+Reachability of internal partition units
+----------------------------------------
+
+The internal partition units are called as implementation partition unit somewhere else.
+But the name may be confusing since implementation partition units are not implementation
+units.
+
+According to [module.reach]p1,2:
+
+  A translation unit U is necessarily reachable from a point P if U is a module
+  interface unit on which the translation unit containing P has an interface
+  dependency, or the translation unit containing P imports U, in either case
+  prior to P.
+
+  All translation units that are necessarily reachable are reachable. Additional
+  translation units on which the point within the program has an interface
+  dependency may be considered reachable, but it is unspecified which are and
+  under what circumstances.
+
+For example,
+
+.. code-block:: c++
+
+  // a.cpp
+  import B;
+  int main()
+  {
+      g<void>();
+  }
+
+  // b.cppm
+  export module B;
+  import :C;
+  export template <typename T> inline void g() noexcept
+  {
+      return f<T>();
+  }
+
+  // c.cppm
+  module B:C;
+  template<typename> inline void f() noexcept {}
+
+The internal partition units ``c.cppm`` is not necessarily reachable to
+``a.cpp`` since ``c.cppm`` is not a module interface unit and ``a.cpp``
+doesn't import ``c.cppm``. Then it is up to the compiler to decide if
+``c.cppm`` is reachable to ``a.cpp`` or not. Clang's decision is the
+non-directly imported internal partition units are not reachable.
+
+The suggestion to use internal partition units is, only import them in
+the implementation units unless we understand the codebases very well.
+
 Known Issues
 ------------
 
