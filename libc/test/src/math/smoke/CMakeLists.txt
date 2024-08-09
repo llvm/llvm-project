@@ -4353,6 +4353,48 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fsub_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fsub_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.fsub
+)
+
+add_fp_unittest(
+  fsubl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fsubl_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.fsubl
+)
+
+add_fp_unittest(
+  fsubf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fsubf128_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.fsubf128
+)
+
+add_fp_unittest(
   dsqrtl_test
   SUITE
     libc-math-smoke-tests
