@@ -768,7 +768,9 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("predres", HasPredRes)
       .Cases("ssbs", "ssbs2", HasSSBS)
       .Case("bti", HasBTI)
-      .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
+      .Case("ls64", HasLS64)
+      .Case("ls64_v", HasLS64_V)
+      .Case("ls64_accdata", HasLS64_ACCDATA)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
       .Default(false);
@@ -1045,6 +1047,15 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasLSE = true;
     if (Feature == "+ls64")
       HasLS64 = true;
+    if (Feature == "+ls64_v") {
+      HasLS64 = true;
+      HasLS64_V = true;
+    }
+    if (Feature == "+ls64_accdata") {
+      HasLS64 = true;
+      HasLS64_V = true;
+      HasLS64_ACCDATA = true;
+    }
     if (Feature == "+rand")
       HasRandGen = true;
     if (Feature == "+flagm")

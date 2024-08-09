@@ -33,7 +33,7 @@
 // CHECK-NEXT:     i8mm                FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
 // CHECK-NEXT:     ite                 FEAT_ITE                                               Enable Armv9.4-A Instrumentation Extension
 // CHECK-NEXT:     jscvt               FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
-// CHECK-NEXT:     ls64                FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA              Enable Armv8.7-A LD64B/ST64B Accelerator Extension
+// CHECK-NEXT:     ls64                FEAT_LS64_ACCDATA                                      Enable single-copy atomic 64-byte EL0 stores with status result
 // CHECK-NEXT:     lse                 FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
 // CHECK-NEXT:     lut                 FEAT_LUT                                               Enable Lookup Table instructions

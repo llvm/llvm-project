@@ -33,7 +33,9 @@
 // CHECK-NEXT:     FEAT_LOR                                               Enable Armv8.1-A Limited Ordering Regions extension
 // CHECK-NEXT:     FEAT_LRCPC                                             Enable support for RCPC extension
 // CHECK-NEXT:     FEAT_LRCPC2                                            Enable Armv8.4-A RCPC instructions with Immediate Offsets
-// CHECK-NEXT:     FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA              Enable Armv8.7-A LD64B/ST64B Accelerator Extension
+// CHECK-NEXT:     FEAT_LS64                                              Enable single-copy atomic 64-byte loads and stores without status result
+// CHECK-NEXT:     FEAT_LS64_ACCDATA                                      Enable single-copy atomic 64-byte EL0 stores with status result
+// CHECK-NEXT:     FEAT_LS64_V                                            Enable single-copy atomic 64-byte stores with status result
 // CHECK-NEXT:     FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     FEAT_LSE2                                              Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules
 // CHECK-NEXT:     FEAT_MPAM                                              Enable Armv8.4-A Memory system Partitioning and Monitoring extension

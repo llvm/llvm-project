@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=aarch64 -mattr=+ls64 -disassemble %s 2> %t | FileCheck %s
+# RUN: not llvm-mc -triple=aarch64 -mattr=+ls64_accdata -disassemble %s 2> %t | FileCheck %s
 # RUN: FileCheck --check-prefix=CHECK-ERR %s < %t
 # RUN: not llvm-mc -triple=aarch64 -disassemble %s 2> %t | FileCheck --check-prefix=CHECK-NO-LS64 %s
 # RUN: FileCheck --check-prefix=CHECK-ERR --check-prefix=CHECK-NO-LS64-ERR %s < %t
