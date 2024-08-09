@@ -1868,14 +1868,14 @@ functions:
       - type: _Float16 *
       - type: _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: totalorderf16
+  - name: totalorderf128
     standards:
       - stdc
     return_type: int
     arguments:
       - type: float128 *
       - type: float128 *
-    guard: LIBC_TYPES_HAS_FLOAT16
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: totalordermagf16
     standards:
       - stdc
