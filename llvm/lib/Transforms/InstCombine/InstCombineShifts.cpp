@@ -1513,16 +1513,21 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       // able to invert the transform and perf may suffer with an extra mul
       // instruction.
       if (Op0->hasOneUse()) {
-        APInt NewMulC = MulC->lshr(ShAmtC);
-        // if c is divisible by (1 << ShAmtC):
-        // lshr (mul nuw x, MulC), ShAmtC -> mul nuw nsw x, (MulC >> ShAmtC)
-        if (MulC->eq(NewMulC.shl(ShAmtC))) {
-          auto *NewMul =
-              BinaryOperator::CreateNUWMul(X, ConstantInt::get(Ty, NewMulC));
-          assert(ShAmtC != 0 &&
-                 "lshr X, 0 should be handled by simplifyLShrInst.");
-          NewMul->setHasNoSignedWrap(true);
-          return NewMul;
+        assert(ShAmtC != 0 &&
+               "lshr X, 0 should be handled by simplifyLShrInst.");
+        unsigned CommonZeros = std::min(MulC->countr_zero(), ShAmtC);
+        if (CommonZeros != 0) {
+          APInt NewMulC = MulC->lshr(CommonZeros);
+          unsigned NewShAmtC = ShAmtC - CommonZeros;
+
+          // We can reduce expressions such as like lshr (mul nuw x, 6), 2 ->
+          // lshr (mul nuw nsw x, 3), 1
+          auto *NewMul = Builder.CreateMul(X, ConstantInt::get(Ty, NewMulC), "",
+                                           /*NUW=*/true, /*NSW=*/true);
+          auto *NewLshr = BinaryOperator::CreateLShr(
+              NewMul, ConstantInt::get(Ty, NewShAmtC));
+          NewLshr->copyIRFlags(&I); // We can preserve 'exact'-ness.
+          return NewLshr;
         }
       }
     }
@@ -1719,6 +1724,25 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       AmtSum = std::min(AmtSum, BitWidth - 1);
       // (X >>s C1) >>s C2 --> X >>s (C1 + C2)
       return BinaryOperator::CreateAShr(X, ConstantInt::get(Ty, AmtSum));
+    }
+
+    if (match(Op0, m_OneUse(m_NSWMul(m_Value(X), m_APInt(ShOp1))))) {
+      unsigned CommonZeros = std::min(ShOp1->countr_zero(), ShAmt);
+      if (CommonZeros != 0) {
+        APInt NewMulC = ShOp1->ashr(CommonZeros);
+        unsigned NewShAmtC = ShAmt - CommonZeros;
+
+        // We can reduce expressions such as ashr (mul nsw x, 6), 2 -> ashr (mul
+        // nsw x, 3), 1
+        auto *NewMul = Builder.CreateMul(
+            X, ConstantInt::get(Ty, NewMulC), "",
+            /*NUW*/ cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap(),
+            /*NSW*/ true);
+        auto *NewAshr =
+            BinaryOperator::CreateAShr(NewMul, ConstantInt::get(Ty, NewShAmtC));
+        NewAshr->copyIRFlags(&I); // We can preserve 'exact'-ness.
+        return NewAshr;
+      }
     }
 
     if (match(Op0, m_OneUse(m_SExt(m_Value(X)))) &&

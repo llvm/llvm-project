@@ -702,8 +702,8 @@ define i32 @shl_add_lshr_neg(i32 %x, i32 %y, i32 %z) {
 
 define i32 @mul_splat_fold_wrong_mul_const(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_wrong_mul_const(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 65538
-; CHECK-NEXT:    [[T:%.*]] = lshr i32 [[M]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T:%.*]] = add nuw nsw i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %m = mul nuw i32 %x, 65538
@@ -1522,4 +1522,52 @@ define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
   %add = add <2 x i8> %zext.a, %zext.b
   %lshr = lshr <2 x i8> %add, <i8 1, i8 2>
   ret <2 x i8> %lshr
+}
+
+define i32 @reduce_shift(i32 %x) {
+; CHECK-LABEL: @reduce_shift(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 12
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
+
+; Negative test
+
+define i32 @reduce_shift_no_nuw(i32 %x) {
+; CHECK-LABEL: @reduce_shift_no_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nsw i32 %x, 12
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
+
+; Negative test
+
+define i32 @reduce_shift_wrong_mul(i32 %x) {
+; CHECK-LABEL: @reduce_shift_wrong_mul(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 11
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 11
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
+
+define i32 @reduce_shift_exact(i32 %x) {
+; CHECK-LABEL: @reduce_shift_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 12
+  %shr = lshr exact i32 %mul, 4
+  ret i32 %shr
 }
