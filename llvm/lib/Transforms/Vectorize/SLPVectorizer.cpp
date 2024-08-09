@@ -309,9 +309,11 @@ static unsigned getNumElems(unsigned Size, unsigned PartNumElems,
 
 #if !defined(NDEBUG)
 /// Print a short descriptor of the instruction bundle suitable for debug output.
-static std::string shortBundleName(ArrayRef<Value *> VL) {
+static std::string shortBundleName(ArrayRef<Value *> VL, int Idx = -1) {
   std::string Result;
   raw_string_ostream OS(Result);
+  if (Idx >= 0)
+    OS << "Idx: " << Idx << ", ";
   OS << "n=" << VL.size() << " [" << *VL.front() << ", ..]";
   OS.flush();
   return Result;
@@ -10639,7 +10641,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         // Some gather nodes might be absolutely the same as some vectorizable
         // nodes after reordering, need to handle it.
         LLVM_DEBUG(dbgs() << "SLP: Adding cost 0 for bundle "
-                          << shortBundleName(TE.Scalars) << ".\n"
+                          << shortBundleName(TE.Scalars, TE.Idx) << ".\n"
                           << "SLP: Current total cost = " << Cost << "\n");
         continue;
       }
@@ -10648,7 +10650,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
     Cost += C;
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
-                      << shortBundleName(TE.Scalars) << ".\n"
+                      << shortBundleName(TE.Scalars, TE.Idx) << ".\n"
                       << "SLP: Current total cost = " << Cost << "\n");
   }
 
@@ -12638,10 +12640,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           Entries.front().front()->isSame(E->Scalars)) {
         // Perfect match in the graph, will reuse the previously vectorized
         // node. Cost is 0.
-        LLVM_DEBUG(
-            dbgs()
-            << "SLP: perfect diamond match for gather bundle "
-            << shortBundleName(E->Scalars) << ".\n");
+        LLVM_DEBUG(dbgs() << "SLP: perfect diamond match for gather bundle "
+                          << shortBundleName(E->Scalars, E->Idx) << ".\n");
         // Restore the mask for previous partially matched values.
         Mask.resize(E->Scalars.size());
         const TreeEntry *FrontTE = Entries.front().front();
