@@ -6390,7 +6390,24 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       currentEvaluationContext().ReferenceToConsteval.erase(DRE);
     }
   }
+
   return Call;
+}
+
+const FieldDecl *FindCountedByField(const FieldDecl *FD) {
+  if (!FD)
+    return nullptr;
+
+  const auto *CAT = FD->getType()->getAs<CountAttributedType>();
+  if (!CAT)
+    return nullptr;
+
+  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  const auto *CountDecl = CountDRE->getDecl();
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
+    CountDecl = IFD->getAnonField();
+
+  return dyn_cast<FieldDecl>(CountDecl);
 }
 
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
@@ -6590,8 +6607,34 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
                             VK_PRValue, RParenLoc, CurFPFeatureOverrides());
   }
-  return BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
-                               ExecConfig, IsExecConfig);
+
+  Result = BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
+                                 ExecConfig, IsExecConfig);
+
+  if (FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
+      FDecl && FDecl->getBuiltinID() == Builtin::BI__builtin_get_counted_by) {
+    if (const MemberExpr *ME = ArgExprs[0]->getMemberExpr()) {
+      bool IsFlexibleArrayMember = ME->isFlexibleArrayMemberLike(
+          Context, getLangOpts().getStrictFlexArraysLevel());
+
+      if (!ME->HasSideEffects(Context) && IsFlexibleArrayMember &&
+          ME->getMemberDecl()->getType()->isCountAttributedType()) {
+        const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
+          // The builtin returns a 'size_t *', however 'size_t' might not be
+          // the type of the count field. Thus we create an explicit c-style
+          // cast to ensure the proper types going forward.
+          QualType PtrTy = Context.getPointerType(CountFD->getType());
+          Result = CStyleCastExpr::Create(
+              Context, PtrTy, VK_LValue, CK_BitCast, Result.get(), nullptr,
+              FPOptionsOverride(), Context.CreateTypeSourceInfo(PtrTy),
+              LParenLoc, RParenLoc);
+        }
+      }
+    }
+  }
+
+  return Result;
 }
 
 Expr *Sema::BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,

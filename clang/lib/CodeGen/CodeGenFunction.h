@@ -3309,6 +3309,10 @@ public:
   /// \p nullptr if either the attribute or the field doesn't exist.
   const FieldDecl *FindCountedByField(const FieldDecl *FD);
 
+  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
+
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
                                         const FieldDecl *FAMDecl,
