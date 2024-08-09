@@ -110,6 +110,24 @@ class HeaderMap(object):
             yield (self.get_string(key_idx),
                    self.get_string(prefix_idx) + self.get_string(suffix_idx))
 
+class StringTable:
+    def __init__(self):
+        # A string table offset of 0 is interpreted as an empty bucket, so it's
+        # important we don't assign an actual string to that offset.
+        self.table = "\0"
+        # For the same reason we don't want the empty string having a 0 offset.
+        self.offsets = {}
+
+    def add(self, string):
+        offset = self.offsets.get(string)
+        if offset:
+            return offset
+
+        offset = len(self.table)
+        self.table += string + "\0"
+        self.offsets[string] = offset
+        return offset
+
 ###
 
 def action_dump(name, args):
@@ -182,7 +200,7 @@ def action_write(name, args):
     table = [(0, 0, 0)
              for i in range(num_buckets)]
     max_value_len = 0
-    strtable = "\0"
+    strtable = StringTable()
     for key,value in mappings.items():
         if not isinstance(key, str):
             key = key.decode('utf-8')
@@ -190,17 +208,14 @@ def action_write(name, args):
             value = value.decode('utf-8')
         max_value_len = max(max_value_len, len(value))
 
-        key_idx = len(strtable)
-        strtable += key + '\0'
+        key_idx = strtable.add(key)
         prefix, suffix = os.path.split(value)
         # This guarantees that prefix + suffix == value in all cases, including when
         # prefix is empty or contains a trailing slash or suffix is empty (hence the use
         # of `len(value) - len(suffix)` instead of just `-len(suffix)`.
         prefix += value[len(prefix) : len(value) - len(suffix)]
-        prefix_idx = len(strtable)
-        strtable += prefix + '\0'
-        suffix_idx = len(strtable)
-        strtable += suffix + '\0'
+        prefix_idx = strtable.add(prefix)
+        suffix_idx = strtable.add(suffix)
 
         hash = hmap_hash(key)
         for i in range(num_buckets):
@@ -228,7 +243,7 @@ def action_write(name, args):
         f.write(struct.pack(header_fmt, *header))
         for bucket in table:
             f.write(struct.pack(bucket_fmt, *bucket))
-        f.write(strtable.encode())
+        f.write(strtable.table.encode())
 
 def action_tovfs(name, args):
     "convert a headermap to a VFS layout"
