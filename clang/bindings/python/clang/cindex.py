@@ -152,6 +152,41 @@ c_object_p: TType[_Pointer[Any]] = POINTER(c_void_p)
 ### Exception Classes ###
 
 
+class CXError(Exception):
+    '''Represents C error of type enum CXErrorCode.'''
+
+    # A generic error code, no further details are available.
+    #
+    # Errors of this kind can get their own specific error codes in future
+    # libclang versions.
+    ERROR_FAILURE = 1
+
+    # libclang crashed while performing the requested operation.
+    ERROR_CRASHED = 2
+
+    # The function detected that the arguments violate the function
+    # contract.
+    ERROR_INVALID_ARGUMENTS = 3
+
+    # An AST deserialization error has occurred.
+    ERROR_AST_READ_ERROR = 4
+
+    error_code: int
+
+    def __init__(self, enumeration: int, message: str):
+        assert isinstance(enumeration, int)
+
+        if enumeration < 1 or enumeration > 4:
+            raise Exception(
+                "Encountered undefined CXError "
+                "constant: %d. Please file a bug to have this "
+                "value supported." % enumeration
+            )
+
+        self.error_code = enumeration
+        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+
+
 class TranslationUnitLoadError(Exception):
     """Represents an error that occurred when loading a TranslationUnit.
 
@@ -3263,9 +3298,11 @@ class TranslationUnit(ClangObject):
             unsaved_files = []
 
         unsaved_files_array = self.process_unsaved_files(unsaved_files)
-        ptr = conf.lib.clang_reparseTranslationUnit(
+        result = conf.lib.clang_reparseTranslationUnit(
             self, len(unsaved_files), unsaved_files_array, options
         )
+        if result != 0:
+            raise CXError(result, 'Error reparsing TranslationUnit.')
 
     def save(self, filename):
         """Saves the TranslationUnit to a file.
