@@ -2637,7 +2637,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         defvar T = "(Tuple:" # nf # ")";
         defvar V = VString<nf, /*signed=*/true>.S;
         defvar UV = VString<nf, /*signed=*/false>.S;
-        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfdy">;
+        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfd">;
         let RequiredFeatures = ["Zvfbfmin"] in
           def : RVVBuiltin<T # "v", T # "v" # V, "y">;
         def : RVVBuiltin<T # "Uv", T # "Uv" # UV, "csil">;
