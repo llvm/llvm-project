@@ -16609,9 +16609,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   //
   // With this expansion we produce the following code:
   //   [...]
-  //   br label %atomicrmw.check.shared
-  //
-  // atomicrmw.check.shared:
   //   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %addr)
   //   br i1 %is.shared, label %atomicrmw.shared, label %atomicrmw.check.private
   //
@@ -16654,8 +16651,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Function *F = BB->getParent();
   BasicBlock *ExitBB =
       BB->splitBasicBlock(Builder.GetInsertPoint(), "atomicrmw.end");
-  BasicBlock *CheckSharedBB =
-      BasicBlock::Create(Ctx, "atomicrmw.check.shared", F, ExitBB);
   BasicBlock *SharedBB = BasicBlock::Create(Ctx, "atomicrmw.shared", F, ExitBB);
   BasicBlock *CheckPrivateBB =
       BasicBlock::Create(Ctx, "atomicrmw.check.private", F, ExitBB);
@@ -16682,9 +16677,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
-  Builder.CreateBr(CheckSharedBB);
-
-  Builder.SetInsertPoint(CheckSharedBB);
   CallInst *IsShared = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_shared, {},
                                                {Addr}, nullptr, "is.shared");
   Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
