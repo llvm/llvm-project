@@ -189,6 +189,11 @@ FIELD(DeclaredNonTrivialSpecialMembers, 6, MERGE_OR)
 /// SMF_MoveConstructor, and SMF_Destructor are meaningful here.
 FIELD(DeclaredNonTrivialSpecialMembersForCall, 6, MERGE_OR)
 
+/// True when this class's bases and fields are all trivially relocatable
+/// or references, and the class itself has no user-provided special
+/// member functions.
+FIELD(IsNaturallyTriviallyRelocatable, 1, NO_MERGE)
+
 /// True when this class has a destructor with no semantic effect.
 FIELD(HasIrrelevantDestructor, 1, NO_MERGE)
 
