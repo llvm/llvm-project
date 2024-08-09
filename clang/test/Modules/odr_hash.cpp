@@ -3084,8 +3084,8 @@ struct S5 {
 };
 #else
 S5 s5;
-// expected-error@second.h:* {{'PointersAndReferences::S5::x' from module 'SecondModule' is not present in definition of 'PointersAndReferences::S5' in module 'FirstModule'}}
-// expected-note@first.h:* {{declaration of 'x' does not match}}
+// expected-error@first.h:* {{'PointersAndReferences::S5::x' from module 'FirstModule' is not present in definition of 'PointersAndReferences::S5' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
 #if defined(FIRST)
