@@ -1124,12 +1124,12 @@ parseSwitchCases(OpAsmParser &parser, DenseI64ArrayAttr &cases,
 }
 
 /// Print the case regions and values.
-static void printSwitchCases(OpAsmPrinter &parser, Operation *op,
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
                              DenseI64ArrayAttr cases, RegionRange caseRegions) {
   for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
-    parser.printNewline();
-    parser << "case " << value << ": ";
-    parser.printRegion(*region, /*printEntryBlockArgs=*/false);
+    p.printNewline();
+    p << "case " << value << ": ";
+    p.printRegion(*region, /*printEntryBlockArgs=*/false);
   }
 }
 
