@@ -394,6 +394,8 @@ public:
   LegalizeResult lowerRotate(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
+  LegalizeResult lowerU64ToF32WithSITOFP(MachineInstr &MI);
+  LegalizeResult lowerU64ToF64BitFloatOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI);
   LegalizeResult lowerSITOFP(MachineInstr &MI);
   LegalizeResult lowerFPTOUI(MachineInstr &MI);
