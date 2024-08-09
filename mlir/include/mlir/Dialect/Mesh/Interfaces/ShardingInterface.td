@@ -84,8 +84,8 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
         /*retTy=*/"FailureOr<ShardingOption>",
         /*methodName=*/"getShardingOption",
         /*args=*/(ins
-          "ArrayRef<MeshSharding>": $operandShardings,
-          "ArrayRef<MeshSharding>": $resultShardings
+          "ArrayRef<MeshShardingAttr>": $operandShardings,
+          "ArrayRef<MeshShardingAttr>": $resultShardings
         ),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
@@ -100,7 +100,7 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           This is what shardings the operands and results need to have in order
           to shard the op according to shardingOption.
         }],
-        /*retTy=*/"FailureOr<std::vector<MeshSharding>>",
+        /*retTy=*/"FailureOr<SmallVector<MeshShardingAttr>>",
         /*methodName=*/"getShardingAnnotations",
         /*args=*/(ins
           "const ShardingOption &":$shardingOption
@@ -139,7 +139,7 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           annotations from the IR for each argument/result and prepare
           `operandShardings` and `resultShardings`.
           Values that are not ranked tensors do not have sharding annotations.
-          In this case their corresponding MeshSharding is null.
+          In this case their corresponding MeshShardingAttr is null.
 
           For convenience it will also prepare `spmdizedOperands`, although
           they can be retrieved from the `spmdizationMap`.
@@ -161,8 +161,8 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
         /*methodName=*/"spmdize",
         /*args=*/(ins
           "ArrayRef<Value>": $spmdizedOperands,
-          "ArrayRef<MeshSharding>": $operandShardings,
-          "ArrayRef<MeshSharding>": $resultShardings,
+          "ArrayRef<MeshShardingAttr>": $operandShardings,
+          "ArrayRef<MeshShardingAttr>": $resultShardings,
           "IRMapping&": $spmdizationMap,
           "SymbolTableCollection &": $symbolTableCollection,
           "OpBuilder &":$builder
