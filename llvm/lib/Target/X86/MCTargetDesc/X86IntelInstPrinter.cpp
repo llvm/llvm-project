@@ -424,7 +424,8 @@ void X86IntelInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
     }
   }
 
-  O << ']';
+
+  O << M << ']';
 }
 
 void X86IntelInstPrinter::printSrcIdx(const MCInst *MI, unsigned Op,
@@ -466,7 +467,7 @@ void X86IntelInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
     DispSpec.getExpr()->print(O, &MAI);
   }
 
-  O << ']';
+  O << M << ']';
 }
 
 void X86IntelInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
