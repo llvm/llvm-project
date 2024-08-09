@@ -396,7 +396,11 @@ class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<ArgT
 
   let Src0RC64 = getVOP3SrcForVT<ArgVT[1]>.ret; // srcA
   let Src1RC64 = getVALUDstForVT<ArgVT[2]>.ret; // srcB
-  let Src2RC64 = getVOP3SrcForVT<ArgVT[3]>.ret; // srcC
+  // srcC also supports inline 0
+  let Src2RC64 = !cond(!eq(ArgTy[3], v8f32) : VISrc_256_f32,
+                       !eq(ArgTy[3], v8i32) : VISrc_256_b32,
+                       !eq(ArgTy[3], v8f16) : VISrc_128_f16,
+                       !eq(ArgTy[3], v8bf16) : VISrc_128_bf16);
 }
 
 class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {

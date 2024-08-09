@@ -3601,8 +3601,8 @@ defm FLAT_ATOMIC_INC                  : VFLAT_Real_Atomics_gfx13<0x3c, "flat_ato
 defm FLAT_ATOMIC_DEC                  : VFLAT_Real_Atomics_gfx13<0x3d, "flat_atomic_dec_u32">;
 defm FLAT_ATOMIC_FMIN                 : VFLAT_Real_Atomics_gfx13<0x3f, "flat_atomic_min_num_f32", "flat_atomic_min_f32">;
 defm FLAT_ATOMIC_FMAX                 : VFLAT_Real_Atomics_gfx13<0x40, "flat_atomic_max_num_f32", "flat_atomic_max_f32">;
-defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx13<0x41, "flat_atomic_min_num_f64">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
-defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx13<0x42, "flat_atomic_max_num_f64">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
+defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx13<0x5f, "flat_atomic_min_num_f64", "flat_atomic_fmin_x2">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
+defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx13<0x60, "flat_atomic_max_num_f64", "flat_atomic_fmax_x2">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
 defm FLAT_ATOMIC_COND_SUB_U32         : VFLAT_Real_Atomics_gfx13<0x47>;
 defm FLAT_PREFETCH_B8                 : VFLAT_Real_Base_gfx13<0x048>;
 defm FLAT_ATOMIC_PK_ADD_F16           : VFLAT_Real_Atomics_gfx13<0x4a>;
@@ -3672,8 +3672,8 @@ defm GLOBAL_ATOMIC_INC                : VGLOBAL_Real_Atomics_gfx13<0x3c, "global
 defm GLOBAL_ATOMIC_DEC                : VGLOBAL_Real_Atomics_gfx13<0x3d, "global_atomic_dec_u32">;
 defm GLOBAL_ATOMIC_FMIN               : VGLOBAL_Real_Atomics_gfx13<0x3f, "global_atomic_min_num_f32", "global_atomic_min_f32">;
 defm GLOBAL_ATOMIC_FMAX               : VGLOBAL_Real_Atomics_gfx13<0x40, "global_atomic_max_num_f32", "global_atomic_max_f32">;
-defm GLOBAL_ATOMIC_MIN_F64            : VGLOBAL_Real_Atomics_gfx13<0x41, "global_atomic_min_num_f64">;
-defm GLOBAL_ATOMIC_MAX_F64            : VGLOBAL_Real_Atomics_gfx13<0x42, "global_atomic_max_num_f64">;
+defm GLOBAL_ATOMIC_MIN_F64            : VGLOBAL_Real_Atomics_gfx13<0x5f, "global_atomic_min_num_f64", "global_atomic_fmin_x2">;
+defm GLOBAL_ATOMIC_MAX_F64            : VGLOBAL_Real_Atomics_gfx13<0x60, "global_atomic_max_num_f64", "global_atomic_fmax_x2">;
 defm GLOBAL_LOAD_BLOCK                : VGLOBAL_Real_AllAddr_gfx13<0x43>;
 defm GLOBAL_STORE_BLOCK               : VGLOBAL_Real_AllAddr_gfx13<0x44>;
 defm GLOBAL_LOAD_TR_B128_w32          : VGLOBAL_Real_AllAddr_gfx13<0x45, "global_load_tr16_b128">;
