@@ -2636,7 +2636,7 @@ Constant *ConstantExpr::getXor(Constant *C1, Constant *C2) {
 Constant *ConstantExpr::getExactLogBase2(Constant *C) {
   Type *Ty = C->getType();
   const APInt *IVal;
-  if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
+  if (match(C, m_Power2(IVal)))
     return ConstantInt::get(Ty, IVal->logBase2());
 
   // FIXME: We can extract pow of 2 of splat constant for scalable vectors.
@@ -2654,7 +2654,7 @@ Constant *ConstantExpr::getExactLogBase2(Constant *C) {
       Elts.push_back(Constant::getNullValue(Ty->getScalarType()));
       continue;
     }
-    if (!match(Elt, m_APInt(IVal)) || !IVal->isPowerOf2())
+    if (!match(Elt, m_Power2(IVal)))
       return nullptr;
     Elts.push_back(ConstantInt::get(Ty->getScalarType(), IVal->logBase2()));
   }

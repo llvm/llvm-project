@@ -3152,9 +3152,9 @@ static bool isAllocSiteRemovable(Instruction *AI,
           // alignment.
           const APInt *Alignment;
           const APInt *Size;
-          return match(CB->getArgOperand(0), m_APInt(Alignment)) &&
+          return match(CB->getArgOperand(0), m_Power2(Alignment)) &&
                  match(CB->getArgOperand(1), m_APInt(Size)) &&
-                 Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
+                 Size->urem(*Alignment).isZero();
         };
         auto *CB = dyn_cast<CallBase>(AI);
         LibFunc TheLibFunc;
