@@ -2708,6 +2708,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FMINNMV_PRED)
     MAKE_CASE(AArch64ISD::FMUL_PRED)
     MAKE_CASE(AArch64ISD::FSUB_PRED)
+    MAKE_CASE(AArch64ISD::FAMAX_PRED)
+    MAKE_CASE(AArch64ISD::FAMIN_PRED)
     MAKE_CASE(AArch64ISD::RDSVL)
     MAKE_CASE(AArch64ISD::BIC)
     MAKE_CASE(AArch64ISD::CBZ)
@@ -21712,6 +21714,12 @@ static SDValue performIntrinsicCombine(SDNode *N,
                     AArch64CC::LAST_ACTIVE);
   case Intrinsic::aarch64_sve_whilelo:
     return tryCombineWhileLo(N, DCI, Subtarget);
+  case Intrinsic::aarch64_sve_famax_u:
+    return DAG.getNode(AArch64ISD::FAMAX_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_famin_u:
+    return DAG.getNode(AArch64ISD::FAMIN_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   }
   return SDValue();
 }

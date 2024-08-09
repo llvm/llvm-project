@@ -218,6 +218,9 @@ def AArch64fsub_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
   return N->getFlags().hasAllowContract();
 }]>;
 
+def AArch64famax_p : SDNode<"AArch64ISD::FAMAX_PRED", SDT_AArch64Arith>;
+def AArch64famin_p : SDNode<"AArch64ISD::FAMIN_PRED", SDT_AArch64Arith>;
+
 def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3,i32>,
   SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>
@@ -483,6 +486,8 @@ def AArch64fminnm_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fminnm,
 def AArch64fmaxnm_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmaxnm, AArch64fmaxnm_p>;
 def AArch64fmin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmin, AArch64fmin_p>;
 def AArch64fmax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmax, AArch64fmax_p>;
+def AArch64famax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_famax, AArch64famax_p>;
+def AArch64famin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_famin, AArch64famin_p>;
 
 def AArch64fadd : PatFrags<(ops node:$op1, node:$op2),
                             [(fadd node:$op1, node:$op2),
@@ -716,6 +721,11 @@ let Predicates = [HasSVEorSME] in {
   defm FMULX_ZPZZ  : sve_fp_bin_pred_hfd<int_aarch64_sve_fmulx_u>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fdiv_p>;
 } // End HasSVEorSME
+
+let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
+  defm FAMAX_ZPZZ : sve_fp_bin_pred_hfd<AArch64famax_p>;
+  defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<AArch64famin_p>;
+}
 
 let Predicates = [HasSVEorSME, UseExperimentalZeroingPseudos] in {
   defm FADD_ZPZZ   : sve_fp_2op_p_zds_zeroing_hsd<int_aarch64_sve_fadd>;
@@ -4219,8 +4229,8 @@ defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
 
 let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
 // FP8 Arithmetic - Predicated Group
-defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "", null_frag, DestructiveOther>;
-defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "", null_frag, DestructiveOther>;
+defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "FAMIN_ZPZZ", AArch64famin_m1, DestructiveBinaryComm>;
+defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "FAMAX_ZPZZ", AArch64famax_m1, DestructiveBinaryComm>;
 } // End HasSVE2orSME2, HasFAMINMAX
 
 let Predicates = [HasSSVE_FP8FMA] in {
