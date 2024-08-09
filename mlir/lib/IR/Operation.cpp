@@ -503,6 +503,7 @@ Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
 void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
   assert(!op->getBlock() && "already in an operation block!");
   op->block = getContainingBlock();
+
   // Invalidate the order on the operation.
   op->orderIndex = Operation::kInvalidOrderIdx;
 }
