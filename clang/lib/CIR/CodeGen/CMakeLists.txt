@@ -30,6 +30,7 @@ add_clang_library(clangCIR
   CIRGenFunction.cpp
   CIRGenItaniumCXXABI.cpp
   CIRGenModule.cpp
+  CIRGenOpenCL.cpp
   CIRGenOpenMPRuntime.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenMP.cpp

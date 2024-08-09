@@ -1,5 +1,6 @@
 add_clang_library(MLIRCIR
   CIRAttrs.cpp
+  CIROpenCLAttrs.cpp
   CIRDataLayout.cpp
   CIRDialect.cpp
   CIRMemorySlot.cpp
