@@ -146,14 +146,16 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:  entry:
 ; PRED-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; PRED-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; PRED-NEXT:    [[SRC3:%.*]] = ptrtoint ptr [[SRC]] to i64
+; PRED-NEXT:    [[DST2:%.*]] = ptrtoint ptr [[DST]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; PRED:       vector.memcheck:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
-; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1]], [[SRC2]]
+; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[DST2]], [[SRC3]]
 ; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
-; PRED-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; PRED-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
@@ -163,6 +165,13 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; PRED-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 8
+; PRED-NEXT:    [[SUB_DIFF:%.*]] = sub i64 [[SRC2]], [[DST1]]
+; PRED-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_DIFF]], 1
+; PRED-NEXT:    [[NEG_COMPARE:%.*]] = icmp slt i64 [[DIFF]], 0
+; PRED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[NEG_COMPARE]], i64 0
+; PRED-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i1> [[DOTSPLATINSERT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
+; PRED-NEXT:    [[PTR_DIFF_LANE_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[DIFF]])
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_ALIAS:%.*]] = or <vscale x 8 x i1> [[PTR_DIFF_LANE_MASK]], [[DOTSPLAT]]
 ; PRED-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 8
 ; PRED-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP0]], [[TMP12]]
@@ -177,9 +186,10 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 0
+; PRED-NEXT:    [[TMP30:%.*]] = and <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], [[ACTIVE_LANE_MASK_ALIAS]]
 ; PRED-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP17]]
 ; PRED-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP18]], i32 0
-; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr [[TMP19]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)
+; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr [[TMP19]], i32 1, <vscale x 8 x i1> [[TMP30]], <vscale x 8 x i8> poison)
 ; PRED-NEXT:    [[TMP20:%.*]] = zext <vscale x 8 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 8 x i16>
 ; PRED-NEXT:    [[TMP21:%.*]] = mul <vscale x 8 x i16> [[TMP20]], [[TMP16]]
 ; PRED-NEXT:    [[TMP22:%.*]] = zext <vscale x 8 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 8 x i16>
@@ -188,8 +198,11 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP25:%.*]] = trunc <vscale x 8 x i16> [[TMP24]] to <vscale x 8 x i8>
 ; PRED-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP17]]
 ; PRED-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
-; PRED-NEXT:    call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> [[TMP25]], ptr [[TMP27]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP10]]
+; PRED-NEXT:    call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> [[TMP25]], ptr [[TMP27]], i32 1, <vscale x 8 x i1> [[TMP30]])
+; PRED-NEXT:    [[TMP31:%.*]] = zext <vscale x 8 x i1> [[ACTIVE_LANE_MASK_ALIAS]] to <vscale x 8 x i8>
+; PRED-NEXT:    [[TMP32:%.*]] = call i8 @llvm.vector.reduce.add.nxv8i8(<vscale x 8 x i8> [[TMP31]])
+; PRED-NEXT:    [[TMP33:%.*]] = zext i8 [[TMP32]] to i64
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP33]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TMP15]])
 ; PRED-NEXT:    [[TMP28:%.*]] = xor <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer)
 ; PRED-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 8 x i1> [[TMP28]], i32 0
@@ -197,7 +210,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; PRED-NEXT:    br label [[LOOP:%.*]]
 ; PRED:       loop:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

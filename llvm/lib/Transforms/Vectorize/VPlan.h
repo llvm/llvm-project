@@ -43,6 +43,7 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/InstructionCost.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1239,6 +1240,7 @@ public:
     SLPLoad,
     SLPStore,
     ActiveLaneMask,
+    AliasLaneMask,
     ExplicitVectorLength,
     /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
     /// The first operand is the incoming value from the predecessor in VPlan,
@@ -1258,6 +1260,7 @@ public:
     // scalar.
     ExtractFromEnd,
     LogicalAnd, // Non-poison propagating logical And.
+    PopCount,
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -3818,6 +3821,20 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(const VPValue *V, VPlan &Plan);
 } // end namespace vputils
+
+/// A pair of pointers that could overlap across a loop iteration.
+struct PointerDiffInfoValues {
+  /// The pointer being read from
+  Value *Src;
+  /// The pointer being stored to
+  Value *Sink;
+
+  PointerDiffInfoValues(const SCEV *SrcStart, const SCEV *SinkStart,
+                        SCEVExpander Exp, Instruction *Loc)
+      : Src(Exp.expandCodeFor(SrcStart, SrcStart->getType(), Loc)),
+        Sink(Exp.expandCodeFor(SinkStart, SinkStart->getType(), Loc)) {}
+  PointerDiffInfoValues(Value *Src, Value *Sink) : Src(Src), Sink(Sink) {}
+};
 
 } // end namespace llvm
 

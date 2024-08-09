@@ -1256,8 +1256,10 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
 //   %Negated = Not %ALM
 //   branch-on-cond %Negated
 //
-static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
-    VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
+static VPValue *
+addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan,
+                                    bool DataAndControlFlowWithoutRuntimeCheck,
+                                    VPValue *AliasMask) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
@@ -1298,14 +1300,22 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
       "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
-  auto *EntryALM =
+  VPValue *Mask =
       Builder.createNaryOp(VPInstruction::ActiveLaneMask, {EntryIncrement, TC},
                            DL, "active.lane.mask.entry");
 
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
   // preheader ActiveLaneMask instruction.
-  auto LaneMaskPhi = new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc());
+  auto *LaneMaskPhi = new VPActiveLaneMaskPHIRecipe(Mask, DebugLoc());
   LaneMaskPhi->insertAfter(CanonicalIVPHI);
+  VPValue *LaneMask = LaneMaskPhi;
+  if (AliasMask) {
+    // And the alias mask so the iteration only processed non-aliasing lanes
+    Builder.setInsertPoint(CanonicalIVPHI->getParent(),
+                           CanonicalIVPHI->getParent()->getFirstNonPhi());
+    LaneMask = Builder.createNaryOp(Instruction::BinaryOps::And,
+                                    {LaneMaskPhi, AliasMask}, DL);
+  }
 
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
@@ -1324,7 +1334,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   auto *NotMask = Builder.createNot(ALM, DL);
   Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
   OriginalTerminator->eraseFromParent();
-  return LaneMaskPhi;
+  return LaneMask;
 }
 
 /// Collect all VPValues representing a header mask through the (ICMP_ULE,
@@ -1374,23 +1384,24 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
 
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
-    bool DataAndControlFlowWithoutRuntimeCheck) {
+    bool DataAndControlFlowWithoutRuntimeCheck, VPValue *AliasMask) {
+
   assert((!DataAndControlFlowWithoutRuntimeCheck ||
           UseActiveLaneMaskForControlFlow) &&
          "DataAndControlFlowWithoutRuntimeCheck implies "
          "UseActiveLaneMaskForControlFlow");
 
-  auto FoundWidenCanonicalIVUser =
+  auto *FoundWidenCanonicalIVUser =
       find_if(Plan.getCanonicalIV()->users(),
               [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
-  assert(FoundWidenCanonicalIVUser &&
+  assert(FoundWidenCanonicalIVUser && *FoundWidenCanonicalIVUser &&
          "Must have widened canonical IV when tail folding!");
   auto *WideCanonicalIV =
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
-  VPSingleDefRecipe *LaneMask;
+  VPValue *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
-        Plan, DataAndControlFlowWithoutRuntimeCheck);
+        Plan, DataAndControlFlowWithoutRuntimeCheck, AliasMask);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
     LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
