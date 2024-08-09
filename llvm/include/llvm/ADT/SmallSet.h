@@ -167,9 +167,8 @@ public:
     if (isSmall()) {
       // Since the collection is small, just do a linear search.
       return vfind(V) == Vector.end() ? 0 : 1;
-    } else {
-      return Set.count(V);
     }
+    return Set.count(V);
   }
 
   /// insert - Insert an element into the set if it isn't already there.
