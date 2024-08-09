@@ -1749,6 +1749,10 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
 
+  let builders = [
+    OpBuilder<(ins "ValueRange":$iterSpace, "ValueRange":$initArgs, "unsigned":$numCases)>,
+  ];
+
   let extraClassDeclaration = [{
     unsigned getSpaceDim() {
       return llvm::cast<::mlir::sparse_tensor::IterSpaceType>(
