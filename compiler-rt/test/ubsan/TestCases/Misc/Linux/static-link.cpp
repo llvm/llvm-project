@@ -1,7 +1,7 @@
 // REQUIRES: ubsan-standalone
 // REQUIRES: target={{x86_64.*}}
 // UNSUPPORTED: i386-target-arch, internal_symbolizer
-// RUN: %clangxx -fsanitize=bool -static  %s -o %t && UBSAN_OPTIONS=handle_segv=0:handle_sigbus=0:handle_sigfpe=0 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -fsanitize=bool -static  %s -o %t && env UBSAN_OPTIONS=handle_segv=0:handle_sigbus=0:handle_sigfpe=0 %run %t 2>&1 | FileCheck %s
 // RUN: %run %t 2>&1 | FileCheck %s
 #include <signal.h>
 #include <stdio.h>
