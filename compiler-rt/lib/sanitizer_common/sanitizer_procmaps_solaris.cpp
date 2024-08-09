@@ -11,6 +11,18 @@
 
 // Before Solaris 11.4, <procfs.h> doesn't work in a largefile environment.
 #undef _FILE_OFFSET_BITS
+
+// Even though this is a Solaris-specific file, it gets built on all
+// platforms, including Linux ones. On such platforms, _TIME_BITS=64
+// might be passed to enable 64-bit time_t on 32-bit
+// architectures. However _TIME_BITS=64 requires _FILE_OFFSET_BITS=64,
+// but we undefine _FILE_OFFSET_BITS above, causing a failure as
+// sanitizer_platform.h below includes some system headers that are
+// unhappy with _TIME_BITS defined and _FILE_OFFSET_BITS
+// undefined. Therefore, apply the same consideration as in
+// sanitizer_platform_limits_posix.cpp, which consists in undefining
+// _TIME_BITS.
+#undef _TIME_BITS
 #include "sanitizer_platform.h"
 #if SANITIZER_SOLARIS
 #  include <fcntl.h>
