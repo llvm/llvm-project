@@ -643,11 +643,26 @@ static uint64_t computeIRComplexityScoreImpl(const Function &F) {
           ++Score;
         if (OverflowOp->hasNoSignedWrap())
           ++Score;
-      } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
-        if (GEP->isInBounds())
+      } else if (const auto *Trunc = dyn_cast<TruncInst>(&I)) {
+        if (Trunc->hasNoSignedWrap())
+          ++Score;
+        if (Trunc->hasNoUnsignedWrap())
           ++Score;
       } else if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I)) {
         if (ExactOp->isExact())
+          ++Score;
+      } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(&I)) {
+        if (NNI->hasNonNeg())
+          ++Score;
+      } else if (const auto *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
+        if (PDI->isDisjoint())
+          ++Score;
+      } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
+        if (GEP->isInBounds())
+          ++Score;
+        if (GEP->hasNoUnsignedSignedWrap())
+          ++Score;
+        if (GEP->hasNoUnsignedWrap())
           ++Score;
       } else if (const auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
         FastMathFlags FMF = FPOp->getFastMathFlags();
