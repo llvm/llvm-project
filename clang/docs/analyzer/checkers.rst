@@ -1277,6 +1277,22 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+.. _security-MmapWriteExec:
+
+security.MmapWriteExec (C)
+""""""""""""""""""""""""""
+Warn on ``mmap()`` calls with both writable and executable access.
+
+.. code-block:: c
+
+ void test(int n) {
+   void *c = mmap(NULL, 32, PROT_READ | PROT_WRITE | PROT_EXEC,
+                  MAP_PRIVATE | MAP_ANON, -1, 0);
+   // warn: Both PROT_WRITE and PROT_EXEC flags are set. This can lead to
+   //       exploitable memory regions, which could be overwritten with malicious
+   //       code
+ }
+
 .. _security-putenv-stack-array:
 
 security.PutenvStackArray (C)
@@ -2997,22 +3013,6 @@ Limitations:
 
  - It is an AST-based checker, thus it does not make use of the
    path-sensitive taint-analysis.
-
-.. _alpha-security-MmapWriteExec:
-
-alpha.security.MmapWriteExec (C)
-""""""""""""""""""""""""""""""""
-Warn on mmap() calls that are both writable and executable.
-
-.. code-block:: c
-
- void test(int n) {
-   void *c = mmap(NULL, 32, PROT_READ | PROT_WRITE | PROT_EXEC,
-                  MAP_PRIVATE | MAP_ANON, -1, 0);
-   // warn: Both PROT_WRITE and PROT_EXEC flags are set. This can lead to
-   //       exploitable memory regions, which could be overwritten with malicious
-   //       code
- }
 
 .. _alpha-security-ReturnPtrRange:
 
