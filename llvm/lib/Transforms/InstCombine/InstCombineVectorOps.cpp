@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -963,6 +964,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     return AggregateDescription::Found;
   };
 
+  // If an aggregate element is defined in UseBB, we can't use it in PredBB.
+  bool EltDefinedInUseBB = false;
+
   // Given the value \p Elt that was being inserted into element \p EltIdx of an
   // aggregate AggTy, see if \p Elt was originally defined by an
   // appropriate extractvalue (same element index, same aggregate type).
@@ -972,8 +976,11 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       [&](Instruction *Elt, unsigned EltIdx, std::optional<BasicBlock *> UseBB,
           std::optional<BasicBlock *> PredBB) -> std::optional<Value *> {
     // For now(?), only deal with, at most, a single level of PHI indirection.
-    if (UseBB && PredBB)
+    if (UseBB && PredBB) {
       Elt = dyn_cast<Instruction>(Elt->DoPHITranslation(*UseBB, *PredBB));
+      if (Elt && Elt->getParent() == *UseBB)
+        EltDefinedInUseBB = true;
+    }
     // FIXME: deal with multiple levels of PHI indirection?
 
     // Did we find an extraction?
@@ -1106,6 +1113,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
   SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
         SourceAggregates.insert({Pred, nullptr});
@@ -1117,9 +1125,62 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // aggregate produced by OrigIVI must have been originally extracted from
     // the same aggregate. Is that so? Can we find said original aggregate?
     SourceAggregate = FindCommonSourceAggregate(UseBB, Pred);
-    if (Describe(SourceAggregate) != AggregateDescription::Found)
-      return nullptr; // Give up.
-    IV.first->second = *SourceAggregate;
+    if (Describe(SourceAggregate) == AggregateDescription::Found) {
+      FoundSrcAgg = true;
+      IV.first->second = *SourceAggregate;
+    } else {
+      // If UseBB is the single successor of Pred, we can add InsertValue to
+      // Pred.
+      if (succ_size(Pred) != 1)
+        return nullptr; // Give up.
+    }
+  }
+
+  if (!FoundSrcAgg)
+    return nullptr;
+
+  // Do some sanity check if we need to add insertvalue into predecessors.
+  Loop *OrigLoop, *UseLoop;
+  if (LI) {
+    OrigLoop = LI->getLoopFor(OrigIVI.getParent());
+    UseLoop = LI->getLoopFor(UseBB);
+  }
+  for (auto &It : SourceAggregates) {
+    if (Describe(It.second) == AggregateDescription::Found)
+      continue;
+
+    // Element is defined in UseBB, so it can't be used in predecessors.
+    if (EltDefinedInUseBB)
+      return nullptr;
+
+    if (LI) {
+      // Don't add insertvalue into inner loops.
+      Loop *PredLoop = LI->getLoopFor(It.first);
+      if (OrigLoop != PredLoop && (!OrigLoop || OrigLoop->contains(PredLoop)))
+        return nullptr;
+
+      // Don't cross loop header.
+      if (UseLoop && UseLoop->getHeader() == UseBB &&
+          UseLoop->contains(It.first))
+        return nullptr;
+    }
+  }
+
+  // For predecessors without appropriate source aggregate, create one in the
+  // predecessor.
+  for (auto &It : SourceAggregates) {
+    if (Describe(It.second) == AggregateDescription::Found)
+      continue;
+
+    BasicBlock *Pred = It.first;
+    Builder.SetInsertPoint(Pred, Pred->getTerminator()->getIterator());
+    Value *V = PoisonValue::get(AggTy);
+    for (auto I : enumerate(AggElts)) {
+      Value *Elt = (*I.value())->DoPHITranslation(UseBB, Pred);
+      V = Builder.CreateInsertValue(V, Elt, I.index());
+    }
+
+    It.second = V;
   }
 
   // All good! Now we just need to thread the source aggregates here.
