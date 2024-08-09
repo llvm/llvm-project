@@ -653,7 +653,8 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
 }
 
 std::error_code
-SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
+SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
+                                           SampleProfileMap &Profiles) {
   Data = Start;
   auto NumHeadSamples = readNumber<uint64_t>();
   if (std::error_code EC = NumHeadSamples.getError())
@@ -676,6 +677,11 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
   if (std::error_code EC = readProfile(FProfile))
     return EC;
   return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
+  return readFuncProfile(Start, Profiles);
 }
 
 std::error_code SampleProfileReaderBinary::readImpl() {
@@ -725,6 +731,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecLBRProfile:
+    LBRProfileSecRange = std::make_pair(Data, End);
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
@@ -745,9 +752,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     ProfileIsProbeBased =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased);
     FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
-    bool HasAttribute =
+    ProfileHasAttribute =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute);
-    if (std::error_code EC = readFuncMetadata(HasAttribute))
+    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute))
       return EC;
     break;
   }
@@ -791,6 +798,19 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
   return false;
 }
 
+std::error_code SampleProfileReaderExtBinaryBase::readOnDemand(
+    const DenseSet<StringRef> &FuncsToUse, SampleProfileMap &Profiles) {
+  Data = LBRProfileSecRange.first;
+  End = LBRProfileSecRange.second;
+  if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
+    return EC;
+  End = Data;
+
+  if (std::error_code EC =
+          readFuncMetadataOnDemand(ProfileHasAttribute, Profiles))
+    return EC;
+  return sampleprof_error::success;
+}
 
 bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
   if (!M)
@@ -838,6 +858,95 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
  return sampleprof_error::success;
 }
 
+std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
+    const DenseSet<StringRef> &FuncsToUse, SampleProfileMap &Profiles) {
+  const uint8_t *Start = Data;
+
+  if (Remapper) {
+    for (auto Name : FuncsToUse) {
+      Remapper->insert(Name);
+    }
+  }
+
+  if (ProfileIsCS) {
+    assert(useFuncOffsetList());
+    DenseSet<uint64_t> FuncGuidsToUse;
+    if (useMD5()) {
+      for (auto Name : FuncsToUse)
+        FuncGuidsToUse.insert(Function::getGUID(Name));
+    }
+
+    // For each function in current module, load all context profiles for
+    // the function as well as their callee contexts which can help profile
+    // guided importing for ThinLTO. This can be achieved by walking
+    // through an ordered context container, where contexts are laid out
+    // as if they were walked in preorder of a context trie. While
+    // traversing the trie, a link to the highest common ancestor node is
+    // kept so that all of its decendants will be loaded.
+    const SampleContext *CommonContext = nullptr;
+    for (const auto &NameOffset : FuncOffsetList) {
+      const auto &FContext = NameOffset.first;
+      FunctionId FName = FContext.getFunction();
+      StringRef FNameString;
+      if (!useMD5())
+        FNameString = FName.stringRef();
+
+      // For function in the current module, keep its farthest ancestor
+      // context. This can be used to load itself and its child and
+      // sibling contexts.
+      if ((useMD5() && FuncGuidsToUse.count(FName.getHashCode())) ||
+          (!useMD5() && (FuncsToUse.count(FNameString) ||
+                         (Remapper && Remapper->exist(FNameString))))) {
+        if (!CommonContext || !CommonContext->isPrefixOf(FContext))
+          CommonContext = &FContext;
+      }
+
+      if (CommonContext == &FContext ||
+          (CommonContext && CommonContext->isPrefixOf(FContext))) {
+        // Load profile for the current context which originated from
+        // the common ancestor.
+        const uint8_t *FuncProfileAddr = Start + NameOffset.second;
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+          return EC;
+      }
+    }
+  } else if (useMD5()) {
+    assert(!useFuncOffsetList());
+    for (auto Name : FuncsToUse) {
+      auto GUID = MD5Hash(Name);
+      auto iter = FuncOffsetTable.find(GUID);
+      if (iter == FuncOffsetTable.end())
+        continue;
+      const uint8_t *FuncProfileAddr = Start + iter->second;
+      if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
+        return EC;
+    }
+  } else if (Remapper) {
+    assert(useFuncOffsetList());
+    for (auto NameOffset : FuncOffsetList) {
+      SampleContext FContext(NameOffset.first);
+      auto FuncName = FContext.getFunction();
+      StringRef FuncNameStr = FuncName.stringRef();
+      if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
+        continue;
+      const uint8_t *FuncProfileAddr = Start + NameOffset.second;
+      if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
+        return EC;
+    }
+  } else {
+    assert(!useFuncOffsetList());
+    for (auto Name : FuncsToUse) {
+
+      auto iter = FuncOffsetTable.find(MD5Hash(Name));
+      if (iter == FuncOffsetTable.end())
+        continue;
+      const uint8_t *FuncProfileAddr = Start + iter->second;
+      if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
+        return EC;
+    }
+  }
+}
+
 std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   // Collect functions used by current module if the Reader has been
   // given a module.
@@ -849,7 +958,6 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
 
   // When LoadFuncsToBeUsed is false, we are using LLVM tool, need to read all
   // profiles.
-  const uint8_t *Start = Data;
   if (!LoadFuncsToBeUsed) {
     while (Data < End) {
       if (std::error_code EC = readFuncProfile(Data))
@@ -858,88 +966,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
     assert(Data == End && "More data is read than expected");
   } else {
     // Load function profiles on demand.
-    if (Remapper) {
-      for (auto Name : FuncsToUse) {
-        Remapper->insert(Name);
-      }
-    }
-
-    if (ProfileIsCS) {
-      assert(useFuncOffsetList());
-      DenseSet<uint64_t> FuncGuidsToUse;
-      if (useMD5()) {
-        for (auto Name : FuncsToUse)
-          FuncGuidsToUse.insert(Function::getGUID(Name));
-      }
-
-      // For each function in current module, load all context profiles for
-      // the function as well as their callee contexts which can help profile
-      // guided importing for ThinLTO. This can be achieved by walking
-      // through an ordered context container, where contexts are laid out
-      // as if they were walked in preorder of a context trie. While
-      // traversing the trie, a link to the highest common ancestor node is
-      // kept so that all of its decendants will be loaded.
-      const SampleContext *CommonContext = nullptr;
-      for (const auto &NameOffset : FuncOffsetList) {
-        const auto &FContext = NameOffset.first;
-        FunctionId FName = FContext.getFunction();
-        StringRef FNameString;
-        if (!useMD5())
-          FNameString = FName.stringRef();
-
-        // For function in the current module, keep its farthest ancestor
-        // context. This can be used to load itself and its child and
-        // sibling contexts.
-        if ((useMD5() && FuncGuidsToUse.count(FName.getHashCode())) ||
-            (!useMD5() && (FuncsToUse.count(FNameString) ||
-                           (Remapper && Remapper->exist(FNameString))))) {
-          if (!CommonContext || !CommonContext->isPrefixOf(FContext))
-            CommonContext = &FContext;
-        }
-
-        if (CommonContext == &FContext ||
-            (CommonContext && CommonContext->isPrefixOf(FContext))) {
-          // Load profile for the current context which originated from
-          // the common ancestor.
-          const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-            return EC;
-        }
-      }
-    } else if (useMD5()) {
-      assert(!useFuncOffsetList());
-      for (auto Name : FuncsToUse) {
-        auto GUID = MD5Hash(Name);
-        auto iter = FuncOffsetTable.find(GUID);
-        if (iter == FuncOffsetTable.end())
-          continue;
-        const uint8_t *FuncProfileAddr = Start + iter->second;
-        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-          return EC;
-      }
-    } else if (Remapper) {
-      assert(useFuncOffsetList());
-      for (auto NameOffset : FuncOffsetList) {
-        SampleContext FContext(NameOffset.first);
-        auto FuncName = FContext.getFunction();
-        StringRef FuncNameStr = FuncName.stringRef();
-        if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
-          continue;
-        const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-          return EC;
-      }
-    } else {
-      assert(!useFuncOffsetList());
-      for (auto Name : FuncsToUse) {
-        auto iter = FuncOffsetTable.find(MD5Hash(Name));
-        if (iter == FuncOffsetTable.end())
-          continue;
-        const uint8_t *FuncProfileAddr = Start + iter->second;
-        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-          return EC;
-      }
-    }
+    if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
+      return EC;
     Data = End;
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
@@ -1245,6 +1273,27 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadataOnDemand(
+    bool ProfileHasAttribute, SampleProfileMap &Profiles) {
+  if (FContextToMetaDataSecRange.empty())
+    return sampleprof_error::success;
+
+  for (auto &I : Profiles) {
+    FunctionSamples *FProfile = &I.second;
+    auto R =
+        FContextToMetaDataSecRange.find(FProfile->getContext().getHashCode());
+    if (R == FContextToMetaDataSecRange.end())
+      continue;
+
+    Data = R->second.first;
+    End = R->second.second;
+    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
+      return EC;
+    assert(Data == End && "More data is read than expected");
+  }
+  return sampleprof_error::success;
+}
+
 std::error_code
 SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
   while (Data < End) {
@@ -1257,8 +1306,11 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
     if (It != Profiles.end())
       FProfile = &It->second;
 
+    const uint8_t *Start = Data;
     if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
       return EC;
+
+    FContextToMetaDataSecRange[FContext.getHashCode()] = {Start, Data};
   }
 
   assert(Data == End && "More data is read than expected");
