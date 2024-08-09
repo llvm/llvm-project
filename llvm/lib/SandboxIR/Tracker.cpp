@@ -265,15 +265,6 @@ void CreateAndInsertInst::dump() const {
 }
 #endif
 
-void Tracker::track(std::unique_ptr<IRChangeBase> &&Change) {
-  assert(State == TrackerState::Record && "The tracker should be tracking!");
-  Changes.push_back(std::move(Change));
-
-#ifndef NDEBUG
-  InMiddleOfCreatingChange = false;
-#endif
-}
-
 void Tracker::save() { State = TrackerState::Record; }
 
 void Tracker::revert() {
