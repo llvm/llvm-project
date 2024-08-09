@@ -1,0 +1,7 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+# CHECK: yaml2obj: error: failed to convert 'Euro symbol €' to EBCDIC 1047
+
+--- !GOFF
+- End:
+    EntryName: "Euro symbol €"
