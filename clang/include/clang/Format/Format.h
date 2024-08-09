@@ -2231,6 +2231,41 @@ struct FormatStyle {
   /// \version 3.7
   bool BreakBeforeTernaryOperators;
 
+  /// Different ways to break binary operations.
+  enum BreakBinaryOperationsStyle : int8_t {
+    /// Don't break binary operations
+    /// \code
+    ///    aaa + bbbb * ccccc - ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_Never,
+
+    /// Binary operations will either be all on the same line, or each operation
+    /// will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb *
+    ///    ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_OnePerLine,
+
+    /// Binary operations of a particular precedence that exceed the column
+    /// limit will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb * ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_RespectPrecedence
+  };
+
+  /// The break constructor initializers style to use.
+  /// \version 20
+  BreakBinaryOperationsStyle BreakBinaryOperations;
+
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
     /// Break constructor initializers before the colon and after the commas.
@@ -5037,6 +5072,7 @@ struct FormatStyle {
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
+           BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
