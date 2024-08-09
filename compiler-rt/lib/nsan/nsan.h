@@ -86,8 +86,8 @@ inline const u8 *GetShadowTypeAddrFor(const u8 *Ptr) {
 template <typename FT> struct FTInfo {};
 template <> struct FTInfo<float> {
   using orig_type = float;
-  using orig_bits_type = __sanitizer::u32;
-  using mantissa_bits_type = __sanitizer::u32;
+  using orig_bits_type = u32;
+  using mantissa_bits_type = u32;
   using shadow_type = double;
   static const char *kCppTypeName;
   static constexpr unsigned kMantissaBits = 23;
@@ -104,8 +104,8 @@ template <> struct FTInfo<float> {
 };
 template <> struct FTInfo<double> {
   using orig_type = double;
-  using orig_bits_type = __sanitizer::u64;
-  using mantissa_bits_type = __sanitizer::u64;
+  using orig_bits_type = u64;
+  using mantissa_bits_type = u64;
   using shadow_type = __float128;
   static const char *kCppTypeName;
   static constexpr unsigned kMantissaBits = 52;
@@ -126,7 +126,7 @@ template <> struct FTInfo<double> {
 };
 template <> struct FTInfo<long double> {
   using orig_type = long double;
-  using mantissa_bits_type = __sanitizer::u64;
+  using mantissa_bits_type = u64;
   using shadow_type = __float128;
   static const char *kCppTypeName;
   static constexpr unsigned kMantissaBits = 63;
