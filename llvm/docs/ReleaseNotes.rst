@@ -163,6 +163,9 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-readobj now supports ``--coff-output-style=<value>``. Valid options are ``LLVM``,
+  and ``JSON``. (`#95074 <https://github.com/llvm/llvm-project/pull/95074>`)
+
 Changes to LLDB
 ---------------------------------
 
