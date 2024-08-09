@@ -3582,6 +3582,12 @@ seq\_cst total orderings of other operations that are not marked
 Floating-Point Environment
 --------------------------
 
+Unless noted otherwise, LLVM works with IEEE 754 floating-point semantics: LLVM
+backends assume that the CPU is configured to provide IEEE-compatible behavior,
+and LLVM frontends can assume that LLVM IR floating-point operations behave
+according to the IEEE specification (with an :ref:`exception around NaN values
+<floatnan>`).
+
 The default LLVM floating-point environment assumes that traps are disabled and
 status flags are not observable. Therefore, floating-point math operations do
 not have side effects and may be speculated freely. Results assume the
