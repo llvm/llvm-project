@@ -187,7 +187,7 @@ public:
   SummaryStatistics(const SummaryStatistics &&rhs)
       : m_total_time(), m_name(rhs.m_name), m_summary_count(rhs.m_summary_count.load(std::memory_order_relaxed)) {}
 
-  lldb_private::ConstString GetName() { return m_name; };
+  lldb_private::ConstString GetName() const { return m_name; };
   double GetAverageTime() const {
     return m_total_time.get().count() / m_summary_count.load(std::memory_order_relaxed);
   }

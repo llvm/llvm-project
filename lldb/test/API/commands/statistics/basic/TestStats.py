@@ -81,7 +81,7 @@ class TestCase(TestBase):
     def test_expressions_frame_var_counts(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
         self.expect("expr patatino", substrs=["27"])
@@ -224,7 +224,7 @@ class TestCase(TestBase):
         self.build()
         target = self.createTestTarget()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "// break here", lldb.SBFileSpec("main.cpp")
         )
         debug_stats = self.get_stats()
         debug_stat_keys = [
@@ -448,6 +448,7 @@ class TestCase(TestBase):
             "targetCreateTime",
             "moduleIdentifiers",
             "totalBreakpointResolveTime",
+            "summaryProviderStatistics"
         ]
         self.verify_keys(target_stats, '"stats"', keys_exist, None)
         self.assertGreater(target_stats["totalBreakpointResolveTime"], 0.0)
@@ -919,3 +920,24 @@ class TestCase(TestBase):
                 debug_stats_1,
                 f"The order of options '{options[0]}' and '{options[1]}' should not matter",
             )
+    
+    def test_summary_statistics_providers(self):
+        """
+        Test summary timing statistics is included in statistics dump when 
+        a type with a summary provider exists, and is evaluated.
+        """
+
+        self.build()
+        target = self.createTestTarget()
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop here", lldb.SBFileSpec("main.cpp")
+        )
+        self.expect("frame var", substrs=["hello world"])
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        # We don't want to take a dependency on the type name, so we just look
+        # for string and that it was called once.
+        summary_provider_str = str(summary_providers)
+        self.assertIn("string", summary_provider_str)
+        self.assertIn("'invocationCount': 1", summary_provider_str)

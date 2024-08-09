@@ -196,6 +196,8 @@ TargetStats::ToJSON(Target &target,
                                   m_source_realpath_attempt_count);
   target_metrics_json.try_emplace("sourceRealpathCompatibleCount",
                                   m_source_realpath_compatible_count);
+  target_metrics_json.try_emplace("summaryProviderStatistics", 
+                                  target.GetSummaryStatisticsCache().ToJSON());
   return target_metrics_json;
 }
 
@@ -366,7 +368,6 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   if (include_targets) {
     if (target) {
       json_targets.emplace_back(target->ReportStatistics(options));
-      json_targets.emplace_back(target->GetSummaryStatisticsCache().ToJSON());
     } else {
       for (const auto &target : debugger.GetTargetList().Targets())
         json_targets.emplace_back(target->ReportStatistics(options));
@@ -423,18 +424,21 @@ llvm::json::Value DebuggerStats::ReportStatistics(
 }
 
 llvm::json::Value SummaryStatistics::ToJSON() const {
-  return json::Object {
-    {"invocationCount", GetSummaryCount()},
-    {"totalTime", GetTotalTime()},
-    {"averageTime", GetAverageTime()}
-  };
+  json::Object body {{
+      {"invocationCount", GetSummaryCount()},
+      {"totalTime", GetTotalTime()},
+      {"averageTime", GetAverageTime()}
+    }};
+  return json::Object{{GetName().AsCString(), std::move(body)}};
 }
+
 
 json::Value SummaryStatisticsCache::ToJSON() {
   m_map_mutex.lock();
   json::Array json_summary_stats;
   for (const auto &summary_stat : m_summary_stats_map)
     json_summary_stats.emplace_back(summary_stat.second.ToJSON());
+    
   m_map_mutex.unlock();
-  return json::Object{{"summaryProviderStatistics", std::move(json_summary_stats)}};
+  return json_summary_stats;
 }
