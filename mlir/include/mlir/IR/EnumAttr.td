@@ -168,6 +168,7 @@ class EnumAttrInfo<
 
   // Generate specialized Attribute class
   bit genSpecializedAttr = 1;
+  bit genParser = 1;
   // The underlying Attribute class, which holds the enum value
   Attr baseAttrClass = baseClass;
   // The name of specialized Enum Attribute class
