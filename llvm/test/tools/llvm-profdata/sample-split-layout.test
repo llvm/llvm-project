@@ -1,0 +1,22 @@
+RUN: llvm-profdata merge --sample --extbinary --split-layout %p/Inputs/sample-profile.proftext -o %t-output
+RUN: diff %t-output %p/Inputs/split-layout.profdata
+
+RUN: llvm-profdata merge --sample --text --split-layout %t-output | FileCheck %s
+CHECK: main:184019:0
+CHECK-NEXT:  4: 534
+CHECK-NEXT:  4.2: 534
+CHECK-NEXT:  5: 1075
+CHECK-NEXT:  5.1: 1075
+CHECK-NEXT:  6: 2080
+CHECK-NEXT:  7: 534
+CHECK-NEXT:  9: 2064 _Z3bari:1471 _Z3fooi:631
+CHECK-NEXT:  10: inline1:1000
+CHECK-NEXT:   1: 1000
+CHECK-NEXT:  10: inline2:2000
+CHECK-NEXT:   1: 2000
+CHECK-NEXT: _Z3bari:20301:1437
+CHECK-NEXT:  1: 1437
+CHECK-NEXT:  !Flat
+CHECK-NEXT: _Z3fooi:7711:610
+CHECK-NEXT:  1: 610
+CHECK-NEXT:  !Flat

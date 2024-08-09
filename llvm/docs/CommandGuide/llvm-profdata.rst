@@ -162,6 +162,12 @@ OPTIONS
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
+.. option:: --split-layout=[true|false]
+
+ Split the profile data section to two with one containing sample profiles with
+ inlined functions and the other not. This option can only be used with
+ sample-based profile in extbinary format.
+
 .. option:: --convert-sample-profile-layout=[nest|flat]
 
  Convert the merged profile into a profile with a new layout. Supported

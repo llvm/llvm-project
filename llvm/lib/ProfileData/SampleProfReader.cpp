@@ -223,6 +223,11 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
 
   if (Input[Depth] == '!') {
     LineTy = LineType::Metadata;
+    // This metadata is only for manual inspection only. We already created a
+    // FunctionSamples and put it in the profile map, so there is no point
+    // to skip profiles even they have no use for ThinLTO.
+    if (Input == StringRef(" !Flat"))
+      return true;
     return parseMetadata(Input.substr(Depth), FunctionHash, Attributes);
   }
 
@@ -996,7 +1001,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readImpl() {
     if (!Entry.Size)
       continue;
 
-    // Skip sections without context when SkipFlatProf is true.
+    // Skip sections without inlined functions when SkipFlatProf is true.
     if (SkipFlatProf && hasSecFlag(Entry, SecCommonFlags::SecFlagFlat))
       continue;
 
