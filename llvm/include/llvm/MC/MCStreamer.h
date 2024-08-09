@@ -912,6 +912,9 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);
 
+  /// This implements the '.loc_label Name' directive.
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
+
   /// Associate a filename with a specified logical file number, and also
   /// specify that file's checksum information.  This implements the '.cv_file 4
   /// "foo.c"' assembler directive. Returns true on success.
@@ -1119,7 +1122,8 @@ public:
   virtual void emitDwarfLineStartLabel(MCSymbol *StartSym);
 
   /// Emit the debug line end entry.
-  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) {}
+  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel,
+                                     MCSymbol *EndLabel = nullptr) {}
 
   /// If targets does not support representing debug line section by .loc/.file
   /// directives in assembly output, we need to populate debug line section with
