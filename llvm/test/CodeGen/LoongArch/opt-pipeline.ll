@@ -70,6 +70,9 @@
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
+; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
+; LAXX-NEXT:       Function Alias Analysis Results
+; LAXX-NEXT:       ObjC ARC contraction
 ; LAXX-NEXT:       Prepare callbr
 ; LAXX-NEXT:       Safe Stack instrumentation pass
 ; LAXX-NEXT:       Insert stack protectors
