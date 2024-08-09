@@ -237,7 +237,6 @@ static bool expandNormalizeIntrinsic(CallInst *Orig) {
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
 
-  Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
   auto *XVec = dyn_cast<FixedVectorType>(Ty);
   if (!XVec) {
     if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
@@ -253,25 +252,47 @@ static bool expandNormalizeIntrinsic(CallInst *Orig) {
     return true;
   }
 
+  Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
   unsigned XVecSize = XVec->getNumElements();
-  Value *Sum = Builder.CreateFMul(Elt, Elt);
-  for (unsigned I = 1; I < XVecSize; I++) {
-    Elt = Builder.CreateExtractElement(X, I);
-    Value *Mul = Builder.CreateFMul(Elt, Elt);
-    Sum = Builder.CreateFAdd(Sum, Mul);
+  Value *DotProduct = nullptr;
+  switch (XVecSize) {
+  case 1:
+    report_fatal_error(Twine("Invalid input vector: length is zero"),
+                       /* gen_crash_diag=*/false);
+    break;
+  case 2:
+    DotProduct = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::dx_dot2, ArrayRef<Value *>{X, X}, nullptr, "dx.dot2");
+    break;
+  case 3:
+    DotProduct = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::dx_dot3, ArrayRef<Value *>{X, X}, nullptr, "dx.dot3");
+    break;
+  case 4:
+    DotProduct = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::dx_dot4, ArrayRef<Value *>{X, X}, nullptr, "dx.dot4");
+    break;
+  default:
+    report_fatal_error(Twine("Invalid input vector: vector size is invalid."),
+                       /* gen_crash_diag=*/false);
   }
-  Value *Length = Builder.CreateIntrinsic(
-      EltTy, Intrinsic::sqrt, ArrayRef<Value *>{Sum}, nullptr, "elt.sqrt");
+
+  Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
+                                                ArrayRef<Value *>{DotProduct},
+                                                nullptr, "dx.rsqrt");
 
   // verify that the length is non-zero
-  if (auto *constantFP = dyn_cast<ConstantFP>(Length)) {
+  // (if the reciprocal sqrt of the length is non-zero, then the length is
+  // non-zero)
+  if (auto *constantFP = dyn_cast<ConstantFP>(Multiplicand)) {
     const APFloat &fpVal = constantFP->getValueAPF();
     if (fpVal.isZero())
       report_fatal_error(Twine("Invalid input vector: length is zero"),
                          /* gen_crash_diag=*/false);
   }
-  Value *LengthVec = Builder.CreateVectorSplat(XVecSize, Length);
-  Value *Result = Builder.CreateFDiv(X, LengthVec);
+
+  Value *MultiplicandVec = Builder.CreateVectorSplat(XVecSize, Multiplicand);
+  Value *Result = Builder.CreateFMul(X, MultiplicandVec);
 
   Orig->replaceAllUsesWith(Result);
   Orig->eraseFromParent();

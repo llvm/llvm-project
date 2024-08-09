@@ -1,7 +1,7 @@
 ; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation normalize does not support double overload type
-; CHECK: Cannot create Sqrt operation: Invalid overload type
+; CHECK: Cannot create Dot2 operation: Invalid overload type
 
 define noundef <2 x double> @test_normalize_double2(<2 x double> noundef %p0) {
 entry:
