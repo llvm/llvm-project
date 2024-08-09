@@ -21,6 +21,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -83,6 +84,35 @@ static bool getIsTransparentStepping(const Decl *D) {
   if (!D)
     return false;
   return D->hasAttr<TransparentSteppingAttr>();
+}
+
+/// Returns true if \ref VD is a a holding variable (aka a
+/// VarDecl retrieved using \ref BindingDecl::getHoldingVar).
+static bool IsDecomposedVarDecl(VarDecl const *VD) {
+  auto const *Init = VD->getInit();
+  if (!Init)
+    return false;
+
+  auto const *RefExpr =
+      llvm::dyn_cast_or_null<DeclRefExpr>(Init->IgnoreUnlessSpelledInSource());
+  if (!RefExpr)
+    return false;
+
+  return llvm::dyn_cast_or_null<DecompositionDecl>(RefExpr->getDecl());
+}
+
+/// Returns true if \ref VD is a compiler-generated variable
+/// and should be treated as artificial for the purposes
+/// of debug-info generation.
+static bool IsArtificial(VarDecl const *VD) {
+  // Tuple-like bindings are marked as implicit despite
+  // being spelled out in source. Don't treat them as artificial
+  // variables.
+  if (IsDecomposedVarDecl(VD))
+    return false;
+
+  return VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
+                              cast<Decl>(VD->getDeclContext())->isImplicit());
 }
 
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
@@ -4794,11 +4824,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   if (VD->hasAttr<NoDebugAttr>())
     return nullptr;
 
-  bool Unwritten =
-      VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
-                           cast<Decl>(VD->getDeclContext())->isImplicit());
+  const bool VarIsArtificial = IsArtificial(VD);
+
   llvm::DIFile *Unit = nullptr;
-  if (!Unwritten)
+  if (!VarIsArtificial)
     Unit = getOrCreateFile(VD->getLocation());
   llvm::DIType *Ty;
   uint64_t XOffset = 0;
@@ -4815,13 +4844,13 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   // Get location information.
   unsigned Line = 0;
   unsigned Column = 0;
-  if (!Unwritten) {
+  if (!VarIsArtificial) {
     Line = getLineNumber(VD->getLocation());
     Column = getColumnNumber(VD->getLocation());
   }
   SmallVector<uint64_t, 13> Expr;
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  if (VD->isImplicit())
+  if (VarIsArtificial)
     Flags |= llvm::DINode::FlagArtificial;
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
