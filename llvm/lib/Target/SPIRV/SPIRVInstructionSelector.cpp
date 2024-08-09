@@ -239,7 +239,7 @@ private:
                    MachineInstr &I) const;
 
   bool selectNormalize(Register ResVReg, const SPIRVType *ResType,
-                   MachineInstr &I) const;
+                       MachineInstr &I) const;
 
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
