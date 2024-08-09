@@ -51,8 +51,6 @@ Getting Started with libc++
    Status/Format
    Status/Parallelism
    Status/PSTL
-   Status/Ranges
-   Status/Spaceship
    Status/SpecialMath
    Status/Zip
 
