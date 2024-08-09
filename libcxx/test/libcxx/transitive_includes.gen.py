@@ -73,7 +73,7 @@ else:
 {lit_header_restrictions.get(header, '')}
 
 // TODO: Fix this test to make it work with localization or wide characters disabled
-// UNSUPPORTED: no-localization, no-wide-characters, no-threads, no-filesystem, libcpp-has-no-experimental-tzdb, no-tzdb
+// UNSUPPORTED: no-localization, no-wide-characters, no-threads, no-filesystem
 
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.
