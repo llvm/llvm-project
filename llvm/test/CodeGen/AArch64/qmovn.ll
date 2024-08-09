@@ -125,6 +125,117 @@ entry:
   ret <2 x i32> %t
 }
 
+define <2 x i32> @vqmovni64_smaxmin_u(<2 x i64> %s0) {
+; CHECK-LABEL: vqmovni64_smaxmin_u:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NEXT:    cmgt v2.2d, v1.2d, v0.2d
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    cmgt v1.2d, v0.2d, #0
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %c1 = icmp slt <2 x i64> %s0, <i64 4294967295, i64 4294967295>
+  %s1 = select <2 x i1> %c1, <2 x i64> %s0, <2 x i64> <i64 4294967295, i64 4294967295>
+  %c2 = icmp sgt <2 x i64> %s1, zeroinitializer
+  %s2 = select <2 x i1> %c2, <2 x i64> %s1, <2 x i64> zeroinitializer
+  %t = trunc <2 x i64> %s2 to <2 x i32>
+  ret <2 x i32> %t
+}
+
+define <2 x i32> @vqmovni64_sminmax_u(<2 x i64> %s0) {
+; CHECK-LABEL: vqmovni64_sminmax_u:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmgt v1.2d, v0.2d, #0
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmgt v1.2d, v2.2d, v0.2d
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %c1 = icmp sgt <2 x i64> %s0, zeroinitializer
+  %s1 = select <2 x i1> %c1, <2 x i64> %s0, <2 x i64> zeroinitializer
+  %c2 = icmp slt <2 x i64> %s1, <i64 4294967295, i64 4294967295>
+  %s2 = select <2 x i1> %c2, <2 x i64> %s1, <2 x i64> <i64 4294967295, i64 4294967295>
+  %t = trunc <2 x i64> %s2 to <2 x i32>
+  ret <2 x i32> %t
+}
+
+define <4 x i16> @vqmovni32_smaxmin_u(<4 x i32> %s0) {
+; CHECK-LABEL: vqmovni32_smaxmin_u:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  %c1 = icmp slt <4 x i32> %s0, <i32 65535, i32 65535, i32 65535, i32 65535>
+  %s1 = select <4 x i1> %c1, <4 x i32> %s0, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>
+  %c2 = icmp sgt <4 x i32> %s1, zeroinitializer
+  %s2 = select <4 x i1> %c2, <4 x i32> %s1, <4 x i32> zeroinitializer
+  %t = trunc <4 x i32> %s2 to <4 x i16>
+  ret <4 x i16> %t
+}
+
+define <4 x i16> @vqmovni32_sminmax_u(<4 x i32> %s0) {
+; CHECK-LABEL: vqmovni32_sminmax_u:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  %c1 = icmp sgt <4 x i32> %s0, zeroinitializer
+  %s1 = select <4 x i1> %c1, <4 x i32> %s0, <4 x i32> zeroinitializer
+  %c2 = icmp slt <4 x i32> %s1, <i32 65535, i32 65535, i32 65535, i32 65535>
+  %s2 = select <4 x i1> %c2, <4 x i32> %s1, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>
+  %t = trunc <4 x i32> %s2 to <4 x i16>
+  ret <4 x i16> %t
+}
+
+define <8 x i8> @vqmovni16_smaxmin_u(<8 x i16> %s0) {
+; CHECK-LABEL: vqmovni16_smaxmin_u:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2d, #0xff00ff00ff00ff
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    smin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    smax v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+entry:
+  %c1 = icmp slt <8 x i16> %s0, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %s1 = select <8 x i1> %c1, <8 x i16> %s0, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %c2 = icmp sgt <8 x i16> %s1, zeroinitializer
+  %s2 = select <8 x i1> %c2, <8 x i16> %s1, <8 x i16> zeroinitializer
+  %t = trunc <8 x i16> %s2 to <8 x i8>
+  ret <8 x i8> %t
+}
+
+define <8 x i8> @vqmovni16_sminmax_u(<8 x i16> %s0) {
+; CHECK-LABEL: vqmovni16_sminmax_u:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0xff00ff00ff00ff
+; CHECK-NEXT:    smax v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    smin v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+entry:
+  %c1 = icmp sgt <8 x i16> %s0, zeroinitializer
+  %s1 = select <8 x i1> %c1, <8 x i16> %s0, <8 x i16> zeroinitializer
+  %c2 = icmp slt <8 x i16> %s1, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %s2 = select <8 x i1> %c2, <8 x i16> %s1, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %t = trunc <8 x i16> %s2 to <8 x i8>
+  ret <8 x i8> %t
+}
+
 define <2 x i32> @vqmovni64_umaxmin(<2 x i64> %s0) {
 ; CHECK-LABEL: vqmovni64_umaxmin:
 ; CHECK:       // %bb.0: // %entry
@@ -344,6 +455,64 @@ entry:
   %max = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %y, <2 x i64> zeroinitializer)
   %min = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %max, <2 x i64> <i64 4294967295, i64 4294967295>)
   %trunc = trunc <2 x i64> %min to <2 x i32>
+  %shuffle = shufflevector <2 x i32> %x, <2 x i32> %trunc, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle
+}
+
+; Test the (concat_vectors (X), (trunc(smin(smax(Y, 0), 2^n))))) pattern.
+
+define <16 x i8> @sminsmax_range_unsigned_i16_to_i8(<8 x i8> %x, <8 x i16> %y) {
+; CHECK-LABEL: sminsmax_range_unsigned_i16_to_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.2d, #0xff00ff00ff00ff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smax v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    smin v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    xtn2 v0.16b, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %min = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %y, <8 x i16> zeroinitializer)
+  %max = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %min, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>)
+  %trunc = trunc <8 x i16> %max to <8 x i8>
+  %shuffle = shufflevector <8 x i8> %x, <8 x i8> %trunc, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle
+}
+
+define <8 x i16> @sminsmax_range_unsigned_i32_to_i16(<4 x i16> %x, <4 x i32> %y) {
+; CHECK-LABEL: sminsmax_range_unsigned_i32_to_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smax v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    smin v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    xtn2 v0.8h, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %smax = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %y, <4 x i32> zeroinitializer)
+  %smin = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %smax, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>)
+  %trunc = trunc <4 x i32> %smin to <4 x i16>
+  %shuffle = shufflevector <4 x i16> %x, <4 x i16> %trunc, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle
+}
+
+define <4 x i32> @sminsmax_range_unsigned_i64_to_i32(<2 x i32> %x, <2 x i64> %y) {
+; CHECK-LABEL: sminsmax_range_unsigned_i64_to_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmgt v2.2d, v1.2d, #0
+; CHECK-NEXT:    movi v3.2d, #0x000000ffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    cmgt v2.2d, v3.2d, v1.2d
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    orn v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    xtn2 v0.4s, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %smax = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %y, <2 x i64> zeroinitializer)
+  %smin = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %smax, <2 x i64> <i64 4294967295, i64 4294967295>)
+  %trunc = trunc <2 x i64> %smin to <2 x i32>
   %shuffle = shufflevector <2 x i32> %x, <2 x i32> %trunc, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %shuffle
 }
