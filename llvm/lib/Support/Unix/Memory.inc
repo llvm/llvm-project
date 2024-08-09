@@ -469,9 +469,7 @@ bool Memory::execProtectionChangeNeedsNewMapping() {
   return status;
 }
 #else
-bool Memory::execProtectionChangeNeedsNewMapping() {
-  return false;
-}
+bool Memory::execProtectionChangeNeedsNewMapping() { return false; }
 #endif
 
 } // namespace sys
