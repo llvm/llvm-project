@@ -4091,6 +4091,15 @@ void InitializationSequence::AddParenthesizedListInitStep(QualType T) {
   Steps.push_back(S);
 }
 
+void InitializationSequence::AddUnwrapInitListAtFirst(InitListExpr *Syntactic) {
+  assert(Syntactic->getNumInits() == 1 &&
+         "Can only unwrap trivial init lists.");
+  Step S;
+  S.Kind = SK_UnwrapInitList;
+  S.Type = Syntactic->getInit(0)->getType();
+  Steps.insert(Steps.begin(), S);
+}
+
 void InitializationSequence::RewrapReferenceInitList(QualType T,
                                                      InitListExpr *Syntactic) {
   assert(Syntactic->getNumInits() == 1 &&
@@ -4165,6 +4174,33 @@ static void MaybeProduceObjCObject(Sema &S,
 
     Sequence.AddProduceObjCObjectStep(Entity.getType());
   }
+}
+
+/// Initialize an array from another array
+static void TryArrayCopy(Sema &S, const InitializationKind &Kind,
+                         const InitializedEntity &Entity, Expr *Initializer,
+                         QualType DestType, InitializationSequence &Sequence,
+                         bool TreatUnavailableAsInvalid) {
+  // If source is a prvalue, use it directly.
+  if (Initializer->isPRValue()) {
+    Sequence.AddArrayInitStep(DestType, /*IsGNUExtension*/ false);
+    return;
+  }
+
+  // Emit element-at-a-time copy loop.
+  InitializedEntity Element =
+      InitializedEntity::InitializeElement(S.Context, 0, Entity);
+  QualType InitEltT =
+      S.Context.getAsArrayType(Initializer->getType())->getElementType();
+  OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
+                      Initializer->getValueKind(),
+                      Initializer->getObjectKind());
+  Expr *OVEAsExpr = &OVE;
+  Sequence.InitializeFrom(S, Element, Kind, OVEAsExpr,
+                          /*TopLevelOfInitList*/ false,
+                          TreatUnavailableAsInvalid);
+  if (Sequence)
+    Sequence.AddArrayInitLoopStep(Entity.getType(), InitEltT);
 }
 
 static void TryListInitialization(Sema &S,
@@ -4775,6 +4811,31 @@ static void TryListInitialization(Sema &S,
     }
     if (const ArrayType *DestAT = S.Context.getAsArrayType(DestType)) {
       Expr *SubInit[1] = {InitList->getInit(0)};
+
+      // C++17 [dcl.struct.bind]p1:
+      // ... If the assignment-expression in the initializer has array type A
+      // and no ref-qualifier is present, e has type cv A and each element is
+      // copy-initialized or direct-initialized from the corresponding element
+      // of the assignment-expression as specified by the form of the
+      // initializer.
+      //
+      // This is a special case not following list-initialization.
+      if (isa<ConstantArrayType>(DestAT) &&
+          Entity.getKind() == InitializedEntity::EK_Variable &&
+          isa<DecompositionDecl>(Entity.getDecl())) {
+        assert(
+            S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
+            "Deduced to other type?");
+        TryArrayCopy(S,
+                     InitializationKind::CreateCopy(Kind.getLocation(),
+                                                    InitList->getLBraceLoc()),
+                     Entity, SubInit[0], DestType, Sequence,
+                     TreatUnavailableAsInvalid);
+        if (Sequence)
+          Sequence.AddUnwrapInitListAtFirst(InitList);
+        return;
+      }
+
       if (!isa<VariableArrayType>(DestAT) &&
           IsStringInit(SubInit[0], DestAT, S.Context) == SIF_None) {
         InitializationKind SubKind =
@@ -6460,25 +6521,8 @@ void InitializationSequence::InitializeFrom(Sema &S,
         S.Context.hasSameUnqualifiedType(Initializer->getType(),
                                          Entity.getType()) &&
         canPerformArrayCopy(Entity)) {
-      // If source is a prvalue, use it directly.
-      if (Initializer->isPRValue()) {
-        AddArrayInitStep(DestType, /*IsGNUExtension*/false);
-        return;
-      }
-
-      // Emit element-at-a-time copy loop.
-      InitializedEntity Element =
-          InitializedEntity::InitializeElement(S.Context, 0, Entity);
-      QualType InitEltT =
-          Context.getAsArrayType(Initializer->getType())->getElementType();
-      OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
-                          Initializer->getValueKind(),
-                          Initializer->getObjectKind());
-      Expr *OVEAsExpr = &OVE;
-      InitializeFrom(S, Element, Kind, OVEAsExpr, TopLevelOfInitList,
-                     TreatUnavailableAsInvalid);
-      if (!Failed())
-        AddArrayInitLoopStep(Entity.getType(), InitEltT);
+      TryArrayCopy(S, Kind, Entity, Initializer, DestType, *this,
+                   TreatUnavailableAsInvalid);
       return;
     }
 

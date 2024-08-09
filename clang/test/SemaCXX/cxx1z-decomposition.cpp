@@ -198,4 +198,33 @@ namespace lambdas {
   }
 }
 
-// FIXME: by-value array copies
+namespace by_value_array_copy {
+  struct explicit_copy {
+    explicit_copy() = default; // expected-note 2{{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+    explicit explicit_copy(const explicit_copy&) = default; // expected-note 2{{explicit constructor is not a candidate}}
+  };
+
+  constexpr int direct_initialization_for_elements() {
+    int arr[3]{1, 2, 3};
+    auto [a1, b1, c1](arr);
+    explicit_copy ec_arr[2];
+    auto [a2, b2](ec_arr);
+    arr[0]--;
+    return a1 + b1 + c1 + arr[0];
+  }
+  static_assert(direct_initialization_for_elements() == 6);
+
+  void copy_initialization_for_elements() {
+    int arr[2]{1, 2};
+    auto [a1, b1] = arr;
+    auto [a2, b2]{arr}; // GH31813
+    explicit_copy ec_arr[2];
+    auto [a3, b3] = ec_arr; // expected-error {{no matching constructor for initialization of 'explicit_copy[2]'}}
+    auto [a4, b4]{ec_arr}; // expected-error {{no matching constructor for initialization of 'explicit_copy[2]'}}
+
+    // Test prvalue
+    using T = explicit_copy[2];
+    auto [a5, b5] = T{};
+    auto [a6, b6]{T{}};
+  }
+} // namespace by_value_array_copy
