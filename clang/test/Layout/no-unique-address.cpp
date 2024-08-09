@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -fsyntax-only -triple x86_64-linux-gnu -fdump-record-layouts %s | FileCheck %s
+// RUN: %clang_cc1 -DOLD_ABI=false -std=c++20 -fsyntax-only -triple x86_64-linux-gnu -fdump-record-layouts %s | FileCheck %s --check-prefixes=CHECK,NEW
+// RUN: %clang_cc1 -fclang-abi-compat=19.0 -DOLD_ABI=true -std=c++20 -fsyntax-only -triple x86_64-linux-gnu -fdump-record-layouts %s | FileCheck %s --check-prefixes=CHECK,OLD
 
 namespace Empty {
   struct A {};
@@ -40,7 +41,8 @@ namespace Empty {
   // CHECK-NEXT:     0 |   struct Empty::A a1 (empty)
   // CHECK-NEXT:     1 |   struct Empty::A a2 (empty)
   // CHECK-NEXT:     0 |   char e
-  // CHECK-NEXT:       | [sizeof=2, dsize=2, align=1,
+  // OLD-NEXT:         | [sizeof=2, dsize=2, align=1,
+  // NEW-NEXT:         | [sizeof=2, dsize=1, align=1,
   // CHECK-NEXT:       |  nvsize=2, nvalign=1]
 
   struct F {
@@ -120,8 +122,10 @@ namespace Empty {
   // CHECK-NEXT:     4 |   struct Empty::A b (empty)
   // CHECK-NEXT:     4 |   int y
   // CHECK-NEXT:     8 |   struct Empty::A c (empty)
-  // CHECK-NEXT:       | [sizeof=12, dsize=12, align=4,
-  // CHECK-NEXT:       |  nvsize=12, nvalign=4]
+  // OLD-NEXT:         | [sizeof=12, dsize=12, align=4,
+  // OLD-NEXT:         |  nvsize=12, nvalign=4]
+  // NEW-NEXT:         | [sizeof=12, dsize=8, align=4,
+  // NEW-NEXT:         |  nvsize=9, nvalign=4]
 
   struct EmptyWithNonzeroDSizeNonPOD {
     ~EmptyWithNonzeroDSizeNonPOD();
@@ -145,7 +149,7 @@ namespace Empty {
 }
 
 namespace POD {
-  // Cannot reuse tail padding of a PDO type.
+  // Cannot reuse tail padding of a POD type.
   struct A { int n; char c[3]; };
   struct B { [[no_unique_address]] A a; char d; };
   static_assert(sizeof(B) == 12);
@@ -156,8 +160,10 @@ namespace POD {
   // CHECK-NEXT:     0 |     int n
   // CHECK-NEXT:     4 |     char[3] c
   // CHECK-NEXT:     8 |   char d
-  // CHECK-NEXT:       | [sizeof=12, dsize=12, align=4,
-  // CHECK-NEXT:       |  nvsize=12, nvalign=4]
+  // OLD-NEXT:         | [sizeof=12, dsize=12, align=4,
+  // OLD-NEXT:         |  nvsize=12, nvalign=4]
+  // NEW-NEXT:         | [sizeof=12, dsize=9, align=4,
+  // NEW-NEXT:         |  nvsize=9, nvalign=4]
 }
 
 namespace NonPOD {
@@ -262,4 +268,24 @@ namespace RepeatedVBase {
   // CHECK-NEXT:     8 |     char c
   // CHECK-NEXT:       | [sizeof=32, dsize=9, align=16,
   // CHECK-NEXT:       |  nvsize=9, nvalign=16]
+}
+
+namespace PotentiallyOverlappingNonClass {
+  struct A {
+    [[no_unique_address]] alignas(2) char x;
+  };
+  struct B : A {
+    char y;
+  };
+  static_assert(sizeof(B) == (OLD_ABI ? 4 : 2));
+  // CHECK:*** Dumping AST Record Layout
+  // CHECK:          0 | struct PotentiallyOverlappingNonClass::B
+  // CHECK-NEXT:     0 |   struct PotentiallyOverlappingNonClass::A (base)
+  // CHECK-NEXT:     0 |     char x
+  // NEW-NEXT:       1 |   char y
+  // NEW-NEXT:         | [sizeof=2, dsize=2, align=2,
+  // NEW-NEXT:         |  nvsize=2, nvalign=2]
+  // OLD-NEXT:       2 |   char y
+  // OLD-NEXT:         | [sizeof=4, dsize=3, align=2,
+  // OLD-NEXT:         |  nvsize=3, nvalign=2]
 }

@@ -255,57 +255,6 @@ public:
     llvm_unreachable("bad ABI kind");
   }
 
-  /// When is record layout allowed to allocate objects in the tail
-  /// padding of a base class?
-  ///
-  /// This decision cannot be changed without breaking platform ABI
-  /// compatibility. In ISO C++98, tail padding reuse was only permitted for
-  /// non-POD base classes, but that restriction was removed retroactively by
-  /// DR 43, and tail padding reuse is always permitted in all de facto C++
-  /// language modes. However, many platforms use a variant of the old C++98
-  /// rule for compatibility.
-  enum TailPaddingUseRules {
-    /// The tail-padding of a base class is always theoretically
-    /// available, even if it's POD.
-    AlwaysUseTailPadding,
-
-    /// Only allocate objects in the tail padding of a base class if
-    /// the base class is not POD according to the rules of C++ TR1.
-    UseTailPaddingUnlessPOD03,
-
-    /// Only allocate objects in the tail padding of a base class if
-    /// the base class is not POD according to the rules of C++11.
-    UseTailPaddingUnlessPOD11
-  };
-  TailPaddingUseRules getTailPaddingUseRules() const {
-    switch (getKind()) {
-    // To preserve binary compatibility, the generic Itanium ABI has
-    // permanently locked the definition of POD to the rules of C++ TR1,
-    // and that trickles down to derived ABIs.
-    case GenericItanium:
-    case GenericAArch64:
-    case GenericARM:
-    case iOS:
-    case GenericMIPS:
-    case XL:
-      return UseTailPaddingUnlessPOD03;
-
-    // AppleARM64 and WebAssembly use the C++11 POD rules.  They do not honor
-    // the Itanium exception about classes with over-large bitfields.
-    case AppleARM64:
-    case Fuchsia:
-    case WebAssembly:
-    case WatchOS:
-      return UseTailPaddingUnlessPOD11;
-
-    // MSVC always allocates fields in the tail-padding of a base class
-    // subobject, even if they're POD.
-    case Microsoft:
-      return AlwaysUseTailPadding;
-    }
-    llvm_unreachable("bad ABI kind");
-  }
-
   friend bool operator==(const TargetCXXABI &left, const TargetCXXABI &right) {
     return left.getKind() == right.getKind();
   }
