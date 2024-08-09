@@ -610,13 +610,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::verifyStartStop(
 
   if (!Started)
     return make_error<StringError>(
-        "Can't find start pass \"" +
-            PIC->getPassNameForClassName(Info.StartPass) + "\".",
+        "Can't find start pass \"" + Info.StartPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
   if (!Stopped)
     return make_error<StringError>(
-        "Can't find stop pass \"" +
-            PIC->getPassNameForClassName(Info.StopPass) + "\".",
+        "Can't find stop pass \"" + Info.StopPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
   return Error::success();
 }
