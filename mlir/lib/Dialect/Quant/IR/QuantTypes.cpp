@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "TypeDetail.h"
-#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -25,7 +25,7 @@ unsigned QuantizedType::getFlags() const {
 }
 
 bool QuantizedType::classof(Type type) {
-  return llvm::isa<QuantizationDialect>(type.getDialect());
+  return llvm::isa<QuantDialect>(type.getDialect());
 }
 
 LogicalResult
@@ -70,6 +70,17 @@ int64_t QuantizedType::getStorageTypeMin() const {
 
 int64_t QuantizedType::getStorageTypeMax() const {
   return static_cast<ImplType *>(impl)->storageTypeMax;
+}
+
+bool QuantizedType::hasStorageTypeBounds() const {
+  unsigned int integralWidth = getStorageTypeIntegralWidth();
+  bool isSignedInteger = isSigned();
+  int64_t defaultIntegerMin =
+      getDefaultMinimumForInteger(isSignedInteger, integralWidth);
+  int64_t defaultIntegerMax =
+      getDefaultMaximumForInteger(isSignedInteger, integralWidth);
+  return defaultIntegerMin != getStorageTypeMin() ||
+         defaultIntegerMax != getStorageTypeMax();
 }
 
 unsigned QuantizedType::getStorageTypeIntegralWidth() const {
