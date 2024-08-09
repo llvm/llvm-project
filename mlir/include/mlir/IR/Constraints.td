@@ -153,6 +153,9 @@ class TypeConstraint<Pred predicate, string summary = "",
     Constraint<predicate, summary> {
   // The name of the C++ Type class if known, or Type if not.
   string cppClassName = cppClassNameParam;
+  // TODO: This field is sometimes called `cppClassName` and sometimes
+  // `cppType`. Use a single name consistently.
+  string cppType = cppClassNameParam;
 }
 
 // Subclass for constraints on an attribute.

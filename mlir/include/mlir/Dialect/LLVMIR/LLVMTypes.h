@@ -180,11 +180,13 @@ public:
   ArrayRef<Type> getBody() const;
 
   /// Verifies that the type about to be constructed is well-formed.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              StringRef, bool);
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              ArrayRef<Type> types, bool);
-  using Base::verify;
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError, StringRef,
+                   bool);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   ArrayRef<Type> types, bool);
+  using Base::verifyInvariants;
 
   /// Hooks for DataLayoutTypeInterface. Should not be called directly. Obtain a
   /// DataLayout instance and query it instead.

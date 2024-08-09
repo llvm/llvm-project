@@ -180,6 +180,7 @@ class AnyTypeOf<list<Type> allowedTypeList, string summary = "",
         summary),
     cppClassName> {
   list<Type> allowedTypes = allowedTypeList;
+  string cppType = cppClassName;
 }
 
 // A type that satisfies the constraints of all given types.

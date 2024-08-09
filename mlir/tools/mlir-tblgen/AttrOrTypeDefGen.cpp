@@ -93,8 +93,14 @@ private:
   void emitDialectName();
   /// Emit attribute or type builders.
   void emitBuilders();
-  /// Emit a verifier for the def.
-  void emitVerifier();
+  /// Emit a verifier declaration for custom verification (impl. provided by
+  /// the users).
+  void emitVerifierDecl();
+  /// Emit a verifier that checks type constraints.
+  void emitInvariantsVerifierImpl();
+  /// Emit an entry poiunt for verification that calls the invariants and
+  /// custom verifier.
+  void emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier);
   /// Emit parsers and printers.
   void emitParserPrinter();
   /// Emit parameter accessors, if required.
@@ -188,9 +194,17 @@ DefGen::DefGen(const AttrOrTypeDef &def)
   emitName();
   // Emit the dialect name.
   emitDialectName();
-  // Emit the verifier.
-  if (storageCls && def.genVerifyDecl())
-    emitVerifier();
+  // Emit verification of type constraints.
+  bool genVerifyInvariantsImpl = def.genVerifyInvariantsImpl();
+  if (storageCls && genVerifyInvariantsImpl)
+    emitInvariantsVerifierImpl();
+  // Emit the custom verifier (written by the user).
+  bool genVerifyDecl = def.genVerifyDecl();
+  if (storageCls && genVerifyDecl)
+    emitVerifierDecl();
+  // Emit the "verifyInvariants" function if there is any verification at all.
+  if (storageCls)
+    emitInvariantsVerifier(genVerifyInvariantsImpl, genVerifyDecl);
   // Emit the mnemonic, if there is one, and any associated parser and printer.
   if (def.getMnemonic())
     emitParserPrinter();
@@ -295,22 +309,86 @@ void DefGen::emitDialectName() {
 void DefGen::emitBuilders() {
   if (!def.skipDefaultBuilders()) {
     emitDefaultBuilder();
-    if (def.genVerifyDecl())
+    if (def.genVerifyDecl() || def.genVerifyInvariantsImpl())
       emitCheckedBuilder();
   }
   for (auto &builder : def.getBuilders()) {
     emitCustomBuilder(builder);
-    if (def.genVerifyDecl())
+    if (def.genVerifyDecl() || def.genVerifyInvariantsImpl())
       emitCheckedCustomBuilder(builder);
   }
 }
 
-void DefGen::emitVerifier() {
-  defCls.declare<UsingDeclaration>("Base::getChecked");
+void DefGen::emitVerifierDecl() {
   defCls.declareStaticMethod(
       "::llvm::LogicalResult", "verify",
       getBuilderParams({{"::llvm::function_ref<::mlir::InFlightDiagnostic()>",
                          "emitError"}}));
+}
+
+static const char *const patternParameterVerificationCode = R"(
+if (!({0})) {
+  emitError() << "failed to verify '{1}': {2}";
+  return ::mlir::failure();
+}
+)";
+
+void DefGen::emitInvariantsVerifierImpl() {
+  SmallVector<MethodParameter> builderParams = getBuilderParams(
+      {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}});
+  Method *verifier =
+      defCls.addMethod("::llvm::LogicalResult", "verifyInvariantsImpl",
+                       Method::Static, builderParams);
+  verifier->body().indent();
+
+  // Generate verification for each parameter that is a type constraint.
+  for (auto it : llvm::enumerate(def.getParameters())) {
+    const AttrOrTypeParameter &param = it.value();
+    std::optional<Constraint> constraint = param.getConstraint();
+    // No verification needed for parameters that are not type constraints.
+    if (!constraint.has_value())
+      continue;
+    FmtContext ctx;
+    // Note: Skip over the first method parameter (`emitError`).
+    ctx.withSelf(builderParams[it.index() + 1].getName());
+    std::string condition = tgfmt(constraint->getConditionTemplate(), &ctx);
+    verifier->body() << formatv(patternParameterVerificationCode, condition,
+                                param.getName(), constraint->getSummary())
+                     << "\n";
+  }
+  verifier->body() << "return ::mlir::success();";
+}
+
+void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
+  if (!hasImpl && !hasCustomVerifier)
+    return;
+  defCls.declare<UsingDeclaration>("Base::getChecked");
+  SmallVector<MethodParameter> builderParams = getBuilderParams(
+      {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}});
+  Method *verifier =
+      defCls.addMethod("::llvm::LogicalResult", "verifyInvariants",
+                       Method::Static, builderParams);
+  verifier->body().indent();
+
+  auto emitVerifierCall = [&](StringRef name) {
+    verifier->body() << strfmt("if (::mlir::failed({0}(", name);
+    llvm::interleaveComma(
+        llvm::map_range(builderParams,
+                        [](auto &param) { return param.getName(); }),
+        verifier->body());
+    verifier->body() << ")))\n";
+    verifier->body() << "  return ::mlir::failure();\n";
+  };
+
+  if (hasImpl) {
+    // Call the verifier that checks the type constraints.
+    emitVerifierCall("verifyInvariantsImpl");
+  }
+  if (hasCustomVerifier) {
+    // Call the custom verifier that is provided by the user.
+    emitVerifierCall("verify");
+  }
+  verifier->body() << "return ::mlir::success();";
 }
 
 void DefGen::emitParserPrinter() {
