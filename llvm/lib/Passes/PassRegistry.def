@@ -20,6 +20,7 @@
 #endif
 MODULE_ANALYSIS("callgraph", CallGraphAnalysis())
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
+MODULE_ANALYSIS("ctx-prof-analysis", CtxProfAnalysis(UseCtxProfile))
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
 MODULE_ANALYSIS("ir-similarity", IRSimilarityAnalysis())
 MODULE_ANALYSIS("lcg", LazyCallGraphAnalysis())
@@ -79,6 +80,7 @@ MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfilingLoweringPass())
 MODULE_PASS("ctx-instr-lower", PGOCtxProfLoweringPass())
+MODULE_PASS("print<ctx-prof-analysis>", CtxProfAnalysisPrinterPass(dbgs()))
 MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
@@ -590,6 +592,10 @@ FUNCTION_PASS_WITH_PARAMS(
       return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
     },
     parseWinEHPrepareOptions, "demote-catchswitch-only")
+FUNCTION_PASS_WITH_PARAMS(
+    "rtsan", "RealtimeSanitizerPass",
+    [](RealtimeSanitizerOptions Opts) { return RealtimeSanitizerPass(Opts); },
+    parseRtSanPassOptions, "")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

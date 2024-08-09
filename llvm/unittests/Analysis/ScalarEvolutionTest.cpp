@@ -137,7 +137,7 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
-  auto *PN = PHINode::Create(Ty, 2, "", &*LoopBB->begin());
+  auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
   PN->addIncoming(UndefValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
@@ -930,10 +930,12 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Type::getInt64Ty(Context), 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br);
+  auto *Phi =
+      PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br->getIterator());
   Phi->addIncoming(MinInt64, EntryBB);
   Phi->addIncoming(Add, LoopBB);
   // exit:
@@ -986,10 +988,11 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br);
+  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br->getIterator());
   auto *Arg = &*(F->arg_begin());
   Phi->addIncoming(Arg, EntryBB);
   Phi->addIncoming(Add, LoopBB);

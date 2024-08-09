@@ -36,9 +36,9 @@ static void printExtensionTable(raw_ostream &OS,
     if (R->getValueAsBit("Experimental") != Experimental)
       continue;
 
-    OS << "    {\"" << getExtensionName(R) << "\", {"
-       << R->getValueAsInt("MajorVersion") << ", "
-       << R->getValueAsInt("MinorVersion") << "}},\n";
+    OS.indent(4) << "{\"" << getExtensionName(R) << "\", {"
+                 << R->getValueAsInt("MajorVersion") << ", "
+                 << R->getValueAsInt("MinorVersion") << "}},\n";
   }
 
   OS << "};\n\n";
@@ -77,8 +77,8 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
         if (!ImpliedExt->isSubClassOf("RISCVExtension"))
           continue;
 
-        OS << "    { {\"" << Name << "\"}, \"" << getExtensionName(ImpliedExt)
-           << "\"},\n";
+        OS.indent(4) << "{ {\"" << Name << "\"}, \""
+                     << getExtensionName(ImpliedExt) << "\"},\n";
       }
     }
 
@@ -236,10 +236,10 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
            "duplicated bitmask");
 #endif
 
-    OS << "    {"
-       << "\"" << ExtName << "\""
-       << ", " << GroupIDVal << ", " << BitPosVal << "ULL"
-       << "},\n";
+    OS.indent(4) << "{"
+                 << "\"" << ExtName << "\""
+                 << ", " << GroupIDVal << ", " << BitPosVal << "ULL"
+                 << "},\n";
   }
   OS << "};\n";
   OS << "#endif\n";
