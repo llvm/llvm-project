@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -triple arm64-apple-ios                    -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,OFF
 // RUN: %clang_cc1 -triple arm64e-apple-ios                   -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,OFF
 // RUN: %clang_cc1 -triple aarch64-linux-gnu                  -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,OFF
 
@@ -8,7 +9,6 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-returns -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,RETS
 
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-indirect-gotos -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,GOTOS
-// RUN: %clang_cc1 -triple arm64e-apple-ios  -fptrauth-indirect-gotos -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,GOTOS
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-indirect-gotos -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,GOTOS
 
 // ALL: define {{(dso_local )?}}void @test() #0
