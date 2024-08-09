@@ -72,7 +72,6 @@ public:
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       llvm_unreachable("NYI");
 
-    ASTContext &Context = getContext();
     if (const auto *EIT = Ty->getAs<BitIntType>())
       llvm_unreachable("NYI");
 

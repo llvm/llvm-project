@@ -1601,6 +1601,11 @@ public:
   void buildDelegateCallArg(CallArgList &args, const clang::VarDecl *param,
                             clang::SourceLocation loc);
 
+  /// Return true if the current function should not be instrumented with
+  /// sanitizers.
+  bool ShouldSkipSanitizerInstrumentation();
+  bool ShouldXRayInstrumentFunction() const;
+
   /// Return true if the current function should be instrumented with
   /// __cyg_profile_func_* calls
   bool ShouldInstrumentFunction();
