@@ -452,7 +452,7 @@ class CheckPredicateMatcher : public Matcher {
 
 public:
   CheckPredicateMatcher(const TreePredicateFn &pred,
-                        const SmallVectorImpl<unsigned> &Operands);
+                        ArrayRef<unsigned> Operands);
 
   TreePredicateFn getPredicate() const;
   unsigned getNumOperands() const;
