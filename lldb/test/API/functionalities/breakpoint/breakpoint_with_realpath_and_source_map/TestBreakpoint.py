@@ -2,7 +2,6 @@
 Test lldb breakpoint with symlinks/realpath and source-map.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -32,47 +31,44 @@ class BreakpointTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        # Retrieve the associated command interpreter from our debugger.
-        ci = self.dbg.GetCommandInterpreter()
-        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
-        return ci
-
     @skipIf(oslist=["windows"])
-    def test_file_line_breakpoint_realpath(self):
-        """Test file/line breakpoint where support files have symlinks."""
-        ci = self.buildAndCreateTarget()
-
-        file_path = self.getBuildArtifact("a.out")
-        print("DEBUG", file_path)
-
-        res = lldb.SBCommandReturnObject()
-        # ci.HandleCommand(f"b main.c:{self.line_in_main}", res)
-        # print("DEBUG OUT", res.GetOutput())
-        # print("DEBUG ERR", res.GetError())
-
+    def test_file_line_breakpoint_realpath_and_source_map(self):
+        """Test file/line breakpoint with realpathing and source-mapping."""
+        self.buildAndCreateTarget()
         cwd = os.getcwd()
-        print("DEBUG CWD", cwd)
 
         ######################################################################
         # Baseline
-        #---------------------------------------------------------------------
+        # --------------------------------------------------------------------
         # Breakpoints should be resolved with paths which are in the line-table.
         lldbutil.run_break_set_by_file_and_line(
             self, "main.c", self.line_in_main, num_expected_locations=1, loc_exact=True
         )
         lldbutil.run_break_set_by_file_and_line(
-            self, "symlink1/foo.h", self.line_in_foo, num_expected_locations=1, loc_exact=True
+            self,
+            "symlink1/foo.h",
+            self.line_in_foo,
+            num_expected_locations=1,
+            loc_exact=True,
         )
         lldbutil.run_break_set_by_file_and_line(
-            self, "symlink2/bar.h", self.line_in_bar, num_expected_locations=1, loc_exact=True
+            self,
+            "symlink2/bar.h",
+            self.line_in_bar,
+            num_expected_locations=1,
+            loc_exact=True,
         )
         lldbutil.run_break_set_by_file_and_line(
-            self, "symlink2/qux.h", self.line_in_qux, num_expected_locations=1, loc_exact=True
+            self,
+            "symlink2/qux.h",
+            self.line_in_qux,
+            num_expected_locations=1,
+            loc_exact=True,
         )
 
         ######################################################################
         # Symlinked file
-        #---------------------------------------------------------------------
+        # --------------------------------------------------------------------
         # - `symlink1/foo.h` is a symlink file, pointing at `real/foo.h`
         # - main.c includes `symlink1/foo.h`.
         # - As a result, the line-table contains a support file `(test_base_dir)/symlink1/foo.h`
@@ -80,18 +76,26 @@ class BreakpointTestCase(TestBase):
         # - Setting a realpath prefix to the current working directory will cause the above support file to be realpath'ed to `(test_base_dir)/real/foo.h`
         # - Now setting a breakpoint for `real/foo.h` will be resolved.
         lldbutil.run_break_set_by_file_and_line(
-            self, "real/foo.h", self.line_in_foo, num_expected_locations=0, loc_exact=True
+            self,
+            "real/foo.h",
+            self.line_in_foo,
+            num_expected_locations=0,
+            loc_exact=True,
         )
         self.runCmd(f'settings set target.source-realpath-prefixes "{cwd}"')
         lldbutil.run_break_set_by_file_and_line(
-            self, "real/foo.h", self.line_in_foo, num_expected_locations=1, loc_exact=True
+            self,
+            "real/foo.h",
+            self.line_in_foo,
+            num_expected_locations=1,
+            loc_exact=True,
         )
         # Clear settings so that the test below won't be affected.
         self.runCmd("settings clear target.source-realpath-prefixes")
 
         ######################################################################
         # Symlinked directory
-        #---------------------------------------------------------------------
+        # --------------------------------------------------------------------
         # - `symlink2` is a symlink directory, pointing at `real`.
         # - So, `symlink2/bar.h` will be realpath'ed to `real/bar.h`.
         # - main.c includes `symlink2/bar.h`.
@@ -100,18 +104,26 @@ class BreakpointTestCase(TestBase):
         # - Setting a realpath prefix to the current working directory will cause the above support file to be realpath'ed to `(test_base_dir)/real/bar.h`
         # - Now setting a breakpoint for `real/bar.h` will be resolved.
         lldbutil.run_break_set_by_file_and_line(
-            self, "real/bar.h", self.line_in_foo, num_expected_locations=0, loc_exact=True
+            self,
+            "real/bar.h",
+            self.line_in_foo,
+            num_expected_locations=0,
+            loc_exact=True,
         )
         self.runCmd(f'settings set target.source-realpath-prefixes "{cwd}"')
         lldbutil.run_break_set_by_file_and_line(
-            self, "real/bar.h", self.line_in_foo, num_expected_locations=1, loc_exact=True
+            self,
+            "real/bar.h",
+            self.line_in_foo,
+            num_expected_locations=1,
+            loc_exact=True,
         )
         # Clear settings so that the test below won't be affected.
         self.runCmd("settings clear target.source-realpath-prefixes")
 
         ######################################################################
         # Symlink + source-map
-        #---------------------------------------------------------------------
+        # --------------------------------------------------------------------
         # - `symlink2` is a symlink directory, pointing at `real`.
         # - So, `symlink2/qux.h` will be realpath'ed to `real/qux.h`.
         # - main.c includes `symlink2/qux.h`.
@@ -120,15 +132,27 @@ class BreakpointTestCase(TestBase):
         # - Setting a breakpoint for `to-be-mapped/qux.h` won't be resolved, because it doesn't match the above path.
         # - After setting a source-map, setting the same breakpoint will be resolved, because the input path `to-be-mapped/qux.h` is reverse-mapped to `real/qux.h`, which matches the realpath'ed support file.
         lldbutil.run_break_set_by_file_and_line(
-            self, "real/qux.h", self.line_in_foo, num_expected_locations=0, loc_exact=True
+            self,
+            "real/qux.h",
+            self.line_in_foo,
+            num_expected_locations=0,
+            loc_exact=True,
         )
         self.runCmd(f'settings set target.source-realpath-prefixes "{cwd}"')
         lldbutil.run_break_set_by_file_and_line(
-            self, "to-be-mapped/qux.h", self.line_in_foo, num_expected_locations=0, loc_exact=True
+            self,
+            "to-be-mapped/qux.h",
+            self.line_in_foo,
+            num_expected_locations=0,
+            loc_exact=True,
         )
         self.runCmd('settings set target.source-map "real" "to-be-mapped"')
         lldbutil.run_break_set_by_file_and_line(
-            self, "to-be-mapped/qux.h", self.line_in_foo, num_expected_locations=1, loc_exact=True
+            self,
+            "to-be-mapped/qux.h",
+            self.line_in_foo,
+            num_expected_locations=1,
+            loc_exact=True,
         )
         # Clear settings so that the test below won't be affected.
         self.runCmd("settings clear target.source-realpath-prefixes")
