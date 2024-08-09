@@ -1908,25 +1908,25 @@ structured_op: !LinalgStructuredOpConfig
           scalar_arg: C
         - !ScalarExpression
           scalar_fn:
-            kind: type
-            fn_name: cast_signed
-            type_var: U
+            kind: binary
+            fn_name: mul
             operands:
             - !ScalarExpression
               scalar_fn:
-                kind: binary
-                fn_name: mul
+                kind: type
+                fn_name: cast_signed
+                type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
+            - !ScalarExpression
+              scalar_fn:
+                kind: type
+                fn_name: cast_signed
+                type_var: U
+                operands:
                 - !ScalarExpression
-                  scalar_fn:
-                    kind: type
-                    fn_name: cast_signed
-                    type_var: U
-                    operands:
-                    - !ScalarExpression
-                      scalar_arg: B
+                  scalar_arg: B
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: matvec
