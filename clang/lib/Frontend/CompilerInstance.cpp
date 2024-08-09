@@ -1016,12 +1016,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // better. We generally expect frontend actions to be invoked with (nearly)
   // DesiredStackSpace available.
   noteBottomOfStack();
-
-  auto FinishDiagnosticClient = llvm::make_scope_exit([&]() {
-    // Notify the diagnostic client that all files were processed.
-    getDiagnosticClient().finish();
-  });
-
   raw_ostream &OS = getVerboseOutputStream();
 
   if (!Act.PrepareToExecute(*this))

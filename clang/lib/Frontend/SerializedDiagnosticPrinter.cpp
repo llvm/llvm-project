@@ -129,7 +129,7 @@ private:
   void writeRecordWithBlob(unsigned ID, RecordData &Record, StringRef Blob);
 };
 
-class SDiagsWriter : public DiagnosticConsumer {
+class SDiagsWriter final : public DiagnosticConsumer {
   friend class SDiagsRenderer;
   friend class SDiagsMerger;
 
@@ -149,7 +149,13 @@ public:
     EmitPreamble();
   }
 
-  ~SDiagsWriter() override {}
+  ~SDiagsWriter() override {
+    // Not all uses of DiagnosticConsumer call finish, and not all uses invoke
+    // the destructor. This makes calling finish optional for cases where it
+    // is properly destructed.
+    if (!IsFinishing)
+      finish();
+  }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;

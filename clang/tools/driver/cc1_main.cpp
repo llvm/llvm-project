@@ -26,6 +26,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -274,10 +275,21 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-  if (!Success) {
+
+  auto FinishDiagnosticClient = [&]() {
+    // Notify the diagnostic client that all files were processed.
     Clang->getDiagnosticClient().finish();
+
+    // Our error handler depends on the Diagnostics object, which we're
+    // potentially about to delete. Uninstall the handler now so that any
+    // later errors use the default handling behavior instead.
+    llvm::remove_fatal_error_handler();
+  };
+  auto FinishDiagnosticClientScope =
+      llvm::make_scope_exit([&]() { FinishDiagnosticClient(); });
+
+  if (!Success)
     return 1;
-  }
 
   // Execute the frontend actions.
   {
@@ -314,10 +326,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     }
   }
 
-  // Our error handler depends on the Diagnostics object, which we're
-  // potentially about to delete. Uninstall the handler now so that any
-  // later errors use the default handling behavior instead.
-  llvm::remove_fatal_error_handler();
+  // Call this before the Clang pointer is moved below.
+  FinishDiagnosticClient();
+  FinishDiagnosticClientScope.release();
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
