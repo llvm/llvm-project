@@ -48,7 +48,7 @@ constexpr bool test_range() {
   }
   {
     // designated initializer
-  
+
     // AppleClang 15 hasn't implemented P0960R3, so `std::ranges::elements_of` requires a
     // user-defined constructor, making it non-aggregate and therefore incompatible with designated
     // initializers.
