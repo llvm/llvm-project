@@ -1049,46 +1049,47 @@ static bool matchType(FuncArgTypeID ArgTy, const Type *Ty, unsigned IntBits,
   llvm_unreachable("Invalid type");
 }
 
-static bool isValidProtoForSizeReturningNew(const FunctionType& FTy, LibFunc F, const Module& M, int SizeTSizeBits) {
+static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
+                                            const Module &M,
+                                            int SizeTSizeBits) {
   switch (F) {
-    case LibFunc_size_returning_new: {
-      if(FTy.getNumParams() != 1 || !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits)) {
-        return false;
-      }
-    }
-    break;
-    case LibFunc_size_returning_new_hot_cold: {
-      if(FTy.getNumParams() != 2 ||
-         !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
-         !FTy.getParamType(1)->isIntegerTy(8)) {
-        return false;
-      }
-    }
-    break;
-    case LibFunc_size_returning_new_aligned: {
-      if(FTy.getNumParams() !=2 ||
-        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
-         !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits)) {
-        return false;
-      }
-    }
-    break;
-    case LibFunc_size_returning_new_aligned_hot_cold:
-      if( FTy.getNumParams() != 3 ||
-          !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
-         !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits) ||
-         !FTy.getParamType(2)->isIntegerTy(8)) {
-        return false;
-      }
-    break;
-    default:
+  case LibFunc_size_returning_new: {
+    if (FTy.getNumParams() != 1 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits)) {
       return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_hot_cold: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(8)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    if (FTy.getNumParams() != 3 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(2)->isIntegerTy(8)) {
+      return false;
+    }
+    break;
+  default:
+    return false;
   }
 
-  auto& Context = M.getContext();
+  auto &Context = M.getContext();
   llvm::Type *I8Ty = Type::getInt8Ty(Context);
   llvm::PointerType *I8PtrTy = PointerType::get(I8Ty, 0);
-  llvm::StructType *SizedPtrTy = llvm::StructType::get(Context, {I8PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
+  llvm::StructType *SizedPtrTy = llvm::StructType::get(
+      Context, {I8PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
   return FTy.getReturnType() == SizedPtrTy;
 }
 
