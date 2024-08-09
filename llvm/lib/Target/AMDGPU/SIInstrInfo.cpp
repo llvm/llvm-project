@@ -3369,6 +3369,8 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
 
 bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
+  case AMDGPU::V_MOV_B16_t16_e32:
+  case AMDGPU::V_MOV_B16_t16_e64:
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
@@ -4599,6 +4601,10 @@ static bool shouldReadExec(const MachineInstr &MI) {
   return true;
 }
 
+static bool isRegOrFI(const MachineOperand &MO) {
+  return MO.isReg() || MO.isFI();
+}
+
 static bool isSubRegOf(const SIRegisterInfo &TRI,
                        const MachineOperand &SuperVec,
                        const MachineOperand &SubReg) {
@@ -4933,7 +4939,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
             ++ConstantBusCount;
             SGPRsUsed.push_back(SGPRUsed);
           }
-        } else {
+        } else if (!MO.isFI()) { // Treat FI like a register.
           if (!UsesLiteral) {
             ++ConstantBusCount;
             UsesLiteral = true;
@@ -5026,7 +5032,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MachineOperand &Src0 = MI.getOperand(Src0Idx);
     const MachineOperand &Src1 = MI.getOperand(Src1Idx);
 
-    if (!Src0.isReg() && !Src1.isReg() &&
+    if (!isRegOrFI(Src0) && !isRegOrFI(Src1) &&
         !isInlineConstant(Src0, Desc.operands()[Src0Idx]) &&
         !isInlineConstant(Src1, Desc.operands()[Src1Idx]) &&
         !Src0.isIdenticalTo(Src1)) {
@@ -5635,7 +5641,9 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
   unsigned RCID = get(MI.getOpcode()).operands()[OpIdx].RegClass;
   const TargetRegisterClass *RC = RI.getRegClass(RCID);
   unsigned Size = RI.getRegSizeInBits(*RC);
-  unsigned Opcode = (Size == 64) ? AMDGPU::V_MOV_B64_PSEUDO : AMDGPU::V_MOV_B32_e32;
+  unsigned Opcode = (Size == 64) ? AMDGPU::V_MOV_B64_PSEUDO
+                    : Size == 16 ? AMDGPU::V_MOV_B16_t16_e64
+                                 : AMDGPU::V_MOV_B32_e32;
   if (MO.isReg())
     Opcode = AMDGPU::COPY;
   else if (RI.isSGPRClass(RC))

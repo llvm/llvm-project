@@ -1429,7 +1429,6 @@ std::string NVPTXTargetLowering::getPrototype(
 
   bool first = true;
 
-  const Function *F = CB.getFunction();
   unsigned NumArgs = VAInfo ? VAInfo->first : Args.size();
   for (unsigned i = 0, OIdx = 0; i != NumArgs; ++i, ++OIdx) {
     Type *Ty = Args[i].Ty;
@@ -1471,10 +1470,12 @@ std::string NVPTXTargetLowering::getPrototype(
       continue;
     }
 
+    // Indirect calls need strict ABI alignment so we disable optimizations by
+    // not providing a function to optimize.
     Type *ETy = Args[i].IndirectType;
     Align InitialAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
     Align ParamByValAlign =
-        getFunctionByValParamAlign(F, ETy, InitialAlign, DL);
+        getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
 
     O << ".param .align " << ParamByValAlign.value() << " .b8 ";
     O << "_";
@@ -2231,18 +2232,12 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDLoc DL(Op.getNode());
 
   // The size for ptx alloca instruction is 64-bit for m64 and 32-bit for m32.
-  if (nvTM->is64Bit())
-    Size = DAG.getZExtOrTrunc(Size, DL, MVT::i64);
-  else
-    Size = DAG.getZExtOrTrunc(Size, DL, MVT::i32);
+  MVT ValueSizeTy = nvTM->is64Bit() ? MVT::i64 : MVT::i32;
 
-  SDValue AllocOps[] = {Chain, Size,
+  SDValue AllocOps[] = {Chain, DAG.getZExtOrTrunc(Size, DL, ValueSizeTy),
                         DAG.getTargetConstant(Align, DL, MVT::i32)};
-  SDValue Alloca = DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL,
-                               nvTM->is64Bit() ? MVT::i64 : MVT::i32, AllocOps);
-
-  SDValue MergeOps[] = {Alloca, Chain};
-  return DAG.getMergeValues(MergeOps, DL);
+  EVT RetTypes[] = {ValueSizeTy, MVT::Other};
+  return DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL, RetTypes, AllocOps);
 }
 
 // By default CONCAT_VECTORS is lowered by ExpandVectorBuildThroughStack()
@@ -6148,7 +6143,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   }
 
   // Copy regular operands
-  SmallVector<SDValue, 8> OtherOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 8> OtherOps(N->ops());
 
   // The select routine does not have access to the LoadSDNode instance, so
   // pass along the extension information
@@ -6305,7 +6300,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
              "Custom handling of non-i8 ldu/ldg?");
 
       // Just copy all operands as-is
-      SmallVector<SDValue, 4> Ops(N->op_begin(), N->op_end());
+      SmallVector<SDValue, 4> Ops(N->ops());
 
       // Force output to i16
       SDVTList LdResVTs = DAG.getVTList(MVT::i16, MVT::Other);

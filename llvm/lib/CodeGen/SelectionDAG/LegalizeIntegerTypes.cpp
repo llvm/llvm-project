@@ -192,6 +192,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SUB:
   case ISD::VP_MUL:      Res = PromoteIntRes_SimpleIntBinOp(N); break;
 
+  case ISD::ABDS:
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
   case ISD::VP_SMIN:
@@ -201,6 +202,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SDIV:
   case ISD::VP_SREM:     Res = PromoteIntRes_SExtIntBinOp(N); break;
 
+  case ISD::ABDU:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORU:
   case ISD::VP_UMIN:
@@ -2294,12 +2296,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_Shift(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_CMP(SDNode *N) {
-  SDValue LHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(0))
-                    : SExtPromotedInteger(N->getOperand(0));
-  SDValue RHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(1))
-                    : SExtPromotedInteger(N->getOperand(1));
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (N->getOpcode() == ISD::SCMP) {
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+  } else {
+    SExtOrZExtPromotedOperands(LHS, RHS);
+  }
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS), 0);
 }
@@ -2370,7 +2375,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSTORE(MaskedStoreSDNode *N,
     // The Mask. Update in place.
     EVT DataVT = DataOp.getValueType();
     Mask = PromoteTargetBoolean(Mask, DataVT);
-    SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+    SmallVector<SDValue, 4> NewOps(N->ops());
     NewOps[4] = Mask;
     return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
   }
@@ -2389,7 +2394,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MLOAD(MaskedLoadSDNode *N,
   assert(OpNo == 3 && "Only know how to promote the mask!");
   EVT DataVT = N->getValueType(0);
   SDValue Mask = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
-  SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 4> NewOps(N->ops());
   NewOps[OpNo] = Mask;
   SDNode *Res = DAG.UpdateNodeOperands(N, NewOps);
   if (Res == N)
@@ -2403,7 +2408,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MLOAD(MaskedLoadSDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_MGATHER(MaskedGatherSDNode *N,
                                                unsigned OpNo) {
-  SmallVector<SDValue, 5> NewOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 5> NewOps(N->ops());
 
   if (OpNo == 2) {
     // The Mask
@@ -2432,7 +2437,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MGATHER(MaskedGatherSDNode *N,
 SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
                                                 unsigned OpNo) {
   bool TruncateStore = N->isTruncatingStore();
-  SmallVector<SDValue, 5> NewOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 5> NewOps(N->ops());
 
   if (OpNo == 2) {
     // The Mask
@@ -2665,7 +2670,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_REDUCE(SDNode *N, unsigned OpNo) {
   SDLoc DL(N);
   SDValue Op = N->getOperand(OpNo);
-  SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 4> NewOps(N->ops());
 
   if (OpNo == 2) { // Mask
     // Update in place.
@@ -2701,7 +2706,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SET_ROUNDING(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Operand = N->getOperand(OpNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
   NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
@@ -2710,7 +2715,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
   assert(OpNo >= 7);
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Operand = N->getOperand(OpNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
   NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
@@ -2721,14 +2726,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
   assert((N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_LOAD && OpNo == 3) ||
          (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_STORE && OpNo == 4));
 
-  SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 8> NewOps(N->ops());
   NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
 
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo) {
-  SmallVector<SDValue, 6> NewOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 6> NewOps(N->ops());
 
   if (OpNo == 2) { // Offset operand
     NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
@@ -2788,6 +2793,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::PARITY:      ExpandIntRes_PARITY(N, Lo, Hi); break;
   case ISD::Constant:    ExpandIntRes_Constant(N, Lo, Hi); break;
   case ISD::ABS:         ExpandIntRes_ABS(N, Lo, Hi); break;
+  case ISD::ABDS:
+  case ISD::ABDU:        ExpandIntRes_ABD(N, Lo, Hi); break;
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTLZ:        ExpandIntRes_CTLZ(N, Lo, Hi); break;
   case ISD::CTPOP:       ExpandIntRes_CTPOP(N, Lo, Hi); break;
@@ -3395,13 +3402,13 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
       Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::UADDO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::UADDO_CARRY, dl, VTList, HiOps);
     } else {
       Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::USUBO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::USUBO_CARRY, dl, VTList, HiOps);
     }
     return;
@@ -3845,6 +3852,11 @@ void DAGTypeLegalizer::ExpandIntRes_CTLZ(SDNode *N,
                                  DAG.getConstant(NVT.getSizeInBits(), dl,
                                                  NVT)));
   Hi = DAG.getConstant(0, dl, NVT);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_ABD(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Result = TLI.expandABD(N, DAG);
+  SplitInteger(Result, Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N,
@@ -5690,7 +5702,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
          (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_STORE && OpNo == 4));
 
   SDValue Hi; // The upper half is dropped out.
-  SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 8> NewOps(N->ops());
   GetExpandedInteger(NewOps[OpNo], NewOps[OpNo], Hi);
 
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);

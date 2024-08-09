@@ -1289,7 +1289,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
           S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
           DeclarationNameInfo(GetDN, Loc), /*RequiresADL=*/true, &Args,
           UnresolvedSetIterator(), UnresolvedSetIterator(),
-          /*KnownDependent=*/false);
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false);
 
       Expr *Arg = E.get();
       E = S.BuildCallExpr(nullptr, Get, Loc, Arg, Loc);
@@ -10385,7 +10385,7 @@ void Sema::checkIncorrectVTablePointerAuthenticationAttribute(
   while (1) {
     assert(PrimaryBase);
     const CXXRecordDecl *Base = nullptr;
-    for (auto BasePtr : PrimaryBase->bases()) {
+    for (const CXXBaseSpecifier &BasePtr : PrimaryBase->bases()) {
       if (!BasePtr.getType()->getAsCXXRecordDecl()->isDynamicClass())
         continue;
       Base = BasePtr.getType()->getAsCXXRecordDecl();
@@ -12248,16 +12248,15 @@ Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation EnumLoc, SourceRange TyLoc,
                                       const IdentifierInfo &II, ParsedType Ty,
                                       CXXScopeSpec *SS) {
-  assert(!SS->isInvalid() && "ScopeSpec is invalid");
+  assert(SS && !SS->isInvalid() && "ScopeSpec is invalid");
   TypeSourceInfo *TSI = nullptr;
   SourceLocation IdentLoc = TyLoc.getBegin();
   QualType EnumTy = GetTypeFromParser(Ty, &TSI);
   if (EnumTy.isNull()) {
-    Diag(IdentLoc, SS && isDependentScopeSpecifier(*SS)
+    Diag(IdentLoc, isDependentScopeSpecifier(*SS)
                        ? diag::err_using_enum_is_dependent
                        : diag::err_unknown_typename)
-        << II.getName()
-        << SourceRange(SS ? SS->getBeginLoc() : IdentLoc, TyLoc.getEnd());
+        << II.getName() << SourceRange(SS->getBeginLoc(), TyLoc.getEnd());
     return nullptr;
   }
 
@@ -18485,11 +18484,15 @@ bool Sema::DefineUsedVTables() {
 
     bool DefineVTable = true;
 
-    // If this class has a key function, but that key function is
-    // defined in another translation unit, we don't need to emit the
-    // vtable even though we're using it.
     const CXXMethodDecl *KeyFunction = Context.getCurrentKeyFunction(Class);
-    if (KeyFunction && !KeyFunction->hasBody()) {
+    // V-tables for non-template classes with an owning module are always
+    // uniquely emitted in that module.
+    if (Class->isInCurrentModuleUnit()) {
+      DefineVTable = true;
+    } else if (KeyFunction && !KeyFunction->hasBody()) {
+      // If this class has a key function, but that key function is
+      // defined in another translation unit, we don't need to emit the
+      // vtable even though we're using it.
       // The key function is in another translation unit.
       DefineVTable = false;
       TemplateSpecializationKind TSK =
@@ -18534,7 +18537,7 @@ bool Sema::DefineUsedVTables() {
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
     CXXRecordDecl *Canonical = Class->getCanonicalDecl();
-    if (VTablesUsed[Canonical])
+    if (VTablesUsed[Canonical] && !Class->shouldEmitInExternalSource())
       Consumer.HandleVTable(Class);
 
     // Warn if we're emitting a weak vtable. The vtable will be weak if there is

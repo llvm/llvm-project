@@ -95,13 +95,12 @@ add_object_library(
   HDRS
     do_start.h
   DEPENDS
-    libc.config.linux.app_h
+    libc.config.app_h
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.include.llvm-libc-macros.link_macros
     libc.src.__support.threads.thread
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.OSUtil.pid
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ

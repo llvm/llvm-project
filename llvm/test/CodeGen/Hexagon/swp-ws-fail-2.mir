@@ -3,6 +3,7 @@
 # RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
 # RUN: | FileCheck %s
 
+# CHECK: Physical registers are not supported in window scheduling!
 # CHECK: The WindowScheduler failed to initialize!
 
 ---

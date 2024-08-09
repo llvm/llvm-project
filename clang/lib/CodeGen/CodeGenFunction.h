@@ -612,6 +612,9 @@ public:
   /// True if the current statement has always_inline attribute.
   bool InAlwaysInlineAttributedStmt = false;
 
+  /// True if the current statement has noconvergent attribute.
+  bool InNoConvergentAttributedStmt = false;
+
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
@@ -1310,8 +1313,8 @@ public:
                                      CodeGenFunction &CGF) {
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
-    auto store =
-        new llvm::StoreInst(value, addr.emitRawPointer(CGF), &block->back());
+    auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF),
+                                     block->back().getIterator());
     store->setAlignment(addr.getAlignment().getAsAlign());
   }
 
@@ -3307,9 +3310,9 @@ public:
   const FieldDecl *FindCountedByField(const FieldDecl *FD);
 
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
-                                      const FieldDecl *FAMDecl,
-                                      const FieldDecl *CountDecl);
+  llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -3901,6 +3904,7 @@ public:
   void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
   void EmitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &S);
+  void EmitOMPAssumeDirective(const OMPAssumeDirective &S);
 
   /// Emit device code for the target directive.
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
@@ -4159,6 +4163,13 @@ public:
       llvm::AtomicOrdering Failure =
           llvm::AtomicOrdering::SequentiallyConsistent,
       bool IsWeak = false, AggValueSlot Slot = AggValueSlot::ignored());
+
+  /// Emit an atomicrmw instruction, and applying relevant metadata when
+  /// applicable.
+  llvm::AtomicRMWInst *emitAtomicRMWInst(
+      llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
+      llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
@@ -4529,7 +4540,6 @@ public:
 
   RValue EmitNVPTXDevicePrintfCallExpr(const CallExpr *E);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E);
-  RValue EmitOpenMPDevicePrintfCallExpr(const CallExpr *E);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
@@ -4697,6 +4707,9 @@ public:
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
 
+  llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuInit();
+
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
@@ -4838,9 +4851,10 @@ public:
   void EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest, const LValue &Src,
                             ExprValueKind SrcKind);
 
-  /// Build all the stores needed to initialize an aggregate at Dest with the
-  /// value Val.
-  void EmitAggregateStore(llvm::Value *Val, Address Dest, bool DestIsVolatile);
+  /// Create a store to \arg DstPtr from \arg Src, truncating the stored value
+  /// to at most \arg DstSize bytes.
+  void CreateCoercedStore(llvm::Value *Src, Address Dst, llvm::TypeSize DstSize,
+                          bool DstIsVolatile);
 
   /// EmitExtendGCLifetime - Given a pointer to an Objective-C object,
   /// make sure it survives garbage collection until this point.
@@ -5296,7 +5310,7 @@ public:
       llvm::SmallVector<StringRef, 8> Features;
 
       Conds(StringRef Arch, ArrayRef<StringRef> Feats)
-          : Architecture(Arch), Features(Feats.begin(), Feats.end()) {}
+          : Architecture(Arch), Features(Feats) {}
     } Conditions;
 
     MultiVersionResolverOption(llvm::Function *F, StringRef Arch,

@@ -27,7 +27,7 @@ namespace characteristics = Fortran::evaluate::characteristics;
 namespace Fortran::semantics {
 
 static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
-    parser::ContextualMessages &messages, evaluate::FoldingContext &context) {
+    parser::ContextualMessages &messages, SemanticsContext &context) {
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   if (auto kw{arg.keyword()}) {
@@ -79,8 +79,12 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         messages.Say(
             "VOLATILE argument requires an explicit interface"_err_en_US);
       }
+      if (const Symbol & base{named->GetFirstSymbol()};
+          IsFunctionResult(base)) {
+        context.NoteDefinedSymbol(base);
+      }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
-                   "actual argument", *expr, context,
+                   "actual argument", *expr, context.foldingContext(),
                    /*forImplicitInterface=*/true)}) {
       const auto *argProcDesignator{
           std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
@@ -647,8 +651,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualLastSymbol->name(), dummyName);
   }
 
-  // Definability
-  bool actualIsVariable{evaluate::IsVariable(actual)};
+  // Definability checking
+  // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
     std::optional<parser::MessageFixedText> undefinableMessage;
     if (dummy.intent == common::Intent::Out) {
@@ -670,7 +674,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     if (undefinableMessage) {
-      // Problems with polymorphism are caught in the callee's definition.
       DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
       if (isElemental) { // 15.5.2.4(21)
         flags.set(DefinabilityFlag::VectorSubscriptIsOk);
@@ -687,6 +690,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           }
         } else {
           messages.Say(std::move(*whyNot));
+        }
+      }
+    } else if (dummy.intent != common::Intent::In ||
+        (dummyIsPointer && !actualIsPointer)) {
+      if (auto named{evaluate::ExtractNamedEntity(actual)}) {
+        if (const Symbol & base{named->GetFirstSymbol()};
+            IsFunctionResult(base)) {
+          context.NoteDefinedSymbol(base);
         }
       }
     }
@@ -893,6 +904,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // argument
   if (dummy.attrs.test(characteristics::DummyDataObject::Attr::Target) &&
       context.ShouldWarn(common::UsageWarning::NonTargetPassedToTarget)) {
+    bool actualIsVariable{evaluate::IsVariable(actual)};
     bool actualIsTemp{!actualIsVariable || HasVectorSubscript(actual) ||
         evaluate::ExtractCoarrayRef(actual)};
     if (actualIsTemp) {
@@ -1416,7 +1428,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
             if (auto whyNot{WhyNotDefinable(
                     pointerArg->sourceLocation().value_or(messages.at()),
                     *scope,
-                    DefinabilityFlags{DefinabilityFlag::PointerDefinition},
+                    DefinabilityFlags{DefinabilityFlag::PointerDefinition,
+                        DefinabilityFlag::DoNotNoteDefinition},
                     *pointerExpr)}) {
               if (whyNot->IsFatal()) {
                 if (auto *msg{messages.Say(pointerArg->sourceLocation(),
@@ -2021,7 +2034,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
       auto restorer{messages.SetMessages(buffer)};
       for (auto &actual : actuals) {
         if (actual) {
-          CheckImplicitInterfaceArg(*actual, messages, foldingContext);
+          CheckImplicitInterfaceArg(*actual, messages, context);
         }
       }
     }

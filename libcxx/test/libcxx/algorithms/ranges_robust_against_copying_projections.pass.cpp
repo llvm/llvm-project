@@ -26,35 +26,35 @@ struct Proj {
     constexpr explicit Proj(int *copies) : copies_(copies) {}
     constexpr Proj(const Proj& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr Proj& operator=(const Proj&) = default;
-    constexpr void *operator()(T) const { return nullptr; }
+    constexpr void* operator()(T) const { return nullptr; }
 };
 
 struct Less {
-    constexpr bool operator()(void*, void*) const { return false; }
+  constexpr bool operator()(void*, void*) const { return false; }
 };
 
 struct Equal {
-    constexpr bool operator()(void*, void*) const { return true; }
+  constexpr bool operator()(void*, void*) const { return true; }
 };
 
 struct UnaryVoid {
-    constexpr void operator()(void*) const {}
+  constexpr void operator()(void*) const {}
 };
 
 struct UnaryTrue {
-    constexpr bool operator()(void*) const { return true; }
+  constexpr bool operator()(void*) const { return true; }
 };
 
 struct NullaryValue {
-    constexpr std::nullptr_t operator()() const { return nullptr; }
+  constexpr std::nullptr_t operator()() const { return nullptr; }
 };
 
 struct UnaryTransform {
-    constexpr T operator()(void*) const { return T(); }
+  constexpr T operator()(void*) const { return T(); }
 };
 
 struct BinaryTransform {
-    constexpr T operator()(void*, void*) const { return T(); }
+  constexpr T operator()(void*, void*) const { return T(); }
 };
 
 constexpr bool all_the_algorithms()

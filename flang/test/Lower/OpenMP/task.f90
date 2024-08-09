@@ -227,7 +227,7 @@ subroutine task_multiple_clauses()
   integer :: x, y, z
   logical :: buzz
 
-  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) priority(%{{.+}}) allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
+  !CHECK: omp.task allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) final(%{{.+}}) if(%{{.+}}) priority(%{{.+}}) {
   !$omp task if(buzz) final(buzz) priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
 
 !CHECK: %[[X_PRIV_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFtask_multiple_clausesEx"}
