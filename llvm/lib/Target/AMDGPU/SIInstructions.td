@@ -1173,8 +1173,11 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
 let SubtargetPredicate = NotHasTrue16BitInsts in
 defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
 
-let SubtargetPredicate = HasTrue16BitInsts in
+let SubtargetPredicate = UseRealTrue16Insts in
 defm : f16_fp_Pats<V_CVT_F16_F32_t16_e64, V_CVT_F32_F16_t16_e64>;
+
+let SubtargetPredicate = UseFakeTrue16Insts in
+defm : f16_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64>;
 
 //===----------------------------------------------------------------------===//
 // VOP2 Patterns

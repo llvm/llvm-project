@@ -1747,9 +1747,11 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
       /* else */,
         // VOP1 without modifiers
-        !if (HasClamp,
-          (ins Src0RC:$src0, Clamp0:$clamp),
-          (ins Src0RC:$src0))
+        !if(HasOMod,
+          (ins Src0RC:$src0, Clamp0:$clamp, omod0:$omod),
+          !if (HasClamp,
+            (ins Src0RC:$src0, Clamp0:$clamp),
+            (ins Src0RC:$src0)))
       /* endif */ ),
     !if (!eq(NumSrcArgs, 2),
       !if (HasModifiers,
@@ -2532,11 +2534,20 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src2Mod = getSrcMod<Src2VT, 1 /*IsTrue16*/>.ret;
 }
 
-class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
+class VOPProfile_Fake16<VOPProfile P, bit UseRealTrueDecoderSpace=0> : VOPProfile<P.ArgVT> {
   let IsTrue16 = 1;
+
+  // FIXME-TRUE16. Some non-implememted true16 is
+  // using fake16 profile. However this creates a conflicts
+  // with fake16 decoder namespace.
+  // This is a hack to avoid decoderNamespace issue
+  // should be removed after true16 pesudo is fully supported
+  let IsRealTrue16 = !if(UseRealTrueDecoderSpace,1,0);
+
   // Most DstVT are 16-bit, but not all
   let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
+  let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
