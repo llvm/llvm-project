@@ -652,6 +652,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       }
     } break;
 
+    case eFormatFloat128:
     case eFormatFloat: {
       TargetSP target_sp;
       if (exe_scope)
@@ -665,7 +666,9 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       const unsigned format_precision = 0;
 
       const llvm::fltSemantics &semantics =
-          GetFloatSemantics(target_sp, item_byte_size);
+          item_format == eFormatFloat128 && item_byte_size == 16
+              ? llvm::APFloat::IEEEquad()
+              : GetFloatSemantics(target_sp, item_byte_size);
 
       // Recalculate the byte size in case of a difference. This is possible
       // when item_byte_size is 16 (128-bit), because you could get back the
