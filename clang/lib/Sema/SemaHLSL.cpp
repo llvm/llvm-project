@@ -1116,7 +1116,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
-
+    // return type is the same as the input type
     TheCall->setType(ArgTyA);
     break;
   }
