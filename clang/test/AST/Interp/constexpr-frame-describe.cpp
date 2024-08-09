@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -fsyntax-only -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -fsyntax-only -verify=expected,both %s
 
 
 struct Foo {
