@@ -15,6 +15,7 @@ define void @PR92569(i64 %arg, <8 x i8> %arg1) {
 ; CHECK-NEXT:    shrb $3, %al
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    andl $15, %eax
 ; CHECK-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; CHECK-NEXT:    movl %eax, 0
 ; CHECK-NEXT:    retq
