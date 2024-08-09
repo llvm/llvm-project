@@ -1,56 +1,36 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | FileCheck %s
 ; RUN: %if ptxas-11.0 %{ llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | %ptxas-verify -arch=sm_80 %}
 
-declare i16 @llvm.nvvm.abs.bf16(i16)
-declare i32 @llvm.nvvm.abs.bf16x2(i32)
-declare i16 @llvm.nvvm.neg.bf16(i16)
-declare i32 @llvm.nvvm.neg.bf16x2(i32)
-
-declare i16 @llvm.nvvm.fmin.bf16(i16, i16)
-declare i16 @llvm.nvvm.fmin.nan.bf16(i16, i16)
-declare i32 @llvm.nvvm.fmin.bf16x2(i32, i32)
-declare i32 @llvm.nvvm.fmin.nan.bf16x2(i32, i32)
-
-declare i16 @llvm.nvvm.fmax.bf16(i16, i16)
-declare i16 @llvm.nvvm.fmax.nan.bf16(i16, i16)
-declare i32 @llvm.nvvm.fmax.bf16x2(i32, i32)
-declare i32 @llvm.nvvm.fmax.nan.bf16x2(i32, i32)
-
-declare i16 @llvm.nvvm.fma.rn.bf16(i16, i16, i16)
-declare i16 @llvm.nvvm.fma.rn.relu.bf16(i16, i16, i16)
-declare i32 @llvm.nvvm.fma.rn.bf16x2(i32, i32, i32)
-declare i32 @llvm.nvvm.fma.rn.relu.bf16x2(i32, i32, i32)
-
 ; CHECK-LABEL: abs_bf16
-define i16 @abs_bf16(i16 %0) {
+define bfloat @abs_bf16(bfloat %0) {
   ; CHECK-NOT: call
   ; CHECK: abs.bf16
-  %res = call i16 @llvm.nvvm.abs.bf16(i16 %0);
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.abs.bf16(bfloat %0);
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: abs_bf16x2
-define i32 @abs_bf16x2(i32 %0) {
+define <2 x bfloat> @abs_bf16x2(<2 x bfloat> %0) {
   ; CHECK-NOT: call
   ; CHECK: abs.bf16x2
-  %res = call i32 @llvm.nvvm.abs.bf16x2(i32 %0);
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.abs.bf16x2(<2 x bfloat> %0);
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: neg_bf16
-define i16 @neg_bf16(i16 %0) {
+define bfloat @neg_bf16(bfloat %0) {
   ; CHECK-NOT: call
   ; CHECK: neg.bf16
-  %res = call i16 @llvm.nvvm.neg.bf16(i16 %0);
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.neg.bf16(bfloat %0);
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: neg_bf16x2
-define i32 @neg_bf16x2(i32 %0) {
+define <2 x bfloat> @neg_bf16x2(<2 x bfloat> %0) {
   ; CHECK-NOT: call
   ; CHECK: neg.bf16x2
-  %res = call i32 @llvm.nvvm.neg.bf16x2(i32 %0);
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.neg.bf16x2(<2 x bfloat> %0);
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmin_nan_f
@@ -134,35 +114,35 @@ define <2 x half> @fmin_ftz_nan_f16x2(<2 x half> %0, <2 x half> %1) {
 }
 
 ; CHECK-LABEL: fmin_bf16
-define i16 @fmin_bf16(i16 %0, i16 %1) {
+define bfloat @fmin_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: min.bf16
-  %res = call i16 @llvm.nvvm.fmin.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmin.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmin_nan_bf16
-define i16 @fmin_nan_bf16(i16 %0, i16 %1) {
+define bfloat @fmin_nan_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: min.NaN.bf16
-  %res = call i16 @llvm.nvvm.fmin.nan.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmin.nan.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmin_bf16x2
-define i32 @fmin_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmin_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: min.bf16x2
-  %res = call i32 @llvm.nvvm.fmin.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmin.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmin_nan_bf16x2
-define i32 @fmin_nan_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmin_nan_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: min.NaN.bf16x2
-  %res = call i32 @llvm.nvvm.fmin.nan.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmin.nan.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmax_nan_f
@@ -246,35 +226,35 @@ define <2 x half> @fmax_ftz_nan_f16x2(<2 x half> %0, <2 x half> %1) {
 }
 
 ; CHECK-LABEL: fmax_bf16
-define i16 @fmax_bf16(i16 %0, i16 %1) {
+define bfloat @fmax_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: max.bf16
-  %res = call i16 @llvm.nvvm.fmax.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmax.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmax_nan_bf16
-define i16 @fmax_nan_bf16(i16 %0, i16 %1) {
+define bfloat @fmax_nan_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: max.NaN.bf16
-  %res = call i16 @llvm.nvvm.fmax.nan.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmax.nan.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmax_bf16x2
-define i32 @fmax_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmax_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: max.bf16x2
-  %res = call i32 @llvm.nvvm.fmax.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmax.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmax_nan_bf16x2
-define i32 @fmax_nan_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmax_nan_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: max.NaN.bf16x2
-  %res = call i32 @llvm.nvvm.fmax.nan.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmax.nan.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fma_rn_relu_f16
@@ -310,33 +290,33 @@ define <2 x half> @fma_rn_ftz_relu_f16x2(<2 x half> %0, <2 x half> %1, <2 x half
 }
 
 ; CHECK-LABEL: fma_rn_bf16
-define i16 @fma_rn_bf16(i16 %0, i16 %1, i16 %2) {
+define bfloat @fma_rn_bf16(bfloat %0, bfloat %1, bfloat %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.bf16
-  %res = call i16 @llvm.nvvm.fma.rn.bf16(i16 %0, i16 %1, i16 %2)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fma.rn.bf16(bfloat %0, bfloat %1, bfloat %2)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fma_rn_relu_bf16
-define i16 @fma_rn_relu_bf16(i16 %0, i16 %1, i16 %2) {
+define bfloat @fma_rn_relu_bf16(bfloat %0, bfloat %1, bfloat %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.relu.bf16
-  %res = call i16 @llvm.nvvm.fma.rn.relu.bf16(i16 %0, i16 %1, i16 %2)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %0, bfloat %1, bfloat %2)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fma_rn_bf16x2
-define i32 @fma_rn_bf16x2(i32 %0, i32 %1, i32 %2) {
+define <2 x bfloat> @fma_rn_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.bf16x2
-  %res = call i32 @llvm.nvvm.fma.rn.bf16x2(i32 %0, i32 %1, i32 %2)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fma_rn_relu_bf16x2
-define i32 @fma_rn_relu_bf16x2(i32 %0, i32 %1, i32 %2) {
+define <2 x bfloat> @fma_rn_relu_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.relu.bf16x2
-  %res = call i32 @llvm.nvvm.fma.rn.relu.bf16x2(i32 %0, i32 %1, i32 %2)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2)
+  ret <2 x bfloat> %res
 }
