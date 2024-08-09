@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -36,7 +37,7 @@ FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsPass();
 FunctionPass *createSIPeepholeSDWAPass();
-FunctionPass *createSILowerI1CopiesPass();
+FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass();
@@ -80,6 +81,13 @@ private:
 
 struct AMDGPUUseNativeCallsPass : PassInfoMixin<AMDGPUUseNativeCallsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class SILowerI1CopiesPass : public PassInfoMixin<SILowerI1CopiesPass> {
+public:
+  SILowerI1CopiesPass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
@@ -174,8 +182,8 @@ extern char &SIFixVGPRCopiesID;
 void initializeSILowerWWMCopiesPass(PassRegistry &);
 extern char &SILowerWWMCopiesID;
 
-void initializeSILowerI1CopiesPass(PassRegistry &);
-extern char &SILowerI1CopiesID;
+void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
+extern char &SILowerI1CopiesLegacyID;
 
 void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
 extern char &AMDGPUGlobalISelDivergenceLoweringID;
