@@ -27,6 +27,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> LArchAnnotateTableJump;
+
 #define LOONGARCH_PRERA_EXPAND_PSEUDO_NAME                                     \
   "LoongArch Pre-RA pseudo instruction expansion pass"
 #define LOONGARCH_EXPAND_PSEUDO_NAME                                           \
@@ -167,6 +169,21 @@ bool LoongArchPreRAExpandPseudo::expandMI(
   case LoongArch::PseudoTAIL_MEDIUM:
   case LoongArch::PseudoTAIL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
+  case LoongArch::PseudoBRIND:
+    // If the PseudoBRIND is used to table jump, then emit a label to annotate
+    // the `jr` instruction.
+    if (!LArchAnnotateTableJump)
+      return false;
+    for (auto &MI : MBB.instrs()) {
+      for (auto MO : MI.operands()) {
+        if (!MO.isJTI())
+          continue;
+        MachineFunction *MF = MBB.getParent();
+        MBBI->setPreInstrSymbol(
+            *MF, MF->getContext().createNamedTempSymbol("jrtb_"));
+        return false;
+      }
+    }
   }
   return false;
 }
