@@ -23,7 +23,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/CodeGen/LoopTraversal.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -33,35 +32,156 @@ namespace llvm {
 class MachineBasicBlock;
 class MachineInstr;
 
-/// Thin wrapper around "int" used to store reaching definitions,
-/// using an encoding that makes it compatible with TinyPtrVector.
-/// The 0th LSB is forced zero (and will be used for pointer union tagging),
-/// The 1st LSB is forced one (to make sure the value is non-zero).
-class ReachingDef {
-  uintptr_t Encoded;
-  friend struct PointerLikeTypeTraits<ReachingDef>;
-  explicit ReachingDef(uintptr_t Encoded) : Encoded(Encoded) {}
-
+// An implementation of multimap from (MBBNumber, Unit) to reaching definitions.
+//
+// This implementation only supports modification operations just enough
+// to serve our needs:
+//
+// - addDef
+// - prependDef
+// - replaceFront
+//
+// Internally, the multimap is implemented as a collection of singly linked
+// lists represented on top of a single array.  Each singly-linked list
+// contains reaching definitions for a given pair of MBBNumber and Unit.
+//
+// This design has the following highlights:
+//
+// - Unlike SparseMultiset or other maps, we do not store keys as part of values
+//   or anywhere else in the data structure.
+//
+// - The single array design minimizes malloc traffic.
+//
+// - Reaching definitions share one array.  This means that if one pair of
+//   (MBBNumber, Unit) has multiple reaching definitions while another pair of
+//   (MBBNumber, Unit) has none, they cancel each other to some extent.
+class MBBReachingDefsInfo {
 public:
-  ReachingDef(std::nullptr_t) : Encoded(0) {}
-  ReachingDef(int Instr) : Encoded(((uintptr_t) Instr << 2) | 2) {}
-  operator int() const { return ((int) Encoded) >> 2; }
-};
+  MBBReachingDefsInfo() = default;
+  MBBReachingDefsInfo(const MBBReachingDefsInfo &) = delete;
+  MBBReachingDefsInfo &operator=(const MBBReachingDefsInfo &) = delete;
 
-template<>
-struct PointerLikeTypeTraits<ReachingDef> {
-  static constexpr int NumLowBitsAvailable = 1;
-
-  static inline void *getAsVoidPointer(const ReachingDef &RD) {
-    return reinterpret_cast<void *>(RD.Encoded);
+  // Initialize the multimap with the number of basic blocks and the number of
+  // register units.
+  void init(unsigned BBs, unsigned Regs) {
+    assert(NumBlockIDs == 0 && "can initialize only once");
+    assert(NumRegUnits == 0 && "can initialize only once");
+    assert(Storage.empty() && "can initialize only once");
+    NumBlockIDs = BBs;
+    NumRegUnits = Regs;
+    unsigned NumIndexes = NumBlockIDs * NumRegUnits;
+    // Reserve space for reaching definitions.  Note that the first NumIndexes
+    // elements are used for indexes to various chains.  The second half
+    // accommodates up to one reaching def per (MBBNumber, Unit) pair on
+    // average.
+    Storage.reserve(NumIndexes * 2);
+    Storage.assign(NumIndexes, std::make_pair(0, 0));
   }
 
-  static inline ReachingDef getFromVoidPointer(void *P) {
-    return ReachingDef(reinterpret_cast<uintptr_t>(P));
+  // Clear the entire data structure.
+  void clear() {
+    NumBlockIDs = 0;
+    NumRegUnits = 0;
+    Storage.clear();
   }
 
-  static inline ReachingDef getFromVoidPointer(const void *P) {
-    return ReachingDef(reinterpret_cast<uintptr_t>(P));
+  // Add a reaching definition Def to the end of the singly-linked list of
+  // definitions for (MBBNumber, Unit).
+  void addDef(unsigned MBBNumber, unsigned Unit, int Def) {
+    unsigned Key = computeKey(MBBNumber, Unit);
+    unsigned NewIndex = Storage.size();
+    Storage.emplace_back(Def, 0);
+    if (Storage[Key].first == 0) {
+      // Update the index of the first element.
+      Storage[Key].first = NewIndex;
+      // Update the index of the last element.
+      Storage[Key].second = NewIndex;
+    } else {
+      unsigned OldLastPos = Storage[Key].second;
+      // The old last element now points to the new element.
+      Storage[OldLastPos].second = NewIndex;
+      // Update the index of the last element.
+      Storage[Key].second = NewIndex;
+    }
+  }
+
+  // Add a reaching definition Def to the beginning of the singly-linked list of
+  // definitions for (MBBNumber, Unit).
+  void prependDef(unsigned MBBNumber, unsigned Unit, int Def) {
+    unsigned Key = computeKey(MBBNumber, Unit);
+    unsigned NewIndex = Storage.size();
+    Storage.emplace_back(Def, 0);
+    if (Storage[Key].first == 0) {
+      // Update the index of the first element.
+      Storage[Key].first = NewIndex;
+      // Update the index of the last element.
+      Storage[Key].second = NewIndex;
+    } else {
+      // The new element now points to the old first element.
+      Storage[NewIndex].second = Storage[Key].first;
+      // Update the index of the first element.
+      Storage[Key].first = NewIndex;
+    }
+  }
+
+  // Replace the definition at the beginning of the singly-linked list of
+  // definitions for (MBBNumber, Unit).
+  void replaceFront(unsigned MBBNumber, unsigned Unit, int Def) {
+    unsigned Key = computeKey(MBBNumber, Unit);
+    assert(Storage[Key].first != 0);
+    assert(Storage[Key].second != 0);
+    unsigned FirstPos = Storage[Key].first;
+    Storage[FirstPos].first = Def;
+  }
+
+  class def_iterator {
+    ArrayRef<std::pair<int, int>> Storage;
+    unsigned Pos;
+
+  public:
+    def_iterator(ArrayRef<std::pair<int, int>> Storage, unsigned Pos)
+        : Storage(Storage), Pos(Pos) {}
+    int operator*() { return Storage[Pos].first; }
+    void operator++() { Pos = Storage[Pos].second; }
+    bool operator==(const def_iterator &RHS) const {
+      return Storage == RHS.Storage && Pos == RHS.Pos;
+    }
+    bool operator!=(const def_iterator &RHS) const { return !operator==(RHS); }
+  };
+
+  def_iterator def_begin(unsigned MBBNumber, unsigned Unit) const {
+    unsigned Key = computeKey(MBBNumber, Unit);
+    return {Storage, static_cast<unsigned>(Storage[Key].first)};
+  }
+  def_iterator def_end() const { return {Storage, 0}; }
+  iterator_range<def_iterator> defs(unsigned MBBNumber, unsigned Unit) const {
+    return llvm::make_range(def_begin(MBBNumber, Unit), def_end());
+  }
+
+private:
+  // The number of reg units.
+  unsigned NumRegUnits = 0;
+
+  // The number of basic blocks.
+  unsigned NumBlockIDs = 0;
+
+  // The storage for definitions and various indexes.  The array has two parts:
+  //
+  // The first NumBlockIDs * NumRegUnits elements represent array indexes to
+  // reaching definitions for all possible pairs of MBBNumber and Unit.  Each
+  // pair represents the first and last index of a corresponding chain.  If the
+  // chain is empty, both values are zero.
+  //
+  // The subsequent elements represent reaching definitions and indexes to their
+  // next elements.  In each pair, the first is the reaching def, and the second
+  // is the index to the next element.  The index is zero for the last element
+  // of the chain.
+  std::vector<std::pair<int, int>> Storage;
+
+  unsigned computeKey(unsigned MBBNumber, unsigned Unit) const {
+    assert(MBBNumber < NumBlockIDs);
+    assert(Unit < NumRegUnits);
+    return MBBNumber * NumRegUnits + Unit;
   }
 };
 
@@ -72,6 +192,7 @@ private:
   const TargetRegisterInfo *TRI = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits = 0;
+  unsigned NumBlockIDs = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,
@@ -93,12 +214,7 @@ private:
   /// their basic blocks.
   DenseMap<MachineInstr *, int> InstIds;
 
-  /// All reaching defs of a given RegUnit for a given MBB.
-  using MBBRegUnitDefs = TinyPtrVector<ReachingDef>;
-  /// All reaching defs of all reg units for a given MBB
-  using MBBDefsInfo = std::vector<MBBRegUnitDefs>;
   /// All reaching defs of all reg units for a all MBBs
-  using MBBReachingDefsInfo = SmallVector<MBBDefsInfo, 4>;
   MBBReachingDefsInfo MBBReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.
