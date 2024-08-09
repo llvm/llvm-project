@@ -3897,7 +3897,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(numArgOperands >= 1);
     Value *Addr = I.getArgOperand(numArgOperands - 1);
     assert(Addr->getType()->isPointerTy());
-    unsigned int skipTrailingOperands = 1;
+    int skipTrailingOperands = 1;
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
@@ -3905,14 +3905,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Second-last operand is the lane number (for vst{2,3,4}lane)
     if (useLane) {
       skipTrailingOperands++;
-      assert(numArgOperands >= (int)skipTrailingOperands);
+      assert(numArgOperands >= static_cast<int>(skipTrailingOperands));
       assert(isa<IntegerType>(
           I.getArgOperand(numArgOperands - skipTrailingOperands)->getType()));
     }
 
     SmallVector<Value *, 8> ShadowArgs;
     // All the initial operands are the inputs
-    for (unsigned int i = 0; i < numArgOperands - skipTrailingOperands; i++) {
+    for (int i = 0; i < numArgOperands - skipTrailingOperands; i++) {
       assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
       Value *Shadow = getShadow(&I, i);
       ShadowArgs.append(1, Shadow);
@@ -3958,7 +3958,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // This is particularly imprecise for vst{2,3,4}lane, since only one
       // lane of each input is actually copied to the output.
       OriginCombiner OC(this, IRB);
-      for (unsigned int i = 0; i < numArgOperands - skipTrailingOperands; i++)
+      for (int i = 0; i < numArgOperands - skipTrailingOperands; i++)
         OC.Add(I.getArgOperand(i));
 
       const DataLayout &DL = F.getDataLayout();
