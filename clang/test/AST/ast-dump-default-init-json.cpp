@@ -745,7 +745,7 @@ void test() {
 // CHECK-NEXT:               "qualType": "const A"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "lvalue",
-// CHECK-NEXT:              "hasRewrittenInit": true,
+// CHECK-NEXT:              "hasRewrittenInit": false,
 // CHECK-NEXT:              "inner": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                "id": "0x{{.*}}",
