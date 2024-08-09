@@ -5,12 +5,13 @@
 define void @foo() unnamed_addr #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $8589934462, %rax # imm = 0x1FFFFFF7E
+; CHECK-NEXT:    movabsq $8589934472, %rax # imm = 0x1FFFFFF88
 ; CHECK-NEXT:    subq %rax, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8589934470
-; CHECK-NEXT:    movb $42, -129(%rsp)
-; CHECK-NEXT:    movb $43, -128(%rsp)
-; CHECK-NEXT:    movabsq $8589934462, %rax # imm = 0x1FFFFFF7E
+; CHECK-NEXT:    .cfi_def_cfa_offset 8589934480
+; CHECK-NEXT:    movabsq $4294967177, %rax # imm = 0xFFFFFF89
+; CHECK-NEXT:    movb $42, (%rsp,%rax)
+; CHECK-NEXT:    movb $43, -118(%rsp)
+; CHECK-NEXT:    movabsq $8589934472, %rax # imm = 0x1FFFFFF88
 ; CHECK-NEXT:    addq %rax, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
