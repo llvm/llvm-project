@@ -1026,6 +1026,30 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
                                          ConstantInt::get(Cmp0->getType(), *C));
   }
 
+  // Zero does not work here because X u> 0 ? -1 : X is not a saturated add.
+  if (Pred == ICmpInst::ICMP_UGT &&
+      match(FVal, m_NUWAdd(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(-*C)) && !C->isZero()) {
+    // (X u > -C) ? -1 : (X + C) --> uadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
+
+  // The constant 1 needs special handling, so it has to be exempt here. This is
+  // because -1 + 1 is 0, which means this tranformation does not hold true.
+  // Note that X u >= -1 is canonicalized as X == -1, which is handled in the
+  // special case below this transform.
+  // Zero also does not work here because X u >= 1 ? -1 : X is not a saturated
+  // add.
+  if (Pred == ICmpInst::ICMP_UGE &&
+      match(FVal, m_NUWAdd(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(-*C + 1)) && !C->isZero() &&
+      !C->isOne()) {
+    // (X u >= -C + 1) ? -1 : (X + C) --> uadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
+
   // Canonicalize predicate to less-than or less-or-equal-than.
   if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
     std::swap(Cmp0, Cmp1);
