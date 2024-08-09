@@ -2927,7 +2927,7 @@ struct VScaleVal_match {
         if (GEP->getNumIndices() == 1 && DerefTy &&
             DerefTy->getElementType()->isIntegerTy(8) &&
             m_Zero().match(GEP->getPointerOperand()) &&
-            m_SpecificInt(1).match(GEP->idx_begin()->get()))
+            m_One().match(GEP->idx_begin()->get()))
           return true;
       }
     }
