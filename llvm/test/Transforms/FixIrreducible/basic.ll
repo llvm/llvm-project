@@ -7,17 +7,18 @@ define i32 @basic(i1 %PredEntry, i1 %PredLeft, i1 %PredRight, i32 %X, i32 %Y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
 ; CHECK:       left:
-; CHECK-NEXT:    [[L:%.*]] = add i32 [[L_PHI_MOVED:%.*]], 1
+; CHECK-NEXT:    [[L_PHI:%.*]] = phi i32 [ [[R_PHI_MOVED:%.*]], [[RIGHT:%.*]] ], [ [[L_PHI_MOVED:%.*]], [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[L:%.*]] = add i32 [[L_PHI]], 1
 ; CHECK-NEXT:    br i1 [[PREDLEFT:%.*]], label [[IRR_GUARD]], label [[EXIT:%.*]]
 ; CHECK:       right:
-; CHECK-NEXT:    br i1 [[PREDRIGHT:%.*]], label [[IRR_GUARD]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[PREDRIGHT:%.*]], label [[LEFT:%.*]], label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[Z:%.*]] = phi i32 [ [[L]], [[LEFT:%.*]] ], [ [[R_PHI_MOVED:%.*]], [[RIGHT:%.*]] ]
+; CHECK-NEXT:    [[Z:%.*]] = phi i32 [ [[L]], [[LEFT]] ], [ [[R_PHI_MOVED]], [[RIGHT]] ]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[R_PHI_MOVED]] = phi i32 [ [[R_PHI_MOVED]], [[RIGHT]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ], [ [[L]], [[LEFT]] ]
-; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ [[R_PHI_MOVED]], [[RIGHT]] ], [ [[X:%.*]], [[ENTRY]] ], [ [[L_PHI_MOVED]], [[LEFT]] ]
-; CHECK-NEXT:    [[GUARD_LEFT:%.*]] = phi i1 [ true, [[RIGHT]] ], [ [[PREDENTRY:%.*]], [[ENTRY]] ], [ false, [[LEFT]] ]
+; CHECK-NEXT:    [[R_PHI_MOVED]] = phi i32 [ [[L]], [[LEFT]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ [[L_PHI_MOVED]], [[LEFT]] ], [ [[X:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[GUARD_LEFT:%.*]] = phi i1 [ false, [[LEFT]] ], [ [[PREDENTRY:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_LEFT]], label [[LEFT]], label [[RIGHT]]
 ;
 entry:
@@ -42,16 +43,17 @@ define i32 @feedback_loop(i1 %PredEntry, i1 %PredLeft, i1 %PredRight, i32 %X, i3
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
 ; CHECK:       left:
+; CHECK-NEXT:    [[L_PHI:%.*]] = phi i32 [ [[R_PHI_MOVED:%.*]], [[RIGHT:%.*]] ], [ [[L_PHI_MOVED:%.*]], [[IRR_GUARD]] ]
 ; CHECK-NEXT:    br i1 [[PREDLEFT:%.*]], label [[IRR_GUARD]], label [[EXIT:%.*]]
 ; CHECK:       right:
-; CHECK-NEXT:    br i1 [[PREDRIGHT:%.*]], label [[IRR_GUARD]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[PREDRIGHT:%.*]], label [[LEFT:%.*]], label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[Z:%.*]] = phi i32 [ [[L_PHI_MOVED:%.*]], [[LEFT:%.*]] ], [ [[R_PHI_MOVED:%.*]], [[RIGHT:%.*]] ]
+; CHECK-NEXT:    [[Z:%.*]] = phi i32 [ [[L_PHI]], [[LEFT]] ], [ [[R_PHI_MOVED]], [[RIGHT]] ]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[R_PHI_MOVED]] = phi i32 [ [[R_PHI_MOVED]], [[RIGHT]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ], [ [[L_PHI_MOVED]], [[LEFT]] ]
-; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ [[R_PHI_MOVED]], [[RIGHT]] ], [ [[X:%.*]], [[ENTRY]] ], [ [[L_PHI_MOVED]], [[LEFT]] ]
-; CHECK-NEXT:    [[GUARD_LEFT:%.*]] = phi i1 [ true, [[RIGHT]] ], [ [[PREDENTRY:%.*]], [[ENTRY]] ], [ false, [[LEFT]] ]
+; CHECK-NEXT:    [[R_PHI_MOVED]] = phi i32 [ [[L_PHI]], [[LEFT]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ [[L_PHI_MOVED]], [[LEFT]] ], [ [[X:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[GUARD_LEFT:%.*]] = phi i1 [ false, [[LEFT]] ], [ [[PREDENTRY:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_LEFT]], label [[LEFT]], label [[RIGHT]]
 ;
 entry:
@@ -73,7 +75,7 @@ exit:
 define i32 @multiple_predecessors(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC, i1 %PredD, i32 %X, i32 %Y) {
 ; CHECK-LABEL: @multiple_predecessors(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PREDB_INV:%.*]] = xor i1 [[PREDB:%.*]], true
+; CHECK-NEXT:    [[PREDA_INV:%.*]] = xor i1 [[PREDA:%.*]], true
 ; CHECK-NEXT:    br i1 [[PREDENTRY:%.*]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[A_INC:%.*]] = add i32 [[X:%.*]], 1
@@ -81,18 +83,19 @@ define i32 @multiple_predecessors(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       C:
-; CHECK-NEXT:    br i1 [[PREDC:%.*]], label [[IRR_GUARD]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[PREDC:%.*]], label [[D:%.*]], label [[EXIT:%.*]]
 ; CHECK:       D:
-; CHECK-NEXT:    [[D_INC:%.*]] = add i32 [[D_PHI_MOVED:%.*]], 1
+; CHECK-NEXT:    [[D_PHI:%.*]] = phi i32 [ [[C_PHI_MOVED:%.*]], [[C:%.*]] ], [ [[D_PHI_MOVED:%.*]], [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[D_INC:%.*]] = add i32 [[D_PHI]], 1
 ; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[EXIT]], label [[IRR_GUARD]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[C_PHI_MOVED:%.*]], [[C:%.*]] ], [ [[D_INC]], [[D:%.*]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[C_PHI_MOVED]], [[C]] ], [ [[D_INC]], [[D]] ]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[D_PHI_MOVED]] = phi i32 [ [[D_PHI_MOVED]], [[D]] ], [ [[Y:%.*]], [[B]] ], [ [[A_INC]], [[A]] ], [ [[C_PHI_MOVED]], [[C]] ]
-; CHECK-NEXT:    [[C_PHI_MOVED]] = phi i32 [ [[D_INC]], [[D]] ], [ [[Y]], [[B]] ], [ [[X]], [[A]] ], [ [[C_PHI_MOVED]], [[C]] ]
-; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[D]] ], [ [[PREDB_INV]], [[B]] ], [ [[PREDA:%.*]], [[A]] ], [ false, [[C]] ]
-; CHECK-NEXT:    br i1 [[GUARD_C]], label [[C]], label [[D]]
+; CHECK-NEXT:    [[C_PHI_MOVED]] = phi i32 [ [[D_INC]], [[D]] ], [ [[Y:%.*]], [[B]] ], [ [[X]], [[A]] ]
+; CHECK-NEXT:    [[D_PHI_MOVED]] = phi i32 [ [[D_PHI_MOVED]], [[D]] ], [ [[Y]], [[B]] ], [ [[A_INC]], [[A]] ]
+; CHECK-NEXT:    [[GUARD_D:%.*]] = phi i1 [ false, [[D]] ], [ [[PREDB:%.*]], [[B]] ], [ [[PREDA_INV]], [[A]] ]
+; CHECK-NEXT:    br i1 [[GUARD_D]], label [[D]], label [[C]]
 ;
 entry:
   br i1 %PredEntry, label %A, label %B
@@ -128,17 +131,18 @@ define i32 @separate_predecessors(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       C:
+; CHECK-NEXT:    [[C_PHI:%.*]] = phi i32 [ [[D_INC:%.*]], [[D:%.*]] ], [ [[C_PHI_MOVED:%.*]], [[IRR_GUARD]] ]
 ; CHECK-NEXT:    br i1 [[PREDC:%.*]], label [[EXIT:%.*]], label [[IRR_GUARD]]
 ; CHECK:       D:
-; CHECK-NEXT:    [[D_INC:%.*]] = add i32 [[D_PHI_MOVED:%.*]], 1
-; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[EXIT]], label [[IRR_GUARD]]
+; CHECK-NEXT:    [[D_INC]] = add i32 [[D_PHI_MOVED:%.*]], 1
+; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[EXIT]], label [[C:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[C_PHI_MOVED:%.*]], [[C:%.*]] ], [ [[D_INC]], [[D:%.*]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[C_PHI]], [[C]] ], [ [[D_INC]], [[D]] ]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[D_PHI_MOVED]] = phi i32 [ [[D_PHI_MOVED]], [[D]] ], [ undef, [[A]] ], [ [[C_PHI_MOVED]], [[C]] ], [ [[Y:%.*]], [[B]] ]
-; CHECK-NEXT:    [[C_PHI_MOVED]] = phi i32 [ [[D_INC]], [[D]] ], [ [[X]], [[A]] ], [ [[C_PHI_MOVED]], [[C]] ], [ undef, [[B]] ]
-; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[D]] ], [ true, [[A]] ], [ false, [[C]] ], [ false, [[B]] ]
+; CHECK-NEXT:    [[D_PHI_MOVED]] = phi i32 [ [[C_PHI]], [[C]] ], [ [[Y:%.*]], [[B]] ], [ undef, [[A]] ]
+; CHECK-NEXT:    [[C_PHI_MOVED]] = phi i32 [ [[C_PHI_MOVED]], [[C]] ], [ undef, [[B]] ], [ [[X]], [[A]] ]
+; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ false, [[C]] ], [ false, [[B]] ], [ true, [[A]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_C]], label [[C]], label [[D]]
 ;
 entry:
@@ -174,24 +178,24 @@ define void @four_headers(i1 %PredEntry, i1 %PredX, i1  %PredY, i1 %PredD) {
 ; CHECK:       Y:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       A:
-; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK-NEXT:    br label [[B:%.*]]
 ; CHECK:       B:
-; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       C:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       D:
-; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[EXIT:%.*]], label [[IRR_GUARD]]
+; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[EXIT:%.*]], label [[A:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A:%.*]] = phi i1 [ true, [[D:%.*]] ], [ [[PREDX:%.*]], [[X]] ], [ false, [[A:%.*]] ], [ false, [[B:%.*]] ], [ false, [[Y]] ], [ false, [[C:%.*]] ]
-; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ false, [[D]] ], [ true, [[X]] ], [ true, [[A]] ], [ false, [[B]] ], [ false, [[Y]] ], [ false, [[C]] ]
-; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ false, [[D]] ], [ false, [[X]] ], [ false, [[A]] ], [ true, [[B]] ], [ [[PREDY:%.*]], [[Y]] ], [ false, [[C]] ]
+; CHECK-NEXT:    [[GUARD_A:%.*]] = phi i1 [ false, [[C]] ], [ false, [[Y]] ], [ [[PREDX:%.*]], [[X]] ]
+; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ false, [[C]] ], [ false, [[Y]] ], [ true, [[X]] ]
+; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ false, [[C]] ], [ [[PREDY:%.*]], [[Y]] ], [ false, [[X]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A]], label [[A]], label [[IRR_GUARD1:%.*]]
 ; CHECK:       irr.guard1:
 ; CHECK-NEXT:    br i1 [[GUARD_B]], label [[B]], label [[IRR_GUARD2:%.*]]
 ; CHECK:       irr.guard2:
-; CHECK-NEXT:    br i1 [[GUARD_C]], label [[C]], label [[D]]
+; CHECK-NEXT:    br i1 [[GUARD_C]], label [[C]], label [[D:%.*]]
 ;
 entry:
   br i1 %PredEntry, label %X, label %Y
@@ -223,23 +227,24 @@ define i32 @hidden_nodes(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC, i1 %Pre
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    [[A_INC:%.*]] = add i32 [[A_PHI_MOVED:%.*]], 1
+; CHECK-NEXT:    [[A_PHI:%.*]] = phi i32 [ [[C_INC:%.*]], [[E:%.*]] ], [ [[A_PHI_MOVED:%.*]], [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[A_INC:%.*]] = add i32 [[A_PHI]], 1
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       C:
-; CHECK-NEXT:    [[C_INC:%.*]] = add i32 [[B_PHI_MOVED:%.*]], 1
+; CHECK-NEXT:    [[C_INC]] = add i32 [[B_PHI_MOVED:%.*]], 1
 ; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       D:
-; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[EXIT:%.*]], label [[E:%.*]]
+; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[EXIT:%.*]], label [[E]]
 ; CHECK:       E:
-; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK-NEXT:    br label [[A:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[B_PHI_MOVED]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[B_PHI_MOVED]] = phi i32 [ undef, [[E]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ], [ [[A_INC]], [[A:%.*]] ]
-; CHECK-NEXT:    [[A_PHI_MOVED]] = phi i32 [ [[C_INC]], [[E]] ], [ [[X:%.*]], [[ENTRY]] ], [ [[A_PHI_MOVED]], [[A]] ]
-; CHECK-NEXT:    [[GUARD_A:%.*]] = phi i1 [ true, [[E]] ], [ [[PREDENTRY:%.*]], [[ENTRY]] ], [ false, [[A]] ]
+; CHECK-NEXT:    [[B_PHI_MOVED]] = phi i32 [ [[A_INC]], [[A]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[A_PHI_MOVED]] = phi i32 [ [[A_PHI_MOVED]], [[A]] ], [ [[X:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[GUARD_A:%.*]] = phi i1 [ false, [[A]] ], [ [[PREDENTRY:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A]], label [[A]], label [[B:%.*]]
 ;
 entry:

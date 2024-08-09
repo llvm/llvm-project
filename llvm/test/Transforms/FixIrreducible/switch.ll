@@ -17,11 +17,11 @@ define void @loop_1(i32 %Value, i1 %PredEntry, i1 %PredD) {
 ; CHECK-NEXT:    br i1 [[SWITCHLEAF2]], label [[IRR_GUARD]], label [[EXIT:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VALUE]], 0
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[IRR_GUARD]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[A:%.*]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A:%.*]] = phi i1 [ true, [[LEAFBLOCK]] ], [ [[PREDENTRY:%.*]], [[ENTRY:%.*]] ], [ false, [[LEAFBLOCK1]] ], [ false, [[A:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A:%.*]] = phi i1 [ false, [[LEAFBLOCK1]] ], [ false, [[A]] ], [ [[PREDENTRY:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A]], label [[A]], label [[B:%.*]]
 ;
 entry:

@@ -10,19 +10,19 @@ define void @nested_irr_top_level(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1
 ; CHECK:       B1:
 ; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[IRR_GUARD1]], label [[A3:%.*]]
 ; CHECK:       B2:
-; CHECK-NEXT:    br i1 [[PRED3:%.*]], label [[IRR_GUARD1]], label [[A3]]
+; CHECK-NEXT:    br i1 [[PRED3:%.*]], label [[B1:%.*]], label [[A3]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    br i1 [[PRED4:%.*]], label [[IRR_GUARD]], label [[EXIT:%.*]]
 ; CHECK:       A2:
-; CHECK-NEXT:    br i1 [[PRED5:%.*]], label [[IRR_GUARD]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[PRED5:%.*]], label [[A1:%.*]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ true, [[A2:%.*]] ], [ [[PRED0:%.*]], [[ENTRY:%.*]] ], [ false, [[A3]] ]
-; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1:%.*]], label [[A2]]
+; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ false, [[A3]] ], [ [[PRED0:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1]], label [[A2:%.*]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ true, [[B2:%.*]] ], [ [[PRED1:%.*]], [[A1]] ], [ false, [[B1:%.*]] ]
-; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1]], label [[B2]]
+; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ false, [[B1]] ], [ [[PRED1:%.*]], [[A1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1]], label [[B2:%.*]]
 ;
 entry:
   br i1 %Pred0, label %A1, label %A2
@@ -57,21 +57,21 @@ define void @nested_irr_in_loop(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %
 ; CHECK:       B1:
 ; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[IRR_GUARD1]], label [[A3:%.*]]
 ; CHECK:       B2:
-; CHECK-NEXT:    br i1 [[PRED3:%.*]], label [[IRR_GUARD1]], label [[A3]]
+; CHECK-NEXT:    br i1 [[PRED3:%.*]], label [[B1:%.*]], label [[A3]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    br i1 [[PRED4:%.*]], label [[IRR_GUARD]], label [[L1:%.*]]
 ; CHECK:       A2:
-; CHECK-NEXT:    br i1 [[PRED5:%.*]], label [[IRR_GUARD]], label [[L1]]
+; CHECK-NEXT:    br i1 [[PRED5:%.*]], label [[A1:%.*]], label [[L1]]
 ; CHECK:       L1:
 ; CHECK-NEXT:    br i1 [[PRED6:%.*]], label [[EXIT:%.*]], label [[H1]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ true, [[A2:%.*]] ], [ [[PRED0:%.*]], [[H1]] ], [ false, [[A3]] ]
-; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1:%.*]], label [[A2]]
+; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ false, [[A3]] ], [ [[PRED0:%.*]], [[H1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1]], label [[A2:%.*]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ true, [[B2:%.*]] ], [ [[PRED1:%.*]], [[A1]] ], [ false, [[B1:%.*]] ]
-; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1]], label [[B2]]
+; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ false, [[B1]] ], [ [[PRED1:%.*]], [[A1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1]], label [[B2:%.*]]
 ;
 entry:
   br label %H1
@@ -114,12 +114,12 @@ define void @loop_in_irr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK:       A3:
 ; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[IRR_GUARD]], label [[EXIT:%.*]]
 ; CHECK:       A2:
-; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK-NEXT:    br label [[A1:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ true, [[A2:%.*]] ], [ [[PRED0:%.*]], [[ENTRY:%.*]] ], [ false, [[A3]] ]
-; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1:%.*]], label [[A2]]
+; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ false, [[A3]] ], [ [[PRED0:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1]], label [[A2:%.*]]
 ;
 entry:
   br i1 %Pred0, label %A1, label %A2
@@ -150,16 +150,16 @@ define void @loop_in_irr_shared_header(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK:       H1:
 ; CHECK-NEXT:    br label [[L1:%.*]]
 ; CHECK:       L1:
-; CHECK-NEXT:    br i1 [[PRED1:%.*]], label [[IRR_GUARD]], label [[A3:%.*]]
+; CHECK-NEXT:    br i1 [[PRED1:%.*]], label [[H1:%.*]], label [[A3:%.*]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[IRR_GUARD]], label [[EXIT:%.*]]
 ; CHECK:       A2:
-; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK-NEXT:    br label [[H1]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2:%.*]] ], [ true, [[L1]] ], [ [[PRED0:%.*]], [[ENTRY:%.*]] ], [ false, [[A3]] ]
-; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1:%.*]], label [[A2]]
+; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ false, [[A3]] ], [ [[PRED0:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1]], label [[A2:%.*]]
 ;
 entry:
   br i1 %Pred0, label %H1, label %A2
@@ -189,7 +189,7 @@ define void @siblings_top_level(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %
 ; CHECK:       A1:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       A2:
-; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[IRR_GUARD1]], label [[L1:%.*]]
+; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[A1:%.*]], label [[L1:%.*]]
 ; CHECK:       L1:
 ; CHECK-NEXT:    br i1 [[PRED3:%.*]], label [[H1]], label [[EXIT:%.*]]
 ; CHECK:       fork1:
@@ -201,15 +201,15 @@ define void @siblings_top_level(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %
 ; CHECK:       L2:
 ; CHECK-NEXT:    br i1 [[PRED5:%.*]], label [[H2]], label [[IRR_GUARD]]
 ; CHECK:       B2:
-; CHECK-NEXT:    br i1 [[PRED6:%.*]], label [[IRR_GUARD]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[PRED6:%.*]], label [[B1:%.*]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ true, [[B2:%.*]] ], [ [[PRED4:%.*]], [[FORK1]] ], [ false, [[L2]] ]
-; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1:%.*]], label [[B2]]
+; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ false, [[L2]] ], [ [[PRED4:%.*]], [[FORK1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1]], label [[B2:%.*]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ true, [[A2:%.*]] ], [ [[PRED1:%.*]], [[H1]] ], [ false, [[A1:%.*]] ]
-; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1]], label [[A2]]
+; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ false, [[A1]] ], [ [[PRED1:%.*]], [[H1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1]], label [[A2:%.*]]
 ;
 entry:
   br i1 %Pred0, label %H1, label %fork1
@@ -256,7 +256,7 @@ define void @siblings_in_loop(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pr
 ; CHECK:       A1:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       A2:
-; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[IRR_GUARD1]], label [[L1:%.*]]
+; CHECK-NEXT:    br i1 [[PRED2:%.*]], label [[A1:%.*]], label [[L1:%.*]]
 ; CHECK:       L1:
 ; CHECK-NEXT:    br i1 [[PRED3:%.*]], label [[H1]], label [[L0:%.*]]
 ; CHECK:       fork1:
@@ -268,17 +268,17 @@ define void @siblings_in_loop(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pr
 ; CHECK:       L2:
 ; CHECK-NEXT:    br i1 [[PRED5:%.*]], label [[H2]], label [[IRR_GUARD]]
 ; CHECK:       B2:
-; CHECK-NEXT:    br i1 [[PRED6:%.*]], label [[IRR_GUARD]], label [[L0]]
+; CHECK-NEXT:    br i1 [[PRED6:%.*]], label [[B1:%.*]], label [[L0]]
 ; CHECK:       L0:
 ; CHECK-NEXT:    br i1 [[PRED7:%.*]], label [[EXIT:%.*]], label [[H0]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ true, [[B2:%.*]] ], [ [[PRED4:%.*]], [[FORK1]] ], [ false, [[L2]] ]
-; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1:%.*]], label [[B2]]
+; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ false, [[L2]] ], [ [[PRED4:%.*]], [[FORK1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B1]], label [[B1]], label [[B2:%.*]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ true, [[A2:%.*]] ], [ [[PRED1:%.*]], [[H1]] ], [ false, [[A1:%.*]] ]
-; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1]], label [[A2]]
+; CHECK-NEXT:    [[GUARD_A1:%.*]] = phi i1 [ false, [[A1]] ], [ [[PRED1:%.*]], [[H1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A1]], label [[A1]], label [[A2:%.*]]
 ;
 entry:
   br label %H0
@@ -337,13 +337,13 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    br i1 [[PRED3:%.*]], label [[IRR_GUARD:%.*]], label [[LOR_RHS:%.*]]
 ; CHECK:       cond.true49:
-; CHECK-NEXT:    br i1 [[PRED4:%.*]], label [[IF_THEN69:%.*]], label [[WHILE_BODY63:%.*]]
+; CHECK-NEXT:    br i1 [[PRED4:%.*]], label [[IF_THEN69:%.*]], label [[IRR_GUARD1:%.*]]
 ; CHECK:       while.body63:
 ; CHECK-NEXT:    br i1 [[PRED5:%.*]], label [[EXIT:%.*]], label [[WHILE_COND47:%.*]]
 ; CHECK:       while.cond47:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       cond.end61:
-; CHECK-NEXT:    br i1 [[PRED7:%.*]], label [[WHILE_BODY63]], label [[WHILE_COND]]
+; CHECK-NEXT:    br i1 [[PRED7:%.*]], label [[IRR_GUARD1]], label [[WHILE_COND]]
 ; CHECK:       if.then69:
 ; CHECK-NEXT:    br i1 [[PRED8:%.*]], label [[EXIT]], label [[WHILE_COND]]
 ; CHECK:       lor.rhs:
@@ -365,8 +365,11 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_COND_TRUE49:%.*]] = phi i1 [ [[PRED6:%.*]], [[WHILE_COND47]] ], [ true, [[WHILE_COND]] ], [ false, [[LOR_RHS]] ]
-; CHECK-NEXT:    br i1 [[GUARD_COND_TRUE49]], label [[COND_TRUE49:%.*]], label [[COND_END61:%.*]]
+; CHECK-NEXT:    [[GUARD_COND_TRUE49:%.*]] = phi i1 [ [[PRED6:%.*]], [[WHILE_COND47]] ], [ false, [[LOR_RHS]] ], [ true, [[WHILE_COND]] ]
+; CHECK-NEXT:    br i1 [[GUARD_COND_TRUE49]], label [[IRR_GUARD1]], label [[COND_END61:%.*]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_COND_TRUE492:%.*]] = phi i1 [ false, [[COND_TRUE49:%.*]] ], [ false, [[COND_END61]] ], [ true, [[IRR_GUARD]] ]
+; CHECK-NEXT:    br i1 [[GUARD_COND_TRUE492]], label [[COND_TRUE49]], label [[WHILE_BODY63:%.*]]
 ;
 entry:
   br i1 %Pred0, label %if.end, label %if.then
