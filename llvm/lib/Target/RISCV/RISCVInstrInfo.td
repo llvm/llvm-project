@@ -513,7 +513,7 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
   let isTerminator = 1;
 }
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, UseNamedOperandTable = 1 in {
 class Load_ri<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_LOAD, (outs GPR:$rd), (ins GPRMem:$rs1, simm12:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
@@ -528,7 +528,7 @@ class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
 // encoding.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1, UseNamedOperandTable = 1 in {
 class Store_rri<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_STORE, (outs),
               (ins GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
