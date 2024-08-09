@@ -2361,9 +2361,35 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
       builder.getContext(), attrs.getDictionary(builder.getContext())));
 }
 
-void CIRGenModule::setFunctionAttributes(GlobalDecl GD, mlir::cir::FuncOp F,
-                                         bool IsIncompleteFunction,
-                                         bool IsThunk) {
+void CIRGenModule::setCIRFunctionAttributes(GlobalDecl GD,
+                                            const CIRGenFunctionInfo &info,
+                                            mlir::cir::FuncOp func,
+                                            bool isThunk) {
+  // TODO(cir): More logic of constructAttributeList is needed.
+  // NOTE(cir): Here we only need CallConv, so a call to constructAttributeList
+  // is omitted for simplicity.
+  mlir::cir::CallingConv callingConv = info.getEffectiveCallingConvention();
+
+  // TODO(cir): Check X86_VectorCall incompatibility with WinARM64EC
+
+  func.setCallingConv(callingConv);
+}
+
+void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
+                                         mlir::cir::FuncOp func,
+                                         bool isIncompleteFunction,
+                                         bool isThunk) {
+  // NOTE(cir): Original CodeGen checks if this is an intrinsic. In CIR we
+  // represent them in dedicated ops. The correct attributes are ensured during
+  // translation to LLVM. Thus, we don't need to check for them here.
+
+  if (!isIncompleteFunction) {
+    setCIRFunctionAttributes(globalDecl,
+                             getTypes().arrangeGlobalDeclaration(globalDecl),
+                             func, isThunk);
+  }
+
+  // TODO(cir): Complete the remaining part of the function.
   assert(!MissingFeatures::setFunctionAttributes());
 }
 
