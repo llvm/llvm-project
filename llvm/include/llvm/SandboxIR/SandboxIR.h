@@ -258,6 +258,9 @@ protected:
   template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
 
   Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
+  /// Disable copies.
+  Value(const Value &) = delete;
+  Value &operator=(const Value &) = delete;
 
 public:
   virtual ~Value() = default;
