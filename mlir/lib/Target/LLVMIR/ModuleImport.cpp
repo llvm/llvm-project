@@ -518,6 +518,20 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   return success();
 }
 
+LogicalResult ModuleImport::convertIdentMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    // llvm.ident should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (named.getName() == "llvm.ident")
+      if (named.getNumOperands() == 1)
+        if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr("llvm.ident",
+                                builder.getStringAttr(mdStr->getString()));
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
@@ -545,6 +559,8 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertIdentMetadata()))
     return failure();
   return success();
 }

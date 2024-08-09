@@ -114,6 +114,22 @@ mlir::LLVM::TargetFeaturesAttr fir::getTargetFeatures(mlir::ModuleOp mod) {
   return {};
 }
 
+static constexpr const char *identName = "llvm.ident";
+
+void fir::setIdent(mlir::ModuleOp mod, llvm::StringRef ident) {
+  if (ident.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(identName, mlir::StringAttr::get(ctx, ident));
+}
+
+llvm::StringRef fir::getIdent(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(identName))
+    return attr;
+  return {};
+}
+
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.
   if (triple.empty() || triple == "default")
