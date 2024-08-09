@@ -104,7 +104,8 @@ template <> struct flag_traits<flag_oncore> {
 template <flag_type FlagType> class kmp_flag {
 protected:
   flag_properties t; /**< "Type" of the flag in loc */
-  kmp_info_t *waiting_threads[1]; /**< Threads sleeping on this thread. */
+  /**< Threads sleeping on this thread. */
+  kmp_info_t *waiting_threads[1] = {nullptr};
   kmp_uint32 num_waiting_threads; /**< Num threads sleeping on this thread. */
   std::atomic<bool> *sleepLoc;
 
@@ -140,7 +141,7 @@ template <typename PtrType, flag_type FlagType, bool Sleepable>
 class kmp_flag_native : public kmp_flag<FlagType> {
 protected:
   volatile PtrType *loc;
-  PtrType checker; /**< When flag==checker, it has been released. */
+  PtrType checker = (PtrType)0; /**< When flag==checker, it has been released */
   typedef flag_traits<FlagType> traits_type;
 
 public:
@@ -234,7 +235,7 @@ template <typename PtrType, flag_type FlagType, bool Sleepable>
 class kmp_flag_atomic : public kmp_flag<FlagType> {
 protected:
   std::atomic<PtrType> *loc; /**< Pointer to flag location to wait on */
-  PtrType checker; /**< Flag == checker means it has been released. */
+  PtrType checker = (PtrType)0; /**< Flag==checker means it has been released */
 public:
   typedef flag_traits<FlagType> traits_type;
   typedef PtrType flag_t;
@@ -935,7 +936,8 @@ class kmp_flag_oncore : public kmp_flag_native<kmp_uint64, flag_oncore, false> {
   kmp_uint32 offset; /**< Portion of flag of interest for an operation. */
   bool flag_switch; /**< Indicates a switch in flag location. */
   enum barrier_type bt; /**< Barrier type. */
-  kmp_info_t *this_thr; /**< Thread to redirect to different flag location. */
+  /**< Thread to redirect to different flag location. */
+  kmp_info_t *this_thr = nullptr;
 #if USE_ITT_BUILD
   void *itt_sync_obj; /**< ITT object to pass to new flag location. */
 #endif
