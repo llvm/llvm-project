@@ -313,6 +313,8 @@ AST Matchers
 - Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
   inline namespaces with an enclosing namespace of the same name.
 
+Add `matchesString` for `StringLiteral` which matches literals on given `RegExp`.
+
 clang-format
 ------------
 
