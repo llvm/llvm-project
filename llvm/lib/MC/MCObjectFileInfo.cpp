@@ -546,18 +546,11 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
-  TextSection = Ctx->getGOFFSection(".text", SectionKind::getText(), nullptr);
-  BSSSection = Ctx->getGOFFSection(".bss", SectionKind::getBSS(), nullptr);
-  PPA1Section = Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(),
-                                    TextSection, GOFF::SK_PPA1);
-  PPA2Section = Ctx->getGOFFSection(".ppa2", SectionKind::getMetadata(),
-                                    TextSection, GOFF::SK_PPA2);
-
-  PPA2ListSection =
-      Ctx->getGOFFSection(".ppa2list", SectionKind::getData(), nullptr);
-
-  ADASection = Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr);
-  IDRLSection = Ctx->getGOFFSection("B_IDRL", SectionKind::getData(), nullptr);
+  TextSection = Ctx->getGOFFSection(".text", SectionKind::getText());
+  BSSSection = Ctx->getGOFFSection(".bss", SectionKind::getBSS());
+  PPA2ListSection = Ctx->getGOFFSection(".ppa2list", SectionKind::getData());
+  ADASection = Ctx->getGOFFSection(".ada", SectionKind::getData());
+  IDRLSection = Ctx->getGOFFSection("B_IDRL", SectionKind::getData());
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
