@@ -254,11 +254,12 @@ bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
     CASE_VMERGE_TO_VMV(M8)
   }
 
-  Register MergeReg = MI.getOperand(1).getReg();
+  Register PassthruReg = MI.getOperand(1).getReg();
   Register FalseReg = MI.getOperand(2).getReg();
-  // Check merge == false (or merge == undef)
-  if (MergeReg != RISCV::NoRegister && TRI->lookThruCopyLike(MergeReg, MRI) !=
-                                           TRI->lookThruCopyLike(FalseReg, MRI))
+  // Check passthru == false (or passthru == undef)
+  if (PassthruReg != RISCV::NoRegister &&
+      TRI->lookThruCopyLike(PassthruReg, MRI) !=
+          TRI->lookThruCopyLike(FalseReg, MRI))
     return false;
 
   assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
@@ -266,14 +267,14 @@ bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
     return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.removeOperand(1);  // Merge operand
+  MI.removeOperand(1);  // Passthru operand
   MI.tieOperands(0, 1); // Tie false to dest
   MI.removeOperand(3);  // Mask operand
   MI.addOperand(
       MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
 
   // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
-  // register class for the destination and merge operands e.g. VRNoV0 -> VR
+  // register class for the destination and passthru operands e.g. VRNoV0 -> VR
   MRI->recomputeRegClass(MI.getOperand(0).getReg());
   MRI->recomputeRegClass(MI.getOperand(1).getReg());
   return true;

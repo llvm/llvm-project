@@ -37,10 +37,19 @@ LLVM_LIBRARY_VISIBILITY extern std::vector<Partition> partitions;
 
 // Returned by InputSectionBase::relsOrRelas. At least one member is empty.
 template <class ELFT> struct RelsOrRelas {
-  ArrayRef<typename ELFT::Rel> rels;
-  ArrayRef<typename ELFT::Rela> relas;
+  Relocs<typename ELFT::Rel> rels;
+  Relocs<typename ELFT::Rela> relas;
   bool areRelocsRel() const { return rels.size(); }
 };
+
+#define invokeOnRelocs(sec, f, ...)                                            \
+  {                                                                            \
+    const RelsOrRelas<ELFT> rs = (sec).template relsOrRelas<ELFT>();           \
+    if (rs.areRelocsRel())                                                     \
+      f(__VA_ARGS__, rs.rels);                                                 \
+    else                                                                       \
+      f(__VA_ARGS__, rs.relas);                                                \
+  }
 
 // This is the base class of all sections that lld handles. Some are sections in
 // input files, some are sections in the produced output file and some exist
@@ -407,7 +416,7 @@ public:
   InputSectionBase *getRelocatedSection() const;
 
   template <class ELFT, class RelTy>
-  void relocateNonAlloc(uint8_t *buf, llvm::ArrayRef<RelTy> rels);
+  void relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels);
 
   // Points to the canonical section. If ICF folds two sections, repl pointer of
   // one section points to the other.

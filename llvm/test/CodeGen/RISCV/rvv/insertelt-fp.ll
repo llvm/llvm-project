@@ -7,7 +7,7 @@
 define <vscale x 1 x half> @insertelt_nxv1f16_0(<vscale x 1 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv1f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 1 x half> %v, half %elt, i32 0
@@ -29,7 +29,7 @@ define <vscale x 1 x half> @insertelt_nxv1f16_idx(<vscale x 1 x half> %v, half %
 ; CHECK-LABEL: insertelt_nxv1f16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 1
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
@@ -41,7 +41,7 @@ define <vscale x 1 x half> @insertelt_nxv1f16_idx(<vscale x 1 x half> %v, half %
 define <vscale x 2 x half> @insertelt_nxv2f16_0(<vscale x 2 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv2f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 2 x half> %v, half %elt, i32 0
@@ -63,7 +63,7 @@ define <vscale x 2 x half> @insertelt_nxv2f16_idx(<vscale x 2 x half> %v, half %
 ; CHECK-LABEL: insertelt_nxv2f16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 1
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
@@ -211,7 +211,7 @@ define <vscale x 32 x half> @insertelt_nxv32f16_idx(<vscale x 32 x half> %v, hal
 define <vscale x 1 x float> @insertelt_nxv1f32_0(<vscale x 1 x float> %v, float %elt) {
 ; CHECK-LABEL: insertelt_nxv1f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 1 x float> %v, float %elt, i32 0
@@ -233,7 +233,7 @@ define <vscale x 1 x float> @insertelt_nxv1f32_idx(<vscale x 1 x float> %v, floa
 ; CHECK-LABEL: insertelt_nxv1f32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 1
-; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0

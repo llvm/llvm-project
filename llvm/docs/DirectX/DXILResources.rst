@@ -96,7 +96,7 @@ Buffers
 
 .. code-block:: llvm
 
-   target("dx.TypedBuffer", ElementType, IsWriteable, IsROV)
+   target("dx.TypedBuffer", ElementType, IsWriteable, IsROV, IsSigned)
    target("dx.RawBuffer", ElementType, IsWriteable, IsROV)
 
 We need two separate buffer types to account for the differences between the
@@ -106,9 +106,14 @@ used for DXIL's RawBuffers and StructuredBuffers. We call the latter
 "RawBuffer" to match the naming of the operations, but it can represent both
 the Raw and Structured variants.
 
-For TypedBuffer, the element type must be an integer or floating point type.
-For RawBuffer the type can be an integer, floating point, or struct type.
-HLSL's ByteAddressBuffer is represented by an `i8` element type.
+HLSL's Buffer and RWBuffer are represented as a TypedBuffer with an element
+type that is a scalar integer or floating point type, or a vector of at most 4
+such types. HLSL's ByteAddressBuffer is a RawBuffer with an `i8` element type.
+HLSL's StructuredBuffers are RawBuffer with a struct, vector, or scalar type.
+
+One unfortunate necessity here is that TypedBuffer needs an extra parameter to
+differentiate signed vs unsigned ints. The is because in LLVM IR int types
+don't have a sign, so to keep this information we need a side channel.
 
 These types are generally used by BufferLoad and BufferStore operations, as
 well as atomics.
@@ -128,6 +133,8 @@ There are a few fields to describe variants of all of these types:
        writeable) and UAVs (writeable).
    * - IsROV
      - Whether the UAV is a rasterizer ordered view. Always ``0`` for SRVs.
+   * - IsSigned
+     - Whether an int element type is signed ("dx.TypedBuffer" only)
 
 .. _bufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferload
 .. _bufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
@@ -197,23 +204,23 @@ Examples:
 .. code-block:: llvm
 
    ; RWBuffer<float4> Buf : register(u5, space3)
-   %buf = call target("dx.TypedBuffer", float, 1, 0)
+   %buf = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
                @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
                    i32 3, i32 5, i32 1, i32 0, i1 false)
 
-   ; RWBuffer<uint> Buf : register(u7, space2)
-   %buf = call target("dx.TypedBuffer", i32, 1, 0)
+   ; RWBuffer<int> Buf : register(u7, space2)
+   %buf = call target("dx.TypedBuffer", i32, 1, 0, 1)
                @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0t(
                    i32 2, i32 7, i32 1, i32 0, i1 false)
 
    ; Buffer<uint4> Buf[24] : register(t3, space5)
-   %buf = call target("dx.TypedBuffer", i32, 0, 0)
+   %buf = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
                @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0t(
                    i32 2, i32 7, i32 24, i32 0, i1 false)
 
    ; struct S { float4 a; uint4 b; };
    ; StructuredBuffer<S> Buf : register(t2, space4)
-   %buf = call target("dx.RawBuffer", {<4 x f32>, <4 x i32>}, 0, 0)
+   %buf = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0)
                @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
                    i32 4, i32 2, i32 1, i32 0, i1 false)
 

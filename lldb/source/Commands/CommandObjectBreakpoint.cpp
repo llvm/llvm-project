@@ -539,7 +539,8 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_dummy_options.m_use_dummy);
+    Target &target =
+        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     // The following are the various types of breakpoints that could be set:
     //   1).  -f -l -p  [-s -g]   (setting breakpoint by source location)
@@ -839,7 +840,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_dummy_opts.m_use_dummy);
+    Target &target = m_dummy_opts.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -903,7 +904,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1010,7 +1011,7 @@ the second re-enables the first location.");
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
 
@@ -1148,7 +1149,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints =
         target.GetBreakpointList(m_options.m_internal);
@@ -1267,7 +1268,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     // The following are the various types of breakpoints that could be
     // cleared:
@@ -1416,7 +1417,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
     result.Clear();
     
     std::unique_lock<std::recursive_mutex> lock;
@@ -1676,7 +1677,7 @@ protected:
       return;
     }
 
-    Target &target = GetSelectedOrDummyTarget(false);
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1764,7 +1765,7 @@ protected:
     }
 
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1838,7 +1839,7 @@ protected:
     }
 
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1897,7 +1898,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::vector<std::string> name_list;
     if (command.empty()) {
@@ -2209,7 +2210,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -2319,7 +2320,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);

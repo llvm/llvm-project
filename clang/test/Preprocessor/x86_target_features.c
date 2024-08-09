@@ -512,11 +512,11 @@
 
 // NOHRESET-NOT: #define __HRESET__ 1
 
-// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -muintr -x c -E -dM -o - %s | FileCheck -check-prefix=UINTR %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -muintr -x c -E -dM -o - %s | FileCheck -check-prefix=UINTR %s
 
 // UINTR: #define __UINTR__ 1
 
-// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-uintr -x c -E -dM -o - %s | FileCheck -check-prefix=NOUINTR %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-uintr -x c -E -dM -o - %s | FileCheck -check-prefix=NOUINTR %s
 
 // NOUINTR-NOT: #define __UINTR__ 1
 

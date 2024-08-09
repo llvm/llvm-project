@@ -588,7 +588,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
-            os << ' ' << common::EnumToString(x.attr());
+            if (auto attr{x.attr()}) {
+              os << ' ' << common::EnumToString(*attr);
+            } else {
+              os << " (no attr)";
+            }
             DumpExpr(os, "init", x.init());
           },
           [&](const MiscDetails &x) {
@@ -739,9 +743,16 @@ const Symbol *DerivedTypeDetails::GetFinalForRank(int rank) const {
   return nullptr;
 }
 
-void TypeParamDetails::set_type(const DeclTypeSpec &type) {
+TypeParamDetails &TypeParamDetails::set_attr(common::TypeParamAttr attr) {
+  CHECK(!attr_);
+  attr_ = attr;
+  return *this;
+}
+
+TypeParamDetails &TypeParamDetails::set_type(const DeclTypeSpec &type) {
   CHECK(!type_);
   type_ = &type;
+  return *this;
 }
 
 bool GenericKind::IsIntrinsicOperator() const {

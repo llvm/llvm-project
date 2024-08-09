@@ -118,12 +118,13 @@ public:
       return;
     }
 
-    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
+    const KeyT EmptyKey = getEmptyKey();
     if (std::is_trivially_destructible<ValueT>::value) {
       // Use a simpler loop when values don't need destruction.
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
         P->getFirst() = EmptyKey;
     } else {
+      const KeyT TombstoneKey = getTombstoneKey();
       unsigned NumEntries = getNumEntries();
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
         if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey)) {

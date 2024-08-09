@@ -429,6 +429,8 @@ _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_strong_explicit(
   return __o->compare_exchange_strong(*__e, __d, __s, __f);
 }
 
+#if _LIBCPP_STD_VER >= 20
+
 // atomic_wait
 
 template <class _Tp>
@@ -462,28 +464,26 @@ atomic_wait_explicit(const atomic<_Tp>* __o, typename atomic<_Tp>::value_type __
 // atomic_notify_one
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-atomic_notify_one(volatile atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void atomic_notify_one(volatile atomic<_Tp>* __o) _NOEXCEPT {
   __o->notify_one();
 }
 template <class _Tp>
-_LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT {
   __o->notify_one();
 }
 
 // atomic_notify_all
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-atomic_notify_all(volatile atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void atomic_notify_all(volatile atomic<_Tp>* __o) _NOEXCEPT {
   __o->notify_all();
 }
 template <class _Tp>
-_LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT {
   __o->notify_all();
 }
+
+#endif // _LIBCPP_STD_VER >= 20
 
 // atomic_fetch_add
 

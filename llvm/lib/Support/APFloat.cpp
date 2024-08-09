@@ -143,6 +143,7 @@ static constexpr fltSemantics semFloat8E4M3FNUZ = {
     7, -7, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
 static constexpr fltSemantics semFloat8E4M3B11FNUZ = {
     4, -10, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
+static constexpr fltSemantics semFloat8E3M4 = {3, -2, 5, 8};
 static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
 static constexpr fltSemantics semFloat6E3M2FN = {
     4, -2, 3, 6, fltNonfiniteBehavior::FiniteOnly};
@@ -217,6 +218,8 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return Float8E4M3FNUZ();
   case S_Float8E4M3B11FNUZ:
     return Float8E4M3B11FNUZ();
+  case S_Float8E3M4:
+    return Float8E3M4();
   case S_FloatTF32:
     return FloatTF32();
   case S_Float6E3M2FN:
@@ -257,6 +260,8 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_Float8E4M3FNUZ;
   else if (&Sem == &llvm::APFloat::Float8E4M3B11FNUZ())
     return S_Float8E4M3B11FNUZ;
+  else if (&Sem == &llvm::APFloat::Float8E3M4())
+    return S_Float8E3M4;
   else if (&Sem == &llvm::APFloat::FloatTF32())
     return S_FloatTF32;
   else if (&Sem == &llvm::APFloat::Float6E3M2FN())
@@ -287,6 +292,7 @@ const fltSemantics &APFloatBase::Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
 const fltSemantics &APFloatBase::Float8E4M3B11FNUZ() {
   return semFloat8E4M3B11FNUZ;
 }
+const fltSemantics &APFloatBase::Float8E3M4() { return semFloat8E3M4; }
 const fltSemantics &APFloatBase::FloatTF32() { return semFloatTF32; }
 const fltSemantics &APFloatBase::Float6E3M2FN() { return semFloat6E3M2FN; }
 const fltSemantics &APFloatBase::Float6E2M3FN() { return semFloat6E2M3FN; }
@@ -3643,6 +3649,11 @@ APInt IEEEFloat::convertFloat8E4M3B11FNUZAPFloatToAPInt() const {
   return convertIEEEFloatToAPInt<semFloat8E4M3B11FNUZ>();
 }
 
+APInt IEEEFloat::convertFloat8E3M4APFloatToAPInt() const {
+  assert(partCount() == 1);
+  return convertIEEEFloatToAPInt<semFloat8E3M4>();
+}
+
 APInt IEEEFloat::convertFloatTF32APFloatToAPInt() const {
   assert(partCount() == 1);
   return convertIEEEFloatToAPInt<semFloatTF32>();
@@ -3703,6 +3714,9 @@ APInt IEEEFloat::bitcastToAPInt() const {
 
   if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3B11FNUZ)
     return convertFloat8E4M3B11FNUZAPFloatToAPInt();
+
+  if (semantics == (const llvm::fltSemantics *)&semFloat8E3M4)
+    return convertFloat8E3M4APFloatToAPInt();
 
   if (semantics == (const llvm::fltSemantics *)&semFloatTF32)
     return convertFloatTF32APFloatToAPInt();
@@ -3932,6 +3946,10 @@ void IEEEFloat::initFromFloat8E4M3B11FNUZAPInt(const APInt &api) {
   initFromIEEEAPInt<semFloat8E4M3B11FNUZ>(api);
 }
 
+void IEEEFloat::initFromFloat8E3M4APInt(const APInt &api) {
+  initFromIEEEAPInt<semFloat8E3M4>(api);
+}
+
 void IEEEFloat::initFromFloatTF32APInt(const APInt &api) {
   initFromIEEEAPInt<semFloatTF32>(api);
 }
@@ -3977,6 +3995,8 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloat8E4M3FNUZAPInt(api);
   if (Sem == &semFloat8E4M3B11FNUZ)
     return initFromFloat8E4M3B11FNUZAPInt(api);
+  if (Sem == &semFloat8E3M4)
+    return initFromFloat8E3M4APInt(api);
   if (Sem == &semFloatTF32)
     return initFromFloatTF32APInt(api);
   if (Sem == &semFloat6E3M2FN)

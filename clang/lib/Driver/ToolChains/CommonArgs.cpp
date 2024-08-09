@@ -1957,8 +1957,8 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   return std::make_tuple(RelocM, 0U, false);
 }
 
-// `-falign-functions` indicates that the functions should be aligned to a
-// 16-byte boundary.
+// `-falign-functions` indicates that the functions should be aligned to the
+// backend's preferred alignment.
 //
 // `-falign-functions=1` is the same as `-fno-align-functions`.
 //

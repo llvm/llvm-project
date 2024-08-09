@@ -1625,4 +1625,40 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
+  // Regression test for a case where caching of equivalent values caused the
+  // comparator to get inconsistent.
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define i32 @foo(i32 %arg0) {
+      %1 = add i32 %arg0, 1
+      %2 = add i32 %arg0, 1
+      %3 = xor i32 %2, %1
+      %4 = add i32 %3, %2
+      %5 = add i32 %arg0, 1
+      %6 = xor i32 %5, %arg0
+      %7 = add i32 %arg0, %6
+      %8 = add i32 %5, %7
+      %9 = xor i32 %8, %7
+      %10 = add i32 %9, %8
+      %11 = xor i32 %10, %9
+      %12 = add i32 %11, %10
+      %13 = xor i32 %12, %11
+      %14 = add i32 %12, %13
+      %15 = add i32 %14, %4
+      ret i32 %15
+    })",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+    // crash if the comparator has the specific caching bug.
+    SE.getSCEV(F.getEntryBlock().getTerminator()->getOperand(0));
+  });
+}
+
 }  // end namespace llvm
