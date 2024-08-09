@@ -3601,6 +3601,31 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
   return Cost;
 }
 
+bool AArch64TTIImpl::isPartialReductionSupported(
+    const Instruction *ReductionInstr, Type *InputType, unsigned ScaleFactor,
+    bool IsInputASignExtended, bool IsInputBSignExtended,
+    const Instruction *BinOp) const {
+  if (ReductionInstr->getOpcode() != Instruction::Add)
+    return false;
+
+  // Check that both extends are of the same type
+  if (IsInputASignExtended != IsInputBSignExtended)
+    return false;
+
+  if (!BinOp || BinOp->getOpcode() != Instruction::Mul)
+    return false;
+
+  // Dot product only supports a scale factor of 4
+  if (ScaleFactor != 4)
+    return false;
+
+  Type *ReductionType = ReductionInstr->getType();
+
+  return ((ReductionType->isIntegerTy(32) && InputType->isIntegerTy(8)) ||
+          (ReductionType->isIntegerTy(64) && InputType->isIntegerTy(16))) &&
+         ReductionType->isScalableTy();
+}
+
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   return ST->getMaxInterleaveFactor();
 }
