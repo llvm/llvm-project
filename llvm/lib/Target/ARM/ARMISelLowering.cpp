@@ -3024,18 +3024,27 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
 
   assert(Subtarget->supportsTailCall());
 
-  // Indirect tail calls cannot be optimized for Thumb1 if the args
-  // to the call take up r0-r3. The reason is that there are no legal registers
-  // left to hold the pointer to the function to be called.
-  // Similarly, if the function uses return address sign and authentication,
-  // r12 is needed to hold the PAC and is not available to hold the callee
-  // address.
-  if (Outs.size() >= 4 &&
-      (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect)) {
-    if (Subtarget->isThumb1Only())
-      return false;
-    // Conservatively assume the function spills LR.
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true))
+  // Indirect tail-calls require a register to hold the target address. That
+  // register must be:
+  // * Allocatable (i.e. r0-r7 if the target is Thumb1).
+  // * Not callee-saved, so must be one of r0-r3 or r12.
+  // * Not used to hold an argument to the tail-called function, which might be
+  //   in r0-r3.
+  // * Not used to hold the return address authentication code, which is in r12
+  //   if enabled.
+  // Sometimes, no register matches all of these conditions, so we can't do a
+  // tail-call.
+  if (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect) {
+    SmallSet<MCPhysReg, 5> AddressRegisters;
+    for (Register R : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
+      AddressRegisters.insert(R);
+    if (!(Subtarget->isThumb1Only() ||
+          MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true)))
+      AddressRegisters.insert(ARM::R12);
+    for (const CCValAssign &AL : ArgLocs)
+      if (AL.isRegLoc())
+        AddressRegisters.erase(AL.getLocReg());
+    if (AddressRegisters.empty())
       return false;
   }
 

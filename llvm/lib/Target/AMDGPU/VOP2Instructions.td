@@ -763,7 +763,11 @@ def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, []>;
 
 // No patterns so that the scalar instructions are always selected.
 // The scalar versions will be replaced with vector when needed later.
-defm V_ADD_CO_U32 : VOP2bInst <"v_add_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_add_co_u32", 1>;
+
+let isAdd = 1 in {
+  defm V_ADD_CO_U32 : VOP2bInst <"v_add_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_add_co_u32", 1>;
+}
+
 defm V_SUB_CO_U32 : VOP2bInst <"v_sub_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_sub_co_u32", 1>;
 defm V_SUBREV_CO_U32 : VOP2bInst <"v_subrev_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_sub_co_u32", 1>;
 defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_addc_u32", 1>;
@@ -772,7 +776,11 @@ defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_f
 
 
 let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
-defm V_ADD_U32 : VOP2Inst_VOPD <"v_add_u32", VOP_I32_I32_I32_ARITH, 0x10, "v_add_nc_u32", null_frag, "v_add_u32", 1>;
+
+let isAdd = 1 in {
+  defm V_ADD_U32 : VOP2Inst_VOPD <"v_add_u32", VOP_I32_I32_I32_ARITH, 0x10, "v_add_nc_u32", null_frag, "v_add_u32", 1>;
+}
+
 defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
 defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
 }

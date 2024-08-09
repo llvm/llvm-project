@@ -13,6 +13,7 @@
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
@@ -27,12 +28,6 @@
 #define DEBUG_TYPE "spirv-to-llvm-pattern"
 
 using namespace mlir;
-
-//===----------------------------------------------------------------------===//
-// Constants
-//===----------------------------------------------------------------------===//
-
-constexpr unsigned defaultAddressSpace = 0;
 
 //===----------------------------------------------------------------------===//
 // Utility functions
@@ -273,47 +268,13 @@ static std::optional<Type> convertArrayType(spirv::ArrayType type,
   return LLVM::LLVMArrayType::get(llvmElementType, numElements);
 }
 
-static unsigned mapToOpenCLAddressSpace(spirv::StorageClass storageClass) {
-  // Based on
-  // https://registry.khronos.org/SPIR-V/specs/unified1/OpenCL.ExtendedInstructionSet.100.html#_binary_form
-  // and clang/lib/Basic/Targets/SPIR.h.
-  switch (storageClass) {
-#define STORAGE_SPACE_MAP(storage, space)                                      \
-  case spirv::StorageClass::storage:                                           \
-    return space;
-    STORAGE_SPACE_MAP(Function, 0)
-    STORAGE_SPACE_MAP(CrossWorkgroup, 1)
-    STORAGE_SPACE_MAP(Input, 1)
-    STORAGE_SPACE_MAP(UniformConstant, 2)
-    STORAGE_SPACE_MAP(Workgroup, 3)
-    STORAGE_SPACE_MAP(Generic, 4)
-    STORAGE_SPACE_MAP(DeviceOnlyINTEL, 5)
-    STORAGE_SPACE_MAP(HostOnlyINTEL, 6)
-#undef STORAGE_SPACE_MAP
-  default:
-    return defaultAddressSpace;
-  }
-}
-
-static unsigned mapToAddressSpace(spirv::ClientAPI clientAPI,
-                                  spirv::StorageClass storageClass) {
-  switch (clientAPI) {
-#define CLIENT_MAP(client, storage)                                            \
-  case spirv::ClientAPI::client:                                               \
-    return mapTo##client##AddressSpace(storage);
-    CLIENT_MAP(OpenCL, storageClass)
-#undef CLIENT_MAP
-  default:
-    return defaultAddressSpace;
-  }
-}
-
 /// Converts SPIR-V pointer type to LLVM pointer. Pointer's storage class is not
 /// modelled at the moment.
 static Type convertPointerType(spirv::PointerType type,
                                LLVMTypeConverter &converter,
                                spirv::ClientAPI clientAPI) {
-  unsigned addressSpace = mapToAddressSpace(clientAPI, type.getStorageClass());
+  unsigned addressSpace =
+      storageClassToAddressSpace(clientAPI, type.getStorageClass());
   return LLVM::LLVMPointerType::get(type.getContext(), addressSpace);
 }
 
@@ -822,7 +783,7 @@ public:
                        : LLVM::Linkage::External;
     auto newGlobalOp = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         op, dstType, isConstant, linkage, op.getSymName(), Attribute(),
-        /*alignment=*/0, mapToAddressSpace(clientAPI, storageClass));
+        /*alignment=*/0, storageClassToAddressSpace(clientAPI, storageClass));
 
     // Attach location attribute if applicable
     if (op.getLocationAttr())
