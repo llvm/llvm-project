@@ -197,7 +197,9 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
     </p>
     <h2 id="Members">Members</h2>
     <ul>
-      <li>private int X</li>
+      <li>
+        <div>private int X</div>
+      </li>
     </ul>
     <h2 id="Records">Records</h2>
     <ul>
