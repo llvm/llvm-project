@@ -14,6 +14,7 @@
 #define MLIR_TARGET_LLVM_ROCDL_UTILS_H
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
@@ -107,6 +108,20 @@ protected:
   /// AMD GCN libraries to use when linking, the default is using none.
   AMDGCNLibraries deviceLibs = AMDGCNLibraries::None;
 };
+
+/// Returns a map containing the `amdhsa.kernels` ELF metadata for each of the
+/// kernels in the binary, or `std::nullopt` if the metadata couldn't be
+/// retrieved. The map associates the name of the kernel with the list of named
+/// attributes found in `amdhsa.kernels`. For more information on the ELF
+/// metadata see: https://llvm.org/docs/AMDGPUUsage.html#amdhsa
+std::optional<DenseMap<StringAttr, NamedAttrList>>
+getAMDHSAKernelsELFMetadata(Builder &builder, ArrayRef<char> elfData);
+
+/// Returns a `#gpu.kernel_table` containing kernel metadata for each of the
+/// kernels in `gpuModule`. If `elfData` is valid, then the `amdhsa.kernels` ELF
+/// metadata will be added to the `#gpu.kernel_table`.
+gpu::KernelTableAttr getKernelMetadata(Operation *gpuModule,
+                                       ArrayRef<char> elfData = {});
 } // namespace ROCDL
 } // namespace mlir
 
