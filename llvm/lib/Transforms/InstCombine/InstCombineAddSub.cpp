@@ -1250,6 +1250,74 @@ static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
   return nullptr;
 }
 
+static Value *foldCeilIdioms(BinaryOperator &I, InstCombinerImpl &IC) {
+  assert(I.getOpcode() == Instruction::Add && "Expecting add instruction.");
+  Value *A, *B;
+  auto &ICB = IC.Builder;
+
+  // Fold the log2 ceil idiom:
+  // zext (ctpop(A) >u/!= 1) + (ctlz (A, true) ^ (BW - 1))
+  //      -> BW - ctlz (A - 1, false)
+  const APInt *XorC;
+  ICmpInst::Predicate Pred;
+  if (match(&I,
+            m_c_Add(
+                m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
+                              m_One())),
+                m_OneUse(m_ZExtOrSelf(m_OneUse(m_Xor(
+                    m_OneUse(m_TruncOrSelf(m_OneUse(
+                        m_Intrinsic<Intrinsic::ctlz>(m_Deferred(A), m_One())))),
+                    m_APInt(XorC))))))) &&
+      (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
+      *XorC == A->getType()->getScalarSizeInBits() - 1) {
+    Value *Sub = ICB.CreateAdd(A, Constant::getAllOnesValue(A->getType()));
+    Value *Ctlz = ICB.CreateIntrinsic(Intrinsic::ctlz, {A->getType()},
+                                      {Sub, ICB.getFalse()});
+    Value *Ret = ICB.CreateSub(
+        ConstantInt::get(A->getType(), A->getType()->getScalarSizeInBits()),
+        Ctlz, "", /*HasNUW*/ true, /*HasNSW*/ true);
+    return ICB.CreateZExtOrTrunc(Ret, I.getType());
+  }
+
+  // Fold the ceil division idiom:
+  // add (udiv (sub A, Bias), B), Bias
+  //      -> udiv (add A, B - 1), B)
+  // with Bias = A != 0; A + B not to overflow
+  auto MatchDivision = [&IC](Instruction *Div, Value *&DivOp0, Value *&DivOp1) {
+    if (match(Div, m_UDiv(m_Value(DivOp0), m_Value(DivOp1))))
+      return true;
+
+    Value *N;
+    if (match(Div, m_LShr(m_Value(DivOp0), m_Value(N))) &&
+        match(N,
+              m_Sub(m_SpecificInt(Div->getType()->getScalarSizeInBits() - 1),
+                    m_Intrinsic<Intrinsic::ctlz>(m_Value(DivOp1), m_Zero()))) &&
+        IC.isKnownToBeAPowerOfTwo(DivOp1, /*OrZero*/ false, 0, Div))
+      return true;
+
+    return false;
+  };
+
+  Instruction *Div;
+  Value *Bias, *Sub;
+  if (match(&I, m_c_Add(m_Instruction(Div), m_Value(Bias))) &&
+      MatchDivision(Div, Sub, B) &&
+      match(Sub, m_Sub(m_Value(A), m_Value(Bias))) &&
+      match(Bias, m_ZExt(m_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(A),
+                                        m_ZeroInt()))) &&
+      Bias->hasNUses(2)) {
+    WithCache<const Value *> LHSCache(A), RHSCache(B);
+    auto OR = IC.computeOverflowForUnsignedAdd(LHSCache, RHSCache, &I);
+    if (OR == OverflowResult::NeverOverflows) {
+      auto *BMinusOne =
+          ICB.CreateAdd(B, Constant::getAllOnesValue(I.getType()));
+      return ICB.CreateUDiv(ICB.CreateAdd(A, BMinusOne), B);
+    }
+  }
+
+  return nullptr;
+}
+
 // Transform:
 //  (add A, (shl (neg B), Y))
 //      -> (sub A, (shl B, Y))
@@ -1785,30 +1853,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
                                    {Builder.CreateOr(A, B)}));
 
-  // Fold the log2_ceil idiom:
-  // zext(ctpop(A) >u/!= 1) + (ctlz(A, true) ^ (BW - 1))
-  // -->
-  // BW - ctlz(A - 1, false)
-  const APInt *XorC;
-  ICmpInst::Predicate Pred;
-  if (match(&I,
-            m_c_Add(
-                m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
-                              m_One())),
-                m_OneUse(m_ZExtOrSelf(m_OneUse(m_Xor(
-                    m_OneUse(m_TruncOrSelf(m_OneUse(
-                        m_Intrinsic<Intrinsic::ctlz>(m_Deferred(A), m_One())))),
-                    m_APInt(XorC))))))) &&
-      (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
-      *XorC == A->getType()->getScalarSizeInBits() - 1) {
-    Value *Sub = Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()));
-    Value *Ctlz = Builder.CreateIntrinsic(Intrinsic::ctlz, {A->getType()},
-                                          {Sub, Builder.getFalse()});
-    Value *Ret = Builder.CreateSub(
-        ConstantInt::get(A->getType(), A->getType()->getScalarSizeInBits()),
-        Ctlz, "", /*HasNUW*/ true, /*HasNSW*/ true);
-    return replaceInstUsesWith(I, Builder.CreateZExtOrTrunc(Ret, I.getType()));
-  }
+  if (Value *V = foldCeilIdioms(I, *this))
+    return replaceInstUsesWith(I, V);
 
   if (Instruction *Res = foldSquareSumInt(I))
     return Res;
