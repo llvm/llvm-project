@@ -214,6 +214,14 @@ Error ELFNixPlatformRuntimeState::registerObjectSections(
   return Error::success();
 }
 
+Error ELFNixPlatformRuntimeState::deregisterObjectSections(
+    ELFNixPerObjectSectionsToRegister POSR) {
+  if (POSR.EHFrameSection.Start)
+    deregisterEHFrameSection(POSR.EHFrameSection.Start.toPtr<const char *>());
+
+  return Error::success();
+}
+
 Error ELFNixPlatformRuntimeState::registerJITDylib(std::string &Name, void *Handle) {
   std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
 
@@ -294,14 +302,6 @@ Error ELFNixPlatformRuntimeState::deregisterInits(
   for (auto &I : Inits) {
     JDS->RecordedInits.removeIfPresent(I);
   }
-
-  return Error::success();
-}
-
-Error ELFNixPlatformRuntimeState::deregisterObjectSections(
-    ELFNixPerObjectSectionsToRegister POSR) {
-  if (POSR.EHFrameSection.Start)
-    deregisterEHFrameSection(POSR.EHFrameSection.Start.toPtr<const char *>());
 
   return Error::success();
 }

@@ -183,7 +183,8 @@ private:
   // Records the addresses of runtime symbols used by the platform.
   Error bootstrapELFNixRuntime(JITDylib &PlatformJD);
 
-  Error registerPerObjectSections(const ELFPerObjectSectionsToRegister &POSR);
+  Error registerPerObjectSections(
+      jitlink::LinkGraph &G,const ELFPerObjectSectionsToRegister &POSR);
 
   Expected<uint64_t> createPThreadKey();
 

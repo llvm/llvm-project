@@ -546,7 +546,9 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
   }
 
   for (auto &D : DeferredPOSRs)
-    if (auto Err = registerPerObjectSections(D))
+    if (auto Err = ES.callSPSWrapper<void(
+                    SPSELFPerObjectSectionsToRegister)>(
+         orc_rt_elfnix_register_object_sections, D))
       return Err;
 
   for (auto KV : JDBootstrapStates) {
@@ -563,7 +565,7 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
 }
 
 Error ELFNixPlatform::registerPerObjectSections(
-    const ELFPerObjectSectionsToRegister &POSR) {
+    jitlink::LinkGraph &G, const ELFPerObjectSectionsToRegister &POSR) {
 
   if (!orc_rt_elfnix_register_object_sections)
     return make_error<StringError>("Attempting to register per-object "
@@ -571,12 +573,14 @@ Error ELFNixPlatform::registerPerObjectSections(
                                    "been loaded yet",
                                    inconvertibleErrorCode());
 
-  Error ErrResult = Error::success();
-  if (auto Err = ES.callSPSWrapper<shared::SPSError(
-                     SPSELFPerObjectSectionsToRegister)>(
-          orc_rt_elfnix_register_object_sections, ErrResult, POSR))
-    return Err;
-  return ErrResult;
+  using SPSRegisterObjSectionsArgs = SPSArgList<SPSELFPerObjectSectionsToRegister>;
+  G.allocActions().push_back(
+        {cantFail(WrapperFunctionCall::Create<SPSRegisterObjSectionsArgs>(
+             orc_rt_elfnix_register_object_sections, POSR)),
+         cantFail(WrapperFunctionCall::Create<SPSRegisterObjSectionsArgs>(
+             orc_rt_elfnix_deregister_object_sections, POSR))});
+
+  return Error::success();
 }
 
 Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
@@ -738,7 +742,7 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addEHAndTLVSupportPasses(
       }
 
       // Otherwise register it immediately.
-      if (auto Err = MP.registerPerObjectSections(POSR))
+      if (auto Err = MP.registerPerObjectSections(G,POSR))
         return Err;
     }
 
