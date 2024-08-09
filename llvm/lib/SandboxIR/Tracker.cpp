@@ -27,23 +27,23 @@ void UseSwap::dump() const {
 }
 #endif // NDEBUG
 
-PHISetIncoming::PHISetIncoming(PHINode &PHI, unsigned Idx, What What)
+PHISetIncoming::PHISetIncoming(PHINode *PHI, unsigned Idx, What What)
     : PHI(PHI), Idx(Idx) {
   switch (What) {
   case What::Value:
-    OrigValueOrBB = PHI.getIncomingValue(Idx);
+    OrigValueOrBB = PHI->getIncomingValue(Idx);
     break;
   case What::Block:
-    OrigValueOrBB = PHI.getIncomingBlock(Idx);
+    OrigValueOrBB = PHI->getIncomingBlock(Idx);
     break;
   }
 }
 
 void PHISetIncoming::revert(Tracker &Tracker) {
   if (auto *V = OrigValueOrBB.dyn_cast<Value *>())
-    PHI.setIncomingValue(Idx, V);
+    PHI->setIncomingValue(Idx, V);
   else
-    PHI.setIncomingBlock(Idx, OrigValueOrBB.get<BasicBlock *>());
+    PHI->setIncomingBlock(Idx, OrigValueOrBB.get<BasicBlock *>());
 }
 
 #ifndef NDEBUG
@@ -53,32 +53,33 @@ void PHISetIncoming::dump() const {
 }
 #endif // NDEBUG
 
-PHIRemoveIncoming::PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx)
+PHIRemoveIncoming::PHIRemoveIncoming(PHINode *PHI, unsigned RemovedIdx)
     : PHI(PHI), RemovedIdx(RemovedIdx) {
-  RemovedV = PHI.getIncomingValue(RemovedIdx);
-  RemovedBB = PHI.getIncomingBlock(RemovedIdx);
+  RemovedV = PHI->getIncomingValue(RemovedIdx);
+  RemovedBB = PHI->getIncomingBlock(RemovedIdx);
 }
 
 void PHIRemoveIncoming::revert(Tracker &Tracker) {
   // Special case: if the PHI is now empty, as we don't need to care about the
   // order of the incoming values.
-  unsigned NumIncoming = PHI.getNumIncomingValues();
+  unsigned NumIncoming = PHI->getNumIncomingValues();
   if (NumIncoming == 0) {
-    PHI.addIncoming(RemovedV, RemovedBB);
+    PHI->addIncoming(RemovedV, RemovedBB);
     return;
   }
   // Shift all incoming values by one starting from the end until `Idx`.
   // Start by adding a copy of the last incoming values.
   unsigned LastIdx = NumIncoming - 1;
-  PHI.addIncoming(PHI.getIncomingValue(LastIdx), PHI.getIncomingBlock(LastIdx));
+  PHI->addIncoming(PHI->getIncomingValue(LastIdx),
+                   PHI->getIncomingBlock(LastIdx));
   for (unsigned Idx = LastIdx; Idx > RemovedIdx; --Idx) {
-    auto *PrevV = PHI.getIncomingValue(Idx - 1);
-    auto *PrevBB = PHI.getIncomingBlock(Idx - 1);
-    PHI.setIncomingValue(Idx, PrevV);
-    PHI.setIncomingBlock(Idx, PrevBB);
+    auto *PrevV = PHI->getIncomingValue(Idx - 1);
+    auto *PrevBB = PHI->getIncomingBlock(Idx - 1);
+    PHI->setIncomingValue(Idx, PrevV);
+    PHI->setIncomingBlock(Idx, PrevBB);
   }
-  PHI.setIncomingValue(RemovedIdx, RemovedV);
-  PHI.setIncomingBlock(RemovedIdx, RemovedBB);
+  PHI->setIncomingValue(RemovedIdx, RemovedV);
+  PHI->setIncomingBlock(RemovedIdx, RemovedBB);
 }
 
 #ifndef NDEBUG
@@ -88,10 +89,10 @@ void PHIRemoveIncoming::dump() const {
 }
 #endif // NDEBUG
 
-PHIAddIncoming::PHIAddIncoming(PHINode &PHI)
-    : PHI(PHI), Idx(PHI.getNumIncomingValues()) {}
+PHIAddIncoming::PHIAddIncoming(PHINode *PHI)
+    : PHI(PHI), Idx(PHI->getNumIncomingValues()) {}
 
-void PHIAddIncoming::revert(Tracker &Tracker) { PHI.removeIncomingValue(Idx); }
+void PHIAddIncoming::revert(Tracker &Tracker) { PHI->removeIncomingValue(Idx); }
 
 #ifndef NDEBUG
 void PHIAddIncoming::dump() const {
