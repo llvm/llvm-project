@@ -1063,8 +1063,10 @@ struct ScalableTransposeTransferWriteConversion
           writeOp, "lowering tensor transfers is disabled");
     }
 
-    Value vector = writeOp.getVector();
     VectorType vectorType = writeOp.getVectorType();
+
+    // Note: By comparing the scalable dims to an ArrayRef of length two this
+    // implicitly checks the rank (is also two).
     ArrayRef<bool> scalableFlags = vectorType.getScalableDims();
     if (scalableFlags != ArrayRef<bool>{true, false}) {
       return rewriter.notifyMatchFailure(
@@ -1077,11 +1079,15 @@ struct ScalableTransposeTransferWriteConversion
           writeOp, "non-identity permutations are unsupported (lower first)");
     }
 
+    // Note: This pattern is only lowering the leading dimension (to a loop),
+    // so we only check if the leading dimension is in bounds. The in-bounds
+    // attribute for the trailing dimension will be propagated.
     if (!writeOp.isDimInBounds(0)) {
       return rewriter.notifyMatchFailure(
           writeOp, "out-of-bounds dims are unsupported (use masking)");
     }
 
+    Value vector = writeOp.getVector();
     auto transposeOp = vector.getDefiningOp<vector::TransposeOp>();
     if (!transposeOp ||
         transposeOp.getPermutation() != ArrayRef<int64_t>{1, 0}) {
