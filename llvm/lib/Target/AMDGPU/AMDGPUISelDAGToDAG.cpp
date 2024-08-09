@@ -2788,7 +2788,7 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   }
 
   if (ConvGlueNode) {
-    SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+    SmallVector<SDValue, 4> NewOps(N->ops());
     NewOps.push_back(SDValue(ConvGlueNode, 0));
     CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), NewOps);
   }
