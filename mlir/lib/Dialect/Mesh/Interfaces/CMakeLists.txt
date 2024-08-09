@@ -1,5 +1,6 @@
 add_mlir_library(MLIRShardingInterface
   ShardingInterface.cpp
+  TensorShardingInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Mesh
@@ -11,5 +12,6 @@ add_mlir_library(MLIRShardingInterface
   MLIRDialectUtils
   MLIRIR
   MLIRMeshDialect
+  MLIRTensorDialect
   MLIRSupport
 )

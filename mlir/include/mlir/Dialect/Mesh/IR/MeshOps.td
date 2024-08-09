@@ -20,7 +20,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
-// Mesh Dialect operations.
+// Mesh operations.
 //===----------------------------------------------------------------------===//
 
 class Mesh_Op<string mnemonic, list<Trait> traits = []> :
@@ -105,101 +105,6 @@ def Mesh_MeshShapeOp : Mesh_Op<"mesh_shape", [
   ];
 }
 
-def Mesh_ShardOp : Mesh_Op<"shard", [
-    Pure,
-    SameOperandsAndResultType,
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
-  ]> {
-  let summary = "Annotate on how a tensor is sharded across a mesh.";
-  let description = [{
-    The mesh.shard operation is designed to specify and guide the sharding
-    behavior of a tensor value across a mesh topology. This operation has one
-    operand and two attributes:
-
-    1. `input`: This operand represents the tensor value that needs to be
-    annotated for sharding.
-
-    2. `shard`: This attribute is type of `MeshSharding`, which is the core data
-    structure to represent distribution of a tensor on a mesh.
-
-    3. `annotate_for_users`: A unit attribute addressing the scenario when a
-    tensor's sharding annotation differs based on its context of use (either as
-    a result or an operand). If specified, the sharding pertains to specific
-    users of the tensor value, indicating how it should be considered when used
-    as an operand in subsequent operations. If not, the sharding applies to the
-    operation that defines the tensor value.
-
-    Example:
-    ```
-    func.func @only_result_annotated(%arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
-      ...
-    }
-
-    func.func @only_operand_annotated(%arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> annotate_for_users : tensor<4x8xf32>
-      ...
-    }
-
-    // The first mesh.shard op applies to %arg0, the second mesh.shard op
-    // applies for the operand of op0, the third mesh.shard op applies for the
-    // operand of op2
-    func.func @both_result_and_multi_operands_annotated(
-        %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> annotate_for_users : tensor<4x8xf32>
-      %2 = mesh.shard %0 to <@mesh0, [[2]]> annotate_for_users : tensor<4x8xf32>
-      "op0"(%1) : ...
-      "op1"(%2) : ...
-      ...
-    }
-    ```
-
-    The following usages are undefined:
-    ```
-    func.func @annotate_on_same_result_with_different_sharding(
-        %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> : tensor<4x8xf32>
-      ...
-    }
-
-    func.func @annotate_on_same_result_same_value_with_different_sharding(
-        %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
-      %1 = mesh.shard %arg0 to <@mesh0, [[1]]> : tensor<4x8xf32>
-      ...
-    }
-
-    func.func @annotate_on_same_operand_with_different_sharding(
-        %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> annotate_for_users : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> annotate_for_users : tensor<4x8xf32>
-      ...
-    }
-
-    func.func @result_annotated_after_operand(
-        %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> annotate_for_users : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> : tensor<4x8xf32>
-      ...
-    }
-    ```
-  }];
-  let arguments = (ins
-    AnyRankedTensor:$src,
-    MeshSharding:$shard,
-    UnitAttr:$annotate_for_users
-  );
-  let results = (outs
-    AnyRankedTensor:$result
-  );
-  let assemblyFormat = [{
-    $src `to` $shard (`annotate_for_users` $annotate_for_users^)? attr-dict `:`
-      type($result)
-  }];
-}
-
 def Mesh_ProcessMultiIndexOp : Mesh_Op<"process_multi_index", [
   Pure,
   DeclareOpInterfaceMethods<SymbolUserOpInterface>,
@@ -248,6 +153,273 @@ def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
   let builders = [
     OpBuilder<(ins "::mlir::mesh::MeshOp":$mesh)>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// Sharding operations.
+//===----------------------------------------------------------------------===//
+
+def Mesh_ShardingOp : Mesh_Op<"sharding", [
+    Pure,
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
+  let summary = "Define a sharding of a tensor.";
+  let description = [{
+    The MeshSharding specifies how a tensor is sharded and distributed across the
+    process mesh. It is typically used in a `mesh.shard` operation.
+    The operation has the follwing attributes and operands:
+
+    1. `mesh`: this attribute is a FlatSymbolRefAttr that refers to the device
+    mesh where the distributed tensor is placed. The symbol must resolve to a
+    `mesh.mesh` operation.
+
+    2. `split_axes`: is an array composed of int64_t sub-arrays. The outer array's
+    maximum size is the `rank` of the related tensor. For the i-th sub-array, if
+    its value is [x, y], it indicates that the tensor's i-th dimension is splitted
+    along the x and y axes of the device mesh.
+
+    3. [Optional] `partial_axes`: if not empty, this signifies that the tensor is partial
+    one along the specified mesh axes. An all-reduce should be applied to obtain
+    the complete tensor, with reduction type being specified by `partial_type`.
+
+    4. [Optional] `partial_type`: indicates the reduction type of the possible all-reduce
+    op. It has 4 possible values:
+    `generic`: is not an allowed value inside a shard attribute.
+
+    5. [Optional] Sizes of halos to be added for each sharded tensor dimension.
+    `halo_sizes`is provided as a flattened 1d array of i64s, 2 values for each sharded dimension.
+    `halo_sizes` = [1, 2] means that the first sharded dimension gets an additional
+    halo of size 1 at the start of the first dimension and a halo size is 2 at its end.
+    `halo_sizes` = [1, 2, 2, 3] defines halos for the first 2 sharded dimensions
+    e.g. the first sharded dimension gets [1,2] halos and the seconds gets [2,3] halos.
+    `?` indicates dynamic halo sizes.
+    
+    6. [Optional] Sizes of sharded dimensions of each shard.
+    `sharded_dims_sizes`is provided as a flattened 1d array of i64s: for each device of the
+    device-mesh one value for each sharded tensor dimension.
+    Assuming a 3d-tensor of shape 32x32x32 with the first 2 dimensions being sharded,
+    `sharded_dims_sizes` = [16, 8, 16, 24] means that the first device of
+    the device-mesh will get a shard of shape 16x8x32 and the second device will get a
+    shard of shape 16x24x32.
+    `?` indicates dynamic shard dimensions.
+    
+    `halo_sizes` and `sharded_dims_sizes` are mutually exclusive.
+
+    Examples:
+
+    ```
+    mesh.mesh @mesh0(shape = 2x2x4)
+    mesh.mesh @mesh1d_4(shape = 4)
+
+    // The tensor is fully replicated on @mesh0.
+    // Currently, there must be at least one sub-array present in axes, even
+    // if it's empty. Otherwise, a parsing error will occur.
+    %sharding0 = mesh.sharding @mesh0 split_axes = [[]]
+
+    // The tensor is sharded on the first dimension along axis 0 of @mesh0
+    %sharding1 = mesh.sharding @mesh0 split_axes = [[0]]
+
+    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
+    // it is also a partial_sum along mesh axis 1.
+    %sharding2 = mesh.sharding @mesh0 split_axes = [[0] split_axes = []] partial = sum[1]
+
+    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
+    // it is also a partial_max along mesh axis 1.
+    %sharding3 = mesh.sharding @mesh0 split_axes = [[0]] partial = max[1]
+
+    // Could be used for a mesh.shard op
+    %sharded0 = mesh.shard %arg0 to %sharding3 : tensor<4x8xf32>
+
+    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
+    // and it has halo-sizes of 1 and 2 on the sharded dim.
+    %halo_sharding = mesh.sharding @mesh0 split_axes = [[0]] halo_sizes = [1, 2]
+    %sharded1 = mesh.shard %arg0 to %halo_sharding : tensor<4x8xf32>
+    
+    // The tensor is sharded on its second dimension along axis 0 of @mesh1d_4
+    // and it has pre-defined shard sizes. The shards of the devices will have
+    // the following shapes: [4x2, 4x3, 4x4, 4x5]
+    %sharding4 = mesh.sharding @mesh1d_4 split_axes = [[] split_axes = [0]] sharded_dims_sizes = [2, 3, 4, 5]
+    %sharded2 = mesh.shard %arg0 to %sharding4 : tensor<4x14xf32>
+    ```
+  }];
+    
+  let arguments = (ins
+    FlatSymbolRefAttr:$mesh,
+    Mesh_MeshAxesArrayAttr:$split_axes,
+    OptionalAttr<Mesh_MeshAxesAttr>:$partial_axes,
+    OptionalAttr<Mesh_ReductionKindAttr>:$partial_type,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_sharded_dims_sizes,
+    Variadic<I64>:$dynamic_sharded_dims_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_halo_sizes,
+    Variadic<I64>:$dynamic_halo_sizes
+  );
+  let results = (outs
+    Mesh_Sharding:$result
+  );
+  let assemblyFormat = [{
+    $mesh
+    `split_axes` `=` $split_axes
+    (`partial` `=` $partial_type $partial_axes^)?
+    (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
+    (`sharded_dims_sizes` `=` custom<DynamicIndexList>($dynamic_sharded_dims_sizes, $static_sharded_dims_sizes)^)?
+    attr-dict `:` type($result)
+  }];
+  let builders = [
+    OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
+                   "ArrayRef<MeshAxesAttr>":$split_axes,
+                   "ArrayRef<MeshAxis>":$partial_axes,
+                   "mesh::ReductionKind":$partial_type,
+                   CArg<"ArrayRef<int64_t>", "{}">:$static_halo_sizes,
+                   CArg<"ArrayRef<int64_t>", "{}">:$static_sharded_dims_sizes)>,
+    OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
+                   "ArrayRef<MeshAxesAttr>":$split_axes)>,
+    OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
+                   "ArrayRef<MeshAxesAttr>":$split_axes,
+                   "::mlir::ArrayRef<::mlir::OpFoldResult>":$halo_sizes,
+                   "::mlir::ArrayRef<::mlir::OpFoldResult>":$sharded_dims_sizes)>,
+    OpBuilder<(ins "mlir::mesh::MeshSharding":$from)>
+  ];
+  let hasVerifier = 1;
+}
+
+def Mesh_ShardShapeOp : Mesh_Op<"shard_shape", [Pure]> {
+  let summary = "Get the shard shape of a given process/device.";
+  let description = [{
+    The device/process id is a linearized id of the device/process in the mesh.
+    This operation might be used during spmdization when the shard shape depends
+    on (non-constant) values used in `mesh.sharding`.
+  }];
+  let arguments = (ins
+    DenseI64ArrayAttr:$shape,
+    Mesh_Sharding:$sharding,
+    Index:$device
+  );
+  let results = (outs Variadic<Index>:$result);
+  let assemblyFormat = [{
+      custom<DimensionList>($shape) $sharding $device attr-dict `:` type($result)
+  }];
+  let builders = [
+    OpBuilder<(ins "ArrayRef<int64_t>":$shape, "Value":$sharding, "Value":$device)>
+  ];
+}
+
+def Mesh_ShardOp : Mesh_Op<"shard", [
+    Pure,
+    AllTypesMatch<["result", "src"]>,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
+  let summary = "Annotate on how a tensor is sharded across a mesh.";
+  let description = [{
+    The mesh.shard operation is designed to specify and guide the sharding
+    behavior of a tensor value across a mesh topology. This operation has two
+    operands and two optional attributes:
+
+    1. `input`: This operand represents the tensor value that needs to be
+    annotated for sharding.
+
+    2. `sharding`: This attribute is type of `MeshShardingType`, which is the core data
+    structure to represent distribution of a tensor on a mesh. it is typically defiend
+    by an `mesh.sharding` operation.
+
+    3. `annotate_for_users`: A unit attribute addressing the scenario when a
+    tensor's sharding annotation differs based on its context of use (either as
+    a result or an operand). If specified, the sharding pertains to specific
+    users of the tensor value, indicating how it should be considered when used
+    as an operand in subsequent operations. If not, the sharding applies to the
+    operation that defines the tensor value.
+
+    Example:
+    ```
+    func.func @only_result_annotated(%arg0 : tensor<4x8xf32>) -> () {
+      %sharding = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding : tensor<4x8xf32>
+      ...
+    }
+
+    func.func @only_operand_annotated(%arg0 : tensor<4x8xf32>) -> () {
+      %sharding = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding annotate_for_users : tensor<4x8xf32>
+      ...
+    }
+    
+    func.func @two_operands_annotated(%arg0 : tensor<4x8xf32>, %arg1 : tensor<16x8xf32>) -> () {
+      %sharding = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding annotate_for_users : tensor<4x8xf32>
+      %1 = mesh.shard %arg1 to %sharding annotate_for_users : tensor<16x8xf32>
+      ...
+    }
+
+    // The first mesh.shard op applies to %arg0, the second mesh.shard op
+    // applies for the operand of op0, the third mesh.shard op applies for the
+    // operand of op2
+    func.func @both_result_and_multi_operands_annotated(
+        %arg0 : tensor<4x8xf32>) -> () {
+      %sharding = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding : tensor<4x8xf32>
+      %sharding1 = mesh.sharding @mesh0 split_axes = [[1]] : !mesh.sharding
+      %1 = mesh.shard %0 to %sharding1 annotate_for_users : tensor<4x8xf32>
+      %sharding2 = mesh.sharding @mesh0 split_axes = [[2]] : !mesh.sharding
+      %2 = mesh.shard %0 to %sharding2 annotate_for_users : tensor<4x8xf32>
+      "op0"(%1) : ...
+      "op1"(%2) : ...
+      ...
+    }
+    ```
+
+    The following usages are undefined:
+    ```
+    func.func @annotate_on_same_result_with_different_sharding(
+        %arg0 : tensor<4x8xf32>) -> () {
+      %sharding1 = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axes = [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to $sharding1 : tensor<4x8xf32>
+      %1 = mesh.shard %0 to sharding2 : tensor<4x8xf32>
+      ...
+    }
+
+    func.func @annotate_on_same_result_same_value_with_different_sharding(
+        %arg0 : tensor<4x8xf32>) -> () {
+      %sharding1 = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axes = [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding1 : tensor<4x8xf32>
+      %1 = mesh.shard %arg0 to %sharding2 : tensor<4x8xf32>
+      ...
+    }
+
+    func.func @annotate_on_same_operand_with_different_sharding(
+        %arg0 : tensor<4x8xf32>) -> () {
+      %sharding1 = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axes = [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding1 annotate_for_users : tensor<4x8xf32>
+      %1 = mesh.shard %0 to %sharding2 annotate_for_users : tensor<4x8xf32>
+      ...
+    }
+
+    func.func @result_annotated_after_operand(
+        %arg0 : tensor<4x8xf32>) -> () {
+      %sharding1 = mesh.sharding @mesh0 split_axes = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axes = [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding1 annotate_for_users : tensor<4x8xf32>
+      %1 = mesh.shard %0 to %sharding2 : tensor<4x8xf32>
+      ...
+    }
+    ```
+  }];
+  let arguments = (ins
+    AnyRankedTensor:$src,
+    Mesh_Sharding:$sharding,
+    UnitAttr:$annotate_for_users
+  );
+  let results = (outs
+    AnyRankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $src `to` $sharding
+      (`annotate_for_users` $annotate_for_users^)?
+      attr-dict `:` type($result)
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -879,4 +1051,38 @@ def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
   let hasCanonicalizer = 1;
 }
 
+def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "Update halo data.";
+  let description = [{
+    This operation updates halo regions of shards, e.g. if their sharding
+    specified halos and the actual tensor data might have changed
+    on the remote devices. Changes might be caused by mutating operations
+    and/or if the new halo regions are larger than the existing ones.
+
+    Assumes all devices hold tensors with same-sized halo data as specified
+    by `dynamic/static_halo_sizes`.
+
+    `split_axes` specifies for each tensor axis along which mesh axes its halo
+    data is updated.
+
+    Optionally resizes to new halo sizes `target_halo_sizes`.
+  }];
+  let arguments = (ins
+    AnyNon0RankedMemRef:$input,
+    FlatSymbolRefAttr:$mesh,
+    Mesh_MeshAxesArrayAttr:$split_axes,
+    Variadic<I64>:$dynamic_halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_halo_sizes,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$target_halo_sizes
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh
+    `split_axes` `=` $split_axes
+    (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
+    (`target_halo_sizes` `=` $target_halo_sizes^)?
+    attr-dict `:` type($input)
+  }];
+}
 #endif // MLIR_DIALECT_MESH_IR_MESHOPS_TD
