@@ -472,6 +472,7 @@ def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
 def FlagEnum : DiagGroup<"flag-enum">;
 def IncrementBool : DiagGroup<"increment-bool", [DeprecatedIncrementBool]>;
 def InfiniteRecursion : DiagGroup<"infinite-recursion">;
+def InvalidSpecialization : DiagGroup<"invalid-specialization">;
 def PureVirtualCallFromCtorDtor: DiagGroup<"call-to-pure-virtual-from-ctor-dtor">;
 def GNUImaginaryConstant : DiagGroup<"gnu-imaginary-constant">;
 def IgnoredGCH : DiagGroup<"ignored-gch">;
