@@ -10,11 +10,6 @@
 
 // basic_filebuf<charT,traits>* close();
 
-// This test closes an fd that belongs to a std::filebuf, and Bionic's fdsan
-// detects this and aborts the process, starting in Android R (API 30).
-// See D137129.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{2[1-9]}}
-
 #include <fstream>
 #include <cassert>
 #if defined(__unix__)
@@ -23,6 +18,15 @@
 #endif
 #include "test_macros.h"
 #include "platform_support.h"
+
+// If we're building for a lower __ANDROID_API__, the Bionic versioner will
+// omit the function declarations from fdsan.h. We might be running on a newer
+// API level, though, so declare the API function here using weak.
+#if defined(__BIONIC__)
+#include <android/fdsan.h>
+enum android_fdsan_error_level android_fdsan_set_error_level(enum android_fdsan_error_level new_level)
+    __attribute__((weak));
+#endif
 
 int main(int, char**)
 {
@@ -37,6 +41,13 @@ int main(int, char**)
         assert(f.close() == nullptr);
         assert(!f.is_open());
     }
+#if defined(__BIONIC__)
+    // Starting with Android API 30+, Bionic's fdsan aborts a process that
+    // attempts to close a file descriptor belonging to something else. Disable
+    // fdsan to allow closing the FD belonging to std::filebuf's FILE*.
+    if (android_fdsan_set_error_level != nullptr)
+        android_fdsan_set_error_level(ANDROID_FDSAN_ERROR_LEVEL_DISABLED);
+#endif
 #if defined(__unix__)
     {
         std::filebuf f;
