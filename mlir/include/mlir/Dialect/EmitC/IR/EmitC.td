@@ -1327,44 +1327,150 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
     Example:
 
     ```mlir
-    // Cases with i32 type.
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
-    emitc.switch %0 : i32
-    case 2: {
-      %1 = emitc.call_opaque "func_b" () : () -> i32
-      emitc.yield
-    }
-    case 5: {
-      %2 = emitc.call_opaque "func_a" () : () -> i32
-      emitc.yield
-    }
-    default : {
-      %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-      %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    // Example for i32:
+    func.func @emitc_switch_i32() {
+      %0 = "emitc.variable"(){value = 1 : i32} : () -> i32
 
-      emitc.call_opaque "func2" (%3) : (f32) -> ()
-      emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
-      emitc.yield
+      emitc.switch %0 : i32
+      case 2: {
+        %1 = emitc.call_opaque "func_b" () : () -> i32
+        emitc.yield
+      }
+      case 5: {
+        %2 = emitc.call_opaque "func_a" () : () -> i32
+        emitc.yield
+      }
+      default: {
+        %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+        %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+
+        emitc.call_opaque "func2" (%3) : (f32) -> ()
+        emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
+        emitc.yield
+      }
+      return
+    }
+
+    // Output for i32:
+    void emitc_switch_i32() {
+      int32_t v1 = 1;
+
+      switch (v1) {
+      case (2): {
+        int32_t v2 = func_b();
+        break;
+      }
+      case (5): {
+        int32_t v3 = func_a();
+        break;
+      }
+      default: {
+        float v4 = 4.200000000e+01f;
+        float v5 = 4.200000000e+01f;
+        func2(v4);
+        func3(v5, v4);
+        break;
+      }
+      return;
     }
     ...
-    // Cases with i16 type.
-    %0 = "emitc.variable"(){value = 42 : i16} : () -> i16
-    emitc.switch %0 : i16
-    case 2: {
-      %1 = emitc.call_opaque "func_b" () : () -> i32
-      emitc.yield
-    }
-    case 5: {
-      %2 = emitc.call_opaque "func_a" () : () -> i32
-      emitc.yield
-    }
-    default : {
-      %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-      %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    // Example for ui16:
+    func.func @emitc_switch_ui16() {
+      %0 = "emitc.variable"(){value = 1 : ui16} : () -> ui16
 
-      emitc.call_opaque "func2" (%3) : (f32) -> ()
-      emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
-      emitc.yield
+      emitc.switch %0 : ui16
+      case 2: {
+        %1 = emitc.call_opaque "func_b" () : () -> i32
+        emitc.yield
+      }
+      case 5: {
+        %2 = emitc.call_opaque "func_a" () : () -> i32
+        emitc.yield
+      }
+      default: {
+        %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+        %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+
+        emitc.call_opaque "func2" (%3) : (f32) -> ()
+        emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
+        emitc.yield
+      }
+      return
+    }
+
+    // Output for ui16:
+    void emitc_switch_ui16() {
+      uint16_t v1 = 1;
+
+      switch (v1) {
+      case (2): {
+        int32_t v2 = func_b();
+        break;
+      }
+      case (5): {
+        int32_t v3 = func_a();
+        break;
+      }
+      default: {
+        float v4 = 4.200000000e+01f;
+        float v5 = 4.200000000e+01f;
+        func2(v4);
+        func3(v5, v4);
+        break;
+      }
+      return;
+    }
+    ...
+    // Example for i64 with `-declare-variables-at-top` option: 
+    func.func @emitc_switch_i64() {
+      %0 = "emitc.variable"(){value = 1 : i64} : () -> i64
+
+      emitc.switch %0 : i64
+      case 2: {
+        %1 = emitc.call_opaque "func_b" () : () -> i32
+        emitc.yield
+      }
+      case 5: {
+        %2 = emitc.call_opaque "func_a" () : () -> i32
+        emitc.yield
+      }
+      default: {
+        %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+        %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+
+        emitc.call_opaque "func2" (%3) : (f32) -> ()
+        emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
+        emitc.yield
+      }
+      return
+    }
+
+    // Output for i64 with `-declare-variables-at-top` option:
+    void emitc_switch_i64() {
+      int64_t v1;
+      float v2;
+      float v3;
+      int32_t v4;
+      int32_t v5;
+      v1 = 1;
+
+      switch (v1) {
+      case (2): {
+        v4 = func_b();
+        break;
+      }
+      case (5): {
+        v5 = func_a();
+        break;
+      }
+      default: {
+        v2 = 4.200000000e+01f;
+        v3 = 4.200000000e+01f;
+        func2(v2);
+        func3(v3, v2);
+        break;
+      }
+      return;
     }
     ```
   }];
