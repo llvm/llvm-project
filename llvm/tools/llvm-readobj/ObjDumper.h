@@ -49,7 +49,7 @@ public:
   void addPredicate(CompPredicate Pred) { Predicates.push_back(Pred); }
 
   bool operator()(object::SymbolRef LHS, object::SymbolRef RHS) {
-    for (CompPredicate Pred : Predicates) {
+    for (const CompPredicate &Pred : Predicates) {
       if (Pred(LHS, RHS))
         return true;
       if (Pred(RHS, LHS))

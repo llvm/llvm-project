@@ -255,7 +255,7 @@ Error Object::compressOrDecompressSections(const CommonConfig &Config) {
   }
 
   DenseMap<SectionBase *, SectionBase *> FromTo;
-  for (auto [S, Func] : ToReplace)
+  for (const auto &[S, Func] : ToReplace)
     FromTo[S] = Func();
   return replaceSections(FromTo);
 }

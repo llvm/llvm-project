@@ -498,7 +498,7 @@ std::error_code OverlayFileSystem::getRealPath(const Twine &Path,
 }
 
 void OverlayFileSystem::visitChildFileSystems(VisitCallbackTy Callback) {
-  for (IntrusiveRefCntPtr<FileSystem> FS : overlays_range()) {
+  for (const IntrusiveRefCntPtr<FileSystem> &FS : overlays_range()) {
     Callback(*FS);
     FS->visitChildFileSystems(Callback);
   }

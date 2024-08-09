@@ -202,19 +202,19 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       PSV.Resources = P.Info->Resources;
       PSV.EntryName = P.Info->EntryName;
 
-      for (auto El : P.Info->SigInputElements)
+      for (const auto &El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
             El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
             El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
             El.Stream});
 
-      for (auto El : P.Info->SigOutputElements)
+      for (const auto &El : P.Info->SigOutputElements)
         PSV.OutputElements.push_back(mcdxbc::PSVSignatureElement{
             El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
             El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
             El.Stream});
 
-      for (auto El : P.Info->SigPatchOrPrimElements)
+      for (const auto &El : P.Info->SigPatchOrPrimElements)
         PSV.PatchOrPrimElements.push_back(mcdxbc::PSVSignatureElement{
             El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
             El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
