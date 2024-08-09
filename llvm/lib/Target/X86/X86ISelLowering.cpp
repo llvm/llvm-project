@@ -36205,6 +36205,8 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
       MIB.add(MO);
   }
   MIB.setMemRefs(MMOs);
+  auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+  MFI->insertLongJmpMIClobberFP(MIB.getInstr());
 
   // Reload IP
   MIB = BuildMI(*thisMBB, MI, MIMD, TII->get(PtrLoadOpc), Tmp);

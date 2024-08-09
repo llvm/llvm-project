@@ -157,3 +157,46 @@ define i64 @test3(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6,
   %x = call cc 11 i64 @hipe2(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7)
   ret i64 %x
 }
+
+@buf = dso_local global [20 x ptr] zeroinitializer, align 16
+
+; longjmp modifies fp, it is expected behavior, wo should not save/restore fp
+; around it.
+define void @test4() {
+; CHECK-LABEL: test4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    andq $-16, %rsp
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    .cfi_offset %rbx, -56
+; CHECK-NEXT:    .cfi_offset %r12, -48
+; CHECK-NEXT:    .cfi_offset %r13, -40
+; CHECK-NEXT:    .cfi_offset %r14, -32
+; CHECK-NEXT:    .cfi_offset %r15, -24
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_remember_state
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x06, 0x77, 0x08, 0x06, 0x11, 0x10, 0x22 #
+; CHECK-NEXT:    xorl %r13d, %r13d
+; CHECK-NEXT:    callq external@PLT
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_restore_state
+; CHECK-NEXT:    movq buf(%rip), %rbp
+; CHECK-NEXT:    movq buf+8(%rip), %rax
+; CHECK-NEXT:    movq buf+16(%rip), %rsp
+; CHECK-NEXT:    jmpq *%rax
+entry:
+  %x = call ghccc i32 @external(i32 0)
+  call void @llvm.eh.sjlj.longjmp(ptr @buf)
+  unreachable
+}
