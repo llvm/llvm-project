@@ -2341,10 +2341,15 @@ struct SCEVFindUnsafe {
 };
 } // namespace
 
-bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
+static bool isSafeToExpand(const SCEV *S, bool CanonicalMode,
+                           ScalarEvolution &SE) {
   SCEVFindUnsafe Search(SE, CanonicalMode);
   visitAll(S, Search);
   return !Search.IsUnsafe;
+}
+
+bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
+  return ::isSafeToExpand(S, CanonicalMode, SE);
 }
 
 bool SCEVExpander::isSafeToExpandAt(const SCEV *S,
@@ -2367,6 +2372,47 @@ bool SCEVExpander::isSafeToExpandAt(const SCEV *S,
         return true;
   }
   return false;
+}
+
+namespace {
+struct SCEVUDivRewriter : public SCEVRewriteVisitor<SCEVUDivRewriter> {
+  SCEVUDivRewriter(ScalarEvolution &SE) : SCEVRewriteVisitor(SE) {}
+
+  static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE) {
+    SCEVUDivRewriter Rewriter(SE);
+    return Rewriter.visit(Scev);
+  }
+
+  const SCEV *visitUDivExpr(const SCEVUDivExpr *Expr) {
+    auto *LHS = visit(Expr->getLHS());
+    auto *RHS = visit(Expr->getRHS());
+    return SE.getUDivExpr(LHS, SE.getUMaxExpr(SE.getOne(RHS->getType()), RHS));
+  }
+};
+} // namespace
+
+const SCEV *SCEVExpander::rewriteExpressionToRemoveUB(const SCEV *Expr, Loop *L,
+                                                      ScalarEvolution &SE) {
+  SmallVector<BasicBlock *> Exiting;
+  L->getExitingBlocks(Exiting);
+  // Check if exit count for any exit that may execute unconditionally may in
+  // introduce UB. Note that we can skip checks in the header or if there's a
+  // single exit, as in those cases we know that the exit count will be
+  // evaluated in each loop iteration. There are other cases where the exiting
+  // block executes on each loop iteration, but we don't have a cheap way to
+  // check at the moment.
+
+  if (Exiting.size() == 1 || all_of(Exiting, [L, &SE](BasicBlock *E) {
+        if (L->getHeader() == E)
+          return true;
+        const SCEV *EC = SE.getExitCount(L, E);
+        if (isa<SCEVCouldNotCompute>(EC))
+          return true;
+        return ::isSafeToExpand(EC, true, SE);
+      }))
+    return Expr;
+
+  return SCEVUDivRewriter::rewrite(Expr, SE);
 }
 
 void SCEVExpanderCleaner::cleanup() {

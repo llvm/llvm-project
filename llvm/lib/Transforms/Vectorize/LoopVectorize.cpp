@@ -926,6 +926,9 @@ const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
   assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) && "Invalid loop count");
 
   ScalarEvolution &SE = *PSE.getSE();
+  if (OrigLoop)
+    BackedgeTakenCount = SCEVExpander::rewriteExpressionToRemoveUB(
+        BackedgeTakenCount, OrigLoop, SE);
   return SE.getTripCountFromExitCount(BackedgeTakenCount, IdxTy, OrigLoop);
 }
 
