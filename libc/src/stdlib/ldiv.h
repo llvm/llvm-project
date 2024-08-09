@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_LDIV_H
 #define LLVM_LIBC_SRC_STDLIB_LDIV_H
 
+#include "src/__support/macros/config.h"
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 ldiv_t ldiv(long x, long y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_LDIV_H

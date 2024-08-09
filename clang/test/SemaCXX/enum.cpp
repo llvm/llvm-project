@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++98 -verify -triple x86_64-apple-darwin %s
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
+
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++98 -verify -triple x86_64-apple-darwin %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s -fexperimental-new-constant-interpreter
+
 enum E { // expected-note{{previous definition is here}}
   Val1,
   Val2
@@ -99,12 +103,14 @@ void PR8089() {
 // This is accepted as a GNU extension. In C++98, there was no provision for
 // expressions with UB to be non-constant.
 enum { overflow = 123456 * 234567 };
-#if __cplusplus >= 201103L
-// expected-warning@-2 {{not an integral constant expression}}
-// expected-note@-3 {{value 28958703552 is outside the range of representable values}}
-#else 
-// expected-warning@-5 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
+// expected-error@-1 {{expression is not an integral constant expression}}
+// expected-note@-2 {{value 28958703552 is outside the range of representable values of type 'int'}}
+#if __cplusplus < 201103L
+// expected-warning@-4 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
 #endif
+enum { overflow_shift = 1 << 32 };
+// expected-error@-1 {{expression is not an integral constant expression}}
+// expected-note@-2 {{shift count 32 >= width of type 'int' (32 bits)}}
 
 // FIXME: This is not consistent with the above case.
 enum NoFold : int { overflow2 = 123456 * 234567 };
@@ -112,9 +118,21 @@ enum NoFold : int { overflow2 = 123456 * 234567 };
 // expected-error@-2 {{enumerator value is not a constant expression}}
 // expected-note@-3 {{value 28958703552 is outside the range of representable values}}
 #else
-// expected-warning@-5 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
-// expected-warning@-6 {{extension}}
+// expected-warning@-5 {{enumeration types with a fixed underlying type are a C++11 extension}}
+// expected-warning@-6 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
+// expected-error@-7 {{expression is not an integral constant expression}}
+// expected-note@-8 {{value 28958703552 is outside the range of representable values of type 'int'}}
 #endif
+enum : int { overflow2_shift = 1 << 32 };
+#if __cplusplus >= 201103L
+// expected-error@-2 {{enumerator value is not a constant expression}}
+// expected-note@-3 {{shift count 32 >= width of type 'int' (32 bits)}}
+#else
+// expected-error@-5 {{expression is not an integral constant expression}}
+// expected-note@-6 {{shift count 32 >= width of type 'int' (32 bits)}}
+// expected-warning@-7 {{enumeration types with a fixed underlying type are a C++11 extension}}
+#endif
+
 
 // PR28903
 struct PR28903 {

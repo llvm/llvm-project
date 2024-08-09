@@ -2,6 +2,7 @@
 #include "Utils/CodegenUtils.h"
 #include "Utils/SparseTensorIterator.h"
 
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
@@ -10,8 +11,8 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
-void convertLevelType(SparseTensorEncodingAttr enc, Level lvl,
-                      SmallVectorImpl<Type> &fields) {
+static void convertLevelType(SparseTensorEncodingAttr enc, Level lvl,
+                             SmallVectorImpl<Type> &fields) {
   // Position and coordinate buffer in the sparse structure.
   if (enc.getLvlType(lvl).isWithPosLT())
     fields.push_back(enc.getPosMemRefType());
@@ -67,6 +68,21 @@ public:
 
     SmallVector<Value> result = space.toValues();
     rewriter.replaceOp(op, result, resultMapping);
+    return success();
+  }
+};
+
+/// Sparse codegen rule for number of entries operator.
+class ExtractValOpConverter : public OneToNOpConversionPattern<ExtractValOp> {
+public:
+  using OneToNOpConversionPattern::OneToNOpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ExtractValOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value pos = adaptor.getIterator().back();
+    Value valBuf = rewriter.create<ToValuesOp>(loc, op.getTensor());
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, valBuf, pos);
     return success();
   }
 };
@@ -193,6 +209,6 @@ void mlir::populateLowerSparseIterationToSCFPatterns(
     TypeConverter &converter, RewritePatternSet &patterns) {
 
   IterateOp::getCanonicalizationPatterns(patterns, patterns.getContext());
-  patterns.add<ExtractIterSpaceConverter, SparseIterateOpConverter>(
-      converter, patterns.getContext());
+  patterns.add<ExtractIterSpaceConverter, ExtractValOpConverter,
+               SparseIterateOpConverter>(converter, patterns.getContext());
 }

@@ -416,15 +416,6 @@ def BBSI : RRI8_Inst<0x07, (outs),
   let imm8 = target;
 }
 
-def : Pat<(brcc SETGT, AR:$s, AR:$t, bb:$target),
-          (BLT AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETUGT, AR:$s, AR:$t, bb:$target),
-          (BLTU AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETLE, AR:$s, AR:$t, bb:$target),
-          (BGE AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETULE, AR:$s, AR:$t, bb:$target),
-          (BGEU AR:$t, AR:$s, bb:$target)>;
-
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//
@@ -573,4 +564,13 @@ let Defs = [SP], Uses = [SP] in {
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                "#ADJCALLSTACKUP",
                                [(Xtensa_callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Generic select instruction
+//===----------------------------------------------------------------------===//
+let usesCustomInserter = 1 in {
+  def SELECT : Pseudo<(outs AR:$dst), (ins AR:$lhs, AR:$rhs, AR:$t, AR:$f, i32imm:$cond),
+                     "!select $dst, $lhs, $rhs, $t, $f, $cond",
+                     [(set i32:$dst, (Xtensa_select_cc i32:$lhs, i32:$rhs, i32:$t, i32:$f, imm:$cond))]>;
 }

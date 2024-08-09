@@ -158,6 +158,7 @@ struct DAP {
   FunctionBreakpointMap function_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
+  std::vector<std::string> pre_init_commands;
   std::vector<std::string> init_commands;
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> post_run_commands;
@@ -246,6 +247,7 @@ struct DAP {
 
   llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
   llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);
+  llvm::Error RunPreInitCommands();
   llvm::Error RunInitCommands();
   llvm::Error RunPreRunCommands();
   void RunPostRunCommands();

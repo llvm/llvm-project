@@ -47,8 +47,8 @@ public:
   void emitSled(const MachineInstr &MI, SledKind Kind);
 
   // tblgen'erated function.
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
+
   // Wrapper needed for tblgenned pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return lowerLoongArchMachineOperandToMCOperand(MO, MCOp, *this);

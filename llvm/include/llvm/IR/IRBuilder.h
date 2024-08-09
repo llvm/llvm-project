@@ -34,7 +34,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1024,6 +1023,14 @@ public:
                                  Name);
   }
 
+  /// Create call to the ldexp intrinsic.
+  Value *CreateLdexp(Value *Src, Value *Exp, Instruction *FMFSource = nullptr,
+                     const Twine &Name = "") {
+    assert(!IsFPConstrained && "TODO: Support strictfp");
+    return CreateIntrinsic(Intrinsic::ldexp, {Src->getType(), Exp->getType()},
+                           {Src, Exp}, FMFSource, Name);
+  }
+
   /// Create a call to the arithmetic_fence intrinsic.
   CallInst *CreateArithmeticFence(Value *Val, Type *DstType,
                                   const Twine &Name = "") {
@@ -1895,16 +1902,17 @@ public:
   }
 
   Value *CreateConstGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0, unsigned Idx1,
-                            const Twine &Name = "") {
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NWFlags = GEPNoWrapFlags::none()) {
     Value *Idxs[] = {
       ConstantInt::get(Type::getInt32Ty(Context), Idx0),
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::none()))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, NWFlags))
       return V;
 
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs, NWFlags), Name);
   }
 
   Value *CreateConstInBoundsGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0,
@@ -1968,7 +1976,9 @@ public:
 
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
                          const Twine &Name = "") {
-    return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
+    GEPNoWrapFlags NWFlags =
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap();
+    return CreateConstGEP2_32(Ty, Ptr, 0, Idx, Name, NWFlags);
   }
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",

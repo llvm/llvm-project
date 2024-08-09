@@ -19,7 +19,7 @@ class FrameStatCommand(ParsedCommand):
 
     @classmethod
     def register_lldb_command(cls, debugger, module_name):
-        ParsedCommandBase.do_register_cmd(cls, debugger, module_name)
+        ParsedCommand.do_register_cmd(cls, debugger, module_name)
         print(
             'The "{0}" command has been installed, type "help {0}" or "{0} '
             '--help" for detailed help.'.format(cls.program)
@@ -71,6 +71,10 @@ class FrameStatCommand(ParsedCommand):
             dest = "statics",
             default = True,
         )
+
+    def get_repeat_command(self, args):
+        """As an example, make the command not auto-repeat:"""
+        return ""
 
     def get_short_help(self):
         return "Example command for use in debugging"

@@ -840,6 +840,12 @@ float extract_lane_f16x8(f16x8 a, int i) {
   return __builtin_wasm_extract_lane_f16x8(a, i);
 }
 
+f16x8 replace_lane_f16x8(f16x8 a, int i, float v) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.wasm.replace.lane.f16x8(<8 x half> %a, i32 %i, float %v)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_replace_lane_f16x8(a, i, v);
+}
+
 f16x8 min_f16x8(f16x8 a, f16x8 b) {
   // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.minimum.v8f16(<8 x half> %a, <8 x half> %b)
   // WEBASSEMBLY-NEXT: ret <8 x half> %0

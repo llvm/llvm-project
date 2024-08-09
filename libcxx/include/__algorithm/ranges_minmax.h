@@ -47,8 +47,7 @@ namespace ranges {
 template <class _T1>
 using minmax_result = min_max_result<_T1>;
 
-namespace __minmax {
-struct __fn {
+struct __minmax {
   template <class _Type,
             class _Proj                                                      = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
@@ -89,7 +88,7 @@ struct __fn {
     // vectorize the code.
     if constexpr (contiguous_range<_Range> && is_integral_v<_ValueT> &&
                   __is_cheap_to_copy<_ValueT> & __is_identity<_Proj>::value &&
-                  __desugars_to_v<__less_tag, _Comp, _ValueT, _ValueT>) {
+                  __desugars_to_v<__totally_ordered_less_tag, _Comp, _ValueT, _ValueT>) {
       minmax_result<_ValueT> __result = {__r[0], __r[0]};
       for (auto __e : __r) {
         if (__e < __result.min)
@@ -159,10 +158,9 @@ struct __fn {
     }
   }
 };
-} // namespace __minmax
 
 inline namespace __cpo {
-inline constexpr auto minmax = __minmax::__fn{};
+inline constexpr auto minmax = __minmax{};
 } // namespace __cpo
 } // namespace ranges
 

@@ -20,7 +20,7 @@ F:
 define void @test2() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @test2() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @test2() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -242,6 +242,8 @@ declare ptr @fn_nonnull_deref_arg(ptr nonnull dereferenceable(4) %p)
 declare ptr @fn_nonnull_deref_or_null_arg(ptr nonnull dereferenceable_or_null(4) %p)
 declare ptr @fn_nonnull_arg(ptr nonnull %p)
 declare ptr @fn_noundef_arg(ptr noundef %p)
+declare ptr @fn_ptr_arg(ptr)
+declare ptr @fn_ptr_arg_nounwind_willreturn(ptr) nounwind willreturn
 
 define void @test9(i1 %X, ptr %Y) {
 ; CHECK-LABEL: @test9(
@@ -855,10 +857,72 @@ exit:
   ret i32 %res
 }
 
+; From bb to bb5 is UB.
+define i32 @test9_null_user_order_1(ptr %arg, i1 %arg1, ptr %arg2) {
+; CHECK-LABEL: @test9_null_user_order_1(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[I:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 1
+; CHECK-NEXT:    store ptr [[I4]], ptr [[ARG]], align 8
+; CHECK-NEXT:    [[I7:%.*]] = load i32, ptr [[I]], align 4
+; CHECK-NEXT:    [[I8:%.*]] = icmp ne ptr [[I]], [[ARG2:%.*]]
+; CHECK-NEXT:    call void @fn_ptr_arg(i1 [[I8]])
+; CHECK-NEXT:    ret i32 [[I7]]
+;
+bb:
+  br i1 %arg1, label %bb5, label %bb3
+
+bb3:                                              ; preds = %bb
+  %i = load ptr, ptr %arg, align 8
+  %i4 = getelementptr inbounds i8, ptr %i, i64 1
+  store ptr %i4, ptr %arg, align 8
+  br label %bb5
+
+bb5:                                              ; preds = %bb3, %bb
+  %i6 = phi ptr [ %i, %bb3 ], [ null, %bb ]
+  %i7 = load i32, ptr %i6, align 4
+  %i8 = icmp ne ptr %i6, %arg2
+  call void @fn_ptr_arg(i1 %i8)
+  ret i32 %i7
+}
+
+define i32 @test9_null_user_order_2(ptr %arg, i1 %arg1, ptr %arg2) {
+; CHECK-LABEL: @test9_null_user_order_2(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[I:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 1
+; CHECK-NEXT:    store ptr [[I4]], ptr [[ARG]], align 8
+; CHECK-NEXT:    [[I8:%.*]] = icmp ne ptr [[I]], [[ARG2:%.*]]
+; CHECK-NEXT:    call void @fn_ptr_arg_nounwind_willreturn(i1 [[I8]])
+; CHECK-NEXT:    [[I7:%.*]] = load i32, ptr [[I]], align 4
+; CHECK-NEXT:    ret i32 [[I7]]
+;
+bb:
+  br i1 %arg1, label %bb5, label %bb3
+
+bb3:                                              ; preds = %bb
+  %i = load ptr, ptr %arg, align 8
+  %i4 = getelementptr inbounds i8, ptr %i, i64 1
+  store ptr %i4, ptr %arg, align 8
+  br label %bb5
+
+bb5:                                              ; preds = %bb3, %bb
+  %i6 = phi ptr [ %i, %bb3 ], [ null, %bb ]
+  %i8 = icmp ne ptr %i6, %arg2
+  call void @fn_ptr_arg_nounwind_willreturn(i1 %i8)
+  %i7 = load i32, ptr %i6, align 4
+  ret i32 %i7
+}
+
 attributes #0 = { null_pointer_is_valid }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { null_pointer_is_valid }
-; CHECK: attributes #[[ATTR3]] = { nounwind }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nounwind willreturn }
+; CHECK: attributes #[[ATTR4]] = { nounwind }
 ;.

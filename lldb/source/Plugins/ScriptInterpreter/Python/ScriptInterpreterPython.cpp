@@ -14,11 +14,10 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
-#include "Interfaces/OperatingSystemPythonInterface.h"
-#include "Interfaces/ScriptedPlatformPythonInterface.h"
-#include "Interfaces/ScriptedProcessPythonInterface.h"
-#include "Interfaces/ScriptedThreadPlanPythonInterface.h"
-#include "Interfaces/ScriptedThreadPythonInterface.h"
+#include "Interfaces/OperatingSystemPythonInterface/OperatingSystemPythonInterface.h"
+#include "Interfaces/ScriptedPlatformPythonInterface/ScriptedPlatformPythonInterface.h"
+#include "Interfaces/ScriptedProcessPythonInterface/ScriptedProcessPythonInterface.h"
+#include "Interfaces/ScriptedThreadPlanPythonInterface/ScriptedThreadPlanPythonInterface.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"
@@ -2708,6 +2707,33 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedParsedCommand(
   return ret_val;
 }
 
+std::optional<std::string>
+ScriptInterpreterPythonImpl::GetRepeatCommandForScriptedCommand(
+    StructuredData::GenericSP impl_obj_sp, Args &args) {
+  if (!impl_obj_sp || !impl_obj_sp->IsValid())
+    return std::nullopt;
+
+  lldb::DebuggerSP debugger_sp = m_debugger.shared_from_this();
+
+  if (!debugger_sp.get())
+    return std::nullopt;
+
+  std::optional<std::string> ret_val;
+
+  {
+    Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    StructuredData::ArraySP args_arr_sp(new StructuredData::Array());
+
+    // For scripting commands, we send the command string:
+    std::string command;
+    args.GetQuotedCommandString(command);
+    ret_val = SWIGBridge::LLDBSwigPythonGetRepeatCommandForScriptedCommand(
+        static_cast<PyObject *>(impl_obj_sp->GetValue()), command);
+  }
+  return ret_val;
+}
 
 /// In Python, a special attribute __doc__ contains the docstring for an object
 /// (function, method, class, ...) if any is defined Otherwise, the attribute's

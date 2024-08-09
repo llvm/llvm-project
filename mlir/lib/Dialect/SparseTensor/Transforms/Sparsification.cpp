@@ -357,6 +357,9 @@ static Value genSubscript(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
     const auto pos = env.emitter().getValPosits(tid);
     assert(!pos.empty());
     args.append(pos);
+    // Simply returns the tensor to extract value using iterators.
+    if (env.options().sparseEmitStrategy == SparseEmitStrategy::kSparseIterator)
+      return t->get();
   } else {
     // For dense tensors we push all level's coordinates onto `args`.
     const Level lvlRank = stt.getLvlRank();
@@ -512,9 +515,16 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
       return genInsertionLoadReduce(env, builder, t);
     return genInsertionLoad(env, builder, t);
   }
+
   // Actual load.
   SmallVector<Value> args;
   Value ptr = genSubscript(env, builder, t, args);
+  if (llvm::isa<TensorType>(ptr.getType())) {
+    assert(env.options().sparseEmitStrategy ==
+               SparseEmitStrategy::kSparseIterator &&
+           args.size() == 1);
+    return builder.create<ExtractValOp>(loc, ptr, args.front());
+  }
   return builder.create<memref::LoadOp>(loc, ptr, args);
 }
 

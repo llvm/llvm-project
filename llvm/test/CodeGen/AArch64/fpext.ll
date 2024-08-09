@@ -32,6 +32,33 @@ entry:
   ret float %c
 }
 
+define fp128 @fpext_f16_f128(half %a) {
+; CHECK-LABEL: fpext_f16_f128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b __extendhftf2
+entry:
+  %c = fpext half %a to fp128
+  ret fp128 %c
+}
+
+define fp128 @fpext_f32_f128(float %a) {
+; CHECK-LABEL: fpext_f32_f128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b __extendsftf2
+entry:
+  %c = fpext float %a to fp128
+  ret fp128 %c
+}
+
+define fp128 @fpext_f64_f128(double %a) {
+; CHECK-LABEL: fpext_f64_f128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b __extenddftf2
+entry:
+  %c = fpext double %a to fp128
+  ret fp128 %c
+}
+
 define <2 x double> @fpext_v2f32_v2f64(<2 x float> %a) {
 ; CHECK-LABEL: fpext_v2f32_v2f64:
 ; CHECK:       // %bb.0: // %entry
@@ -64,6 +91,214 @@ define <3 x double> @fpext_v3f32_v3f64(<3 x float> %a) {
 entry:
   %c = fpext <3 x float> %a to <3 x double>
   ret <3 x double> %c
+}
+
+define <4 x fp128> @fpext_v4f16_v4f128(<4 x half> %a) {
+; CHECK-SD-LABEL: fpext_v4f16_v4f128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #64
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-SD-NEXT:    bl __extendhftf2
+; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    mov h1, v1.h[1]
+; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    bl __extendhftf2
+; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    mov h1, v1.h[2]
+; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    bl __extendhftf2
+; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    mov h1, v1.h[3]
+; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    bl __extendhftf2
+; CHECK-SD-NEXT:    mov v3.16b, v0.16b
+; CHECK-SD-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q2, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    add sp, sp, #64
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fpext_v4f16_v4f128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #80
+; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    .cfi_offset b9, -24
+; CHECK-GI-NEXT:    .cfi_offset b10, -32
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov h8, v0.h[1]
+; CHECK-GI-NEXT:    mov h9, v0.h[2]
+; CHECK-GI-NEXT:    mov h10, v0.h[3]
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-GI-NEXT:    bl __extendhftf2
+; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s0, s8
+; CHECK-GI-NEXT:    bl __extendhftf2
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s0, s9
+; CHECK-GI-NEXT:    bl __extendhftf2
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s0, s10
+; CHECK-GI-NEXT:    bl __extendhftf2
+; CHECK-GI-NEXT:    mov v3.16b, v0.16b
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    add sp, sp, #80
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = fpext <4 x half> %a to <4 x fp128>
+  ret <4 x fp128> %c
+}
+
+define <4 x fp128> @fpext_v4f32_v4f128(<4 x float> %a) {
+; CHECK-SD-LABEL: fpext_v4f32_v4f128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #80
+; CHECK-SD-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    bl __extendsftf2
+; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    mov s1, v1.s[1]
+; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    bl __extendsftf2
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    bl __extendsftf2
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    mov s0, v0.s[1]
+; CHECK-SD-NEXT:    bl __extendsftf2
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ldp q0, q3, [sp] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q2, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    add sp, sp, #80
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fpext_v4f32_v4f128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #80
+; CHECK-GI-NEXT:    str d10, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    .cfi_offset b9, -24
+; CHECK-GI-NEXT:    .cfi_offset b10, -32
+; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    mov s9, v0.s[2]
+; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-GI-NEXT:    bl __extendsftf2
+; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s0, s8
+; CHECK-GI-NEXT:    bl __extendsftf2
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s0, s9
+; CHECK-GI-NEXT:    bl __extendsftf2
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s0, s10
+; CHECK-GI-NEXT:    bl __extendsftf2
+; CHECK-GI-NEXT:    mov v3.16b, v0.16b
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    add sp, sp, #80
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = fpext <4 x float> %a to <4 x fp128>
+  ret <4 x fp128> %c
+}
+
+define <4 x fp128> @fpext_v4f64_v4f128(<4 x double> %a) {
+; CHECK-SD-LABEL: fpext_v4f64_v4f128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #80
+; CHECK-SD-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    bl __extenddftf2
+; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    bl __extenddftf2
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    bl __extenddftf2
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    bl __extenddftf2
+; CHECK-SD-NEXT:    mov v3.16b, v0.16b
+; CHECK-SD-NEXT:    ldp q1, q0, [sp, #16] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    add sp, sp, #80
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fpext_v4f64_v4f128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #80
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    .cfi_offset b8, -24
+; CHECK-GI-NEXT:    .cfi_offset b9, -32
+; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov d8, v0.d[1]
+; CHECK-GI-NEXT:    mov d9, v1.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    bl __extenddftf2
+; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov d0, d8
+; CHECK-GI-NEXT:    bl __extenddftf2
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    bl __extenddftf2
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov d0, d9
+; CHECK-GI-NEXT:    bl __extenddftf2
+; CHECK-GI-NEXT:    mov v3.16b, v0.16b
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    add sp, sp, #80
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = fpext <4 x double> %a to <4 x fp128>
+  ret <4 x fp128> %c
 }
 
 define <4 x double> @fpext_v4f32_v4f64(<4 x float> %a) {

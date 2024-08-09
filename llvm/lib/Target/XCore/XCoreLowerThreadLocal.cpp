@@ -154,8 +154,7 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
 
   // Update uses.
   SmallVector<User *, 16> Users(GV->users());
-  for (unsigned I = 0, E = Users.size(); I != E; ++I) {
-    User *U = Users[I];
+  for (User *U : Users) {
     Instruction *Inst = cast<Instruction>(U);
     IRBuilder<> Builder(Inst);
     Function *GetID = Intrinsic::getDeclaration(GV->getParent(),
@@ -179,8 +178,7 @@ bool XCoreLowerThreadLocal::runOnModule(Module &M) {
   for (GlobalVariable &GV : M.globals())
     if (GV.isThreadLocal())
       ThreadLocalGlobals.push_back(&GV);
-  for (unsigned I = 0, E = ThreadLocalGlobals.size(); I != E; ++I) {
-    MadeChange |= lowerGlobal(ThreadLocalGlobals[I]);
-  }
+  for (GlobalVariable *GV : ThreadLocalGlobals)
+    MadeChange |= lowerGlobal(GV);
   return MadeChange;
 }

@@ -32,7 +32,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 ;
 ; GCN-LABEL: break_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s3, s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -114,7 +114,7 @@ define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 ;
 ; GCN-LABEL: undef_phi_cond_break_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s3, s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -207,7 +207,7 @@ define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ;
 ; GCN-LABEL: constexpr_phi_cond_break_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s3, s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -297,7 +297,7 @@ define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
 ;
 ; GCN-LABEL: true_phi_cond_break_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s3, s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -386,7 +386,7 @@ define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
 ;
 ; GCN-LABEL: false_phi_cond_break_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s3, s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -479,7 +479,7 @@ define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ;
 ; GCN-LABEL: invert_true_phi_cond_break_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s3, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s3, s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

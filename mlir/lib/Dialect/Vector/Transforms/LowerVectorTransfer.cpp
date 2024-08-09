@@ -133,9 +133,7 @@ struct TransferReadPermutationLowering
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.getInBounds() ? inverseTransposeInBoundsAttr(
-                               rewriter, op.getInBounds().value(), permutation)
-                         : ArrayAttr();
+        inverseTransposeInBoundsAttr(rewriter, op.getInBounds(), permutation);
 
     // Generate new transfer_read operation.
     VectorType newReadType = VectorType::get(
@@ -208,9 +206,7 @@ struct TransferWritePermutationLowering
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.getInBounds() ? inverseTransposeInBoundsAttr(
-                               rewriter, op.getInBounds().value(), permutation)
-                         : ArrayAttr();
+        inverseTransposeInBoundsAttr(rewriter, op.getInBounds(), permutation);
 
     // Generate new transfer_write operation.
     Value newVec = rewriter.create<vector::TransposeOp>(
@@ -466,8 +462,7 @@ struct TransferReadToVectorLoadLowering
     // If there is broadcasting involved then we first load the unbroadcasted
     // vector, and then broadcast it with `vector.broadcast`.
     ArrayRef<int64_t> vectorShape = read.getVectorType().getShape();
-    SmallVector<int64_t> unbroadcastedVectorShape(vectorShape.begin(),
-                                                  vectorShape.end());
+    SmallVector<int64_t> unbroadcastedVectorShape(vectorShape);
     for (unsigned i : broadcastedDims)
       unbroadcastedVectorShape[i] = 1;
     VectorType unbroadcastedVectorType = read.getVectorType().cloneWith(

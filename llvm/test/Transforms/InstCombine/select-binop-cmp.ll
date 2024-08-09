@@ -1315,6 +1315,19 @@ define i32 @select_replace_call_speculatable(i32 %x, i32 %y) {
   ret i32 %s
 }
 
+define i32 @select_replace_call_speculatable_intrinsic(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_call_speculatable_intrinsic(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 0)
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %call = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %s = select i1 %c, i32 %call, i32 %y
+  ret i32 %s
+}
+
 ; We can't replace the call arguments, as the call is not speculatable. We
 ; may end up changing side-effects or causing undefined behavior.
 define i32 @select_replace_call_non_speculatable(i32 %x, i32 %y) {

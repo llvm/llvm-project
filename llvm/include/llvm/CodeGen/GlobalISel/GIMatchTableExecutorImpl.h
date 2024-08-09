@@ -309,6 +309,23 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIM_CheckNumOperandsGE:
+    case GIM_CheckNumOperandsLE: {
+      uint64_t InsnID = readULEB();
+      uint64_t Expected = readULEB();
+      const bool IsLE = (MatcherOpcode == GIM_CheckNumOperandsLE);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckNumOperands"
+                             << (IsLE ? "LE" : "GE") << "(MIs[" << InsnID
+                             << "], Expected=" << Expected << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      const unsigned NumOps = State.MIs[InsnID]->getNumOperands();
+      if (IsLE ? (NumOps <= Expected) : (NumOps >= Expected)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_CheckNumOperands: {
       uint64_t InsnID = readULEB();
       uint64_t Expected = readULEB();
@@ -1078,6 +1095,22 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs()
                           << CurrentIdx << ": GIR_Copy(OutMIs[" << NewInsnID
                           << "], MIs[" << OldInsnID << "], " << OpIdx << ")\n");
+      break;
+    }
+
+    case GIR_CopyRemaining: {
+      uint64_t NewInsnID = readULEB();
+      uint64_t OldInsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
+      MachineInstr &OldMI = *State.MIs[OldInsnID];
+      MachineInstrBuilder &NewMI = OutMIs[NewInsnID];
+      for (const auto &Op : drop_begin(OldMI.operands(), OpIdx))
+        NewMI.add(Op);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_CopyRemaining(OutMIs["
+                             << NewInsnID << "], MIs[" << OldInsnID
+                             << "], /*start=*/" << OpIdx << ")\n");
       break;
     }
 

@@ -92,8 +92,8 @@ define i8 @ctlo_i8_undef(i8 %x) {
 ; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notb %al
 ; X86-CLZ-NEXT:    movzbl %al, %eax
+; X86-CLZ-NEXT:    shll $24, %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
-; X86-CLZ-NEXT:    addl $-24, %eax
 ; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CLZ-NEXT:    retl
 ;
@@ -101,8 +101,8 @@ define i8 @ctlo_i8_undef(i8 %x) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    notb %dil
 ; X64-CLZ-NEXT:    movzbl %dil, %eax
+; X64-CLZ-NEXT:    shll $24, %eax
 ; X64-CLZ-NEXT:    lzcntl %eax, %eax
-; X64-CLZ-NEXT:    addl $-24, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
   %tmp1 = xor i8 %x, -1
@@ -364,7 +364,7 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-NOCMOV-NEXT:    notl %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
-; X86-NOCMOV-NEXT:    addl $32, %eax
+; X86-NOCMOV-NEXT:    orl $32, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
 ; X86-NOCMOV-NEXT:  .LBB7_1:
@@ -383,7 +383,7 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-CMOV-NEXT:    xorl $31, %edx
 ; X86-CMOV-NEXT:    bsrl %eax, %eax
 ; X86-CMOV-NEXT:    xorl $31, %eax
-; X86-CMOV-NEXT:    addl $32, %eax
+; X86-CMOV-NEXT:    orl $32, %eax
 ; X86-CMOV-NEXT:    testl %ecx, %ecx
 ; X86-CMOV-NEXT:    cmovnel %edx, %eax
 ; X86-CMOV-NEXT:    xorl %edx, %edx

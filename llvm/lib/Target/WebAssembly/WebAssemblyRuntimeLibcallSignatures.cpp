@@ -21,7 +21,7 @@
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 
 using namespace llvm;
 
@@ -204,6 +204,24 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::TAN_F32] = f32_func_f32;
     Table[RTLIB::TAN_F64] = f64_func_f64;
     Table[RTLIB::TAN_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ASIN_F32] = f32_func_f32;
+    Table[RTLIB::ASIN_F64] = f64_func_f64;
+    Table[RTLIB::ASIN_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ACOS_F32] = f32_func_f32;
+    Table[RTLIB::ACOS_F64] = f64_func_f64;
+    Table[RTLIB::ACOS_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ATAN_F32] = f32_func_f32;
+    Table[RTLIB::ATAN_F64] = f64_func_f64;
+    Table[RTLIB::ATAN_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::SINH_F32] = f32_func_f32;
+    Table[RTLIB::SINH_F64] = f64_func_f64;
+    Table[RTLIB::SINH_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::COSH_F32] = f32_func_f32;
+    Table[RTLIB::COSH_F64] = f64_func_f64;
+    Table[RTLIB::COSH_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::TANH_F32] = f32_func_f32;
+    Table[RTLIB::TANH_F64] = f64_func_f64;
+    Table[RTLIB::TANH_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::SINCOS_F32] = func_f32_iPTR_iPTR;
     Table[RTLIB::SINCOS_F64] = func_f64_iPTR_iPTR;
     Table[RTLIB::SINCOS_F128] = func_i64_i64_iPTR_iPTR;

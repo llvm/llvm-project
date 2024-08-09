@@ -21,6 +21,11 @@ def LLVM_Dialect : Dialect {
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
 
+  let discardableAttrs = (ins
+    /// Attribute encoding size and type of GPU workgroup attributions.
+    "WorkgroupAttributionAttr":$workgroup_attribution
+  );
+
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }

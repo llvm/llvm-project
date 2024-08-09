@@ -1325,20 +1325,20 @@ struct AAPointerInfoImpl
 
         const auto *FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
             QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+        if (FnReachabilityAA) {
+          // Without going backwards in the call tree, can we reach the access
+          // from the least dominating write. Do not allow to pass the
+          // instruction itself either.
+          bool Inserted = ExclusionSet.insert(&I).second;
 
-        // Without going backwards in the call tree, can we reach the access
-        // from the least dominating write. Do not allow to pass the instruction
-        // itself either.
-        bool Inserted = ExclusionSet.insert(&I).second;
+          if (!FnReachabilityAA->instructionCanReach(
+                  A, *LeastDominatingWriteInst,
+                  *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
+            WriteChecked = true;
 
-        if (!FnReachabilityAA ||
-            !FnReachabilityAA->instructionCanReach(
-                A, *LeastDominatingWriteInst,
-                *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
-          WriteChecked = true;
-
-        if (Inserted)
-          ExclusionSet.erase(&I);
+          if (Inserted)
+            ExclusionSet.erase(&I);
+        }
       }
 
       if (ReadChecked && WriteChecked)
@@ -1621,13 +1621,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     return true;
   };
 
-  const auto *F = getAnchorScope();
-  const auto *CI =
-      F ? A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(*F)
-        : nullptr;
-  const auto *TLI =
-      F ? A.getInfoCache().getTargetLibraryInfoForFunction(*F) : nullptr;
-
   auto UsePred = [&](const Use &U, bool &Follow) -> bool {
     Value *CurPtr = U.get();
     User *Usr = U.getUser();
@@ -1671,18 +1664,18 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     // For PHIs we need to take care of the recurrence explicitly as the value
     // might change while we iterate through a loop. For now, we give up if
     // the PHI is not invariant.
-    if (isa<PHINode>(Usr)) {
+    if (auto *PHI = dyn_cast<PHINode>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
-      bool IsFirstPHIUser = !OffsetInfoMap.count(Usr);
-      auto &UsrOI = OffsetInfoMap[Usr];
+      bool IsFirstPHIUser = !OffsetInfoMap.count(PHI);
+      auto &UsrOI = OffsetInfoMap[PHI];
       auto &PtrOI = OffsetInfoMap[CurPtr];
 
       // Check if the PHI operand has already an unknown offset as we can't
       // improve on that anymore.
       if (PtrOI.isUnknown()) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
-                          << *CurPtr << " in " << *Usr << "\n");
+                          << *CurPtr << " in " << *PHI << "\n");
         Follow = !UsrOI.isUnknown();
         UsrOI.setUnknown();
         return true;
@@ -1705,7 +1698,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       auto It = OffsetInfoMap.find(CurPtrBase);
       if (It == OffsetInfoMap.end()) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
-                          << *CurPtr << " in " << *Usr << "\n");
+                          << *CurPtr << " in " << *PHI
+                          << " (base: " << *CurPtrBase << ")\n");
         UsrOI.setUnknown();
         Follow = true;
         return true;
@@ -1718,6 +1712,9 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       // Cycles reported by CycleInfo. It is sufficient to check the PHIs in
       // every Cycle header; if such a node is marked unknown, this will
       // eventually propagate through the whole net of PHIs in the recurrence.
+      const auto *CI =
+          A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
+              *PHI->getFunction());
       if (mayBeInCycle(CI, cast<Instruction>(Usr), /* HeaderOnly */ true)) {
         auto BaseOI = It->getSecond();
         BaseOI.addToAll(Offset.getZExtValue());
@@ -1729,7 +1726,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
 
         LLVM_DEBUG(
             dbgs() << "[AAPointerInfo] PHI operand pointer offset mismatch "
-                   << *CurPtr << " in " << *Usr << "\n");
+                   << *CurPtr << " in " << *PHI << "\n");
         UsrOI.setUnknown();
         Follow = true;
         return true;
@@ -1882,6 +1879,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (auto *CB = dyn_cast<CallBase>(Usr)) {
       if (CB->isLifetimeStartOrEnd())
         return true;
+      const auto *TLI =
+          A.getInfoCache().getTargetLibraryInfoForFunction(*CB->getFunction());
       if (getFreedOperand(CB, TLI) == U)
         return true;
       if (CB->isArgOperand(&U)) {
@@ -8866,7 +8865,7 @@ struct AADenormalFPMathImpl : public AADenormalFPMath {
     if (Known.ModeF32.isValid())
       OS << " denormal-fp-math-f32=" << Known.ModeF32;
     OS << ']';
-    return OS.str();
+    return Str;
   }
 };
 
@@ -8979,7 +8978,7 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     OS << " / ";
     getAssumed().print(OS);
     OS << ">";
-    return OS.str();
+    return Str;
   }
 
   /// Helper function to get a SCEV expr for the associated value at program
@@ -9656,7 +9655,7 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -10778,7 +10777,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   template <typename AAType>
@@ -11875,14 +11874,24 @@ struct AAUnderlyingObjectsImpl
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
-    return std::string("UnderlyingObjects ") +
-           (isValidState()
-                ? (std::string("inter #") +
-                   std::to_string(InterAssumedUnderlyingObjects.size()) +
-                   " objs" + std::string(", intra #") +
-                   std::to_string(IntraAssumedUnderlyingObjects.size()) +
-                   " objs")
-                : "<invalid>");
+    if (!isValidState())
+      return "<invalid>";
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    OS << "underlying objects: inter " << InterAssumedUnderlyingObjects.size()
+       << " objects, intra " << IntraAssumedUnderlyingObjects.size()
+       << " objects.\n";
+    if (!InterAssumedUnderlyingObjects.empty()) {
+      OS << "inter objects:\n";
+      for (auto *Obj : InterAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    if (!IntraAssumedUnderlyingObjects.empty()) {
+      OS << "intra objects:\n";
+      for (auto *Obj : IntraAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    return Str;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -12492,6 +12501,8 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   void initialize(Attributor &A) override {
     assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
            "Associated value is not a pointer");
+    if (getAssociatedType()->getPointerAddressSpace())
+      indicateOptimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {

@@ -31,7 +31,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-contract-lowering"
 
@@ -1284,6 +1283,8 @@ public:
 /// This only kicks in when VectorTransformsOptions is set to `Matmul`.
 /// vector.transpose operations are inserted if the vector.contract op is not a
 /// row-major matrix multiply.
+///
+/// Scalable vectors are not supported.
 FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
     vector::ContractionOp op, MaskingOpInterface maskOp,
     PatternRewriter &rew) const {
@@ -1303,13 +1304,18 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
       !isReductionIterator(iteratorTypes[2]))
     return failure();
 
+  Type opResType = op.getType();
+  VectorType vecType = dyn_cast<VectorType>(opResType);
+  if (vecType && vecType.isScalable()) {
+    // Note - this is sufficient to reject all cases with scalable vectors.
+    return failure();
+  }
+
   Type elementType = op.getLhsType().getElementType();
   if (!elementType.isIntOrFloat())
     return failure();
 
-  Type dstElementType = op.getType();
-  if (auto vecType = dyn_cast<VectorType>(dstElementType))
-    dstElementType = vecType.getElementType();
+  Type dstElementType = vecType ? vecType.getElementType() : opResType;
   if (elementType != dstElementType)
     return failure();
 
