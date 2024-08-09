@@ -16655,7 +16655,32 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     if (Action == AA_Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
     } else if (getLangOpts().CPlusPlus) {
-      DiagKind = diag::err_typecheck_convert_incompatible_pointer;
+      DiagKind = [this, &SrcType, &DstType] {
+        const VariableArrayType *SrcTypeVLA = nullptr, *DstTypeVLA = nullptr;
+        if (const PointerType *P = SrcType->getAs<PointerType>())
+          SrcTypeVLA = Context.getAsVariableArrayType(P->getPointeeType());
+        if (const PointerType *P = DstType->getAs<PointerType>())
+          DstTypeVLA = Context.getAsVariableArrayType(P->getPointeeType());
+
+        if (SrcTypeVLA == nullptr || DstTypeVLA == nullptr)
+          return diag::err_typecheck_convert_incompatible_pointer;
+
+        DeclRefExpr *SrcSizeExpr = nullptr, *DstSizeExpr = nullptr;
+        if (ImplicitCastExpr *I =
+                dyn_cast<ImplicitCastExpr>(SrcTypeVLA->getSizeExpr()))
+          SrcSizeExpr = dyn_cast<DeclRefExpr>(I->getSubExpr());
+        if (ImplicitCastExpr *I =
+                dyn_cast<ImplicitCastExpr>(DstTypeVLA->getSizeExpr()))
+          DstSizeExpr = dyn_cast<DeclRefExpr>(I->getSubExpr());
+
+        if (SrcSizeExpr == nullptr || DstSizeExpr == nullptr)
+          return diag::err_typecheck_convert_incompatible_pointer;
+
+        return SrcSizeExpr->getDecl()->getName() ==
+                       DstSizeExpr->getDecl()->getName()
+                   ? diag::err_typecheck_convert_incompatible_vla
+                   : diag::err_typecheck_convert_incompatible_pointer;
+      }();
       isInvalid = true;
     } else {
       DiagKind = diag::ext_typecheck_convert_incompatible_pointer;

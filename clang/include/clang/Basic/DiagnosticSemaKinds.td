@@ -8648,6 +8648,9 @@ def err_typecheck_convert_incompatible_pointer : Error<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">;
+def err_typecheck_convert_incompatible_vla : Error<
+  "incompatible assignment of pointers of variable-length array type %0"
+  "; consider using a typedef to use the same variable-length array type for both operands">;
 def err_typecheck_convert_incompatible_function_pointer : Error<
   "incompatible function pointer types "
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
