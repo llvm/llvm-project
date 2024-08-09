@@ -499,12 +499,12 @@ def clang_format_to_blob(filename, line_ranges, revision=None,
   Returns the object ID (SHA-1) of the created blob."""
   clang_format_cmd = [binary]
   if style:
-    clang_format_cmd.extend(['-style='+style])
+    clang_format_cmd.extend(['--style='+style])
   clang_format_cmd.extend([
-      '-lines=%s:%s' % (start_line, start_line+line_count-1)
+      '--lines=%s:%s' % (start_line, start_line+line_count-1)
       for start_line, line_count in line_ranges])
   if revision is not None:
-    clang_format_cmd.extend(['-assume-filename='+filename])
+    clang_format_cmd.extend(['--assume-filename='+filename])
     git_show_cmd = ['git', 'cat-file', 'blob', '%s:%s' % (revision, filename)]
     git_show = subprocess.Popen(git_show_cmd, env=env, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE)
