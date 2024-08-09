@@ -7763,6 +7763,20 @@ bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
   return Flush;
 }
 
+static void convertLLVMType(Value *&Val, Type *dstTy, IRBuilderBase &Builder) {
+  Type *srcTy = Val->getType();
+  if (srcTy != dstTy) {
+    if (dstTy->isIntegerTy() && srcTy->isFloatingPointTy())
+      Val = Builder.CreateFPToSI(Val, dstTy);
+    else if (dstTy->isFloatingPointTy() && srcTy->isIntegerTy())
+      Val = Builder.CreateSIToFP(Val, dstTy);
+    else if (dstTy->isFloatingPointTy() && srcTy->isFloatingPointTy())
+      Val = Builder.CreateFPCast(Val, dstTy);
+    else if (dstTy->isIntegerTy() && srcTy->isIntegerTy())
+      Val = Builder.CreateIntCast(Val, dstTy, true);
+  }
+}
+
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
                                   AtomicOpValue &X, AtomicOpValue &V,
@@ -7773,6 +7787,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
   assert(X.Var->getType()->isPointerTy() &&
          "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
+  Type *VElemTy = V.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
           XElemTy->isPointerTy()) &&
          "OMP atomic read expected a scalar type");
@@ -7797,6 +7812,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
       XRead = Builder.CreateIntToPtr(XLoad, XElemTy, "atomic.ptr.cast");
     }
   }
+  convertLLVMType(XRead, VElemTy, Builder);
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Read);
   Builder.CreateStore(XRead, V.Var, V.IsVolatile);
   return Builder.saveIP();
@@ -8021,6 +8037,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCapture(
                        X.IsVolatile, IsXBinopExpr);
 
   Value *CapturedVal = (IsPostfixUpdate ? Result.first : Result.second);
+  convertLLVMType(CapturedVal, V.ElemTy, Builder);
   Builder.CreateStore(CapturedVal, V.Var, V.IsVolatile);
 
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Capture);
