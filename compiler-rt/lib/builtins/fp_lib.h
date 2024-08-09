@@ -171,8 +171,11 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
                          (sum2 & Word_FullMask) + ((sum3 << 32) & Word_HiMask);
 
   *lo = r0 + (r1 << 64);
+  // The addition above can overflow, in which case `*lo` will be less than
+  // `r0`. Carry any overflow into `hi`.
+  const bool carry = *lo < r0;
   *hi = (r1 >> 64) + (sum1 >> 96) + (sum2 >> 64) + (sum3 >> 32) + sum4 +
-        (sum5 << 32) + (sum6 << 64);
+        (sum5 << 32) + (sum6 << 64) + carry;
 }
 #undef Word_1
 #undef Word_2
