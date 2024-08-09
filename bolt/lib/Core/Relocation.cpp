@@ -1071,13 +1071,18 @@ void Relocation::print(raw_ostream &OS) const {
     break;
 
   case Triple::aarch64:
-    static const char *const AArch64RelocNames[] = {
-#define ELF_RELOC(name, value) #name,
+    // AArch64 relocations are not sequentially numbered so we cannot use an
+    // array
+    switch (Type) {
+    default:
+      llvm_unreachable("illegal AArch64 relocation");
+#define ELF_RELOC(name, value)                                                 \
+  case value:                                                                  \
+    OS << #name;                                                               \
+    break;
 #include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
 #undef ELF_RELOC
-    };
-    assert(Type < ArrayRef(AArch64RelocNames).size());
-    OS << AArch64RelocNames[Type];
+    }
     break;
 
   case Triple::riscv64:
