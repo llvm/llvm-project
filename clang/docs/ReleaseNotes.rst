@@ -176,6 +176,37 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
+- Clang will now print ``static_assert`` failure details for binary operators on
+  structs, vectors, or arrays. The diagnostic is limited in size (the limit may
+  be adjusted with `-fconstexpr-print-value-size-limit=N`), and is not emitted
+  when it would be redundant with the existing "requirement" diagnostic.
+  Example:
+
+  .. code-block:: cpp
+
+    struct S {
+      int a, b;
+      bool operator==(const S &) const = default;
+    };
+
+    static_assert(S{1, 2} == S{3, 4});
+    constexpr auto f = [] { return S{3, 4}; };
+    static_assert(S{1, 2} == f());
+
+  will now print:
+
+  .. code-block:: text
+
+    error: static assertion failed due to requirement 'S{1, 2} == S{3, 4}'
+       85 | static_assert(S{1, 2} == S{3, 4});
+          |               ^~~~~~~~~~~~~~~~~~
+    error: static assertion failed due to requirement 'S{1, 2} == f()'
+       87 | static_assert(S{1, 2} == f());
+          |               ^~~~~~~~~~~~~~
+    note: expression evaluates to 'S{1, 2} == S{3, 4}'
+       87 | static_assert(S{1, 2} == f());
+          |               ~~~~~~~~^~~~~~
+
 Improvements to Clang's time-trace
 ----------------------------------
 
