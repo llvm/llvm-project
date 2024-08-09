@@ -157,8 +157,7 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
 };
 // clang-format on
 
-static const Function *getCalledFunction(const Value *V,
-                                         bool &IsNoBuiltin) {
+static const Function *getCalledFunction(const Value *V) {
   // Don't care about intrinsics in this case.
   if (isa<IntrinsicInst>(V))
     return nullptr;
@@ -167,11 +166,10 @@ static const Function *getCalledFunction(const Value *V,
   if (!CB)
     return nullptr;
 
-  IsNoBuiltin = CB->isNoBuiltin();
+  if (CB->isNoBuiltin())
+    return nullptr;
 
-  if (const Function *Callee = CB->getCalledFunction())
-    return Callee;
-  return nullptr;
+  return CB->getCalledFunction();
 }
 
 /// Returns the allocation data for the given value if it's a call to a known
@@ -221,29 +219,23 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
 static std::optional<AllocFnsTy>
 getAllocationData(const Value *V, AllocType AllocTy,
                   const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltinCall;
-  if (const Function *Callee = getCalledFunction(V, IsNoBuiltinCall))
-    if (!IsNoBuiltinCall)
-      return getAllocationDataForFunction(Callee, AllocTy, TLI);
+  if (const Function *Callee = getCalledFunction(V))
+    return getAllocationDataForFunction(Callee, AllocTy, TLI);
   return std::nullopt;
 }
 
 static std::optional<AllocFnsTy>
 getAllocationData(const Value *V, AllocType AllocTy,
                   function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  bool IsNoBuiltinCall;
-  if (const Function *Callee = getCalledFunction(V, IsNoBuiltinCall))
-    if (!IsNoBuiltinCall)
-      return getAllocationDataForFunction(
-          Callee, AllocTy, &GetTLI(const_cast<Function &>(*Callee)));
+  if (const Function *Callee = getCalledFunction(V))
+    return getAllocationDataForFunction(
+        Callee, AllocTy, &GetTLI(const_cast<Function &>(*Callee)));
   return std::nullopt;
 }
 
 static std::optional<AllocFnsTy>
 getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltinCall;
-  const Function *Callee = getCalledFunction(CB, IsNoBuiltinCall);
-  if (Callee && !IsNoBuiltinCall) {
+  if (const Function *Callee = getCalledFunction(CB)) {
     // Prefer to use existing information over allocsize. This will give us an
     // accurate AllocTy.
     if (std::optional<AllocFnsTy> Data =
@@ -507,9 +499,7 @@ std::optional<FreeFnsTy> getFreeFunctionDataForFunction(const Function *Callee,
 
 std::optional<StringRef>
 llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltin;
-  const Function *Callee = getCalledFunction(I, IsNoBuiltin);
-  if (Callee && !IsNoBuiltin) {
+  if (const Function *Callee = getCalledFunction(I)) {
     LibFunc TLIFn;
     if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn)) {
       // Callee is some known library function.
@@ -554,9 +544,7 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
 }
 
 Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltinCall;
-  const Function *Callee = getCalledFunction(CB, IsNoBuiltinCall);
-  if (Callee && !IsNoBuiltinCall) {
+  if (const Function *Callee = getCalledFunction(CB)) {
     LibFunc TLIFn;
     if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
         isLibFreeFunction(Callee, TLIFn)) {
