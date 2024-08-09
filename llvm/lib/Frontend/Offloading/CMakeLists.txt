@@ -1,3 +1,5 @@
+add_subdirectory(AMDGPU)
+
 add_llvm_component_library(LLVMFrontendOffloading
   Utility.cpp
   OffloadWrapper.cpp
