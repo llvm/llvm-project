@@ -1570,3 +1570,6 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// Warnings about non-portable include paths
+def NonportablePath : DiagGroup<"nonportable-include-path">;

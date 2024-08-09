@@ -2100,6 +2100,23 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
     const FileEntry *LookupFromFile, StringRef &LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
+
+  // Check for trailing whitespace or dots in the include path.
+  // This must be done before looking up the file, as Windows will still
+  // find the file even if there are trailing dots or whitespace.
+  size_t TrailingPos = Filename.find_last_not_of(" .");
+  if (TrailingPos != StringRef::npos && TrailingPos < Filename.size() - 1) {
+    StringRef TrimmedFilename = Filename.rtrim(" .");
+
+    auto Hint = isAngled
+                    ? FixItHint::CreateReplacement(
+                          FilenameRange, "<" + TrimmedFilename.str() + ">")
+                    : FixItHint::CreateReplacement(
+                          FilenameRange, "\"" + TrimmedFilename.str() + "\"");
+    Diag(FilenameTok, diag::pp_nonportable_path_trailing_whitespace)
+        << Filename << TrimmedFilename << Hint;
+  }
+
   auto DiagnoseHeaderInclusion = [&](FileEntryRef FE) {
     if (LangOpts.AsmPreprocessor)
       return;
