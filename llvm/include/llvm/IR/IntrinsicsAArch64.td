@@ -3467,6 +3467,15 @@ let TargetPrefix = "aarch64" in {
   }
 
   //
+  // Multi-vector floating point absolute min/max number
+  //
+
+  foreach instr = ["famax", "famin"] in {
+    def int_aarch64_sme_ # instr # _x2 : SME2_VG2_Multi_Multi_Intrinsic;
+    def int_aarch64_sme_ # instr # _x4 : SME2_VG4_Multi_Multi_Intrinsic;
+  }
+
+  //
   // Multi-vector vertical dot-products
   //
 
