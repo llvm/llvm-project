@@ -278,19 +278,18 @@ static bool expandNormalizeIntrinsic(CallInst *Orig) {
                        /* gen_crash_diag=*/false);
   }
 
-  Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
-                                                ArrayRef<Value *>{DotProduct},
-                                                nullptr, "dx.rsqrt");
-
   // verify that the length is non-zero
-  // (if the reciprocal sqrt of the length is non-zero, then the length is
-  // non-zero)
-  if (auto *constantFP = dyn_cast<ConstantFP>(Multiplicand)) {
+  // (if the dot product is non-zero, then the length is non-zero)
+  if (auto *constantFP = dyn_cast<ConstantFP>(DotProduct)) {
     const APFloat &fpVal = constantFP->getValueAPF();
     if (fpVal.isZero())
       report_fatal_error(Twine("Invalid input vector: length is zero"),
                          /* gen_crash_diag=*/false);
   }
+
+  Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
+                                                ArrayRef<Value *>{DotProduct},
+                                                nullptr, "dx.rsqrt");
 
   Value *MultiplicandVec = Builder.CreateVectorSplat(XVecSize, Multiplicand);
   Value *Result = Builder.CreateFMul(X, MultiplicandVec);
