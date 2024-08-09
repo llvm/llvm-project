@@ -97,26 +97,49 @@ enum XRayPatchingStatus {
 /// for possible result values.
 extern XRayPatchingStatus __xray_patch();
 
+extern XRayPatchingStatus __xray_patch_object(int32_t ObjId);
+
 /// Reverses the effect of __xray_patch(). See XRayPatchingStatus for possible
 /// result values.
 extern XRayPatchingStatus __xray_unpatch();
+
+extern XRayPatchingStatus __xray_unpatch_object(int32_t ObjId);
 
 /// This patches a specific function id. See XRayPatchingStatus for possible
 /// result values.
 extern XRayPatchingStatus __xray_patch_function(int32_t FuncId);
 
+extern XRayPatchingStatus __xray_patch_function_in_object(int32_t FuncId,
+                                                          int32_t ObjId);
+
 /// This unpatches a specific function id. See XRayPatchingStatus for possible
 /// result values.
 extern XRayPatchingStatus __xray_unpatch_function(int32_t FuncId);
+
+extern XRayPatchingStatus __xray_unpatch_function_in_object(int32_t FuncId,
+                                                            int32_t ObjId);
 
 /// This function returns the address of the function provided a valid function
 /// id. We return 0 if we encounter any error, even if 0 may be a valid function
 /// address.
 extern uintptr_t __xray_function_address(int32_t FuncId);
 
+extern uintptr_t __xray_function_address_in_object(int32_t FuncId,
+                                                   int32_t ObjId);
+
 /// This function returns the maximum valid function id. Returns 0 if we
 /// encounter errors (when there are no instrumented functions, etc.).
 extern size_t __xray_max_function_id();
+
+extern size_t __xray_max_function_id_in_object(int32_t ObjId);
+
+extern size_t __xray_num_objects();
+
+extern int32_t __xray_unpack_function_id(int32_t PackedId);
+
+extern int32_t __xray_unpack_object_id(int32_t PackedId);
+
+extern int32_t __xray_pack_id(int32_t FuncId, int32_t ObjId);
 
 /// Initialize the required XRay data structures. This is useful in cases where
 /// users want to control precisely when the XRay instrumentation data

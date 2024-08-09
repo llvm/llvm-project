@@ -63,6 +63,22 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         << XRayInstrument->getSpelling() << Triple.str();
   }
 
+  if (Args.hasFlag(options::OPT_fxray_enable_shared,
+                   options::OPT_fno_xray_enable_shared, false)) {
+    XRayEnableShared = true;
+
+    // DSO instrumentation is currently limited to x86_64
+    if (Triple.getArch() != llvm::Triple::x86_64) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-fxray-enable-shared" << Triple.str();
+    }
+
+    unsigned PICLvl = std::get<1>(tools::ParsePICArgs(TC, Args));
+    if (!PICLvl) {
+      D.Diag(diag::err_opt_not_valid_without_opt) << "-fxray-enable-shared" << "-fPIC";
+    }
+  }
+
   // Both XRay and -fpatchable-function-entry use
   // TargetOpcode::PATCHABLE_FUNCTION_ENTER.
   if (Arg *A = Args.getLastArg(options::OPT_fpatchable_function_entry_EQ))
@@ -176,6 +192,9 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_xray_ignore_loops);
   Args.addOptOutFlag(CmdArgs, options::OPT_fxray_function_index,
                      options::OPT_fno_xray_function_index);
+
+  if (XRayEnableShared)
+    CmdArgs.push_back("-fxray-enable-shared");
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fxray_instruction_threshold_EQ)) {
