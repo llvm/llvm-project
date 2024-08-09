@@ -159,8 +159,8 @@ ProgramState::invalidateRegions(RegionList Regions,
   for (const MemRegion *Reg : Regions)
     Values.push_back(loc::MemRegionVal(Reg));
 
-  return invalidateRegionsImpl(Values, E, Count, LCtx, CausedByPointerEscape,
-                               IS, ITraits, Call);
+  return invalidateRegions(Values, E, Count, LCtx, CausedByPointerEscape, IS,
+                           Call, ITraits);
 }
 
 ProgramStateRef
@@ -172,18 +172,6 @@ ProgramState::invalidateRegions(ValueList Values,
                              const CallEvent *Call,
                              RegionAndSymbolInvalidationTraits *ITraits) const {
 
-  return invalidateRegionsImpl(Values, E, Count, LCtx, CausedByPointerEscape,
-                               IS, ITraits, Call);
-}
-
-ProgramStateRef
-ProgramState::invalidateRegionsImpl(ValueList Values,
-                                    const Expr *E, unsigned Count,
-                                    const LocationContext *LCtx,
-                                    bool CausedByPointerEscape,
-                                    InvalidatedSymbols *IS,
-                                    RegionAndSymbolInvalidationTraits *ITraits,
-                                    const CallEvent *Call) const {
   ProgramStateManager &Mgr = getStateManager();
   ExprEngine &Eng = Mgr.getOwningEngine();
 
@@ -197,21 +185,18 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
 
   StoreManager::InvalidatedRegions TopLevelInvalidated;
   StoreManager::InvalidatedRegions Invalidated;
-  const StoreRef &newStore
-  = Mgr.StoreMgr->invalidateRegions(getStore(), Values, E, Count, LCtx, Call,
-                                    *IS, *ITraits, &TopLevelInvalidated,
-                                    &Invalidated);
+  const StoreRef &NewStore = Mgr.StoreMgr->invalidateRegions(
+      getStore(), Values, E, Count, LCtx, Call, *IS, *ITraits,
+      &TopLevelInvalidated, &Invalidated);
 
-  ProgramStateRef newState = makeWithStore(newStore);
+  ProgramStateRef NewState = makeWithStore(NewStore);
 
   if (CausedByPointerEscape) {
-    newState = Eng.notifyCheckersOfPointerEscape(newState, IS,
-                                                 TopLevelInvalidated,
-                                                 Call,
-                                                 *ITraits);
+    NewState = Eng.notifyCheckersOfPointerEscape(
+        NewState, IS, TopLevelInvalidated, Call, *ITraits);
   }
 
-  return Eng.processRegionChanges(newState, IS, TopLevelInvalidated,
+  return Eng.processRegionChanges(NewState, IS, TopLevelInvalidated,
                                   Invalidated, LCtx, Call);
 }
 
