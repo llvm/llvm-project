@@ -15,7 +15,9 @@ using namespace clang::CodeGen;
 DefaultABIInfo::~DefaultABIInfo() = default;
 
 ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
-  Ty = useFirstFieldIfTransparentUnion(Ty);
+  llvm::Type *CoerceTy = nullptr;
+  Ty = useFirstFieldIfTransparentUnion(Ty, getContext(), getVMContext(),
+                                       &CoerceTy);
 
   if (isAggregateTypeForABI(Ty)) {
     // Records with non-trivial destructors/copy-constructors should not be
@@ -38,8 +40,9 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
                                 : Context.LongLongTy))
       return getNaturalAlignIndirect(Ty);
 
-  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                            : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CoerceTy)
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
@@ -148,6 +151,22 @@ QualType CodeGen::useFirstFieldIfTransparentUnion(QualType Ty) {
     if (UD->hasAttr<TransparentUnionAttr>()) {
       assert(!UD->field_empty() && "sema created an empty transparent union");
       return UD->field_begin()->getType();
+    }
+  }
+  return Ty;
+}
+
+QualType
+CodeGen::useFirstFieldIfTransparentUnion(QualType Ty, ASTContext &Context,
+                                         llvm::LLVMContext &LLVMContext,
+                                         llvm::Type **CTy) {
+  if (const RecordType *UT = Ty->getAsUnionType()) {
+    const RecordDecl *UD = UT->getDecl();
+    if (UD->hasAttr<TransparentUnionAttr>()) {
+      assert(!UD->field_empty() && "sema created an empty transparent union");
+      QualType UTy = UD->field_begin()->getType();
+      *CTy = llvm::IntegerType::get(LLVMContext, Context.getTypeSize(UTy));
+      return UTy;
     }
   }
   return Ty;

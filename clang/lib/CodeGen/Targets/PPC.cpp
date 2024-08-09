@@ -196,7 +196,9 @@ ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
-  Ty = useFirstFieldIfTransparentUnion(Ty);
+  llvm::Type *CoerceTy = nullptr;
+  Ty = useFirstFieldIfTransparentUnion(Ty, getContext(), getVMContext(),
+                                       &CoerceTy);
 
   if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
@@ -217,7 +219,7 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign*/ TyAlign > CCAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, CoerceTy)
                                      : ABIArgInfo::getDirect());
 }
 
@@ -822,7 +824,9 @@ bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateSmallEnough(
 
 ABIArgInfo
 PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
-  Ty = useFirstFieldIfTransparentUnion(Ty);
+  llvm::Type *CoerceType = nullptr;
+  Ty = useFirstFieldIfTransparentUnion(Ty, getContext(), getVMContext(),
+                                       &CoerceType);
 
   if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
@@ -891,7 +895,7 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*Realign=*/TyAlign > ABIAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, CoerceType)
                                      : ABIArgInfo::getDirect());
 }
 
