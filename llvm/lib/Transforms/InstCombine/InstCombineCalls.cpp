@@ -1505,6 +1505,80 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
       ConstantInt::getTrue(ZeroUndef->getType()));
 }
 
+/// Return whether "X LOp (Y ROp Z)" is always equal to
+/// "(X LOp Y) ROp (X LOp Z)".
+static bool leftDistributesOverRightIntrinsic(Intrinsic::ID LOp,
+                                              Intrinsic::ID ROp) {
+  switch (LOp) {
+  case Intrinsic::umax:
+    return ROp == Intrinsic::umin;
+  case Intrinsic::smax:
+    return ROp == Intrinsic::smin;
+  case Intrinsic::umin:
+    return ROp == Intrinsic::umax;
+  case Intrinsic::smin:
+    return ROp == Intrinsic::smax;
+  case Intrinsic::uadd_sat:
+    return ROp == Intrinsic::umax || ROp == Intrinsic::umin;
+  case Intrinsic::sadd_sat:
+    return ROp == Intrinsic::smax || ROp == Intrinsic::smin;
+  default:
+    return false;
+  }
+}
+
+// Attempts to factorise a common term
+// in an instruction that has the form "(A op' B) op (C op' D)
+static Value *
+foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
+                                   InstCombiner::BuilderTy &Builder) {
+  Value *LHS = II->getOperand(0), *RHS = II->getOperand(1);
+  Intrinsic::ID TopLevelOpcode = II->getIntrinsicID();
+
+  IntrinsicInst *Op0 = dyn_cast<IntrinsicInst>(LHS);
+  IntrinsicInst *Op1 = dyn_cast<IntrinsicInst>(RHS);
+
+  if (!Op0 || !Op1)
+    return nullptr;
+
+  if (Op0->getIntrinsicID() != Op1->getIntrinsicID())
+    return nullptr;
+
+  if (!Op0->hasOneUse() || !Op1->hasOneUse())
+    return nullptr;
+
+  Intrinsic::ID InnerOpcode = Op0->getIntrinsicID();
+
+  if (!leftDistributesOverRightIntrinsic(InnerOpcode, TopLevelOpcode))
+    return nullptr;
+
+  assert(II->isCommutative() && Op0->isCommutative() &&
+         "Only inner and outer commutative op codes are supported.");
+
+  Value *A = Op0->getOperand(0);
+  Value *B = Op0->getOperand(1);
+  Value *C = Op1->getOperand(0);
+  Value *D = Op1->getOperand(1);
+
+  if (A == C || A == D) {
+    if (A != C)
+      std::swap(C, D);
+
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
+    return Builder.CreateBinaryIntrinsic(InnerOpcode, NewIntrinsic, A);
+  }
+
+  if (B == D || B == C) {
+    if (B != D)
+      std::swap(C, D);
+
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
+    return Builder.CreateBinaryIntrinsic(InnerOpcode, NewIntrinsic, B);
+  }
+
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1928,6 +2002,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                      ConstantInt::get(II->getType(), *RHSC));
       }
     }
+
+    if (Value *V = foldIntrinsicUsingDistributiveLaws(II, Builder))
+      return replaceInstUsesWith(*II, V);
 
     break;
   }
