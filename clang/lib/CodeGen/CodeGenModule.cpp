@@ -950,9 +950,6 @@ void CodeGenModule::Release() {
       UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           GetAddrOfGlobal(GD), Int8PtrTy));
     }
-    // Sort decls by name to always emit them in deterministic order.
-    llvm::sort(UsedArray,
-               [](auto A, auto B) { return A->getName() < B->getName(); });
 
     llvm::ArrayType *ATy = llvm::ArrayType::get(Int8PtrTy, UsedArray.size());
 

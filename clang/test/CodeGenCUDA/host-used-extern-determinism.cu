@@ -3,9 +3,9 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK-LABEL: @__clang_gpu_used_externalx = internal {{.*}}global
-// References to the kernels must be in sorted order.
-// CHECK-SAME: [ptr @_Z6kernelILi0EEvPi, ptr @_Z6kernelILi1EEvPi, ptr @_Z6kernelILi2EEvPi, ptr @_Z6kernelILi3EEvPi]
+// CHECK-LABEL: @__clang_gpu_used_external = internal {{.*}}global
+// References to the kernels must be in order of appearance.
+// CHECK-SAME: [ptr @_Z6kernelILi3EEvPi, ptr @_Z6kernelILi1EEvPi, ptr @_Z6kernelILi2EEvPi, ptr @_Z6kernelILi0EEvPi]
 
 template <int N>
 __global__ void kernel(int* out) { *out = N; }
