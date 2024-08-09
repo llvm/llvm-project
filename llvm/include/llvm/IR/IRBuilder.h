@@ -1902,16 +1902,17 @@ public:
   }
 
   Value *CreateConstGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0, unsigned Idx1,
-                            const Twine &Name = "") {
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NWFlags = GEPNoWrapFlags::none()) {
     Value *Idxs[] = {
       ConstantInt::get(Type::getInt32Ty(Context), Idx0),
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::none()))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, NWFlags))
       return V;
 
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs, NWFlags), Name);
   }
 
   Value *CreateConstInBoundsGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0,
@@ -1975,7 +1976,9 @@ public:
 
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
                          const Twine &Name = "") {
-    return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
+    GEPNoWrapFlags NWFlags =
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap();
+    return CreateConstGEP2_32(Ty, Ptr, 0, Idx, Name, NWFlags);
   }
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
