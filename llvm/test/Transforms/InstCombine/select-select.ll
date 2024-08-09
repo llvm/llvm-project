@@ -282,10 +282,7 @@ define i8 @strong_order_cmp_ugt_eq(i32 %a, i32 %b) {
 
 define i8 @strong_order_cmp_eq_slt(i32 %a, i32 %b) {
 ; CHECK-LABEL: @strong_order_cmp_eq_slt(
-; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL_EQ:%.*]] = zext i1 [[CMP_EQ]] to i8
-; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 ; CHECK-NEXT:    ret i8 [[SEL_LT]]
 ;
   %cmp.eq = icmp eq i32 %a, %b
@@ -312,10 +309,7 @@ define i8 @strong_order_cmp_eq_sgt(i32 %a, i32 %b) {
 
 define i8 @strong_order_cmp_eq_ult(i32 %a, i32 %b) {
 ; CHECK-LABEL: @strong_order_cmp_eq_ult(
-; CHECK-NEXT:    [[CMP_EQ:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL_EQ:%.*]] = zext i1 [[CMP_EQ]] to i8
-; CHECK-NEXT:    [[CMP_LT:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL_LT:%.*]] = select i1 [[CMP_LT]], i8 -1, i8 [[SEL_EQ]]
+; CHECK-NEXT:    [[SEL_LT:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 ; CHECK-NEXT:    ret i8 [[SEL_LT]]
 ;
   %cmp.eq = icmp eq i32 %a, %b
