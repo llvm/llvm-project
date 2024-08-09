@@ -12368,6 +12368,16 @@ def warn_hlsl_availability_unavailable :
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;
 
+def err_hlsl_attribute_in_wrong_shader_model: Error<
+  "attribute %0 requires shader model %1 or greater">;
+
+def warn_attr_min_eq_max:  Warning<
+  "%0 attribute minimum and maximum arguments are equal">,
+  InGroup<HLSLAttributeStatement>, DefaultError;
+
+def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
+  "attribute %0 with %1 arguments requires shader model %2 or greater">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
