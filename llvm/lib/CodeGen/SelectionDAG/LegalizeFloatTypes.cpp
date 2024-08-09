@@ -3090,6 +3090,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SELECT:      R = SoftPromoteHalfRes_SELECT(N); break;
   case ISD::SELECT_CC:   R = SoftPromoteHalfRes_SELECT_CC(N); break;
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:  R = SoftPromoteHalfRes_XINT_TO_FP(N); break;
   case ISD::UNDEF:       R = SoftPromoteHalfRes_UNDEF(N); break;
@@ -3311,7 +3313,12 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_XINT_TO_FP(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDLoc dl(N);
 
-  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+  SDValue Op = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
+
+  bool Signed = N->getOpcode() == ISD::SINT_TO_FP ||
+                N->getOpcode() == ISD::STRICT_SINT_TO_FP;
+  SDValue Res =
+      DAG.getNode(Signed ? ISD::SINT_TO_FP : ISD::UINT_TO_FP, dl, NVT, Op);
 
   // Round the value to the softened type.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
@@ -3396,6 +3403,8 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::BITCAST:    Res = SoftPromoteHalfOp_BITCAST(N); break;
   case ISD::FCOPYSIGN:  Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo); break;
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT: Res = SoftPromoteHalfOp_FP_TO_XINT(N); break;
   case ISD::FP_TO_SINT_SAT:
@@ -3422,7 +3431,7 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
 
   assert(Res.getNode() != N && "Expected a new node!");
 
-  assert(Res.getValueType() == N->getValueType(0) && N->getNumValues() == 1 &&
+  assert(Res.getValueType() == N->getValueType(0) &&
          "Invalid operand expansion");
 
   ReplaceValueWith(SDValue(N, 0), Res);
@@ -3479,7 +3488,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT(SDNode *N) {
   EVT RVT = N->getValueType(0);
-  SDValue Op = N->getOperand(0);
+  SDValue Op = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
   EVT SVT = Op.getValueType();
   SDLoc dl(N);
 
@@ -3489,7 +3498,10 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT(SDNode *N) {
 
   SDValue Res = DAG.getNode(GetPromotionOpcode(SVT, RVT), dl, NVT, Op);
 
-  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Res);
+  bool Signed = N->getOpcode() == ISD::FP_TO_SINT ||
+                N->getOpcode() == ISD::STRICT_FP_TO_SINT;
+  return DAG.getNode(Signed ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, dl,
+                     N->getValueType(0), Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N) {
