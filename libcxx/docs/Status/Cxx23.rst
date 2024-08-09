@@ -43,6 +43,9 @@ Paper Status
    .. [#note-P0533R9] P0533R9: ``isfinite``, ``isinf``, ``isnan`` and ``isnormal`` are implemented.
    .. [#note-P1413R3] P1413R3: ``std::aligned_storage_t`` and ``std::aligned_union_t`` are marked deprecated, but
       clang doesn't issue a diagnostic for deprecated using template declarations.
+   .. [#note-P2278R4] P2278R4: ``basic_const_iterator`` has been implemented, and the const range accessors
+      (``cbegin``, ``cend``, ``crbegin``, ``crend``) have been updated to return this new type.
+      However, the changes to ``cdata`` and ``span``, and ``const_view``, have not yet been implemented.
    .. [#note-P2520R0] P2520R0: Libc++ implemented this paper as a DR in C++20 as well.
    .. [#note-P2711R1] P2711R1: ``join_with_view`` hasn't been done yet since this type isn't implemented yet.
    .. [#note-P2770R0] P2770R0: ``join_with_view`` hasn't been done yet since this type isn't implemented yet.

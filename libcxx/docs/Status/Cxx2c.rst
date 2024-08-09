@@ -44,6 +44,8 @@ Paper Status
    .. [#note-P2944R3] Implemented comparisons for ``reference_wrapper`` only.
    .. [#note-P2422R1] Libc++ keeps the ``nodiscard`` attributes as a conforming extension.
    .. [#note-P2997R1] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
+   .. [#note-P2836R1] This paper is applies as DR against C++23 (MSVC STL and libstdc++ have done the same);
+      The feature macro is not yet defined, since other features from the original paper have not been completed.
 
 .. _issues-status-cxx2c:
 
