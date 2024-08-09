@@ -270,3 +270,16 @@ def SearchAPI : PublicAPI<"search.h"> {
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
   let Types = ["struct statvfs"];
 }
+
+def LinkAPI : PublicAPI<"link.h"> {
+  let Types = [
+    "struct dl_phdr_info",
+    "__dl_iterate_phdr_callback_t"
+  ];
+}
+
+def DlfcnAPI : PublicAPI<"dlfcn.h"> {
+  let Types = [
+    "Dl_info"
+  ];
+}
