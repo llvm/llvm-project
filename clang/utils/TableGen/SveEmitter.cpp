@@ -67,7 +67,7 @@ public:
 };
 
 class SVEType {
-  bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
+  bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat, MFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
       Svcount;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
@@ -77,10 +77,10 @@ public:
 
   SVEType(StringRef TS, char CharMod, unsigned NumVectors = 1)
       : Float(false), Signed(true), Immediate(false), Void(false),
-        Constant(false), Pointer(false), BFloat(false), DefaultType(false),
-        IsScalable(true), Predicate(false), PredicatePattern(false),
-        PrefetchOp(false), Svcount(false), Bitwidth(128), ElementBitwidth(~0U),
-        NumVectors(NumVectors) {
+        Constant(false), Pointer(false), BFloat(false), MFloat(false),
+        DefaultType(false), IsScalable(true), Predicate(false),
+        PredicatePattern(false), PrefetchOp(false), Svcount(false),
+        Bitwidth(128), ElementBitwidth(~0U), NumVectors(NumVectors) {
     if (!TS.empty())
       applyTypespec(TS);
     applyModifier(CharMod);
@@ -103,6 +103,10 @@ public:
   bool isDefault() const { return DefaultType; }
   bool isFloat() const { return Float && !BFloat; }
   bool isBFloat() const { return BFloat && !Float; }
+  bool isMFloat() const {
+    return MFloat && !BFloat && !Float;
+    ;
+  }
   bool isFloatingPoint() const { return Float || BFloat; }
   bool isInteger() const {
     return !isFloatingPoint() && !Predicate && !Svcount;
@@ -468,6 +472,8 @@ std::string SVEType::builtin_str() const {
   else if (isBFloat()) {
     assert(ElementBitwidth == 16 && "Not a valid BFloat.");
     S += "y";
+  } else if (isMFloat()) {
+    S += "m";
   }
 
   if (!isFloatingPoint()) {
@@ -523,6 +529,8 @@ std::string SVEType::str() const {
       S += "bool";
     else if (isBFloat())
       S += "bfloat";
+    else if (isMFloat())
+      S += "mfloat";
     else
       S += "int";
 
@@ -587,6 +595,12 @@ void SVEType::applyTypespec(StringRef TS) {
       BFloat = true;
       Float = false;
       ElementBitwidth = 16;
+      break;
+    case 'm':
+      MFloat = true;
+      Float = false;
+      BFloat = false;
+      ElementBitwidth = 8;
       break;
     default:
       llvm_unreachable("Unhandled type code!");
@@ -1040,6 +1054,8 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
       TypeCode = 'b';
     else if (T.isBFloat())
       TypeCode = "bf";
+    else if (T.isMFloat())
+      TypeCode = "mfp";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -1131,6 +1147,11 @@ uint64_t SVEEmitter::encodeTypeFlags(const SVEType &T) {
   if (T.isBFloat()) {
     assert(T.getElementSizeInBits() == 16 && "Not a valid BFloat.");
     return encodeEltType("EltTyBFloat16");
+  }
+
+  if (T.isMFloat()) {
+    assert(T.getElementSizeInBits() == 8 && "Not a valid MFloat.");
+    return encodeEltType("EltTyMFloat8");
   }
 
   if (T.isPredicateVector() || T.isSvcount()) {
@@ -1310,6 +1331,9 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#include <arm_bf16.h>\n";
   OS << "#include <arm_vector_types.h>\n";
+
+  OS << "typedef __SVMfloat8_t svmfloat8_t;\n\n";
+  OS << "#include <arm_mfp8.h>\n";
 
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";

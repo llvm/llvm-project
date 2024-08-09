@@ -160,6 +160,7 @@ def EltTyBool16  : EltType<10>;
 def EltTyBool32  : EltType<11>;
 def EltTyBool64  : EltType<12>;
 def EltTyBFloat16 : EltType<13>;
+def EltTyMFloat8  : EltType<14>;
 
 class MemEltType<int val> {
   int Value = val;

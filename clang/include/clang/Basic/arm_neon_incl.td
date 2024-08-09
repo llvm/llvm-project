@@ -216,6 +216,7 @@ def OP_UNAVAILABLE : Operation {
 // h: half-float
 // d: double
 // b: bfloat16
+// m: mfloat8
 //
 // Typespec modifiers
 // ------------------
@@ -240,6 +241,7 @@ def OP_UNAVAILABLE : Operation {
 // B: change to BFloat16
 // P: change to polynomial category.
 // p: change polynomial to equivalent integer category. Otherwise nop.
+// M: change to MFloat8.
 //
 // >: double element width (vector size unchanged).
 // <: half element width (vector size unchanged).

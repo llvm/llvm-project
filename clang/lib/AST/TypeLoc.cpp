@@ -361,6 +361,7 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::Long:
   case BuiltinType::LongLong:
   case BuiltinType::Int128:
+  case BuiltinType::MFloat8:
   case BuiltinType::Half:
   case BuiltinType::Float:
   case BuiltinType::Double:

@@ -1139,6 +1139,7 @@ public:
   CanQualType SatShortFractTy, SatFractTy, SatLongFractTy;
   CanQualType SatUnsignedShortFractTy, SatUnsignedFractTy,
       SatUnsignedLongFractTy;
+  CanQualType MFloat8Ty;
   CanQualType HalfTy; // [OpenCL 6.1.1.1], ARM NEON
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3

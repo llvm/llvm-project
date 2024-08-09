@@ -475,7 +475,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                     Context.getFloatTypeSemantics(T),
                                     /* UseNativeHalf = */ false);
       break;
-
+    case BuiltinType::MFloat8:
+      ResultType = llvm::Type::getInt8Ty(getLLVMContext());
+      break;
     case BuiltinType::NullPtr:
       // Model std::nullptr_t as i8*
       ResultType = llvm::PointerType::getUnqual(getLLVMContext());
@@ -549,7 +551,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::SveBFloat16:
     case BuiltinType::SveBFloat16x2:
     case BuiltinType::SveBFloat16x3:
-    case BuiltinType::SveBFloat16x4: {
+    case BuiltinType::SveBFloat16x4:
+    case BuiltinType::SveMFloat8: {
       ASTContext::BuiltinVectorTypeInfo Info =
           Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
       return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),

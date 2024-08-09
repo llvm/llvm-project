@@ -3197,6 +3197,13 @@ void CastOperation::CheckCStyleCast() {
     }
   }
 
+  if ((DestType->isMFloat8Type() && !SrcType->isMFloat8Type()) ||
+      (!DestType->isMFloat8Type() && SrcType->isMFloat8Type())) {
+    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_bad_mfloat8_cast)
+        << SrcType << DestType << SrcExpr.get()->getSourceRange();
+    SrcExpr = ExprError();
+    return;
+  }
   // ARC imposes extra restrictions on casts.
   if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers()) {
     checkObjCConversion(CheckedConversionKind::CStyleCast);
