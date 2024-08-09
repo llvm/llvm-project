@@ -351,6 +351,8 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
+- Fixed a bug in ``SourceRange.__contains__`` that led to false positives
+  when the source range is only one line. 
 
 OpenMP Support
 --------------
