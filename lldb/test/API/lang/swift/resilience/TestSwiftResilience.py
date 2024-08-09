@@ -8,7 +8,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
-import unittest2
 
 import sys
 if sys.version_info.major == 2:

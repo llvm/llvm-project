@@ -3,7 +3,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
-import unittest2
 
 
 class TestSwiftOtherArchDylib(TestBase):
@@ -14,7 +13,7 @@ class TestSwiftOtherArchDylib(TestBase):
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @skipIf(archs=no_match(["arm64"]))
-    @expectedFailure("the swift.org toolchain cannot produce arm64e binaries")
+    @skipTestIfFn("the swift.org toolchain cannot produce arm64e binaries")
     def test(self):
         """Test module import from dylibs with an architecture
            that uses a different SDK"""

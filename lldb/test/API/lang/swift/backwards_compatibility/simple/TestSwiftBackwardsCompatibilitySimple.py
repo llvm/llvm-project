@@ -16,7 +16,6 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import swift
-import unittest2
 
 
 class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
