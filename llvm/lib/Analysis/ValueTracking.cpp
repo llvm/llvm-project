@@ -2486,7 +2486,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     if ((match(U, m_IDiv(m_Value(), m_Specific(V))) ||
          match(U, m_IRem(m_Value(), m_Specific(V)))) &&
-        isValidAssumeForContext(cast<Instruction>(U), CtxI, DT))
+        isValidAssumeForContext(cast<Instruction>(U), CtxI, DT, true))
       return true;
 
     // Consider only compare instructions uniquely controlling a branch
