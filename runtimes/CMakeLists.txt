@@ -116,28 +116,19 @@ filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} C
 # brittle. We should ideally move this to runtimes/CMakeLists.txt.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-  set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
-  # TODO: When we can require CMake 3.14, we should use
-  # CMAKE_REQUIRED_LINK_OPTIONS here. Until then, we need a workaround:
-  # When using CMAKE_REQUIRED_FLAGS, this option gets added both to
-  # compilation and linking commands. That causes warnings in the
-  # compilation commands during cmake tests. This is normally benign, but
-  # when testing whether -Werror works, that test fails (due to the
-  # preexisting warning).
-  #
-  # Therefore, before we can use CMAKE_REQUIRED_LINK_OPTIONS, check if we
-  # can use --start-no-unused-arguments to silence the warnings about
-  # --unwindlib=none during compilation.
-  #
-  # We must first add --unwindlib=none to CMAKE_REQUIRED_FLAGS above, to
-  # allow this subsequent test to succeed, then rewrite CMAKE_REQUIRED_FLAGS
-  # below.
-  check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
-  if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
-    set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
-  endif()
+  list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "--unwindlib=none")
 endif()
+
+# Disable linker for CMake flag compatibility checks
+#
+# Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+# disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+# for static targets; cache the target type here, and reset it after the various
+# checks have been performed.
+set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(CMAKE_REQUIRED_LINK_OPTIONS)
 
 # Disable use of the installed C++ standard library when building runtimes.
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
@@ -151,6 +142,10 @@ check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
 endif()
+
+# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)

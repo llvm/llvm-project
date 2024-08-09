@@ -29,11 +29,27 @@ endmacro()
 # Add each flag in the list to LIBCXX_COMPILE_FLAGS and LIBCXX_LINK_FLAGS
 # if that flag is supported by the current compiler.
 macro(add_flags_if_supported)
+
+  # Disable linker for CMake flag compatibility checks
+  #
+  # Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+  # disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+  # for static targets; cache the target type here, and reset it after the various
+  # checks have been performed.
+  set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+  set(CMAKE_REQUIRED_LINK_OPTIONS)
+
   foreach(flag ${ARGN})
       mangle_name("${flag}" flagname)
       check_cxx_compiler_flag("${flag}" "CXX_SUPPORTS_${flagname}_FLAG")
       add_flags_if(CXX_SUPPORTS_${flagname}_FLAG ${flag})
   endforeach()
+
+  # reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 endmacro()
 
 # Add a list of flags to 'LIBCXX_LINK_FLAGS'.

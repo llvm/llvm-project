@@ -6,6 +6,17 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
 
+# Disable linker for CMake flag compatibility checks
+#
+# Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+# disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+# for static targets; cache the target type here, and reset it after the various
+# checks have been performed.
+set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(CMAKE_REQUIRED_LINK_OPTIONS)
+
 # The compiler driver may be implicitly trying to link against libunwind.
 # This is normally ok (libcxx relies on an unwinder), but if libunwind is
 # built in the same cmake invocation as libcxx and we've got
@@ -100,6 +111,10 @@ int main(void) { return 0; }
 " C_SUPPORTS_COMMENT_LIB_PRAGMA)
   cmake_pop_check_state()
 endif()
+
+# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 
 check_symbol_exists(__PICOLIBC__ "string.h" PICOLIBC)
 

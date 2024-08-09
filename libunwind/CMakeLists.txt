@@ -176,6 +176,23 @@ if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
 endif()
 
+# Disable linker for running CMake checks
+#
+# This was originally added because when building libunwind for ARM Linux,
+# we need to pass the -funwind-tables flag in order for it to work properly
+# with ARM EHABI. However, this produces a false negative when performing CMake
+# checks, causing libunwind to not be built with this flag.
+#
+# A similar dynamic occurred with the advent of CMAKE_REQUIRED_LINK_OPTIONS
+# (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG), which causes flag checks for static
+# targets to fail due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454.
+# Thus, to avoid failures with static targets, we cache the target type here,
+# and reset it after the various flag support checks have been performed.
+set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(CMAKE_REQUIRED_LINK_OPTIONS)
+
 add_compile_flags_if_supported(-Werror=return-type)
 
 if (LIBUNWIND_ENABLE_CET)
@@ -215,23 +232,7 @@ endif()
 add_cxx_compile_flags_if_supported(-fstrict-aliasing)
 add_cxx_compile_flags_if_supported(-EHsc)
 
-# Don't run the linker in this CMake check.
-#
-# The reason why this was added is that when building libunwind for
-# ARM Linux, we need to pass the -funwind-tables flag in order for it to
-# work properly with ARM EHABI.
-#
-# However, when performing CMake checks, adding this flag causes the check
-# to produce a false negative, because the compiler generates calls
-# to __aeabi_unwind_cpp_pr0, which is defined in libunwind itself,
-# which isn't built yet, so the linker complains about undefined symbols.
-#
-# This leads to libunwind not being built with this flag, which makes
-# libunwind quite useless in this setup.
-set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 add_compile_flags_if_supported(-funwind-tables)
-set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
 
 if (LIBUNWIND_USES_ARM_EHABI AND NOT CXX_SUPPORTS_FUNWIND_TABLES_FLAG)
   message(SEND_ERROR "The -funwind-tables flag must be supported "
@@ -240,6 +241,10 @@ endif()
 
 add_cxx_compile_flags_if_supported(-fno-exceptions)
 add_cxx_compile_flags_if_supported(-fno-rtti)
+
+# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 
 # Ensure that we don't depend on C++ standard library.
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
