@@ -586,7 +586,7 @@ def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
     conveniently utilize `the dynamic_shared_memory_size` parameter of
     `gpu.launch` for this purpose.
 
-    Examples:
+    Example with memref:
     ```mlir
     %0 = gpu.dynamic.shared.memory : memref<?xi8, #gpu.address_space<workgroup>>
     %1 = memref.view %0[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>>
@@ -594,10 +594,15 @@ def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
     %2 = memref.view %0[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>>
                             to memref<32x64xf32, #gpu.address_space<workgroup>>
     ```
+
+    Example with llvm.ptr:
+    ```mlir
+    %0 = gpu.dynamic.shared.memory : !llvm.ptr<3>    
+    ```
   }];
   let arguments = (ins);
-  let results = (outs Arg<MemRefRankOf<[I8], [1]>>:$resultMemref);
-  let assemblyFormat = [{ attr-dict `:` type($resultMemref) }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{ attr-dict `:` type($result) }];
   let hasVerifier = 1;
 }
 
