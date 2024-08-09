@@ -198,6 +198,12 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Bug Fixes to C Support
+^^^^^^^^^^^^^^^^^^^^^^
+
+- No longer applying Named Return Value Optimization (NRVO) in C as it is a
+  non-conforming optimization in C. (#GH100902)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
