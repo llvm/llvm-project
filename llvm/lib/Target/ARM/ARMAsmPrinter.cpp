@@ -793,7 +793,7 @@ void ARMAsmPrinter::emitAttributes() {
 
     auto *BTIValue = mdconst::extract_or_null<ConstantInt>(
         SourceModule->getModuleFlag("branch-target-enforcement"));
-    if (BTIValue && BTIValue->isOne()) {
+    if (BTIValue && !BTIValue->isZero()) {
       // If "+pacbti" is used as an architecture extension,
       // Tag_BTI_extension is emitted in
       // ARMTargetStreamer::emitTargetAttributes().
