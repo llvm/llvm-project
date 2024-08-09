@@ -951,7 +951,8 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
       DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
       /*Innermost=*/std::nullopt,
       /*RelativeToPrimary=*/true,
-      /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
+      /*Pattern=*/nullptr,
+      !isa_and_present<ClassTemplateDecl>(DeclInfo.getDecl()),
       /*SkipForSpecialization*/ false);
 
   if (MLTAL.getNumSubstitutedLevels() == 0)
