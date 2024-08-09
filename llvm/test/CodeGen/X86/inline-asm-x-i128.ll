@@ -4,7 +4,7 @@
 ; RUN: not llc < %s -mtriple=i386-unknown-linux-gnu 2>&1 | FileCheck %s --check-prefix=ERROR
 
 ; For 32-bit we still error since __int128 isn't supported in the frontend.
-; ERROR: error: couldn't allocate output register for constraint 'x'
+; ERROR: error: couldn't allocate output register for constraint 'x': register is unavailable without SSE1
 
 define { i64, i64 } @foo(i64 %0, i64 %1) {
 ; CHECK-LABEL: foo:

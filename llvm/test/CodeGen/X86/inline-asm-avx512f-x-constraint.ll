@@ -18,7 +18,7 @@ entry:
 ; FP16: %[[REG1:.*]]:vr512_0_15 = COPY %1
 ; FP16: %[[REG2:.*]]:vr512_0_15 = COPY %2
 ; FP16: INLINEASM &"vaddph\09$3, $2, $0 {$1}", 0 /* attdialect */, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
-; CHECK-STDERR: couldn't allocate output register for constraint 'x'
+; CHECK-STDERR: couldn't allocate output register for constraint 'x': register is unavailable without AVX512FP16
 define <32 x half> @mask_Yk_f16(i8 signext %msk, <32 x half> %x, <32 x half> %y) {
 entry:
   %0 = tail call <32 x half> asm "vaddph\09$3, $2, $0 {$1}", "=x,^Yk,x,x,~{dirflag},~{fpsr},~{flags}"(i8 %msk, <32 x half> %x, <32 x half> %y)
@@ -29,7 +29,7 @@ entry:
 ; FP16: %[[REG1:.*]]:vr512_0_15 = COPY %1
 ; FP16: %[[REG2:.*]]:vr512_0_15 = COPY %2
 ; FP16: INLINEASM &"vaddph\09$3, $2, $0 {$1}", 0 /* attdialect */, {{.*}}, def %{{.*}}, {{.*}}, %{{.*}}, {{.*}}, %[[REG1]], {{.*}}, %[[REG2]], 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
-; CHECK-STDERR: couldn't allocate output register for constraint 'x'
+; CHECK-STDERR: couldn't allocate output register for constraint 'x': register is unavailable without AVX512BF16
 define <32 x bfloat> @mask_Yk_bf16(i8 signext %msk, <32 x bfloat> %x, <32 x bfloat> %y) {
 entry:
   %0 = tail call <32 x bfloat> asm "vaddph\09$3, $2, $0 {$1}", "=x,^Yk,x,x,~{dirflag},~{fpsr},~{flags}"(i8 %msk, <32 x bfloat> %x, <32 x bfloat> %y)

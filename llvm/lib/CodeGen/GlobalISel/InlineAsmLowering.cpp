@@ -93,8 +93,9 @@ static void getRegistersForValue(MachineFunction &MF,
   // register class, find it.
   Register AssignedReg;
   const TargetRegisterClass *RC;
+  std::string ErrMsg;
   std::tie(AssignedReg, RC) = TLI.getRegForInlineAsmConstraint(
-      &TRI, RefOpInfo.ConstraintCode, RefOpInfo.ConstraintVT);
+      &TRI, RefOpInfo.ConstraintCode, RefOpInfo.ConstraintVT, ErrMsg);
   // RC is unset only on failure. Return immediately.
   if (!RC)
     return;

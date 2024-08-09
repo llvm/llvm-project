@@ -160,7 +160,8 @@ public:
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
-                               StringRef Constraint, MVT VT) const override;
+                               StringRef Constraint, MVT VT,
+                               std::string &ErrMsg) const override;
 
   // Lower operand with C_Immediate and C_Other constraint type
   void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,

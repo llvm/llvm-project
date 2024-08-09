@@ -3,7 +3,7 @@ target triple = "x86_64--"
 
 @a = global i32 0, align 4
 
-; CHECK: error: couldn't allocate input reg for constraint 'x'
+; CHECK: error: couldn't allocate input reg for constraint 'x': couldn't allocate for type i1
 define i32 @main() {
 entry:
   %0 = load i32, ptr @a, align 4
