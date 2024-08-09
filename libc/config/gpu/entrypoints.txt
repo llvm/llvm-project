@@ -165,6 +165,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+    libc.src.stdlib.at_quick_exit
+    libc.src.stdlib.quick_exit
+    libc.src.stdlib.getenv
 
     # TODO: Implement these correctly
     libc.src.stdlib.aligned_alloc
@@ -333,6 +336,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rintf
     libc.src.math.round
     libc.src.math.roundf
+    libc.src.math.scalbln
+    libc.src.math.scalblnf
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.sin

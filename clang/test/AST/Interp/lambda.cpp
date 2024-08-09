@@ -46,8 +46,7 @@ constexpr int div(int a, int b) {
     return a / b; // both-note {{division by zero}}
   };
 
-  return f(); // expected-note {{in call to '&f->operator()()'}} \
-              // ref-note {{in call to 'f.operator()()'}}
+  return f(); // both-note {{in call to 'f.operator()()'}}
 }
 static_assert(div(8, 2) == 4);
 static_assert(div(8, 0) == 4); // both-error {{not an integral constant expression}} \

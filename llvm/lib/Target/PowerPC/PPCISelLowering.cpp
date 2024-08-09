@@ -9361,14 +9361,18 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue Op0 = Op->getOperand(0);
 
+  SDValue Lo = Op0.getOperand(0);
+  SDValue Hi = Op0.getOperand(1);
+
   if ((Op.getValueType() != MVT::f128) ||
-      (Op0.getOpcode() != ISD::BUILD_PAIR) ||
-      (Op0.getOperand(0).getValueType() != MVT::i64) ||
-      (Op0.getOperand(1).getValueType() != MVT::i64) || !Subtarget.isPPC64())
+      (Op0.getOpcode() != ISD::BUILD_PAIR) || (Lo.getValueType() != MVT::i64) ||
+      (Hi.getValueType() != MVT::i64) || !Subtarget.isPPC64())
     return SDValue();
 
-  return DAG.getNode(PPCISD::BUILD_FP128, dl, MVT::f128, Op0.getOperand(0),
-                     Op0.getOperand(1));
+  if (!Subtarget.isLittleEndian())
+    std::swap(Lo, Hi);
+
+  return DAG.getNode(PPCISD::BUILD_FP128, dl, MVT::f128, Lo, Hi);
 }
 
 static const SDValue *getNormalLoadInput(const SDValue &Op, bool &IsPermuted) {
@@ -14340,8 +14344,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
       continue;
     }
 
-    SmallVector<SDValue, 3> Ops(PromOp.getNode()->op_begin(),
-                                PromOp.getNode()->op_end());
+    SmallVector<SDValue, 3> Ops(PromOp.getNode()->ops());
 
     // If there are any constant inputs, make sure they're replaced now.
     for (unsigned i = 0; i < 2; ++i)

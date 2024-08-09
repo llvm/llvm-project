@@ -2296,9 +2296,9 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
 
 /// Compute the new DIExpression to use with a DBG_VALUE for a spill slot.
 /// This prepends DW_OP_deref when spilling an indirect DBG_VALUE.
-static const DIExpression *
-computeExprForSpill(const MachineInstr &MI,
-                    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
+static const DIExpression *computeExprForSpill(
+    const MachineInstr &MI,
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
   assert(MI.getDebugVariable()->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
          "Expected inlined-at fields to agree");
 
@@ -2353,7 +2353,7 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
 MachineInstr *llvm::buildDbgValueForSpill(
     MachineBasicBlock &BB, MachineBasicBlock::iterator I,
     const MachineInstr &Orig, int FrameIndex,
-    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
   const DIExpression *Expr = computeExprForSpill(Orig, SpilledOperands);
   MachineInstrBuilder NewMI =
       BuildMI(BB, I, Orig.getDebugLoc(), Orig.getDesc());

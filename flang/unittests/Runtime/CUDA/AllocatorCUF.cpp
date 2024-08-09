@@ -10,12 +10,14 @@
 #include "../../../runtime/terminator.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Runtime/CUDA/allocator.h"
+#include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/allocator-registry.h"
 
 #include "cuda.h"
 
 using namespace Fortran::runtime;
+using namespace Fortran::runtime::cuda;
 
 static OwningPtr<Descriptor> createAllocatable(
     Fortran::common::TypeCategory tc, int kind, int rank = 1) {
@@ -53,7 +55,7 @@ public:
 
 TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
   using Fortran::common::TypeCategory;
-  Fortran::runtime::cuf::CUFRegisterAllocator();
+  RTNAME(CUFRegisterAllocator)();
   ScopedContext ctx;
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
@@ -71,7 +73,7 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
 
 TEST(AllocatableCUFTest, SimplePinnedAllocate) {
   using Fortran::common::TypeCategory;
-  Fortran::runtime::cuf::CUFRegisterAllocator();
+  RTNAME(CUFRegisterAllocator)();
   ScopedContext ctx;
   // INTEGER(4), PINNED, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Integer, 4)};
@@ -86,4 +88,16 @@ TEST(AllocatableCUFTest, SimplePinnedAllocate) {
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
   EXPECT_FALSE(a->IsAllocated());
+}
+
+TEST(AllocatableCUFTest, DescriptorAllocationTest) {
+  using Fortran::common::TypeCategory;
+  RTNAME(CUFRegisterAllocator)();
+  ScopedContext ctx;
+  // REAL(4), DEVICE, ALLOCATABLE :: a(:)
+  auto a{createAllocatable(TypeCategory::Real, 4)};
+  Descriptor *desc = nullptr;
+  desc = RTNAME(CUFAllocDesciptor)(a->SizeInBytes());
+  EXPECT_TRUE(desc != nullptr);
+  RTNAME(CUFFreeDesciptor)(desc);
 }
