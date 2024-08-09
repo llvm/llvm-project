@@ -107,7 +107,7 @@
 "`P2770R0 <https://wg21.link/P2770R0>`__","Stashing stashing ``iterators`` for proper flattening","February 2023","|Partial| [#note-P2770R0]_","","|ranges|"
 "`P2164R9 <https://wg21.link/P2164R9>`__","``views::enumerate``","February 2023","","","|ranges|"
 "`P2711R1 <https://wg21.link/P2711R1>`__","Making multi-param constructors of ``views`` ``explicit``","February 2023","|In Progress| [#note-P2711R1]_","","|ranges|"
-"`P2609R3 <https://wg21.link/P2609R3>`__","Relaxing Ranges Just A Smidge","February 2023","","","|ranges|"
+"`P2609R3 <https://wg21.link/P2609R3>`__","Relaxing Ranges Just A Smidge","February 2023","|Complete| [#note-P2609R3]_","20.0","|ranges|"
 "`P2713R1 <https://wg21.link/P2713R1>`__","Escaping improvements in ``std::format``","February 2023","|Complete|","19.0","|format|"
 "`P2675R1 <https://wg21.link/P2675R1>`__","``format``'s width estimation is too approximate and not forward compatible","February 2023","|Complete|","17.0","|format|"
 "`P2572R1 <https://wg21.link/P2572R1>`__","``std::format`` fill character allowances","February 2023","|Complete|","17.0","|format|"

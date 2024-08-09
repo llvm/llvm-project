@@ -38,6 +38,8 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
+- P2609R3 - Relaxing Ranges Just A Smidge
+
 - TODO
 
 
