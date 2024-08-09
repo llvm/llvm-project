@@ -218,17 +218,19 @@ static std::string computeBaseSysRoot(const Driver &D,
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args) {
   DetectedMultilibs Result;
-  if (isRISCVBareMetal(Triple)) {
+  // Look for a multilib.yaml before trying target-specific hardwired logic.
+  // If it exists, always do what it specifies.
+  llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
+  llvm::sys::path::append(MultilibPath, MultilibFilename);
+  if (D.getVFS().exists(MultilibPath)) {
+    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
+    SelectedMultilibs = Result.SelectedMultilibs;
+    Multilibs = Result.Multilibs;
+  } else if (isRISCVBareMetal(Triple)) {
     if (findRISCVMultilibs(D, Triple, Args, Result)) {
       SelectedMultilibs = Result.SelectedMultilibs;
       Multilibs = Result.Multilibs;
     }
-  } else {
-    llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
-    llvm::sys::path::append(MultilibPath, MultilibFilename);
-    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
-    SelectedMultilibs = Result.SelectedMultilibs;
-    Multilibs = Result.Multilibs;
   }
 }
 
