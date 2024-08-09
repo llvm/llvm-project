@@ -65,11 +65,12 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/InitializePasses.h"
@@ -1330,6 +1331,20 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
           }
       }
     return true;
+  } else if (auto *PTII = dyn_cast<PtrToIntInst>(&I)) {
+    const DataLayout &DL = I.getModule()->getDataLayout();
+    // Non-integral pointers may not have a stable bit representation, therefore
+    // casting them to an integer is not loop invariant.
+    if (DL.isNonIntegralPointerType(PTII->getPointerOperand()->getType())) {
+      return false;
+    }
+  } else if (auto *ITPI = dyn_cast<IntToPtrInst>(&I)) {
+    const DataLayout &DL = I.getModule()->getDataLayout();
+    // Non-integral pointers may not have a stable bit representation, therefore
+    // casting an integer to a non-integral pointer type is not loop invariant.
+    if (DL.isNonIntegralPointerType(ITPI->getType())) {
+      return false;
+    }
   }
 
   assert(!I.mayReadOrWriteMemory() && "unhandled aliasing");
