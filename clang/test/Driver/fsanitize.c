@@ -1040,3 +1040,10 @@
 // RUN: not %clang --target=aarch64-none-elf -fsanitize=dataflow %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
 // RUN: not %clang --target=arm-arm-none-eabi -fsanitize=shadow-call-stack %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
 // UNSUPPORTED-BAREMETAL: unsupported option '-fsanitize={{.*}}' for target
+
+// RUN: %clang -O0 -O1 -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SAN-OPT-WARN
+// RUN: %clang -Ofast -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SAN-OPT-WARN
+// RUN: %clang -O3 -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SAN-OPT-WARN
+// RUN: %clang -O2 -fsanitize=thread %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SAN-OPT-WARN
+// RUN: %clang -O1 -fsanitize=thread %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SAN-OPT-WARN
+// CHECK-SAN-OPT-WARN: warning: enabling optimizations with sanitizers may potentially reduce effectiveness

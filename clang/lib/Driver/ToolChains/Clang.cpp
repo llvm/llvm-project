@@ -6273,6 +6273,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     PScpu::addProfileRTArgs(TC, Args, CmdArgs);
     PScpu::addSanitizerArgs(TC, Args, CmdArgs);
   }
+  
+  // Emit a warning if optimizations are enabled with sanitizers
+  if (Args.hasArg(options::OPT_fsanitize_EQ) &&
+      (Args.hasArg(options::OPT_Ofast) || Args.hasArg(options::OPT_O))) {
+    D.Diag(diag::warn_sanitizer_with_optimization);
+  }
 
   // Pass options for controlling the default header search paths.
   if (Args.hasArg(options::OPT_nostdinc)) {
