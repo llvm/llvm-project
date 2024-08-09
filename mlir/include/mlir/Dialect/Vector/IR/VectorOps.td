@@ -2683,13 +2683,13 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
                     TCresVTEtIsSameAsOpBase<0, 1>>]>,
       Arguments<(
         // TODO: tighten vector element types that make sense.
-        ins VectorOfRankAndType<[1],
+        ins FixedVectorOfRankAndType<[1],
               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$lhs,
-            VectorOfRankAndType<[1],
+            FixedVectorOfRankAndType<[1],
               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$rhs,
             I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_columns)>,
       Results<(
-        outs VectorOfRankAndType<[1],
+        outs FixedVectorOfRankAndType<[1],
                [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)>
 {
   let summary = "Vector matrix multiplication op that operates on flattened 1-D"
@@ -2707,7 +2707,10 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
     <rhs_columns> and multiplies them. The result matrix is returned embedded in
     the result vector.
 
-    Also see:
+    Note, the semantics of the corresponding LLVM intrinsic,
+    `@llvm.matrix.multiply.*`, are not clear in the context of scalable
+    vectors. Hence, this Op is only available for fixed-width vectors. Also
+    see:
 
     http://llvm.org/docs/LangRef.html#llvm-matrix-multiply-intrinsic
 
