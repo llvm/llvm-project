@@ -222,8 +222,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV32-LABEL: test_srem_pow2_setne:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a1, a0, 26
-; RV32-NEXT:    srai a1, a1, 26
-; RV32-NEXT:    slli a1, a1, 21
+; RV32-NEXT:    srai a1, a1, 1
 ; RV32-NEXT:    srli a1, a1, 30
 ; RV32-NEXT:    add a1, a0, a1
 ; RV32-NEXT:    andi a1, a1, 60
@@ -235,8 +234,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV64-LABEL: test_srem_pow2_setne:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a1, a0, 58
-; RV64-NEXT:    srai a1, a1, 58
-; RV64-NEXT:    slli a1, a1, 53
+; RV64-NEXT:    srai a1, a1, 1
 ; RV64-NEXT:    srli a1, a1, 62
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    andi a1, a1, 60
@@ -248,8 +246,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV32M-LABEL: test_srem_pow2_setne:
 ; RV32M:       # %bb.0:
 ; RV32M-NEXT:    slli a1, a0, 26
-; RV32M-NEXT:    srai a1, a1, 26
-; RV32M-NEXT:    slli a1, a1, 21
+; RV32M-NEXT:    srai a1, a1, 1
 ; RV32M-NEXT:    srli a1, a1, 30
 ; RV32M-NEXT:    add a1, a0, a1
 ; RV32M-NEXT:    andi a1, a1, 60
@@ -261,8 +258,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV64M-LABEL: test_srem_pow2_setne:
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    slli a1, a0, 58
-; RV64M-NEXT:    srai a1, a1, 58
-; RV64M-NEXT:    slli a1, a1, 53
+; RV64M-NEXT:    srai a1, a1, 1
 ; RV64M-NEXT:    srli a1, a1, 62
 ; RV64M-NEXT:    add a1, a0, a1
 ; RV64M-NEXT:    andi a1, a1, 60
@@ -274,8 +270,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV32MV-LABEL: test_srem_pow2_setne:
 ; RV32MV:       # %bb.0:
 ; RV32MV-NEXT:    slli a1, a0, 26
-; RV32MV-NEXT:    srai a1, a1, 26
-; RV32MV-NEXT:    slli a1, a1, 21
+; RV32MV-NEXT:    srai a1, a1, 1
 ; RV32MV-NEXT:    srli a1, a1, 30
 ; RV32MV-NEXT:    add a1, a0, a1
 ; RV32MV-NEXT:    andi a1, a1, 60
@@ -287,8 +282,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV64MV-LABEL: test_srem_pow2_setne:
 ; RV64MV:       # %bb.0:
 ; RV64MV-NEXT:    slli a1, a0, 58
-; RV64MV-NEXT:    srai a1, a1, 58
-; RV64MV-NEXT:    slli a1, a1, 53
+; RV64MV-NEXT:    srai a1, a1, 1
 ; RV64MV-NEXT:    srli a1, a1, 62
 ; RV64MV-NEXT:    add a1, a0, a1
 ; RV64MV-NEXT:    andi a1, a1, 60
