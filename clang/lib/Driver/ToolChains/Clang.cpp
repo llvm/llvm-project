@@ -6971,8 +6971,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-nogpulib");
 
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
+    // Do not pass this argument to the offloading device if the target does not
+    // support it.
+    // TODO: We need a better way to detect incompatible options for offloading.
+    if (JA.getOffloadingDeviceKind() == Action::OFK_None ||
+        (!TC.getTriple().isAMDGPU() && !TC.getTriple().isNVPTX() &&
+         !TC.getTriple().isSPIRV()))
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
