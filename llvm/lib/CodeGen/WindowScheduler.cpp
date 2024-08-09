@@ -318,7 +318,7 @@ void WindowScheduler::generateTripleMBB() {
       auto *NewMI = MF->CloneMachineInstr(MI);
       DenseMap<Register, Register> NewDefs;
       // New defines are updated.
-      for (const auto &MO : NewMI->all_defs())
+      for (const auto MO : NewMI->all_defs())
         if (MO.isReg() && MO.getReg().isVirtual()) {
           Register NewDef =
               MRI->createVirtualRegister(MRI->getRegClass(MO.getReg()));
