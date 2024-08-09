@@ -54,6 +54,8 @@ function(create_object_library fq_target_name)
   _get_common_compile_options(compile_options "${ADD_OBJECT_FLAGS}")
   list(APPEND compile_options ${ADD_OBJECT_COMPILE_OPTIONS})
 
+  list(APPEND compile_options -Wunused)
+
   add_library(
     ${fq_target_name}
     EXCLUDE_FROM_ALL
@@ -236,6 +238,9 @@ function(create_entrypoint_object fq_target_name)
   endif()
 
   _get_common_compile_options(common_compile_options "${ADD_ENTRYPOINT_OBJ_FLAGS}")
+
+  list(APPEND common_compile_options -Wunused)
+
   list(APPEND common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
