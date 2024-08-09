@@ -180,4 +180,71 @@ entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -2147483649)
 }
 
+define internal void @bar() #0 {
+; STATIC-LABEL: bar:
+; STATIC:       # %bb.0:
+; STATIC-NEXT:    retq
+;
+; PIC-LABEL: bar:
+; PIC:       # %bb.0:
+; PIC-NEXT:    retq
+;
+; MSTATIC-LABEL: bar:
+; MSTATIC:       # %bb.0:
+; MSTATIC-NEXT:    retq
+;
+; MPIC-LABEL: bar:
+; MPIC:       # %bb.0:
+; MPIC-NEXT:    retq
+  ret void
+}
+
+define dso_local i64 @fun_neg_0x6fffffff() #0 {
+; STATIC-LABEL: fun_neg_0x6fffffff:
+; STATIC:       # %bb.0:
+; STATIC-NEXT:    movl $bar, %eax
+; STATIC-NEXT:    addq $-1879048193, %rax # imm = 0x8FFFFFFF
+; STATIC-NEXT:    retq
+;
+; PIC-LABEL: fun_neg_0x6fffffff:
+; PIC:       # %bb.0:
+; PIC-NEXT:    leaq bar-1879048193(%rip), %rax
+; PIC-NEXT:    retq
+;
+; MSTATIC-LABEL: fun_neg_0x6fffffff:
+; MSTATIC:       # %bb.0:
+; MSTATIC-NEXT:    movl $bar, %eax
+; MSTATIC-NEXT:    addq $-1879048193, %rax # imm = 0x8FFFFFFF
+; MSTATIC-NEXT:    retq
+;
+; MPIC-LABEL: fun_neg_0x6fffffff:
+; MPIC:       # %bb.0:
+; MPIC-NEXT:    leaq bar-1879048193(%rip), %rax
+; MPIC-NEXT:    retq
+  ret i64 add (i64 ptrtoint (ptr @bar to i64), i64 -1879048193)
+}
+
+define dso_local i64 @fun_neg_0x70000000() #0 {
+; STATIC-LABEL: fun_neg_0x70000000:
+; STATIC:       # %bb.0:
+; STATIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; STATIC-NEXT:    retq
+;
+; PIC-LABEL: fun_neg_0x70000000:
+; PIC:       # %bb.0:
+; PIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; PIC-NEXT:    retq
+;
+; MSTATIC-LABEL: fun_neg_0x70000000:
+; MSTATIC:       # %bb.0:
+; MSTATIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; MSTATIC-NEXT:    retq
+;
+; MPIC-LABEL: fun_neg_0x70000000:
+; MPIC:       # %bb.0:
+; MPIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; MPIC-NEXT:    retq
+  ret i64 add (i64 ptrtoint (ptr @bar to i64), i64 -1879048192)
+}
+
 attributes #0 = { nounwind }
