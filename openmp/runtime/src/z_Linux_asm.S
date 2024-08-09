@@ -209,11 +209,18 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif
 
 # if (BTI_FLAG | PAC_FLAG) != 0
-#  define BTI_C hint #34
+#  if PAC_FLAG != 0
+#   define PACBTI_C hint #25
+#   define PACBTI_RET hint #29
+#  else
+#   define PACBTI_C hint #34
+#   define PACBTI_RET
+#  endif
 #  define GNU_PROPERTY_BTI_PAC \
     GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND, BTI_FLAG | PAC_FLAG)
 # else
-#  define BTI_C
+#  define PACBTI_C
+#  define PACBTI_RET
 #  define GNU_PROPERTY_BTI_PAC
 # endif
 #endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
@@ -1336,7 +1343,7 @@ __tid = 8
 // mark_begin;
 	.text
 	PROC __kmp_invoke_microtask
-	BTI_C
+	PACBTI_C
 
 	stp	x29, x30, [sp, #-16]!
 # if OMPT_SUPPORT
@@ -1400,6 +1407,7 @@ KMP_LABEL(kmp_1):
 	ldp	x19, x20, [sp], #16
 # endif
 	ldp	x29, x30, [sp], #16
+	PACBTI_RET
 	ret
 
 	DEBUG_INFO __kmp_invoke_microtask
