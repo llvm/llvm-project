@@ -164,7 +164,7 @@ private:
       writeHTML();
 
     llvm::StringRef Path =
-        SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
+        SM.getFileEntryRefForID(SM.getMainFileID())->getName();
     assert(!Path.empty() && "Main file path not known?");
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
