@@ -592,15 +592,17 @@ test suite, but there are two things to have in mind:
    multiple connections. For more information on how to setup remote debugging
    see the Remote debugging page.
 2. You must tell the test-suite how to connect to the remote system. This is
-   achieved using the ``--platform-name``, ``--platform-url`` and
-   ``--platform-working-dir`` parameters to ``dotest.py``. These parameters
-   correspond to the platform select and platform connect LLDB commands. You
-   will usually also need to specify the compiler and architecture for the
-   remote system.
+   achieved using the ``LLDB_TEST_PLATFORM_URL``, ``LLDB_TEST_PLATFORM_WORKING_DIR``
+   flags to cmake, and ``--platform-name`` parameter to ``dotest.py``.
+   These parameters correspond to the platform select and platform connect
+   LLDB commands. You will usually also need to specify the compiler and
+   architecture for the remote system.
+3. Remote Shell tests execution is currently supported only for Linux target
+   platform. It's triggered when ``LLDB_TEST_SYSROOT`` is provided for building
+   test sources. It can be disabled by setting ``LLDB_SHELL_TESTS_DISABLE_REMOTE=On``.
+   Shell tests are not guaranteed to pass against remote target if the compiler
+   being used is other than Clang.
 
-Currently, running the remote test suite is supported only with ``dotest.py`` (or
-dosep.py with a single thread), but we expect this issue to be addressed in the
-near future.
 
 Running tests in QEMU System Emulation Environment
 ``````````````````````````````````````````````````
