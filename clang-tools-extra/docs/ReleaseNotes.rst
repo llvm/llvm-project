@@ -98,6 +98,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`modernize-use-uniform-initializer
+  <clang-tidy/checks/modernize/use-uniform-initializer>` check.
+
+  Finds usage of C-Style initialization that can be rewritten with
+  C++-11 uniform initializers.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
