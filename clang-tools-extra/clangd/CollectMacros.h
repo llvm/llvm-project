@@ -24,6 +24,7 @@ namespace clangd {
 
 struct MacroOccurrence {
   // Half-open range (end offset is exclusive) inside the main file.
+  FileID FID;
   size_t StartOffset;
   size_t EndOffset;
 
