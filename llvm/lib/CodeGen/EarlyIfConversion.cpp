@@ -889,7 +889,8 @@ bool EarlyIfConverter::shouldConvertIf() {
           return false;
 
         MachineInstr *Def = MRI->getVRegDef(Reg);
-        return CurrentLoop->isLoopInvariant(*Def) ||
+        return CurrentLoop->isLoopInvariant(*Def, /*ExcludeReg = */ 0,
+                                            /*IgnoreAliasing = */ true) ||
                all_of(Def->operands(), [&](MachineOperand &Op) {
                  if (Op.isImm())
                    return true;
@@ -900,7 +901,8 @@ bool EarlyIfConverter::shouldConvertIf() {
                    return false;
 
                  MachineInstr *Def = MRI->getVRegDef(Reg);
-                 return CurrentLoop->isLoopInvariant(*Def);
+                 return CurrentLoop->isLoopInvariant(
+                     *Def, /*ExcludeReg = */ 0, /*IgnoreAliasing = */ true);
                });
       }))
     return false;

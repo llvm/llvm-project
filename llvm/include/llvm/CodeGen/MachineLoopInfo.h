@@ -83,7 +83,8 @@ public:
   /// ExcludeReg can be used to exclude the given register from the check
   /// i.e. when we're considering hoisting it's definition but not hoisted it
   /// yet
-  bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
+  bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0,
+                       bool IgnoreAliasing = false) const;
 
   void dump() const;
 
