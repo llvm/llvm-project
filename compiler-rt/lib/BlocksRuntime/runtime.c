@@ -1,172 +1,152 @@
-/*
- * runtime.c
- *
- * Copyright 2008-2010 Apple, Inc. Permission is hereby granted, free of charge,
- * to any person obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to permit
- * persons to whom the Software is furnished to do so, subject to the following
- * conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- */
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
 
 #include "Block_private.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-
-#include "config.h"
-
-#ifdef HAVE_AVAILABILITY_MACROS_H
-#include <AvailabilityMacros.h>
-#endif /* HAVE_AVAILABILITY_MACROS_H */
-
-#ifdef HAVE_TARGET_CONDITIONALS_H
-#include <TargetConditionals.h>
-#endif /* HAVE_TARGET_CONDITIONALS_H */
-
-#if defined(HAVE_OSATOMIC_COMPARE_AND_SWAP_INT) && defined(HAVE_OSATOMIC_COMPARE_AND_SWAP_LONG)
-
-#ifdef HAVE_LIBKERN_OSATOMIC_H
-#include <libkern/OSAtomic.h>
-#endif /* HAVE_LIBKERN_OSATOMIC_H */
-
-#elif defined(__WIN32__) || defined(_WIN32)
-#define _CRT_SECURE_NO_WARNINGS 1
-#include <windows.h>
-
-static __inline bool OSAtomicCompareAndSwapLong(long oldl, long newl, long volatile *dst) {
-    /* fixme barrier is overkill -- see objc-os.h */
-    long original = InterlockedCompareExchange(dst, newl, oldl);
-    return (original == oldl);
-}
-
-static __inline bool OSAtomicCompareAndSwapInt(int oldi, int newi, int volatile *dst) {
-    /* fixme barrier is overkill -- see objc-os.h */
-    int original = InterlockedCompareExchange(dst, newi, oldi);
-    return (original == oldi);
-}
-
-/*
- * Check to see if the GCC atomic built-ins are available.  If we're on
- * a 64-bit system, make sure we have an 8-byte atomic function
- * available.
- *
- */
-
-#elif defined(HAVE_SYNC_BOOL_COMPARE_AND_SWAP_INT) && defined(HAVE_SYNC_BOOL_COMPARE_AND_SWAP_LONG)
-
-static __inline bool OSAtomicCompareAndSwapLong(long oldl, long newl, long volatile *dst) {
-  return __sync_bool_compare_and_swap(dst, oldl, newl);
-}
-
-static __inline bool OSAtomicCompareAndSwapInt(int oldi, int newi, int volatile *dst) {
-  return __sync_bool_compare_and_swap(dst, oldi, newi);
-}
-
+#if HAVE_OBJC
+#define __USE_GNU
+#include <dlfcn.h>
+#endif
+#if __has_include(<os/assumes.h>)
+#include <os/assumes.h>
 #else
-#error unknown atomic compare-and-swap primitive
-#endif /* HAVE_OSATOMIC_COMPARE_AND_SWAP_INT && HAVE_OSATOMIC_COMPARE_AND_SWAP_LONG */
+#include <assert.h> 
+#endif
+#ifndef os_assumes
+#define os_assumes(_x) _x
+#endif
+#ifndef os_assert
+#define os_assert(_x) assert(_x)
+#endif
 
+#if !defined(__has_builtin)
+#define __has_builtin(builtin) 0
+#endif
 
-/*
- * Globals:
- */
+#if __has_builtin(__sync_bool_compare_and_swap)
+#define OSAtomicCompareAndSwapInt(_Old, _New, _Ptr)                            \
+  __sync_bool_compare_and_swap(_Ptr, _Old, _New)
+#else
+#define _CRT_SECURE_NO_WARNINGS 1
+#include <Windows.h>
+static __inline bool OSAtomicCompareAndSwapInt(int oldi, int newi,
+                                               int volatile *dst) {
+  // fixme barrier is overkill -- see objc-os.h
+  int original = InterlockedCompareExchange((LONG volatile *)dst, newi, oldi);
+  return (original == oldi);
+}
+#endif
 
+/***********************
+Globals
+************************/
+
+#if HAVE_OBJC
 static void *_Block_copy_class = _NSConcreteMallocBlock;
 static void *_Block_copy_finalizing_class = _NSConcreteMallocBlock;
 static int _Block_copy_flag = BLOCK_NEEDS_FREE;
-static int _Byref_flag_initial_value = BLOCK_NEEDS_FREE | 2;
-
-static const int WANTS_ONE = (1 << 16);
+#endif
+static int _Byref_flag_initial_value = BLOCK_BYREF_NEEDS_FREE | 4;  // logical 2
 
 static bool isGC = false;
 
-/*
- * Internal Utilities:
- */
+/*******************************************************************************
+Internal Utilities
+********************************************************************************/
 
-#if 0
-static unsigned long int latching_incr_long(unsigned long int *where) {
+
+static int32_t latching_incr_int(volatile int32_t *where) {
     while (1) {
-        unsigned long int old_value = *(volatile unsigned long int *)where;
+        int32_t old_value = *where;
         if ((old_value & BLOCK_REFCOUNT_MASK) == BLOCK_REFCOUNT_MASK) {
             return BLOCK_REFCOUNT_MASK;
         }
-        if (OSAtomicCompareAndSwapLong(old_value, old_value+1, (volatile long int *)where)) {
-            return old_value+1;
-        }
-    }
-}
-#endif /* if 0 */
-
-static int latching_incr_int(int *where) {
-    while (1) {
-        int old_value = *(volatile int *)where;
-        if ((old_value & BLOCK_REFCOUNT_MASK) == BLOCK_REFCOUNT_MASK) {
-            return BLOCK_REFCOUNT_MASK;
-        }
-        if (OSAtomicCompareAndSwapInt(old_value, old_value+1, (volatile int *)where)) {
-            return old_value+1;
+        if (OSAtomicCompareAndSwapInt(old_value, old_value+2, where)) {
+            return old_value+2;
         }
     }
 }
 
-#if 0
-static int latching_decr_long(unsigned long int *where) {
+static bool latching_incr_int_not_deallocating(volatile int32_t *where) {
     while (1) {
-        unsigned long int old_value = *(volatile int *)where;
+        int32_t old_value = *where;
+        if (old_value & BLOCK_DEALLOCATING) {
+            // if deallocating we can't do this
+            return false;
+        }
         if ((old_value & BLOCK_REFCOUNT_MASK) == BLOCK_REFCOUNT_MASK) {
-            return BLOCK_REFCOUNT_MASK;
+            // if latched, we're leaking this block, and we succeed
+            return true;
+        }
+        if (OSAtomicCompareAndSwapInt(old_value, old_value+2, where)) {
+            // otherwise, we must store a new retained value without the deallocating bit set
+            return true;
+        }
+    }
+}
+
+
+// return should_deallocate?
+static bool latching_decr_int_should_deallocate(volatile int32_t *where) {
+    while (1) {
+        int32_t old_value = *where;
+        if ((old_value & BLOCK_REFCOUNT_MASK) == BLOCK_REFCOUNT_MASK) {
+            return false; // latched high
         }
         if ((old_value & BLOCK_REFCOUNT_MASK) == 0) {
-            return 0;
+            return false;   // underflow, latch low
         }
-        if (OSAtomicCompareAndSwapLong(old_value, old_value-1, (volatile long int *)where)) {
-            return old_value-1;
+        int32_t new_value = old_value - 2;
+        bool result = false;
+        if ((old_value & (BLOCK_REFCOUNT_MASK|BLOCK_DEALLOCATING)) == 2) {
+            new_value = old_value - 1;
+            result = true;
+        }
+        if (OSAtomicCompareAndSwapInt(old_value, new_value, where)) {
+            return result;
         }
     }
 }
-#endif /* if 0 */
 
-static int latching_decr_int(int *where) {
+// hit zero?
+static bool latching_decr_int_now_zero(volatile int32_t *where) {
     while (1) {
-        int old_value = *(volatile int *)where;
+        int32_t old_value = *where;
         if ((old_value & BLOCK_REFCOUNT_MASK) == BLOCK_REFCOUNT_MASK) {
-            return BLOCK_REFCOUNT_MASK;
+            return false; // latched high
         }
         if ((old_value & BLOCK_REFCOUNT_MASK) == 0) {
-            return 0;
+            return false;   // underflow, latch low
         }
-        if (OSAtomicCompareAndSwapInt(old_value, old_value-1, (volatile int *)where)) {
-            return old_value-1;
+        int32_t new_value = old_value - 2;
+        if (OSAtomicCompareAndSwapInt(old_value, new_value, where)) {
+            return (new_value & BLOCK_REFCOUNT_MASK) == 0;
         }
     }
 }
 
 
-/*
- * GC support stub routines:
- */
-#if 0
+/***********************
+GC support stub routines
+************************/
+#if !defined(_MSC_VER) || defined(__clang__)
 #pragma mark GC Support Routines
-#endif /* if 0 */
+#endif
 
 
-static void *_Block_alloc_default(const unsigned long size, const bool initialCountIsOne, const bool isObject) {
+
+static void *_Block_alloc_default(size_t size, const bool initialCountIsOne, const bool isObject) {
+	(void)initialCountIsOne;
+	(void)isObject;
     return malloc(size);
 }
 
@@ -175,26 +155,35 @@ static void _Block_assign_default(void *value, void **destptr) {
 }
 
 static void _Block_setHasRefcount_default(const void *ptr, const bool hasRefcount) {
+	(void)ptr;
+	(void)hasRefcount;
 }
 
+#if HAVE_OBJC
 static void _Block_do_nothing(const void *aBlock) { }
+#endif
 
 static void _Block_retain_object_default(const void *ptr) {
-    if (!ptr) return;
+	(void)ptr;
 }
 
 static void _Block_release_object_default(const void *ptr) {
-    if (!ptr) return;
+	(void)ptr;
 }
 
 static void _Block_assign_weak_default(const void *ptr, void *dest) {
+#if !defined(_WIN32)
+    *(long *)dest = (long)ptr;
+#else
     *(void **)dest = (void *)ptr;
+#endif
 }
 
 static void _Block_memmove_default(void *dst, void *src, unsigned long size) {
     memmove(dst, src, (size_t)size);
 }
 
+#if HAVE_OBJC
 static void _Block_memmove_gc_broken(void *dest, void *src, unsigned long size) {
     void **destp = (void **)dest;
     void **srcp = (void **)src;
@@ -205,12 +194,17 @@ static void _Block_memmove_gc_broken(void *dest, void *src, unsigned long size) 
         size -= sizeof(void *);
     }
 }
+#endif
 
-/*
- * GC support callout functions - initially set to stub routines:
- */
+static void _Block_destructInstance_default(const void *aBlock) {
+	(void)aBlock;
+}
 
-static void *(*_Block_allocator)(const unsigned long, const bool isOne, const bool isObject) = _Block_alloc_default;
+/**************************************************************************
+GC support callout functions - initially set to stub routines
+***************************************************************************/
+
+static void *(*_Block_allocator)(size_t, const bool isOne, const bool isObject) = _Block_alloc_default;
 static void (*_Block_deallocator)(const void *) = (void (*)(const void *))free;
 static void (*_Block_assign)(void *value, void **destptr) = _Block_assign_default;
 static void (*_Block_setHasRefcount)(const void *ptr, const bool hasRefcount) = _Block_setHasRefcount_default;
@@ -218,17 +212,18 @@ static void (*_Block_retain_object)(const void *ptr) = _Block_retain_object_defa
 static void (*_Block_release_object)(const void *ptr) = _Block_release_object_default;
 static void (*_Block_assign_weak)(const void *dest, void *ptr) = _Block_assign_weak_default;
 static void (*_Block_memmove)(void *dest, void *src, unsigned long size) = _Block_memmove_default;
+static void (*_Block_destructInstance) (const void *aBlock) = _Block_destructInstance_default;
 
 
-/*
- * GC support SPI functions - called from ObjC runtime and CoreFoundation:
- */
+#if HAVE_OBJC
+/**************************************************************************
+GC support SPI functions - called from ObjC runtime and CoreFoundation
+***************************************************************************/
 
-/* Public SPI
- * Called from objc-auto to turn on GC.
- * version 3, 4 arg, but changed 1st arg
- */
-void _Block_use_GC( void *(*alloc)(const unsigned long, const bool isOne, const bool isObject),
+// Public SPI
+// Called from objc-auto to turn on GC.
+// version 3, 4 arg, but changed 1st arg
+void _Block_use_GC( void *(*alloc)(size_t, const bool isOne, const bool isObject),
                     void (*setHasRefcount)(const void *, const bool),
                     void (*gc_assign)(void *, void **),
                     void (*gc_assign_weak)(const void *, void *),
@@ -240,53 +235,115 @@ void _Block_use_GC( void *(*alloc)(const unsigned long, const bool isOne, const 
     _Block_assign = gc_assign;
     _Block_copy_flag = BLOCK_IS_GC;
     _Block_copy_class = _NSConcreteAutoBlock;
-    /* blocks with ctors & dtors need to have the dtor run from a class with a finalizer */
+    // blocks with ctors & dtors need to have the dtor run from a class with a finalizer
     _Block_copy_finalizing_class = _NSConcreteFinalizingBlock;
     _Block_setHasRefcount = setHasRefcount;
-    _Byref_flag_initial_value = BLOCK_IS_GC;   // no refcount
+    _Byref_flag_initial_value = BLOCK_BYREF_IS_GC;   // no refcount
     _Block_retain_object = _Block_do_nothing;
     _Block_release_object = _Block_do_nothing;
     _Block_assign_weak = gc_assign_weak;
     _Block_memmove = gc_memmove;
 }
 
-/* transitional */
-void _Block_use_GC5( void *(*alloc)(const unsigned long, const bool isOne, const bool isObject),
+// transitional
+void _Block_use_GC5( void *(*alloc)(size_t, const bool isOne, const bool isObject),
                     void (*setHasRefcount)(const void *, const bool),
                     void (*gc_assign)(void *, void **),
                     void (*gc_assign_weak)(const void *, void *)) {
-    /* until objc calls _Block_use_GC it will call us; supply a broken internal memmove implementation until then */
+    // until objc calls _Block_use_GC it will call us; supply a broken internal memmove implementation until then
     _Block_use_GC(alloc, setHasRefcount, gc_assign, gc_assign_weak, _Block_memmove_gc_broken);
 }
 
  
-/*
- * Called from objc-auto to alternatively turn on retain/release.
- * Prior to this the only "object" support we can provide is for those
- * super special objects that live in libSystem, namely dispatch queues.
- * Blocks and Block_byrefs have their own special entry points.
- *
- */
+// Called from objc-auto to alternatively turn on retain/release.
+// Prior to this the only "object" support we can provide is for those
+// super special objects that live in libSystem, namely dispatch queues.
+// Blocks and Block_byrefs have their own special entry points.
+BLOCK_EXPORT
 void _Block_use_RR( void (*retain)(const void *),
                     void (*release)(const void *)) {
     _Block_retain_object = retain;
     _Block_release_object = release;
+    _Block_destructInstance = dlsym(RTLD_DEFAULT, "objc_destructInstance");
+}
+#endif // HAVE_OBJC
+
+// Called from CF to indicate MRR. Newer version uses a versioned structure, so we can add more functions
+// without defining a new entry point.
+BLOCK_EXPORT
+void _Block_use_RR2(const Block_callbacks_RR *callbacks) {
+    _Block_retain_object = callbacks->retain;
+    _Block_release_object = callbacks->release;
+    _Block_destructInstance = callbacks->destructInstance;
 }
 
-/*
- * Internal Support routines for copying:
- */
-
+/****************************************************************************
+Accessors for block descriptor fields
+*****************************************************************************/
 #if 0
+static struct Block_descriptor_1 * _Block_descriptor_1(struct Block_layout *aBlock)
+{
+    return aBlock->descriptor;
+}
+#endif
+
+static struct Block_descriptor_2 * _Block_descriptor_2(struct Block_layout *aBlock)
+{
+    if (! (aBlock->flags & BLOCK_HAS_COPY_DISPOSE)) return NULL;
+    uint8_t *desc = (uint8_t *)aBlock->descriptor;
+    desc += sizeof(struct Block_descriptor_1);
+    return (struct Block_descriptor_2 *)desc;
+}
+
+static struct Block_descriptor_3 * _Block_descriptor_3(struct Block_layout *aBlock)
+{
+    if (! (aBlock->flags & BLOCK_HAS_SIGNATURE)) return NULL;
+    uint8_t *desc = (uint8_t *)aBlock->descriptor;
+    desc += sizeof(struct Block_descriptor_1);
+    if (aBlock->flags & BLOCK_HAS_COPY_DISPOSE) {
+        desc += sizeof(struct Block_descriptor_2);
+    }
+    return (struct Block_descriptor_3 *)desc;
+}
+
+static __inline bool _Block_has_layout(struct Block_layout *aBlock) {
+    if (! (aBlock->flags & BLOCK_HAS_SIGNATURE)) return false;
+    uint8_t *desc = (uint8_t *)aBlock->descriptor;
+    desc += sizeof(struct Block_descriptor_1);
+    if (aBlock->flags & BLOCK_HAS_COPY_DISPOSE) {
+        desc += sizeof(struct Block_descriptor_2);
+    }
+    return ((struct Block_descriptor_3 *)desc)->layout != NULL;
+}    
+
+static void _Block_call_copy_helper(void *result, struct Block_layout *aBlock)
+{
+    struct Block_descriptor_2 *desc = _Block_descriptor_2(aBlock);
+    if (!desc) return;
+
+    (*desc->copy)(result, aBlock); // do fixup
+}
+
+static void _Block_call_dispose_helper(struct Block_layout *aBlock)
+{
+    struct Block_descriptor_2 *desc = _Block_descriptor_2(aBlock);
+    if (!desc) return;
+
+    (*desc->dispose)(aBlock);
+}
+
+/*******************************************************************************
+Internal Support routines for copying
+********************************************************************************/
+
+#if !defined(_MSC_VER) || defined(__clang__)
 #pragma mark Copy/Release support
-#endif /* if 0 */
+#endif
 
-/* Copy, or bump refcount, of a block.  If really copying, call the copy helper if present. */
-static void *_Block_copy_internal(const void *arg, const int flags) {
+// Copy, or bump refcount, of a block.  If really copying, call the copy helper if present.
+static void *_Block_copy_internal(const void *arg, const bool wantsOne) {
     struct Block_layout *aBlock;
-    const bool wantsOne = (WANTS_ONE & flags) == WANTS_ONE;
 
-    //printf("_Block_copy_internal(%p, %x)\n", arg, flags);	
     if (!arg) return NULL;
     
     
@@ -299,7 +356,7 @@ static void *_Block_copy_internal(const void *arg, const int flags) {
     }
     else if (aBlock->flags & BLOCK_IS_GC) {
         // GC refcounting is expensive so do most refcounting here.
-        if (wantsOne && ((latching_incr_int(&aBlock->flags) & BLOCK_REFCOUNT_MASK) == 1)) {
+        if (wantsOne && ((latching_incr_int(&aBlock->flags) & BLOCK_REFCOUNT_MASK) == 2)) {
             // Tell collector to hang on this - it will bump the GC refcount version
             _Block_setHasRefcount(aBlock, true);
         }
@@ -312,38 +369,32 @@ static void *_Block_copy_internal(const void *arg, const int flags) {
     // Its a stack block.  Make a copy.
     if (!isGC) {
         struct Block_layout *result = malloc(aBlock->descriptor->size);
-        if (!result) return (void *)0;
+        if (!result) return NULL;
         memmove(result, aBlock, aBlock->descriptor->size); // bitcopy first
         // reset refcount
-        result->flags &= ~(BLOCK_REFCOUNT_MASK);    // XXX not needed
-        result->flags |= BLOCK_NEEDS_FREE | 1;
+        result->flags &= ~(BLOCK_REFCOUNT_MASK|BLOCK_DEALLOCATING);    // XXX not needed
+        result->flags |= BLOCK_NEEDS_FREE | 2;  // logical refcount 1
         result->isa = _NSConcreteMallocBlock;
-        if (result->flags & BLOCK_HAS_COPY_DISPOSE) {
-            //printf("calling block copy helper %p(%p, %p)...\n", aBlock->descriptor->copy, result, aBlock);
-            (*aBlock->descriptor->copy)(result, aBlock); // do fixup
-        }
+        _Block_call_copy_helper(result, aBlock);
         return result;
     }
     else {
         // Under GC want allocation with refcount 1 so we ask for "true" if wantsOne
         // This allows the copy helper routines to make non-refcounted block copies under GC
-        unsigned long int flags = aBlock->flags;
+        int32_t flags = aBlock->flags;
         bool hasCTOR = (flags & BLOCK_HAS_CTOR) != 0;
-        struct Block_layout *result = _Block_allocator(aBlock->descriptor->size, wantsOne, hasCTOR);
-        if (!result) return (void *)0;
+        struct Block_layout *result = _Block_allocator(aBlock->descriptor->size, wantsOne, hasCTOR || _Block_has_layout(aBlock));
+        if (!result) return NULL;
         memmove(result, aBlock, aBlock->descriptor->size); // bitcopy first
         // reset refcount
         // if we copy a malloc block to a GC block then we need to clear NEEDS_FREE.
-        flags &= ~(BLOCK_NEEDS_FREE|BLOCK_REFCOUNT_MASK);   // XXX not needed
+        flags &= ~(BLOCK_NEEDS_FREE|BLOCK_REFCOUNT_MASK|BLOCK_DEALLOCATING);   // XXX not needed
         if (wantsOne)
-            flags |= BLOCK_IS_GC | 1;
+            flags |= BLOCK_IS_GC | 2;
         else
             flags |= BLOCK_IS_GC;
         result->flags = flags;
-        if (flags & BLOCK_HAS_COPY_DISPOSE) {
-            //printf("calling block copy helper...\n");
-            (*aBlock->descriptor->copy)(result, aBlock); // do fixup
-        }
+        _Block_call_copy_helper(result, aBlock);
         if (hasCTOR) {
             result->isa = _NSConcreteFinalizingBlock;
         }
@@ -355,27 +406,23 @@ static void *_Block_copy_internal(const void *arg, const int flags) {
 }
 
 
-/*
- * Runtime entry points for maintaining the sharing knowledge of byref data blocks.
- *
- * A closure has been copied and its fixup routine is asking us to fix up the reference to the shared byref data
- * Closures that aren't copied must still work, so everyone always accesses variables after dereferencing the forwarding ptr.
- * We ask if the byref pointer that we know about has already been copied to the heap, and if so, increment it.
- * Otherwise we need to copy it and update the stack forwarding pointer
- * XXX We need to account for weak/nonretained read-write barriers.
- */
 
+
+
+// Runtime entry points for maintaining the sharing knowledge of byref data blocks.
+
+// A closure has been copied and its fixup routine is asking us to fix up the reference to the shared byref data
+// Closures that aren't copied must still work, so everyone always accesses variables after dereferencing the forwarding ptr.
+// We ask if the byref pointer that we know about has already been copied to the heap, and if so, increment it.
+// Otherwise we need to copy it and update the stack forwarding pointer
 static void _Block_byref_assign_copy(void *dest, const void *arg, const int flags) {
     struct Block_byref **destp = (struct Block_byref **)dest;
     struct Block_byref *src = (struct Block_byref *)arg;
         
-    //printf("_Block_byref_assign_copy called, byref destp %p, src %p, flags %x\n", destp, src, flags);
-    //printf("src dump: %s\n", _Block_byref_dump(src));
-    if (src->forwarding->flags & BLOCK_IS_GC) {
+    if (src->forwarding->flags & BLOCK_BYREF_IS_GC) {
         ;   // don't need to do any more work
     }
     else if ((src->forwarding->flags & BLOCK_REFCOUNT_MASK) == 0) {
-        //printf("making copy\n");
         // src points to stack
         bool isWeak = ((flags & (BLOCK_FIELD_IS_BYREF|BLOCK_FIELD_IS_WEAK)) == (BLOCK_FIELD_IS_BYREF|BLOCK_FIELD_IS_WEAK));
         // if its weak ask for an object (only matters under GC)
@@ -387,23 +434,31 @@ static void _Block_byref_assign_copy(void *dest, const void *arg, const int flag
         if (isWeak) {
             copy->isa = &_NSConcreteWeakBlockVariable;  // mark isa field so it gets weak scanning
         }
-        if (src->flags & BLOCK_HAS_COPY_DISPOSE) {
+        if (src->flags & BLOCK_BYREF_HAS_COPY_DISPOSE) {
             // Trust copy helper to copy everything of interest
             // If more than one field shows up in a byref block this is wrong XXX
-            copy->byref_keep = src->byref_keep;
-            copy->byref_destroy = src->byref_destroy;
-            (*src->byref_keep)(copy, src);
+            struct Block_byref_2 *src2 = (struct Block_byref_2 *)(src+1);
+            struct Block_byref_2 *copy2 = (struct Block_byref_2 *)(copy+1);
+            copy2->byref_keep = src2->byref_keep;
+            copy2->byref_destroy = src2->byref_destroy;
+
+            if (src->flags & BLOCK_BYREF_LAYOUT_EXTENDED) {
+                struct Block_byref_3 *src3 = (struct Block_byref_3 *)(src2+1);
+                struct Block_byref_3 *copy3 = (struct Block_byref_3*)(copy2+1);
+                copy3->layout = src3->layout;
+            }
+
+            (*src2->byref_keep)(copy, src);
         }
         else {
             // just bits.  Blast 'em using _Block_memmove in case they're __strong
-            _Block_memmove(
-                (void *)&copy->byref_keep,
-                (void *)&src->byref_keep,
-                src->size - sizeof(struct Block_byref_header));
+            // This copy includes Block_byref_3, if any.
+            _Block_memmove(copy+1, src+1,
+                           src->size - sizeof(struct Block_byref));
         }
     }
     // already copied to heap
-    else if ((src->forwarding->flags & BLOCK_NEEDS_FREE) == BLOCK_NEEDS_FREE) {
+    else if ((src->forwarding->flags & BLOCK_BYREF_NEEDS_FREE) == BLOCK_BYREF_NEEDS_FREE) {
         latching_incr_int(&src->forwarding->flags);
     }
     // assign byref data block pointer into new Block
@@ -412,76 +467,80 @@ static void _Block_byref_assign_copy(void *dest, const void *arg, const int flag
 
 // Old compiler SPI
 static void _Block_byref_release(const void *arg) {
-    struct Block_byref *shared_struct = (struct Block_byref *)arg;
-    int refcount;
+    struct Block_byref *byref = (struct Block_byref *)arg;
 
     // dereference the forwarding pointer since the compiler isn't doing this anymore (ever?)
-    shared_struct = shared_struct->forwarding;
-    
-    //printf("_Block_byref_release %p called, flags are %x\n", shared_struct, shared_struct->flags);
+    byref = byref->forwarding;
+
     // To support C++ destructors under GC we arrange for there to be a finalizer for this
     // by using an isa that directs the code to a finalizer that calls the byref_destroy method.
-    if ((shared_struct->flags & BLOCK_NEEDS_FREE) == 0) {
+    if ((byref->flags & BLOCK_BYREF_NEEDS_FREE) == 0) {
         return; // stack or GC or global
     }
-    refcount = shared_struct->flags & BLOCK_REFCOUNT_MASK;
-    if (refcount <= 0) {
-        printf("_Block_byref_release: Block byref data structure at %p underflowed\n", arg);
-    }
-    else if ((latching_decr_int(&shared_struct->flags) & BLOCK_REFCOUNT_MASK) == 0) {
-        //printf("disposing of heap based byref block\n");
-        if (shared_struct->flags & BLOCK_HAS_COPY_DISPOSE) {
-            //printf("calling out to helper\n");
-            (*shared_struct->byref_destroy)(shared_struct);
+    os_assert(byref->flags & BLOCK_REFCOUNT_MASK);
+    if (latching_decr_int_should_deallocate(&byref->flags)) {
+        if (byref->flags & BLOCK_BYREF_HAS_COPY_DISPOSE) {
+            struct Block_byref_2 *byref2 = (struct Block_byref_2 *)(byref+1);
+            (*byref2->byref_destroy)(byref);
         }
-        _Block_deallocator((struct Block_layout *)shared_struct);
+        _Block_deallocator((struct Block_layout *)byref);
     }
 }
 
 
-/*
+/************************************************************
  *
  * API supporting SPI
  * _Block_copy, _Block_release, and (old) _Block_destroy
  *
- */
+ ***********************************************************/
 
-#if 0
+#if !defined(_MSC_VER) || defined(__clang__)
 #pragma mark SPI/API
-#endif /* if 0 */
+#endif
 
+BLOCK_EXPORT
 void *_Block_copy(const void *arg) {
-    return _Block_copy_internal(arg, WANTS_ONE);
+    return _Block_copy_internal(arg, true);
 }
 
 
 // API entry point to release a copied Block
-void _Block_release(void *arg) {
+BLOCK_EXPORT
+void _Block_release(const void *arg) {
     struct Block_layout *aBlock = (struct Block_layout *)arg;
-    int32_t newCount;
-    if (!aBlock) return;
-    newCount = latching_decr_int(&aBlock->flags) & BLOCK_REFCOUNT_MASK;
-    if (newCount > 0) return;
-    // Hit zero
+    if (!aBlock 
+        || (aBlock->flags & BLOCK_IS_GLOBAL)
+        || ((aBlock->flags & (BLOCK_IS_GC|BLOCK_NEEDS_FREE)) == 0)
+        ) return;
     if (aBlock->flags & BLOCK_IS_GC) {
-        // Tell GC we no longer have our own refcounts.  GC will decr its refcount
-        // and unless someone has done a CFRetain or marked it uncollectable it will
-        // now be subject to GC reclamation.
-        _Block_setHasRefcount(aBlock, false);
+        if (latching_decr_int_now_zero(&aBlock->flags)) {
+            // Tell GC we no longer have our own refcounts.  GC will decr its refcount
+            // and unless someone has done a CFRetain or marked it uncollectable it will
+            // now be subject to GC reclamation.
+            _Block_setHasRefcount(aBlock, false);
+        }
     }
     else if (aBlock->flags & BLOCK_NEEDS_FREE) {
-        if (aBlock->flags & BLOCK_HAS_COPY_DISPOSE)(*aBlock->descriptor->dispose)(aBlock);
-        _Block_deallocator(aBlock);
-    }
-    else if (aBlock->flags & BLOCK_IS_GLOBAL) {
-        ;
-    }
-    else {
-        printf("Block_release called upon a stack Block: %p, ignored\n", (void *)aBlock);
+        if (latching_decr_int_should_deallocate(&aBlock->flags)) {
+            _Block_call_dispose_helper(aBlock);
+            _Block_destructInstance(aBlock);
+            _Block_deallocator(aBlock);
+        }
     }
 }
 
+BLOCK_EXPORT
+bool _Block_tryRetain(const void *arg) {
+    struct Block_layout *aBlock = (struct Block_layout *)arg;
+    return latching_incr_int_not_deallocating(&aBlock->flags);
+}
 
+BLOCK_EXPORT
+bool _Block_isDeallocating(const void *arg) {
+    struct Block_layout *aBlock = (struct Block_layout *)arg;
+    return (aBlock->flags & BLOCK_DEALLOCATING) != 0;
+}
 
 // Old Compiler SPI point to release a copied Block used by the compiler in dispose helpers
 static void _Block_destroy(const void *arg) {
@@ -497,27 +556,80 @@ static void _Block_destroy(const void *arg) {
 
 
 
-/*
+/************************************************************
  *
  * SPI used by other layers
  *
- */
+ ***********************************************************/
 
 // SPI, also internal.  Called from NSAutoBlock only under GC
+BLOCK_EXPORT
 void *_Block_copy_collectable(const void *aBlock) {
-    return _Block_copy_internal(aBlock, 0);
+    return _Block_copy_internal(aBlock, false);
 }
 
 
 // SPI
-unsigned long int Block_size(void *arg) {
-    return ((struct Block_layout *)arg)->descriptor->size;
+BLOCK_EXPORT
+size_t Block_size(void *aBlock) {
+    return ((struct Block_layout *)aBlock)->descriptor->size;
 }
 
+BLOCK_EXPORT
+bool _Block_use_stret(void *aBlock) {
+    struct Block_layout *layout = (struct Block_layout *)aBlock;
 
-#if 0
+    int requiredFlags = BLOCK_HAS_SIGNATURE | BLOCK_USE_STRET;
+    return (layout->flags & requiredFlags) == requiredFlags;
+}
+
+// Checks for a valid signature, not merely the BLOCK_HAS_SIGNATURE bit.
+BLOCK_EXPORT
+bool _Block_has_signature(void *aBlock) {
+    return _Block_signature(aBlock) ? true : false;
+}
+
+BLOCK_EXPORT
+const char * _Block_signature(void *aBlock)
+{
+    struct Block_descriptor_3 *desc3 = _Block_descriptor_3(aBlock);
+    if (!desc3) return NULL;
+
+    return desc3->signature;
+}
+
+BLOCK_EXPORT
+const char * _Block_layout(void *aBlock)
+{
+    // Don't return extended layout to callers expecting GC layout
+    struct Block_layout *layout = (struct Block_layout *)aBlock;
+    if (layout->flags & BLOCK_HAS_EXTENDED_LAYOUT) return NULL;
+
+    struct Block_descriptor_3 *desc3 = _Block_descriptor_3(aBlock);
+    if (!desc3) return NULL;
+
+    return desc3->layout;
+}
+
+BLOCK_EXPORT
+const char * _Block_extended_layout(void *aBlock)
+{
+    // Don't return GC layout to callers expecting extended layout
+    struct Block_layout *layout = (struct Block_layout *)aBlock;
+    if (! (layout->flags & BLOCK_HAS_EXTENDED_LAYOUT)) return NULL;
+
+    struct Block_descriptor_3 *desc3 = _Block_descriptor_3(aBlock);
+    if (!desc3) return NULL;
+
+    // Return empty string (all non-object bytes) instead of NULL 
+    // so callers can distinguish "empty layout" from "no layout".
+    if (!desc3->layout) return "";
+    else return desc3->layout;
+}
+
+#if !defined(_MSC_VER) || defined(__clang__)
 #pragma mark Compiler SPI entry points
-#endif /* if 0 */
+#endif
 
     
 /*******************************************************
@@ -537,164 +649,112 @@ The flags parameter of _Block_object_assign and _Block_object_dispose is set to
 	* BLOCK_FIELD_IS_OBJECT (3), for the case of an Objective-C Object,
 	* BLOCK_FIELD_IS_BLOCK (7), for the case of another Block, and
 	* BLOCK_FIELD_IS_BYREF (8), for the case of a __block variable.
-If the __block variable is marked weak the compiler also or's in BLOCK_FIELD_IS_WEAK (16).
+If the __block variable is marked weak the compiler also or's in BLOCK_FIELD_IS_WEAK (16)
 
 So the Block copy/dispose helpers should only ever generate the four flag values of 3, 7, 8, and 24.
 
 When  a __block variable is either a C++ object, an Objective-C object, or another Block then the compiler also generates copy/dispose helper functions.  Similarly to the Block copy helper, the "__block" copy helper (formerly and still a.k.a. "byref" copy helper) will do a C++ copy constructor (not a const one though!) and the dispose helper will do the destructor.  And similarly the helpers will call into the same two support functions with the same values for objects and Blocks with the additional BLOCK_BYREF_CALLER (128) bit of information supplied.
 
 So the __block copy/dispose helpers will generate flag values of 3 or 7 for objects and Blocks respectively, with BLOCK_FIELD_IS_WEAK (16) or'ed as appropriate and always 128 or'd in, for the following set of possibilities:
-	__block id                   128+3
-        __weak block id              128+3+16
-	__block (^Block)             128+7
-	__weak __block (^Block)      128+7+16
+	__block id                   128+3       (0x83)
+	__block (^Block)             128+7       (0x87)
+    __weak __block id            128+3+16    (0x93)
+	__weak __block (^Block)      128+7+16    (0x97)
         
-The implementation of the two routines would be improved by switch statements enumerating the eight cases.
 
 ********************************************************/
 
-/*
- * When Blocks or Block_byrefs hold objects then their copy routine helpers use this entry point
- * to do the assignment.
- */
+//
+// When Blocks or Block_byrefs hold objects then their copy routine helpers use this entry point
+// to do the assignment.
+//
+BLOCK_EXPORT
 void _Block_object_assign(void *destAddr, const void *object, const int flags) {
-    //printf("_Block_object_assign(*%p, %p, %x)\n", destAddr, object, flags);
-    if ((flags & BLOCK_BYREF_CALLER) == BLOCK_BYREF_CALLER) {
-        if ((flags & BLOCK_FIELD_IS_WEAK) == BLOCK_FIELD_IS_WEAK) {
-            _Block_assign_weak(object, destAddr);
-        }
-        else {
-            // do *not* retain or *copy* __block variables whatever they are
-            _Block_assign((void *)object, destAddr);
-        }
-    }
-    else if ((flags & BLOCK_FIELD_IS_BYREF) == BLOCK_FIELD_IS_BYREF)  {
-        // copying a __block reference from the stack Block to the heap
-        // flags will indicate if it holds a __weak reference and needs a special isa
-        _Block_byref_assign_copy(destAddr, object, flags);
-    }
-    // (this test must be before next one)
-    else if ((flags & BLOCK_FIELD_IS_BLOCK) == BLOCK_FIELD_IS_BLOCK) {
-        // copying a Block declared variable from the stack Block to the heap
-        _Block_assign(_Block_copy_internal(object, flags), destAddr);
-    }
-    // (this test must be after previous one)
-    else if ((flags & BLOCK_FIELD_IS_OBJECT) == BLOCK_FIELD_IS_OBJECT) {
-        //printf("retaining object at %p\n", object);
+    switch (os_assumes(flags & BLOCK_ALL_COPY_DISPOSE_FLAGS)) {
+      case BLOCK_FIELD_IS_OBJECT:
+        /*******
+        id object = ...;
+        [^{ object; } copy];
+        ********/
+            
         _Block_retain_object(object);
-        //printf("done retaining object at %p\n", object);
         _Block_assign((void *)object, destAddr);
+        break;
+
+      case BLOCK_FIELD_IS_BLOCK:
+        /*******
+        void (^object)(void) = ...;
+        [^{ object; } copy];
+        ********/
+
+        _Block_assign(_Block_copy_internal(object, false), destAddr);
+        break;
+    
+      case BLOCK_FIELD_IS_BYREF | BLOCK_FIELD_IS_WEAK:
+      case BLOCK_FIELD_IS_BYREF:
+        /*******
+         // copy the onstack __block container to the heap
+         __block ... x;
+         __weak __block ... x;
+         [^{ x; } copy];
+         ********/
+        
+        _Block_byref_assign_copy(destAddr, object, flags);
+        break;
+        
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_OBJECT:
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_BLOCK:
+        /*******
+         // copy the actual field held in the __block container
+         __block id object;
+         __block void (^object)(void);
+         [^{ object; } copy];
+         ********/
+
+        // under manual retain release __block object/block variables are dangling
+        _Block_assign((void *)object, destAddr);
+        break;
+
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_OBJECT | BLOCK_FIELD_IS_WEAK:
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_BLOCK  | BLOCK_FIELD_IS_WEAK:
+        /*******
+         // copy the actual field held in the __block container
+         __weak __block id object;
+         __weak __block void (^object)(void);
+         [^{ object; } copy];
+         ********/
+
+        _Block_assign_weak(object, destAddr);
+        break;
+
+      default:
+        break;
     }
 }
 
 // When Blocks or Block_byrefs hold objects their destroy helper routines call this entry point
 // to help dispose of the contents
 // Used initially only for __attribute__((NSObject)) marked pointers.
+BLOCK_EXPORT
 void _Block_object_dispose(const void *object, const int flags) {
-    //printf("_Block_object_dispose(%p, %x)\n", object, flags);
-    if (flags & BLOCK_FIELD_IS_BYREF)  {
+    switch (os_assumes(flags & BLOCK_ALL_COPY_DISPOSE_FLAGS)) {
+      case BLOCK_FIELD_IS_BYREF | BLOCK_FIELD_IS_WEAK:
+      case BLOCK_FIELD_IS_BYREF:
         // get rid of the __block data structure held in a Block
         _Block_byref_release(object);
-    }
-    else if ((flags & (BLOCK_FIELD_IS_BLOCK|BLOCK_BYREF_CALLER)) == BLOCK_FIELD_IS_BLOCK) {
-        // get rid of a referenced Block held by this Block
-        // (ignore __block Block variables, compiler doesn't need to call us)
+        break;
+      case BLOCK_FIELD_IS_BLOCK:
         _Block_destroy(object);
-    }
-    else if ((flags & (BLOCK_FIELD_IS_WEAK|BLOCK_FIELD_IS_BLOCK|BLOCK_BYREF_CALLER)) == BLOCK_FIELD_IS_OBJECT) {
-        // get rid of a referenced object held by this Block
-        // (ignore __block object variables, compiler doesn't need to call us)
+        break;
+      case BLOCK_FIELD_IS_OBJECT:
         _Block_release_object(object);
+        break;
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_OBJECT:
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_BLOCK:
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_OBJECT | BLOCK_FIELD_IS_WEAK:
+      case BLOCK_BYREF_CALLER | BLOCK_FIELD_IS_BLOCK  | BLOCK_FIELD_IS_WEAK:
+        break;
+      default:
+        break;
     }
 }
-
-
-/*
- * Debugging support:
- */
-#if 0
-#pragma mark Debugging
-#endif /* if 0 */
-
-
-const char *_Block_dump(const void *block) {
-    struct Block_layout *closure = (struct Block_layout *)block;
-    static char buffer[512];
-    char *cp = buffer;
-    if (closure == NULL) {
-        sprintf(cp, "NULL passed to _Block_dump\n");
-        return buffer;
-    }
-    if (! (closure->flags & BLOCK_HAS_DESCRIPTOR)) {
-        printf("Block compiled by obsolete compiler, please recompile source for this Block\n");
-        exit(1);
-    }
-    cp += sprintf(cp, "^%p (new layout) =\n", (void *)closure);
-    if (closure->isa == NULL) {
-        cp += sprintf(cp, "isa: NULL\n");
-    }
-    else if (closure->isa == _NSConcreteStackBlock) {
-        cp += sprintf(cp, "isa: stack Block\n");
-    }
-    else if (closure->isa == _NSConcreteMallocBlock) {
-        cp += sprintf(cp, "isa: malloc heap Block\n");
-    }
-    else if (closure->isa == _NSConcreteAutoBlock) {
-        cp += sprintf(cp, "isa: GC heap Block\n");
-    }
-    else if (closure->isa == _NSConcreteGlobalBlock) {
-        cp += sprintf(cp, "isa: global Block\n");
-    }
-    else if (closure->isa == _NSConcreteFinalizingBlock) {
-        cp += sprintf(cp, "isa: finalizing Block\n");
-    }
-    else {
-        cp += sprintf(cp, "isa?: %p\n", (void *)closure->isa);
-    }
-    cp += sprintf(cp, "flags:");
-    if (closure->flags & BLOCK_HAS_DESCRIPTOR) {
-        cp += sprintf(cp, " HASDESCRIPTOR");
-    }
-    if (closure->flags & BLOCK_NEEDS_FREE) {
-        cp += sprintf(cp, " FREEME");
-    }
-    if (closure->flags & BLOCK_IS_GC) {
-        cp += sprintf(cp, " ISGC");
-    }
-    if (closure->flags & BLOCK_HAS_COPY_DISPOSE) {
-        cp += sprintf(cp, " HASHELP");
-    }
-    if (closure->flags & BLOCK_HAS_CTOR) {
-        cp += sprintf(cp, " HASCTOR");
-    }
-    cp += sprintf(cp, "\nrefcount: %u\n", closure->flags & BLOCK_REFCOUNT_MASK);
-    cp += sprintf(cp, "invoke: %p\n", (void *)(uintptr_t)closure->invoke);
-    {
-        struct Block_descriptor *dp = closure->descriptor;
-        cp += sprintf(cp, "descriptor: %p\n", (void *)dp);
-        cp += sprintf(cp, "descriptor->reserved: %lu\n", dp->reserved);
-        cp += sprintf(cp, "descriptor->size: %lu\n", dp->size);
-
-        if (closure->flags & BLOCK_HAS_COPY_DISPOSE) {
-            cp += sprintf(cp, "descriptor->copy helper: %p\n", (void *)(uintptr_t)dp->copy);
-            cp += sprintf(cp, "descriptor->dispose helper: %p\n", (void *)(uintptr_t)dp->dispose);
-        }
-    }
-    return buffer;
-}
-
-
-const char *_Block_byref_dump(struct Block_byref *src) {
-    static char buffer[256];
-    char *cp = buffer;
-    cp += sprintf(cp, "byref data block %p contents:\n", (void *)src);
-    cp += sprintf(cp, "  forwarding: %p\n", (void *)src->forwarding);
-    cp += sprintf(cp, "  flags: 0x%x\n", src->flags);
-    cp += sprintf(cp, "  size: %d\n", src->size);
-    if (src->flags & BLOCK_HAS_COPY_DISPOSE) {
-        cp += sprintf(cp, "  copy helper: %p\n", (void *)(uintptr_t)src->byref_keep);
-        cp += sprintf(cp, "  dispose helper: %p\n", (void *)(uintptr_t)src->byref_destroy);
-    }
-    return buffer;
-}
-

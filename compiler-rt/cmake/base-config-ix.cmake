@@ -158,6 +158,7 @@ if(APPLE)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_XROS "Enable building for xrOS - Experimental" Off)
 
+  check_include_files("objc/objc-internal.h" HAVE_OBJC)
 else()
   option(COMPILER_RT_DEFAULT_TARGET_ONLY "Build builtins only for the default target" Off)
 endif()
