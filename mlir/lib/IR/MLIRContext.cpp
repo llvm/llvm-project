@@ -273,6 +273,9 @@ public:
   /// destruction.
   DistinctAttributeAllocator distinctAttributeAllocator;
 
+  llvm::sys::SmartRWMutex<true> weakOperationRefsMutex;
+  DenseMap<Operation *, std::weak_ptr<WeakOpRefHolder>> weakOperationReferences;
+
 public:
   MLIRContextImpl(bool threadingIsEnabled)
       : threadingIsEnabled(threadingIsEnabled) {
@@ -396,6 +399,42 @@ void MLIRContext::executeActionInternal(function_ref<void()> actionFn,
 }
 
 bool MLIRContext::hasActionHandler() { return (bool)getImpl().actionHandler; }
+
+WeakOpRef MLIRContext::acquireWeakOpRef(Operation *op) {
+  {
+    llvm::sys::SmartScopedReader<true> contextLock(
+        impl->weakOperationRefsMutex);
+    auto it = impl->weakOperationReferences.find(op);
+    if (it != impl->weakOperationReferences.end()) {
+      assert(op->hasWeakReference() &&
+             "op should report having weak references");
+      return {it->second.lock()};
+    }
+  }
+  {
+    ScopedWriterLock contextLock(impl->weakOperationRefsMutex,
+                                 isMultithreadingEnabled());
+    auto shared = std::make_shared<WeakOpRefHolder>(op);
+    (void)impl->weakOperationReferences.insert({op, shared});
+    op->setHasWeakReference(true);
+    return {shared};
+  }
+}
+
+void MLIRContext::expireWeakRefs(Operation *op) {
+  if (op && impl) {
+    ScopedWriterLock lock(impl->weakOperationRefsMutex,
+                          isMultithreadingEnabled());
+    if (auto it = impl->weakOperationReferences.find(op);
+        it != impl->weakOperationReferences.end()) {
+      if (!it->second.expired())
+        it->second.reset();
+      assert(it->second.expired() && "should be expired");
+      impl->weakOperationReferences.erase(op);
+    }
+    op->setHasWeakReference(false);
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Diagnostic Handlers
