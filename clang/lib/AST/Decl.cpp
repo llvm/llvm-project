@@ -5086,7 +5086,14 @@ void RecordDecl::completeDefinition() {
 /// This which can be turned on with an attribute, pragma, or the
 /// -mms-bitfields command-line option.
 bool RecordDecl::isMsStruct(const ASTContext &C) const {
-  return hasAttr<MSStructAttr>() || C.getLangOpts().MSBitfields == 1;
+  if (hasAttr<MSStructAttr>())
+    return true;
+  if (hasAttr<GCCStructAttr>())
+    return false;
+  auto LayoutCompatibility = C.getLangOpts().getLayoutCompatibility();
+  if (LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Default)
+    return C.defaultsToMsStruct();
+  return LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Microsoft;
 }
 
 void RecordDecl::reorderDecls(const SmallVectorImpl<Decl *> &Decls) {

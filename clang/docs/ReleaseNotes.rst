@@ -151,6 +151,12 @@ Attribute Changes in Clang
 - The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
   that a function requires an additional x86-64 thunk, which may be patched at runtime.
 
+- On targets with Itanium C++ ABI, Clang now supports ``[[gnu:gcc_struct]]``
+  with the behavior similar to one existing in GCC. In particular, whenever
+  ``-mms-bitfields`` command line option is provided (or if Microsoft-compatible
+  structure layout is default on the target), ``[[gnu::gcc_struct]]`` requests
+  the compiler to follow Itanium rules for the layout of an annotated structure.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 

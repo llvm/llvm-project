@@ -8307,3 +8307,18 @@ of ``nonallocating`` by the compiler.
   }];
 }
 
+def MSStructDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``ms_struct`` and ``gcc_struct`` attributes request the compiler to enter a
+special record layout compatibility mode which mimics the layout of Microsoft or
+Itanium C++ ABI respectively. Obviously, if the current C++ ABI matches the
+requested ABI, the attribute does nothing. However, if it does not, annotated
+structure or class is laid out in a special compatibility mode, which slightly
+changes offsets for fields and bit-fields. The intention is to match the layout
+of the requested ABI for structures which only use C features.
+
+Note that the default behavior can be controlled by ``-mms-bitfields`` and
+``-mno-ms-bitfields`` switches and via ``#pragma ms_struct``.
+  }];
+}
