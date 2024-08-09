@@ -389,7 +389,17 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
     return std::nullopt;
   }
 
-  llvm::SmallVector<llvm::StringRef> Args = {Driver, "-E", "-v"};
+  llvm::SmallVector<llvm::StringRef> Args = {Driver};
+  // Support the zig compiler wrapper
+  auto DriverExecutable = llvm::sys::path::stem(Driver);
+  if (DriverExecutable == "zig") {
+    if (InputArgs.Lang == "c") {
+      Args.push_back("cc");
+    } else {
+      Args.push_back("c++");
+    }
+  }
+  Args.append({"-E", "-v"});
   Args.append(InputArgs.render());
   // Input needs to go after Lang flags.
   Args.push_back("-");
