@@ -1051,6 +1051,9 @@ void SelectionDAG::RemoveDeadNode(SDNode *N){
 }
 
 void SelectionDAG::DeleteNode(SDNode *N) {
+  for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
+    DUL->NodeDeleted(N, nullptr);
+
   // First take this out of the appropriate CSE map.
   RemoveNodeFromCSEMaps(N);
 

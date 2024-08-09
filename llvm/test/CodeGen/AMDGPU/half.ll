@@ -1969,19 +1969,19 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v15, s3
 ; VI-NEXT:    v_mov_b32_e32 v14, s2
-; VI-NEXT:    s_add_u32 s2, s0, 0x50
+; VI-NEXT:    s_add_u32 s2, s0, 0x70
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v17, s3
 ; VI-NEXT:    v_mov_b32_e32 v16, s2
-; VI-NEXT:    s_add_u32 s2, s0, 64
+; VI-NEXT:    s_add_u32 s2, s0, 0x60
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v19, s3
 ; VI-NEXT:    v_mov_b32_e32 v11, s1
 ; VI-NEXT:    v_mov_b32_e32 v18, s2
-; VI-NEXT:    s_add_u32 s2, s0, 0x70
+; VI-NEXT:    s_add_u32 s2, s0, 0x50
 ; VI-NEXT:    v_mov_b32_e32 v10, s0
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
-; VI-NEXT:    s_add_u32 s0, s0, 0x60
+; VI-NEXT:    s_add_u32 s0, s0, 64
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_f16_e32 v22, v4
@@ -1995,15 +1995,15 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; VI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v4
 ; VI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v7
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cvt_f32_f16_e32 v26, v2
-; VI-NEXT:    v_cvt_f32_f16_sdwa v27, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-NEXT:    v_cvt_f32_f16_sdwa v28, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_cvt_f32_f16_e32 v26, v0
+; VI-NEXT:    v_cvt_f32_f16_sdwa v27, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_cvt_f32_f16_sdwa v28, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
-; VI-NEXT:    v_cvt_f32_f16_e32 v8, v3
-; VI-NEXT:    v_cvt_f32_f16_e32 v29, v0
-; VI-NEXT:    v_cvt_f32_f16_sdwa v30, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-NEXT:    v_cvt_f32_f16_e32 v31, v1
-; VI-NEXT:    v_cvt_f32_f16_sdwa v32, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_cvt_f32_f16_e32 v8, v1
+; VI-NEXT:    v_cvt_f32_f16_e32 v29, v2
+; VI-NEXT:    v_cvt_f32_f16_sdwa v30, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_cvt_f32_f16_e32 v31, v3
+; VI-NEXT:    v_cvt_f32_f16_sdwa v32, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v20
 ; VI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v21
 ; VI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v22
@@ -2040,40 +2040,40 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; GFX11-NEXT:    global_load_b128 v[0:3], v32, s[2:3]
 ; GFX11-NEXT:    global_load_b128 v[4:7], v32, s[2:3] offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v10, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v23, 16, v5
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v19, 16, v4
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v15, v7
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v23, v7
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v14, v6
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v22, v6
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
+; GFX11-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v10, v1
+; GFX11-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v13, v3
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v12, v2
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v18, v4
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v22, v5
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[4:5], v10
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v10, v23
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v34, v11
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v11, v19
-; GFX11-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v7, v7
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; GFX11-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v18, v5
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v34, v11
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v11, v19
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v14, v4
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[4:5], v10
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v10, v15
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v8, v0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[28:29], v22
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[30:31], v10
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[24:25], v18
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[26:27], v11
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[28:29], v23
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[30:31], v7
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[24:25], v22
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[26:27], v6
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v33, v9
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[20:21], v15
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[22:23], v7
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[20:21], v18
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[22:23], v11
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[16:17], v14
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[18:19], v6
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[18:19], v10
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[0:1], v8
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[8:9], v12
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[12:13], v13
@@ -2082,10 +2082,10 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[6:7], v34
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[2:3], v33
 ; GFX11-NEXT:    s_clause 0x7
-; GFX11-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:80
-; GFX11-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:64
-; GFX11-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:112
-; GFX11-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:96
+; GFX11-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:112
+; GFX11-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:96
+; GFX11-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:80
+; GFX11-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:64
 ; GFX11-NEXT:    global_store_b128 v32, v[12:15], s[0:1] offset:48
 ; GFX11-NEXT:    global_store_b128 v32, v[8:11], s[0:1] offset:32
 ; GFX11-NEXT:    global_store_b128 v32, v[4:7], s[0:1] offset:16
