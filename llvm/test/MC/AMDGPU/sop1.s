@@ -62,7 +62,7 @@ s_mov_b64 s[0:1], 0x80000000
 
 s_mov_b64 s[102:103], -1
 // SICI: s_mov_b64 s[102:103], -1 ; encoding: [0xc1,0x04,0xe6,0xbe]
-// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: s[102:103] register not available on this GPU
 // GFX10: s_mov_b64 s[102:103], -1 ; encoding: [0xc1,0x04,0xe6,0xbe]
 
 s_cmov_b32 s1, 200
