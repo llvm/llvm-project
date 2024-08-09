@@ -167,6 +167,7 @@ private:
   bool handleFPUDelaySlot();
   bool handleLoadDelaySlot();
   bool handlePossibleLongBranch();
+  bool handleMFLO();
 
   const MipsSubtarget *STI;
   const MipsInstrInfo *TII;
@@ -744,13 +745,15 @@ static void emitGPDisp(MachineFunction &F, const MipsInstrInfo *TII) {
 template <typename Pred, typename Safe>
 bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
   bool Changed = false;
+  bool hasPendingMFLO = false;
 
   for (MachineFunction::iterator FI = MFp->begin(); FI != MFp->end(); ++FI) {
     for (Iter I = FI->begin(); I != FI->end(); ++I) {
 
       // Delay slot hazard handling. Use lookahead over state.
-      if (!Predicate(*I))
+      if (!Predicate(*I) && !hasPendingMFLO) {
         continue;
+      }
 
       Iter IInSlot;
       bool LastInstInFunction =
@@ -766,15 +769,38 @@ bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
         if (std::next(Iit) == FI->end() ||
             std::next(Iit)->getOpcode() != Mips::NOP) {
           Changed = true;
-          TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
-              ->bundleWithPred();
-          NumInsertedNops++;
+          if (Predicate(*I) ||
+              (!LastInstInFunction && !SafeInSlot(*IInSlot, *I))) {
+            TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
+                ->bundleWithPred();
+            NumInsertedNops++;
+          }
+          if (IsMFLOMFHI(I->getOpcode()) && !LastInstInFunction &&
+              IsDIVMULT(IInSlot->getOpcode())) {
+            TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
+                ->bundleWithPred();
+            NumInsertedNops++;
+          }
         }
+      } else if (IsMFLOMFHI(I->getOpcode())) {
+        hasPendingMFLO = true;
       }
     }
   }
 
   return Changed;
+}
+
+bool MipsBranchExpansion::handleMFLO() {
+  // mips1-4 require a minimum of 2 instructions between a mflo/mfhi
+  // and the next mul/div instruction.
+  if (STI->hasMips32() || STI->hasMips5())
+    return false;
+
+  return handleSlot([this](auto &I) -> bool { return TII->IsMfloOrMfhi(I); },
+                    [this](auto &IInSlot, auto &I) -> bool {
+                      return TII->SafeAfterMflo(IInSlot);
+                    });
 }
 
 bool MipsBranchExpansion::handleForbiddenSlot() {
@@ -893,16 +919,19 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   bool forbiddenSlotChanged = handleForbiddenSlot();
   bool fpuDelaySlotChanged = handleFPUDelaySlot();
   bool loadDelaySlotChanged = handleLoadDelaySlot();
+  bool MfloChanged = handleMFLO();
 
   bool Changed = longBranchChanged || forbiddenSlotChanged ||
-                 fpuDelaySlotChanged || loadDelaySlotChanged;
+                 fpuDelaySlotChanged || loadDelaySlotChanged || MfloChanged;
 
   // Then run them alternatively while there are changes.
   while (forbiddenSlotChanged) {
     longBranchChanged = handlePossibleLongBranch();
     fpuDelaySlotChanged = handleFPUDelaySlot();
     loadDelaySlotChanged = handleLoadDelaySlot();
-    if (!longBranchChanged && !fpuDelaySlotChanged && !loadDelaySlotChanged)
+    MfloChanged = handleMFLO();
+    if (!longBranchChanged && !fpuDelaySlotChanged && !loadDelaySlotChanged &&
+        !MfloChanged)
       break;
     forbiddenSlotChanged = handleForbiddenSlot();
   }
