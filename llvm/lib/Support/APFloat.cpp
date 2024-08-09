@@ -3749,7 +3749,7 @@ double IEEEFloat::convertToDouble() const {
   return api.bitsToDouble();
 }
 
-#if defined(HAS_IEE754_FLOAT128)
+#ifdef HAS_IEE754_FLOAT128
 float128 IEEEFloat::convertToQuad() const {
   assert(semantics == (const llvm::fltSemantics *)&semIEEEquad &&
          "Float semantics are not IEEEquads");
@@ -5406,7 +5406,7 @@ double APFloat::convertToDouble() const {
   return Temp.getIEEE().convertToDouble();
 }
 
-#if defined(HAS_IEE754_FLOAT128)
+#ifdef HAS_IEE754_FLOAT128
 float128 APFloat::convertToQuad() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
     return getIEEE().convertToQuad();
