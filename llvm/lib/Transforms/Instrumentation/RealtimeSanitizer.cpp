@@ -19,6 +19,8 @@
 
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 
+#include <cassert>
+
 using namespace llvm;
 
 static void insertCallBeforeInstruction(Function &Fn, Instruction &Instruction,
@@ -51,8 +53,19 @@ RealtimeSanitizerPass::RealtimeSanitizerPass(
 PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
                                              AnalysisManager<Function> &AM) {
   if (F.hasFnAttribute(Attribute::SanitizeRealtime)) {
+    assert(!F.hasFnAttribute(Attribute::NoSanitizeRealtime));
     insertCallAtFunctionEntryPoint(F, "__rtsan_realtime_enter");
     insertCallAtAllFunctionExitPoints(F, "__rtsan_realtime_exit");
+
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+
+  if (F.hasFnAttribute(Attribute::NoSanitizeRealtime)) {
+    assert(!F.hasFnAttribute(Attribute::SanitizeRealtime));
+    insertCallAtFunctionEntryPoint(F, "__rtsan_off");
+    insertCallAtAllFunctionExitPoints(F, "__rtsan_on");
 
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
