@@ -124,6 +124,10 @@ public:
                  llvm::ScalarEvolution &SE, llvm::DominatorTree &DT,
                  llvm::LoopInfo &LI, llvm::BasicBlock *StartBlock);
 
+  /// Change the function that code is emitted into.
+  void switchGeneratedFunc(llvm::Function *GenFn, llvm::DominatorTree *GenDT,
+                           llvm::LoopInfo *GenLI, llvm::ScalarEvolution *GenSE);
+
   /// Create LLVM-IR for an isl_ast_expr[ession].
   ///
   /// @param Expr The ast expression for which we generate LLVM-IR.
@@ -205,9 +209,14 @@ private:
 
   const llvm::DataLayout &DL;
   llvm::ScalarEvolution &SE;
-  llvm::DominatorTree &DT;
-  llvm::LoopInfo &LI;
   llvm::BasicBlock *StartBlock;
+
+  /// Relates to the region where the code is emitted into.
+  /// @{
+  llvm::DominatorTree *GenDT;
+  llvm::LoopInfo *GenLI;
+  llvm::ScalarEvolution *GenSE;
+  /// @}
 
   llvm::Value *createOp(__isl_take isl_ast_expr *Expr);
   llvm::Value *createOpUnary(__isl_take isl_ast_expr *Expr);
