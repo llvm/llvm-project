@@ -176,6 +176,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
