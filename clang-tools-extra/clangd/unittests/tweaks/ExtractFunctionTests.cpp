@@ -571,6 +571,53 @@ int getNum(bool Superstitious, int Min, int Max) {
   EXPECT_EQ(apply(Before), After);
 }
 
+TEST_F(ExtractFunctionTest, OverloadedOperators) {
+  Context = File;
+  std::string Before = R"cpp(struct A {
+                int operator+(int x) { return x; }
+              };
+              A &operator<<(A &, int);
+              A &operator|(A &, int);
+
+              A stream{};
+
+              void foo(int, int);
+
+              int main() {
+                [[foo(1, 2);
+                foo(3, 4);
+                stream << 42;
+                stream + 42;
+                stream | 42;
+                foo(1, 2);
+                foo(3, 4);]]
+              })cpp";
+  std::string After =
+      R"cpp(struct A {
+                int operator+(int x) { return x; }
+              };
+              A &operator<<(A &, int);
+              A &operator|(A &, int);
+
+              A stream{};
+
+              void foo(int, int);
+
+              void extracted() {
+foo(1, 2);
+                foo(3, 4);
+                stream << 42;
+                stream + 42;
+                stream | 42;
+                foo(1, 2);
+                foo(3, 4);
+}
+int main() {
+                extracted();
+              })cpp";
+  EXPECT_EQ(apply(Before), After);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

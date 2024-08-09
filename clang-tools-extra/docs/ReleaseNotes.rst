@@ -69,6 +69,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- Improved the extract-to-function code action to allow extracting statements
+  with overloaded operators like ``<<`` of ``std::ostream``.
+
 Signature help
 ^^^^^^^^^^^^^^
 
