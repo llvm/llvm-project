@@ -98,3 +98,6 @@ enum E8 { A8 = -128, B8 = 127 } x8;
 // CHECK-NOT: DIFlagEnumClass
 // CHECK: !DIEnumerator(name: "A8", value: -128)
 
+// Forward declaration of an enum class.
+enum class Color : int;
+// CHECK-NOT: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Color"
