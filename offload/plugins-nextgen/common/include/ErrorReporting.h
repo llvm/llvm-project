@@ -12,6 +12,7 @@
 #define OFFLOAD_PLUGINS_NEXTGEN_COMMON_ERROR_REPORTING_H
 
 #include "PluginInterface.h"
+#include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -105,6 +106,15 @@ class ErrorReporter {
     print(BoldRed, Format, Args...);
     print("\n");
   }
+
+  /// Print \p Format, instantiated with \p Args to stderr, but colored with
+  /// a banner.
+  template <typename... ArgsTy>
+  [[gnu::format(__printf__, 1, 2)]] static void
+  reportWarning(const char *Format, ArgsTy &&...Args) {
+    print(Yellow, "WARNING: ");
+    print(Yellow, Format, Args...);
+  }
 #pragma clang diagnostic pop
 
   static void reportError(const char *Str) { reportError("%s", Str); }
@@ -113,6 +123,13 @@ class ErrorReporter {
   static void print(ColorTy Color, const char *Str) { print(Color, "%s", Str); }
   static void print(ColorTy Color, StringRef Str) {
     print(Color, "%s", Str.str().c_str());
+  }
+
+  static void reportLocation(SanitizerEnvironmentTy &SE) {
+    print(BoldLightPurple,
+          "Triggered by thread <%u,%u,%u> block <%u,%u,%u> PC %p\n",
+          SE.ThreadId[0], SE.ThreadId[1], SE.ThreadId[2], SE.BlockId[0],
+          SE.BlockId[1], SE.BlockId[2], (void *)SE.PC);
   }
 
   /// Pretty print a stack trace.
@@ -225,6 +242,16 @@ public:
       std::function<bool(__tgt_async_info &)> AsyncInfoWrapperMatcher) {
     assert(AsyncInfoWrapperMatcher && "A matcher is required");
 
+    SanitizerEnvironmentTy *SE = nullptr;
+    for (auto &It : Device.SanitizerEnvironmentMap) {
+      if (It.second->ErrorCode == SanitizerEnvironmentTy::NONE)
+        continue;
+      if (SE)
+        reportWarning(
+            "Multiple errors encountered, information might be inaccurate.");
+      SE = It.second;
+    }
+
     uint32_t Idx = 0;
     for (uint32_t I = 0, E = KTIR.size(); I < E; ++I) {
       auto KTI = KTIR.getKernelTraceInfo(I);
@@ -243,7 +270,24 @@ public:
           llvm::omp::prettifyFunctionName(KTI.Kernel->getName());
       reportError("Kernel '%s'", PrettyKernelName.c_str());
     }
-    reportError("execution interrupted by hardware trap instruction");
+    assert((!SE || SE->ErrorCode != SanitizerEnvironmentTy::NONE) &&
+           "Unexpected sanitizer environment");
+    if (!SE) {
+      reportError("execution stopped, reason is unknown");
+      print(Yellow, "Compile with '-mllvm -amdgpu-enable-offload-sanitizer' "
+                    "improved diagnosis\n");
+    } else {
+      switch (SE->ErrorCode) {
+      case SanitizerEnvironmentTy::TRAP:
+        reportError("execution interrupted by hardware trap instruction");
+        break;
+      default:
+        reportError(
+            "execution stopped, reason is unknown due to invalid error code");
+      }
+
+      reportLocation(*SE);
+    }
     if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo))) {
       if (!KTI.LaunchTrace.empty())
         reportStackTrace(KTI.LaunchTrace);

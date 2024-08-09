@@ -185,6 +185,7 @@ add_llvm_target(AMDGPUCodeGen
   Core
   GlobalISel
   HipStdPar
+  Instrumentation
   IPO
   IRPrinter
   MC
