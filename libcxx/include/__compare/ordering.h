@@ -24,7 +24,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // exposition only
 enum class _OrdResult : signed char { __less = -1, __equiv = 0, __greater = 1 };
 
-enum class _NCmpResult : signed char { __unordered = -127 };
+enum class _PartialOrdResult : signed char {
+  __less      = static_cast<signed char>(_OrdResult::__less),
+  __equiv     = static_cast<signed char>(_OrdResult::__equiv),
+  __greater    = static_cast<signed char>(_OrdResult::__greater),
+  __unordered = -127,
+};
 
 class partial_ordering;
 class weak_ordering;
@@ -41,15 +46,7 @@ struct _CmpUnspecifiedParam {
 };
 
 class partial_ordering {
-  using _ValueT = signed char;
-
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr partial_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
-
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr partial_ordering(_NCmpResult __v) noexcept : __value_(_ValueT(__v)) {}
-
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __is_ordered() const noexcept {
-    return __value_ != _ValueT(_NCmpResult::__unordered);
-  }
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr partial_ordering(_PartialOrdResult __v) noexcept : __value_(__v) {}
 
 public:
   // valid values
@@ -62,39 +59,39 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(partial_ordering, partial_ordering) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ == 0;
+    return __v.__value_ == _PartialOrdResult::__equiv;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ < 0;
+    return __v.__value_ == _PartialOrdResult::__less;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ <= 0;
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__less;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ > 0;
+    return __v.__value_ == _PartialOrdResult::__greater;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(partial_ordering __v, _CmpUnspecifiedParam) noexcept {
-    return __v.__is_ordered() && __v.__value_ >= 0;
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__greater;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 < __v.__value_;
+    return __v.__value_ == _PartialOrdResult::__greater;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 <= __v.__value_;
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__greater;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 > __v.__value_;
+    return __v.__value_ == _PartialOrdResult::__less;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(_CmpUnspecifiedParam, partial_ordering __v) noexcept {
-    return __v.__is_ordered() && 0 >= __v.__value_;
+    return __v.__value_ == _PartialOrdResult::__equiv || __v.__value_ == _PartialOrdResult::__less;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr partial_ordering
@@ -108,13 +105,13 @@ public:
   }
 
 private:
-  _ValueT __value_;
+  _PartialOrdResult __value_;
 };
 
-inline constexpr partial_ordering partial_ordering::less(_OrdResult::__less);
-inline constexpr partial_ordering partial_ordering::equivalent(_OrdResult::__equiv);
-inline constexpr partial_ordering partial_ordering::greater(_OrdResult::__greater);
-inline constexpr partial_ordering partial_ordering::unordered(_NCmpResult ::__unordered);
+inline constexpr partial_ordering partial_ordering::less(_PartialOrdResult::__less);
+inline constexpr partial_ordering partial_ordering::equivalent(_PartialOrdResult::__equiv);
+inline constexpr partial_ordering partial_ordering::greater(_PartialOrdResult::__greater);
+inline constexpr partial_ordering partial_ordering::unordered(_PartialOrdResult::__unordered);
 
 class weak_ordering {
   using _ValueT = signed char;
