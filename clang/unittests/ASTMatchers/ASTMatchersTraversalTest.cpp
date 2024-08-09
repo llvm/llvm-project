@@ -3070,10 +3070,13 @@ B func1() { return 42; }
     auto M = expr(unless(integerLiteral(equals(24)))).bind("intLit");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 6)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 6),
+        {"-std=c++11"}));
+
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 1)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 1),
+        {"-std=c++11"}));
   }
   {
     auto M =
@@ -3116,7 +3119,8 @@ B func1() { return 42; }
     auto M = expr().bind("allExprs");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 6)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 6),
+        {"-std=c++11"}));
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
         std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 1)));
