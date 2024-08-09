@@ -242,7 +242,8 @@ static bool eliminateCondBranches_v3(Function &F, DominatorTree &DT) {
     // a new unconditional branch to the selected successor and removing the
     // conditional one.
 
-    BranchInst *NewBranch = BranchInst::Create(TakenSucc, BB.getTerminator()->getIterator());
+    BranchInst *NewBranch =
+        BranchInst::Create(TakenSucc, BB.getTerminator()->getIterator());
     BB.getTerminator()->eraseFromParent();
 
     // Delete the edge between BB and RemovedSucc in the DominatorTree, iff

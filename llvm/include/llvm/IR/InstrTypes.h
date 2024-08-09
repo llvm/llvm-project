@@ -61,7 +61,7 @@ protected:
     Op<0>() = V;
   }
   LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-    "BasicBlock::iterator")
+                  "BasicBlock::iterator")
   UnaryInstruction(Type *Ty, unsigned iType, Value *V,
                    Instruction *IB = nullptr)
     : Instruction(Ty, iType, &Op<0>(), 1, IB) {
@@ -322,7 +322,7 @@ public:
     return BO;
   }
   LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-    "BasicBlock::iterator")
+                  "BasicBlock::iterator")
   static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
                                    const Twine &Name, Instruction *I) {
     BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
@@ -349,7 +349,7 @@ public:
     return BO;
   }
   LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-    "BasicBlock::iterator")
+                  "BasicBlock::iterator")
   static BinaryOperator *CreateNUW(BinaryOps Opc, Value *V1, Value *V2,
                                    const Twine &Name, Instruction *I) {
     BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
@@ -376,7 +376,7 @@ public:
     return BO;
   }
   LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-    "BasicBlock::iterator")
+                  "BasicBlock::iterator")
   static BinaryOperator *CreateExact(BinaryOps Opc, Value *V1, Value *V2,
                                      const Twine &Name, Instruction *I) {
     BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
@@ -413,7 +413,7 @@ public:
     return Create##NUWNSWEXACT(Instruction::OPC, V1, V2, Name, BB);            \
   }                                                                            \
   LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",           \
-      "BasicBlock::iterator")                                                  \
+                  "BasicBlock::iterator")                                      \
   static BinaryOperator *Create##NUWNSWEXACT##OPC(                             \
       Value *V1, Value *V2, const Twine &Name, Instruction *I) {               \
     return Create##NUWNSWEXACT(Instruction::OPC, V1, V2, Name, I);             \
@@ -517,7 +517,7 @@ BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
   return BO;
 }
 LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-"BasicBlock::iterator")
+                "BasicBlock::iterator")
 BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
                                                Value *V2, const Twine &Name,
                                                Instruction *I) {
