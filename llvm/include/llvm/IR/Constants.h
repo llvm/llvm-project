@@ -1056,12 +1056,18 @@ public:
     return !getAddrDiscriminator()->isNullValue();
   }
 
-  /// A constant value for the address discriminator which has special
-  /// significance to ctors/dtors lowering. Regular address discrimination can't
-  /// be applied for them since uses of llvm.global_{c|d}tors are disallowed
-  /// (see Verifier::visitGlobalVariable) and we can't emit getelementptr
-  /// expressions referencing these special arrays.
-  enum { AddrDiscriminator_CtorsDtors = 1 };
+  /// Constant values for the address discriminator which have special
+  /// significance to lowering in some contexts.
+  /// - For ctors/dtors, regular address discrimination can't
+  ///   be applied for them since uses of llvm.global_{c|d}tors are disallowed
+  ///   (see Verifier::visitGlobalVariable) and we can't emit getelementptr
+  ///   expressions referencing these special arrays.
+  /// - For vtable pointers of std::type_info and classes derived from it,
+  ///   we do not know the storage address when emitting ptrauth constant.
+  enum {
+    AddrDiscriminator_CtorsDtors = 1,
+    AddrDiscriminator_CXXTypeInfoVTablePointer = 1
+  };
 
   /// Whether the address uses a special address discriminator.
   /// These discriminators can't be used in real pointer-auth values; they

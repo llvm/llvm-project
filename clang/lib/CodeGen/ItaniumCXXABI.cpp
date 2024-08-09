@@ -3958,9 +3958,23 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
                                                           VTable, Two);
   }
 
-  if (auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer)
-    VTable = CGM.getConstantSignedPointer(VTable, Schema, nullptr, GlobalDecl(),
-                                          QualType(Ty, 0));
+  if (const auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
+    llvm::PointerType *PtrTy = llvm::PointerType::get(
+        CGM.getLLVMContext(),
+        CGM.getModule().getDataLayout().getProgramAddressSpace());
+    llvm::Constant *StorageAddress =
+        (Schema.isAddressDiscriminated()
+             ? llvm::ConstantExpr::getIntToPtr(
+                   llvm::ConstantInt::get(
+                       CGM.IntPtrTy,
+                       llvm::ConstantPtrAuth::
+                           AddrDiscriminator_CXXTypeInfoVTablePointer),
+                   PtrTy)
+             : nullptr);
+    VTable = CGM.getConstantSignedPointer(VTable, Schema, StorageAddress,
+                                          GlobalDecl(), QualType(Ty, 0));
+  }
 
   Fields.push_back(VTable);
 }
