@@ -1,4 +1,4 @@
-//===-- Implementation of fadd function -----------------------------------===//
+//===-- Implementation of faddl function ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fadd.h"
-#include "src/__support/FPUtil/generic/add_sub.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_MATH_FADDL_H
+#define LLVM_LIBC_SRC_MATH_FADDL_H
+
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, fadd, (double x, double y)) {
-  return fputil::generic::add<float>(x, y);
-}
+float faddl(long double x, long double y);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_MATH_FADDL_H
