@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This header contains several configuration defines.
+// Removing the header would #ifndef TEST_FOO to unconditionally pass when
+// it's optionally defined in this header.
+//
+// IWYU pragma: always_keep
+
 #ifndef SUPPORT_TEST_MACROS_HPP
 #define SUPPORT_TEST_MACROS_HPP
 
