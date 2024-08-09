@@ -1227,6 +1227,14 @@ StorageSpecifierType::get(MLIRContext *ctx, SparseTensorEncodingAttr encoding) {
   return Base::get(ctx, getNormalizedEncodingForSpecifier(encoding));
 }
 
+StorageSpecifierType
+StorageSpecifierType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                 MLIRContext *ctx,
+                                 SparseTensorEncodingAttr encoding) {
+  return Base::getChecked(emitError, ctx,
+                          getNormalizedEncodingForSpecifier(encoding));
+}
+
 //===----------------------------------------------------------------------===//
 // SparseTensorDialect Operations.
 //===----------------------------------------------------------------------===//
