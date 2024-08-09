@@ -405,9 +405,10 @@ void CheckHelper::Check(const Symbol &symbol) {
             messages_.Say(
                 "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
           }
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+          if (auto bad{
+                  FindPolymorphicAllocatablePotentialComponent(*derived)}) {
             SayWithDeclaration(*bad,
-                "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
+                "Result of pure function may not have polymorphic ALLOCATABLE potential component '%s'"_err_en_US,
                 bad.BuildResultDesignatorName());
           }
         }
