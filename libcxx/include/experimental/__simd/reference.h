@@ -61,6 +61,32 @@ public:
     return {__s_, __idx_};
   }
 
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() + _Up{1})>
+  __simd_reference _LIBCPP_HIDE_FROM_ABI operator++() && noexcept {
+    __set(__get() + 1);
+    return {__s_, __idx_};
+  }
+
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() + _Up{1})>
+  value_type _LIBCPP_HIDE_FROM_ABI operator++(int) && noexcept {
+    auto __r = __get();
+    __set(__get() + 1);
+    return __r;
+  }
+
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() - _Up{1})>
+  __simd_reference _LIBCPP_HIDE_FROM_ABI operator--() && noexcept {
+    __set(__get() - 1);
+    return {__s_, __idx_};
+  }
+
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() - _Up{1})>
+  value_type _LIBCPP_HIDE_FROM_ABI operator--(int) && noexcept {
+    auto __r = __get();
+    __set(__get() - 1);
+    return __r;
+  }
+
   // Note: This approach might not fully align with the specification,
   // which might be a wording defect. (https://wg21.link/N4808 section 9.6.3)
   template <class _Tp1, class _Storage1, class _Vp1>
