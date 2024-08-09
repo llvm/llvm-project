@@ -591,6 +591,7 @@ define <16 x i8> @adjusted_lxvwsx(ptr %s, ptr %t) {
 ; P7:       # %bb.0: # %entry
 ; P7-NEXT:    ld r3, 0(r3)
 ; P7-NEXT:    std r3, -16(r1)
+; P7-NEXT:    std r3, -8(r1)
 ; P7-NEXT:    addi r3, r1, -16
 ; P7-NEXT:    lxvw4x vs0, 0, r3
 ; P7-NEXT:    xxspltw v2, vs0, 1
