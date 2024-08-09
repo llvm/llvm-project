@@ -4,6 +4,8 @@
 // CHECK: HLSLBufferDecl {{.*}} cbuffer A
 cbuffer A
 {
+    // CHECK-NEXT:-HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit CBuffer
+    // CHECK-NEXT:-HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer
     // CHECK-NEXT: VarDecl {{.*}} A1 'float4'
     // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 0
     float4 A1 : packoffset(c);
