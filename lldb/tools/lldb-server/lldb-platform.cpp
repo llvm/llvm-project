@@ -565,16 +565,6 @@ int main_platform(int argc, char *argv[]) {
     printf("Connection established.\n");
 
     if (g_server) {
-      // Collect child zombie processes.
-#if !defined(_WIN32)
-      ::pid_t waitResult;
-      while ((waitResult = waitpid(-1, nullptr, WNOHANG)) > 0) {
-        // waitResult is the child pid
-        std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
-        gdbserver_portmap.FreePortForProcess(waitResult);
-      }
-#endif
-      // After collecting zombie ports, get the next available
       std::optional<uint16_t> available_port;
       {
         std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
