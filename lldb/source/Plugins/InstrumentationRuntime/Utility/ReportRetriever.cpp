@@ -219,7 +219,6 @@ bool ReportRetriever::NotifyBreakpointHit(ProcessSP process_sp,
   return true; // Return true to stop the target
 }
 
-// FIXME: Setup the breakpoint using a less fragile SPI. rdar://124399066
 Breakpoint *ReportRetriever::SetupBreakpoint(ModuleSP module_sp,
                                              ProcessSP process_sp,
                                              ConstString symbol_name) {
@@ -235,19 +234,13 @@ Breakpoint *ReportRetriever::SetupBreakpoint(ModuleSP module_sp,
   if (!symbol->ValueIsAddress() || !symbol->GetAddressRef().IsValid())
     return nullptr;
 
-  Target &target = process_sp->GetTarget();
-  addr_t symbol_address = symbol->GetAddressRef().GetOpcodeLoadAddress(&target);
-
-  if (symbol_address == LLDB_INVALID_ADDRESS)
-    return nullptr;
-
+  const Address &address = symbol->GetAddressRef();
   const bool internal = true;
   const bool hardware = false;
 
-  Breakpoint *breakpoint =
-      process_sp->GetTarget()
-          .CreateBreakpoint(symbol_address, internal, hardware)
-          .get();
+  Breakpoint *breakpoint = process_sp->GetTarget()
+                               .CreateBreakpoint(address, internal, hardware)
+                               .get();
 
   return breakpoint;
 }
