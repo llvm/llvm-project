@@ -16230,8 +16230,7 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
         QualType MemPtrType
           = Context.getMemberPointerType(Fn->getType(), ClassType.getTypePtr());
         // Under the MS ABI, lock down the inheritance model now.
-        if (Context.getTargetInfo().getCXXABI().isMicrosoft())
-          (void)isCompleteType(UnOp->getOperatorLoc(), MemPtrType);
+        microsoftCompleteMemberPointer(UnOp->getOperatorLoc(), MemPtrType);
 
         return UnaryOperator::Create(Context, SubExpr.get(), UO_AddrOf,
                                      MemPtrType, VK_PRValue, OK_Ordinary,

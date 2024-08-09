@@ -68,6 +68,11 @@ public:
     return T.isOSFuchsia();
   }
 
+  // Return true if this target uses the Microsoft C++ ABI by default.
+  static bool defaultABIIsMicrosoft(const llvm::Triple &T) {
+    return T.isKnownWindowsMSVCEnvironment();
+  }
+
   /// A bogus initialization of the platform ABI.
   TargetCXXABI() : TheKind(GenericItanium) {}
 

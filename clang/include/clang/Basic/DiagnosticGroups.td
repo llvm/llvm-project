@@ -1044,6 +1044,8 @@ def VoidPointerDeref : DiagGroup<"void-ptr-dereference">;
 
 def FUseLdPath : DiagGroup<"fuse-ld-path">;
 
+def MicrosoftIncompleteMemberPointer : DiagGroup<"microsoft-incomplete-member-pointer">;
+
 def Move : DiagGroup<"move", [
     PessimizingMove,
     RedundantMove,
@@ -1106,7 +1108,8 @@ def Most : DiagGroup<"most", [
     PrivateExtern,
     SelTypeCast,
     ExternCCompat,
-    UserDefinedWarnings
+    UserDefinedWarnings,
+    MicrosoftIncompleteMemberPointer
  ]>;
 
 // Thread Safety warnings

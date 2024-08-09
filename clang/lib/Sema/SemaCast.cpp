@@ -1793,10 +1793,8 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
 
   // Lock down the inheritance model right now in MS ABI, whether or not the
   // pointee types are the same.
-  if (Self.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-    (void)Self.isCompleteType(OpRange.getBegin(), SrcType);
-    (void)Self.isCompleteType(OpRange.getBegin(), DestType);
-  }
+  Self.microsoftCompleteMemberPointer(OpRange.getBegin(), SrcMemPtr);
+  Self.microsoftCompleteMemberPointer(OpRange.getBegin(), DestMemPtr);
 
   // T == T, modulo cv
   if (!Self.Context.hasSameUnqualifiedType(SrcMemPtr->getPointeeType(),
@@ -2335,12 +2333,8 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
         SrcMemPtr->isMemberFunctionPointer())
       return TC_NotApplicable;
 
-    if (Self.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-      // We need to determine the inheritance model that the class will use if
-      // haven't yet.
-      (void)Self.isCompleteType(OpRange.getBegin(), SrcType);
-      (void)Self.isCompleteType(OpRange.getBegin(), DestType);
-    }
+    Self.microsoftCompleteMemberPointer(OpRange.getBegin(), SrcMemPtr);
+    Self.microsoftCompleteMemberPointer(OpRange.getBegin(), DestMemPtr);
 
     // Don't allow casting between member pointers of different sizes.
     if (Self.Context.getTypeSize(DestMemPtr) !=
