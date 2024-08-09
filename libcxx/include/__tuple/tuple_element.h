@@ -30,11 +30,13 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const _Tp> {
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, volatile _Tp> {
+  _LIBCPP_VOLATILE_DEPRECATED_WARNING;
   typedef _LIBCPP_NODEBUG volatile typename tuple_element<_Ip, _Tp>::type type;
 };
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp> {
+  _LIBCPP_VOLATILE_DEPRECATED_WARNING;
   typedef _LIBCPP_NODEBUG const volatile typename tuple_element<_Ip, _Tp>::type type;
 };
 
