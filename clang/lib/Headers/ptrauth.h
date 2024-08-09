@@ -28,21 +28,21 @@ typedef enum {
   /* A process-specific key which can be used to sign data pointers. */
   ptrauth_key_process_dependent_data = ptrauth_key_asdb,
 
-  /* The key used to sign C function pointers.
-     The extra data is always 0. */
-  ptrauth_key_function_pointer = ptrauth_key_process_independent_code,
-
   /* The key used to sign return addresses on the stack.
      The extra data is based on the storage address of the return address.
-     On ARM64, that is always the storage address of the return address plus 8
+     On AArch64, that is always the storage address of the return address + 8
      (or, in other words, the value of the stack pointer on function entry) */
   ptrauth_key_return_address = ptrauth_key_process_dependent_code,
 
   /* The key used to sign frame pointers on the stack.
      The extra data is based on the storage address of the frame pointer.
-     On ARM64, that is always the storage address of the frame pointer plus 16
+     On AArch64, that is always the storage address of the frame pointer + 16
      (or, in other words, the value of the stack pointer on function entry) */
   ptrauth_key_frame_pointer = ptrauth_key_process_dependent_data,
+
+  /* The key used to sign C function pointers.
+     The extra data is always 0. */
+  ptrauth_key_function_pointer = ptrauth_key_process_independent_code,
 
   /* The key used to sign block function pointers, including:
        invocation functions,
