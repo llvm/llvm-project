@@ -32,12 +32,9 @@ public:
   ///       !isPreISelGenericOpcode(I.getOpcode())
   virtual bool select(MachineInstr &I) = 0;
 
-  void setTargetPassConfig(const TargetPassConfig *T) { TPC = T; }
-
-  void setRemarkEmitter(MachineOptimizationRemarkEmitter *M) { MORE = M; }
-
-protected:
+  // FIXME: Eliminate dependency on TargetPassConfig for NewPM transition
   const TargetPassConfig *TPC = nullptr;
+
   MachineOptimizationRemarkEmitter *MORE = nullptr;
 };
 } // namespace llvm
