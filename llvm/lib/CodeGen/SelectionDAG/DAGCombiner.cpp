@@ -15720,7 +15720,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
 
   // Finally, recreate the node, it's operands were updated to use
   // frozen operands, so we just need to use it's "original" operands.
-  SmallVector<SDValue> Ops(N0->op_begin(), N0->op_end());
+  SmallVector<SDValue> Ops(N0->ops());
   // Special-handle ISD::UNDEF, each single one of them can be it's own thing.
   for (SDValue &Op : Ops) {
     if (Op.getOpcode() == ISD::UNDEF)
@@ -24160,7 +24160,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
     if (In.getOpcode() == ISD::CONCAT_VECTORS && In.hasOneUse() &&
         !(LegalDAG && In.getValueType().isScalableVector())) {
       unsigned NumOps = N->getNumOperands() * In.getNumOperands();
-      SmallVector<SDValue, 4> Ops(In->op_begin(), In->op_end());
+      SmallVector<SDValue, 4> Ops(In->ops());
       Ops.resize(NumOps, DAG.getUNDEF(Ops[0].getValueType()));
       return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
     }
@@ -26612,7 +26612,7 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       N0.getOperand(0).getValueType().isScalableVector() ==
           N1.getValueType().isScalableVector()) {
     unsigned Factor = N1.getValueType().getVectorMinNumElements();
-    SmallVector<SDValue, 8> Ops(N0->op_begin(), N0->op_end());
+    SmallVector<SDValue, 8> Ops(N0->ops());
     Ops[InsIdx / Factor] = N1;
     return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
   }

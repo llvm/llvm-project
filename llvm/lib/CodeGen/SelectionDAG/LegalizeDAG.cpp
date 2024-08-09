@@ -1449,8 +1449,7 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
 
   // We introduced a cycle though, so update the loads operands, making sure
   // to use the original store's chain as an incoming chain.
-  SmallVector<SDValue, 6> NewLoadOperands(NewLoad->op_begin(),
-                                          NewLoad->op_end());
+  SmallVector<SDValue, 6> NewLoadOperands(NewLoad->ops());
   NewLoadOperands[0] = Ch;
   NewLoad =
       SDValue(DAG.UpdateNodeOperands(NewLoad.getNode(), NewLoadOperands), 0);

@@ -6143,7 +6143,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   }
 
   // Copy regular operands
-  SmallVector<SDValue, 8> OtherOps(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 8> OtherOps(N->ops());
 
   // The select routine does not have access to the LoadSDNode instance, so
   // pass along the extension information
@@ -6300,7 +6300,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
              "Custom handling of non-i8 ldu/ldg?");
 
       // Just copy all operands as-is
-      SmallVector<SDValue, 4> Ops(N->op_begin(), N->op_end());
+      SmallVector<SDValue, 4> Ops(N->ops());
 
       // Force output to i16
       SDVTList LdResVTs = DAG.getVTList(MVT::i16, MVT::Other);
