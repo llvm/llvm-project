@@ -20,6 +20,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
