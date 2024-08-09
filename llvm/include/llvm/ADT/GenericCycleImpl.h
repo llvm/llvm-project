@@ -179,26 +179,41 @@ auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(BlockT *Block)
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
-                                                              CycleT *Child) {
-  assert((!Child->ParentCycle && !NewParent->ParentCycle) &&
-         "NewParent and Child must be both top level cycle!\n");
-  auto &CurrentContainer =
-      Child->ParentCycle ? Child->ParentCycle->Children : TopLevelCycles;
+void GenericCycleInfo<ContextT>::moveToAdjacentCycle(CycleT *NewParent,
+                                                     CycleT *Child) {
+  auto *OldParent = Child->getParentCycle();
+  assert(!OldParent || OldParent->contains(NewParent));
+
+  // Find the child in its current parent (or toplevel) and move it out of its
+  // container, into the new parent.
+  auto &CurrentContainer = OldParent ? OldParent->Children : TopLevelCycles;
   auto Pos = llvm::find_if(CurrentContainer, [=](const auto &Ptr) -> bool {
     return Child == Ptr.get();
   });
   assert(Pos != CurrentContainer.end());
   NewParent->Children.push_back(std::move(*Pos));
+  // Pos is empty after moving the child out. So we move the last child into its
+  // place rather than refilling the whole container.
   *Pos = std::move(CurrentContainer.back());
   CurrentContainer.pop_back();
+
   Child->ParentCycle = NewParent;
 
-  NewParent->Blocks.insert(Child->block_begin(), Child->block_end());
+  // Add child blocks to the hierarchy up to the old parent.
+  auto *ParentIter = NewParent;
+  while (ParentIter != OldParent) {
+    ParentIter->Blocks.insert(Child->block_begin(), Child->block_end());
+    ParentIter = ParentIter->getParentCycle();
+  }
 
-  for (auto &It : BlockMapTopLevel)
-    if (It.second == Child)
-      It.second = NewParent;
+  // If Child was a top-level cycle, update the map.
+  if (!OldParent) {
+    auto *H = NewParent->getHeader();
+    auto *NewTLC = getTopLevelParentCycle(H);
+    for (auto &It : BlockMapTopLevel)
+      if (It.second == Child)
+        It.second = NewTLC;
+  }
 }
 
 template <typename ContextT>
@@ -294,7 +309,7 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
                      << "discovered child cycle "
                      << Info.Context.print(BlockParent->getHeader()) << "\n");
           // Make BlockParent the child of NewCycle.
-          Info.moveTopLevelCycleToNewParent(NewCycle.get(), BlockParent);
+          Info.moveToAdjacentCycle(NewCycle.get(), BlockParent);
 
           for (auto *ChildEntry : BlockParent->entries())
             ProcessPredecessors(ChildEntry);
@@ -415,6 +430,95 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
 
   addBlockToCycle(NewBlock, Cycle);
   assert(validateTree());
+}
+
+/// \brief Extend a cycle minimally such that it contains every path from that
+///        cycle reaching a a given block.
+///
+/// The cycle structure is updated such that all predecessors of \p toBlock will
+/// be contained (possibly indirectly) in \p cycleToExtend, without removing any
+/// cycles.
+///
+/// If \p transferredBlocks is non-null, all blocks whose direct containing
+/// cycle was changed are appended to the vector.
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::extendCycle(
+    CycleT *cycleToExtend, BlockT *toBlock,
+    SmallVectorImpl<BlockT *> *transferredBlocks) {
+  SmallVector<BlockT *> workList;
+  workList.push_back(toBlock);
+
+  assert(cycleToExtend);
+  while (!workList.empty()) {
+    BlockT *block = workList.pop_back_val();
+    CycleT *cycle = getCycle(block);
+    if (cycleToExtend->contains(cycle))
+      continue;
+
+    auto cycleToInclude = findLargestDisjointAncestor(cycle, cycleToExtend);
+    if (cycleToInclude) {
+      // Move cycle into cycleToExtend.
+      moveToAdjacentCycle(cycleToExtend, cycleToInclude);
+      assert(cycleToInclude->Depth <= cycleToExtend->Depth);
+      GenericCycleInfoCompute<ContextT>::updateDepth(cycleToInclude);
+
+      // Continue from the entries of the newly included cycle.
+      for (BlockT *entry : cycleToInclude->Entries)
+        llvm::append_range(workList, predecessors(entry));
+    } else {
+      // Block is contained in an ancestor of cycleToExtend, just add it
+      // to the cycle and proceed.
+      BlockMap[block] = cycleToExtend;
+      if (transferredBlocks)
+        transferredBlocks->push_back(block);
+
+      CycleT *ancestor = cycleToExtend;
+      do {
+        ancestor->Blocks.insert(block);
+        ancestor = ancestor->getParentCycle();
+      } while (ancestor != cycle);
+
+      llvm::append_range(workList, predecessors(block));
+    }
+  }
+
+  assert(validateTree());
+}
+
+/// \brief Finds the largest ancestor of \p A that is disjoint from \B.
+///
+/// The caller must ensure that \p B does not contain \p A. If \p A
+/// contains \p B, null is returned.
+template <typename ContextT>
+auto GenericCycleInfo<ContextT>::findLargestDisjointAncestor(
+    const CycleT *A, const CycleT *B) const -> CycleT * {
+  if (!A || !B)
+    return nullptr;
+
+  while (B && A->Depth < B->Depth)
+    B = B->ParentCycle;
+  while (A && A->Depth > B->Depth)
+    A = A->ParentCycle;
+
+  if (A == B)
+    return nullptr;
+
+  assert(A && B);
+  assert(A->Depth == B->Depth);
+
+  for (;;) {
+    // Since both are at the same depth, the only way for both A and B to be
+    // null is when their parents are null, which will terminate the loop.
+    assert(A && B);
+
+    if (A->ParentCycle == B->ParentCycle) {
+      // const_cast is justified since cycles are owned by this
+      // object, which is non-const.
+      return const_cast<CycleT *>(A);
+    }
+    A = A->ParentCycle;
+    B = B->ParentCycle;
+  }
 }
 
 /// \brief Find the innermost cycle containing a given block.

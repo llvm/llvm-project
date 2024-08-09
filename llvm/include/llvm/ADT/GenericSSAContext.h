@@ -93,6 +93,9 @@ public:
   static void appendBlockTerms(SmallVectorImpl<const InstructionT *> &terms,
                                const BlockT &block);
 
+  static void appendConvergenceTokenUses(std::vector<BlockT *> &Worklist,
+                                         BlockT &BB);
+
   static bool isConstantOrUndefValuePhi(const InstructionT &Instr);
   const BlockT *getDefBlock(ConstValueRefT value) const;
 
@@ -101,6 +104,7 @@ public:
   Printable print(const InstructionT *inst) const;
   Printable print(ConstValueRefT value) const;
 };
+
 } // namespace llvm
 
 #endif // LLVM_ADT_GENERICSSACONTEXT_H

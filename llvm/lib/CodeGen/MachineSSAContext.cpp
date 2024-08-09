@@ -46,6 +46,12 @@ void MachineSSAContext::appendBlockTerms(
     terms.push_back(&T);
 }
 
+template <>
+void MachineSSAContext::appendConvergenceTokenUses(
+    std::vector<MachineBasicBlock *> &Worklist, MachineBasicBlock &BB) {
+  llvm_unreachable("Cycle extensions are not supported in MIR yet.");
+}
+
 /// Get the defining block of a value.
 template <>
 const MachineBasicBlock *MachineSSAContext::getDefBlock(Register value) const {

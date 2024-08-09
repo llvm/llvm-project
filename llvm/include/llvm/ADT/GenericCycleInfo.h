@@ -250,13 +250,7 @@ private:
   ///
   /// Note: This is an incomplete operation that does not update the depth of
   /// the subtree.
-  void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
-
-  /// Assumes that \p Cycle is the innermost cycle containing \p Block.
-  /// \p Block will be appended to \p Cycle and all of its parent cycles.
-  /// \p Block will be added to BlockMap with \p Cycle and
-  /// BlockMapTopLevel with \p Cycle's top level parent cycle.
-  void addBlockToCycle(BlockT *Block, CycleT *Cycle);
+  void moveToAdjacentCycle(CycleT *NewParent, CycleT *Child);
 
 public:
   GenericCycleInfo() = default;
@@ -275,6 +269,15 @@ public:
   unsigned getCycleDepth(const BlockT *Block) const;
   CycleT *getTopLevelParentCycle(BlockT *Block);
 
+  /// Assumes that \p Cycle is the innermost cycle containing \p Block.
+  /// \p Block will be appended to \p Cycle and all of its parent cycles.
+  /// \p Block will be added to BlockMap with \p Cycle and
+  /// BlockMapTopLevel with \p Cycle's top level parent cycle.
+  void addBlockToCycle(BlockT *Block, CycleT *Cycle);
+
+  void extendCycle(CycleT *cycleToExtend, BlockT *toBlock,
+                   SmallVectorImpl<BlockT *> *transferredBlocks = nullptr);
+
   /// Methods for debug and self-test.
   //@{
 #ifndef NDEBUG
@@ -284,6 +287,8 @@ public:
   void dump() const { print(dbgs()); }
   Printable print(const CycleT *Cycle) { return Cycle->print(Context); }
   //@}
+
+  CycleT *findLargestDisjointAncestor(const CycleT *a, const CycleT *b) const;
 
   /// Iteration over top-level cycles.
   //@{
