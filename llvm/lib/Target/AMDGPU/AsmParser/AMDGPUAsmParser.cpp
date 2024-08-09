@@ -2937,10 +2937,6 @@ unsigned AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
   StringRef RegSuffix = RegName.substr(RI->Name.size());
   unsigned SubReg = NoSubRegister;
   if (!RegSuffix.empty()) {
-    // We don't know the opcode till we are done parsing, so we don't know if
-    // registers should be 16 or 32 bit. It is therefore mandatory to put .l or
-    // .h to correctly specify 16 bit registers. We also can't determine class
-    // VGPR_16_Lo128 or VGPR_16, so always parse them as VGPR_16.
     if (RegSuffix.consume_back(".l"))
       SubReg = AMDGPU::lo16;
     else if (RegSuffix.consume_back(".h"))
