@@ -52,6 +52,10 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Fixed Microsoft layout of pointer-to-members of classes when the layout is needed
+  directly or indirectly by the base classes of a class. These should use the most
+  general unspecified inheritance layout. Also affects -fcomplete-member-pointers.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
