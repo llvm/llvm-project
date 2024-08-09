@@ -1753,6 +1753,7 @@ module std_private_ranges_size                       [system] {
   export std_private_type_traits_make_unsigned
 }
 module std_private_ranges_split_view                 [system] { header "__ranges/split_view.h" }
+module std_private_ranges_stride_view                [system] { header "__ranges/stride_view.h" }
 module std_private_ranges_subrange                   [system] {
   header "__ranges/subrange.h"
   export std_private_ranges_subrange_fwd
