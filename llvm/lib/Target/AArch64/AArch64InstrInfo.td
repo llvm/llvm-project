@@ -157,8 +157,6 @@ def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SHA3), "sve2-sha3">;
 def HasSVE2BitPerm   : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2BitPerm()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
-def HasB16B16        : Predicate<"Subtarget->hasB16B16()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureB16B16), "b16b16">;
 def HasSMEandIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME), "sme">;
@@ -172,6 +170,8 @@ def HasSMEFA64       : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF
                                  AssemblerPredicateWithAll<(all_of FeatureSMEFA64), "sme-fa64">;
 def HasSMEI16I64     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEI16I64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI16I64), "sme-i16i64">;
+def HasSMEB16B16     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEB16B16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEB16B16), "sme-b16b16">;
 def HasSME2andIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
