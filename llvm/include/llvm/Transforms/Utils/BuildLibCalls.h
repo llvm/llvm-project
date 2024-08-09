@@ -267,6 +267,13 @@ namespace llvm {
                                       IRBuilderBase &B,
                                       const TargetLibraryInfo *TLI,
                                       LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
+                                     const TargetLibraryInfo *TLI,
+                                     LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                            IRBuilderBase &B,
+                                            const TargetLibraryInfo *TLI,
+                                            LibFunc NewFunc, uint8_t HotCold);
 }
 
 #endif
