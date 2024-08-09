@@ -33,6 +33,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -334,7 +335,7 @@ class Intrinsic {
   /// The types of return value [0] and parameters [1..].
   std::vector<Type> Types;
 
-  SmallVector<std::tuple<int, int, int>, 2> ImmChecks;
+  SmallVector<ImmCheck, 2> ImmChecks;
   /// The index of the key type passed to CGBuiltin.cpp for polymorphic calls.
   int PolymorphicKeyType;
   /// The local variables defined.
@@ -370,16 +371,14 @@ class Intrinsic {
 
 public:
   Intrinsic(Record *R, StringRef Name, StringRef Proto, TypeSpec OutTS,
-            TypeSpec InTS, ArrayRef<std::tuple<int, int, int>> ImmChecks,
-            ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
+            TypeSpec InTS, ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
             StringRef ArchGuard, StringRef TargetGuard, bool IsUnavailable,
             bool BigEndianSafe)
-      : R(R), Name(Name.str()), OutTS(OutTS), InTS(InTS), ImmChecks(ImmChecks),
-        CK(CK), Body(Body), ArchGuard(ArchGuard.str()),
-        TargetGuard(TargetGuard.str()), IsUnavailable(IsUnavailable),
-        BigEndianSafe(BigEndianSafe), PolymorphicKeyType(0), NeededEarly(false),
-        UseMacro(false), BaseType(OutTS, "."), InBaseType(InTS, "."),
-        Emitter(Emitter) {
+      : R(R), Name(Name.str()), OutTS(OutTS), InTS(InTS), CK(CK), Body(Body),
+        ArchGuard(ArchGuard.str()), TargetGuard(TargetGuard.str()),
+        IsUnavailable(IsUnavailable), BigEndianSafe(BigEndianSafe),
+        PolymorphicKeyType(0), NeededEarly(false), UseMacro(false),
+        BaseType(OutTS, "."), InBaseType(InTS, "."), Emitter(Emitter) {
     // Modify the TypeSpec per-argument to get a concrete Type, and create
     // known variables for each.
     // Types[0] is the return value.
@@ -408,6 +407,26 @@ public:
           (Type.isScalar() && Type.isHalf()))
         UseMacro = true;
     }
+
+    int ArgIdx, Kind, TypeArgIdx;
+    std::vector<Record *> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
+    for (const auto *I : ImmCheckList) {
+      unsigned EltSizeInBits = 0, VecSizeInBits = 0;
+
+      ArgIdx = I->getValueAsInt("Arg");
+      TypeArgIdx = I->getValueAsInt("TypeContextArg");
+      Kind = I->getValueAsDef("Kind")->getValueAsInt("Value");
+
+      assert((ArgIdx >= 0 && Kind >= 0) && "Arg and Kind must be nonnegative");
+
+      if (TypeArgIdx >= 0) {
+        EltSizeInBits = getParamType(TypeArgIdx).getElementSizeInBits();
+        VecSizeInBits = getParamType(TypeArgIdx).getSizeInBits();
+      }
+
+      ImmChecks.emplace_back(
+          ImmCheck(ArgIdx, Kind, EltSizeInBits, VecSizeInBits));
+    }
   }
 
   /// Get the Record that this intrinsic is based off.
@@ -419,14 +438,13 @@ public:
   /// Get the architectural guard string (#ifdef).
   std::string getArchGuard() const { return ArchGuard; }
   std::string getTargetGuard() const { return TargetGuard; }
-  ArrayRef<std::tuple<int, int, int>> getImmChecks() const { return ImmChecks; }
+  ArrayRef<ImmCheck> getImmChecks() const { return ImmChecks; }
   /// Get the non-mangled name.
   std::string getName() const { return Name; }
 
   /// Return true if the intrinsic takes an immediate operand.
   bool hasImmediate() const {
     return llvm::any_of(Types, [](const Type &T) { return T.isImmediate(); });
-    // return !ImmChecks.empty();
   }
 
   // Return if the supplied argument is an immediate
@@ -558,7 +576,6 @@ class NeonEmitter {
                                      SmallVectorImpl<Intrinsic *> &Defs);
   void genOverloadTypeCheckCode(raw_ostream &OS,
                                 SmallVectorImpl<Intrinsic *> &Defs);
-  void genNeonImmCheckTypes(raw_ostream &OS);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,
                                   SmallVectorImpl<Intrinsic *> &Defs);
 
@@ -1958,16 +1975,6 @@ void NeonEmitter::createIntrinsic(Record *R,
   bool BigEndianSafe  = R->getValueAsBit("BigEndianSafe");
   std::string ArchGuard = std::string(R->getValueAsString("ArchGuard"));
   std::string TargetGuard = std::string(R->getValueAsString("TargetGuard"));
-  std::vector<Record *> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
-
-  SmallVector<std::tuple<int, int, int>, 2> ImmChecks;
-  for (const auto *R : ImmCheckList) {
-
-    ImmChecks.push_back(
-        std::make_tuple(R->getValueAsInt("Arg"),
-                        R->getValueAsDef("Kind")->getValueAsInt("Value"),
-                        R->getValueAsInt("EltSizeArg")));
-  }
 
   bool IsUnavailable = OperationRec->getValueAsBit("Unavailable");
   std::string CartesianProductWith = std::string(R->getValueAsString("CartesianProductWith"));
@@ -2009,9 +2016,8 @@ void NeonEmitter::createIntrinsic(Record *R,
   auto &Entry = IntrinsicMap[Name];
 
   for (auto &I : NewTypeSpecs) {
-    Entry.emplace_back(R, Name, Proto, I.first, I.second, ImmChecks, CK, Body,
-                       *this, ArchGuard, TargetGuard, IsUnavailable,
-                       BigEndianSafe);
+    Entry.emplace_back(R, Name, Proto, I.first, I.second, CK, Body, *this,
+                       ArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
     Out.push_back(&Entry.back());
   }
 
@@ -2160,21 +2166,9 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
-void NeonEmitter::genNeonImmCheckTypes(raw_ostream &OS) {
-  OS << "#ifdef GET_NEON_IMMCHECKTYPES\n";
-
-  for (auto *RV : Records.getAllDerivedDefinitions("ImmCheckType")) {
-    OS << "  " << RV->getNameInitAsString() << " = "
-       << RV->getValueAsInt("Value") << ",\n";
-  }
-
-  OS << "#endif\n\n";
-}
-
 void NeonEmitter::genIntrinsicRangeCheckCode(
     raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
   OS << "#ifdef GET_NEON_IMMEDIATE_CHECK\n";
-  int EltType;
   // Ensure these are only emitted once.
   std::set<std::string> Emitted;
 
@@ -2188,15 +2182,11 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
       continue;
 
     OS << "case NEON::BI__builtin_neon_" << Def->getMangledName() << ":\n";
-
     for (const auto &Check : Def->getImmChecks()) {
-      EltType = std::get<2>(Check); // elt type argument
-      if (EltType >= 0)
-        EltType = Def->getParamType(EltType).getNeonEnum();
-
-      OS << "  ImmChecks.push_back(std::make_tuple(" << std::get<0>(Check)
-         << ", " << std::get<1>(Check) << ", " << EltType << ")); \n";
-      OS << "  break;\n";
+      OS << " ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
+         << Check.getKind() << ", " << Check.getElementSizeInBits() << ", "
+         << Check.getVecSizeInBits() << "));\n"
+         << " break;\n";
     }
     Emitted.insert(Def->getMangledName());
   }

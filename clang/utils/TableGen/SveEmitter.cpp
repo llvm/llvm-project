@@ -27,6 +27,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <array>
@@ -49,23 +50,6 @@ enum class ACLEKind { SVE, SME };
 using TypeSpec = std::string;
 
 namespace {
-
-class ImmCheck {
-  unsigned Arg;
-  unsigned Kind;
-  unsigned ElementSizeInBits;
-
-public:
-  ImmCheck(unsigned Arg, unsigned Kind, unsigned ElementSizeInBits = 0)
-      : Arg(Arg), Kind(Kind), ElementSizeInBits(ElementSizeInBits) {}
-  ImmCheck(const ImmCheck &Other) = default;
-  ~ImmCheck() = default;
-
-  unsigned getArg() const { return Arg; }
-  unsigned getKind() const { return Kind; }
-  unsigned getElementSizeInBits() const { return ElementSizeInBits; }
-};
-
 class SVEType {
   bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
@@ -432,7 +416,6 @@ const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
       {SVEType("d", 'd'), "f64"}}};
 
 } // end anonymous namespace
-
 
 //===----------------------------------------------------------------------===//
 // Type implementation
@@ -1214,7 +1197,7 @@ void SVEEmitter::createIntrinsic(
     SmallVector<ImmCheck, 2> ImmChecks;
     for (auto *R : ImmCheckList) {
       int64_t Arg = R->getValueAsInt("Arg");
-      int64_t EltSizeArg = R->getValueAsInt("EltSizeArg");
+      int64_t EltSizeArg = R->getValueAsInt("TypeContextArg");
       int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
       assert(Arg >= 0 && Kind >= 0 && "Arg and Kind must be nonnegative");
 

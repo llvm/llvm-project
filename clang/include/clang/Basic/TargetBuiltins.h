@@ -242,7 +242,7 @@ namespace clang {
   };
 
   // Shared between SVE/SME and NEON
-  enum ArmImmCheckType {
+  enum ImmCheckType {
 #define LLVM_GET_ARM_INTRIN_IMMCHECKTYPES
 #include "clang/Basic/arm_immcheck_types.inc"
 #undef LLVM_GET_ARM_INTRIN_IMMCHECKTYPES

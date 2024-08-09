@@ -11,7 +11,7 @@ def ImmCheckShiftRightNarrow    : ImmCheckType<4>;  // 1..sizeinbits(elt)/2
 def ImmCheckShiftLeft           : ImmCheckType<5>;  // 0..(sizeinbits(elt) - 1)
 def ImmCheck0_7                 : ImmCheckType<6>;  // 0..7
 def ImmCheckLaneIndex           : ImmCheckType<7>;  // 0..(128/(1*sizeinbits(elt)) - 1)
-def ImmCheckLaneQIndex          : ImmCheckType<8>;  // (Neon) treat type as Quad
+def ImmCheckCvt                 : ImmCheckType<8>;  // 1..sizeinbits(elt) (same as ShiftRight)
 def ImmCheckLaneIndexCompRotate : ImmCheckType<9>;  // 0..(128/(2*sizeinbits(elt)) - 1)
 def ImmCheckLaneIndexDot        : ImmCheckType<10>; // 0..(128/(4*sizeinbits(elt)) - 1)
 def ImmCheckComplexRot90_270    : ImmCheckType<11>; // [90,270]
@@ -31,9 +31,9 @@ def ImmCheck1_32                : ImmCheckType<24>; // 1..32
 def ImmCheck1_64                : ImmCheckType<25>; // 1..64
 def ImmCheck0_63                : ImmCheckType<26>; // 0..63
 
-class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
+class ImmCheck<int arg, ImmCheckType kind, int typeArg = -1> {
   int Arg = arg;
   // The index of the argument whose type should be referred to when validating this immedaite.
-  int EltSizeArg = eltSizeArg;
+  int TypeContextArg = typeArg;
   ImmCheckType Kind = kind;
 }
