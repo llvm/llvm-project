@@ -38,6 +38,7 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
                     int32_t Width);
 
 uint64_t ballotSync(uint64_t Mask, int32_t Pred);
+void terminateWarp();
 
 /// AMDGCN Implementation
 ///
@@ -62,6 +63,8 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
 uint64_t ballotSync(uint64_t Mask, int32_t Pred) {
   return Mask & __builtin_amdgcn_ballot_w64(Pred);
 }
+
+void terminateWarp() { __builtin_amdgcn_endpgm(); }
 
 bool isSharedMemPtr(const void *Ptr) {
   return __builtin_amdgcn_is_shared(
@@ -89,6 +92,8 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta, int32_t Width) {
 uint64_t ballotSync(uint64_t Mask, int32_t Pred) {
   return __nvvm_vote_ballot_sync(static_cast<uint32_t>(Mask), Pred);
 }
+
+void terminateWarp() { __nvvm_exit(); }
 
 bool isSharedMemPtr(const void *Ptr) { return __nvvm_isspacep_shared(Ptr); }
 
@@ -125,6 +130,8 @@ int64_t utils::shuffleDown(uint64_t Mask, int64_t Var, uint32_t Delta,
 uint64_t utils::ballotSync(uint64_t Mask, int32_t Pred) {
   return impl::ballotSync(Mask, Pred);
 }
+
+void utils::terminateWarp() { return impl::terminateWarp(); }
 
 bool utils::isSharedMemPtr(void *Ptr) { return impl::isSharedMemPtr(Ptr); }
 
