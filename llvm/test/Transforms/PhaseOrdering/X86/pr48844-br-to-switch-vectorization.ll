@@ -11,13 +11,63 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I11_NOT1:%.*]] = icmp eq ptr [[START:%.*]], [[END:%.*]]
-; CHECK-NEXT:    br i1 [[I11_NOT1]], label [[EXIT:%.*]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 [[I11_NOT1]], label [[EXIT:%.*]], label [[BB12_PREHEADER:%.*]]
+; CHECK:       bb12.preheader:
+; CHECK-NEXT:    [[END3:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START4:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END3]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 124
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[BB12_PREHEADER11:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775776
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[NEXT_GEP]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <8 x i32>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <8 x i32>, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD8]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD9]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD10]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD8]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD9]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD10]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
+; CHECK-NEXT:    [[TMP16:%.*]] = or <8 x i1> [[TMP8]], [[TMP12]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or <8 x i1> [[TMP9]], [[TMP13]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or <8 x i1> [[TMP10]], [[TMP14]]
+; CHECK-NEXT:    [[TMP19:%.*]] = or <8 x i1> [[TMP11]], [[TMP15]]
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[NEXT_GEP]], i32 4, <8 x i1> [[TMP16]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[TMP5]], i32 4, <8 x i1> [[TMP17]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[TMP6]], i32 4, <8 x i1> [[TMP18]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[TMP7]], i32 4, <8 x i1> [[TMP19]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT]], label [[BB12_PREHEADER11]]
+; CHECK:       bb12.preheader11:
+; CHECK-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[START]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[PTR2_PH]], [[BB12_PREHEADER11]] ]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    switch i32 [[VAL]], label [[LATCH]] [
-; CHECK-NEXT:    i32 -12, label [[STORE:%.*]]
-; CHECK-NEXT:    i32 13, label [[STORE]]
+; CHECK-NEXT:      i32 -12, label [[STORE:%.*]]
+; CHECK-NEXT:      i32 13, label [[STORE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       store:
 ; CHECK-NEXT:    store i32 42, ptr [[PTR2]], align 4
@@ -25,7 +75,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR2]], i64 4
 ; CHECK-NEXT:    [[I11_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB12]]
+; CHECK-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB12]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
