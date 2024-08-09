@@ -55,6 +55,7 @@
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -5380,7 +5381,7 @@ static bool combineInstructionsOverFunction(
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
     BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
-    const InstCombineOptions &Opts) {
+    UniformityInfo &UI, const InstCombineOptions &Opts) {
   auto &DL = F.getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
@@ -5418,7 +5419,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, LI);
+                        ORE, BFI, BPI, PSI, DL, LI, UI);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F, RPOT);
     MadeChangeInThisIteration |= IC.run();
@@ -5466,6 +5467,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  auto &UI = AM.getResult<UniformityInfoAnalysis>(F);
 
   // TODO: Only use LoopInfo when the option is set. This requires that the
   //       callers in the pass pipeline explicitly set the option.
@@ -5482,7 +5484,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, BPI, PSI, LI, Options))
+                                       BFI, BPI, PSI, LI, UI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -5505,6 +5507,7 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<BasicAAWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
+  AU.addRequired<UniformityInfoWrapperPass>();
   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
 }
 
@@ -5519,6 +5522,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
   auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  auto &UI = getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
   // Optional analyses.
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
@@ -5535,7 +5539,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
     BPI = &WrapperPass->getBPI();
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, BPI, PSI, LI,
+                                         BFI, BPI, PSI, LI, UI,
                                          InstCombineOptions());
 }
 
@@ -5556,6 +5560,7 @@ INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(InstructionCombiningPass, "instcombine",
                     "Combine redundant instructions", false, false)
 
