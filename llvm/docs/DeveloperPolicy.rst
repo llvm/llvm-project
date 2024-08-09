@@ -475,7 +475,7 @@ What are the expectations around a revert?
 Obtaining Commit Access
 -----------------------
 
-We grant commit access to contributors that can provide a valid justification
+We grant commit access to contributors that can provide a valid justification.
 If you would like commit access, please send an email to
 `Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
 for former contributors with SVN access as well as new contributors. If
