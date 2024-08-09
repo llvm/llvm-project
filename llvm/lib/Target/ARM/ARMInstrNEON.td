@@ -7356,16 +7356,19 @@ def AESIMC : AES<"imc", 1, 1, int_arm_neon_aesimc>;
 def AESMC : AES<"mc", 1, 0, int_arm_neon_aesmc>;
 }
 
-let Predicates = [HasV8, HasSHA2] in {
+let Predicates = [HasV8, HasSHA1] in {
 def SHA1H : N2SHA<"1h", 0b01, 0b010, 1, 1, null_frag>;
 def SHA1SU1 : N2SHA2Op<"1su1", 0b10, 0b011, 1, 0, int_arm_neon_sha1su1>;
-def SHA256SU0 : N2SHA2Op<"256su0", 0b10, 0b011, 1, 1, int_arm_neon_sha256su0>;
 def SHA1C : N3SHA3Op<"1c", 0b00100, 0b00, null_frag>;
 def SHA1M : N3SHA3Op<"1m", 0b00100, 0b10, null_frag>;
 def SHA1P : N3SHA3Op<"1p", 0b00100, 0b01, null_frag>;
 def SHA1SU0 : N3SHA3Op<"1su0", 0b00100, 0b11, int_arm_neon_sha1su0>;
+}
+
+let Predicates = [HasV8, HasSHA2] in {
 def SHA256H : N3SHA3Op<"256h", 0b00110, 0b00, int_arm_neon_sha256h>;
 def SHA256H2 : N3SHA3Op<"256h2", 0b00110, 0b01, int_arm_neon_sha256h2>;
+def SHA256SU0 : N2SHA2Op<"256su0", 0b10, 0b011, 1, 1, int_arm_neon_sha256su0>;
 def SHA256SU1 : N3SHA3Op<"256su1", 0b00110, 0b10, int_arm_neon_sha256su1>;
 }
 

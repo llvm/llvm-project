@@ -30,7 +30,8 @@
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
-// CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
+// CHECK-NEXT:     FEAT_SHA1                                              Enable SHA1 support
+// CHECK-NEXT:     FEAT_SHA256                                            Enable SHA256 support
 // CHECK-NEXT:     FEAT_SPE                                               Enable Statistical Profiling extension
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension

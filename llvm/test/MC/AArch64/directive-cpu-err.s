@@ -49,9 +49,9 @@
     // CHECK-NEXT:  aese v0.16b, v1.16b
     // CHECK-NEXT:  ^
 
-    .cpu generic+nosha2
+    .cpu generic+nosha1
     sha1h s0, s1
-    // CHECK:       error: instruction requires: sha2
+    // CHECK:       error: instruction requires: sha1
     // CHECK-NEXT:  sha1h s0, s1
     // CHECK-NEXT:  ^
 

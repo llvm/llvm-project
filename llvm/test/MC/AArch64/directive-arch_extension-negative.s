@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 \
-// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
+// RUN: -mattr=+crc,+sm4,+sha3,+sha1,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
 // RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
@@ -29,10 +29,10 @@ sha512h q0, q1, v2.2d
 // CHECK-NEXT: sha512h q0, q1, v2.2d
 
 sha1h s0, s1
-// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: sha2
-.arch_extension nosha2
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: sha1
+.arch_extension nosha1
 sha1h s0, s1
-// CHECK: [[@LINE-1]]:1: error: instruction requires: sha2
+// CHECK: [[@LINE-1]]:1: error: instruction requires: sha1
 // CHECK-NEXT: sha1h s0, s1
 
 aese v0.16b, v1.16b

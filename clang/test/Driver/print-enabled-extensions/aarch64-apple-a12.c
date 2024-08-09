@@ -22,6 +22,7 @@
 // CHECK-NEXT:     FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
-// CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
+// CHECK-NEXT:     FEAT_SHA1                                              Enable SHA1 support
+// CHECK-NEXT:     FEAT_SHA256                                            Enable SHA256 support
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState
 // CHECK-NEXT:     FEAT_VHE                                               Enable Armv8.1-A Virtual Host extension

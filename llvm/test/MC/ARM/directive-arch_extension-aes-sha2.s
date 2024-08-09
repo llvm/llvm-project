@@ -6,7 +6,7 @@
   .syntax unified
 
   .arch_extension aes
-  .arch_extension sha2
+  .arch_extension sha1
 
   .type crypto,%function
 crypto:
@@ -18,7 +18,7 @@ crypto:
 @CHECK:	sha1c.32 q0, q1, q2
 
   .arch_extension noaes
-  .arch_extension nosha2
+  .arch_extension nosha1
 
   .type nocrypto,%function
 nocrypto:
@@ -29,6 +29,6 @@ nocrypto:
 @CHECK-ERROR: aesd.8 q0, q1
 @CHECK-ERROR: ^
 
-@CHECK-ERROR: error: instruction requires: sha2
+@CHECK-ERROR: error: instruction requires: sha1
 @CHECK-ERROR: sha1c.32 q0, q1, q2
 @CHECK-ERROR: ^

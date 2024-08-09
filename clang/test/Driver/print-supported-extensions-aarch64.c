@@ -51,7 +51,8 @@
 // CHECK-NEXT:     rcpc3               FEAT_LRCPC3                                            Enable Armv8.9-A RCPC instructions for A64 and Advanced SIMD and floating-point instruction set
 // CHECK-NEXT:     rdm                 FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     sb                  FEAT_SB                                                Enable Armv8.5-A Speculation Barrier
-// CHECK-NEXT:     sha2                FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
+// CHECK-NEXT:     sha1                FEAT_SHA1                                              Enable SHA1 support
+// CHECK-NEXT:     sha2                FEAT_SHA256                                            Enable SHA256 support
 // CHECK-NEXT:     sha3                FEAT_SHA3, FEAT_SHA512                                 Enable SHA512 and SHA3 support
 // CHECK-NEXT:     sm4                 FEAT_SM4, FEAT_SM3                                     Enable SM3 and SM4 support
 // CHECK-NEXT:     sme                 FEAT_SME                                               Enable Scalable Matrix Extension (SME)

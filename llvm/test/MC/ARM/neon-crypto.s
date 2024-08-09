@@ -20,8 +20,8 @@ sha256su0.32  q0, q1
 @ CHECK: sha1h.32  q0, q1       @ encoding: [0xc2,0x02,0xb9,0xf3]
 @ CHECK: sha1su1.32 q0, q1      @ encoding: [0x82,0x03,0xba,0xf3]
 @ CHECK: sha256su0.32 q0, q1    @ encoding: [0xc2,0x03,0xba,0xf3]
-@ CHECK-V7: instruction requires: sha2 armv8
-@ CHECK-V7: instruction requires: sha2 armv8
+@ CHECK-V7: instruction requires: sha1 armv8
+@ CHECK-V7: instruction requires: sha1 armv8
 @ CHECK-V7: instruction requires: sha2 armv8
 
 sha1c.32  q0, q1, q2
@@ -38,10 +38,10 @@ sha256su1.32  q0, q1, q2
 @ CHECK: sha256h.32  q0, q1, q2      @ encoding: [0x44,0x0c,0x02,0xf3]
 @ CHECK: sha256h2.32 q0, q1, q2      @ encoding: [0x44,0x0c,0x12,0xf3]
 @ CHECK: sha256su1.32 q0, q1, q2     @ encoding: [0x44,0x0c,0x22,0xf3]
-@ CHECK-V7: instruction requires: sha2 armv8
-@ CHECK-V7: instruction requires: sha2 armv8
-@ CHECK-V7: instruction requires: sha2 armv8
-@ CHECK-V7: instruction requires: sha2 armv8
+@ CHECK-V7: instruction requires: sha1 armv8
+@ CHECK-V7: instruction requires: sha1 armv8
+@ CHECK-V7: instruction requires: sha1 armv8
+@ CHECK-V7: instruction requires: sha1 armv8
 @ CHECK-V7: instruction requires: sha2 armv8
 @ CHECK-V7: instruction requires: sha2 armv8
 @ CHECK-V7: instruction requires: sha2 armv8
