@@ -122,6 +122,8 @@
 // RUN: %clang_cl -c -### /Zc:char8_t- -- %s 2>&1 | FileCheck -check-prefix CHECK-CHAR8_T_ %s
 // CHECK-CHAR8_T_: "-fno-char8_t"
 
+// RUN: %clang_cl -c -### /Zc:referenceBinding- -- %s 2>&1 | FileCheck -check-prefix CHECK-REFERENCE_BINDING_ %s
+// CHECK-REFERENCE_BINDING_: "-fms-reference-binding"
 
 
 // These never warn, but don't have an effect yet.

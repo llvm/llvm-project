@@ -4495,6 +4495,26 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
         T1 = S.Context.getQualifiedType(UnqualT1, T1Quals);
       if (isa<ArrayType>(T2) && T2Quals)
         T2 = S.Context.getQualifiedType(UnqualT2, T2Quals);
+
+      if (S.getLangOpts().MSVCReferenceBinding &&
+          S.Context.hasSameType(SCS1.getFromType(), SCS2.getFromType()) &&
+          !SCS1.getFromType().hasQualifiers() && SCS1.BindsToRvalue &&
+          SCS2.BindsToRvalue &&
+          !SCS1.BindsImplicitObjectArgumentWithoutRefQualifier &&
+          !SCS2.BindsImplicitObjectArgumentWithoutRefQualifier) {
+
+        // When binding a user-defined type temporary to an lvalue MSVC will
+        // pick `const T&` over `T&` when binding an unqualified `T&&`.
+        // Therefore we want to pick the more qualified const overload in this
+        // specific case.
+        if (!T2.hasQualifiers() &&
+            (T1.isConstQualified() && !T1.isVolatileQualified()))
+          return ImplicitConversionSequence::Better;
+        if (!T1.hasQualifiers() &&
+            (T2.isConstQualified() && !T2.isVolatileQualified()))
+          return ImplicitConversionSequence::Worse;
+      }
+
       if (T2.isMoreQualifiedThan(T1))
         return ImplicitConversionSequence::Better;
       if (T1.isMoreQualifiedThan(T2))
@@ -4956,6 +4976,11 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
              : Ref_Incompatible;
 }
 
+bool Sema::AllowMSLValueReferenceBinding(Qualifiers Quals, QualType QT) {
+  return getLangOpts().MSVCReferenceBinding &&
+         !(Quals.hasVolatile() || QT->isBuiltinType() || QT->isArrayType());
+}
+
 /// Look for a user-defined conversion to a value reference-compatible
 ///        with DeclType. Return true if something definite is found.
 static bool
@@ -5189,9 +5214,14 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //        non-volatile const type (i.e., cv1 shall be const), or the reference
   //        shall be an rvalue reference.
   if (!isRValRef && (!T1.isConstQualified() || T1.isVolatileQualified())) {
-    if (InitCategory.isRValue() && RefRelationship != Sema::Ref_Incompatible)
-      ICS.setBad(BadConversionSequence::lvalue_ref_to_rvalue, Init, DeclType);
-    return ICS;
+    if (InitCategory.isRValue() && RefRelationship != Sema::Ref_Incompatible) {
+      if (!S.AllowMSLValueReferenceBinding(T1.getQualifiers(), T1)) {
+        ICS.setBad(BadConversionSequence::lvalue_ref_to_rvalue, Init, DeclType);
+        return ICS;
+      }
+    } else {
+      return ICS;
+    }
   }
 
   //       -- If the initializer expression

@@ -7270,6 +7270,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fdelayed-template-parsing");
   }
 
+  if (Args.hasFlag(options::OPT_fms_reference_binding,
+                   options::OPT_fno_ms_reference_binding,
+                   IsWindowsMSVC && !HaveCxx20))
+    CmdArgs.push_back("-fms-reference-binding");
+
   if (Args.hasFlag(options::OPT_fpch_validate_input_files_content,
                    options::OPT_fno_pch_validate_input_files_content, false))
     CmdArgs.push_back("-fvalidate-ast-input-files-content");

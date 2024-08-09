@@ -5252,13 +5252,20 @@ static void TryReferenceInitializationCore(Sema &S,
       Sequence.SetOverloadFailure(
                         InitializationSequence::FK_ReferenceInitOverloadFailed,
                                   ConvOvlResult);
-    else if (!InitCategory.isLValue())
-      Sequence.SetFailed(
-          T1Quals.isAddressSpaceSupersetOf(T2Quals)
-              ? InitializationSequence::
-                    FK_NonConstLValueReferenceBindingToTemporary
-              : InitializationSequence::FK_ReferenceInitDropsQualifiers);
-    else {
+    else if (!InitCategory.isLValue()) {
+      if (T1Quals.isAddressSpaceSupersetOf(T2Quals)) {
+        if (S.AllowMSLValueReferenceBinding(T1Quals, T1)) {
+          S.Diag(DeclLoc, diag::ext_ms_lvalue_reference_binding)
+              << Initializer->getSourceRange();
+        } else {
+          Sequence.SetFailed(InitializationSequence::
+                                 FK_NonConstLValueReferenceBindingToTemporary);
+        }
+      } else {
+        Sequence.SetFailed(
+            InitializationSequence::FK_ReferenceInitDropsQualifiers);
+      }
+    } else {
       InitializationSequence::FailureKind FK;
       switch (RefRelationship) {
       case Sema::Ref_Compatible:
@@ -5284,7 +5291,9 @@ static void TryReferenceInitializationCore(Sema &S,
       }
       Sequence.SetFailed(FK);
     }
-    return;
+
+    if (Sequence.Failed())
+      return;
   }
 
   //    - If the initializer expression
