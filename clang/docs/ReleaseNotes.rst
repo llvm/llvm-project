@@ -49,6 +49,9 @@ C++ Specific Potentially Breaking Changes
   few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
   which GCC supports as well.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
