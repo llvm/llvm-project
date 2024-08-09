@@ -243,8 +243,6 @@ void SendThreadStoppedEvent() {
   if (process.IsValid()) {
     auto state = process.GetState();
     if (state == lldb::eStateStopped) {
-      llvm::DenseSet<lldb::tid_t> old_thread_ids;
-      old_thread_ids.swap(g_dap.thread_ids);
       uint32_t stop_id = process.GetStopID();
       const uint32_t num_threads = process.GetNumThreads();
 
@@ -255,28 +253,34 @@ void SendThreadStoppedEvent() {
       lldb::tid_t first_tid_with_reason = LLDB_INVALID_THREAD_ID;
       uint32_t num_threads_with_reason = 0;
       bool focus_thread_exists = false;
+      lldb::SBThread focus_thread, first_thread_with_reason;
       for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
         lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
         const lldb::tid_t tid = thread.GetThreadID();
         const bool has_reason = ThreadHasStopReason(thread);
         // If the focus thread doesn't have a stop reason, clear the thread ID
         if (tid == g_dap.focus_tid) {
+          focus_thread = thread;
           focus_thread_exists = true;
           if (!has_reason)
             g_dap.focus_tid = LLDB_INVALID_THREAD_ID;
         }
         if (has_reason) {
           ++num_threads_with_reason;
-          if (first_tid_with_reason == LLDB_INVALID_THREAD_ID)
+          if (first_tid_with_reason == LLDB_INVALID_THREAD_ID) {
             first_tid_with_reason = tid;
+            first_thread_with_reason = thread;
+          }
         }
       }
 
       // We will have cleared g_dap.focus_tid if the focus thread doesn't have
       // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
       // then set the focus thread to the first thread with a stop reason.
-      if (!focus_thread_exists || g_dap.focus_tid == LLDB_INVALID_THREAD_ID)
+      if (!focus_thread_exists || g_dap.focus_tid == LLDB_INVALID_THREAD_ID) {
         g_dap.focus_tid = first_tid_with_reason;
+        focus_thread = first_thread_with_reason;
+      }
 
       // If no threads stopped with a reason, then report the first one so
       // we at least let the UI know we stopped.
@@ -284,14 +288,38 @@ void SendThreadStoppedEvent() {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
         g_dap.focus_tid = thread.GetThreadID();
         g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
+      } else if (g_dap.single_stopped_event) {
+        // If single_stopped_event option is true only one stopped event will
+        // be sent during debugger stop. The focused thread's stopped event is
+        // preferred if it is stopped with a reason; otherwise, we simply use
+        // the first stopped thread.
+        //
+        // This option would be preferred for VSCode IDE because multiple
+        // stopped events would cause confusing UX.
+        //
+        // TODO: do we need to give priority to exception/signal stopped event
+        // over normal stepping complete/breakpoint?
+        //
+
+        assert(focus_thread.IsValid());
+        assert(g_dap.focus_tid == focus_thread.GetThreadID());
+        g_dap.SendJSON(CreateThreadStopped(focus_thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
           lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-          g_dap.thread_ids.insert(thread.GetThreadID());
           if (ThreadHasStopReason(thread)) {
             g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
           }
         }
+      }
+
+      // Update existing thread ids and send thread exit event
+      // for non-exist ones.
+      llvm::DenseSet<lldb::tid_t> old_thread_ids;
+      old_thread_ids.swap(g_dap.thread_ids);
+      for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+        lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
+        g_dap.thread_ids.insert(thread.GetThreadID());
       }
 
       for (auto tid : old_thread_ids) {
@@ -880,6 +908,10 @@ void request_attach(const llvm::json::Object &request) {
 void request_continue(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
+  auto arguments = request.getObject("arguments");
+  lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
+  g_dap.focus_tid = thread.GetThreadID();
+
   lldb::SBProcess process = g_dap.target.GetProcess();
   lldb::SBError error = process.Continue();
   llvm::json::Object body;
@@ -1636,6 +1668,11 @@ void request_initialize(const llvm::json::Object &request) {
       "Get or set the repl behavior of lldb-dap evaluation requests.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
+  // singleStoppedEvent option is not from formal DAP specification. It is an
+  // lldb specific option to experiment stopped events behaivor against
+  // application with multiple threads.
+  g_dap.single_stopped_event =
+      GetBoolean(arguments, "singleStoppedEvent", false);
 
   // Start our event thread so we can receive events from the debugger, target,
   // process and more.

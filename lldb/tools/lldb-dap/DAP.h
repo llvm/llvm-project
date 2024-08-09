@@ -175,6 +175,9 @@ struct DAP {
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry;
   bool is_attach;
+  // Whether to send single stopped event when multiple stopped events
+  // occured at the same time (eg. breakpoints by threads simultanously)
+  bool single_stopped_event;
   bool enable_auto_variable_summaries;
   bool enable_synthetic_child_debugging;
   // The process event thread normally responds to process exited events by
