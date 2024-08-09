@@ -9,11 +9,10 @@ define zeroext i1 @abs_isinff(float %x) {
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    li 4, 1
 ; P8-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
-; P8-NEXT:    li 3, 0
+; P8-NEXT:    li 3, 1
 ; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    iseleq 3, 4, 3
+; P8-NEXT:    iseleq 3, 0, 3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinff:
@@ -34,11 +33,10 @@ define zeroext i1 @abs_isinf(double %x) {
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    li 4, 1
 ; P8-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
-; P8-NEXT:    li 3, 0
+; P8-NEXT:    li 3, 1
 ; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    iseleq 3, 4, 3
+; P8-NEXT:    iseleq 3, 0, 3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinf:
@@ -67,8 +65,8 @@ define zeroext i1 @abs_isinfq(fp128 %x) {
 ; P8-NEXT:    clrldi 4, 4, 1
 ; P8-NEXT:    xor 4, 4, 5
 ; P8-NEXT:    or 3, 3, 4
-; P8-NEXT:    cntlzd 3, 3
-; P8-NEXT:    rldicl 3, 3, 58, 63
+; P8-NEXT:    addic 4, 3, -1
+; P8-NEXT:    subfe 3, 4, 3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfq:
@@ -173,7 +171,8 @@ define <4 x i1> @abs_isinfv4f32(<4 x float> %x) {
 ; P8-NEXT:    xvabssp 0, 34
 ; P8-NEXT:    addi 3, 3, .LCPI6_0@toc@l
 ; P8-NEXT:    lxvd2x 1, 0, 3
-; P8-NEXT:    xvcmpeqsp 34, 0, 1
+; P8-NEXT:    xvcmpeqsp 0, 0, 1
+; P8-NEXT:    xxlnor 34, 0, 0
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfv4f32:
@@ -182,7 +181,8 @@ define <4 x i1> @abs_isinfv4f32(<4 x float> %x) {
 ; P9-NEXT:    xvabssp 0, 34
 ; P9-NEXT:    addi 3, 3, .LCPI6_0@toc@l
 ; P9-NEXT:    lxv 1, 0(3)
-; P9-NEXT:    xvcmpeqsp 34, 0, 1
+; P9-NEXT:    xvcmpeqsp 0, 0, 1
+; P9-NEXT:    xxlnor 34, 0, 0
 ; P9-NEXT:    blr
 entry:
   %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %x)
@@ -198,6 +198,7 @@ define <2 x i1> @abs_isinfv2f64(<2 x double> %x) {
 ; P8-NEXT:    addi 3, 3, .LCPI7_0@toc@l
 ; P8-NEXT:    lxvd2x 1, 0, 3
 ; P8-NEXT:    xvcmpeqdp 34, 0, 1
+; P8-NEXT:    xxlnor 34, 34, 34
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfv2f64:
@@ -207,6 +208,7 @@ define <2 x i1> @abs_isinfv2f64(<2 x double> %x) {
 ; P9-NEXT:    addi 3, 3, .LCPI7_0@toc@l
 ; P9-NEXT:    lxv 1, 0(3)
 ; P9-NEXT:    xvcmpeqdp 34, 0, 1
+; P9-NEXT:    xxlnor 34, 34, 34
 ; P9-NEXT:    blr
 entry:
   %0 = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)

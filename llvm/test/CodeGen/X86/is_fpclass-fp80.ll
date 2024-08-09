@@ -244,7 +244,7 @@ define i1 @is_inf_f80(x86_fp80 %x) nounwind {
 ; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    sete %al
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_inf_f80:
@@ -255,7 +255,7 @@ define i1 @is_inf_f80(x86_fp80 %x) nounwind {
 ; X64-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
 ; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    orq %rcx, %rax
-; X64-NEXT:    sete %al
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 516)  ; 0x204 = "inf"

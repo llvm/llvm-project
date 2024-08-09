@@ -1368,7 +1368,7 @@ define i1 @isinf_f16(half %x) nounwind {
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
 ; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3159,7 +3159,7 @@ define i1 @not_isfinite_or_nan_f(half %x) {
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
 ; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
