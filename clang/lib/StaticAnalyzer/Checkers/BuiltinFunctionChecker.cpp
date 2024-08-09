@@ -21,16 +21,67 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 
 using namespace clang;
 using namespace ento;
 
 namespace {
 
+QualType getOverflowBuiltinResultType(const CallEvent &Call) {
+  assert(Call.getNumArgs() == 3);
+
+  return Call.getArgExpr(2)->getType()->getPointeeType();
+}
+
+QualType getOverflowBuiltinResultType(const CallEvent &Call, CheckerContext &C,
+                                      unsigned BI) {
+  assert(Call.getNumArgs() == 3);
+
+  ASTContext &Ast = C.getASTContext();
+
+  switch (BI) {
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+    return Ast.IntTy;
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+    return Ast.LongTy;
+  case Builtin::BI__builtin_smulll_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+    return Ast.LongLongTy;
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_uadd_overflow:
+    return Ast.UnsignedIntTy;
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+    return Ast.UnsignedLongTy;
+  case Builtin::BI__builtin_umulll_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+    return Ast.UnsignedLongLongTy;
+  case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_add_overflow:
+    return getOverflowBuiltinResultType(Call);
+  default:
+    assert(false && "Unknown overflow builtin");
+  }
+}
+
 class BuiltinFunctionChecker : public Checker<eval::Call> {
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+  void HandleOverflowBuiltin(const CallEvent &Call, CheckerContext &C,
+                             BinaryOperator::Opcode Op,
+                             QualType ResultType) const;
 
 private:
   // From: clang/include/clang/Basic/Builtins.def
@@ -49,6 +100,44 @@ private:
 };
 
 } // namespace
+
+void BuiltinFunctionChecker::HandleOverflowBuiltin(const CallEvent &Call,
+                                                   CheckerContext &C,
+                                                   BinaryOperator::Opcode Op,
+                                                   QualType ResultType) const {
+  // All __builtin_*_overflow functions take 3 argumets.
+  assert(Call.getNumArgs() == 3);
+
+  ProgramStateRef State = C.getState();
+  SValBuilder &SVB = C.getSValBuilder();
+  const Expr *CE = Call.getOriginExpr();
+
+  SVal Arg1 = Call.getArgSVal(0);
+  SVal Arg2 = Call.getArgSVal(1);
+
+  SVal RetVal = SVB.evalBinOp(State, Op, Arg1, Arg2, ResultType);
+
+  // TODO: Handle overflows with values that known to overflow. Like INT_MAX + 1
+  // should not produce state for non-overflow case and threat it as
+  // unreachable.
+
+  // Handle non-overflow case.
+  {
+    ProgramStateRef StateSuccess =
+        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(false));
+
+    if (auto L = Call.getArgSVal(2).getAs<Loc>())
+      StateSuccess = StateSuccess->bindLoc(*L, RetVal, C.getLocationContext());
+
+    C.addTransition(StateSuccess);
+  }
+
+  // Handle overflow case.
+  {
+    C.addTransition(
+        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true)));
+  }
+}
 
 bool BuiltinFunctionChecker::isBuiltinLikeFunction(
     const CallEvent &Call) const {
@@ -82,10 +171,41 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     return true;
   }
 
-  switch (FD->getBuiltinID()) {
+  unsigned BI = FD->getBuiltinID();
+
+  switch (BI) {
   default:
     return false;
-
+  case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_smulll_overflow:
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_umulll_overflow:
+    HandleOverflowBuiltin(Call, C, BO_Mul,
+                          getOverflowBuiltinResultType(Call, C, BI));
+    return true;
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+    HandleOverflowBuiltin(Call, C, BO_Sub,
+                          getOverflowBuiltinResultType(Call, C, BI));
+    return true;
+  case Builtin::BI__builtin_add_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+  case Builtin::BI__builtin_uadd_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+    HandleOverflowBuiltin(Call, C, BO_Add,
+                          getOverflowBuiltinResultType(Call, C, BI));
+    return true;
   case Builtin::BI__builtin_assume:
   case Builtin::BI__assume: {
     assert (Call.getNumArgs() > 0);
