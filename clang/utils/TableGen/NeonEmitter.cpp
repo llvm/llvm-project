@@ -33,6 +33,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -333,6 +334,8 @@ class Intrinsic {
 
   /// The types of return value [0] and parameters [1..].
   std::vector<Type> Types;
+
+  SmallVector<ImmCheck, 2> ImmChecks;
   /// The index of the key type passed to CGBuiltin.cpp for polymorphic calls.
   int PolymorphicKeyType;
   /// The local variables defined.
@@ -369,12 +372,13 @@ class Intrinsic {
 public:
   Intrinsic(Record *R, StringRef Name, StringRef Proto, TypeSpec OutTS,
             TypeSpec InTS, ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
-            StringRef ArchGuard, StringRef TargetGuard, bool IsUnavailable, bool BigEndianSafe)
+            StringRef ArchGuard, StringRef TargetGuard, bool IsUnavailable,
+            bool BigEndianSafe)
       : R(R), Name(Name.str()), OutTS(OutTS), InTS(InTS), CK(CK), Body(Body),
-        ArchGuard(ArchGuard.str()), TargetGuard(TargetGuard.str()), IsUnavailable(IsUnavailable),
-        BigEndianSafe(BigEndianSafe), PolymorphicKeyType(0), NeededEarly(false),
-        UseMacro(false), BaseType(OutTS, "."), InBaseType(InTS, "."),
-        Emitter(Emitter) {
+        ArchGuard(ArchGuard.str()), TargetGuard(TargetGuard.str()),
+        IsUnavailable(IsUnavailable), BigEndianSafe(BigEndianSafe),
+        PolymorphicKeyType(0), NeededEarly(false), UseMacro(false),
+        BaseType(OutTS, "."), InBaseType(InTS, "."), Emitter(Emitter) {
     // Modify the TypeSpec per-argument to get a concrete Type, and create
     // known variables for each.
     // Types[0] is the return value.
@@ -403,6 +407,26 @@ public:
           (Type.isScalar() && Type.isHalf()))
         UseMacro = true;
     }
+
+    int ArgIdx, Kind, TypeArgIdx;
+    std::vector<Record *> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
+    for (const auto *I : ImmCheckList) {
+      unsigned EltSizeInBits = 0, VecSizeInBits = 0;
+
+      ArgIdx = I->getValueAsInt("Arg");
+      TypeArgIdx = I->getValueAsInt("TypeContextArg");
+      Kind = I->getValueAsDef("Kind")->getValueAsInt("Value");
+
+      assert((ArgIdx >= 0 && Kind >= 0) && "Arg and Kind must be nonnegative");
+
+      if (TypeArgIdx >= 0) {
+        EltSizeInBits = getParamType(TypeArgIdx).getElementSizeInBits();
+        VecSizeInBits = getParamType(TypeArgIdx).getSizeInBits();
+      }
+
+      ImmChecks.emplace_back(
+          ImmCheck(ArgIdx, Kind, EltSizeInBits, VecSizeInBits));
+    }
   }
 
   /// Get the Record that this intrinsic is based off.
@@ -414,6 +438,7 @@ public:
   /// Get the architectural guard string (#ifdef).
   std::string getArchGuard() const { return ArchGuard; }
   std::string getTargetGuard() const { return TargetGuard; }
+  ArrayRef<ImmCheck> getImmChecks() const { return ImmChecks; }
   /// Get the non-mangled name.
   std::string getName() const { return Name; }
 
@@ -422,14 +447,11 @@ public:
     return llvm::any_of(Types, [](const Type &T) { return T.isImmediate(); });
   }
 
-  /// Return the parameter index of the immediate operand.
-  unsigned getImmediateIdx() const {
-    for (unsigned Idx = 0; Idx < Types.size(); ++Idx)
-      if (Types[Idx].isImmediate())
-        return Idx - 1;
-    llvm_unreachable("Intrinsic has no immediate");
+  // Return if the supplied argument is an immediate
+  bool isArgImmediate(unsigned idx) const {
+    assert((idx + 1) < Types.size() && "Argument type index out of range!");
+    return Types[idx + 1].isImmediate();
   }
-
 
   unsigned getNumParams() const { return Types.size() - 1; }
   Type getReturnType() const { return Types[0]; }
@@ -1031,7 +1053,7 @@ std::string Intrinsic::getBuiltinTypeStr() {
     if (LocalCK == ClassI && T.isInteger())
       T.makeSigned();
 
-    if (hasImmediate() && getImmediateIdx() == I)
+    if (isArgImmediate(I))
       T.makeImmediate(32);
 
     S += T.builtin_str();
@@ -1952,6 +1974,7 @@ void NeonEmitter::createIntrinsic(Record *R,
   bool BigEndianSafe  = R->getValueAsBit("BigEndianSafe");
   std::string ArchGuard = std::string(R->getValueAsString("ArchGuard"));
   std::string TargetGuard = std::string(R->getValueAsString("TargetGuard"));
+
   bool IsUnavailable = OperationRec->getValueAsBit("Unavailable");
   std::string CartesianProductWith = std::string(R->getValueAsString("CartesianProductWith"));
 
@@ -2142,84 +2165,28 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
-void NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
-                                        SmallVectorImpl<Intrinsic *> &Defs) {
+void NeonEmitter::genIntrinsicRangeCheckCode(
+    raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
   OS << "#ifdef GET_NEON_IMMEDIATE_CHECK\n";
-
+  // Ensure these are only emitted once.
   std::set<std::string> Emitted;
 
-  for (auto *Def : Defs) {
+  for (auto &Def : Defs) {
+    if (Emitted.find(Def->getMangledName()) != Emitted.end() ||
+        !Def->hasImmediate())
+      continue;
+
+    // If the Def has a body (operation DAGs), it is not a __builtin_neon_
     if (Def->hasBody())
       continue;
-    // Functions which do not have an immediate do not need to have range
-    // checking code emitted.
-    if (!Def->hasImmediate())
-      continue;
-    if (Emitted.find(Def->getMangledName()) != Emitted.end())
-      continue;
 
-    std::string LowerBound, UpperBound;
-
-    Record *R = Def->getRecord();
-    if (R->getValueAsBit("isVXAR")) {
-      //VXAR takes an immediate in the range [0, 63]
-      LowerBound = "0";
-      UpperBound = "63";
-    } else if (R->getValueAsBit("isVCVT_N")) {
-      // VCVT between floating- and fixed-point values takes an immediate
-      // in the range [1, 32) for f32 or [1, 64) for f64 or [1, 16) for f16.
-      LowerBound = "1";
-	  if (Def->getBaseType().getElementSizeInBits() == 16 ||
-		  Def->getName().find('h') != std::string::npos)
-		// VCVTh operating on FP16 intrinsics in range [1, 16)
-		UpperBound = "15";
-	  else if (Def->getBaseType().getElementSizeInBits() == 32)
-        UpperBound = "31";
-	  else
-        UpperBound = "63";
-    } else if (R->getValueAsBit("isScalarShift")) {
-      // Right shifts have an 'r' in the name, left shifts do not. Convert
-      // instructions have the same bounds and right shifts.
-      if (Def->getName().find('r') != std::string::npos ||
-          Def->getName().find("cvt") != std::string::npos)
-        LowerBound = "1";
-
-      UpperBound = utostr(Def->getReturnType().getElementSizeInBits() - 1);
-    } else if (R->getValueAsBit("isShift")) {
-      // Builtins which are overloaded by type will need to have their upper
-      // bound computed at Sema time based on the type constant.
-
-      // Right shifts have an 'r' in the name, left shifts do not.
-      if (Def->getName().find('r') != std::string::npos)
-        LowerBound = "1";
-      UpperBound = "RFT(TV, true)";
-    } else if (Def->getClassKind(true) == ClassB) {
-      // ClassB intrinsics have a type (and hence lane number) that is only
-      // known at runtime.
-      if (R->getValueAsBit("isLaneQ"))
-        UpperBound = "RFT(TV, false, true)";
-      else
-        UpperBound = "RFT(TV, false, false)";
-    } else {
-      // The immediate generally refers to a lane in the preceding argument.
-      assert(Def->getImmediateIdx() > 0);
-      Type T = Def->getParamType(Def->getImmediateIdx() - 1);
-      UpperBound = utostr(T.getNumElements() - 1);
+    OS << "case NEON::BI__builtin_neon_" << Def->getMangledName() << ":\n";
+    for (const auto &Check : Def->getImmChecks()) {
+      OS << " ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
+         << Check.getKind() << ", " << Check.getElementSizeInBits() << ", "
+         << Check.getVecSizeInBits() << "));\n"
+         << " break;\n";
     }
-
-    // Calculate the index of the immediate that should be range checked.
-    unsigned Idx = Def->getNumParams();
-    if (Def->hasImmediate())
-      Idx = Def->getGeneratedParamIdx(Def->getImmediateIdx());
-
-    OS << "case NEON::BI__builtin_neon_" << Def->getMangledName() << ": "
-       << "i = " << Idx << ";";
-    if (!LowerBound.empty())
-      OS << " l = " << LowerBound << ";";
-    if (!UpperBound.empty())
-      OS << " u = " << UpperBound << ";";
-    OS << " break;\n";
-
     Emitted.insert(Def->getMangledName());
   }
 

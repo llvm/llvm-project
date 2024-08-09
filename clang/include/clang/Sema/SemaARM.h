@@ -15,6 +15,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
@@ -37,15 +38,20 @@ public:
                             /// flags. Do Sema checks for the runtime mode.
   };
 
+  bool CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy, unsigned ArgIdx,
+                         unsigned EltBitWidth, unsigned VecBitWidth);
   bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
                                     unsigned MaxWidth);
   bool CheckNeonBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                     CallExpr *TheCall);
+  bool
+  ParseNeonImmChecks(CallExpr *TheCall,
+                     SmallVector<std::tuple<int, int, int, int>, 2> &ImmChecks,
+                     int OverloadType);
+  bool ParseSVEImmChecks(CallExpr *TheCall,
+                         SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
   bool CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool
-  ParseSVEImmChecks(CallExpr *TheCall,
-                    llvm::SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
   bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);

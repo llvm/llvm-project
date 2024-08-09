@@ -27,6 +27,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <array>
@@ -49,23 +50,6 @@ enum class ACLEKind { SVE, SME };
 using TypeSpec = std::string;
 
 namespace {
-
-class ImmCheck {
-  unsigned Arg;
-  unsigned Kind;
-  unsigned ElementSizeInBits;
-
-public:
-  ImmCheck(unsigned Arg, unsigned Kind, unsigned ElementSizeInBits = 0)
-      : Arg(Arg), Kind(Kind), ElementSizeInBits(ElementSizeInBits) {}
-  ImmCheck(const ImmCheck &Other) = default;
-  ~ImmCheck() = default;
-
-  unsigned getArg() const { return Arg; }
-  unsigned getKind() const { return Kind; }
-  unsigned getElementSizeInBits() const { return ElementSizeInBits; }
-};
-
 class SVEType {
   bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
@@ -388,6 +372,9 @@ public:
   /// Emit all the range checks for the immediates.
   void createRangeChecks(raw_ostream &o);
 
+  // Emit all the ImmCheckTypes to arm_immcheck_types.h
+  void createImmCheckTypes(raw_ostream &OS);
+
   /// Create the SVETypeFlags used in CGBuiltins
   void createTypeFlags(raw_ostream &o);
 
@@ -429,7 +416,6 @@ const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
       {SVEType("d", 'd'), "f64"}}};
 
 } // end anonymous namespace
-
 
 //===----------------------------------------------------------------------===//
 // Type implementation
@@ -1211,7 +1197,7 @@ void SVEEmitter::createIntrinsic(
     SmallVector<ImmCheck, 2> ImmChecks;
     for (auto *R : ImmCheckList) {
       int64_t Arg = R->getValueAsInt("Arg");
-      int64_t EltSizeArg = R->getValueAsInt("EltSizeArg");
+      int64_t EltSizeArg = R->getValueAsInt("TypeContextArg");
       int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
       assert(Arg >= 0 && Kind >= 0 && "Arg and Kind must be nonnegative");
 
@@ -1572,8 +1558,10 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
   for (auto &KV : MergeTypes)
     OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
   OS << "#endif\n\n";
+}
 
-  OS << "#ifdef LLVM_GET_SVE_IMMCHECKTYPES\n";
+void SVEEmitter::createImmCheckTypes(raw_ostream &OS) {
+  OS << "#ifdef LLVM_GET_ARM_INTRIN_IMMCHECKTYPES\n";
   for (auto &KV : ImmCheckTypes)
     OS << "  " << KV.getKey() << " = " << KV.getValue() << ",\n";
   OS << "#endif\n\n";
@@ -1856,6 +1844,10 @@ void EmitSveRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitSveTypeFlags(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createTypeFlags(OS);
+}
+
+void EmitImmCheckTypes(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createImmCheckTypes(OS);
 }
 
 void EmitSveStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
