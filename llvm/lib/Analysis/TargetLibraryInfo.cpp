@@ -1049,6 +1049,49 @@ static bool matchType(FuncArgTypeID ArgTy, const Type *Ty, unsigned IntBits,
   llvm_unreachable("Invalid type");
 }
 
+static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
+                                            const Module &M,
+                                            int SizeTSizeBits) {
+  switch (F) {
+  case LibFunc_size_returning_new: {
+    if (FTy.getNumParams() != 1 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_hot_cold: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(8)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    if (FTy.getNumParams() != 3 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(2)->isIntegerTy(8)) {
+      return false;
+    }
+    break;
+  default:
+    return false;
+  }
+
+  auto &Context = M.getContext();
+  PointerType *PtrTy = PointerType::get(Context, 0);
+  StructType *SizedPtrTy = StructType::get(
+      Context, {PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
+  return FTy.getReturnType() == SizedPtrTy;
+}
+
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
                                                    const Module &M) const {
@@ -1099,7 +1142,13 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
     return false;
   }
-
+    // Special handling of __size_returning_new functions that return a struct
+    // of type {void*, size_t}.
+  case LibFunc_size_returning_new:
+  case LibFunc_size_returning_new_hot_cold:
+  case LibFunc_size_returning_new_aligned:
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    return isValidProtoForSizeReturningNew(FTy, F, M, getSizeTSize(M));
   default:
     break;
   }
