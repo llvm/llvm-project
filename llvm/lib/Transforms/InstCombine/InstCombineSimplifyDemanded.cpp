@@ -561,7 +561,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    Known = KnownBits::computeForAddSub(true, NSW, NUW, LHSKnown, RHSKnown);
+    Known = KnownBits::add(LHSKnown, RHSKnown, NSW, NUW);
     break;
   }
   case Instruction::Sub: {
@@ -595,7 +595,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    Known = KnownBits::computeForAddSub(false, NSW, NUW, LHSKnown, RHSKnown);
+    Known = KnownBits::sub(LHSKnown, RHSKnown, NSW, NUW);
     break;
   }
   case Instruction::Mul: {
@@ -1232,8 +1232,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    Known =
-        KnownBits::computeForAddSub(/*Add=*/true, NSW, NUW, LHSKnown, RHSKnown);
+    Known = KnownBits::add(LHSKnown, RHSKnown, NSW, NUW);
     computeKnownBitsFromContext(I, Known, Depth, Q);
     break;
   }
@@ -1250,8 +1249,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
     llvm::computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, Q);
-    Known = KnownBits::computeForAddSub(/*Add=*/false, NSW, NUW, LHSKnown,
-                                        RHSKnown);
+    Known = KnownBits::sub(LHSKnown, RHSKnown, NSW, NUW);
     computeKnownBitsFromContext(I, Known, Depth, Q);
     break;
   }

@@ -1399,13 +1399,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Note that inbounds does *not* guarantee nsw for the addition, as only
       // the offset is signed, while the base address is unsigned.
-      Known = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, /* NUW=*/false, Known, IndexBits);
+      Known = KnownBits::add(Known, IndexBits);
     }
     if (!Known.isUnknown() && !AccConstIndices.isZero()) {
       KnownBits Index = KnownBits::makeConstant(AccConstIndices);
-      Known = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, /* NUW=*/false, Known, Index);
+      Known = KnownBits::add(Known, Index);
     }
     break;
   }
@@ -1802,9 +1800,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = computeKnownBitsForHorizontalOperation(
             I, DemandedElts, Depth, Q,
             [](const KnownBits &KnownLHS, const KnownBits &KnownRHS) {
-              return KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
-                                                 /*NUW=*/false, KnownLHS,
-                                                 KnownRHS);
+              return KnownBits::add(KnownLHS, KnownRHS);
             });
         break;
       }
@@ -1821,9 +1817,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = computeKnownBitsForHorizontalOperation(
             I, DemandedElts, Depth, Q,
             [](const KnownBits &KnownLHS, const KnownBits &KnownRHS) {
-              return KnownBits::computeForAddSub(/*Add=*/false, /*NSW=*/false,
-                                                 /*NUW=*/false, KnownLHS,
-                                                 KnownRHS);
+              return KnownBits::sub(KnownLHS, KnownRHS);
             });
         break;
       }
@@ -2642,8 +2636,7 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
       isKnownToBeAPowerOfTwo(X, /*OrZero*/ false, Depth, Q))
     return true;
 
-  return KnownBits::computeForAddSub(/*Add=*/true, NSW, NUW, XKnown, YKnown)
-      .isNonZero();
+  return KnownBits::add(XKnown, YKnown, NSW, NUW).isNonZero();
 }
 
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
