@@ -323,6 +323,11 @@ public:
     return false;
   }
 
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
+    return false;
+  }
+
   bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) const {
     return false;
   }

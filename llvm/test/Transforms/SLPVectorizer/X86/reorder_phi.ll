@@ -9,8 +9,8 @@ define  void @foo (ptr %A, ptr %B, ptr %Result) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 256, 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP18:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP20:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP20:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP19:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], ptr [[A:%.*]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], ptr [[B:%.*]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP4]], align 4
@@ -26,13 +26,13 @@ define  void @foo (ptr %A, ptr %B, ptr %Result) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP16:%.*]] = fsub <2 x float> [[TMP11]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x float> [[TMP11]], [[TMP15]]
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> [[TMP17]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP20]] = fadd <2 x float> [[TMP2]], [[TMP21]]
-; CHECK-NEXT:    [[TMP18]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[TMP19]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> [[TMP17]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP19]] = fadd <2 x float> [[TMP2]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP20]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store <2 x float> [[TMP20]], ptr [[RESULT:%.*]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP19]], ptr [[RESULT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -8,18 +8,9 @@
 ; YAML-NEXT:  Function:        test
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-4'
+; YAML-NEXT:    - Cost:            '-3'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '4'
-; YAML-LABEL: --- !Passed
-; YAML-NEXT:  Pass:            slp-vectorizer
-; YAML-NEXT:  Name:            VectorizedList
-; YAML-NEXT:  Function:        test
-; YAML-NEXT:  Args:
-; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-2'
-; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '2'
 
 define <4 x float> @test(ptr %x, float %v, float %a) {
 ; CHECK-LABEL: define <4 x float> @test(
@@ -27,12 +18,11 @@ define <4 x float> @test(ptr %x, float %v, float %a) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[A]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[V]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 poison, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP3]], [[TMP7]]
-; CHECK-NEXT:    ret <4 x float> [[TMP8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[V]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    ret <4 x float> [[TMP7]]
 ;
   %gep1 = getelementptr inbounds <4 x float>, ptr %x, i64 0, i64 1
   %x0 = load float, ptr %x, align 4
