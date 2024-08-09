@@ -884,6 +884,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("ptrauth-returns");
   if (CodeGenOpts.PointerAuth.FunctionPointers)
     Fn->addFnAttr("ptrauth-calls");
+  if (CodeGenOpts.PointerAuth.AuthTraps)
+    Fn->addFnAttr("ptrauth-auth-traps");
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
 
