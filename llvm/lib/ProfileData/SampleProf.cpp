@@ -20,6 +20,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -276,6 +277,110 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
       NameFS.second.findAllNames(NameSet);
     }
   }
+}
+
+namespace {
+// A class to keep a string invariant where it is appended with contents in a
+// recursive function.
+struct ScopedString {
+  std::string &String;
+
+  size_t Length;
+
+  ScopedString(std::string &String) : String(String), Length(String.length()) {}
+
+  ~ScopedString() {
+    assert(String.length() > Length);
+    String.resize(Length);
+  }
+};
+} // namespace
+
+// CanonicalName is invariant in this function. It should already contain the
+// canonical name of the current FunctionSamples.
+uint64_t FunctionSamples::eraseInlinedCallsites(const llvm::Regex &Re,
+                                                std::string &CanonicalName,
+                                                bool MatchCallTargets,
+                                                bool EraseMatch) {
+  uint64_t Result = 0;
+
+  ScopedString SaveString1(CanonicalName);
+  CanonicalName.push_back(':');
+
+  if (MatchCallTargets) {
+    // Check matching call targets.
+    for (auto BodySampleIt = BodySamples.begin();
+         BodySampleIt != BodySamples.end();) {
+      auto &[Loc, BodySample] = *BodySampleIt;
+      SampleRecord::CallTargetMap &CallTargets =
+          const_cast<SampleRecord::CallTargetMap &>(
+              BodySample.getCallTargets());
+      if (!CallTargets.empty()) {
+        ScopedString SaveString2(CanonicalName);
+        CanonicalName += Loc.toString();
+        CanonicalName += " @@ ";
+        uint64_t RemovedCallTargetCount = 0;
+        for (auto CallTargetIt = CallTargets.begin();
+             CallTargetIt != CallTargets.end();) {
+          ScopedString SaveString3(CanonicalName);
+          CanonicalName += CallTargetIt->first.str();
+
+          if (Re.match(CanonicalName) == EraseMatch) {
+            RemovedCallTargetCount += CallTargetIt->second;
+            CallTargetIt = CallTargets.erase(CallTargetIt);
+          } else
+            ++CallTargetIt;
+        }
+        // Adjust sample count as if they were removed with
+        // removeCalledTargetAndBodySample.
+        Result += BodySample.removeSamples(RemovedCallTargetCount);
+        if (BodySample.getSamples() == 0) {
+          BodySampleIt = BodySamples.erase(BodySampleIt);
+          continue;
+        }
+      }
+      ++BodySampleIt;
+    }
+  }
+
+  // Check matching inlined callsites.
+  for (auto CallsiteSampleIt = CallsiteSamples.begin();
+       CallsiteSampleIt != CallsiteSamples.end();) {
+    auto &[Loc, FSMap] = *CallsiteSampleIt;
+    ScopedString SaveString2(CanonicalName);
+    CanonicalName += Loc.toString();
+    CanonicalName += " @ ";
+    for (auto FunctionSampleIt = FSMap.begin();
+         FunctionSampleIt != FSMap.end();) {
+      FunctionSamples &InlinedFS = FunctionSampleIt->second;
+      ScopedString SaveString3(CanonicalName);
+      CanonicalName.append(InlinedFS.getContext().toString());
+
+      if (Re.match(CanonicalName) == EraseMatch) {
+        Result += InlinedFS.getTotalSamples();
+        FunctionSampleIt = FSMap.erase(FunctionSampleIt);
+      } else {
+        // Recursively process inlined callsites.
+        Result += InlinedFS.eraseInlinedCallsites(Re, CanonicalName,
+                                                  MatchCallTargets, EraseMatch);
+        // If every sample in the inlined callsite is removed, remove the
+        // callsite as well.
+        if (InlinedFS.getTotalSamples() == 0) {
+          FunctionSampleIt = FSMap.erase(FunctionSampleIt);
+        } else
+          ++FunctionSampleIt;
+      }
+    }
+
+    // If FSMap has no more entries, remove it as well.
+    if (FSMap.empty())
+      CallsiteSampleIt = CallsiteSamples.erase(CallsiteSampleIt);
+    else
+      ++CallsiteSampleIt;
+  }
+
+  // Adjust total sample count after removals.
+  return removeTotalSamples(Result);
 }
 
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(

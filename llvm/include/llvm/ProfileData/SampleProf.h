@@ -41,6 +41,7 @@ namespace llvm {
 
 class DILocation;
 class raw_ostream;
+class Regex;
 
 const std::error_category &sampleprof_category();
 
@@ -298,6 +299,15 @@ struct LineLocation {
 
   uint64_t getHashCode() const {
     return ((uint64_t) Discriminator << 32) | LineOffset;
+  }
+
+  std::string toString() const {
+    std::string S = std::to_string(LineOffset);
+    if (Discriminator != 0) {
+      S.push_back('.');
+      S += std::to_string(Discriminator);
+    }
+    return S;
   }
 
   uint32_t LineOffset;
@@ -757,11 +767,10 @@ public:
                       : sampleprof_error::success;
   }
 
-  void removeTotalSamples(uint64_t Num) {
-    if (TotalSamples < Num)
-      TotalSamples = 0;
-    else
-      TotalSamples -= Num;
+  uint64_t removeTotalSamples(uint64_t Num) {
+    Num = std::min(Num, TotalSamples);
+    TotalSamples -= Num;
+    return Num;
   }
 
   void setTotalSamples(uint64_t Num) { TotalSamples = Num; }
@@ -1215,6 +1224,13 @@ public:
   // Find all the names in the current FunctionSamples including names in
   // all the inline instances and names of call targets.
   void findAllNames(DenseSet<FunctionId> &NameSet) const;
+
+  /// Traverse inlined callsites recursively, and erase those with matching
+  /// canonical representation (or do the opposite, if EraseMatch is false).
+  /// Returns total number of samples removed.
+  uint64_t eraseInlinedCallsites(const llvm::Regex &Re,
+                                 std::string &CanonicalName,
+                                 bool MatchCallTargets, bool EraseMatch);
 
   bool operator==(const FunctionSamples &Other) const {
     return (GUIDToFuncNameMap == Other.GUIDToFuncNameMap ||
