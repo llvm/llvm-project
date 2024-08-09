@@ -1,0 +1,41 @@
+//==- BuiltinsRISCVXCV.def - RISC-V CORE-V Builtin database ----*- C++ -*-==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the CORE-V-specific builtin function database.  Users of
+// this file must define the BUILTIN macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
+TARGET_BUILTIN(alu_slet, "ZiZiZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_sletu, "ZiUZiUZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_min, "ZiZiZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_minu, "UZiUZiUZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_max, "ZiZiZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_maxu, "UZiUZiUZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_exths, "Zii", "nc", "xcvalu")
+TARGET_BUILTIN(alu_exthz, "UZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_extbs, "Zii", "nc", "xcvalu")
+TARGET_BUILTIN(alu_extbz, "UZiUi", "nc", "xcvalu")
+
+TARGET_BUILTIN(alu_clip, "ZiZiUZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_clipu, "UZiUZiUZi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_addN, "ZiZiUZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_adduN, "UZiUZiUZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_addRN, "ZiZiZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_adduRN, "UZiUZiUZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_subN, "ZiZiUZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_subuN, "UZiUZiUZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_subRN, "ZiZiZiUi", "nc", "xcvalu")
+TARGET_BUILTIN(alu_subuRN, "UZiUZiUZiUi", "nc", "xcvalu")
+
+#undef BUILTIN
+#undef TARGET_BUILTIN

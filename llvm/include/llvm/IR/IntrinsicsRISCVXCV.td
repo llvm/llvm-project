@@ -59,16 +59,26 @@ let TargetPrefix = "riscv" in {
                             [IntrNoMem, IntrWillReturn, IntrSpeculatable,
                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
+  def int_riscv_cv_alu_slet  : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_sletu : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_min   : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_minu  : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_max   : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_maxu  : ScalarCoreVAluGprGprIntrinsic;
+  def int_riscv_cv_alu_exths : ScalarCoreVAluGprIntrinsic;
+  def int_riscv_cv_alu_exthz : ScalarCoreVAluGprIntrinsic;
+  def int_riscv_cv_alu_extbs : ScalarCoreVAluGprIntrinsic;
+  def int_riscv_cv_alu_extbz : ScalarCoreVAluGprIntrinsic;
   def int_riscv_cv_alu_clip   : ScalarCoreVAluGprGprIntrinsic;
   def int_riscv_cv_alu_clipu  : ScalarCoreVAluGprGprIntrinsic;
-  def int_riscv_cv_alu_addn   : ScalarCoreVAluGprGprGprIntrinsic;
-  def int_riscv_cv_alu_addun  : ScalarCoreVAluGprGprGprIntrinsic;
-  def int_riscv_cv_alu_addrn  : ScalarCoreVAluGprGprGprIntrinsic;
-  def int_riscv_cv_alu_addurn : ScalarCoreVAluGprGprGprIntrinsic;
-  def int_riscv_cv_alu_subn   : ScalarCoreVAluGprGprGprIntrinsic;
-  def int_riscv_cv_alu_subun  : ScalarCoreVAluGprGprGprIntrinsic;
-  def int_riscv_cv_alu_subrn  : ScalarCoreVAluGprGprGprIntrinsic;
-  def int_riscv_cv_alu_suburn : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_addN   : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_adduN  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_addRN  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_adduRN : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_subN   : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_subuN  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_subRN  : ScalarCoreVAluGprGprGprIntrinsic;
+  def int_riscv_cv_alu_subuRN : ScalarCoreVAluGprGprGprIntrinsic;
 
   def int_riscv_cv_mac_mac : ScalarCoreVMacGprGprGprIntrinsic;
   def int_riscv_cv_mac_msu : ScalarCoreVMacGprGprGprIntrinsic;

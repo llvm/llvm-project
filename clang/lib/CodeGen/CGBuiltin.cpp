@@ -22250,6 +22250,13 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     return Store;
   }
 
+// Core-V
+#define BUILTIN(NAME, TYPE, ATTRS)                                             \
+  case RISCVXCV::BI__builtin_riscv_cv_##NAME:                                  \
+    ID = Intrinsic::riscv_cv_##NAME;                                           \
+    return Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
+#include "clang/Basic/BuiltinsRISCVXCV.def"
+
   // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
   // SiFive Vector builtins are handled from here.
