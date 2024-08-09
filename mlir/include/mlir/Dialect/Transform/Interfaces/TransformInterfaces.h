@@ -476,10 +476,6 @@ public:
     extensions.erase(TypeID::get<Ty>());
   }
 
-private:
-  /// Identifier for storing top-level value in the `operations` mapping.
-  static constexpr Value kTopLevelValue = Value();
-
   /// Creates a state for transform ops living in the given region. The second
   /// argument points to the root operation in the payload IR being transformed,
   /// which may or may not contain the region with transform ops. Additional
@@ -487,6 +483,10 @@ private:
   TransformState(Region *region, Operation *payloadRoot,
                  const RaggedArray<MappedValue> &extraMappings = {},
                  const TransformOptions &options = TransformOptions());
+
+private:
+  /// Identifier for storing top-level value in the `operations` mapping.
+  static constexpr Value kTopLevelValue = Value();
 
   /// Returns the mappings frame for the region in which the value is defined.
   /// If `allowOutOfScope` is set to "false", asserts that the value is in
