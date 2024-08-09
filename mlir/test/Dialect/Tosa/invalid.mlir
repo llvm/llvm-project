@@ -413,3 +413,14 @@ func.func @test_tile_invalid_multiples() {
   %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<4x31x31xf32>) -> tensor<4x31x31xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @test_invalid_constant_permutation
+func.func @test_invalid_constant_permutation() {
+  // expected-error@+3 {{permutation must be within input bounds}}
+	%0 = tensor.empty() : tensor<3x4x5xi32>
+	%1 = arith.constant dense<[3, 0, 1]> : tensor<3xi32>
+	%2 = tosa.transpose %0, %1 : (tensor<3x4x5xi32>, tensor<3xi32>) -> tensor<3x4x5xi32>
+	return 
+}
