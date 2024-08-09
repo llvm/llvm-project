@@ -559,6 +559,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_FREEZE:
+  case TargetOpcode::G_BITCAST:
     return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT: {
     Register DstReg = MI.getOperand(0).getReg();
