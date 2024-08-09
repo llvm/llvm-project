@@ -185,9 +185,11 @@ DEFINE_SIMPLE_ALIAS(Hypot, std::hypot)
 DEFINE_SIMPLE_ALIAS(Ilogb, std::ilogb)
 DEFINE_SIMPLE_ALIAS(Isinf, std::isinf)
 DEFINE_SIMPLE_ALIAS(Isnan, std::isnan)
+#ifdef HAS_LIBM_BESSEL
 DEFINE_SIMPLE_ALIAS(J0, j0l)
 DEFINE_SIMPLE_ALIAS(J1, j1l)
 DEFINE_SIMPLE_ALIAS(Jn, jnl)
+#endif
 DEFINE_SIMPLE_ALIAS(Ldexp, std::ldexp)
 DEFINE_SIMPLE_ALIAS(Lgamma, std::lgamma)
 DEFINE_SIMPLE_ALIAS(Llround, std::llround)
@@ -204,9 +206,11 @@ DEFINE_SIMPLE_ALIAS(Tan, std::tan)
 DEFINE_SIMPLE_ALIAS(Tanh, std::tanh)
 DEFINE_SIMPLE_ALIAS(Tgamma, std::tgamma)
 DEFINE_SIMPLE_ALIAS(Trunc, std::trunc)
+#ifdef HAS_LIBM_BESSEL
 DEFINE_SIMPLE_ALIAS(Y0, y0l)
 DEFINE_SIMPLE_ALIAS(Y1, y1l)
 DEFINE_SIMPLE_ALIAS(Yn, ynl)
+#endif
 
 // Use numeric_limits to produce infinity of the right type.
 #define F128_RT_INFINITY \
