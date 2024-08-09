@@ -55,9 +55,6 @@ set(STAGE1_RUNTIMES "compiler-rt")
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
-  if (NOT "compiler-rt" IN_LIST STAGE1_RUNTIMES)
-    list(APPEND STAGE1_PROJECTS "compiler-rt")
-  endif()
   set(CLANG_BOOTSTRAP_TARGETS
     generate-profdata
     stage2-package
