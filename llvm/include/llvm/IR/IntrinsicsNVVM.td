@@ -552,6 +552,22 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
+class NVVM_INTRINSIC_RECORD<string intr> {
+  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+}
+
+class NVVM_CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_NAME<int dim> {
+  string intr = "llvm.nvvm.cp.async.bulk.tensor.gmem.to.smem"
+              # "." # dim # "d";
+  string record = NVVM_INTRINSIC_RECORD<intr>.record;
+}
+
+class NVVM_CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_NAME<int dim> {
+  string intr = "llvm.nvvm.cp.async.bulk.tensor.smem.to.gmem"
+              # "." # dim # "d";
+  string record = NVVM_INTRINSIC_RECORD<intr>.record;
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -4841,5 +4857,43 @@ def int_nvvm_setmaxnreg_dec_sync_aligned_u32
 // Exit
 def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
+
+// -------- llvm.nvvm.cp.async.bulk.tensor.gmem.to.smem
+class NVVM_CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_INTR<int dim> :
+  DefaultAttrsIntrinsic<[],
+    !listconcat(
+      // flags, dst_smem_ptr, barrier_ptr, tensor_map_ptr
+      [llvm_i32_ty, llvm_shared_ptr_ty, llvm_shared_ptr_ty, llvm_ptr_ty],
+      !listsplat(llvm_i32_ty, dim), // tensor_dims
+      !if(!ge(dim, 3), !listsplat(llvm_i16_ty, !add(dim, -2)), []), // im2col
+      [llvm_i16_ty, llvm_i64_ty]), // cta_mask, cache_policy
+    [IntrConvergent, IntrArgMemOnly, ImmArg<ArgIndex<0>>,
+      WriteOnly<ArgIndex<1>>, ReadOnly<ArgIndex<3>>,
+      NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>,
+      NoCapture<ArgIndex<3>>],
+    NVVM_CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_NAME<dim>.intr>;
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  def NVVM_CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_NAME<dim>.record : 
+    NVVM_CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_INTR<dim>;
+}
+
+// -------- llvm.nvvm.cp.async.bulk.tensor.smem.to.gmem
+class NVVM_CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_INTR<int dim> :
+  DefaultAttrsIntrinsic<[],
+    !listconcat(
+      // flags, src_smem_ptr, tensor_map_ptr
+      [llvm_i32_ty, llvm_shared_ptr_ty, llvm_ptr_ty],
+      !listsplat(llvm_i32_ty, dim), // tensor_dims
+      [llvm_i64_ty]), // cache_policy
+    [IntrConvergent, IntrArgMemOnly, ImmArg<ArgIndex<0>>,
+      ReadOnly<ArgIndex<1>>, WriteOnly<ArgIndex<2>>,
+      NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>],
+    NVVM_CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_NAME<dim>.intr>;
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  def NVVM_CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_NAME<dim>.record : 
+    NVVM_CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_INTR<dim>;
+}
 
 } // let TargetPrefix = "nvvm"

@@ -57,6 +57,7 @@ private:
   void Select(SDNode *N) override;
   bool tryIntrinsicNoChain(SDNode *N);
   bool tryIntrinsicChain(SDNode *N);
+  bool tryIntrinsicVoid(SDNode *N);
   void SelectTexSurfHandle(SDNode *N);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
@@ -76,6 +77,8 @@ private:
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
+  void SelectCpAsyncBulkTensorS2G(SDNode *N);
+  void SelectCpAsyncBulkTensorG2S(SDNode *N);
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
