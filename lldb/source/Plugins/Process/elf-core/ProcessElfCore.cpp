@@ -1095,3 +1095,9 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   }
   return true;
 }
+
+const uint8_t *ProcessElfCore::PeekMemory(lldb::addr_t low, lldb::addr_t high,
+                                          size_t &available_bytes) {
+  return DoPeekMemory(m_core_module_sp, m_core_aranges, low, high,
+                      available_bytes);
+}

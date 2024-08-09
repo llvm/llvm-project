@@ -94,6 +94,12 @@ size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
 
 void ProcessTrace::Clear() { m_thread_list.Clear(); }
 
+const uint8_t *ProcessTrace::PeekMemory(lldb::addr_t low, lldb::addr_t high,
+                                        size_t &available_bytes) {
+  available_bytes = 0;
+  return nullptr;
+}
+
 void ProcessTrace::Initialize() {
   static llvm::once_flag g_once_flag;
 

@@ -668,6 +668,13 @@ public:
   // transparent decompression of section contents.
   size_t CopyData(lldb::offset_t offset, size_t length, void *dst) const;
 
+  // Returns a pointer to the data at the specified offset. If the offset is
+  // invalid, this function will return nullptr. The 'available_bytes' argument
+  // will be set to the number of bytes available at the given offset, which
+  // will be at most 'length' bytes.
+  const uint8_t *PeekData(lldb::addr_t offset, size_t length,
+                          size_t &available_bytes) const;
+
   // This function will transparently decompress section data if the section if
   // compressed.
   virtual size_t ReadSectionData(Section *section,

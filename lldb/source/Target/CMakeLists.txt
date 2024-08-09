@@ -26,6 +26,7 @@ add_lldb_library(lldbTarget
   OperatingSystem.cpp
   PathMappingList.cpp
   Platform.cpp
+  PostMortemProcess.cpp
   Process.cpp
   ProcessTrace.cpp
   Queue.cpp

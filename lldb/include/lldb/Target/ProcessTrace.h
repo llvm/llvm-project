@@ -72,6 +72,9 @@ protected:
   bool DoUpdateThreadList(ThreadList &old_thread_list,
                           ThreadList &new_thread_list) override;
 
+  const uint8_t *PeekMemory(lldb::addr_t low, lldb::addr_t high,
+                            size_t &available_bytes) override;
+
 private:
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
                                         lldb::ListenerSP listener_sp,
