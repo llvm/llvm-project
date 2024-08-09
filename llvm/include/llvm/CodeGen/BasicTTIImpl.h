@@ -2159,30 +2159,11 @@ public:
       ISD = ISD::USUBSAT;
       break;
     case Intrinsic::smul_fix:
-    case Intrinsic::umul_fix: {
-      unsigned ExtSize = RetTy->getScalarSizeInBits() * 2;
-      Type *ExtTy = RetTy->getWithNewBitWidth(ExtSize);
-
-      unsigned ExtOp =
-          IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
-      TTI::CastContextHint CCH = TTI::CastContextHint::None;
-
-      InstructionCost Cost = 0;
-      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, RetTy, CCH, CostKind);
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
-      Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, RetTy, ExtTy,
-                                            CCH, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, RetTy,
-                                              CostKind,
-                                              {TTI::OK_AnyValue, TTI::OP_None},
-                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
-      Cost += thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind,
-                                              {TTI::OK_AnyValue, TTI::OP_None},
-                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
-      Cost += thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
-      return Cost;
-    }
+      ISD = ISD::SMULFIX;
+      break;
+    case Intrinsic::umul_fix:
+      ISD = ISD::UMULFIX;
+      break;
     case Intrinsic::sadd_with_overflow:
       ISD = ISD::SADDO;
       break;
@@ -2415,6 +2396,30 @@ public:
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
                                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      return Cost;
+    }
+    case Intrinsic::smul_fix:
+    case Intrinsic::umul_fix: {
+      unsigned ExtSize = RetTy->getScalarSizeInBits() * 2;
+      Type *ExtTy = RetTy->getWithNewBitWidth(ExtSize);
+
+      unsigned ExtOp =
+          IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
+      TTI::CastContextHint CCH = TTI::CastContextHint::None;
+
+      InstructionCost Cost = 0;
+      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, RetTy, CCH, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
+      Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, RetTy, ExtTy,
+                                            CCH, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, RetTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::Shl, RetTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
       return Cost;
     }
     default:
