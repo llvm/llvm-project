@@ -312,6 +312,7 @@ protected:
       // Non-trivial move, so dispatch to a type-erased implementation.
       getNonTrivialCallbacks()->MovePtr(getInlineStorage(),
                                         RHS.getInlineStorage());
+      getNonTrivialCallbacks()->DestroyPtr(RHS.getInlineStorage());
     }
 
     // Clear the old callback and inline flag to get back to as-if-null.
