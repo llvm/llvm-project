@@ -19,8 +19,7 @@ class Type;
 class PGOCtxProfLoweringPass : public PassInfoMixin<PGOCtxProfLoweringPass> {
 public:
   explicit PGOCtxProfLoweringPass() = default;
-  // True if contextual instrumentation is enabled.
-  static bool isCtxIRPGOInstrEnabled();
+  static bool isContextualIRPGOEnabled();
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
