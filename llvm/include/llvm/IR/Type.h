@@ -473,6 +473,8 @@ public:
   }
   static Type *getFloatingPointTy(LLVMContext &C, const fltSemantics &S);
 
+  static constexpr unsigned WasmExternrefAddressSpace = 10;
+  static constexpr unsigned WasmFuncrefAddressSpace = 20;
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.
   //
