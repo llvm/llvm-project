@@ -121,10 +121,9 @@ define i32 @reduce_sum_16xi32_prefix2(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix3(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
 ; CHECK-NEXT:    vredsum.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -160,15 +159,8 @@ define i32 @reduce_sum_16xi32_prefix4(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -32
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v10, -1
-; CHECK-NEXT:    vmerge.vim v10, v10, 0, v0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vsext.vf4 v12, v10
-; CHECK-NEXT:    vand.vv v8, v8, v12
 ; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -220,10 +212,9 @@ define i32 @reduce_sum_16xi32_prefix6(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix7(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -408,10 +399,9 @@ define i32 @reduce_sum_16xi32_prefix14(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix15(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 15, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v12, zero
-; CHECK-NEXT:    vslideup.vi v8, v12, 15
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -532,15 +522,8 @@ define i32 @reduce_xor_16xi32_prefix2(ptr %p) {
 define i32 @reduce_xor_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_xor_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -32
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v10, -1
-; CHECK-NEXT:    vmerge.vim v10, v10, 0, v0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vsext.vf4 v12, v10
-; CHECK-NEXT:    vand.vv v8, v8, v12
 ; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vredxor.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -576,16 +559,8 @@ define i32 @reduce_and_16xi32_prefix2(ptr %p) {
 define i32 @reduce_and_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_and_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, -1
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 5
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 6
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vredand.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -620,15 +595,8 @@ define i32 @reduce_or_16xi32_prefix2(ptr %p) {
 define i32 @reduce_or_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_or_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -32
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v10, -1
-; CHECK-NEXT:    vmerge.vim v10, v10, 0, v0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vsext.vf4 v12, v10
-; CHECK-NEXT:    vand.vv v8, v8, v12
 ; CHECK-NEXT:    vredor.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -668,16 +636,8 @@ define i32 @reduce_smax_16xi32_prefix2(ptr %p) {
 define i32 @reduce_smax_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_smax_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 5
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 6
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vredmax.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -712,17 +672,8 @@ define i32 @reduce_smin_16xi32_prefix2(ptr %p) {
 define i32 @reduce_smin_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_smin_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 5
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 6
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vredmin.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -757,15 +708,8 @@ define i32 @reduce_umax_16xi32_prefix2(ptr %p) {
 define i32 @reduce_umax_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_umax_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -32
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v10, -1
-; CHECK-NEXT:    vmerge.vim v10, v10, 0, v0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vsext.vf4 v12, v10
-; CHECK-NEXT:    vand.vv v8, v8, v12
 ; CHECK-NEXT:    vredmaxu.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -800,16 +744,8 @@ define i32 @reduce_umin_16xi32_prefix2(ptr %p) {
 define i32 @reduce_umin_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_umin_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, -1
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 5
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 6
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vredminu.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -845,16 +781,10 @@ define float @reduce_fadd_16xf32_prefix2(ptr %p) {
 define float @reduce_fadd_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_fadd_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 5
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 6
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -938,7 +868,7 @@ define float @reduce_fadd_4xi32_non_associative(ptr %p) {
 ; CHECK-NEXT:    vfmv.f.s fa5, v9
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fadd.s fa0, fa4, fa5

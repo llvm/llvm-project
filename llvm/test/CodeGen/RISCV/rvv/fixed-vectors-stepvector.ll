@@ -19,7 +19,7 @@ declare <3 x i8> @llvm.experimental.stepvector.v3i8()
 define <3 x i8> @stepvector_v3i8() {
 ; CHECK-LABEL: stepvector_v3i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <3 x i8> @llvm.experimental.stepvector.v3i8()

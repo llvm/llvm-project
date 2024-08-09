@@ -526,7 +526,7 @@ declare <15 x double> @llvm.vp.fmuladd.v15f64(<15 x double>, <15 x double>, <15 
 define <15 x double> @vfma_vv_v15f64(<15 x double> %va, <15 x double> %b, <15 x double> %c, <15 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v15f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 15, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v16, v8, v24, v0.t
@@ -539,7 +539,7 @@ define <15 x double> @vfma_vv_v15f64(<15 x double> %va, <15 x double> %b, <15 x 
 define <15 x double> @vfma_vv_v15f64_unmasked(<15 x double> %va, <15 x double> %b, <15 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v15f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 15, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24

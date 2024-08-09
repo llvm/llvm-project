@@ -119,12 +119,12 @@ define <3 x half> @vfsub_vv_v3f16(<3 x half> %va, <3 x half> %b, <3 x i1> %m, i3
 ;
 ; ZVFHMIN-LABEL: vfsub_vv_v3f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfsub.vv v9, v9, v10, v0.t
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
   %v = call <3 x half> @llvm.vp.fsub.v3f16(<3 x half> %va, <3 x half> %b, <3 x i1> %m, i32 %evl)
