@@ -209,7 +209,7 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   !con(
     !con(
       !if(EnableSaddr,
-        (ins SReg_64:$saddr, VGPR_32:$vaddr),
+        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
         (ins VReg_64:$vaddr)),
         (ins flat_offset:$offset)),
         // FIXME: Operands with default values do not work with following non-optional operands.
@@ -231,7 +231,7 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   (outs),
   !con(
     !if(EnableSaddr,
-      (ins VGPR_32:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata, SReg_64:$saddr),
+      (ins VGPR_32:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata, SReg_64_XEXEC_XNULL:$saddr),
       (ins VReg_64:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata)),
       (ins flat_offset:$offset, CPol_0:$cpol)),
   " $vaddr, $vdata"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
@@ -589,7 +589,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
 
     def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
       (outs),
-      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
+      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_0:$cpol),
       " $vaddr, $vdata, $saddr$offset$cpol">,
       GlobalSaddrTable<1, opName> {
       let has_saddr = 1;
@@ -620,7 +620,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
 
     def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
       (outs vdst_op:$vdst),
-        (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
+        (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
       " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
       GlobalSaddrTable<1, opName#"_rtn"> {
        let has_saddr = 1;
