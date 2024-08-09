@@ -93,7 +93,7 @@ int SOME_DEFINE;
 """,
                 ),
                 (
-                    "./fake.h",
+                    f".{os.sep}fake.h",
                     """
 #define SOME_DEFINE y
 """,
