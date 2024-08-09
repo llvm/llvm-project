@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "derived.h"
+#include "engine.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"
@@ -29,97 +30,92 @@ static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
   }
 }
 
-RT_API_ATTRS int Initialize(const Descriptor &instance,
-    const typeInfo::DerivedType &derived, Terminator &terminator, bool hasStat,
-    const Descriptor *errMsg) {
-  const Descriptor &componentDesc{derived.component()};
-  std::size_t elements{instance.Elements()};
-  int stat{StatOk};
-  // Initialize data components in each element; the per-element iterations
-  // constitute the inner loops, not the outer ones
-  std::size_t myComponents{componentDesc.Elements()};
-  for (std::size_t k{0}; k < myComponents; ++k) {
+RT_API_ATTRS auto engine::Initialization::Resume(Engine &engine) -> ResultType {
+  while (component_.Iterating(components_)) {
     const auto &comp{
-        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-    SubscriptValue at[maxRank];
-    instance.GetLowerBounds(at);
+        *componentDesc_->ZeroBasedIndexedElement<typeInfo::Component>(
+            component_.at)};
     if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-        Descriptor &allocDesc{
-            *instance.ElementComponent<Descriptor>(at, comp.offset())};
-        comp.EstablishDescriptor(allocDesc, instance, terminator);
+      while (element_.Iterating(elements_, &instance_)) {
+        Descriptor &allocDesc{*instance_.ElementComponent<Descriptor>(
+            element_.subscripts, comp.offset())};
+        comp.EstablishDescriptor(allocDesc, instance_, engine.terminator());
         allocDesc.raw().attribute = CFI_attribute_allocatable;
         if (comp.genre() == typeInfo::Component::Genre::Automatic) {
-          stat = ReturnError(terminator, allocDesc.Allocate(), errMsg, hasStat);
-          if (stat == StatOk) {
-            if (const DescriptorAddendum * addendum{allocDesc.Addendum()}) {
-              if (const auto *derived{addendum->derivedType()}) {
-                if (!derived->noInitializationNeeded()) {
-                  stat = Initialize(
-                      allocDesc, *derived, terminator, hasStat, errMsg);
-                }
+          if (auto stat{ReturnError(engine.terminator(), allocDesc.Allocate(),
+                  engine.errMsg(), engine.hasStat())};
+              stat != StatOk) {
+            return engine.Fail(stat);
+          }
+          if (const DescriptorAddendum * addendum{allocDesc.Addendum()}) {
+            if (const auto *derived{addendum->derivedType()}) {
+              if (!derived->noInitializationNeeded()) {
+                component_.ResumeAtSameIteration();
+                return engine.Begin(Job::Initialization, allocDesc, derived);
               }
             }
-          }
-          if (stat != StatOk) {
-            break;
           }
         }
       }
     } else if (const void *init{comp.initialization()}) {
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
-      std::size_t bytes{comp.SizeInBytes(instance)};
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-        char *ptr{instance.ElementComponent<char>(at, comp.offset())};
+      std::size_t bytes{comp.SizeInBytes(instance_)};
+      while (element_.Iterating(elements_, &instance_)) {
+        char *ptr{instance_.ElementComponent<char>(
+            element_.subscripts, comp.offset())};
         std::memcpy(ptr, init, bytes);
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Pointer) {
       // Data pointers without explicit initialization are established
       // so that they are valid right-hand side targets of pointer
       // assignment statements.
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-        Descriptor &ptrDesc{
-            *instance.ElementComponent<Descriptor>(at, comp.offset())};
-        comp.EstablishDescriptor(ptrDesc, instance, terminator);
+      while (element_.Iterating(elements_, &instance_)) {
+        Descriptor &ptrDesc{*instance_.ElementComponent<Descriptor>(
+            element_.subscripts, comp.offset())};
+        comp.EstablishDescriptor(ptrDesc, instance_, engine.terminator());
         ptrDesc.raw().attribute = CFI_attribute_pointer;
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Data &&
         comp.derivedType() && !comp.derivedType()->noInitializationNeeded()) {
       // Default initialization of non-pointer non-allocatable/automatic
-      // data component.  Handles parent component's elements.  Recursive.
-      SubscriptValue extents[maxRank];
-      GetComponentExtents(extents, comp, instance);
-      StaticDescriptor<maxRank, true, 0> staticDescriptor;
-      Descriptor &compDesc{staticDescriptor.descriptor()};
-      const typeInfo::DerivedType &compType{*comp.derivedType()};
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
+      // data component.  Handles parent component's elements.
+      if (!element_.active) {
+        GetComponentExtents(extents_, comp, instance_);
+      }
+      while (element_.Iterating(elements_, &instance_)) {
+        Descriptor &compDesc{staticDescriptor_.descriptor()};
+        const typeInfo::DerivedType &compType{*comp.derivedType()};
         compDesc.Establish(compType,
-            instance.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extents);
-        stat = Initialize(compDesc, compType, terminator, hasStat, errMsg);
-        if (stat != StatOk) {
-          break;
-        }
+            instance_.ElementComponent<char>(
+                element_.subscripts, comp.offset()),
+            comp.rank(), extents_);
+        component_.ResumeAtSameIteration();
+        return engine.Begin(Job::Initialization, compDesc, &compType);
       }
     }
   }
   // Initialize procedure pointer components in each element
-  const Descriptor &procPtrDesc{derived.procPtr()};
+  const Descriptor &procPtrDesc{derived_->procPtr()};
   std::size_t myProcPtrs{procPtrDesc.Elements()};
   for (std::size_t k{0}; k < myProcPtrs; ++k) {
     const auto &comp{
         *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(k)};
-    SubscriptValue at[maxRank];
-    instance.GetLowerBounds(at);
-    for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-      auto &pptr{*instance.ElementComponent<typeInfo::ProcedurePointer>(
-          at, comp.offset)};
+    while (element_.Iterating(elements_, &instance_)) {
+      auto &pptr{*instance_.ElementComponent<typeInfo::ProcedurePointer>(
+          element_.subscripts, comp.offset)};
       pptr = comp.procInitialization;
     }
   }
-  return stat;
+  return engine.Done();
+}
+
+RT_API_ATTRS int Initialize(const Descriptor &instance,
+    const typeInfo::DerivedType &derived, Terminator &terminator, bool hasStat,
+    const Descriptor *errMsg) {
+  return engine::Engine{terminator, hasStat, errMsg}.Do(
+      engine::Job::Initialization, instance, &derived);
 }
 
 static RT_API_ATTRS const typeInfo::SpecialBinding *FindFinal(
