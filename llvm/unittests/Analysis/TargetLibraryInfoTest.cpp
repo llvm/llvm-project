@@ -83,17 +83,18 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
 }
 
 TEST_F(TargetLibraryInfoTest, SizeReturningNewInvalidProto) {
-  parseAssembly("target datalayout = \"p:64:64:64\"\n"
-                ";; Invalid additional params \n"
-                "declare {i8*, i64} @__size_returning_new(i64, i64)\n"
-                ";; Invalid params types \n"
-                "declare {i8*, i64} @__size_returning_new_hot_cold(i64, i32)\n"
-                ";; Invalid return struct types \n"
-                "declare {i8*, i8} @__size_returning_new_aligned(i64, i64)\n"
-                ";; Invalid return type \n"
-                "declare i8* @__size_returning_new_aligned_hot_cold(i64, i64, i8)\n");
+  parseAssembly(
+      "target datalayout = \"p:64:64:64\"\n"
+      ";; Invalid additional params \n"
+      "declare {i8*, i64} @__size_returning_new(i64, i64)\n"
+      ";; Invalid params types \n"
+      "declare {i8*, i64} @__size_returning_new_hot_cold(i64, i32)\n"
+      ";; Invalid return struct types \n"
+      "declare {i8*, i8} @__size_returning_new_aligned(i64, i64)\n"
+      ";; Invalid return type \n"
+      "declare i8* @__size_returning_new_aligned_hot_cold(i64, i64, i8)\n");
 
-    for (const LibFunc LF :
+  for (const LibFunc LF :
        {LibFunc_size_returning_new, LibFunc_size_returning_new_aligned,
         LibFunc_size_returning_new_hot_cold,
         LibFunc_size_returning_new_aligned_hot_cold}) {
