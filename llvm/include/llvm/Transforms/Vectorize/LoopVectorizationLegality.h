@@ -224,6 +224,18 @@ private:
   Instruction *ExactFPMathInst = nullptr;
 };
 
+/// This holds details about a histogram operation -- a load -> update -> store
+/// sequence where each lane in a vector might be updating the same element as
+/// another lane.
+struct HistogramInfo {
+  LoadInst *Load;
+  Instruction *Update;
+  StoreInst *Store;
+
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
+      : Load(Load), Update(Update), Store(Store) {}
+};
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -390,6 +402,22 @@ public:
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
 
+  /// Returns a HistogramInfo* for the given instruction if it was determined
+  /// to be part of a load -> update -> store sequence where multiple lanes
+  /// may be working on the same memory address.
+  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+    for (const HistogramInfo &HGram : Histograms)
+      if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
+        return &HGram;
+
+    return std::nullopt;
+  }
+
+  /// Returns a list of all known histogram operations in the loop.
+  const SmallVectorImpl<HistogramInfo> &getHistograms() const {
+    return Histograms;
+  }
+
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
   }
@@ -437,6 +465,11 @@ private:
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
   bool canVectorizeMemory();
+
+  /// If LAA cannot determine whether all dependences are safe, we may be able
+  /// to further analyse some unknown dependences and if they match a certain
+  /// pattern (like a histogram) then we may still be able to vectorize.
+  bool canVectorizeUncheckedDependences();
 
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
@@ -541,6 +574,11 @@ private:
   /// call to the appropriate masked intrinsic or drop them in case of
   /// conditional assumes.
   SmallPtrSet<const Instruction *, 8> MaskedOp;
+
+  /// Contains all identified histogram operations, which are sequences of
+  /// load -> update -> store instructions where multiple lanes in a vector
+  /// may work on the same memory location.
+  SmallVector<HistogramInfo, 1> Histograms;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;

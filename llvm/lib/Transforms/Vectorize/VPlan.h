@@ -69,6 +69,7 @@ class LoopVectorizationCostModel;
 class LoopVersioning;
 
 struct VPCostContext;
+struct HistogramInfo;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -937,6 +938,7 @@ public:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
     case VPRecipeBase::VPWidenStoreSC:
+    case VPRecipeBase::VPHistogramSC:
       // TODO: Widened stores don't define a value, but widened loads do. Split
       // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
@@ -1570,6 +1572,52 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe representing a sequence of load -> update -> store as part of
+/// a histogram operation. This means there may be aliasing between vector
+/// lanes, which is handled by the llvm.experimental.vector.histogram family
+/// of intrinsics. The only update operations currently supported are
+/// 'add' and 'sub' where the other term is loop-invariant.
+class VPHistogramRecipe : public VPRecipeBase {
+  const HistogramInfo &Info;
+  unsigned Opcode;
+
+public:
+  template <typename IterT>
+  VPHistogramRecipe(const HistogramInfo &HI, unsigned Opcode,
+                    iterator_range<IterT> Operands, DebugLoc DL = {})
+      : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Info(HI),
+        Opcode(Opcode) {}
+
+  ~VPHistogramRecipe() override = default;
+
+  VPHistogramRecipe *clone() override {
+    llvm_unreachable("cloning not supported");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPHistogramSC);
+
+  /// Produce a vectorized histogram operation.
+  void execute(VPTransformState &State) override;
+
+  unsigned getOpcode() const { return Opcode; }
+
+  const HistogramInfo &getHistogramInfo() const { return Info; }
+
+  /// Return the mask operand if one was provided, or a null pointer if all
+  /// lanes should be executed unconditionally.
+  VPValue *getMask() const {
+    if (getNumOperands() == 3)
+      return getOperand(2);
+    return nullptr;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
