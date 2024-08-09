@@ -310,3 +310,156 @@ loop:
 exit:                                          ; preds = %loop
   ret void
 }
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count. If we speculate Stride==1, it implies that the loop
+; will iterate no more than a single iteration.
+define i32 @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
+; CHECK-LABEL: 'unknown_stride_equalto_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %cmp = icmp eq i32 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i32 %iv, %N
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sext i16 %0 to i32
+  %add1.next = add nsw i32 %add1, %conv
+  %iv.next = add nuw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
+}
+
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count, but the TC is zero-extended from a narrower type.
+define i32 @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 %j) {
+; CHECK-LABEL: 'unknown_stride_equalto_zext_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %conv = zext i16 %N to i32
+  %cmp = icmp eq i16 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %conv
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv3 = sext i16 %0 to i32
+  %add1.next = add nsw i32 %add1, %conv3
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %conv
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
+}
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count, but the TC is sign-extended from a narrower type.
+define i32 @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
+; CHECK-LABEL: 'unknown_stride_equalto_sext_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %conv = sext i16 %N to i32
+  %cmp = icmp eq i16 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %conv
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv3 = sext i16 %0 to i32
+  %add1.next = add nsw i32 %add1, %conv3
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %conv
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
+}
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count, but the TC is truncated from a wider type.
+define i32 @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
+; CHECK-LABEL: 'unknown_stride_equalto_trunc_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %conv = trunc i64 %N to i32
+  %cmp = icmp eq i64 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %conv
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv3 = sext i16 %0 to i32
+  %add1.next = add nsw i32 %add1, %conv3
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %conv
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
+}
