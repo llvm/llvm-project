@@ -2276,6 +2276,37 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_launder:
     return BuiltinLaunder(*this, TheCall);
+  case Builtin::BI__builtin_clear_padding: {
+    const auto numArgs = TheCall->getNumArgs();
+    if (numArgs < 1) {
+      Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args_one)
+          << 0 /*function call*/ << "T*" << 0;
+      return ExprError();
+    }
+    if (numArgs > 1) {
+      Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_many_args_one)
+          << 0 /*function call*/ << "T*" << numArgs << 0;
+      return ExprError();
+    }
+
+    const Expr *PtrArg = TheCall->getArg(0);
+    const QualType PtrArgType = PtrArg->getType();
+    if (!PtrArgType->isPointerType()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+          << PtrArgType << "pointer" << 1 << 0 << 3 << 1 << PtrArgType
+          << "pointer";
+      return ExprError();
+    }
+    if (PtrArgType->getPointeeType().isConstQualified()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_typecheck_assign_const)
+          << TheCall->getSourceRange() << 5 /*ConstUnknown*/;
+      return ExprError();
+    }
+    if (RequireCompleteType(PtrArg->getBeginLoc(), PtrArgType->getPointeeType(),
+                            diag::err_typecheck_decl_incomplete_type))
+      return ExprError();
+    break;
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
