@@ -526,8 +526,8 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   T float_mantissa;
   if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
     float_mantissa =
-        (static_cast<T>(uint64_t(mantissa)) * static_cast<T>(0x1.0p64)) +
-        static_cast<T>(uint64_t(mantissa >> 64));
+        (static_cast<T>(uint64_t(mantissa >> 64)) * static_cast<T>(0x1.0p64)) +
+        static_cast<T>(uint64_t(mantissa));
   } else {
     float_mantissa = static_cast<T>(mantissa);
   }
@@ -591,7 +591,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   }
 
   ExpandedFloat<T> output;
-  output.mantissa = result.get_mantissa();
+  output.mantissa = result.get_explicit_mantissa();
   output.exponent = result.get_biased_exponent();
   return output;
 }
