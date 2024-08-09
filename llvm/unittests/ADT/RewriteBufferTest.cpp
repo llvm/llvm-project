@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Rewrite/Core/RewriteBuffer.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
-using namespace clang;
 
 namespace {
 
@@ -32,7 +31,7 @@ static void tagRange(unsigned Offset, unsigned Len, StringRef tagName,
   raw_string_ostream(EndTag) << "</" << tagName << '>';
 
   Buf.InsertTextAfter(Offset, BeginTag);
-  Buf.InsertTextBefore(Offset+Len, EndTag);
+  Buf.InsertTextBefore(Offset + Len, EndTag);
 }
 
 TEST(RewriteBuffer, TagRanges) {
