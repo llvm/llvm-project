@@ -2707,10 +2707,9 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
     <rhs_columns> and multiplies them. The result matrix is returned embedded in
     the result vector.
 
-    Note, the semantics of the corresponding LLVM intrinsic,
-    `@llvm.matrix.multiply.*`, are not clear in the context of scalable
-    vectors. Hence, this Op is only available for fixed-width vectors. Also
-    see:
+    Note, the corresponding LLVM intrinsic, `@llvm.matrix.multiply.*`, does not
+    support scalable vectors. Hence, this Op is only available for fixed-width
+    vectors. Also see:
 
     http://llvm.org/docs/LangRef.html#llvm-matrix-multiply-intrinsic
 

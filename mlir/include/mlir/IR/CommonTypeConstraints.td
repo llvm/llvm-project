@@ -600,7 +600,7 @@ class VectorOfLengthAndType<list<int> allowedLengths,
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,
-                                    list<Type> allowedTypes> : AllOfType<
+                                 list<Type> allowedTypes> : AllOfType<
   [FixedVectorOf<allowedTypes>, FixedVectorOfLength<allowedLengths>],
   FixedVectorOf<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
