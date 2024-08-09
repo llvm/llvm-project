@@ -530,6 +530,10 @@ struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
                             const FunctionEffectsRef &New);
 };
 
+// Defined in EffectAnalysis.cpp. TODO: Maybe make this a method of Sema and
+// move more of the effects implementation into that file?
+void performEffectAnalysis(Sema &S, TranslationUnitDecl *TU);
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -873,29 +877,16 @@ public:
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
 
-  // ----- function effects ---
+  /// All functions/lambdas/blocks which have bodies and which have a non-empty
+  /// FunctionEffectsRef to be verified.
+  SmallVector<const Decl *> DeclsWithEffectsToVerify;
+  /// The union of all effects present on DeclsWithEffectsToVerify. Conditions
+  /// are all null.
+  FunctionEffectKindSet AllEffectsToVerify;
 
   /// Warn when implicitly changing function effects.
   void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
                                         SourceLocation Loc);
-
-  /// Warn and return true if adding an effect to a set would create a conflict.
-  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
-                                         const FunctionEffectWithCondition &EC,
-                                         SourceLocation NewAttrLoc);
-
-  // Report a failure to merge function effects between declarations due to a
-  // conflict.
-  void
-  diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
-                                       SourceLocation NewLoc,
-                                       SourceLocation OldLoc);
-
-  /// Try to parse the conditional expression attached to an effect attribute
-  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty
-  /// optional on error.
-  std::optional<FunctionEffectMode>
-  ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
 
   /// makeUnavailableInSystemHeader - There is an error in the current
   /// context.  If we're still in a system header, and we can plausibly
@@ -4332,6 +4323,34 @@ public:
 
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
+
+  /// Warn and return true if adding a function effect to a set would create a
+  /// conflict.
+  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
+                                         const FunctionEffectWithCondition &EC,
+                                         SourceLocation NewAttrLoc);
+
+  // Report a failure to merge function effects between declarations due to a
+  // conflict.
+  void
+  diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
+                                       SourceLocation NewLoc,
+                                       SourceLocation OldLoc);
+
+  /// Inline checks from the start of maybeAddDeclWithEffects, to
+  /// minimize performance impact on code not using effects.
+  template <class FuncOrBlockDecl>
+  void maybeAddDeclWithEffects(FuncOrBlockDecl *D) {
+    if (Context.hasAnyFunctionEffects())
+      if (FunctionEffectsRef FX = D->getFunctionEffects(); !FX.empty())
+        maybeAddDeclWithEffects(D, FX);
+  }
+
+  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
+  void maybeAddDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
+
+  /// Unconditionally add a Decl to DeclsWithEfffectsToVerify.
+  void addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
 
 private:
   /// Function or variable declarations to be checked for whether the deferred
@@ -15008,6 +15027,12 @@ public:
     NamedDecl *Hidden;
     return hasAcceptableDefinition(D, &Hidden, Kind);
   }
+
+  /// Try to parse the conditional expression attached to an effect attribute
+  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty
+  /// optional on error.
+  std::optional<FunctionEffectMode>
+  ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
 
 private:
   /// The implementation of RequireCompleteType

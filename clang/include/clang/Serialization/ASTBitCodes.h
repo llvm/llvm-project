@@ -724,6 +724,10 @@ enum ASTRecordTypes {
 
   /// Record code for vtables to emit.
   VTABLES_TO_EMIT = 70,
+
+  /// Record code for Sema's vector of functions/blocks with effects to
+  /// be verified.
+  DECLS_WITH_EFFECTS_TO_VERIFY = 71,
 };
 
 /// Record types used within a source manager block.

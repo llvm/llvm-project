@@ -5137,47 +5137,41 @@ StringRef FunctionEffect::name() const {
   llvm_unreachable("unknown effect kind");
 }
 
-bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
+std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
+    const Decl &Callee, const FunctionEffectKindSet &CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
-    FunctionEffectsRef CalleeFX;
-    if (auto *FD = Callee.getAsFunction())
-      CalleeFX = FD->getFunctionEffects();
-    else if (auto *BD = dyn_cast<BlockDecl>(&Callee))
-      CalleeFX = BD->getFunctionEffects();
-    else
-      return false;
-    for (const FunctionEffectWithCondition &CalleeEC : CalleeFX) {
+    for (const FunctionEffect &Effect : CalleeFX) {
       // nonblocking/nonallocating cannot call allocating.
-      if (CalleeEC.Effect.kind() == Kind::Allocating)
-        return false;
+      if (Effect.kind() == Kind::Allocating)
+        return Effect;
       // nonblocking cannot call blocking.
-      if (kind() == Kind::NonBlocking &&
-          CalleeEC.Effect.kind() == Kind::Blocking)
-        return false;
+      if (kind() == Kind::NonBlocking && Effect.kind() == Kind::Blocking)
+        return Effect;
     }
-    return true;
+    return std::nullopt;
   }
 
   case Kind::Allocating:
   case Kind::Blocking:
-    return false;
+    assert(0 && "effectProhibitingInference with non-inferable effect kind");
+    break;
 
   case Kind::None:
-    assert(0 && "canInferOnFunction with None");
+    assert(0 && "effectProhibitingInference with None");
     break;
   }
   llvm_unreachable("unknown effect kind");
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
-    bool Direct, ArrayRef<FunctionEffect> CalleeFX) const {
+    bool Direct, const FunctionEffectKindSet &CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
     const Kind CallerKind = kind();
-    for (const auto &Effect : CalleeFX) {
+    for (const FunctionEffect &Effect : CalleeFX) {
       const Kind EK = Effect.kind();
       // Does callee have same or stronger constraint?
       if (EK == CallerKind ||
@@ -5318,6 +5312,19 @@ LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
   FunctionEffectsRef(*this).dump(OS);
+}
+
+LLVM_DUMP_METHOD void FunctionEffectKindSet::dump(llvm::raw_ostream &OS) const {
+  OS << "Effects{";
+  bool First = true;
+  for (const auto &Effect : *this) {
+    if (!First)
+      OS << ", ";
+    else
+      First = false;
+    OS << Effect.name();
+  }
+  OS << "}";
 }
 
 FunctionEffectsRef
