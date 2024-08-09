@@ -59,6 +59,7 @@ protected:
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
+  unsigned ScatterOverhead = 10;
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
@@ -225,6 +226,7 @@ public:
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
+  unsigned getScatterOverhead() const { return ScatterOverhead; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,
