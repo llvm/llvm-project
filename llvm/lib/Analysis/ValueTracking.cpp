@@ -8361,6 +8361,11 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
 }
 
 bool llvm::isKnownInversion(const Value *X, const Value *Y) {
+
+  // Handle X = xor Y, -1 or Y = xor X, -1
+  if (match(X, m_Not(m_Specific(Y))) || match(Y, m_Not(m_Specific(X))))
+    return true;
+
   // Handle X = icmp pred A, B, Y = icmp pred A, C.
   Value *A, *B, *C;
   ICmpInst::Predicate Pred1, Pred2;
