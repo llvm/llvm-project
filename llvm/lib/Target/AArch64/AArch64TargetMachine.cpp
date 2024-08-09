@@ -461,8 +461,10 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
-        TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
+        TargetTriple, CPU, TuneCPU, FS, *this, isLittle,
+        MaybeAlign(F.getParent()->getOverrideStackAlignment()),
+        MinSVEVectorSize, MaxSVEVectorSize, IsStreaming, IsStreamingCompatible,
+        HasMinSize);
   }
 
   assert((!IsStreaming || I->hasSME()) && "Expected SME to be available");
