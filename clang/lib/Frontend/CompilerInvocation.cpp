@@ -1719,6 +1719,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, Opt);
   }
 
+  if (T.isPPC32() && Opts.ComplexInRegABI == CodeGenOptions::CMPLX_InGPR)
+    GenerateArg(Consumer, OPT_fcomplex_ppc_gnu_abi);
+
   if (Opts.EnableAIXExtendedAltivecABI)
     GenerateArg(Consumer, OPT_mabi_EQ_vec_extabi);
 
@@ -2092,6 +2095,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Opts.setStructReturnConvention(CodeGenOptions::SRCK_InRegs);
     }
   }
+
+  if (Args.getLastArg(OPT_fcomplex_ppc_gnu_abi))
+    Opts.setComplexInRegABI(CodeGenOptions::CMPLX_InGPR);
 
   if (Arg *A = Args.getLastArg(OPT_mxcoff_roptr)) {
     if (!T.isOSAIX())
