@@ -117,6 +117,12 @@ static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
 
+static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
+    "simplifycfg-hoist-loads-stores-with-cond-faulting", cl::Hidden,
+    cl::init(true),
+    cl::desc("Hoist loads/stores if the target supports "
+             "conditional faulting"));
+
 static cl::opt<unsigned>
     HoistCommonSkipLimit("simplifycfg-hoist-common-skip-limit", cl::Hidden,
                          cl::init(20),
@@ -2978,6 +2984,12 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
   return BIEndProb < Likely;
 }
 
+static bool isSafeCheapLoadStore(const Instruction &I,
+                                 const TargetTransformInfo &TTI) {
+  return (isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         TTI.hasConditionalLoadStoreForType(getLoadStoreType(&I));
+}
+
 /// Speculate a conditional basic block flattening the CFG.
 ///
 /// Note that this is a very risky transform currently. Speculating
@@ -3052,6 +3064,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
   unsigned SpeculatedInstructions = 0;
+  bool HositLoadsStores = HoistLoadsStoresWithCondFaulting &&
+                          Options.HoistLoadsStoresWithCondFaulting;
+  SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
   EphemeralValueTracker EphTracker;
@@ -3080,22 +3095,31 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
     // Only speculatively execute a single instruction (not counting the
     // terminator) for now.
-    ++SpeculatedInstructions;
+    bool IsSafeCheapLoadStore =
+        HositLoadsStores && isSafeCheapLoadStore(I, TTI);
+    // Not count load/store into cost if target supports conditional faulting
+    // b/c it's cheap to speculate it.
+    if (IsSafeCheapLoadStore)
+      SpeculatedConditionalLoadsStores.push_back(&I);
+    else
+      ++SpeculatedInstructions;
+
     if (SpeculatedInstructions > 1)
       return false;
 
     // Don't hoist the instruction if it's unsafe or expensive.
-    if (!isSafeToSpeculativelyExecute(&I) &&
-        !(HoistCondStores && (SpeculatedStoreValue = isSafeToSpeculateStore(
-                                  &I, BB, ThenBB, EndBB))))
+    if (!IsSafeCheapLoadStore && !isSafeToSpeculativelyExecute(&I) &&
+        !(HoistCondStores && !SpeculatedStoreValue &&
+          (SpeculatedStoreValue =
+               isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
       return false;
-    if (!SpeculatedStoreValue &&
+    if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
 
     // Store the store speculation candidate.
-    if (SpeculatedStoreValue)
+    if (!SpeculatedStore && SpeculatedStoreValue)
       SpeculatedStore = cast<StoreInst>(&I);
 
     // Do not hoist the instruction if any of its operands are defined but not
@@ -3122,11 +3146,11 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
   // Check that we can insert the selects and that it's not too expensive to do
   // so.
-  bool Convert = SpeculatedStore != nullptr;
+  bool Convert =
+      SpeculatedStore != nullptr || !SpeculatedConditionalLoadsStores.empty();
   InstructionCost Cost = 0;
   Convert |= validateAndCostRequiredSelects(BB, ThenBB, EndBB,
-                                            SpeculatedInstructions,
-                                            Cost, TTI);
+                                            SpeculatedInstructions, Cost, TTI);
   if (!Convert || Cost > Budget)
     return false;
 
@@ -3213,6 +3237,107 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
         It.dropOneDbgRecord(&DR);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
+
+  // If the target supports conditional faulting,
+  // we look for the following pattern:
+  // \code
+  //   BB:
+  //     ...
+  //     %cond = icmp ult %x, %y
+  //     br i1 %cond, label %TrueBB, label %FalseBB
+  //   FalseBB:
+  //     store i32 1, ptr %q, align 4
+  //     ...
+  //   TrueBB:
+  //     %maskedloadstore = load i32, ptr %b, align 4
+  //     store i32 %maskedloadstore, ptr %p, align 4
+  //     ...
+  // \endcode
+  //
+  // and transform it into:
+  //
+  // \code
+  //   BB:
+  //     ...
+  //     %cond = icmp ult %x, %y
+  //     %maskedloadstore = cload i32, ptr %b, %cond
+  //     cstore i32 %maskedloadstore, ptr %p, %cond
+  //     cstore i32 1, ptr %q, ~%cond
+  //     br i1 %cond, label %TrueBB, label %FalseBB
+  //   FalseBB:
+  //     ...
+  //   TrueBB:
+  //     ...
+  // \endcode
+  //
+  // where cload/cstore are represented by llvm.masked.load/store intrinsics,
+  // e.g.
+  //
+  // \code
+  //   %vcond = bitcast i1 %cond to <1 x i1>
+  //   %v0 = call <1 x i32> @llvm.masked.load.v1i32.p0
+  //                         (ptr %b, i32 4, <1 x i1> %vcond, <1 x i32> poison)
+  //   %maskedloadstore = bitcast <1 x i32> %v0 to i32
+  //   call void @llvm.masked.store.v1i32.p0
+  //                          (<1 x i32> %v0, ptr %p, i32 4, <1 x i1> %vcond)
+  //   %cond.not = xor i1 %cond, true
+  //   %vcond.not = bitcast i1 %cond.not to <1 x i>
+  //   call void @llvm.masked.store.v1i32.p0
+  //              (<1 x i32> <i32 1>, ptr %q, i32 4, <1x i1> %vcond.not)
+  // \endcode
+  //
+  // So we need to turn hoisted load/store into cload/cstore.
+  auto &Context = BI->getParent()->getContext();
+  auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
+  auto *Cond = BI->getOperand(0);
+  Value *Mask = nullptr;
+  // Construct the condition if needed.
+  if (!SpeculatedConditionalLoadsStores.empty()) {
+    IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
+    if (Invert)
+      Mask = Builder.CreateBitCast(
+          Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
+    else
+      Mask = Builder.CreateBitCast(Cond, VCondTy);
+  }
+  for (auto *I : SpeculatedConditionalLoadsStores) {
+    IRBuilder<> Builder(I);
+    // We currently assume conditional faulting load/store is supported for
+    // scalar types only when creating new instructions. This can be easily
+    // extended for vector types in the future.
+    assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
+    auto *Op0 = I->getOperand(0);
+    Instruction *MaskedLoadStore = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      // Handle Load.
+      auto *Ty = I->getType();
+      MaskedLoadStore = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1),
+                                                 Op0, LI->getAlign(), Mask);
+      I->replaceAllUsesWith(Builder.CreateBitCast(MaskedLoadStore, Ty));
+    } else {
+      // Handle Store.
+      auto *StoredVal =
+          Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
+      MaskedLoadStore = Builder.CreateMaskedStore(
+          StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
+    }
+    // For non-debug metadata, only !annotation, !range, !nonull and !align are
+    // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
+    //
+    // !nonull, !align : Not support pointer type, no need to keep.
+    // !range: load type is changed from scalar to vector, no idea how to keep
+    //         it.
+    // !annotation: Not impact semantics, keep it.
+    I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
+    // FIXME: DIAssignID is not supported for masked store yet.
+    // (Verifier::visitDIAssignIDMetadata)
+    at::deleteAssignmentMarkers(I);
+    I->eraseMetadataIf([](unsigned MDKind, MDNode *Node) {
+      return Node->getMetadataID() == Metadata::DIAssignIDKind;
+    });
+    MaskedLoadStore->copyMetadata(*I);
+    I->eraseFromParent();
+  }
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);

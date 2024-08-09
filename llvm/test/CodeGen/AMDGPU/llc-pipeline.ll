@@ -213,7 +213,9 @@
 ; GCN-O1-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:      Expand memcmp() to load/stores
+; GCN-O1-NEXT:      Simplify the CFG
 ; GCN-O1-NEXT:      Remove unreachable blocks from the CFG
+; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-NEXT:      Branch Probability Analysis
@@ -498,7 +500,9 @@
 ; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      Expand memcmp() to load/stores
+; GCN-O1-OPTS-NEXT:      Simplify the CFG
 ; GCN-O1-OPTS-NEXT:      Remove unreachable blocks from the CFG
+; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Branch Probability Analysis
@@ -802,7 +806,9 @@
 ; GCN-O2-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O2-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:      Expand memcmp() to load/stores
+; GCN-O2-NEXT:      Simplify the CFG
 ; GCN-O2-NEXT:      Remove unreachable blocks from the CFG
+; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      Post-Dominator Tree Construction
 ; GCN-O2-NEXT:      Branch Probability Analysis
@@ -1114,7 +1120,9 @@
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Expand memcmp() to load/stores
+; GCN-O3-NEXT:      Simplify the CFG
 ; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
+; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      Post-Dominator Tree Construction
 ; GCN-O3-NEXT:      Branch Probability Analysis

@@ -47,6 +47,7 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils.h"
 #include <cassert>
 #include <optional>
@@ -851,6 +852,13 @@ void TargetPassConfig::addIRPasses() {
   if (TM->getTargetTriple().isOSBinFormatMachO() &&
       !DisableAtExitBasedGlobalDtorLowering)
     addPass(createLowerGlobalDtorsLegacyPass());
+
+  // Hoist loads/stores to reduce branches when profitable.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createCFGSimplificationPass(
+        SimplifyCFGOptions()
+            .runInCodeGen(true)
+            .hoistLoadsStoresWithCondFaulting(true)));
 
   // Make sure that no unreachable blocks are instruction selected.
   addPass(createUnreachableBlockEliminationPass());
