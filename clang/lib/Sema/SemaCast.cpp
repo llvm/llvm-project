@@ -73,7 +73,7 @@ namespace {
       //   value of the expression to the unqualified, non-atomic version of
       //   the named type.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
-          !DestType->isArrayType()) {
+          !DestType->isArrayType() && !DestType.getPointerAuth()) {
         DestType = DestType.getAtomicUnqualifiedType();
       }
 
@@ -165,6 +165,14 @@ namespace {
           SemaObjC::ACR_unbridged)
         IsARCUnbridgedCast = true;
       SrcExpr = src;
+    }
+
+    void checkQualifiedDestType() {
+      // Destination type may not be qualified with __ptrauth.
+      if (DestType.getPointerAuth()) {
+        Self.Diag(DestRange.getBegin(), diag::err_ptrauth_qualifier_cast)
+            << DestType << DestRange;
+      }
     }
 
     /// Check for and handle non-overload placeholder expressions.
@@ -307,6 +315,8 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
   CastOperation Op(*this, DestType, E);
   Op.OpRange = SourceRange(OpLoc, Parens.getEnd());
   Op.DestRange = AngleBrackets;
+
+  Op.checkQualifiedDestType();
 
   switch (Kind) {
   default: llvm_unreachable("Unknown C++ cast!");
@@ -3359,6 +3369,8 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
   // -Wcast-qual
   DiagnoseCastQual(Op.Self, Op.SrcExpr, Op.DestType);
 
+  Op.checkQualifiedDestType();
+
   return Op.complete(CStyleCastExpr::Create(
       Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
       &Op.BasePath, CurFPFeatureOverrides(), CastTypeInfo, LPLoc, RPLoc));
@@ -3377,6 +3389,8 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
   if (Op.SrcExpr.isInvalid())
     return ExprError();
+
+  Op.checkQualifiedDestType();
 
   auto *SubExpr = Op.SrcExpr.get();
   if (auto *BindExpr = dyn_cast<CXXBindTemporaryExpr>(SubExpr))
