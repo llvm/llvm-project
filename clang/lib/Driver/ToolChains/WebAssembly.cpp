@@ -180,6 +180,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (WasmOptPath == "wasm-opt") {
       WasmOptPath = {};
     }
+    if (WasmOptPath.empty()) {
+      printf("warning: wasm-opt not found but was requested\n");
+    }
   }
 
   if (!WasmOptPath.empty()) {
