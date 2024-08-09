@@ -9,6 +9,7 @@
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -632,20 +633,20 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
 
 TEST_F(SandboxIRTest, InsertElementInst) {
   parseIR(C, R"IR(
-define void @foo(i8 %v0, i8 %v1) {
+define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
   %ins0 = insertelement <2 x i8> poison, i8 %v0, i32 0
   %ins1 = insertelement <2 x i8> %ins0, i8 %v1, i32 1
   ret void
 }
 )IR");
-  Function &F = *M->getFunction("foo");
+  Function &LLVMF = *M->getFunction("foo");
   sandboxir::Context Ctx(C);
-  auto &SBF = *Ctx.createFunction(&F);
-  unsigned ArgIdx = 0;
-  auto *Arg0 = SBF.getArg(ArgIdx++);
-  auto *Arg1 = SBF.getArg(ArgIdx++);
-  auto *SBB = &*SBF.begin();
-  auto It = SBB->begin();
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Arg0 = F.getArg(0);
+  auto *Arg1 = F.getArg(1);
+  auto *ArgVec = F.getArg(2);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
   auto *Ins0 = cast<sandboxir::InsertElementInst>(&*It++);
   auto *Ins1 = cast<sandboxir::InsertElementInst>(&*It++);
   auto *Ret = &*It++;
@@ -664,8 +665,19 @@ define void @foo(i8 %v0, i8 %v1) {
 
   auto *NewI2 =
       cast<sandboxir::InsertElementInst>(sandboxir::InsertElementInst::create(
-          Poison, Arg0, Idx, SBB, Ctx, "NewIns2"));
+          Poison, Arg0, Idx, BB, Ctx, "NewIns2"));
   EXPECT_EQ(NewI2->getPrevNode(), Ret);
+
+  auto *LLVMArg0 = LLVMF.getArg(0);
+  auto *LLVMArgVec = LLVMF.getArg(2);
+  auto *Zero = sandboxir::Constant::createInt(Type::getInt8Ty(C), 0, Ctx);
+  auto *LLVMZero = llvm::ConstantInt::get(Type::getInt8Ty(C), 0);
+  EXPECT_EQ(
+      sandboxir::InsertElementInst::isValidOperands(ArgVec, Arg0, Zero),
+      llvm::InsertElementInst::isValidOperands(LLVMArgVec, LLVMArg0, LLVMZero));
+  EXPECT_EQ(
+      sandboxir::InsertElementInst::isValidOperands(Arg0, ArgVec, Zero),
+      llvm::InsertElementInst::isValidOperands(LLVMArg0, LLVMArgVec, LLVMZero));
 }
 
 TEST_F(SandboxIRTest, BranchInst) {
