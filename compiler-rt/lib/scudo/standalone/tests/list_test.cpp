@@ -10,6 +10,8 @@
 
 #include "list.h"
 
+#include <array>
+
 struct ListItemLinkedWithPtr {
   ListItemLinkedWithPtr *Next;
   ListItemLinkedWithPtr *Prev;
@@ -125,6 +127,18 @@ static void testListCommon(void) {
   L.pop_front();
   EXPECT_TRUE(L.empty());
   L.checkConsistency();
+
+  L.push_back(X);
+  L.push_back(Y);
+  L.push_back(Z);
+
+  // Verify the iterator
+  std::array<ListItemTy *, 3> visitOrder{X, Y, Z};
+  auto Iter = visitOrder.begin();
+  for (const auto &Item : L) {
+    EXPECT_EQ(&Item, *Iter);
+    ++Iter;
+  }
 }
 
 TEST(ScudoListTest, LinkedListCommon) {

@@ -147,15 +147,20 @@ template <class T> struct IntrusiveList : public LinkOp<T> {
   typedef IteratorBase<T> Iterator;
   typedef IteratorBase<const T> ConstIterator;
 
-  Iterator begin() { return Iterator(*this, First); }
-  Iterator end() { return Iterator(*this, this->getEndOfListVal()); }
+  Iterator begin() {
+    return Iterator(LinkOp<T>(this->getBase(), this->getSize()), First);
+  }
+  Iterator end() {
+    return Iterator(LinkOp<T>(this->getBase(), this->getSize()), nullptr);
+  }
 
   ConstIterator begin() const {
-    return ConstIterator(LinkOp<const T>(this->getBase(), this->getSize()), First);
+    return ConstIterator(LinkOp<const T>(this->getBase(), this->getSize()),
+                         First);
   }
   ConstIterator end() const {
     return ConstIterator(LinkOp<const T>(this->getBase(), this->getSize()),
-                         this->getEndOfListVal());
+                         nullptr);
   }
 
   void checkConsistency() const;
