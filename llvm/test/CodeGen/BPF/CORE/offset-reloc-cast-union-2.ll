@@ -53,11 +53,11 @@ entry:
 ; CHECK:             .long   16                      # FieldReloc
 ; CHECK-NEXT:        .long   57                      # Field reloc section string offset=57
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   [[TID1]]
 ; CHECK-NEXT:        .long   63
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   [[TID2]]
 ; CHECK-NEXT:        .long   118
 ; CHECK-NEXT:        .long   0

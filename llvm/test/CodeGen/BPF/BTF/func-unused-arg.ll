@@ -58,12 +58,12 @@ define dso_local i32 @f1(i32) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 ; CHECK-NEXT:        .long   11                      # FuncInfo section string offset=11
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Lfunc_begin0
+; CHECK-NEXT:        .long   Lfunc_begin0
 ; CHECK-NEXT:        .long   3
 ; CHECK-NEXT:        .long   16                      # LineInfo
 ; CHECK-NEXT:        .long   11                      # LineInfo section string offset=11
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   17
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1042                    # Line 1 Col 18

@@ -27,67 +27,67 @@ target triple = "bpfeb"
 ; Function Attrs: nounwind readnone
 define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !13 {
 ; CHECK-ALU64-LABEL: test:
-; CHECK-ALU64:       .Ltest$local:
-; CHECK-ALU64-NEXT:    .type .Ltest$local,@function
-; CHECK-ALU64-NEXT:  .Lfunc_begin0:
+; CHECK-ALU64:       Ltest$local:
+; CHECK-ALU64-NEXT:    .type Ltest$local,@function
+; CHECK-ALU64-NEXT:  Lfunc_begin0:
 ; CHECK-ALU64-NEXT:    .loc 1 11 0 # test.c:11:0
 ; CHECK-ALU64-NEXT:    .cfi_sections .debug_frame
 ; CHECK-ALU64-NEXT:    .cfi_startproc
 ; CHECK-ALU64-NEXT:  # %bb.0: # %entry
 ; CHECK-ALU64-NEXT:    #DEBUG_VALUE: test:arg <- $r1
-; CHECK-ALU64-NEXT:  .Ltmp0:
+; CHECK-ALU64-NEXT:  Ltmp0:
 ; CHECK-ALU64-NEXT:    r1 = 16
-; CHECK-ALU64-NEXT:  .Ltmp1:
-; CHECK-ALU64-NEXT:  .Ltmp2:
-; CHECK-ALU64-NEXT:  .Ltmp3:
+; CHECK-ALU64-NEXT:  Ltmp1:
+; CHECK-ALU64-NEXT:  Ltmp2:
+; CHECK-ALU64-NEXT:  Ltmp3:
 ; CHECK-ALU64-NEXT:    r0 = 8
-; CHECK-ALU64-NEXT:  .Ltmp4:
+; CHECK-ALU64-NEXT:  Ltmp4:
 ; CHECK-ALU64-NEXT:    .loc 1 12 69 prologue_end # test.c:12:69
-; CHECK-ALU64-NEXT:  .Ltmp5:
-; CHECK-ALU64-NEXT:  .Ltmp6:
+; CHECK-ALU64-NEXT:  Ltmp5:
+; CHECK-ALU64-NEXT:  Ltmp6:
 ; CHECK-ALU64-NEXT:    r0 += r1
-; CHECK-ALU64-NEXT:  .Ltmp7:
+; CHECK-ALU64-NEXT:  Ltmp7:
 ; CHECK-ALU64-NEXT:    r1 = 45
 ; CHECK-ALU64-NEXT:    .loc 1 13 67 # test.c:13:67
-; CHECK-ALU64-NEXT:  .Ltmp8:
+; CHECK-ALU64-NEXT:  Ltmp8:
 ; CHECK-ALU64-NEXT:    r0 += r1
 ; CHECK-ALU64-NEXT:    .loc 1 12 3 # test.c:12:3
-; CHECK-ALU64-NEXT:  .Ltmp9:
+; CHECK-ALU64-NEXT:  Ltmp9:
 ; CHECK-ALU64-NEXT:    exit
-; CHECK-ALU64-NEXT:  .Ltmp10:
-; CHECK-ALU64-NEXT:  .Ltmp11:
+; CHECK-ALU64-NEXT:  Ltmp10:
+; CHECK-ALU64-NEXT:  Ltmp11:
 ;
 ; CHECK-ALU32-LABEL: test:
-; CHECK-ALU32:       .Ltest$local:
-; CHECK-ALU32-NEXT:    .type .Ltest$local,@function
-; CHECK-ALU32-NEXT:  .Lfunc_begin0:
+; CHECK-ALU32:       Ltest$local:
+; CHECK-ALU32-NEXT:    .type Ltest$local,@function
+; CHECK-ALU32-NEXT:  Lfunc_begin0:
 ; CHECK-ALU32-NEXT:    .loc 1 11 0 # test.c:11:0
 ; CHECK-ALU32-NEXT:    .cfi_sections .debug_frame
 ; CHECK-ALU32-NEXT:    .cfi_startproc
 ; CHECK-ALU32-NEXT:  # %bb.0: # %entry
 ; CHECK-ALU32-NEXT:    #DEBUG_VALUE: test:arg <- $r1
-; CHECK-ALU32-NEXT:  .Ltmp0:
+; CHECK-ALU32-NEXT:  Ltmp0:
 ; CHECK-ALU32-NEXT:    r1 = 16
-; CHECK-ALU32-NEXT:  .Ltmp1:
-; CHECK-ALU32-NEXT:  .Ltmp2:
-; CHECK-ALU32-NEXT:  .Ltmp3:
+; CHECK-ALU32-NEXT:  Ltmp1:
+; CHECK-ALU32-NEXT:  Ltmp2:
+; CHECK-ALU32-NEXT:  Ltmp3:
 ; CHECK-ALU32-NEXT:    r0 = 8
-; CHECK-ALU32-NEXT:  .Ltmp4:
+; CHECK-ALU32-NEXT:  Ltmp4:
 ; CHECK-ALU32-NEXT:    .loc 1 12 69 prologue_end # test.c:12:69
-; CHECK-ALU32-NEXT:  .Ltmp5:
-; CHECK-ALU32-NEXT:  .Ltmp6:
+; CHECK-ALU32-NEXT:  Ltmp5:
+; CHECK-ALU32-NEXT:  Ltmp6:
 ; CHECK-ALU32-NEXT:    w0 += w1
-; CHECK-ALU32-NEXT:  .Ltmp7:
+; CHECK-ALU32-NEXT:  Ltmp7:
 ; CHECK-ALU32-NEXT:    r1 = 45
 ; CHECK-ALU32-NEXT:    .loc 1 13 67 # test.c:13:67
-; CHECK-ALU32-NEXT:  .Ltmp8:
+; CHECK-ALU32-NEXT:  Ltmp8:
 ; CHECK-ALU32-NEXT:    w0 += w1
 ; CHECK-ALU32-NEXT:    # kill: def $w0 killed $w0 killed $r0
 ; CHECK-ALU32-NEXT:    .loc 1 12 3 # test.c:12:3
-; CHECK-ALU32-NEXT:  .Ltmp9:
+; CHECK-ALU32-NEXT:  Ltmp9:
 ; CHECK-ALU32-NEXT:    exit
-; CHECK-ALU32-NEXT:  .Ltmp10:
-; CHECK-ALU32-NEXT:  .Ltmp11:
+; CHECK-ALU32-NEXT:  Ltmp10:
+; CHECK-ALU32-NEXT:  Ltmp11:
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !30, metadata !DIExpression()), !dbg !31
   %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg, i32 5, i32 6), !dbg !32, !llvm.preserve.access.index !18
@@ -108,15 +108,15 @@ entry:
 ; CHECK:             .long   16                      # FieldReloc
 ; CHECK-NEXT:        .long   89                      # Field reloc section string offset=89
 ; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   95
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   95
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   95
 ; CHECK-NEXT:        .long   4
