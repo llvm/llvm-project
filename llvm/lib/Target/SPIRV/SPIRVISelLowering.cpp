@@ -96,10 +96,10 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                         : &SPIRV::fIDRegClass);
   else if (VT.isInteger())
     RC = VT.isVector() ? &SPIRV::vIDRegClass
-                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::ID64RegClass
-                                                        : &SPIRV::IDRegClass);
+                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::iID64RegClass
+                                                        : &SPIRV::iIDRegClass);
   else
-    RC = &SPIRV::IDRegClass;
+    RC = &SPIRV::iIDRegClass;
 
   return std::make_pair(0u, RC);
 }
@@ -125,7 +125,7 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                                    *STI.getRegBankInfo());
   if (!Res)
     report_fatal_error("insert validation bitcast: cannot constrain all uses");
-  MRI->setRegClass(NewReg, &SPIRV::IDRegClass);
+  MRI->setRegClass(NewReg, &SPIRV::iIDRegClass);
   GR.assignSPIRVTypeToVReg(NewPtrType, NewReg, MIB.getMF());
   I.getOperand(OpIdx).setReg(NewReg);
 }

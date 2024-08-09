@@ -17,8 +17,8 @@ include "SPIRVSymbolicOperands.td"
 let isCodeGenOnly=1 in {
   def ASSIGN_TYPE: Pseudo<(outs ANYID:$dst_id), (ins ANYID:$src_id, TYPE:$src_ty)>;
   def DECL_TYPE: Pseudo<(outs ANYID:$dst_id), (ins ANYID:$src_id, TYPE:$src_ty)>;
-  def GET_ID: Pseudo<(outs ID:$dst_id), (ins ANYID:$src)>;
-  def GET_ID64: Pseudo<(outs ID64:$dst_id), (ins ANYID:$src)>;
+  def GET_ID: Pseudo<(outs iID:$dst_id), (ins ANYID:$src)>;
+  def GET_ID64: Pseudo<(outs iID64:$dst_id), (ins ANYID:$src)>;
   def GET_fID: Pseudo<(outs fID:$dst_id), (ins ANYID:$src)>;
   def GET_fID64: Pseudo<(outs fID64:$dst_id), (ins ANYID:$src)>;
   def GET_pID32: Pseudo<(outs pID32:$dst_id), (ins ANYID:$src)>;
@@ -40,18 +40,18 @@ class BinOp<string name, bits<16> opCode, list<dag> pattern=[]>
                   "$dst = "#name#" $src_ty $src $src2", pattern>;
 
 class BinOpTyped<string name, bits<16> opCode, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, CID:$src, CID:$src2),
-                  "$dst = "#name#" $src_ty $src $src2", [(set ID:$dst, (assigntype (node CID:$src, CID:$src2), TYPE:$src_ty))]>;
+                : Op<opCode, (outs iID:$dst), (ins TYPE:$src_ty, CID:$src, CID:$src2),
+                  "$dst = "#name#" $src_ty $src $src2", [(set iID:$dst, (assigntype (node CID:$src, CID:$src2), TYPE:$src_ty))]>;
 
 class TernOpTyped<string name, bits<16> opCode, RegisterClass CCond, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, CCond:$cond, CID:$src1, CID:$src2),
-                  "$dst = "#name#" $src_ty $cond $src1 $src2", [(set ID:$dst, (assigntype (node CCond:$cond, CID:$src1, CID:$src2), TYPE:$src_ty))]>;
+                : Op<opCode, (outs iID:$dst), (ins TYPE:$src_ty, CCond:$cond, CID:$src1, CID:$src2),
+                  "$dst = "#name#" $src_ty $cond $src1 $src2", [(set iID:$dst, (assigntype (node CCond:$cond, CID:$src1, CID:$src2), TYPE:$src_ty))]>;
 
 multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0, bit genV = 0> {
   if genF then
     def S: BinOpTyped<name, opCode, fID, node>;
   else
-    def S: BinOpTyped<name, opCode, ID, node>;
+    def S: BinOpTyped<name, opCode, iID, node>;
   if genV then {
     if genF then
       def V: BinOpTyped<name, opCode, vfID, node>;
@@ -62,32 +62,32 @@ multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0
 
 multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genP = 1, bit genI = 1, bit genF = 0, bit genV = 0> {
   if genF then {
-    def SFSCond: TernOpTyped<name, opCode, ID, fID, node>;
+    def SFSCond: TernOpTyped<name, opCode, iID, fID, node>;
     def SFVCond: TernOpTyped<name, opCode, vID, fID, node>;
   }
   if genI then {
-    def SISCond: TernOpTyped<name, opCode, ID, ID, node>;
-    def SIVCond: TernOpTyped<name, opCode, vID, ID, node>;
+    def SISCond: TernOpTyped<name, opCode, iID, iID, node>;
+    def SIVCond: TernOpTyped<name, opCode, vID, iID, node>;
   }
   if genP then {
-    def SPSCond32: TernOpTyped<name, opCode, ID, pID32, node>;
+    def SPSCond32: TernOpTyped<name, opCode, iID, pID32, node>;
     def SPVCond32: TernOpTyped<name, opCode, vID, pID32, node>;
-    def SPSCond64: TernOpTyped<name, opCode, ID, pID64, node>;
+    def SPSCond64: TernOpTyped<name, opCode, iID, pID64, node>;
     def SPVCond64: TernOpTyped<name, opCode, vID, pID64, node>;
   }
   if genV then {
     if genF then {
-      def VFSCond: TernOpTyped<name, opCode, ID, vfID, node>;
+      def VFSCond: TernOpTyped<name, opCode, iID, vfID, node>;
       def VFVCond: TernOpTyped<name, opCode, vID, vfID, node>;
     }
     if genI then {
-      def VISCond: TernOpTyped<name, opCode, ID, vID, node>;
+      def VISCond: TernOpTyped<name, opCode, iID, vID, node>;
       def VIVCond: TernOpTyped<name, opCode, vID, vID, node>;
     }
     if genP then {
-      def VPSCond32: TernOpTyped<name, opCode, ID, vpID32, node>;
+      def VPSCond32: TernOpTyped<name, opCode, iID, vpID32, node>;
       def VPVCond32: TernOpTyped<name, opCode, vID, vpID32, node>;
-      def VPSCond64: TernOpTyped<name, opCode, ID, vpID64, node>;
+      def VPSCond64: TernOpTyped<name, opCode, iID, vpID64, node>;
       def VPVCond64: TernOpTyped<name, opCode, vID, vpID64, node>;
     }
   }
@@ -97,8 +97,8 @@ class UnOp<string name, bits<16> opCode, list<dag> pattern=[]>
                 : Op<opCode, (outs ANYID:$dst), (ins TYPE:$type, ANYID:$src),
                   "$dst = "#name#" $type $src", pattern>;
 class UnOpTyped<string name, bits<16> opCode, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, CID:$src),
-                  "$dst = "#name#" $src_ty $src", [(set ID:$dst, (assigntype (node CID:$src), TYPE:$src_ty))]>;
+                : Op<opCode, (outs iID:$dst), (ins TYPE:$src_ty, CID:$src),
+                  "$dst = "#name#" $src_ty $src", [(set iID:$dst, (assigntype (node CID:$src), TYPE:$src_ty))]>;
 
 class SimpleOp<string name, bits<16> opCode>: Op<opCode, (outs), (ins), name>;
 
@@ -240,16 +240,16 @@ def ConstPseudoFalse: IntImmLeaf<i32, [{ return Imm.getBitWidth() == 1 && Imm.ge
 def ConstPseudoNull: IntImmLeaf<i64, [{ return Imm.isZero(); }]>;
 
 multiclass IntFPImm<bits<16> opCode, string name> {
-  def I: Op<opCode, (outs ID:$dst), (ins TYPE:$type, ID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set ID:$dst, (assigntype PseudoConstI:$src, TYPE:$type))]>;
-  def F: Op<opCode, (outs ID:$dst), (ins TYPE:$type, fID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set ID:$dst, (assigntype PseudoConstF:$src, TYPE:$type))]>;
+  def I: Op<opCode, (outs iID:$dst), (ins TYPE:$type, iID:$src, variable_ops),
+                  "$dst = "#name#" $type", [(set iID:$dst, (assigntype PseudoConstI:$src, TYPE:$type))]>;
+  def F: Op<opCode, (outs fID:$dst), (ins TYPE:$type, fID:$src, variable_ops),
+                  "$dst = "#name#" $type", [(set fID:$dst, (assigntype PseudoConstF:$src, TYPE:$type))]>;
 }
 
-def OpConstantTrue: Op<41, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantTrue $src_ty",
-                      [(set ID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
-def OpConstantFalse: Op<42, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantFalse $src_ty",
-                      [(set ID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
+def OpConstantTrue: Op<41, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantTrue $src_ty",
+                      [(set iID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
+def OpConstantFalse: Op<42, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantFalse $src_ty",
+                      [(set iID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
 
 defm OpConstant: IntFPImm<43, "OpConstant">;
 
@@ -258,8 +258,7 @@ def OpConstantComposite: Op<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
 def OpConstantSampler: Op<45, (outs ID:$res),
                   (ins TYPE:$t, SamplerAddressingMode:$s, i32imm:$p, SamplerFilterMode:$f),
                   "$res = OpConstantSampler $t $s $p $f">;
-def OpConstantNull: Op<46, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantNull $src_ty",
-                      [(set ID:$dst, (assigntype ConstPseudoNull, TYPE:$src_ty))]>;
+def OpConstantNull: Op<46, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantNull $src_ty">;
 
 def OpSpecConstantTrue: Op<48, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantTrue $t">;
 def OpSpecConstantFalse: Op<49, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantFalse $t">;
@@ -469,8 +468,10 @@ def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
 // 3.42.12 Composite Instructions
 
+//def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
+//                  "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
-                  "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
+                  "$res = OpVectorExtractDynamic $type $vec $idx">;
 
 def OpVectorInsertDynamic: Op<78, (outs ID:$res), (ins TYPE:$ty, ID:$vec, ID:$comp, ID:$idx),
                   "$res = OpVectorInsertDynamic $ty $vec $comp $idx">;
@@ -521,8 +522,8 @@ def OpMatrixTimesMatrix: BinOp<"OpMatrixTimesMatrix", 146>;
 def OpOuterProduct: BinOp<"OpOuterProduct", 147>;
 def OpDot: BinOp<"OpDot", 148>;
 
-def OpIAddCarry: BinOpTyped<"OpIAddCarry", 149, ID, addc>;
-def OpISubBorrow: BinOpTyped<"OpISubBorrow", 150, ID, subc>;
+def OpIAddCarry: BinOpTyped<"OpIAddCarry", 149, iID, addc>;
+def OpISubBorrow: BinOpTyped<"OpISubBorrow", 150, iID, subc>;
 def OpUMulExtended: BinOp<"OpUMulExtended", 151>;
 def OpSMulExtended: BinOp<"OpSMulExtended", 152>;
 
