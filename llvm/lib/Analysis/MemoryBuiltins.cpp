@@ -240,21 +240,18 @@ getAllocationData(const Value *V, AllocType AllocTy,
 }
 
 static std::optional<AllocFnsTy>
-getAllocationSize(const Value *V, const TargetLibraryInfo *TLI) {
+getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   bool IsNoBuiltinCall;
-  const Function *Callee =
-      getCalledFunction(V, IsNoBuiltinCall);
-  if (!Callee)
-    return std::nullopt;
-
-  // Prefer to use existing information over allocsize. This will give us an
-  // accurate AllocTy.
-  if (!IsNoBuiltinCall)
+  const Function *Callee = getCalledFunction(CB, IsNoBuiltinCall);
+  if (Callee && !IsNoBuiltinCall) {
+    // Prefer to use existing information over allocsize. This will give us an
+    // accurate AllocTy.
     if (std::optional<AllocFnsTy> Data =
             getAllocationDataForFunction(Callee, AnyAlloc, TLI))
       return Data;
+  }
 
-  Attribute Attr = Callee->getFnAttribute(Attribute::AllocSize);
+  Attribute Attr = CB->getFnAttr(Attribute::AllocSize);
   if (Attr == Attribute())
     return std::nullopt;
 
@@ -264,7 +261,7 @@ getAllocationSize(const Value *V, const TargetLibraryInfo *TLI) {
   // Because allocsize only tells us how many bytes are allocated, we're not
   // really allowed to assume anything, so we use MallocLike.
   Result.AllocTy = MallocLike;
-  Result.NumParams = Callee->getNumOperands();
+  Result.NumParams = CB->arg_size();
   Result.FstParam = Args.first;
   Result.SndParam = Args.second.value_or(-1);
   // Allocsize has no way to specify an alignment argument
@@ -512,19 +509,20 @@ std::optional<StringRef>
 llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
   bool IsNoBuiltin;
   const Function *Callee = getCalledFunction(I, IsNoBuiltin);
-  if (Callee == nullptr || IsNoBuiltin)
-    return std::nullopt;
-  LibFunc TLIFn;
-
-  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn)) {
-    // Callee is some known library function.
-    const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
-    if (AllocData)
-      return mangledNameForMallocFamily(AllocData->Family);
-    const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
-    if (FreeData)
-      return mangledNameForMallocFamily(FreeData->Family);
+  if (Callee && !IsNoBuiltin) {
+    LibFunc TLIFn;
+    if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn)) {
+      // Callee is some known library function.
+      const auto AllocData =
+          getAllocationDataForFunction(Callee, AnyAlloc, TLI);
+      if (AllocData)
+        return mangledNameForMallocFamily(AllocData->Family);
+      const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
+      if (FreeData)
+        return mangledNameForMallocFamily(FreeData->Family);
+    }
   }
+
   // Callee isn't a known library function, still check attributes.
   if (checkFnAllocKind(I, AllocFnKind::Free | AllocFnKind::Alloc |
                               AllocFnKind::Realloc)) {
@@ -558,14 +556,13 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
 Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
   bool IsNoBuiltinCall;
   const Function *Callee = getCalledFunction(CB, IsNoBuiltinCall);
-  if (Callee == nullptr || IsNoBuiltinCall)
-    return nullptr;
-
-  LibFunc TLIFn;
-  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
-      isLibFreeFunction(Callee, TLIFn)) {
-    // All currently supported free functions free the first argument.
-    return CB->getArgOperand(0);
+  if (Callee && !IsNoBuiltinCall) {
+    LibFunc TLIFn;
+    if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
+        isLibFreeFunction(Callee, TLIFn)) {
+      // All currently supported free functions free the first argument.
+      return CB->getArgOperand(0);
+    }
   }
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
