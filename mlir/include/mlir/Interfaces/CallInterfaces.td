@@ -59,17 +59,41 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
         Returns the operands within this call that are used as arguments to the
         callee as a mutable range.
       }],
-      "::mlir::MutableOperandRange", "getArgOperandsMutable">,
-  ];
+      "::mlir::MutableOperandRange", "getArgOperandsMutable"
+    >,
+    InterfaceMethod<[{
+        Resolve the callable operation for given callee to a
+        CallableOpInterface, or nullptr if a valid callable was not resolved.
+        `symbolTable` parameter allow for using a cached symbol table for symbol
+        lookups instead of performing an O(N) scan.
+      }],
+      "::mlir::Operation *", "resolveCallableInTable", (ins "::mlir::SymbolTableCollection &":$symbolTable),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{
+        ::mlir::CallInterfaceCallable callable = $_op.getCallableForCallee();
+        if (auto symbolVal = dyn_cast<::mlir::Value>(callable))
+          return symbolVal.getDefiningOp();
 
-  let extraClassDeclaration = [{
-    /// Resolve the callable operation for given callee to a
-    /// CallableOpInterface, or nullptr if a valid callable was not resolved.
-    /// `symbolTable` is an optional parameter that will allow for using a
-    /// cached symbol table for symbol lookups instead of performing an O(N)
-    /// scan.
-    ::mlir::Operation *resolveCallable(::mlir::SymbolTableCollection *symbolTable = nullptr);
-  }];
+        // If the callable isn't a value, lookup the symbol reference.
+        auto symbolRef = callable.get<::mlir::SymbolRefAttr>();
+        return symbolTable.lookupNearestSymbolFrom($_op, symbolRef);
+      }]
+    >,
+    InterfaceMethod<[{
+        Resolve the callable operation for given callee to a
+        CallableOpInterface, or nullptr if a valid callable was not resolved.
+    }],
+      "::mlir::Operation *", "resolveCallable", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{
+        ::mlir::CallInterfaceCallable callable = $_op.getCallableForCallee();
+        if (auto symbolVal = dyn_cast<::mlir::Value>(callable))
+          return symbolVal.getDefiningOp();
+
+        // If the callable isn't a value, lookup the symbol reference.
+        auto symbolRef = callable.get<::mlir::SymbolRefAttr>();
+        return SymbolTable::lookupNearestSymbolFrom($_op, symbolRef);
+      }]
+    >
+  ];
 }
 
 /// Interface for callable operations.
