@@ -3635,6 +3635,29 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
              dbgs() << "  T: " << IfTrue->getName()
                     << "  F: " << IfFalse->getName() << "\n");
 
+  // Collect common TBAA metadata, for instructions that match in all if-blocks
+  // and have the same TBAA metadata. If that is the case, they access the same
+  // type on all paths and the TBAA info can be preserved after hoisting.
+  // TODO: preserve other common metadata.
+  LockstepReverseIterator LRI(IfBlocks);
+  DenseMap<Instruction *, MDNode *> CommonTBAA;
+  while (LRI.isValid()) {
+    auto Insts = *LRI;
+    Instruction *I0 = Insts.front();
+    MDNode *MD = I0->getMetadata(LLVMContext::MD_tbaa);
+    if (!MD || any_of(Insts, [I0, MD](Instruction *I) {
+          return !I->isSameOperationAs(I0) ||
+                 !equal(I->operands(), I0->operands()) ||
+                 I->getMetadata(LLVMContext::MD_tbaa) != MD;
+        })) {
+      --LRI;
+      continue;
+    }
+    for (Instruction *I : Insts)
+      CommonTBAA[I] = MD;
+    --LRI;
+  }
+
   // If we can still promote the PHI nodes after this gauntlet of tests,
   // do all of the PHI's now.
 
@@ -3642,6 +3665,10 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // conditional parts of the if's up to the dominating block.
   for (BasicBlock *IfBlock : IfBlocks)
       hoistAllInstructionsInto(DomBlock, DomBI, IfBlock);
+
+  for (Instruction &I : *DomBlock)
+    if (auto *MD = CommonTBAA.lookup(&I))
+      I.setMetadata(LLVMContext::MD_tbaa, MD);
 
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
