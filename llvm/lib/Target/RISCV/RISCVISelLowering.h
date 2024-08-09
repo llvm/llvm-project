@@ -680,6 +680,10 @@ public:
 
   bool preferZeroCompareBranch() const override { return true; }
 
+  // Note that one specific case requires fence insertion for an
+  // AtomicCmpXchgInst but is handled via RISCVCodeGenPrepare rather than this
+  // hook due to limitations in the interface here (see RISCVCodeGenPrepare
+  // for more information).
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
   }
