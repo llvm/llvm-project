@@ -320,7 +320,7 @@ private:
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized and also checks
   // if TheTargetCodeGenInfo is NULL
-  CodeGenTypes Types;
+  std::unique_ptr<CodeGenTypes> Types;
 
   /// Holds information about C++ vtables.
   CodeGenVTables VTables;
@@ -783,7 +783,7 @@ public:
 
   const TargetCodeGenInfo &getTargetCodeGenInfo();
 
-  CodeGenTypes &getTypes() { return Types; }
+  CodeGenTypes &getTypes() { return *Types; }
 
   CodeGenVTables &getVTables() { return VTables; }
 

@@ -24,7 +24,6 @@ namespace clang {
   class ASTContext;
   class CodeGenOptions;
   class LangOptions;
-  class MangleContext;
   class QualType;
   class Type;
 
@@ -120,7 +119,6 @@ class CodeGenTBAA {
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
-  MangleContext &MContext;
 
   // MDHelper - Helper for creating metadata.
   llvm::MDBuilder MDHelper;
@@ -174,8 +172,7 @@ class CodeGenTBAA {
 
 public:
   CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M,
-              const CodeGenOptions &CGO, const LangOptions &Features,
-              MangleContext &MContext);
+              const CodeGenOptions &CGO, const LangOptions &Features);
   ~CodeGenTBAA();
 
   /// getTypeInfo - Get metadata used to describe accesses to objects of the
