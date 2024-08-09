@@ -21,11 +21,13 @@
 #ifndef LLVM_SUPPORT_WINDOWSSUPPORT_H
 #define LLVM_SUPPORT_WINDOWSSUPPORT_H
 
+#if defined(__MINGW32__)
 // mingw-w64 tends to define it as 0x0502 in its headers.
 #undef _WIN32_WINNT
-
 // Require at least Windows 7 API.
 #define _WIN32_WINNT 0x0601
+#endif
+
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
