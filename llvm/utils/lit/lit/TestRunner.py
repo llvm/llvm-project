@@ -743,7 +743,16 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    raise InternalShellError(j, "Error: 'env' requires a" " subcommand")
+                    # Return the environment variables if no argument is provided.
+                    env_str = "\n".join(
+                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
+                    )
+                    results.append(
+                        ShellCommandResult(
+                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
+                        )
+                    )
+                    return 0
             elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1

@@ -9,35 +9,43 @@
 
 # CHECK: -- Testing: 16 tests{{.*}}
 
-# CHECK: FAIL: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
+# CHECK: PASS: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: env FOO=1
 # CHECK: # executed command: env FOO=1
-# CHECK: # | Error: 'env' requires a subcommand
-# CHECK: # error: command failed with exit status: {{.*}}
+# CHECK-NOT: # error:
+# CHECK: --
 
-# CHECK: FAIL: shtest-env :: env-args-last-is-u-arg.txt ({{[^)]*}})
+# CHECK: PASS: shtest-env :: env-args-last-is-u-arg.txt ({{[^)]*}})
 # CHECK: env -u FOO
 # CHECK: # executed command: env -u FOO
-# CHECK: # | Error: 'env' requires a subcommand
-# CHECK: # error: command failed with exit status: {{.*}}
+# CHECK-NOT: # error:
+# CHECK: --
 
-# CHECK: FAIL: shtest-env :: env-args-last-is-u.txt ({{[^)]*}})
+# CHECK: PASS: shtest-env :: env-args-last-is-u.txt ({{[^)]*}})
 # CHECK: env -u
 # CHECK: # executed command: env -u
-# CHECK: # | Error: 'env' requires a subcommand
-# CHECK: # error: command failed with exit status: {{.*}}
+# CHECK-NOT: # error:
+# CHECK: --
 
-# CHECK: FAIL: shtest-env :: env-args-nested-none.txt ({{[^)]*}})
+# CHECK: PASS: shtest-env :: env-args-nested-none.txt ({{[^)]*}})
 # CHECK: env env env
 # CHECK: # executed command: env env env
-# CHECK: # | Error: 'env' requires a subcommand
-# CHECK: # error: command failed with exit status: {{.*}}
+# CHECK-NOT: # error:
+# CHECK: --
 
-# CHECK: FAIL: shtest-env :: env-args-none.txt ({{[^)]*}})
-# CHECK: env
+# CHECK: PASS: shtest-env :: env-args-none.txt ({{[^)]*}})
+# CHECK: env | {{.*}}
 # CHECK: # executed command: env
-# CHECK: # | Error: 'env' requires a subcommand
-# CHECK: # error: command failed with exit status: {{.*}}
+# CHECK: env FOO=2 BAR=1 | {{.*}}
+# CHECK: # executed command: env FOO=2 BAR=1
+# CHECK: env -u FOO -u BAR | {{.*}}
+# CHECK: # executed command: env -u FOO -u BAR
+# CHECK: env -u FOO BAR=1 -u BAR FOO=2 | {{.*}}
+# CHECK: # executed command: env -u FOO BAR=1 -u BAR FOO=2
+# CHECK: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4 | {{.*}}
+# CHECK: # executed command: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4
+# CHECK-NOT: # error:
+# CHECK: --
 
 # CHECK: FAIL: shtest-env :: env-calls-cd.txt ({{[^)]*}})
 # CHECK: env -u FOO BAR=3 cd foobar
@@ -121,6 +129,6 @@
 # CHECK: --
 
 # CHECK: Total Discovered Tests: 16
-# CHECK: Passed:  4 {{\([0-9]*\.[0-9]*%\)}}
-# CHECK: Failed: 12 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Passed:  9 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Failed: 7 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}
