@@ -44,7 +44,7 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
   let description = [{
     The `ptr` type is an opaque pointer type. This type typically represents a
     handle to an object in memory or target-dependent values like `nullptr`.
-    Pointers are optionally parameterized by a memory space.
+    Pointers are parameterized by a memory space.
 
     Syntax:
 
@@ -53,10 +53,10 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     memory-space ::= attribute-value
     ```
   }];
-  let parameters = (ins OptionalParameter<"Attribute">:$memorySpace);
-  let assemblyFormat = "(`<` $memorySpace^ `>`)?";
+  let parameters = (ins "MemorySpaceAttrInterface":$memorySpace);
+  let assemblyFormat = "`<` $memorySpace `>`";
   let builders = [
-    TypeBuilder<(ins CArg<"Attribute", "nullptr">:$memorySpace), [{
+    TypeBuilder<(ins CArg<"MemorySpaceAttrInterface", "nullptr">:$memorySpace), [{
       return $_get($_ctxt, memorySpace);
     }]>
   ];
