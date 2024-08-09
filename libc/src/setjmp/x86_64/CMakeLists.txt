@@ -6,14 +6,11 @@ add_entrypoint_object(
     ../setjmp_impl.h
   DEPENDS
     libc.include.setjmp
+    libc.src.setjmp.checksum
   COMPILE_OPTIONS
     -O3
     -fno-omit-frame-pointer
-    # TODO: Remove once one of these lands:
-    # https://github.com/llvm/llvm-project/pull/87837
-    # https://github.com/llvm/llvm-project/pull/88054
-    # https://github.com/llvm/llvm-project/pull/88157
-    -ftrivial-auto-var-init=uninitialized
+    -momit-leaf-frame-pointer
 )
 
 add_entrypoint_object(
@@ -24,6 +21,7 @@ add_entrypoint_object(
     ../longjmp.h
   DEPENDS
     libc.include.setjmp
+    libc.src.setjmp.checksum
   COMPILE_OPTIONS
     -O3
     -fomit-frame-pointer

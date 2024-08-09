@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/setjmp/longjmp.h"
+#include "include/llvm-libc-types/jmp_buf.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/setjmp/checksum.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86_64)
 #error "Invalid file include"
@@ -16,30 +18,58 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+[[gnu::naked]]
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
-  register __UINT64_TYPE__ rbx __asm__("rbx");
-  register __UINT64_TYPE__ rbp __asm__("rbp");
-  register __UINT64_TYPE__ r12 __asm__("r12");
-  register __UINT64_TYPE__ r13 __asm__("r13");
-  register __UINT64_TYPE__ r14 __asm__("r14");
-  register __UINT64_TYPE__ r15 __asm__("r15");
-  register __UINT64_TYPE__ rsp __asm__("rsp");
-  register __UINT64_TYPE__ rax __asm__("rax");
+  asm(R"(
+   pushq %%rbp
+   pushq %%rbx
+   mov  %%rdi, %%rbp
+   mov  %%esi, %%ebx
+   subq $8, %%rsp
+   call %P0
+   addq $8, %%rsp
+   mov  %%ebx, %%esi
+   mov  %%rbp, %%rdi
+   popq %%rbx
+   popq %%rbp
+ )" ::"i"(jmpbuf::verify)
+      : "rax", "rcx", "rdx", "r8", "r9", "r10", "r11");
 
-  // ABI requires that the return value should be stored in rax. So, we store
-  // |val| in rax. Note that this has to happen before we restore the registers
-  // from values in |buf|. Otherwise, once rsp and rbp are updated, we cannot
-  // read |val|.
-  val = val == 0 ? 1 : val;
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(rax) : "m"(val) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(rbx) : "m"(buf->rbx) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(rbp) : "m"(buf->rbp) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(r12) : "m"(buf->r12) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(r13) : "m"(buf->r13) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(r14) : "m"(buf->r14) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(r15) : "m"(buf->r15) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(rsp) : "m"(buf->rsp) :);
-  LIBC_INLINE_ASM("jmp *%0\n\t" : : "m"(buf->rip));
+  register __UINT64_TYPE__ rcx __asm__("rcx");
+  // Load cookie
+  asm("mov %1, %0\n\t" : "=r"(rcx) : "m"(jmpbuf::register_mangle_cookie));
+
+  // load registers from buffer
+  // do not pass any invalid values into registers
+#define RECOVER(REG)                                                           \
+  register __UINT64_TYPE__ REG __asm__(#REG);                                  \
+  asm volatile("mov %c[" #REG "](%%rdi), %%rdx\n\t"                            \
+               "xor %%rdx, %1\n\t"                                             \
+               "mov %%rdx, %0\n\t"                                             \
+               : "=r"(REG)                                                     \
+               : "r"(rcx), [REG] "i"(offsetof(__jmp_buf, REG))                 \
+               : "rdx");
+
+  RECOVER(rbx);
+  RECOVER(rbp);
+  RECOVER(r12);
+  RECOVER(r13);
+  RECOVER(r14);
+  RECOVER(r15);
+  RECOVER(rsp);
+
+  register int eax __asm__("eax");
+  asm volatile(R"(
+   xor %0,%0
+   cmp $1,%%esi       
+   adc %%esi,%0
+   mov %c[rip](%%rdi),%%rdx
+   xor %%rdx, %%rcx
+   jmp *%%rdx
+ )"
+               : "=r"(eax)
+               : [rip] "i"(offsetof(__jmp_buf, rip))
+               : "rdx");
 }
 
 } // namespace LIBC_NAMESPACE_DECL
