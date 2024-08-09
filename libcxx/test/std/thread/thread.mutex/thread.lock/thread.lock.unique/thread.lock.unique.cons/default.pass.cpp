@@ -15,11 +15,10 @@
 #include <cassert>
 #include <mutex>
 
-#include "test_macros.h"
-#include "../types.h"
+#include "checking_mutex.h"
 
 int main(int, char**) {
-  std::unique_lock<MyMutex> ul;
+  std::unique_lock<checking_mutex> ul;
   assert(!ul.owns_lock());
   assert(ul.mutex() == nullptr);
 

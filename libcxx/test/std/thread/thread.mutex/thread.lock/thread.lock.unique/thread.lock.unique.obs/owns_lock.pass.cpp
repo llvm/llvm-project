@@ -16,17 +16,16 @@
 #include <mutex>
 
 #include "test_macros.h"
-#include "../types.h"
-
-MyMutex m;
+#include "checking_mutex.h"
 
 int main(int, char**) {
-  std::unique_lock<MyMutex> lk0;
-  assert(lk0.owns_lock() == false);
-  std::unique_lock<MyMutex> lk1(m);
-  assert(lk1.owns_lock() == true);
-  lk1.unlock();
-  assert(lk1.owns_lock() == false);
+  checking_mutex mux;
+  std::unique_lock<checking_mutex> lock0;
+  assert(!lock0.owns_lock());
+  std::unique_lock<checking_mutex> lock1(mux);
+  assert(lock1.owns_lock());
+  lock1.unlock();
+  assert(!lock1.owns_lock());
 
   return 0;
 }
