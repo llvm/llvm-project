@@ -442,10 +442,10 @@ func.func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
   %f0 = arith.constant 0.0 : f32
   %0 = memref.cast %A : memref<4x8xf32> to memref<?x?xf32>
 
-  // CHECK: vector.transfer_read %{{.*}} {in_bounds = [true, true]} : memref<4x8xf32>, vector<4x8xf32>
+  // CHECK: vector.transfer_read %{{.*}} {in_bounds = array<i1: true, true>} : memref<4x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %0[%c0, %c0], %f0 : memref<?x?xf32>, vector<4x8xf32>
 
-  // CHECK: vector.transfer_write %{{.*}} {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
+  // CHECK: vector.transfer_write %{{.*}} {in_bounds = array<i1: true, true>} : vector<4x8xf32>, memref<4x8xf32>
   vector.transfer_write %1, %0[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32>
   return %1 : vector<4x8xf32>
 }
@@ -458,7 +458,7 @@ func.func @cast_transfers(%A: tensor<4x8xf32>) -> (vector<4x8xf32>) {
   %f0 = arith.constant 0.0 : f32
   %0 = tensor.cast %A : tensor<4x8xf32> to tensor<?x?xf32>
 
-  // CHECK: vector.transfer_read %{{.*}} {in_bounds = [true, true]} : tensor<4x8xf32>, vector<4x8xf32>
+  // CHECK: vector.transfer_read %{{.*}} {in_bounds = array<i1: true, true>} : tensor<4x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %0[%c0, %c0], %f0 : tensor<?x?xf32>, vector<4x8xf32>
 
   return %1 : vector<4x8xf32>
@@ -903,10 +903,10 @@ func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vecto
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
 
-  // CHECK: vector.transfer_read %{{.*}} {in_bounds = [false, true]}
+  // CHECK: vector.transfer_read %{{.*}} {in_bounds = array<i1: false, true>}
   %1 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x8xf32>, vector<4x8xf32>
 
-  // CHECK: vector.transfer_write %{{.*}} {in_bounds = [false, true]}
+  // CHECK: vector.transfer_write %{{.*}} {in_bounds = array<i1: false, true>}
   vector.transfer_write %1, %A[%c0, %c0] : vector<4x8xf32>, memref<?x8xf32>
 
   // Both dims may be out-of-bounds, attribute is elided.
@@ -1190,20 +1190,20 @@ func.func @transfer_folding_1(%t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>)
 {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} :
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {in_bounds = array<i1: true, true, true>} :
     tensor<2x3x4xf32>, vector<2x3x4xf32>
 
-  %r0 = vector.transfer_write %v, %t1[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+  %r0 = vector.transfer_write %v, %t1[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} :
     vector<2x3x4xf32>, tensor<2x3x4xf32>
 
   %t2 = "test.constant"() { value = dense<6.0> : tensor<2x3x4xf32>} : () -> (tensor<2x3x4xf32>)
-  %r1 = vector.transfer_write %v, %t2[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+  %r1 = vector.transfer_write %v, %t2[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} :
     vector<2x3x4xf32>, tensor<2x3x4xf32>
 
 
   // CHECK-NEXT: some_op_that_may_have_side_effects
   %t3 = "some_op_that_may_have_side_effects"() : () -> (tensor<2x3x4xf32>)
-  %r2 = vector.transfer_write %v, %t0[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+  %r2 = vector.transfer_write %v, %t0[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} :
     vector<2x3x4xf32>, tensor<2x3x4xf32>
 
   // CHECK-NEXT: return %[[T0]], %[[T0]], %[[T0]]
@@ -1258,11 +1258,11 @@ func.func @store_to_load_tensor(%arg0 : tensor<4x4xf32>,
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %w1 = vector.transfer_write %v1, %w0[%c2, %c0] {in_bounds = [true, true]} :
+  %w1 = vector.transfer_write %v1, %w0[%c2, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %0 = vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+  %0 = vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = array<i1: true, true>} :
     tensor<4x4xf32>, vector<1x4xf32>
   return %0 : vector<1x4xf32>
 }
@@ -1280,11 +1280,11 @@ func.func @store_to_load_negative_tensor(%arg0 : tensor<4x4xf32>,
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %w1 = vector.transfer_write %v0, %w0[%i, %i] {in_bounds = [true, true]} :
+  %w1 = vector.transfer_write %v0, %w0[%i, %i] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %0 = vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+  %0 = vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = array<i1: true, true>} :
     tensor<4x4xf32>, vector<1x4xf32>
   return %0 : vector<1x4xf32>
 }
@@ -1300,9 +1300,9 @@ func.func @store_to_load_tensor_broadcast(%arg0 : tensor<4x4xf32>,
   %v0 : vector<4x2xf32>) -> vector<4x2x6xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0] {in_bounds = [true, true]} :
+  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0] {in_bounds = array<i1: true, true>} :
     vector<4x2xf32>, tensor<4x4xf32>
-  %0 = vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true, true],
+  %0 = vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = array<i1: true, true, true>,
   permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
     tensor<4x4xf32>, vector<4x2x6xf32>
   return %0 : vector<4x2x6xf32>
@@ -1318,9 +1318,9 @@ func.func @store_to_load_tensor_broadcast_scalable(%arg0 : tensor<?xf32>,
   %v0 : vector<[4]xf32>) -> vector<6x[4]xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c0] {in_bounds = [true]} :
+  %w0 = vector.transfer_write %v0, %arg0[%c0] {in_bounds = array<i1: true>} :
     vector<[4]xf32>, tensor<?xf32>
-  %0 = vector.transfer_read %w0[%c0], %cf0 {in_bounds = [true, true],
+  %0 = vector.transfer_read %w0[%c0], %cf0 {in_bounds = array<i1: true, true>,
   permutation_map = affine_map<(d0) -> (0, d0)>} :
     tensor<?xf32>, vector<6x[4]xf32>
   return %0 : vector<6x[4]xf32>
@@ -1337,10 +1337,10 @@ func.func @store_to_load_tensor_perm_broadcast(%arg0 : tensor<4x4x4xf32>,
   %v0 : vector<4x1xf32>) -> vector<1x100x4x5xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0, %c0] {in_bounds = [true, true],
+  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0, %c0] {in_bounds = array<i1: true, true>,
   permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>} :
     vector<4x1xf32>, tensor<4x4x4xf32>
-  %0 = vector.transfer_read %w0[%c0, %c0, %c0], %cf0 {in_bounds = [true, true, true, true],
+  %0 = vector.transfer_read %w0[%c0, %c0, %c0], %cf0 {in_bounds = array<i1: true, true, true, true>,
   permutation_map = affine_map<(d0, d1, d2) -> (d1, 0, d2, 0)>} :
     tensor<4x4x4xf32>, vector<1x100x4x5xf32>
   return %0 : vector<1x100x4x5xf32>
@@ -1363,11 +1363,11 @@ func.func @dead_store_tensor(%arg0 : tensor<4x4xf32>,
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = [true, true]} :
+  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %w2 = vector.transfer_write %v1, %w1[%c1, %c0] {in_bounds = [true, true]} :
+  %w2 = vector.transfer_write %v1, %w1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
   return %w2 : tensor<4x4xf32>
 }
@@ -1388,14 +1388,14 @@ func.func @dead_store_tensor_negative(%arg0 : tensor<4x4xf32>,
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = [true, true]} :
+  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %0 = vector.transfer_read %w1[%i, %i], %cf0 {in_bounds = [true, true]} :
+  %0 = vector.transfer_read %w1[%i, %i], %cf0 {in_bounds = array<i1: true, true>} :
     tensor<4x4xf32>, vector<1x4xf32>
   %x = arith.addf %0, %0 : vector<1x4xf32>
-  %w2 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = [true, true]} :
+  %w2 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, tensor<4x4xf32>
   return %w2 : tensor<4x4xf32>
 }
@@ -1420,11 +1420,11 @@ func.func @swap_extract_slice_transfer_write(%arg0 : vector<8x4xf32>,
   //  CHECK-SAME:                 [%[[IV]], 16] [%[[SZ]], 8]
   //       CHECK:   %[[T1:.*]] = vector.transfer_write %[[VEC]]
   //  CHECK-SAME:                 %[[T0]][%[[C0]], %[[C0]]]
-  //  CHECK-SAME:                 in_bounds = [true, false]
+  //  CHECK-SAME:                 in_bounds = array<i1: true, false>
   //  CHECK-SAME:                 permutation_map = #[[$MAP]]
   //       CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1]] into %[[ITER_ARG]]
   //  CHECK-SAME:                 [%[[IV]], 16] [%[[SZ]], 8]
-  %0 = vector.transfer_write %arg0, %arg1[%c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<8x4xf32>, tensor<4x8xf32>
+  %0 = vector.transfer_write %arg0, %arg1[%c0, %c0] {in_bounds = array<i1: true, true>, permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<8x4xf32>, tensor<4x8xf32>
   %1 = tensor.extract_slice %0[0, 0] [%sz, 8] [1, 1] : tensor<4x8xf32> to tensor<?x8xf32>
   %2 = tensor.insert_slice %1 into %arg2[%iv, 16] [%sz, 8] [1, 1] : tensor<?x8xf32> into tensor<64x64xf32>
 
@@ -1452,7 +1452,7 @@ func.func @do_not_swap_extract_slice_transfer_write(%arg0 : vector<8xf32>,
   //       CHECK:   %[[T0:.*]] = vector.transfer_write %[[VEC]]
   //       CHECK:   %[[T1:.*]] = tensor.extract_slice %[[T0]]
   //       CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1]]
-  %0 = vector.transfer_write %arg0, %arg2[%c0] {in_bounds = [true]} : vector<8xf32>, tensor<8xf32>
+  %0 = vector.transfer_write %arg0, %arg2[%c0] {in_bounds = array<i1: true>} : vector<8xf32>, tensor<8xf32>
   %1 = tensor.extract_slice %0[0] [%iv] [1] : tensor<8xf32> to tensor<?xf32>
   %2 = tensor.insert_slice %1 into %arg3[%iv] [%sz] [1] : tensor<?xf32> into tensor<64xf32>
 
@@ -1460,7 +1460,7 @@ func.func @do_not_swap_extract_slice_transfer_write(%arg0 : vector<8xf32>,
   //       CHECK:   %[[T3:.*]] = vector.transfer_write %[[VEC_SMALL]]
   //       CHECK:   %[[T4:.*]] = tensor.extract_slice %[[T3]]
   //       CHECK:   %[[T5:.*]] = tensor.insert_slice %[[T4]]
-  %3 = vector.transfer_write %arg1, %arg2[%c0] {in_bounds = [true]} : vector<4xf32>, tensor<8xf32>
+  %3 = vector.transfer_write %arg1, %arg2[%c0] {in_bounds = array<i1: true>} : vector<4xf32>, tensor<8xf32>
   %4 = tensor.extract_slice %3[0] [%sz] [1] : tensor<8xf32> to tensor<?xf32>
   %5 = tensor.insert_slice %4 into %arg3[%iv] [%sz] [1] : tensor<?xf32> into tensor<64xf32>
 
@@ -1468,7 +1468,7 @@ func.func @do_not_swap_extract_slice_transfer_write(%arg0 : vector<8xf32>,
   //       CHECK:   %[[T6:.*]] = vector.transfer_write %[[VEC]]
   //       CHECK:   %[[T7:.*]] = tensor.extract_slice %[[T6]]
   //       CHECK:   %[[T8:.*]] = tensor.insert_slice %[[T7]]
-  %6 = vector.transfer_write %arg0, %arg2[%c0] {in_bounds = [true]} : vector<8xf32>, tensor<8xf32>
+  %6 = vector.transfer_write %arg0, %arg2[%c0] {in_bounds = array<i1: true>} : vector<8xf32>, tensor<8xf32>
   %7 = tensor.extract_slice %6[0] [1] [1] : tensor<8xf32> to tensor<f32>
   %8 = tensor.insert_slice %7 into %arg3[%iv] [1] [1] : tensor<f32> into tensor<64xf32>
 
@@ -2389,7 +2389,7 @@ func.func @transfer_read_from_rank_reducing_extract_slice(%src: tensor<1x8x8x8xf
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.000000e+00 : f32
   %0 = tensor.extract_slice %src[0, %i1, %i2, %i3] [1, 4, 1, 4] [1, 1, 1, 1] : tensor<1x8x8x8xf32> to tensor<1x4x4xf32>
-  %1 = vector.transfer_read %0[%c0, %i4, %c0], %f0 {in_bounds = [true]} : tensor<1x4x4xf32>, vector<4xf32>
+  %1 = vector.transfer_read %0[%c0, %i4, %c0], %f0 {in_bounds = array<i1: true>} : tensor<1x4x4xf32>, vector<4xf32>
   return %1 : vector<4xf32>
 }
 
@@ -2569,12 +2569,12 @@ func.func @load_store_forwarding_rank_mismatch(%v0: vector<4x1x1xf32>, %arg0: te
   %cf0 = arith.constant 0.0 : f32
   // d0 is explicitly written.
   %w0 = vector.transfer_write %v0, %arg0[%c0, %c0, %c0]
-      {in_bounds = [true, true, true],
+      {in_bounds = array<i1: true, true, true>,
       permutation_map = affine_map<(d0, d1, d2) -> (d2, d1, d0)>} :
       vector<4x1x1xf32>, tensor<4x4x4xf32>
   // d0 is implicitly read (rank-reduction of unit dim).
   %r = vector.transfer_read %w0[%c0, %c0, %c0], %cf0
-      {in_bounds = [true, true, true, true],
+      {in_bounds = array<i1: true, true, true, true>,
       permutation_map = affine_map<(d0, d1, d2) -> (d1, 0, d2, 0)>} :
       tensor<4x4x4xf32>, vector<1x100x4x5xf32>
   return %r : vector<1x100x4x5xf32>

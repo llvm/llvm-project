@@ -125,14 +125,14 @@ func.func @transfer_read_f32_scalable_8x8(%src: memref<?x?xi32>) -> vector<[8]x[
   // CHECK-DAG: %[[C0_I32:.*]] = arith.constant 0 : i32
   // CHECK-DAG: %[[VSCALE:.*]] = vector.vscale
   // CHECK-DAG: %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
-  // CHECK-DAG: %[[TOP_LEFT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[C0_I32]] {in_bounds = [true, true]} : memref<?x?xi32>, vector<[4]x[4]xi32>
-  // CHECK-DAG: %[[TOP_RIGHT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C4_VSCALE]]], %[[C0_I32]] {in_bounds = [true, true]} : memref<?x?xi32>, vector<[4]x[4]xi32>
-  // CHECK-DAG: %[[BOTTOM_LEFT:.*]] = vector.transfer_read %[[SRC]][%[[C4_VSCALE]], %[[C0]]], %[[C0_I32]] {in_bounds = [true, true]} : memref<?x?xi32>, vector<[4]x[4]xi32>
-  // CHECK-DAG: %[[BOTTOM_RIGHT:.*]] = vector.transfer_read %[[SRC]][%[[C4_VSCALE]], %[[C4_VSCALE]]], %[[C0_I32]] {in_bounds = [true, true]} : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK-DAG: %[[TOP_LEFT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[C0_I32]] {in_bounds = array<i1: true, true>} : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK-DAG: %[[TOP_RIGHT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C4_VSCALE]]], %[[C0_I32]] {in_bounds = array<i1: true, true>} : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK-DAG: %[[BOTTOM_LEFT:.*]] = vector.transfer_read %[[SRC]][%[[C4_VSCALE]], %[[C0]]], %[[C0_I32]] {in_bounds = array<i1: true, true>} : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK-DAG: %[[BOTTOM_RIGHT:.*]] = vector.transfer_read %[[SRC]][%[[C4_VSCALE]], %[[C4_VSCALE]]], %[[C0_I32]] {in_bounds = array<i1: true, true>} : memref<?x?xi32>, vector<[4]x[4]xi32>
   // CHECK-NEXT: return %[[TOP_LEFT]], %[[TOP_RIGHT]], %[[BOTTOM_LEFT]], %[[BOTTOM_RIGHT]] : vector<[4]x[4]xi32>, vector<[4]x[4]xi32>, vector<[4]x[4]xi32>, vector<[4]x[4]xi32>
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xi32>, vector<[8]x[8]xi32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xi32>, vector<[8]x[8]xi32>
   return %0 : vector<[8]x[8]xi32>
 }
 
@@ -155,13 +155,13 @@ func.func @transfer_read_i16_scalable_8x16_masked(%src: memref<?x?xi16>, %dim0: 
   // CHECK-DAG: %[[RIGHT_DIM_1:.*]] = arith.addi %[[DIM1]], %[[MINUS_8_VSCALE]] : index
   // CHECK-DAG: %[[LEFT_MASK:.*]] = vector.create_mask %[[DIM0]], %[[DIM1]] : vector<[8]x[8]xi1>
   // CHECK-DAG: %[[RIGHT_MASK:.*]] = vector.create_mask %[[DIM0]], %[[RIGHT_DIM_1]] : vector<[8]x[8]xi1>
-  // CHECK-DAG: %[[LEFT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[C0_I16]], %[[LEFT_MASK]] {in_bounds = [true, true]} : memref<?x?xi16>, vector<[8]x[8]xi16>
-  // CHECK-DAG: %[[RIGHT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C8_VSCALE]]], %[[C0_I16]], %[[RIGHT_MASK]] {in_bounds = [true, true]} : memref<?x?xi16>, vector<[8]x[8]xi16>
+  // CHECK-DAG: %[[LEFT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[C0_I16]], %[[LEFT_MASK]] {in_bounds = array<i1: true, true>} : memref<?x?xi16>, vector<[8]x[8]xi16>
+  // CHECK-DAG: %[[RIGHT:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C8_VSCALE]]], %[[C0_I16]], %[[RIGHT_MASK]] {in_bounds = array<i1: true, true>} : memref<?x?xi16>, vector<[8]x[8]xi16>
   // CHECK-NEXT: return %[[LEFT]], %[[RIGHT]] : vector<[8]x[8]xi16>, vector<[8]x[8]xi16>
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i16
   %mask = vector.create_mask %dim0, %dim1 : vector<[8]x[16]xi1>
-  %0 = vector.transfer_read %src[%c0, %c0], %pad, %mask {in_bounds = [true, true]} : memref<?x?xi16>, vector<[8]x[16]xi16>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad, %mask {in_bounds = array<i1: true, true>} : memref<?x?xi16>, vector<[8]x[16]xi16>
   return %0 : vector<[8]x[16]xi16>
 }
 
@@ -180,14 +180,14 @@ func.func @transfer_write_f16_scalable_16x8(%dest: memref<?x?xf16>, %vec: vector
   // CHECK-DAG: %[[C8_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C8]] : index
   // CHECK-NEXT: scf.for %[[I:.*]] = %[[C0]] to %[[C8_VSCALE]] step %[[C1]] {
   // CHECK-NEXT:   %[[TOP_SLICE:.*]] = vector.extract %[[TOP]][%[[I]]] : vector<[8]xf16> from vector<[8]x[8]xf16>
-  // CHECK-NEXT:   vector.transfer_write %[[TOP_SLICE]], %[[DEST]][%[[I]], %[[C0]]] {in_bounds = [true]} : vector<[8]xf16>, memref<?x?xf16>
+  // CHECK-NEXT:   vector.transfer_write %[[TOP_SLICE]], %[[DEST]][%[[I]], %[[C0]]] {in_bounds = array<i1: true>} : vector<[8]xf16>, memref<?x?xf16>
   // CHECK-NEXT:   %[[BOTTOM_I:.*]] = arith.addi %[[C8_VSCALE]], %[[I]] : index
   // CHECK-NEXT:   %[[BOTTOM_SLICE:.*]] = vector.extract %[[BOTTOM]][%[[I]]] : vector<[8]xf16> from vector<[8]x[8]xf16>
-  // CHECK-NEXT:   vector.transfer_write %[[BOTTOM_SLICE]], %[[DEST]][%[[BOTTOM_I]], %[[C0]]] {in_bounds = [true]} : vector<[8]xf16>, memref<?x?xf16>
+  // CHECK-NEXT:   vector.transfer_write %[[BOTTOM_SLICE]], %[[DEST]][%[[BOTTOM_I]], %[[C0]]] {in_bounds = array<i1: true>} : vector<[8]xf16>, memref<?x?xf16>
   // CHECK-NEXT: }
   // CHECK-NEXT: return
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[8]xf16>, memref<?x?xf16>
+  vector.transfer_write %vec, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[16]x[8]xf16>, memref<?x?xf16>
   return
 }
 
@@ -201,7 +201,7 @@ func.func @transfer_write_i8_scalable_16x16_masked(%dest: memref<?x?xi8>, %vec: 
   // CHECK: vector.transfer_write {{.*}} : vector<[16]x[16]xi8>, memref<?x?xi8>
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %dim0, %dim0 : vector<[16]x[16]xi1>
-  vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[16]x[16]xi8>, memref<?x?xi8>
+  vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[16]x[16]xi8>, memref<?x?xi8>
   return
 }
 
@@ -227,22 +227,22 @@ func.func @transfer_write_f32_scalable_8x8_masked(%dest: memref<?x?xf32>, %dim0:
   // CHECK-NEXT:   %[[UPPER_SLICE_MASK:.*]] = vector.extract %[[MASK]][%[[I]]] : vector<[8]xi1> from vector<[8]x[8]xi1>
   // CHECK-NEXT:   %[[TILE_0_SLICE_MASK:.*]] = vector.scalable.extract %[[UPPER_SLICE_MASK]][0] : vector<[4]xi1> from vector<[8]xi1>
   // CHECK-NEXT:   %[[TILE_0_SLICE:.*]] = vector.extract %[[TILE_0]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_0_SLICE]], %[[DEST]][%[[I]], %[[C0]]], %[[TILE_0_SLICE_MASK]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_0_SLICE]], %[[DEST]][%[[I]], %[[C0]]], %[[TILE_0_SLICE_MASK]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT:   %[[TILE_1_SLICE_MASK:.*]] = vector.scalable.extract %[[UPPER_SLICE_MASK]][4] : vector<[4]xi1> from vector<[8]xi1>
   // CHECK-NEXT:   %[[TILE_1_SLICE:.*]] = vector.extract %[[TILE_1]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_1_SLICE]], %[[DEST]][%[[I]], %[[C4_VSCALE]]], %[[TILE_1_SLICE_MASK]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_1_SLICE]], %[[DEST]][%[[I]], %[[C4_VSCALE]]], %[[TILE_1_SLICE_MASK]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT:   %[[LOWER_SLICE_I:.*]] = arith.addi %[[C4_VSCALE]], %[[I]] : index
   // CHECK-NEXT:   %[[LOWER_SLICE_MASK:.*]] = vector.extract %[[MASK]][%[[LOWER_SLICE_I]]] : vector<[8]xi1> from vector<[8]x[8]xi1>
   // CHECK-NEXT:   %[[TILE_2_SLICE_MASK:.*]] = vector.scalable.extract %[[LOWER_SLICE_MASK]][0] : vector<[4]xi1> from vector<[8]xi1>
   // CHECK-NEXT:   %[[TILE_2_SLICE:.*]] = vector.extract %[[TILE_2]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_2_SLICE]], %[[DEST]][%[[LOWER_SLICE_I]], %[[C0]]], %[[TILE_2_SLICE_MASK]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_2_SLICE]], %[[DEST]][%[[LOWER_SLICE_I]], %[[C0]]], %[[TILE_2_SLICE_MASK]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT:   %[[TILE_3_SLICE_MASK:.*]] = vector.scalable.extract %[[LOWER_SLICE_MASK]][4] : vector<[4]xi1> from vector<[8]xi1>
   // CHECK-NEXT:   %[[TILE_3_SLICE:.*]] = vector.extract %[[TILE_3]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_3_SLICE:.*]], %[[DEST]][%[[LOWER_SLICE_I]], %[[C4_VSCALE]]], %[[TILE_3_SLICE_MASK]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_3_SLICE:.*]], %[[DEST]][%[[LOWER_SLICE_I]], %[[C4_VSCALE]]], %[[TILE_3_SLICE_MASK]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT: }
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %dim0, %dim1 : vector<[8]x[8]xi1>
-  vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
   return
 }
 
@@ -255,7 +255,7 @@ func.func @transfer_write_f32_scalable_8x8_masked(%dest: memref<?x?xf32>, %dim0:
 func.func @negative_transfer_write_f32_scalable_8x8_tensor(%dest: tensor<?x?xf32>, %vec: vector<[8]x[8]xf32>)
 {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, tensor<?x?xf32>
+  vector.transfer_write %vec, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, tensor<?x?xf32>
   return
 }
 
@@ -271,7 +271,7 @@ func.func @negative_transfer_write_f32_scalable_8x8_tensor(%dest: tensor<?x?xf32
 {
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %dim0, %dim1 : vector<[8]x[8]xi1>
-  vector.transfer_write %vec, %dest[%c0, %c0], %mask {permutation_map = #transpose, in_bounds = [true, true]} : vector<[8]x[8]xf32>, tensor<?x?xf32>
+  vector.transfer_write %vec, %dest[%c0, %c0], %mask {permutation_map = #transpose, in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, tensor<?x?xf32>
   return
 }
 
@@ -285,7 +285,7 @@ func.func @negative_transfer_write_f32_scalable_32x32(%dest: memref<?x?xf32>, %d
 {
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %dim0, %dim1 : vector<[32]x[32]xi1>
-  vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[32]x[32]xf32>, memref<?x?xf32>
+  vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[32]x[32]xf32>, memref<?x?xf32>
   return
 }
 
@@ -308,28 +308,28 @@ func.func @transpose_f32_scalable_4x16_via_read(%src: memref<?x?xf32>, %dest: me
   // CHECK-DAG: %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
   // CHECK-DAG: %[[C8_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C8]] : index
   // CHECK-DAG: %[[C12_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C12]] : index
-  // CHECK-DAG: %[[TILE_0:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true], permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
-  // CHECK-DAG: %[[TILE_1:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C4_VSCALE]]], %[[PAD]] {in_bounds = [true, true], permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
-  // CHECK-DAG: %[[TILE_2:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C8_VSCALE]]], %[[PAD]] {in_bounds = [true, true], permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
-  // CHECK-DAG: %[[TILE_3:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C12_VSCALE]]], %[[PAD]] {in_bounds = [true, true], permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: %[[TILE_0:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: %[[TILE_1:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C4_VSCALE]]], %[[PAD]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: %[[TILE_2:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C8_VSCALE]]], %[[PAD]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: %[[TILE_3:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C12_VSCALE]]], %[[PAD]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : memref<?x?xf32>, vector<[4]x[4]xf32>
   // CHECK-NEXT: scf.for %[[I:.*]] = %[[C0]] to %[[C4_VSCALE]] step %[[C1]] {
   // CHECK-NEXT:   %[[TILE_0_SLICE:.*]] = vector.extract %[[TILE_0]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_0_SLICE]], %[[DEST]][%[[I]], %[[C0]]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_0_SLICE]], %[[DEST]][%[[I]], %[[C0]]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT:   %[[TILE_1_I:.*]] = arith.addi %[[C4_VSCALE]], %[[I]] : index
   // CHECK-NEXT:   %[[TILE_1_SLICE:.*]] = vector.extract %[[TILE_1]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_1_SLICE]], %[[DEST]][%[[TILE_1_I]], %[[C0]]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_1_SLICE]], %[[DEST]][%[[TILE_1_I]], %[[C0]]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT:   %[[TILE_2_I:.*]] = arith.addi %[[C8_VSCALE]], %[[I]] : index
   // CHECK-NEXT:   %[[TILE_2_SLICE:.*]] = vector.extract %[[TILE_2]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_2_SLICE]], %[[DEST]][%[[TILE_2_I]], %[[C0]]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_2_SLICE]], %[[DEST]][%[[TILE_2_I]], %[[C0]]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT:   %[[TILE_3_I:.*]] = arith.addi %[[C12_VSCALE]], %[[I]] : index
   // CHECK-NEXT:   %[[TILE_3_SLICE:.*]] = vector.extract %[[TILE_3]][%[[I]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK-NEXT:   vector.transfer_write %[[TILE_3_SLICE]], %[[DEST]][%[[TILE_3_I]], %[[C0]]] {in_bounds = [true]} : vector<[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[TILE_3_SLICE]], %[[DEST]][%[[TILE_3_I]], %[[C0]]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: return
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = #transpose, in_bounds = [true, true]} : memref<?x?xf32>, vector<[16]x[4]xf32>
-  vector.transfer_write %0, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[4]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = #transpose, in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[16]x[4]xf32>
+  vector.transfer_write %0, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[16]x[4]xf32>, memref<?x?xf32>
   return
 }
 
@@ -351,19 +351,19 @@ func.func @transpose_f32_scalable_4x16_via_write(%src: memref<?x?xf32>, %dest: m
   // CHECK-DAG: %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
   // CHECK-DAG: %[[C8_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C8]] : index
   // CHECK-DAG: %[[C12_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C12]] : index
-  // CHECK-DAG: %[[TILE_0:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
-  // CHECK-DAG: %[[TILE_1:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C4_VSCALE]]], %[[PAD]] {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
-  // CHECK-DAG: %[[TILE_2:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C8_VSCALE]]], %[[PAD]] {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
-  // CHECK-DAG: %[[TILE_3:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C12_VSCALE]]], %[[PAD]] {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
-  // CHECK-DAG: vector.transfer_write %[[TILE_0]], %[[DEST]][%[[C0]], %[[C0]]] {in_bounds = [true, true], permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
-  // CHECK-DAG: vector.transfer_write %[[TILE_1]], %[[DEST]][%[[C4_VSCALE]], %[[C0]]] {in_bounds = [true, true], permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
-  // CHECK-DAG: vector.transfer_write %[[TILE_2]], %[[DEST]][%[[C8_VSCALE]], %[[C0]]] {in_bounds = [true, true], permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
-  // CHECK-DAG: vector.transfer_write %[[TILE_3]], %[[DEST]][%[[C12_VSCALE]], %[[C0]]] {in_bounds = [true, true], permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  // CHECK-DAG: %[[TILE_0:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: %[[TILE_1:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C4_VSCALE]]], %[[PAD]] {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: %[[TILE_2:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C8_VSCALE]]], %[[PAD]] {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: %[[TILE_3:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C12_VSCALE]]], %[[PAD]] {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK-DAG: vector.transfer_write %[[TILE_0]], %[[DEST]][%[[C0]], %[[C0]]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  // CHECK-DAG: vector.transfer_write %[[TILE_1]], %[[DEST]][%[[C4_VSCALE]], %[[C0]]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  // CHECK-DAG: vector.transfer_write %[[TILE_2]], %[[DEST]][%[[C8_VSCALE]], %[[C0]]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  // CHECK-DAG: vector.transfer_write %[[TILE_3]], %[[DEST]][%[[C12_VSCALE]], %[[C0]]] {in_bounds = array<i1: true, true>, permutation_map = #{{.*}}} : vector<[4]x[4]xf32>, memref<?x?xf32>
   // CHECK-NEXT: return
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[16]xf32>
-  vector.transfer_write %0, %dest[%c0, %c0] {permutation_map = #transpose, in_bounds = [true, true]} : vector<[4]x[16]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[16]xf32>
+  vector.transfer_write %0, %dest[%c0, %c0] {permutation_map = #transpose, in_bounds = array<i1: true, true>} : vector<[4]x[16]xf32>, memref<?x?xf32>
   return
 }
 
@@ -470,10 +470,10 @@ func.func @lift_illegal_transpose_to_memory_with_arith_extop(%a: index, %b: inde
 // CHECK-LABEL: @lift_illegal_transpose_to_memory_with_in_bounds_attr
 func.func @lift_illegal_transpose_to_memory_with_in_bounds_attr(%a: index, %b: index, %memref: memref<?x?xf32>) -> vector<4x[8]xf32> {
   // CHECK: vector.transfer_read
-  // CHECK-SAME: in_bounds = [true, false]
-  // CHECK-NOT: in_bounds = [false, true]
+  // CHECK-SAME: in_bounds = array<i1: true, false>
+  // CHECK-NOT: in_bounds = array<i1: false, true>
   %pad = arith.constant 0.0 : f32
-  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = [false, true]}: memref<?x?xf32>, vector<[8]x4xf32>
+  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = array<i1: false, true>}: memref<?x?xf32>, vector<[8]x4xf32>
   %legalType = vector.transpose %illegalRead, [1, 0] : vector<[8]x4xf32> to vector<4x[8]xf32>
   return %legalType : vector<4x[8]xf32>
 }
@@ -517,7 +517,7 @@ func.func @lift_illegal_2d_shape_cast_to_memory(%a: index, %b: index, %memref: m
   // CHECK: vector.transfer_read {{.*}} : memref<?x?xf32, {{.*}}>, vector<1x[4]xf32>
   // CHECK-NOT: vector.shape_cast
   %pad = arith.constant 0.0 : f32
-  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = [false, true]}: memref<?x?xf32>, vector<[4]x1xf32>
+  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = array<i1: false, true>}: memref<?x?xf32>, vector<[4]x1xf32>
   %cast = vector.shape_cast %illegalRead : vector<[4]x1xf32> to vector<1x[4]xf32>
   return %cast : vector<1x[4]xf32>
 }
@@ -529,7 +529,7 @@ func.func @lift_illegal_1d_shape_cast_to_memory(%a: index, %b: index, %memref: m
   // CHECK: vector.transfer_read {{.*}} : memref<?x?xf32, {{.*}}>, vector<1x[4]xf32>
   // CHECK-NOT: vector.shape_cast {{.*}} : vector<[4]x1xf32> to vector<[4]xf32>
   %pad = arith.constant 0.0 : f32
-  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = [false, true]}: memref<?x?xf32>, vector<[4]x1xf32>
+  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = array<i1: false, true>}: memref<?x?xf32>, vector<[4]x1xf32>
   %cast = vector.shape_cast %illegalRead : vector<[4]x1xf32> to vector<[4]xf32>
   return %cast : vector<[4]xf32>
 }
@@ -565,9 +565,9 @@ func.func @transpose_store_scalable_via_za(%vec: vector<2x[4]xf32>, %dest: memre
   // CHECK-NEXT: %[[VSCALE:.*]] = vector.vscale
   // CHECK-NEXT: %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
   // CHECK-NEXT: %[[MASK:.*]] = vector.create_mask %[[C4_VSCALE]], %[[C2]] : vector<[4]x[4]xi1>
-  // CHECK-NEXT: vector.transfer_write %[[RES]], %[[DEST]][%[[I]], %[[J]]], %[[MASK]] {in_bounds = [true, true], permutation_map = #[[$TRANSPOSE_MAP_0]]} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  // CHECK-NEXT: vector.transfer_write %[[RES]], %[[DEST]][%[[I]], %[[J]]], %[[MASK]] {in_bounds = array<i1: true, true>, permutation_map = #[[$TRANSPOSE_MAP_0]]} : vector<[4]x[4]xf32>, memref<?x?xf32>
   %tr = vector.transpose %vec, [1, 0] : vector<2x[4]xf32> to vector<[4]x2xf32>
-  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[4]x2xf32>,  memref<?x?xf32>
+  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = array<i1: true, true>} : vector<[4]x2xf32>,  memref<?x?xf32>
   return
 }
 
@@ -584,7 +584,7 @@ func.func @transpose_store_scalable_via_za_masked(%vec: vector<2x[4]xf32>, %dest
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %a, %b : vector<[4]x2xi1>
   %tr = vector.transpose %vec, [1, 0] : vector<2x[4]xf32> to vector<[4]x2xf32>
-  vector.transfer_write %tr, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[4]x2xf32>,  memref<?x?xf32>
+  vector.transfer_write %tr, %dest[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[4]x2xf32>,  memref<?x?xf32>
   return
 }
 
@@ -612,7 +612,7 @@ func.func @transpose_store_scalable_via_za_multi_tile(%vec: vector<8x[4]xf32>, %
   // CHECK: %[[J_OFFSET:.*]] = arith.addi %[[J]], %[[C4]] : index
   // CHECK: vector.transfer_write %[[TILE_1]], %[[DEST]][%[[I]], %[[J_OFFSET]]], %[[MASK]] {{.*}} : vector<[4]x[4]xf32>, memref<?x?xf32>
   %tr = vector.transpose %vec, [1, 0] : vector<8x[4]xf32> to vector<[4]x8xf32>
-  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[4]x8xf32>,  memref<?x?xf32>
+  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = array<i1: true, true>} : vector<[4]x8xf32>,  memref<?x?xf32>
   return
 }
 
@@ -633,7 +633,7 @@ func.func @transpose_store_scalable_via_za_multi_tile_wide(%vec: vector<2x[8]xf3
   // CHECK: %[[I_OFFSET:.*]] = arith.addi %c4_vscale, %[[I]] : index
   // CHECK: vector.transfer_write %[[TILE_0]], %{{.*}}[%[[I_OFFSET]], %[[J]]]
   %tr = vector.transpose %vec, [1, 0] : vector<2x[8]xf32> to vector<[8]x2xf32>
-  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[8]x2xf32>,  memref<?x?xf32>
+  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = array<i1: true, true>} : vector<[8]x2xf32>,  memref<?x?xf32>
   return
 }
 
@@ -643,6 +643,6 @@ func.func @transpose_store_scalable_via_za_multi_tile_wide(%vec: vector<2x[8]xf3
 // CHECK-NOT: arm_sme.get_tile
 func.func @negative_transpose_store_scalable_via_za__bad_source_shape(%vec: vector<2x[7]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index) {
   %tr = vector.transpose %vec, [1, 0] : vector<2x[7]xf32> to vector<[7]x2xf32>
-  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[7]x2xf32>,  memref<?x?xf32>
+  vector.transfer_write %tr, %dest[%i, %j] {in_bounds = array<i1: true, true>} : vector<[7]x2xf32>,  memref<?x?xf32>
   return
 }

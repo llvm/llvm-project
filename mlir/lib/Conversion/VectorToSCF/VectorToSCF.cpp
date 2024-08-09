@@ -242,10 +242,11 @@ static void generateInBoundsCheck(
 }
 
 /// Given an ArrayAttr, return a copy where the first element is dropped.
-static ArrayAttr dropFirstElem(OpBuilder &b, ArrayAttr attr) {
+static DenseBoolArrayAttr dropFirstElem(OpBuilder &b, DenseBoolArrayAttr attr) {
   if (!attr)
     return attr;
-  return ArrayAttr::get(b.getContext(), attr.getValue().drop_front());
+  return DenseBoolArrayAttr::get(b.getContext(),
+                                 attr.asArrayRef().drop_front());
 }
 
 /// Add the pass label to a vector transfer op if its rank is not the target

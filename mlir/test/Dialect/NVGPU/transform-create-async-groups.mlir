@@ -10,13 +10,13 @@ builtin.module {
     %cst_0 = arith.constant 0.000000e+00 : f32
     // Make sure we emit the bypassL1.
     // CHECK: %[[CP0:.*]] = nvgpu.device_async_copy {{.*}}, {{.*}}, 4  {bypassL1} :
-    %1 = vector.transfer_read %a[%c0, %c0], %cst_0 {in_bounds = [true]} : memref<1024x1024xf32>, vector<4xf32>
-    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = [true]} : vector<4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %1 = vector.transfer_read %a[%c0, %c0], %cst_0 {in_bounds = array<i1: true>} : memref<1024x1024xf32>, vector<4xf32>
+    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
     // CHECK-NOT: nvgpu.device_async_create_group
 
     // CHECK: %[[CP1:.*]] = nvgpu.device_async_copy {{.*}}, {{.*}}, 1
-    %2 = vector.transfer_read %a[%c0, %c4], %cst_0 {in_bounds = [true]} : memref<1024x1024xf32>, vector<1xf32>
-    vector.transfer_write %2, %0[%c0, %c4, %c0] {in_bounds = [true]} : vector<1xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %2 = vector.transfer_read %a[%c0, %c4], %cst_0 {in_bounds = array<i1: true>} : memref<1024x1024xf32>, vector<1xf32>
+    vector.transfer_write %2, %0[%c0, %c4, %c0] {in_bounds = array<i1: true>} : vector<1xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
     // CHECK: %[[G:.*]] = nvgpu.device_async_create_group %[[CP0]], %[[CP1]]
     // CHECK: nvgpu.device_async_wait %[[G]]
     return
@@ -44,13 +44,13 @@ builtin.module {
     %cst_0 = arith.constant 0.000000e+00 : f32
     // Make sure we don't emit the bypassL1.
     // CHECK: %[[CP0:.*]] = nvgpu.device_async_copy {{.*}}, {{.*}}, 4 :
-    %1 = vector.transfer_read %a[%c0, %c0], %cst_0 {in_bounds = [true]} : memref<1024x1024xf32>, vector<4xf32>
-    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = [true]} : vector<4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %1 = vector.transfer_read %a[%c0, %c0], %cst_0 {in_bounds = array<i1: true>} : memref<1024x1024xf32>, vector<4xf32>
+    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
     // CHECK-NOT: nvgpu.device_async_create_group
 
     // CHECK: %[[CP1:.*]] = nvgpu.device_async_copy {{.*}}, {{.*}}, 1 :
-    %2 = vector.transfer_read %a[%c0, %c4], %cst_0 {in_bounds = [true]} : memref<1024x1024xf32>, vector<1xf32>
-    vector.transfer_write %2, %0[%c0, %c4, %c0] {in_bounds = [true]} : vector<1xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %2 = vector.transfer_read %a[%c0, %c4], %cst_0 {in_bounds = array<i1: true>} : memref<1024x1024xf32>, vector<1xf32>
+    vector.transfer_write %2, %0[%c0, %c4, %c0] {in_bounds = array<i1: true>} : vector<1xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
     // CHECK: %[[G:.*]] = nvgpu.device_async_create_group %[[CP0]], %[[CP1]]
     // CHECK: nvgpu.device_async_wait %[[G]]
     return
@@ -147,8 +147,8 @@ builtin.module {
     %cst_0 = arith.constant 0.000000e+00 : f32
     // CHECK: nvgpu.device_async_copy {{.*}}, {{.*}}, 4, %[[sz]] {bypassL1} :
     %mask = vector.create_mask %sz : vector<4xi1>
-    %1 = vector.transfer_read %a[%c0, %c0], %cst_0, %mask {in_bounds = [true]} : memref<1024x1024xf32>, vector<4xf32>
-    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = [true]} : vector<4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %1 = vector.transfer_read %a[%c0, %c0], %cst_0, %mask {in_bounds = array<i1: true>} : memref<1024x1024xf32>, vector<4xf32>
+    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
 
     return
   }
@@ -188,8 +188,8 @@ builtin.module {
     // CHECK: %[[s2:.*]] = arith.select %[[cmpi2]], %[[sz1]], %[[c0]]
     // CHECK: nvgpu.device_async_copy %[[a]][%[[c2]], %[[c0]]], {{.*}}, 4, %[[s2]] {bypassL1}
     %mask = vector.create_mask %sz0, %sz1 : vector<3x4xi1>
-    %1 = vector.transfer_read %a[%c0, %c0], %cst_0, %mask {in_bounds = [true, true]} : memref<1024x1024xf32>, vector<3x4xf32>
-    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = [true, true]} : vector<3x4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %1 = vector.transfer_read %a[%c0, %c0], %cst_0, %mask {in_bounds = array<i1: true, true>} : memref<1024x1024xf32>, vector<3x4xf32>
+    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = array<i1: true, true>} : vector<3x4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
 
     return
   }
@@ -251,8 +251,8 @@ builtin.module {
     // CHECK: %[[s5:.*]] = arith.select %[[cond5]], %[[sz2]], %[[c0]]
     // CHECK: nvgpu.device_async_copy %[[a]][%[[c1]], %[[c2]], %[[c0]]], {{.*}}, 4, %[[s5]] {bypassL1}
     %mask = vector.create_mask %sz0, %sz1, %sz2 : vector<2x3x4xi1>
-    %1 = vector.transfer_read %a[%c0, %c0, %c0], %cst_0, %mask {in_bounds = [true, true, true]} : memref<1024x1024x1024xf32>, vector<2x3x4xf32>
-    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<2x3x4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %1 = vector.transfer_read %a[%c0, %c0, %c0], %cst_0, %mask {in_bounds = array<i1: true, true, true>} : memref<1024x1024x1024xf32>, vector<2x3x4xf32>
+    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} : vector<2x3x4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
 
     return
   }

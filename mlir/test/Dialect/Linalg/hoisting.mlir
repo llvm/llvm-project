@@ -200,7 +200,7 @@ func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi3
   affine.for %arg3 = 0 to 64 {
     affine.for %arg4 = 0 to 64 step 16 {
       affine.for %arg5 = 0 to 64 {
-        %0 = vector.transfer_read %memref0[%arg3, %arg5], %c0_i32 {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (0)>} : memref<64x64xi32>, vector<16xi32>
+        %0 = vector.transfer_read %memref0[%arg3, %arg5], %c0_i32 {in_bounds = array<i1: true>, permutation_map = affine_map<(d0, d1) -> (0)>} : memref<64x64xi32>, vector<16xi32>
         %1 = vector.transfer_read %memref1[%arg5, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
         %2 = vector.transfer_read %memref2[%arg3, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
         %3 = arith.muli %0, %1 : vector<16xi32>
@@ -233,10 +233,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK:          %[[ALLOC_0:.+]] = memref.alloc() : memref<32x128xf32>
 // CHECK:          %[[CAST:.+]] = memref.cast %[[ALLOC_0]] : memref<32x128xf32> to memref<32x128xf32, strided<[128, 1],
 // CHECK-SAME:       offset: ?>>
-// CHECK:          %[[D0:.+]] = vector.transfer_read %[[ALLOC]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = [true, true]} :
+// CHECK:          %[[D0:.+]] = vector.transfer_read %[[ALLOC]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = array<i1: true, true>} :
 // CHECK-SAME:       memref<32x64xf32>, vector<32x64xf32>
 // CHECK:          scf.for %[[ARG0:.+]] = %[[C0]] to %[[C1024]] step %[[C128]] {
-// CHECK:            %[[D1:.+]] = vector.transfer_read %[[ALLOC_0]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = [true, true]}
+// CHECK:            %[[D1:.+]] = vector.transfer_read %[[ALLOC_0]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = array<i1: true, true>}
 // CHECK-SAME:         : memref<32x128xf32>, vector<32x128xf32>
 // CHECK:            "some_use"(%[[D0]], %[[D1]], %[[CAST]]) : (vector<32x64xf32>, vector<32x128xf32>, memref<32x128xf32,
 // CHECK-SAME:         strided<[128, 1], offset: ?>>) -> ()
@@ -252,8 +252,8 @@ func.func @hoist_vector_transfer_read() {
   %memref2 = memref.alloc() : memref<32x128xf32>
   %subview2 = memref.subview %memref2[%c0, %c0] [32, 128] [1, 1]: memref<32x128xf32> to memref<32x128xf32, strided<[128, 1], offset: ?>>
   scf.for %arg0 = %c0 to %c1024 step %c128 {
-    %2 = vector.transfer_read %memref2[%c0, %c0], %cst_2 {in_bounds = [true, true]} : memref<32x128xf32>, vector<32x128xf32>
-    %3 = vector.transfer_read %memref0[%c0, %c0], %cst_2 {in_bounds = [true, true]} : memref<32x64xf32>, vector<32x64xf32>
+    %2 = vector.transfer_read %memref2[%c0, %c0], %cst_2 {in_bounds = array<i1: true, true>} : memref<32x128xf32>, vector<32x128xf32>
+    %3 = vector.transfer_read %memref0[%c0, %c0], %cst_2 {in_bounds = array<i1: true, true>} : memref<32x64xf32>, vector<32x64xf32>
     "some_use"(%3, %2, %subview2) : (vector<32x64xf32>, vector<32x128xf32>, memref<32x128xf32, strided<[128, 1], offset: ?>>) -> ()
   }
   memref.dealloc %memref0 : memref<32x64xf32>
@@ -287,11 +287,11 @@ func.func @non_matching_transfers(%m: memref<6x1x7x32xf32>) {
   %cst = arith.constant dense<5.5> : vector<6x7x32xf32>
   %cst_0 = arith.constant 0.0 : f32
   scf.for %iv = %c0 to %c1024 step %c128 {
-    %read = vector.transfer_read %m[%c0, %c0, %c0, %c0], %cst_0 {in_bounds = [true, true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>} : memref<6x1x7x32xf32>, vector<6x7x32xf32>
+    %read = vector.transfer_read %m[%c0, %c0, %c0, %c0], %cst_0 {in_bounds = array<i1: true, true, true>, permutation_map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>} : memref<6x1x7x32xf32>, vector<6x7x32xf32>
     %added = arith.addf %read, %cst : vector<6x7x32xf32>
     %bc = vector.broadcast %added : vector<6x7x32xf32> to vector<1x6x7x32xf32>
     %tr = vector.transpose %bc, [1, 0, 2, 3] : vector<1x6x7x32xf32> to vector<6x1x7x32xf32>
-    vector.transfer_write %tr, %m[%c0, %c0, %c0, %c0] {in_bounds = [true, true, true, true]} : vector<6x1x7x32xf32>, memref<6x1x7x32xf32>
+    vector.transfer_write %tr, %m[%c0, %c0, %c0, %c0] {in_bounds = array<i1: true, true, true, true>} : vector<6x1x7x32xf32>, memref<6x1x7x32xf32>
   }
   return
 }
@@ -328,9 +328,9 @@ func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1x
   scf.for %arg0 = %c0 to %c20 step %c4 {
     %subview = memref.subview %in_0[0, %arg0, 0] [1, 4, 1] [1, 1, 1] : memref<1x20x1xi32> to memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
     %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x4x1xi32> into memref<4xi32>
-    vector.transfer_write %vec, %collapse_shape[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
-    %read = vector.transfer_read %alloca[%c0, %c0, %c0], %c0_i32 {in_bounds = [true, true, true]} : memref<1x4x1xi32>, vector<1x4x1xi32>
-    vector.transfer_write %read, %subview[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
+    vector.transfer_write %vec, %collapse_shape[%c0] {in_bounds = array<i1: true>} : vector<4xi32>, memref<4xi32>
+    %read = vector.transfer_read %alloca[%c0, %c0, %c0], %c0_i32 {in_bounds = array<i1: true, true, true>} : memref<1x4x1xi32>, vector<1x4x1xi32>
+    vector.transfer_write %read, %subview[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
   }
   return
 }
@@ -364,8 +364,8 @@ func.func @no_hoisting_collapse_shape_2(%vec: vector<1x12x1xi32>) {
   %alloca = memref.alloca() {alignment = 64 : i64} : memref<1x12x1xi32>
   scf.for %arg0 = %c0 to %c20 step %c4 {
     %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x12x1xi32> into memref<12xi32>
-    vector.transfer_write %vec, %alloca[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x12x1xi32>, memref<1x12x1xi32>
-    %read = vector.transfer_read %collapse_shape[%c0], %c0_i32 {in_bounds = [true]} : memref<12xi32>, vector<12xi32>
+    vector.transfer_write %vec, %alloca[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} : vector<1x12x1xi32>, memref<1x12x1xi32>
+    %read = vector.transfer_read %collapse_shape[%c0], %c0_i32 {in_bounds = array<i1: true>} : memref<12xi32>, vector<12xi32>
     "prevent.dce"(%read) : (vector<12xi32>) ->()
   }
   return
@@ -410,10 +410,10 @@ func.func @no_hoisting_write_to_memref(%rhs: i32, %arg1: vector<1xi32>) {
   %collapsed_1 = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x1x2xi32> into memref<2xi32>
   scf.for %_ = %c0 to %c20 step %c4 {
     %collapsed_2 = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x1x2xi32> into memref<2xi32>
-    %lhs = vector.transfer_read %collapsed_1[%c0], %c0_i32 {in_bounds = [true]} : memref<2xi32>, vector<1xi32>
-    %acc = vector.transfer_read %collapsed_2[%c0], %c0_i32 {in_bounds = [true]} : memref<2xi32>, vector<1xi32>
+    %lhs = vector.transfer_read %collapsed_1[%c0], %c0_i32 {in_bounds = array<i1: true>} : memref<2xi32>, vector<1xi32>
+    %acc = vector.transfer_read %collapsed_2[%c0], %c0_i32 {in_bounds = array<i1: true>} : memref<2xi32>, vector<1xi32>
     %op = vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<add>} : vector<1xi32>, i32
-    vector.transfer_write %op, %collapsed_1[%c0] {in_bounds = [true]} : vector<1xi32>, memref<2xi32>
+    vector.transfer_write %op, %collapsed_1[%c0] {in_bounds = array<i1: true>} : vector<1xi32>, memref<2xi32>
   }
   return
 }

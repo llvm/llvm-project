@@ -21,16 +21,16 @@ func.func @gpu_func(%in: memref<1024xf32>, %out: memref<1xf32>) {
   in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1)
   threads(%arg6, %arg7, %arg8) in (%arg12 = %c32, %arg13 = %c1, %arg14 = %c1) {
     vector.warp_execute_on_lane_0(%arg6)[32] {
-      %init = vector.transfer_read %out[%c0], %cst_0 {in_bounds = [true]} : memref<1xf32>, vector<1xf32>
+      %init = vector.transfer_read %out[%c0], %cst_0 {in_bounds = array<i1: true>} : memref<1xf32>, vector<1xf32>
       %13 = scf.for %arg0 = %c0 to %c1024 step %c32 iter_args(%arg1 = %init) -> (vector<1xf32>) {
-        %20 = vector.transfer_read %in[%arg0], %cst_0 {in_bounds = [true]} : memref<1024xf32>, vector<32xf32>
+        %20 = vector.transfer_read %in[%arg0], %cst_0 {in_bounds = array<i1: true>} : memref<1024xf32>, vector<32xf32>
         %21 = vector.reduction <add>, %20 : vector<32xf32> into f32
         %22 = vector.broadcast %21 : f32 to vector<1xf32>
         %23 = arith.addf %22, %arg1 : vector<1xf32>
         scf.yield %23 : vector<1xf32>
       }
       %14 = arith.divf %13, %cst : vector<1xf32>
-      vector.transfer_write %14, %out[%c0] {in_bounds = [true]} : vector<1xf32>, memref<1xf32>
+      vector.transfer_write %14, %out[%c0] {in_bounds = array<i1: true>} : vector<1xf32>, memref<1xf32>
     }
     gpu.terminator
   }
@@ -51,9 +51,9 @@ func.func @main() {
   %cst_2 = arith.constant dense<2.000000e+00> : vector<1xf32>
   // init the buffers.
   scf.for %i = %c0 to %c1024 step %c32 {
-    vector.transfer_write %cst_1, %0[%i] {in_bounds = [true]} : vector<32xf32>, memref<1024xf32>
+    vector.transfer_write %cst_1, %0[%i] {in_bounds = array<i1: true>} : vector<32xf32>, memref<1024xf32>
   }
-  vector.transfer_write %cst_2, %1[%c0] {in_bounds = [true]} : vector<1xf32>, memref<1xf32>
+  vector.transfer_write %cst_2, %1[%c0] {in_bounds = array<i1: true>} : vector<1xf32>, memref<1xf32>
   %3 = memref.cast %0 : memref<1024xf32> to memref<*xf32>
   gpu.host_register %3 : memref<*xf32>
   %5 = memref.cast %1 : memref<1xf32> to memref<*xf32>

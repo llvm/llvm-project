@@ -732,16 +732,16 @@ func.func @matmul_on_tensors(
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
   %8 = linalg.fill ins(%cst_0 : f32) outs(%7 : tensor<256x256xf32>) -> tensor<256x256xf32>
-  %9 = vector.transfer_read %arg0[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
-  %10 = vector.transfer_write %9, %8[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
+  %9 = vector.transfer_read %arg0[%c0, %c0], %cst_0 {in_bounds = array<i1: false, true>} : tensor<518x518xf32>, vector<256x256xf32>
+  %10 = vector.transfer_write %9, %8[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<256x256xf32>, tensor<256x256xf32>
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
   %11 = linalg.fill ins(%cst_1 : f32) outs(%7 : tensor<256x256xf32>) -> tensor<256x256xf32>
-  %12 = vector.transfer_read %arg1[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
-  %13 = vector.transfer_write %12, %11[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
+  %12 = vector.transfer_read %arg1[%c0, %c0], %cst_0 {in_bounds = array<i1: false, true>} : tensor<518x518xf32>, vector<256x256xf32>
+  %13 = vector.transfer_write %12, %11[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<256x256xf32>, tensor<256x256xf32>
 
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
@@ -791,7 +791,7 @@ func.func @insert_slice_chain(
   %2 = tensor.extract_slice %0[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %7 = vector.transfer_write %v1, %2[%c0, %c0] {in_bounds = [true, true]} : vector<32x90xf32>, tensor<32x90xf32>
+  %7 = vector.transfer_write %v1, %2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<32x90xf32>, tensor<32x90xf32>
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
   %8 = tensor.insert_slice %7 into %0[0, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
@@ -801,7 +801,7 @@ func.func @insert_slice_chain(
   %10 = tensor.extract_slice %8[32, 0] [30, 90] [1, 1] : tensor<62x90xf32> to tensor<30x90xf32>
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %14 = vector.transfer_write %v2, %10[%c0, %c0] {in_bounds = [true, true]} : vector<30x90xf32>, tensor<30x90xf32>
+  %14 = vector.transfer_write %v2, %10[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<30x90xf32>, tensor<30x90xf32>
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
   %15 = tensor.insert_slice %14 into %8[32, 0] [30, 90] [1, 1] : tensor<30x90xf32> into tensor<62x90xf32>
@@ -930,7 +930,7 @@ func.func @double_insert_slice_into_alias(
   %2 = tensor.extract_slice %arg2[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %7 = vector.transfer_write %v1, %2[%c0, %c0] {in_bounds = [true, true]} : vector<32x90xf32>, tensor<32x90xf32>
+  %7 = vector.transfer_write %v1, %2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<32x90xf32>, tensor<32x90xf32>
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
   %8 = tensor.insert_slice %7 into %arg2[0, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
@@ -940,7 +940,7 @@ func.func @double_insert_slice_into_alias(
   %10 = tensor.extract_slice %e[32, 0] [30, 90] [1, 1] : tensor<?x?xf32> to tensor<30x90xf32>
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %14 = vector.transfer_write %v2, %10[%c0, %c0] {in_bounds = [true, true]} : vector<30x90xf32>, tensor<30x90xf32>
+  %14 = vector.transfer_write %v2, %10[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<30x90xf32>, tensor<30x90xf32>
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
   %15 = tensor.insert_slice %14 into %e[32, 0] [30, 90] [1, 1] : tensor<30x90xf32> into tensor<?x?xf32>

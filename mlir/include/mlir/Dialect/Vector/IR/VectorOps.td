@@ -1248,7 +1248,7 @@ def Vector_TransferReadOp :
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
                    Optional<VectorOf<[I1]>>:$mask,
-                   BoolArrayAttr:$in_bounds)>,
+                   DenseBoolArrayAttr:$in_bounds)>,
     Results<(outs AnyVectorOfAnyRank:$vector)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
@@ -1443,7 +1443,7 @@ def Vector_TransferReadOp :
                    "Value":$source,
                    "ValueRange":$indices,
                    "AffineMapAttr":$permutationMapAttr,
-                   "ArrayAttr":$inBoundsAttr)>,
+                   "DenseBoolArrayAttr":$inBoundsAttr)>,
     /// 2. Builder that sets padding to zero and an empty mask (variant without attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
@@ -1495,7 +1495,7 @@ def Vector_TransferWriteOp :
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    Optional<VectorOf<[I1]>>:$mask,
-                   BoolArrayAttr:$in_bounds)>,
+                   DenseBoolArrayAttr:$in_bounds)>,
     Results<(outs Optional<AnyRankedTensor>:$result)> {
 
   let summary = "The vector.transfer_write op writes a supervector to memory.";
@@ -1606,13 +1606,13 @@ def Vector_TransferWriteOp :
                    "ValueRange":$indices,
                    "AffineMapAttr":$permutationMapAttr,
                    "Value":$mask,
-                   "ArrayAttr":$inBoundsAttr)>,
+                   "DenseBoolArrayAttr":$inBoundsAttr)>,
     /// 2. Builder with type inference that sets an empty mask (variant with attrs).
     OpBuilder<(ins "Value":$vector,
                    "Value":$dest,
                    "ValueRange":$indices,
                    "AffineMapAttr":$permutationMapAttr,
-                   "ArrayAttr":$inBoundsAttr)>,
+                   "DenseBoolArrayAttr":$inBoundsAttr)>,
     /// 3. Builder with type inference that sets an empty mask (variant without attrs).
     OpBuilder<(ins "Value":$vector,
                    "Value":$dest,

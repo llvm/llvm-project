@@ -9,7 +9,7 @@
 func.func @transfer_read_2d_i8(%src : memref<?x?xi8>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i8
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xi8>, vector<[16]x[16]xi8>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xi8>, vector<[16]x[16]xi8>
   "prevent.dce"(%0) : (vector<[16]x[16]xi8>) -> ()
   return
 }
@@ -21,7 +21,7 @@ func.func @transfer_read_2d_i8(%src : memref<?x?xi8>) {
 func.func @transfer_read_2d_i16(%src : memref<?x?xi16>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i16
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xi16>, vector<[8]x[8]xi16>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xi16>, vector<[8]x[8]xi16>
   "prevent.dce"(%0) : (vector<[8]x[8]xi16>) -> ()
   return
 }
@@ -33,7 +33,7 @@ func.func @transfer_read_2d_i16(%src : memref<?x?xi16>) {
 func.func @transfer_read_2d_i32(%src : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xi32>, vector<[4]x[4]xi32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xi32>, vector<[4]x[4]xi32>
   "prevent.dce"(%0) : (vector<[4]x[4]xi32>) -> ()
   return
 }
@@ -45,7 +45,7 @@ func.func @transfer_read_2d_i32(%src : memref<?x?xi32>) {
 func.func @transfer_read_2d_i64(%src : memref<?x?xi64>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i64
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xi64>, vector<[2]x[2]xi64>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xi64>, vector<[2]x[2]xi64>
   "prevent.dce"(%0) : (vector<[2]x[2]xi64>) -> ()
   return
 }
@@ -57,7 +57,7 @@ func.func @transfer_read_2d_i64(%src : memref<?x?xi64>) {
 func.func @transfer_read_2d_i128(%src : memref<?x?xi128>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i128
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xi128>, vector<[1]x[1]xi128>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xi128>, vector<[1]x[1]xi128>
   "prevent.dce"(%0) : (vector<[1]x[1]xi128>) -> ()
   return
 }
@@ -69,7 +69,7 @@ func.func @transfer_read_2d_i128(%src : memref<?x?xi128>) {
 func.func @transfer_read_2d_f16(%src : memref<?x?xf16>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f16
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf16>, vector<[8]x[8]xf16>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xf16>, vector<[8]x[8]xf16>
   "prevent.dce"(%0) : (vector<[8]x[8]xf16>) -> ()
   return
 }
@@ -81,7 +81,7 @@ func.func @transfer_read_2d_f16(%src : memref<?x?xf16>) {
 func.func @transfer_read_2d_bf16(%src : memref<?x?xbf16>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : bf16
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   "prevent.dce"(%0) : (vector<[8]x[8]xbf16>) -> ()
   return
 }
@@ -93,7 +93,7 @@ func.func @transfer_read_2d_bf16(%src : memref<?x?xbf16>) {
 func.func @transfer_read_2d_f32(%src : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
   "prevent.dce"(%0) : (vector<[4]x[4]xf32>) -> ()
   return
 }
@@ -105,7 +105,7 @@ func.func @transfer_read_2d_f32(%src : memref<?x?xf32>) {
 func.func @transfer_read_2d_f64(%src : memref<?x?xf64>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f64
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf64>, vector<[2]x[2]xf64>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xf64>, vector<[2]x[2]xf64>
   "prevent.dce"(%0) : (vector<[2]x[2]xf64>) -> ()
   return
 }
@@ -117,7 +117,7 @@ func.func @transfer_read_2d_f64(%src : memref<?x?xf64>) {
 func.func @transfer_read_2d_with_mask_i16(%src : memref<?x?xi16>, %mask : vector<[8]x[8]xi1>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i16
-  %0 = vector.transfer_read %src[%c0, %c0], %pad, %mask {in_bounds = [true, true]} : memref<?x?xi16>, vector<[8]x[8]xi16>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad, %mask {in_bounds = array<i1: true, true>} : memref<?x?xi16>, vector<[8]x[8]xi16>
   "prevent.dce"(%0) : (vector<[8]x[8]xi16>) -> ()
   return
 }
@@ -131,7 +131,7 @@ func.func @transfer_read_2d_with_mask_i16(%src : memref<?x?xi16>, %mask : vector
 func.func @transfer_read_2d_transpose_i8(%src : memref<?x?xi8>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0 : i8
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : memref<?x?xi8>, vector<[16]x[16]xi8>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: true, true>} : memref<?x?xi8>, vector<[16]x[16]xi8>
   "prevent.dce"(%0) : (vector<[16]x[16]xi8>) -> ()
   return
 }
@@ -143,7 +143,7 @@ func.func @transfer_read_2d_transpose_i8(%src : memref<?x?xi8>) {
 func.func @transfer_read_2d_transpose_with_mask_f32(%src : memref<?x?xf32>, %mask : vector<[4]x[4]xi1>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad, %mask {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad, %mask {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
   "prevent.dce"(%0) : (vector<[4]x[4]xf32>) -> ()
   return
 }
@@ -157,7 +157,7 @@ func.func @transfer_read_2d_transpose_with_mask_f32(%src : memref<?x?xf32>, %mas
 func.func @fold_transpose_into_load(%src : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
   %1 = vector.transpose %0, [1, 0] : vector<[4]x[4]xf32> to vector<[4]x[4]xf32>
   "prevent.dce"(%1) : (vector<[4]x[4]xf32>) -> ()
 }
@@ -175,7 +175,7 @@ func.func @fold_transpose_into_load(%src : memref<?x?xf32>) {
 func.func @fold_transpose_into_load_multi_use(%src : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
   "test.some_use"(%0) : (vector<[4]x[4]xf32>) -> ()
   %1 = vector.transpose %0, [1, 0] : vector<[4]x[4]xf32> to vector<[4]x[4]xf32>
   "prevent.dce"(%1) : (vector<[4]x[4]xf32>) -> ()
@@ -194,7 +194,7 @@ func.func @fold_transpose_into_load_multi_use(%src : memref<?x?xf32>) {
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xi8>, vector<[16]x[16]xi8>
 func.func @transfer_write_2d_i8(%vector : vector<[16]x[16]xi8>, %dest : memref<?x?xi8>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[16]xi8>, memref<?x?xi8>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[16]x[16]xi8>, memref<?x?xi8>
   return
 }
 
@@ -207,7 +207,7 @@ func.func @transfer_write_2d_i8(%vector : vector<[16]x[16]xi8>, %dest : memref<?
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xi16>, vector<[8]x[8]xi16>
 func.func @transfer_write_2d_i16(%vector : vector<[8]x[8]xi16>, %dest : memref<?x?xi16>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xi16>, memref<?x?xi16>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xi16>, memref<?x?xi16>
   return
 }
 
@@ -220,7 +220,7 @@ func.func @transfer_write_2d_i16(%vector : vector<[8]x[8]xi16>, %dest : memref<?
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xi32>, vector<[4]x[4]xi32>
 func.func @transfer_write_2d_i32(%vector : vector<[4]x[4]xi32>, %dest : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x[4]xi32>, memref<?x?xi32>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[4]x[4]xi32>, memref<?x?xi32>
   return
 }
 
@@ -233,7 +233,7 @@ func.func @transfer_write_2d_i32(%vector : vector<[4]x[4]xi32>, %dest : memref<?
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xi64>, vector<[2]x[2]xi64>
 func.func @transfer_write_2d_i64(%vector : vector<[2]x[2]xi64>, %dest : memref<?x?xi64>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[2]x[2]xi64>, memref<?x?xi64>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[2]x[2]xi64>, memref<?x?xi64>
   return
 }
 
@@ -246,7 +246,7 @@ func.func @transfer_write_2d_i64(%vector : vector<[2]x[2]xi64>, %dest : memref<?
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xf16>, vector<[8]x[8]xf16>
 func.func @transfer_write_2d_f16(%vector : vector<[8]x[8]xf16>, %dest : memref<?x?xf16>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf16>, memref<?x?xf16>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf16>, memref<?x?xf16>
   return
 }
 
@@ -259,7 +259,7 @@ func.func @transfer_write_2d_f16(%vector : vector<[8]x[8]xf16>, %dest : memref<?
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xbf16>, vector<[8]x[8]xbf16>
 func.func @transfer_write_2d_bf16(%vector : vector<[8]x[8]xbf16>, %dest : memref<?x?xbf16>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xbf16>, memref<?x?xbf16>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xbf16>, memref<?x?xbf16>
   return
 }
 
@@ -272,7 +272,7 @@ func.func @transfer_write_2d_bf16(%vector : vector<[8]x[8]xbf16>, %dest : memref
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xf32>, vector<[4]x[4]xf32>
 func.func @transfer_write_2d_f32(%vector : vector<[4]x[4]xf32>, %dest : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[4]x[4]xf32>, memref<?x?xf32>
   return
 }
 
@@ -285,7 +285,7 @@ func.func @transfer_write_2d_f32(%vector : vector<[4]x[4]xf32>, %dest : memref<?
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] : memref<?x?xf64>, vector<[2]x[2]xf64>
 func.func @transfer_write_2d_f64(%vector : vector<[2]x[2]xf64>, %dest : memref<?x?xf64>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[2]x[2]xf64>, memref<?x?xf64>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[2]x[2]xf64>, memref<?x?xf64>
   return
 }
 
@@ -299,7 +299,7 @@ func.func @transfer_write_2d_f64(%vector : vector<[2]x[2]xf64>, %dest : memref<?
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]], %[[MASK]] : memref<?x?xf64>, vector<[2]x[2]xf64>
 func.func @transfer_write_2d_with_mask_f64(%vector : vector<[2]x[2]xf64>, %dest : memref<?x?xf64>, %mask : vector<[2]x[2]xi1>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[2]x[2]xf64>, memref<?x?xf64>
+  vector.transfer_write %vector, %dest[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[2]x[2]xf64>, memref<?x?xf64>
   return
 }
 
@@ -314,7 +314,7 @@ func.func @transfer_write_2d_with_mask_f64(%vector : vector<[2]x[2]xf64>, %dest 
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]] layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
 func.func @transfer_write_2d_transpose_i64(%vector : vector<[2]x[2]xi64>, %dest : memref<?x?xi64>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : vector<[2]x[2]xi64>, memref<?x?xi64>
+  vector.transfer_write %vector, %dest[%c0, %c0] {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: true, true>} : vector<[2]x[2]xi64>, memref<?x?xi64>
   return
 }
 
@@ -330,7 +330,7 @@ func.func @transfer_write_2d_transpose_i64(%vector : vector<[2]x[2]xi64>, %dest 
 // CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]], %[[MASK]] layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
 func.func @transfer_write_2d_transpose_with_mask_bf16(%vector : vector<[8]x[8]xbf16>, %dest : memref<?x?xbf16>, %mask : vector<[8]x[8]xi1>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0], %mask {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : vector<[8]x[8]xbf16>, memref<?x?xbf16>
+  vector.transfer_write %vector, %dest[%c0, %c0], %mask {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: true, true>} : vector<[8]x[8]xbf16>, memref<?x?xbf16>
   return
 }
 
@@ -346,7 +346,7 @@ func.func @transfer_write_2d_transpose_with_mask_bf16(%vector : vector<[8]x[8]xb
 func.func @transfer_write_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
   %c0 = arith.constant 0 : index
   %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = array<i1: true> }: vector<[4]xf32>, memref<?x?xf32>
   return
 }
 
@@ -362,7 +362,7 @@ func.func @transfer_write_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?
 func.func @transfer_write_slice_with_mask(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %mask: vector<[4]xi1>, %slice_index: index) {
   %c0 = arith.constant 0 : index
   %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  vector.transfer_write %slice, %dest[%slice_index, %c0], %mask { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0], %mask { in_bounds = array<i1: true> }: vector<[4]xf32>, memref<?x?xf32>
   return
 }
 
@@ -374,7 +374,7 @@ func.func @transfer_write_vertical_slice(%vector: vector<[4]x[4]xf32>, %dest : m
   %c0 = arith.constant 0 : index
    %slice = arm_sme.move_tile_slice_to_vector %vector[%slice_index] layout<vertical>
             : vector<[4]xf32> from vector<[4]x[4]xf32>
-  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = array<i1: true> }: vector<[4]xf32>, memref<?x?xf32>
   return
 }
 

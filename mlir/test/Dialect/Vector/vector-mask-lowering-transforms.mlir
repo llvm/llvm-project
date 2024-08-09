@@ -113,11 +113,11 @@ func.func @transfer_read_3d(
   %f0 = arith.constant 0.0 : f32
   //      CHECK: %[[mask:.*]] = vector.create_mask
   //  CHECK-NOT: vector.mask
-  //      CHECK: vector.transfer_read {{.*}}, %[[mask]] {in_bounds = [true, true, true]}
+  //      CHECK: vector.transfer_read {{.*}}, %[[mask]] {in_bounds = array<i1: true, true, true>}
   // CHECK-SAME:   : tensor<?x?x?xf32>, vector<2x1x7xf32>
   %0 = vector.create_mask %arg0, %arg1, %arg2 : vector<2x1x7xi1>
   %1 = vector.mask %0 {
-    vector.transfer_read %t[%c0, %c0, %c0], %f0 {in_bounds = [true, true, true]}
+    vector.transfer_read %t[%c0, %c0, %c0], %f0 {in_bounds = array<i1: true, true, true>}
       : tensor<?x?x?xf32>, vector<2x1x7xf32>
   } : vector<2x1x7xi1> -> vector<2x1x7xf32>
 

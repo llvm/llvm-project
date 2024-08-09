@@ -497,8 +497,7 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
           loc, slice, writeOp.getSource(), ValueRange{storeRow, storeCol},
           AffineMapAttr::get(writeOp.getPermutationMap().dropResult(0)),
           sliceMask,
-          rewriter.getBoolArrayAttr(
-              ArrayRef<bool>(writeOp.getInBoundsValues()).drop_front()));
+          rewriter.getDenseBoolArrayAttr(writeOp.getInBounds().drop_front()));
     }
 
     rewriter.eraseOp(writeOp);
@@ -691,13 +690,12 @@ struct LiftIllegalVectorTransposeToMemory
         transposeOp.getPermutation(), getContext());
     auto transposedSubview = rewriter.create<memref::TransposeOp>(
         loc, readSubview, AffineMapAttr::get(transposeMap));
-    ArrayAttr inBoundsAttr = illegalRead.getInBoundsAttr();
+    DenseBoolArrayAttr inBoundsAttr = illegalRead.getInBoundsAttr();
     // - The `in_bounds` attribute
     if (inBoundsAttr) {
-      SmallVector<Attribute> inBoundsValues(inBoundsAttr.begin(),
-                                            inBoundsAttr.end());
+      SmallVector<bool> inBoundsValues(inBoundsAttr.asArrayRef());
       applyPermutationToVector(inBoundsValues, transposeOp.getPermutation());
-      inBoundsAttr = rewriter.getArrayAttr(inBoundsValues);
+      inBoundsAttr = rewriter.getDenseBoolArrayAttr(inBoundsValues);
     }
 
     VectorType legalReadType = resultType.clone(readType.getElementType());
@@ -902,7 +900,7 @@ struct LowerIllegalTransposeStoreViaZA
           rewriter.create<arith::AddIOp>(loc, transposedCol, writeIndices[1]);
       auto smeWrite = rewriter.create<vector::TransferWriteOp>(
           loc, tile, destTensorOrMemref, ValueRange{destRow, destCol},
-          transposeMap, subMask, writeOp.getInBounds());
+          transposeMap, subMask, writeOp.getInBoundsAttr());
 
       if (writeOp.hasPureTensorSemantics())
         destTensorOrMemref = smeWrite.getResult();

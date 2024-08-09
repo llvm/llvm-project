@@ -10,7 +10,7 @@
 func.func @transfer_read_2d__bad_type(%src : memref<?x?xf64>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f64
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [false, false]} : memref<?x?xf64>, vector<[4]x[4]xf64>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: false, false>} : memref<?x?xf64>, vector<[4]x[4]xf64>
   "prevent.dce"(%0) : (vector<[4]x[4]xf64>) -> ()
   return
 }
@@ -23,7 +23,7 @@ func.func @transfer_read_2d__bad_type(%src : memref<?x?xf64>) {
 func.func @transfer_read_2d__non_memref_type(%src : tensor<?x?xf64>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f64
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : tensor<?x?xf64>, vector<[2]x[2]xf64>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: true, true>} : tensor<?x?xf64>, vector<[2]x[2]xf64>
   "prevent.dce"(%0) : (vector<[2]x[2]xf64>) -> ()
   return
 }
@@ -36,7 +36,7 @@ func.func @transfer_read_2d__non_memref_type(%src : tensor<?x?xf64>) {
 func.func @transfer_read_2d__bad_transfer_rank(%src : memref<?x?xf64>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f64
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true]} : memref<?x?xf64>, vector<[2]xf64>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = array<i1: true>} : memref<?x?xf64>, vector<[2]xf64>
   "prevent.dce"(%0) : (vector<[2]xf64>) -> ()
   return
 }
@@ -49,7 +49,7 @@ func.func @transfer_read_2d__bad_transfer_rank(%src : memref<?x?xf64>) {
 func.func @transfer_read_2d__non_transpose(%src : memref<?x?xf64>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f64
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d0, 0)>, in_bounds = [true, true]} : memref<?x?xf64>, vector<[2]x[2]xf64>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d0, 0)>, in_bounds = array<i1: true, true>} : memref<?x?xf64>, vector<[2]x[2]xf64>
   "prevent.dce"(%0) : (vector<[2]x[2]xf64>) -> ()
   return
 }
@@ -62,7 +62,7 @@ func.func @transfer_read_2d__non_transpose(%src : memref<?x?xf64>) {
 func.func @transfer_read_2d__out_of_bounds(%src : memref<?x?xf64>) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f64
-  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [false, false]} : memref<?x?xf64>, vector<[2]x[2]xf64>
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: false, false>} : memref<?x?xf64>, vector<[2]x[2]xf64>
   "prevent.dce"(%0) : (vector<[2]x[2]xf64>) -> ()
   return
 }
@@ -83,7 +83,7 @@ func.func @transfer_read_2d__out_of_bounds(%src : memref<?x?xf64>) {
 func.func @transfer_write_2d_zero__bad_type(%arg0 : memref<?x?xi4>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0> : vector<[16]x[16]xi4>
-  vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[16]xi4>, memref<?x?xi4>
+  vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[16]x[16]xi4>, memref<?x?xi4>
   return
 }
 
@@ -95,7 +95,7 @@ func.func @transfer_write_2d_zero__bad_type(%arg0 : memref<?x?xi4>) {
 func.func @transfer_write_2d_zero__bad_shape(%arg0 : memref<?x?xi8>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0> : vector<[8]x[8]xi8>
-  vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xi8>, memref<?x?xi8>
+  vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xi8>, memref<?x?xi8>
   return
 }
 
@@ -107,7 +107,7 @@ func.func @transfer_write_2d_zero__bad_shape(%arg0 : memref<?x?xi8>) {
 func.func @transfer_write_2d_zero__bad_rank(%arg0 : memref<?x?x?xi8>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0> : vector<[16]x[16]x[16]xi8>
-  vector.transfer_write %cst, %arg0[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<[16]x[16]x[16]xi8>, memref<?x?x?xi8>
+  vector.transfer_write %cst, %arg0[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} : vector<[16]x[16]x[16]xi8>, memref<?x?x?xi8>
   return
 }
 
@@ -119,7 +119,7 @@ func.func @transfer_write_2d_zero__bad_rank(%arg0 : memref<?x?x?xi8>) {
 func.func @transfer_write_2d_zero__non_memref_type(%arg0 : tensor<?x?xi8>) -> tensor<?x?xi8> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0> : vector<[16]x[16]xi8>
-  %0 = vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[16]xi8>, tensor<?x?xi8>
+  %0 = vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[16]x[16]xi8>, tensor<?x?xi8>
   return %0 : tensor<?x?xi8>
 }
 
@@ -130,7 +130,7 @@ func.func @transfer_write_2d_zero__non_memref_type(%arg0 : tensor<?x?xi8>) -> te
 // CHECK-NOT: arm_sme.tile_store
 func.func @transfer_write_2d__fixed(%vector : vector<16x16xi8>, %dest : memref<?x?xi8>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xi8>, memref<?x?xi8>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xi8>, memref<?x?xi8>
   return
 }
 
@@ -141,7 +141,7 @@ func.func @transfer_write_2d__fixed(%vector : vector<16x16xi8>, %dest : memref<?
 // CHECK-NOT: arm_sme.tile_store
 func.func @transfer_write_2d__out_of_bounds(%vector : vector<[4]x[4]xf32>, %dest : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = [false, false]} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %vector, %dest[%c0, %c0] {in_bounds = array<i1: false, false>} : vector<[4]x[4]xf32>, memref<?x?xf32>
   return
 }
 
@@ -152,7 +152,7 @@ func.func @transfer_write_2d__out_of_bounds(%vector : vector<[4]x[4]xf32>, %dest
 func.func @transfer_write_slice_unsupported_permutation(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
   %c0 = arith.constant 0 : index
   %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
-  vector.transfer_write %slice, %dest[%slice_index, %c0] { permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = array<i1: true> }: vector<[4]xf32>, memref<?x?xf32>
   return
 }
 

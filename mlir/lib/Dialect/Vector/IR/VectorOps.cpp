@@ -3757,7 +3757,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, AffineMapAttr permutationMapAttr,
-                           /*optional*/ ArrayAttr inBoundsAttr) {
+                           /*optional*/ DenseBoolArrayAttr inBoundsAttr) {
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
   Value padding = builder.create<arith::ConstantOp>(
       result.location, elemType, builder.getZeroAttr(elemType));
@@ -3772,8 +3772,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            std::optional<ArrayRef<bool>> inBounds) {
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : builder.getBoolArrayAttr(
+                          ? builder.getDenseBoolArrayAttr(inBounds.value())
+                          : builder.getDenseBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         inBoundsAttr);
@@ -3788,8 +3788,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
       llvm::cast<ShapedType>(source.getType()), vectorType);
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : builder.getBoolArrayAttr(
+                          ? builder.getDenseBoolArrayAttr(inBounds.value())
+                          : builder.getDenseBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         padding,
@@ -3841,7 +3841,7 @@ static LogicalResult
 verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
                  VectorType vectorType, VectorType maskType,
                  VectorType inferredMaskType, AffineMap permutationMap,
-                 ArrayAttr inBounds) {
+                 ArrayRef<bool> inBounds) {
   if (op->hasAttr("masked")) {
     return op->emitOpError("masked attribute has been removed. "
                            "Use in_bounds instead.");
@@ -3914,8 +3914,7 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
            << AffineMapAttr::get(permutationMap)
            << " vs inBounds of size: " << inBounds.size();
   for (unsigned int i = 0, e = permutationMap.getNumResults(); i < e; ++i)
-    if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
-        !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
+    if (isa<AffineConstantExpr>(permutationMap.getResult(i)) && !inBounds[i])
       return op->emitOpError("requires broadcast dimensions to be in-bounds");
 
   return success();
@@ -3996,7 +3995,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
   if (!inBoundsAttr) {
     result.addAttribute(inBoundsAttrName,
-                        builder.getBoolArrayAttr(
+                        builder.getDenseBoolArrayAttr(
                             SmallVector<bool>(permMap.getNumResults(), false)));
   }
   if (parser.resolveOperand(sourceInfo, shapedType, result.operands) ||
@@ -4124,7 +4123,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  op.setInBoundsAttr(b.getBoolArrayAttr(newInBounds));
+  op.setInBoundsAttr(b.getDenseBoolArrayAttr(newInBounds));
   return success();
 }
 
@@ -4294,7 +4293,7 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             AffineMapAttr permutationMapAttr,
                             /*optional*/ Value mask,
-                            /*optional*/ ArrayAttr inBoundsAttr) {
+                            /*optional*/ DenseBoolArrayAttr inBoundsAttr) {
   Type resultType = llvm::dyn_cast<RankedTensorType>(dest.getType());
   build(builder, result, resultType, vector, dest, indices, permutationMapAttr,
         mask, inBoundsAttr);
@@ -4304,7 +4303,7 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             AffineMapAttr permutationMapAttr,
-                            /*optional*/ ArrayAttr inBoundsAttr) {
+                            /*optional*/ DenseBoolArrayAttr inBoundsAttr) {
   build(builder, result, vector, dest, indices, permutationMapAttr,
         /*mask=*/Value(), inBoundsAttr);
 }
@@ -4318,8 +4317,8 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr =
       (inBounds && !inBounds.value().empty())
-          ? builder.getBoolArrayAttr(inBounds.value())
-          : builder.getBoolArrayAttr(SmallVector<bool>(
+          ? builder.getDenseBoolArrayAttr(inBounds.value())
+          : builder.getDenseBoolArrayAttr(SmallVector<bool>(
                 llvm::cast<VectorType>(vector.getType()).getRank(), false));
   build(builder, result, vector, dest, indices, permutationMapAttr,
         /*mask=*/Value(), inBoundsAttr);
@@ -4377,7 +4376,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
   if (!inBoundsAttr) {
     result.addAttribute(inBoundsAttrName,
-                        builder.getBoolArrayAttr(
+                        builder.getDenseBoolArrayAttr(
                             SmallVector<bool>(permMap.getNumResults(), false)));
   }
   if (parser.resolveOperand(vectorInfo, vectorType, result.operands) ||
@@ -4730,7 +4729,7 @@ public:
     auto newTransferWriteOp = rewriter.create<TransferWriteOp>(
         transferOp.getLoc(), transferOp.getVector(), newExtractOp.getResult(),
         transferOp.getIndices(), transferOp.getPermutationMapAttr(),
-        rewriter.getBoolArrayAttr(newInBounds));
+        rewriter.getDenseBoolArrayAttr(newInBounds));
     rewriter.modifyOpInPlace(insertOp, [&]() {
       insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
     });

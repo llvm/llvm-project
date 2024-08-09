@@ -17,11 +17,11 @@ func.func @matmul(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: mem
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -45,10 +45,10 @@ func.func @matmul_cst(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2:
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -72,10 +72,10 @@ func.func @matmul_broadcast(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, 
   %C = vector.broadcast %f : f16 to vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -102,14 +102,14 @@ func.func @matmul_loop(%arg0: memref<128x128xf16>, %arg1: memref<128x128xf16>, %
   %c128 = arith.constant 128 : index
   %c32 = arith.constant 32 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<128x128xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<128x128xf16>, vector<16x16xf16>
   %14 = scf.for %arg17 = %c0 to %c128 step %c32 iter_args(%arg18 = %C) -> (vector<16x16xf16>) {
-    %17 = vector.transfer_read %arg0[%c0, %arg17], %cst {in_bounds = [true, true]} : memref<128x128xf16>, vector<16x16xf16>
-    %18 = vector.transfer_read %arg1[%arg17, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<128x128xf16>, vector<16x16xf16>
+    %17 = vector.transfer_read %arg0[%c0, %arg17], %cst {in_bounds = array<i1: true, true>} : memref<128x128xf16>, vector<16x16xf16>
+    %18 = vector.transfer_read %arg1[%arg17, %c0], %cst {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<128x128xf16>, vector<16x16xf16>
     %19 = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %17, %18, %arg18 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
     scf.yield %19 : vector<16x16xf16>
   }
-  vector.transfer_write %14, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<128x128xf16>
+  vector.transfer_write %14, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<128x128xf16>
   return
 }
 
@@ -137,11 +137,11 @@ func.func @matmul_fused_elementwise(%arg0: memref<16x16xf16>, %arg1: memref<16x1
   %cst_1 = arith.constant dense<1.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
   %E = arith.addf %D, %cst_1 : vector<16x16xf16>
-  vector.transfer_write %E, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %E, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -168,14 +168,14 @@ func.func @matmul_fused_broadcast(%arg0: memref<16x16xf16>, %arg1: memref<16x16x
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
   %E = vector.transfer_read %arg3[%c0, %c0, %c0, %c0], %cst
-    {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3)->(0, d3)>}
+    {in_bounds = array<i1: true, true>, permutation_map = affine_map<(d0, d1, d2, d3)->(0, d3)>}
     : memref<16x16x16x16xf16>, vector<16x16xf16>
   %F = arith.divf %D, %E : vector<16x16xf16>
-  vector.transfer_write %F, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %F, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -199,11 +199,11 @@ func.func @matmul_3Dmemref(%arg0: memref<2x16x16xf16>, %arg1: memref<16xf16>, %a
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0, %c0], %cst {in_bounds = [true, true]} : memref<2x16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0], %cst {permutation_map = #map4, in_bounds = [true, true]} : memref<16xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0, %c0], %cst {in_bounds = [true, true]} : memref<2x16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<2x16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0], %cst {permutation_map = #map4, in_bounds = array<i1: true, true>} : memref<16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<2x16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<2x16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<2x16x16xf16>
   return
 }
 
@@ -227,11 +227,11 @@ func.func @matmul_memref_strided(%arg0: memref<2x16x16xf16, affine_map<(d0, d1, 
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0, %c0], %cst {in_bounds = [true, true]} : memref<2x16x16xf16, affine_map<(d0, d1, d2) -> (d0 * 512 + d1 * 32 + d2)>>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0], %cst {permutation_map = #map4, in_bounds = [true, true]} : memref<16xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0, %c0], %cst {in_bounds = [true, true]} : memref<2x16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<2x16x16xf16, affine_map<(d0, d1, d2) -> (d0 * 512 + d1 * 32 + d2)>>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0], %cst {permutation_map = #map4, in_bounds = array<i1: true, true>} : memref<16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<2x16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<2x16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<2x16x16xf16>
   return
 }
 
@@ -254,11 +254,11 @@ func.func @matmul_transposed(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>,
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map5, in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map5, in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -281,11 +281,11 @@ func.func @matmul_transposed_broadcasted_1d(%arg0: memref<16xf16>, %arg1: memref
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0) -> (d0, 0)>} : memref<16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0) -> (d0, 0)>} : memref<16xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0], %cst {in_bounds = array<i1: true, true>, permutation_map = affine_map<(d0) -> (d0, 0)>} : memref<16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0], %cst {in_bounds = array<i1: true, true>, permutation_map = affine_map<(d0) -> (d0, 0)>} : memref<16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -308,11 +308,11 @@ func.func @matmul_transposed_broadcasted_2d(%arg0: memref<32x32xf16>, %arg1: mem
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d1, 0)>} : memref<32x32xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d1, 0)>} : memref<32x32xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>, permutation_map = affine_map<(d0, d1) -> (d1, 0)>} : memref<32x32xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = array<i1: true, true>, permutation_map = affine_map<(d0, d1) -> (d1, 0)>} : memref<32x32xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf16>, memref<16x16xf16>
   return
 }
 
@@ -331,21 +331,21 @@ func.func @matmul_transposed_broadcasted_2d(%arg0: memref<32x32xf16>, %arg1: mem
 
 // Do not convert to subgroup_mma ops with integer types if signedness cannot be inferred.
 // CHECK-LABEL: func @matmul_no_extend_int8
-//   CHECK-DAG:   %[[A:.+]] = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-//   CHECK-DAG:   %[[B:.+]] = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-//   CHECK-DAG:   %[[C:.+]] = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true]} : memref<16x16xi32>, vector<16x16xi32>
+//   CHECK-DAG:   %[[A:.+]] = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+//   CHECK-DAG:   %[[B:.+]] = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+//   CHECK-DAG:   %[[C:.+]] = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = array<i1: true, true>} : memref<16x16xi32>, vector<16x16xi32>
 //       CHECK:   %[[D:.+]] = vector.contract {indexing_maps = [#[[$map]], #[[$map1]], #[[$map2]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[A]], %[[B]], %[[C]] : vector<16x16xi8>, vector<16x16xi8> into vector<16x16xi32>
-//       CHECK:   vector.transfer_write %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] {in_bounds = [true, true]} : vector<16x16xi32>, memref<16x16xi32>
+//       CHECK:   vector.transfer_write %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] {in_bounds = array<i1: true, true>} : vector<16x16xi32>, memref<16x16xi32>
 func.func @matmul_no_extend_int8(%arg0: memref<16x16xi8>, %arg1: memref<16x16xi8>, %arg2: memref<16x16xi32>) {
   %cst_0 = arith.constant dense<0> : vector<16x16xi8>
   %c0 = arith.constant 0 : index
   %cst_i8 = arith.constant 0 : i8
   %cst_i32 = arith.constant 0 : i32
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = [true, true]} : memref<16x16xi32>, vector<16x16xi32>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = array<i1: true, true>} : memref<16x16xi32>, vector<16x16xi32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xi8>, vector<16x16xi8> into vector<16x16xi32>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xi32>, memref<16x16xi32>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xi32>, memref<16x16xi32>
   return
 }
 
@@ -369,13 +369,13 @@ func.func @matmul_int8(%arg0: memref<16x16xi8>, %arg1: memref<16x16xi8>, %arg2: 
   %c0 = arith.constant 0 : index
   %cst_i8 = arith.constant 0 : i8
   %cst_i32 = arith.constant 0 : i32
-  %Ar = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-  %Br = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = [true, true]} : memref<16x16xi32>, vector<16x16xi32>
+  %Ar = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+  %Br = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = array<i1: true, true>} : memref<16x16xi32>, vector<16x16xi32>
   %Ae = arith.extsi %Ar : vector<16x16xi8> to vector<16x16xi32>
   %Be = arith.extsi %Br : vector<16x16xi8> to vector<16x16xi32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %Ae, %Be, %C : vector<16x16xi32>, vector<16x16xi32> into vector<16x16xi32>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xi32>, memref<16x16xi32>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xi32>, memref<16x16xi32>
   return
 }
 
@@ -399,13 +399,13 @@ func.func @matmul_mixed_signedness_int8(%arg0: memref<16x16xi8>, %arg1: memref<1
   %c0 = arith.constant 0 : index
   %cst_i8 = arith.constant 0 : i8
   %cst_i32 = arith.constant 0 : i32
-  %Ar = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-  %Br = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = [true, true]} : memref<16x16xi8>, vector<16x16xi8>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = [true, true]} : memref<16x16xi32>, vector<16x16xi32>
+  %Ar = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+  %Br = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x16xi8>, vector<16x16xi8>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = array<i1: true, true>} : memref<16x16xi32>, vector<16x16xi32>
   %Ae = arith.extui %Ar : vector<16x16xi8> to vector<16x16xi32>
   %Be = arith.extsi %Br : vector<16x16xi8> to vector<16x16xi32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %Ae, %Be, %C : vector<16x16xi32>, vector<16x16xi32> into vector<16x16xi32>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xi32>, memref<16x16xi32>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xi32>, memref<16x16xi32>
   return
 }
 
@@ -429,13 +429,13 @@ func.func @matmul_mixed_signedness_int8(%arg0: memref<16x32xi8>, %arg1: memref<1
   %c0 = arith.constant 0 : index
   %cst_i8 = arith.constant 0 : i8
   %cst_i32 = arith.constant 0 : i32
-  %Ar = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = [true, true]} : memref<16x32xi8>, vector<16x32xi8>
-  %Br = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = [true, true]} : memref<16x32xi8>, vector<16x32xi8>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = [true, true]} : memref<16x16xi32>, vector<16x16xi32>
+  %Ar = vector.transfer_read %arg0[%c0, %c0], %cst_i8 {in_bounds = array<i1: true, true>} : memref<16x32xi8>, vector<16x32xi8>
+  %Br = vector.transfer_read %arg1[%c0, %c0], %cst_i8 {permutation_map = #map0, in_bounds = array<i1: true, true>} : memref<16x32xi8>, vector<16x32xi8>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst_i32 {in_bounds = array<i1: true, true>} : memref<16x16xi32>, vector<16x16xi32>
   %Ae = arith.extui %Ar : vector<16x32xi8> to vector<16x32xi32>
   %Be = arith.extsi %Br : vector<16x32xi8> to vector<16x32xi32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %Ae, %Be, %C : vector<16x32xi32>, vector<16x32xi32> into vector<16x16xi32>
-  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xi32>, memref<16x16xi32>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xi32>, memref<16x16xi32>
   return
 }
 
@@ -452,12 +452,12 @@ func.func @matmul_mixed_signedness_int8(%arg0: memref<16x32xi8>, %arg1: memref<1
 func.func @cast_f16_to_f32_write(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>, %arg3: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
   %cast = arith.extf %D : vector<16x16xf16> to vector<16x16xf32>
-  vector.transfer_write %cast, %arg3[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf32>, memref<16x16xf32>
+  vector.transfer_write %cast, %arg3[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf32>, memref<16x16xf32>
   return
 }
 
@@ -472,7 +472,7 @@ func.func @cast_f16_to_f32_write(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf
 //  CHECK-SAME:      %[[ALLOC:.+]]: memref<64x128xf16>
 //   CHECK-DAG:      %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:      %[[CST:.+]] = arith.constant 0.000000e+00 : f16
-//       CHECK:      %[[READ:.+]] = vector.transfer_read %[[ALLOC]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = [true, true], permutation_map = #[[$MAP]]}
+//       CHECK:      %[[READ:.+]] = vector.transfer_read %[[ALLOC]][%[[C0]], %[[C0]]], %[[CST]] {in_bounds = array<i1: true, true>, permutation_map = #[[$MAP]]}
 //       CHECK:      %[[EXTF1:.+]] = arith.extf %[[READ]]
 //   CHECK-NOT:      vector.transpose
 //       CHECK:      %[[RESULT:.+]] = vector.contract
@@ -480,12 +480,12 @@ func.func @fold_transpose_into_transfer_read(%alloc: memref<64x128xf16>, %vector
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
   %init = arith.constant dense<0.000000e+00> : vector<32x64xf32>
-  %0 = vector.transfer_read %alloc[%c0, %c0], %cst {in_bounds = [true, true]} : memref<64x128xf16>, vector<64x128xf16>
+  %0 = vector.transfer_read %alloc[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<64x128xf16>, vector<64x128xf16>
   %1 = arith.extf %0 : vector<64x128xf16> to vector<64x128xf32>
   %2 = arith.extf %vector : vector<32x128xf16> to vector<32x128xf32>
   %3 = vector.transpose %1, [1, 0] : vector<64x128xf32> to vector<128x64xf32>
   %4 = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %2, %3, %init : vector<32x128xf32>, vector<128x64xf32> into vector<32x64xf32>
-  vector.transfer_write %4, %alloc2[%c0, %c0] {in_bounds = [true, true]} : vector<32x64xf32>, memref<32x64xf32>
+  vector.transfer_write %4, %alloc2[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<32x64xf32>, memref<32x64xf32>
   return
 }
 
@@ -506,14 +506,14 @@ func.func @fold_transpose_into_transfer_read(%alloc: memref<64x128xf16>, %vector
 func.func @cast_f16_to_f32_read(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>, %arg3: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f16
-  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
-  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<16x16xf16>, vector<16x16xf16>
   %Aext = arith.extf %A : vector<16x16xf16> to vector<16x16xf32>
   %Bext = arith.extf %B : vector<16x16xf16> to vector<16x16xf32>
   %Cext = arith.extf %C : vector<16x16xf16> to vector<16x16xf32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
                         %Aext, %Bext, %Cext : vector<16x16xf32>, vector<16x16xf32> into vector<16x16xf32>
-  vector.transfer_write %D, %arg3[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf32>, memref<16x16xf32>
+  vector.transfer_write %D, %arg3[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<16x16xf32>, memref<16x16xf32>
   return
 }

@@ -1122,7 +1122,7 @@ public:
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getMaskMutable().assign(mask);
-      xferOp.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
+      xferOp.setInBoundsAttr(rewriter.getDenseBoolArrayAttr({true}));
     });
 
     return success();
@@ -1321,8 +1321,8 @@ class DropInnerMostUnitDimsTransferRead
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
-        readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
+    DenseBoolArrayAttr inBoundsAttr = rewriter.getDenseBoolArrayAttr(
+        readOp.getInBounds().drop_back(dimsToDrop));
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, readOp.getSource(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
@@ -1412,8 +1412,8 @@ class DropInnerMostUnitDimsTransferWrite
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
-        writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
+    DenseBoolArrayAttr inBoundsAttr = rewriter.getDenseBoolArrayAttr(
+        writeOp.getInBounds().drop_back(dimsToDrop));
 
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, writeOp.getSource(), offsets, sizes, strides);

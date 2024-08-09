@@ -2257,7 +2257,7 @@ func.func @transfer_read_1d_non_zero_addrspace(%A : memref<?xf32, 3>, %base: ind
 
 func.func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
   %f7 = arith.constant 7.0: f32
-  %f = vector.transfer_read %A[%base], %f7 {in_bounds = [true]} :
+  %f = vector.transfer_read %A[%base], %f7 {in_bounds = array<i1: true>} :
     memref<?xf32>, vector<17xf32>
   return %f: vector<17xf32>
 }
@@ -2295,7 +2295,7 @@ func.func @transfer_read_1d_mask(%A : memref<?xf32>, %base : index) -> vector<5x
 func.func @transfer_read_1d_scalable_mask(%arg0: memref<1x?xf32>, %mask: vector<[4]xi1>) -> vector<[4]xf32> {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %vec = vector.transfer_read %arg0[%c0, %c0], %pad, %mask {in_bounds = [true]} : memref<1x?xf32>, vector<[4]xf32>
+  %vec = vector.transfer_read %arg0[%c0, %c0], %pad, %mask {in_bounds = array<i1: true>} : memref<1x?xf32>, vector<[4]xf32>
   return %vec : vector<[4]xf32>
 }
 
@@ -2304,7 +2304,7 @@ func.func @transfer_read_1d_scalable_mask(%arg0: memref<1x?xf32>, %mask: vector<
 // CHECK: llvm.intr.masked.store %{{.*}}, %{{.*}}, %{{.*}} {alignment = 4 : i32} : vector<[4]xf32>, vector<[4]xi1> into !llvm.ptr
 func.func @transfer_write_1d_scalable_mask(%arg0: memref<1x?xf32>, %vec: vector<[4]xf32>, %mask: vector<[4]xi1>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = [true]} : vector<[4]xf32>, memref<1x?xf32>
+  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<1x?xf32>
   return
 }
 

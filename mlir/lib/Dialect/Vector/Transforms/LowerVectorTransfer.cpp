@@ -22,15 +22,14 @@ using namespace mlir::vector;
 
 /// Transpose a vector transfer op's `in_bounds` attribute by applying reverse
 /// permutation based on the given indices.
-static ArrayAttr
-inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
+static DenseBoolArrayAttr
+inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayRef<bool> inBounds,
                              const SmallVector<unsigned> &permutation) {
   SmallVector<bool> newInBoundsValues(permutation.size());
   size_t index = 0;
   for (unsigned pos : permutation)
-    newInBoundsValues[pos] =
-        cast<BoolAttr>(attr.getValue()[index++]).getValue();
-  return builder.getBoolArrayAttr(newInBoundsValues);
+    newInBoundsValues[pos] = inBounds[index++];
+  return builder.getDenseBoolArrayAttr(newInBoundsValues);
 }
 
 /// Extend the rank of a vector Value by `addedRanks` by adding outer unit
@@ -132,7 +131,7 @@ struct TransferReadPermutationLowering
     }
 
     // Transpose in_bounds attribute.
-    ArrayAttr newInBoundsAttr =
+    DenseBoolArrayAttr newInBoundsAttr =
         inverseTransposeInBoundsAttr(rewriter, op.getInBounds(), permutation);
 
     // Generate new transfer_read operation.
@@ -205,7 +204,7 @@ struct TransferWritePermutationLowering
                     });
 
     // Transpose in_bounds attribute.
-    ArrayAttr newInBoundsAttr =
+    DenseBoolArrayAttr newInBoundsAttr =
         inverseTransposeInBoundsAttr(rewriter, op.getInBounds(), permutation);
 
     // Generate new transfer_write operation.
@@ -298,7 +297,8 @@ struct TransferWriteNonPermutationLowering
     for (int64_t i = 0, e = op.getVectorType().getRank(); i < e; ++i) {
       newInBoundsValues.push_back(op.isDimInBounds(i));
     }
-    ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
+    DenseBoolArrayAttr newInBoundsAttr =
+        rewriter.getDenseBoolArrayAttr(newInBoundsValues);
     auto newWrite = rewriter.create<vector::TransferWriteOp>(
         op.getLoc(), newVec, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
@@ -386,11 +386,8 @@ struct TransferOpReduceRank
 
     VectorType newReadType = VectorType::get(
         newShape, originalVecType.getElementType(), newScalableDims);
-    ArrayAttr newInBoundsAttr =
-        op.getInBounds()
-            ? rewriter.getArrayAttr(
-                  op.getInBoundsAttr().getValue().take_back(reducedShapeRank))
-            : ArrayAttr();
+    DenseBoolArrayAttr newInBoundsAttr = rewriter.getDenseBoolArrayAttr(
+        op.getInBounds().take_back(reducedShapeRank));
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),

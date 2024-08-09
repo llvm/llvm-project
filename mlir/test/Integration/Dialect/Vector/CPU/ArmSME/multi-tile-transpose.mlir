@@ -40,10 +40,10 @@ func.func @testTransposedReadWithMask(%maskRows: index, %maskCols: index) {
   /// A vector.transfer_read with a transpose permutation map. So the input data
   /// (and mask) have a [4]x[16] shape, but the output is [16]x[4].
   %readTransposed = vector.transfer_read %inDyn[%c0, %c0], %pad, %mask
-    {permutation_map = #transpose, in_bounds = [true, true]} : memref<?x?xf32>, vector<[16]x[4]xf32>
+    {permutation_map = #transpose, in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[16]x[4]xf32>
 
   /// Write the vector back to a memref (that also has a transposed shape).
-  vector.transfer_write %readTransposed, %outDyn[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %readTransposed, %outDyn[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[16]x[4]xf32>, memref<?x?xf32>
 
   /// Print the input memref.
   vector.print str "Input memref:\n"
@@ -72,7 +72,7 @@ func.func @testTransposedWriteWithMask(%maskRows: index, %maskCols: index) {
 
   /// A regular read.
   %c0 = arith.constant 0 : index
-  %read = vector.transfer_read %inDyn[%c0, %c0], %c0_f32 {in_bounds = [true, true]}
+  %read = vector.transfer_read %inDyn[%c0, %c0], %c0_f32 {in_bounds = array<i1: true, true>}
     : memref<?x?xf32>, vector<[16]x[4]xf32>
 
   /// A mask so we only write the first maskRows x maskCols portion of transpose(%in).
@@ -80,7 +80,7 @@ func.func @testTransposedWriteWithMask(%maskRows: index, %maskCols: index) {
 
   /// Write out the data with a transpose. Here (like the read test) the mask
   /// matches the shape of the memory, not the vector.
-  vector.transfer_write %read, %outDyn[%c0, %c0], %mask {permutation_map = #transpose, in_bounds = [true, true]}
+  vector.transfer_write %read, %outDyn[%c0, %c0], %mask {permutation_map = #transpose, in_bounds = array<i1: true, true>}
     : vector<[16]x[4]xf32>, memref<?x?xf32>
 
   /// Print the input memref.

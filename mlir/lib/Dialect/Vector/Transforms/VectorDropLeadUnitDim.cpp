@@ -248,10 +248,9 @@ struct CastAwayTransferReadLeadingOneDim
         AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(), newResults,
                        rewriter.getContext());
 
-    ArrayAttr inBoundsAttr;
-    if (read.getInBounds())
-      inBoundsAttr = rewriter.getArrayAttr(
-          read.getInBoundsAttr().getValue().take_back(newType.getRank()));
+    DenseBoolArrayAttr inBoundsAttr;
+    inBoundsAttr = rewriter.getDenseBoolArrayAttr(
+        read.getInBoundsAttr().asArrayRef().take_back(newType.getRank()));
 
     Value mask = Value();
     if (read.getMask()) {
@@ -302,10 +301,9 @@ struct CastAwayTransferWriteLeadingOneDim
         AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(), newResults,
                        rewriter.getContext());
 
-    ArrayAttr inBoundsAttr;
-    if (write.getInBounds())
-      inBoundsAttr = rewriter.getArrayAttr(
-          write.getInBoundsAttr().getValue().take_back(newType.getRank()));
+    DenseBoolArrayAttr inBoundsAttr;
+    inBoundsAttr = rewriter.getDenseBoolArrayAttr(
+        write.getInBoundsAttr().asArrayRef().take_back(newType.getRank()));
 
     auto newVector = rewriter.create<vector::ExtractOp>(
         write.getLoc(), write.getVector(), splatZero(dropDim));

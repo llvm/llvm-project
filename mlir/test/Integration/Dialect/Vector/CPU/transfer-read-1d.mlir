@@ -41,7 +41,7 @@ func.func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
     scf.for %arg3 = %c0 to %c6 step %c3 {
       %0 = memref.subview %A[%arg2, %arg3] [1, 2] [1, 1]
           : memref<?x?xf32> to memref<1x2xf32, strided<[?, 1], offset: ?>>
-      %1 = vector.transfer_read %0[%c0, %c0], %fm42 {in_bounds=[true]}
+      %1 = vector.transfer_read %0[%c0, %c0], %fm42 {in_bounds=array<i1: true>}
           : memref<1x2xf32, strided<[?, 1], offset: ?>>, vector<2xf32>
       vector.print %1 : vector<2xf32>
     }
@@ -59,7 +59,7 @@ func.func @transfer_read_1d_non_static_unit_stride(%A : memref<?x?xf32>) {
   %fm42 = arith.constant -42.0: f32
   %1 = memref.reinterpret_cast %A to offset: [%c6], sizes: [%c4, %c6],  strides: [%c6, %c1]
       : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  %2 = vector.transfer_read %1[%c2, %c1], %fm42 {in_bounds=[true]}
+  %2 = vector.transfer_read %1[%c2, %c1], %fm42 {in_bounds=array<i1: true>}
       : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
   vector.print %2 : vector<4xf32>
   return
@@ -72,7 +72,7 @@ func.func @transfer_read_1d_non_unit_stride(%A : memref<?x?xf32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %fm42 = arith.constant -42.0: f32
-  %vec = vector.transfer_read %B[%c2, %c1], %fm42 {in_bounds=[false]} : memref<4x3xf32, strided<[6, 2]>>, vector<3xf32>
+  %vec = vector.transfer_read %B[%c2, %c1], %fm42 {in_bounds=array<i1: false>} : memref<4x3xf32, strided<[6, 2]>>, vector<3xf32>
   vector.print %vec : vector<3xf32>
   return
 }
@@ -82,7 +82,7 @@ func.func @transfer_read_1d_broadcast(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
-      {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (0)>}
+      {in_bounds = array<i1: true>, permutation_map = affine_map<(d0, d1) -> (0)>}
       : memref<?x?xf32>, vector<9xf32>
   vector.print %f: vector<9xf32>
   return
@@ -93,7 +93,7 @@ func.func @transfer_read_1d_in_bounds(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
-      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true]}
+      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = array<i1: true>}
       : memref<?x?xf32>, vector<3xf32>
   vector.print %f: vector<3xf32>
   return
@@ -116,7 +116,7 @@ func.func @transfer_read_1d_out_of_bounds(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
-      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]}
+      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = array<i1: false>}
       : memref<?x?xf32>, vector<3xf32>
   vector.print %f: vector<3xf32>
   return
@@ -128,7 +128,7 @@ func.func @transfer_read_1d_mask_in_bounds(
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[1, 0, 1]> : vector<3xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
-      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true]}
+      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = array<i1: true>}
       : memref<?x?xf32>, vector<3xf32>
   vector.print %f: vector<3xf32>
   return

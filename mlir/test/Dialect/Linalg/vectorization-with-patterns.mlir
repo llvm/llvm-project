@@ -345,7 +345,7 @@ func.func @vectorize_affine_apply(%arg0: tensor<5xf32>, %arg3: index) -> tensor<
 // CHECK:   %[[ADDI_3:.*]] = arith.addi %[[ADDI_1]], %[[ADDI_2]] : vector<5xindex>
 // CHECK:   %[[ADDI_4:.*]] = arith.addi %[[ADDI_3]], %[[CST]] : vector<5xindex>
 // CHECK:   %[[CAST:.*]] = arith.index_cast %[[ADDI_4]] : vector<5xindex> to vector<5xi32>
-// CHECK:   vector.transfer_write %[[CAST]], %[[EMPTY]][%[[C0:.*]]] {in_bounds = [true]} : vector<5xi32>, tensor<5xi32>
+// CHECK:   vector.transfer_write %[[CAST]], %[[EMPTY]][%[[C0:.*]]] {in_bounds = array<i1: true>} : vector<5xi32>, tensor<5xi32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -704,10 +704,10 @@ module attributes {transform.with_named_sequence} {
 //     CHECK: func @generic_vectorize_broadcast_transpose
 // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:   %[[CF:.*]] = arith.constant 0.000000e+00 : f32
-//     CHECK:   %[[V0:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CF]] {in_bounds = [true, true, true, true], permutation_map = #[[$MAP0]]} : memref<4x4xf32>, vector<4x4x4x4xf32>
-//     CHECK:   %[[V1:.*]] = vector.transfer_read %{{.*}}[%[[C0]]], %[[CF]] {in_bounds = [true, true, true, true], permutation_map = #[[$MAP1]]} : memref<4xf32>, vector<4x4x4x4xf32>
-//     CHECK:   %[[V2:.*]] = vector.transfer_read %{{.*}}[%[[C0]]], %[[CF]] {in_bounds = [true, true, true, true], permutation_map = #[[$MAP2]]} : memref<4xf32>, vector<4x4x4x4xf32>
-//     CHECK:   %[[V3:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CF]] {in_bounds = [true, true, true, true], permutation_map = #[[$MAP3]]} : memref<4x4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[V0:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CF]] {in_bounds = array<i1: true, true, true, true>, permutation_map = #[[$MAP0]]} : memref<4x4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[V1:.*]] = vector.transfer_read %{{.*}}[%[[C0]]], %[[CF]] {in_bounds = array<i1: true, true, true, true>, permutation_map = #[[$MAP1]]} : memref<4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[V2:.*]] = vector.transfer_read %{{.*}}[%[[C0]]], %[[CF]] {in_bounds = array<i1: true, true, true, true>, permutation_map = #[[$MAP2]]} : memref<4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[V3:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CF]] {in_bounds = array<i1: true, true, true, true>, permutation_map = #[[$MAP3]]} : memref<4x4xf32>, vector<4x4x4x4xf32>
 //     CHECK:   %[[SUB:.*]] = arith.subf %[[V0]], %[[V1]] : vector<4x4x4x4xf32>
 //     CHECK:   %[[ADD0:.*]] = arith.addf %[[V2]], %[[SUB]] : vector<4x4x4x4xf32>
 //     CHECK:   %[[ADD1:.*]] = arith.addf %[[V3]], %[[ADD0]] : vector<4x4x4x4xf32>
@@ -758,9 +758,9 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0, d1) -> (0, d1, 0, d0)>
 // CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3, d0)>
 //       CHECK: func @vectorization_transpose
-//       CHECK: vector.transfer_read {{.*}}{in_bounds = [true, true, true, true], permutation_map = #[[MAP0]]} : memref<14x7xf32>, vector<7x14x8x16xf32>
-//       CHECK: vector.transfer_read {{.*}}{in_bounds = [true, true, true, true], permutation_map = #[[MAP1]]} : memref<16x14xf32>, vector<7x14x8x16xf32>
-//       CHECK: vector.transfer_read {{.*}}{in_bounds = [true, true, true, true], permutation_map = #[[MAP2]]} : memref<16x14x7x8xf32>, vector<7x14x8x16xf32>
+//       CHECK: vector.transfer_read {{.*}}{in_bounds = array<i1: true, true, true, true>, permutation_map = #[[MAP0]]} : memref<14x7xf32>, vector<7x14x8x16xf32>
+//       CHECK: vector.transfer_read {{.*}}{in_bounds = array<i1: true, true, true, true>, permutation_map = #[[MAP1]]} : memref<16x14xf32>, vector<7x14x8x16xf32>
+//       CHECK: vector.transfer_read {{.*}}{in_bounds = array<i1: true, true, true, true>, permutation_map = #[[MAP2]]} : memref<16x14x7x8xf32>, vector<7x14x8x16xf32>
 //       CHECK: arith.addf {{.*}} : vector<7x14x8x16xf32>
 //       CHECK: arith.addf {{.*}} : vector<7x14x8x16xf32>
 //       CHECK: vector.transfer_write {{.*}} : vector<7x14x8x16xf32>, memref<7x14x8x16xf32>
@@ -803,7 +803,7 @@ func.func @matmul_tensors(
   // convert it to a 2D contract.
   //       CHECK:   %[[MUL:.*]] = arith.mulf %[[V0]], %[[V1]] : vector<8x12x4xf32>
   //       CHECK:   %[[R:.*]] = vector.multi_reduction <add>, %[[MUL]], %[[V2]] [2] : vector<8x12x4xf32> to vector<8x12xf32>
-  //       CHECK:   %[[W:.*]] = vector.transfer_write %[[R]], %[[ARG2]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x12xf32>, tensor<8x12xf32>
+  //       CHECK:   %[[W:.*]] = vector.transfer_write %[[R]], %[[ARG2]][%[[C0]], %[[C0]]] {in_bounds = array<i1: true, true>} : vector<8x12xf32>, tensor<8x12xf32>
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<8x4xf32>, tensor<4x12xf32>)
                      outs(%arg2: tensor<8x12xf32>)
     -> tensor<8x12xf32>
@@ -830,8 +830,8 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[INIT:.*]] = tensor.empty() : tensor<2x3x4xf32>
 //   CHECK-DAG:   %[[VEC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<2x3x4xf32>
 //       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]]{{.*}} : vector<2x3x4xf32>, tensor<2x3x4xf32>
-//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, false, true]} : tensor<2x?x2xf32>, vector<2x3x2xf32>
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = [true, true, true]} : vector<2x3x2xf32>, tensor<2x3x4xf32>
+//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = array<i1: true, false, true>} : tensor<2x?x2xf32>, vector<2x3x2xf32>
+//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = array<i1: true, true, true>} : vector<2x3x2xf32>, tensor<2x3x4xf32>
 //       CHECK:   return %[[RESULT]]
 func.func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
   %0 = tensor.pad %arg0 low[0, 0, 2] high[0, 1, 0] {
@@ -860,9 +860,9 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //       CHECK:   %[[INIT:.*]] = tensor.empty() : tensor<2x6x4xf32>
 //       CHECK:   %[[VEC:.*]] =  vector.broadcast %[[PAD]] : f32 to vector<2x6x4xf32>
-//       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<2x6x4xf32>, tensor<2x6x4xf32>
-//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %{{.*}} {in_bounds = [true, true, true]} : tensor<2x5x2xf32>, vector<2x5x2xf32>
-//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = [true, true, true]} : vector<2x5x2xf32>, tensor<2x6x4xf32>
+//       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = array<i1: true, true, true>} : vector<2x6x4xf32>, tensor<2x6x4xf32>
+//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %{{.*}} {in_bounds = array<i1: true, true, true>} : tensor<2x5x2xf32>, vector<2x5x2xf32>
+//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = array<i1: true, true, true>} : vector<2x5x2xf32>, tensor<2x6x4xf32>
 //       CHECK:   return %[[WRITE]]
 func.func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tensor<2x6x4xf32> {
   %0 = tensor.pad %arg0 low[0, 0, 2] high[0, 1, 0] {
@@ -1061,7 +1061,7 @@ func.func private @make_vector() -> tensor<12x13xf32>
 //   CHECK-DAG:   %[[C5:.*]] = arith.constant 5.0
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> tensor<12x13xf32>
 //       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
-//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[VEC0]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<7x9xf32>, tensor<12x13xf32>
+//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[VEC0]][%[[C0]], %[[C0]]] {in_bounds = array<i1: true, true>} : vector<7x9xf32>, tensor<12x13xf32>
 //       CHECK:   return %[[WRITE]]
 func.func @pad_and_insert_slice_source(
     %arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
@@ -1126,8 +1126,8 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   %[[FILL:.*]] = tensor.generate
 //       CHECK:     %[[RES:.*]] = arith.mulf
 //       CHECK:     tensor.yield %[[RES]] : f32
-//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %{{.*}} {in_bounds = [true, true]} : tensor<5x6xf32>, vector<5x6xf32>
-//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C3]], %[[C4]]] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<12x13xf32>
+//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %{{.*}} {in_bounds = array<i1: true, true>} : tensor<5x6xf32>, vector<5x6xf32>
+//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C3]], %[[C4]]] {in_bounds = array<i1: true, true>} : vector<5x6xf32>, tensor<12x13xf32>
 //       CHECK:   return %[[WRITE]]
 func.func @pad_tensor_non_const_pad_value(%arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
   %c0 = arith.constant 0 : index
@@ -1161,7 +1161,7 @@ func.func @sum_exp(%input: tensor<4x16x8xf32>, %output: tensor<4x16xf32>)
   -> tensor<4x16xf32>
 {
   // CHECK: vector.transfer_read {{.*}} : tensor<4x16x8xf32>, vector<4x16x8xf32>
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<4x16xf32>, vector<4x16xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true>} : tensor<4x16xf32>, vector<4x16xf32>
   // CHECK: math.exp {{.*}} : vector<4x16x8xf32>
   // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [2] : vector<4x16x8xf32> to vector<4x16xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4x16xf32>, tensor<4x16xf32>
@@ -1201,14 +1201,14 @@ module attributes {transform.with_named_sequence} {
 func.func @sum_exp_2(%input: tensor<3x2xf32>, %input_2: tensor<5x4xf32>, %output: tensor<5x2xf32>)
   -> tensor<5x2xf32>
 {
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true, true, true], permutation_map = #[[$M1]]} : tensor<3x2xf32>, vector<2x3x4x5xf32>
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true, true, true], permutation_map = #[[$M2]]} : tensor<5x4xf32>, vector<2x3x4x5xf32>
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true], permutation_map = #[[$M3]]} : tensor<5x2xf32>, vector<2x5xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true, true, true>, permutation_map = #[[$M1]]} : tensor<3x2xf32>, vector<2x3x4x5xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true, true, true>, permutation_map = #[[$M2]]} : tensor<5x4xf32>, vector<2x3x4x5xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true>, permutation_map = #[[$M3]]} : tensor<5x2xf32>, vector<2x5xf32>
   // CHECK: math.exp {{.*}} : vector<2x3x4x5xf32>
   // CHECK: math.exp {{.*}} : vector<2x3x4x5xf32>
   // CHECK: addf {{.*}} : vector<2x3x4x5xf32>
   // CHECK: vector.multi_reduction <add>, {{.*}}, %{{.*}}  [1, 2] : vector<2x3x4x5xf32> to vector<2x5xf32>
-  // CHECK: vector.transfer_write {{.*}} {in_bounds = [true, true], permutation_map = #[[$M3]]} : vector<2x5xf32>, tensor<5x2xf32>
+  // CHECK: vector.transfer_write {{.*}} {in_bounds = array<i1: true, true>, permutation_map = #[[$M3]]} : vector<2x5xf32>, tensor<5x2xf32>
   // CHECK: return {{.*}} : tensor<5x2xf32>
   %0 = linalg.generic {
       indexing_maps = [
@@ -1502,10 +1502,10 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL:   func @explicit_broadcast(
 func.func @explicit_broadcast(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> tensor<4x4xf32> {
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<4x4xf32>, vector<4x4xf32>
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true], permutation_map = #[[$M5]]} : tensor<4x1xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true>} : tensor<4x4xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true>, permutation_map = #[[$M5]]} : tensor<4x1xf32>, vector<4x4xf32>
   // CHECK: subf {{.*}} : vector<4x4xf32>
-  // CHECK: vector.transfer_write {{.*}} {in_bounds = [true, true]} : vector<4x4xf32>, tensor<4x4xf32>
+  // CHECK: vector.transfer_write {{.*}} {in_bounds = array<i1: true, true>} : vector<4x4xf32>, tensor<4x4xf32>
   %c0 = arith.constant 0.0 : f32
   %init = tensor.empty() : tensor<4x4xf32>
   %fill = linalg.fill ins(%c0 : f32) outs(%init : tensor<4x4xf32>) -> tensor<4x4xf32>
@@ -1538,12 +1538,12 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL:   func @fused_broadcast_red_2d
 func.func @fused_broadcast_red_2d(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> tensor<4xf32> {
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<4x4xf32>, vector<4x4xf32>
-  // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true], permutation_map = #[[$M6]]} : tensor<4x1xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true>} : tensor<4x4xf32>, vector<4x4xf32>
+  // CHECK: vector.transfer_read {{.*}} {in_bounds = array<i1: true, true>, permutation_map = #[[$M6]]} : tensor<4x1xf32>, vector<4x4xf32>
   // CHECK: subf {{.*}} : vector<4x4xf32>
   // CHECK: math.exp {{.*}} : vector<4x4xf32>
   // CHECK: vector.multi_reduction <add>, {{.*}}, {{.*}} : vector<4x4xf32> to vector<4xf32>
-  // CHECK: vector.transfer_write {{.*}} {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
+  // CHECK: vector.transfer_write {{.*}} {in_bounds = array<i1: true>} : vector<4xf32>, tensor<4xf32>
   %c0 = arith.constant 0.0 : f32
   %init = tensor.empty() : tensor<4xf32>
   %fill = linalg.fill ins(%c0 : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
@@ -1958,9 +1958,9 @@ module attributes {transform.with_named_sequence} {
 }
 
 // CHECK-LABEL: func @multi_output_generic_different_perm_maps
-//       CHECK:     %[[VAL_5:.*]] = vector.transfer_read %{{.*}} {in_bounds = [true, true]} : tensor<4x1xf32>, vector<4x1xf32>
+//       CHECK:     %[[VAL_5:.*]] = vector.transfer_read %{{.*}} {in_bounds = array<i1: true, true>} : tensor<4x1xf32>, vector<4x1xf32>
 //       CHECK:     %[[VAL_6:.*]] = arith.addf %[[VAL_5]], %[[VAL_5]] : vector<4x1xf32>
 //       CHECK:     %[[VAL_7:.*]] = vector.transpose %[[VAL_6]], [1, 0] : vector<4x1xf32> to vector<1x4xf32>
 //       CHECK:     %[[VAL_8:.*]] = vector.transpose %[[VAL_7]], [1, 0] : vector<1x4xf32> to vector<4x1xf32>
-//       CHECK:     vector.transfer_write %[[VAL_8]], %{{.*}} {in_bounds = [true, true]} : vector<4x1xf32>, tensor<4x1xf32>
-//       CHECK:     vector.transfer_write %[[VAL_7]], %{{.*}} {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
+//       CHECK:     vector.transfer_write %[[VAL_8]], %{{.*}} {in_bounds = array<i1: true, true>} : vector<4x1xf32>, tensor<4x1xf32>
+//       CHECK:     vector.transfer_write %[[VAL_7]], %{{.*}} {in_bounds = array<i1: true, true>} : vector<1x4xf32>, tensor<1x4xf32>

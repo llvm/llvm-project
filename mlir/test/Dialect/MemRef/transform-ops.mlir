@@ -314,7 +314,7 @@ func.func @dead_alloc() {
     memref<8x4xf32, affine_map<(d0, d1) -> (d0 * 64 + d1)>, 3>
   %c0 = arith.constant 0 : index
   %cst_0 = arith.constant dense<0.000000e+00> : vector<1x4xf32>
-  vector.transfer_write %cst_0, %1[%c0, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %cst_0, %1[%c0, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<8x4xf32, affine_map<(d0, d1) -> (d0 * 64 + d1)>, 3>
   return
 }
@@ -339,8 +339,8 @@ func.func @store_to_load(%arg: vector<4xf32>) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %cst_1 = arith.constant 0.000000e+00 : f32
   %alloc = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  vector.transfer_write %arg, %alloc[%c0] {in_bounds = [true]} : vector<4xf32>, memref<64xf32>
-  %r = vector.transfer_read %alloc[%c0], %cst_1 {in_bounds = [true]} : memref<64xf32>, vector<4xf32>
+  vector.transfer_write %arg, %alloc[%c0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<64xf32>
+  %r = vector.transfer_read %alloc[%c0], %cst_1 {in_bounds = array<i1: true>} : memref<64xf32>, vector<4xf32>
   return %r : vector<4xf32>
 }
 

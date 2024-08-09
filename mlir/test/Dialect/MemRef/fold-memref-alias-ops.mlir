@@ -102,7 +102,7 @@ func.func @fold_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : in
   %f1 = arith.constant 1.0 : f32
 
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] : memref<12x32xf32> to memref<4x4xf32, strided<[?, ?], offset: ?>>
-  %1 = vector.transfer_read %0[%arg3, %arg4], %f1 {in_bounds = [true]} : memref<4x4xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
+  %1 = vector.transfer_read %0[%arg3, %arg4], %f1 {in_bounds = array<i1: true>} : memref<4x4xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
   return %1 : vector<4xf32>
 }
 //      CHECK: func @fold_subview_with_transfer_read
@@ -116,7 +116,7 @@ func.func @fold_static_stride_subview_with_transfer_write_0d(
     %v : vector<f32>) {
   %f1 = arith.constant 1.0 : f32
   %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
-  vector.transfer_write %v, %0[] {in_bounds = []} : vector<f32>, memref<f32, strided<[], offset: ?>>
+  vector.transfer_write %v, %0[] {in_bounds = array<i1>} : vector<f32>, memref<f32, strided<[], offset: ?>>
   return
 }
 //      CHECK: func @fold_static_stride_subview_with_transfer_write_0d
@@ -132,7 +132,7 @@ func.func @fold_static_stride_subview_with_transfer_write_0d(
 func.func @fold_static_stride_subview_with_transfer_write(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5: index, %arg6 : index, %arg7 : vector<4xf32>) {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] :
     memref<12x32xf32> to memref<4x4xf32, strided<[?, ?], offset: ?>>
-  vector.transfer_write %arg7, %0[%arg3, %arg4] {in_bounds = [true]} : vector<4xf32>, memref<4x4xf32, strided<[?, ?], offset: ?>>
+  vector.transfer_write %arg7, %0[%arg3, %arg4] {in_bounds = array<i1: true>} : vector<4xf32>, memref<4x4xf32, strided<[?, ?], offset: ?>>
   return
 }
 //      CHECK: func @fold_static_stride_subview_with_transfer_write
@@ -186,7 +186,7 @@ func.func @fold_vector_transfer_read_with_rank_reduced_subview(
   %0 = memref.subview %arg0[0, %arg1, %arg2] [1, %arg3, %arg4] [1, 1, 1]
       : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to
         memref<?x?xf32, strided<[?, ?], offset: ?>>
-  %1 = vector.transfer_read %0[%arg5, %arg6], %cst {in_bounds = [true]}
+  %1 = vector.transfer_read %0[%arg5, %arg6], %cst {in_bounds = array<i1: true>}
       : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
   return %1 : vector<4xf32>
 }
@@ -214,7 +214,7 @@ func.func @fold_vector_transfer_write_with_rank_reduced_subview(
   %0 = memref.subview %arg0[0, %arg2, %arg3] [1, %arg4, %arg5] [1, 1, 1]
       : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to
         memref<?x?xf32, strided<[?, ?], offset: ?>>
-  vector.transfer_write %arg1, %0[%arg6, %arg7] {in_bounds = [true]}
+  vector.transfer_write %arg1, %0[%arg6, %arg7] {in_bounds = array<i1: true>}
       : vector<4xf32>, memref<?x?xf32, strided<[?, ?], offset: ?>>
   return
 }
@@ -231,7 +231,7 @@ func.func @fold_vector_transfer_write_with_rank_reduced_subview(
 //   CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
 //   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
-//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[IDX1]]] {in_bounds = [true]} : vector<4xf32>, memref<?x?x?xf32
+//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[IDX1]]] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?x?xf32
 
 // -----
 
@@ -243,7 +243,7 @@ func.func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
   %0 = memref.subview %arg0[%arg2, %arg3, 0] [%arg4, %arg5, 1] [1, 1, 1]
       : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to
         memref<?x?xf32, strided<[?, ?], offset: ?>>
-  vector.transfer_write %arg1, %0[%arg6, %arg7] {in_bounds = [true]}
+  vector.transfer_write %arg1, %0[%arg6, %arg7] {in_bounds = array<i1: true>}
       : vector<4xf32>, memref<?x?xf32, strided<[?, ?], offset: ?>>
   return
 }
@@ -262,7 +262,7 @@ func.func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
 //   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
 //   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
 //   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[IDX0]], %[[IDX1]], %[[C0]]]
-//  CHECK-SAME:    {in_bounds = [true], permutation_map = #[[MAP2]]} : vector<4xf32>, memref<?x?x?xf32
+//  CHECK-SAME:    {in_bounds = array<i1: true>, permutation_map = #[[MAP2]]} : vector<4xf32>, memref<?x?x?xf32
 
 // -----
 
@@ -274,7 +274,7 @@ func.func @fold_masked_vector_transfer_read_with_subview(
   %0 = memref.subview %arg0[%arg1, %arg2] [%arg3, %arg4] [1, 1]
       : memref<?x?xf32, strided<[?, ?], offset: ?>> to
         memref<?x?xf32, strided<[?, ?], offset: ?>>
-  %1 = vector.transfer_read %0[%arg5, %arg6], %cst, %mask {in_bounds = [true]}
+  %1 = vector.transfer_read %0[%arg5, %arg6], %cst, %mask {in_bounds = array<i1: true>}
       : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
   return %1 : vector<4xf32>
 }
@@ -303,7 +303,7 @@ func.func @fold_masked_vector_transfer_read_with_rank_reducing_subview(
       : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>> to
         memref<?x?xf32, strided<[?, ?], offset: ?>>
   %1 = vector.transfer_read %0[%arg5, %arg6], %cst, %mask {
-         permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]}
+         permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: true, true>}
       : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<3x4xf32>
   return %1 : vector<3x4xf32>
 }
@@ -334,7 +334,7 @@ func.func @fold_masked_vector_transfer_write_with_subview(
   %0 = memref.subview %arg0[%arg2, %arg3] [%arg4, %arg5] [1, 1]
       : memref<?x?xf32, strided<[?, ?], offset: ?>> to
         memref<?x?xf32, strided<[?, ?], offset: ?>>
-  vector.transfer_write %arg1, %0[%arg6, %arg7], %mask {in_bounds = [true]}
+  vector.transfer_write %arg1, %0[%arg6, %arg7], %mask {in_bounds = array<i1: true>}
       : vector<4xf32>, memref<?x?xf32, strided<[?, ?], offset: ?>>
   return
 }
@@ -351,7 +351,7 @@ func.func @fold_masked_vector_transfer_write_with_subview(
 //  CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]: vector<4xi1>
 //   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
 //   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
-//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[IDX0]], %[[IDX1]]], %[[MASK]] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32
+//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[IDX0]], %[[IDX1]]], %[[MASK]] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32
 
 // -----
 
@@ -364,7 +364,7 @@ func.func @fold_masked_vector_transfer_write_with_rank_reducing_subview(
       : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>> to
         memref<?x?xf32, strided<[?, ?], offset: ?>>
   vector.transfer_write %arg1, %0[%arg6, %arg7], %mask {
-        permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]}
+        permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = array<i1: true, true>}
       : vector<3x4xf32>, memref<?x?xf32, strided<[?, ?], offset: ?>>
   return
 }
@@ -383,7 +383,7 @@ func.func @fold_masked_vector_transfer_write_with_rank_reducing_subview(
 //   CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP0]]()[%[[ARG2]], %[[ARG6]]]
 //   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP0]]()[%[[ARG3]], %[[ARG7]]]
-//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[C0]], %[[IDX1]]], %[[ARG8]] {in_bounds = [true, true], permutation_map = #[[MAP1]]} : vector<3x4xf32>, memref<?x?x?x?xf32
+//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[C0]], %[[IDX1]]], %[[ARG8]] {in_bounds = array<i1: true, true>, permutation_map = #[[MAP1]]} : vector<3x4xf32>, memref<?x?x?x?xf32
 
 // -----
 

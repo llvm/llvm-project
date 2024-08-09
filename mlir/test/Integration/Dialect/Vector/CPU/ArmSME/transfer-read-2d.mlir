@@ -40,7 +40,7 @@ func.func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: in
   %pad = arith.constant 0.0 : f32
   %mask = vector.create_mask %c2, %c3 : vector<[4]x[4]xi1>
   %0 = vector.transfer_read %A[%base1, %base2], %pad, %mask
-    {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+    {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
 
   vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
@@ -71,7 +71,7 @@ func.func @transfer_read_2d_mask_non_zero_pad(%A : memref<?x?xf32>, %base1: inde
   %pad = arith.constant -42.0 : f32
   %mask = vector.create_mask %c2, %c3 : vector<[4]x[4]xi1>
   %0 = vector.transfer_read %A[%base1, %base2], %pad, %mask
-    {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+    {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[4]x[4]xf32>
 
   vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>

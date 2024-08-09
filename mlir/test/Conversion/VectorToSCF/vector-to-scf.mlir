@@ -133,7 +133,7 @@ func.func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
     affine.for %i1 = 0 to %N {
       affine.for %i2 = 0 to %O {
         affine.for %i3 = 0 to %P step 5 {
-          %f = vector.transfer_read %A[%i0, %i1, %i2, %i3], %f0 {in_bounds = [false, true, false], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, 0, d0)>} : memref<?x?x?x?xf32>, vector<5x4x3xf32>
+          %f = vector.transfer_read %A[%i0, %i1, %i2, %i3], %f0 {in_bounds = array<i1: false, true, false>, permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, 0, d0)>} : memref<?x?x?x?xf32>, vector<5x4x3xf32>
           // Add a dummy use to prevent dead code elimination from removing
           // transfer read ops.
           "dummy_use"(%f) : (vector<5x4x3xf32>) -> ()
@@ -361,17 +361,17 @@ func.func @transfer_write_progressive_inbounds(%A : memref<?x?xf32>, %base: inde
   // CHECK-NEXT: scf.for %[[I:.*]] = %[[C0]] to %[[C3]]
   // CHECK-NEXT:   %[[add:.*]] = affine.apply #[[$MAP0]](%[[I]])[%[[base]]]
   // CHECK-NEXT:   %[[vec_1d:.*]] = memref.load %[[vmemref]][%[[I]]] : memref<3xvector<15xf32>>
-  // CHECK-NEXT:   vector.transfer_write %[[vec_1d]], %[[A]][%[[add]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
+  // CHECK-NEXT:   vector.transfer_write %[[vec_1d]], %[[A]][%[[add]], %[[base]]] {in_bounds = array<i1: true>} : vector<15xf32>, memref<?x?xf32>
 
   // FULL-UNROLL: %[[VEC0:.*]] = vector.extract %[[vec]][0] : vector<15xf32> from vector<3x15xf32>
-  // FULL-UNROLL: vector.transfer_write %[[VEC0]], %[[A]][%[[base]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
+  // FULL-UNROLL: vector.transfer_write %[[VEC0]], %[[A]][%[[base]], %[[base]]] {in_bounds = array<i1: true>} : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: %[[I1:.*]] = affine.apply #[[$MAP1]]()[%[[base]]]
   // FULL-UNROLL: %[[VEC1:.*]] = vector.extract %[[vec]][1] : vector<15xf32> from vector<3x15xf32>
-  // FULL-UNROLL: vector.transfer_write %2, %[[A]][%[[I1]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
+  // FULL-UNROLL: vector.transfer_write %2, %[[A]][%[[I1]], %[[base]]] {in_bounds = array<i1: true>} : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: %[[I2:.*]] = affine.apply #[[$MAP2]]()[%[[base]]]
   // FULL-UNROLL: %[[VEC2:.*]] = vector.extract %[[vec]][2] : vector<15xf32> from vector<3x15xf32>
-  // FULL-UNROLL: vector.transfer_write %[[VEC2:.*]], %[[A]][%[[I2]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
-  vector.transfer_write %vec, %A[%base, %base] {in_bounds = [true, true]} :
+  // FULL-UNROLL: vector.transfer_write %[[VEC2:.*]], %[[A]][%[[I2]], %[[base]]] {in_bounds = array<i1: true>} : vector<15xf32>, memref<?x?xf32>
+  vector.transfer_write %vec, %A[%base, %base] {in_bounds = array<i1: true, true>} :
     vector<3x15xf32>, memref<?x?xf32>
   return
 }
@@ -507,7 +507,7 @@ func.func @transfer_read_with_tensor(%arg: tensor<f32>) -> vector<1xf32> {
     // CHECK-NEXT: %[[RESULT:.*]] = vector.broadcast %[[EXTRACTED]] : f32 to vector<1xf32>
     // CHECK-NEXT: return %[[RESULT]] : vector<1xf32>
     %f0 = arith.constant 0.0 : f32
-    %0 = vector.transfer_read %arg[], %f0 {in_bounds = [true], permutation_map = affine_map<()->(0)>} :
+    %0 = vector.transfer_read %arg[], %f0 {in_bounds = array<i1: true>, permutation_map = affine_map<()->(0)>} :
       tensor<f32>, vector<1xf32>
     return %0: vector<1xf32>
 }
@@ -528,7 +528,7 @@ func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?], offset: ?>>
   %7 = llvm.mlir.undef : vector<[16]xf32>
   %8 = llvm.insertelement %arg1, %7[%0 : i32] : vector<[16]xf32>
   %9 = llvm.shufflevector %8, %7 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[16]xf32>
-  vector.transfer_write %9, %arg0[%c0], %6 {in_bounds = [true]} : vector<[16]xf32>, memref<?xf32, strided<[?], offset: ?>>
+  vector.transfer_write %9, %arg0[%c0], %6 {in_bounds = array<i1: true>} : vector<[16]xf32>, memref<?xf32, strided<[?], offset: ?>>
   return
 }
 
@@ -645,7 +645,7 @@ func.func @transfer_read_array_of_scalable(%arg0: memref<3x?xf32>) -> vector<3x[
   %cst = arith.constant 0.000000e+00 : f32
   %dim = memref.dim %arg0, %c1 : memref<3x?xf32>
   %mask = vector.create_mask %c1, %dim : vector<3x[4]xi1>
-  %read = vector.transfer_read %arg0[%c0, %c0], %cst, %mask {in_bounds = [true, true]} : memref<3x?xf32>, vector<3x[4]xf32>
+  %read = vector.transfer_read %arg0[%c0, %c0], %cst, %mask {in_bounds = array<i1: true, true>} : memref<3x?xf32>, vector<3x[4]xf32>
   return %read : vector<3x[4]xf32>
 }
 // CHECK-LABEL:   func.func @transfer_read_array_of_scalable(
@@ -663,7 +663,7 @@ func.func @transfer_read_array_of_scalable(%arg0: memref<3x?xf32>) -> vector<3x[
 // CHECK:           %[[UNPACK_MASK:.*]] = vector.type_cast %[[ALLOCA_MASK]] : memref<vector<3x[4]xi1>> to memref<3xvector<[4]xi1>>
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
 // CHECK:             %[[MASK_SLICE:.*]] = memref.load %[[UNPACK_MASK]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xi1>>
-// CHECK:             %[[READ_SLICE:.*]] = vector.transfer_read %[[ARG]]{{\[}}%[[VAL_11]], %[[C0]]], %[[PADDING]], %[[MASK_SLICE]] {in_bounds = [true]} : memref<3x?xf32>, vector<[4]xf32>
+// CHECK:             %[[READ_SLICE:.*]] = vector.transfer_read %[[ARG]]{{\[}}%[[VAL_11]], %[[C0]]], %[[PADDING]], %[[MASK_SLICE]] {in_bounds = array<i1: true>} : memref<3x?xf32>, vector<[4]xf32>
 // CHECK:             memref.store %[[READ_SLICE]], %[[UNPACK_VECTOR]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xf32>>
 // CHECK:           }
 // CHECK:           %[[RESULT:.*]] = memref.load %[[ALLOCA_VEC]][] : memref<vector<3x[4]xf32>>
@@ -678,7 +678,7 @@ func.func @transfer_write_array_of_scalable(%vec: vector<3x[4]xf32>, %arg0: memr
   %cst = arith.constant 0.000000e+00 : f32
   %dim = memref.dim %arg0, %c1 : memref<3x?xf32>
   %mask = vector.create_mask %c1, %dim : vector<3x[4]xi1>
-  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = [true, true]} : vector<3x[4]xf32>, memref<3x?xf32>
+  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<3x[4]xf32>, memref<3x?xf32>
   return
 }
 // CHECK-LABEL:   func.func @transfer_write_array_of_scalable(
@@ -698,7 +698,7 @@ func.func @transfer_write_array_of_scalable(%vec: vector<3x[4]xf32>, %arg0: memr
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
 // CHECK:             %[[MASK_SLICE:.*]] = memref.load %[[UNPACK_VECTOR]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xf32>>
 // CHECK:             %[[VECTOR_SLICE:.*]] = memref.load %[[UNPACK_MASK]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xi1>>
-// CHECK:             vector.transfer_write %[[MASK_SLICE]], %[[MEMREF]]{{\[}}%[[VAL_11]], %[[C0]]], %[[VECTOR_SLICE]] {in_bounds = [true]} : vector<[4]xf32>, memref<3x?xf32>
+// CHECK:             vector.transfer_write %[[MASK_SLICE]], %[[MEMREF]]{{\[}}%[[VAL_11]], %[[C0]]], %[[VECTOR_SLICE]] {in_bounds = array<i1: true>} : vector<[4]xf32>, memref<3x?xf32>
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
@@ -714,13 +714,13 @@ func.func @cannot_lower_transfer_write_with_leading_scalable(%vec: vector<[4]x4x
   %cst = arith.constant 0.000000e+00 : f32
   %dim = memref.dim %arg0, %c0 : memref<?x4xf32>
   %mask = vector.create_mask %dim, %c4 : vector<[4]x4xi1>
-  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[4]x4xf32>, memref<?x4xf32>
+  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[4]x4xf32>, memref<?x4xf32>
   return
 }
 // CHECK-LABEL:   func.func @cannot_lower_transfer_write_with_leading_scalable(
 // CHECK-SAME:                                                                 %[[VEC:.*]]: vector<[4]x4xf32>,
 // CHECK-SAME:                                                                 %[[MEMREF:.*]]: memref<?x4xf32>)
-// CHECK: vector.transfer_write %[[VEC]], %[[MEMREF]][%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true]} : vector<[4]x4xf32>, memref<?x4xf32>
+// CHECK: vector.transfer_write %[[VEC]], %[[MEMREF]][%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = array<i1: true, true>} : vector<[4]x4xf32>, memref<?x4xf32>
 
 // -----
 
@@ -731,12 +731,12 @@ func.func @cannot_lower_transfer_read_with_leading_scalable(%arg0: memref<?x4xf3
   %cst = arith.constant 0.000000e+00 : f32
   %dim = memref.dim %arg0, %c0 : memref<?x4xf32>
   %mask = vector.create_mask %dim, %c4 : vector<[4]x4xi1>
-  %read = vector.transfer_read %arg0[%c0, %c0], %cst, %mask {in_bounds = [true, true]} : memref<?x4xf32>, vector<[4]x4xf32>
+  %read = vector.transfer_read %arg0[%c0, %c0], %cst, %mask {in_bounds = array<i1: true, true>} : memref<?x4xf32>, vector<[4]x4xf32>
   return %read : vector<[4]x4xf32>
 }
 // CHECK-LABEL:   func.func @cannot_lower_transfer_read_with_leading_scalable(
 // CHECK-SAME:                                                                %[[MEMREF:.*]]: memref<?x4xf32>)
-// CHECK: %{{.*}} = vector.transfer_read %[[MEMREF]][%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} {in_bounds = [true, true]} : memref<?x4xf32>, vector<[4]x4xf32>
+// CHECK: %{{.*}} = vector.transfer_read %[[MEMREF]][%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} {in_bounds = array<i1: true, true>} : memref<?x4xf32>, vector<[4]x4xf32>
 
 //  -----
 
@@ -746,7 +746,7 @@ func.func @cannot_lower_transfer_read_with_leading_scalable(%arg0: memref<?x4xf3
 func.func @does_not_crash_on_unpack_one_dim(%subview:  memref<1x1x1x1xi32>, %mask: vector<1x1xi1>) -> vector<1x1x1x1xi32> {
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
-  %3 = vector.transfer_read %subview[%c0, %c0, %c0, %c0], %c0_i32, %mask {in_bounds = [false, true, true, false], permutation_map = #map1}
+  %3 = vector.transfer_read %subview[%c0, %c0, %c0, %c0], %c0_i32, %mask {in_bounds = array<i1: false, true, true, false>, permutation_map = #map1}
           : memref<1x1x1x1xi32>, vector<1x1x1x1xi32>
   return %3 : vector<1x1x1x1xi32>
 }
@@ -767,7 +767,7 @@ func.func @add_arrays_of_scalable_vectors(%a: memref<1x2x?xf32>, %b: memref<1x2x
   %cst = arith.constant 0.000000e+00 : f32
   %dim_a = memref.dim %a, %c2 : memref<1x2x?xf32>
   %mask_a = vector.create_mask %c2, %c3, %dim_a : vector<1x2x[4]xi1>
-  %vector_a = vector.transfer_read %a[%c0, %c0, %c0], %cst, %mask_a {in_bounds = [true, true, true]} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
+  %vector_a = vector.transfer_read %a[%c0, %c0, %c0], %cst, %mask_a {in_bounds = array<i1: true, true, true>} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
   return %vector_a : vector<1x2x[4]xf32>
 }
 // CHECK-LABEL: func.func @add_arrays_of_scalable_vectors
@@ -783,7 +783,7 @@ func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%vec: vector
   // FULL-UNROLL: vector.transfer_write {{.*}} : vector<[4]x[4]xf32>, memref<?x?xf32>
   // FULL-UNROLL-NOT: vector.extract
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %memref[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  vector.transfer_write %vec, %memref[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[4]x[4]xf32>, memref<?x?xf32>
   return
 }
 

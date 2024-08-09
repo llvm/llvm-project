@@ -46,7 +46,7 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   // CHECK-SAME:     memref<?x8xf32>, index, index
   //      CHECK: }
   //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
-  // CHECK-SAME:   {in_bounds = [true, true]} : memref<?x8xf32>, vector<4x8xf32>
+  // CHECK-SAME:   {in_bounds = array<i1: true, true>} : memref<?x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>
 
   // CHECK: return %[[res]] : vector<4x8xf32>
@@ -98,7 +98,7 @@ func.func @split_vector_transfer_read_strided_2d(
   //      CHECK:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // CHECK-SAME:     memref<?x8xf32, strided<[?, 1], offset: ?>>, index, index
   //      CHECK: }
-  //      CHECK: %[[res:.*]] = vector.transfer_read {{.*}} {in_bounds = [true, true]} :
+  //      CHECK: %[[res:.*]] = vector.transfer_read {{.*}} {in_bounds = array<i1: true, true>} :
   // CHECK-SAME:   memref<?x8xf32, strided<[?, 1], offset: ?>>, vector<4x8xf32>
   %1 = vector.transfer_read %A[%i, %j], %f0 :
     memref<7x8xf32, strided<[?, 1], offset: ?>>, vector<4x8xf32>
@@ -154,7 +154,7 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 // CHECK:           }
 // CHECK:           vector.transfer_write %[[VEC]],
 // CHECK-SAME:          %[[IN_BOUND_DEST:.*]]#0[%[[IN_BOUND_DEST]]#1, %[[IN_BOUND_DEST]]#2]
-// CHECK-SAME:          {in_bounds = [true, true]} : vector<4x8xf32>, memref<?x8xf32>
+// CHECK-SAME:          {in_bounds = array<i1: true, true>} : vector<4x8xf32>, memref<?x8xf32>
 // CHECK:           %[[OUT_BOUNDS:.*]] = arith.xori %[[IN_BOUNDS]], %[[CT]] : i1
 // CHECK:           scf.if %[[OUT_BOUNDS]] {
 // CHECK:             %[[VAL_19:.*]] = memref.dim %[[DEST]], %[[C0]] : memref<?x8xf32>
@@ -225,7 +225,7 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK:           vector.transfer_write %[[VEC]],
 // CHECK-SAME:          %[[IN_BOUND_DEST:.*]]#0
 // CHECK-SAME:          [%[[IN_BOUND_DEST]]#1, %[[IN_BOUND_DEST]]#2]
-// CHECK-SAME:          {in_bounds = [true, true]}
+// CHECK-SAME:          {in_bounds = array<i1: true, true>}
 // CHECK-SAME:          : vector<4x8xf32>, memref<?x8xf32, strided<[?, 1], offset: ?>>
 // CHECK:           %[[OUT_BOUNDS:.*]] = arith.xori %[[IN_BOUNDS]], %[[CT]] : i1
 // CHECK:           scf.if %[[OUT_BOUNDS]] {

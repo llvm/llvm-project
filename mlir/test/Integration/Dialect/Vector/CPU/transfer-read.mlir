@@ -28,7 +28,7 @@ func.func @transfer_read_mask_1d(%A : memref<?xf32>, %base: index) {
 func.func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base], %fm42
-      {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} :
+      {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = array<i1: true>} :
     memref<?xf32>, vector<4xf32>
   vector.print %f: vector<4xf32>
   return
@@ -37,7 +37,7 @@ func.func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
 func.func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
   %fm42 = arith.constant -42.0: f32
   %m = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
-  %f = vector.transfer_read %A[%base], %fm42, %m {in_bounds = [true]}
+  %f = vector.transfer_read %A[%base], %fm42, %m {in_bounds = array<i1: true>}
       : memref<?xf32>, vector<4xf32>
   vector.print %f: vector<4xf32>
   return

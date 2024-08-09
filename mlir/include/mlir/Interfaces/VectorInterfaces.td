@@ -98,7 +98,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         dimension whether it is in-bounds or not. (Broadcast dimensions are
         always in-bounds).
       }],
-      /*retTy=*/"::mlir::ArrayAttr",
+      /*retTy=*/"::mlir::ArrayRef<bool>",
       /*methodName=*/"getInBounds",
       /*args=*/(ins)
     >,
@@ -241,7 +241,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       if ($_op.isBroadcastDim(dim))
         return true;
       auto inBounds = $_op.getInBounds();
-      return ::llvm::cast<::mlir::BoolAttr>(inBounds[dim]).getValue();
+      return inBounds[dim];
     }
 
     /// Helper function to account for the fact that `permutationMap` results

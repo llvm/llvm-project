@@ -672,7 +672,7 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 //       CHECK:       memref.subview %{{.*}}[%[[THX]]]
       %1 = affine.apply #map1(%arg2)
       %subview_0 = memref.subview %subview[%1] [32] [1] : memref<128xf32, strided<[1], offset: ?>> to memref<32xf32, strided<[1], offset: ?>>
-      vector.transfer_write %cst, %subview_0[%c0] {in_bounds = [true]} : vector<32xf32>, memref<32xf32, strided<[1], offset: ?>>
+      vector.transfer_write %cst, %subview_0[%c0] {in_bounds = array<i1: true>} : vector<32xf32>, memref<32xf32, strided<[1], offset: ?>>
       memref.copy %subview_0, %subview_0 : memref<32xf32, strided<[1], offset: ?>> to memref<32xf32, strided<[1], offset: ?>>
     } {mapping = [#gpu.warp<linear_dim_0>]}
     memref.copy %subview, %subview : memref<128xf32, strided<[1], offset: ?>> to memref<128xf32, strided<[1], offset: ?>>

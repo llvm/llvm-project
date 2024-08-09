@@ -39,10 +39,10 @@ func.func @gpu_func(%arg1: memref<32xf32>, %arg2: memref<32xf32>) {
   in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1)
   threads(%arg6, %arg7, %arg8) in (%arg12 = %c32, %arg13 = %c1, %arg14 = %c1) {
     vector.warp_execute_on_lane_0(%arg6)[32] {
-      %0 = vector.transfer_read %arg1[%c0], %cst {in_bounds = [true]} : memref<32xf32>, vector<32xf32>
+      %0 = vector.transfer_read %arg1[%c0], %cst {in_bounds = array<i1: true>} : memref<32xf32>, vector<32xf32>
       %1 = vector.transfer_read %arg2[%c0], %cst {in_bound = [true]} : memref<32xf32>, vector<32xf32>
       %2 = arith.addf %0, %1 : vector<32xf32>
-      vector.transfer_write %2, %arg1[%c0] {in_bounds = [true]} : vector<32xf32>, memref<32xf32>
+      vector.transfer_write %2, %arg1[%c0] {in_bounds = array<i1: true>} : vector<32xf32>, memref<32xf32>
     }
     gpu.terminator
   }
@@ -60,8 +60,8 @@ func.func @main() {
     24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0]> : vector<32xf32>
   %cst_2 = arith.constant dense<2.000000e+00> : vector<32xf32>
   // init the buffers.
-  vector.transfer_write %cst_1, %0[%c0] {in_bounds = [true]} : vector<32xf32>, memref<32xf32>
-  vector.transfer_write %cst_2, %1[%c0] {in_bounds = [true]} : vector<32xf32>, memref<32xf32>
+  vector.transfer_write %cst_1, %0[%c0] {in_bounds = array<i1: true>} : vector<32xf32>, memref<32xf32>
+  vector.transfer_write %cst_2, %1[%c0] {in_bounds = array<i1: true>} : vector<32xf32>, memref<32xf32>
   %3 = memref.cast %0 : memref<32xf32> to memref<*xf32>
   gpu.host_register %3 : memref<*xf32>
   %5 = memref.cast %1 : memref<32xf32> to memref<*xf32>

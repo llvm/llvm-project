@@ -13,16 +13,16 @@ func.func @forward_dead_store(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c4 = arith.constant 4 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
-  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = array<i1: true, true>} :
     memref<4x4xf32>, vector<1x4xf32>
   %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0)
     -> (vector<1x4xf32>) {
     %1 = arith.addf %acc, %acc : vector<1x4xf32>
     scf.yield %1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -40,18 +40,18 @@ func.func @forward_nested(%arg0: i1, %arg1 : memref<4x4xf32>, %v0 : vector<1x4xf
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %cf0 = arith.constant 0.0 : f32
-  vector.transfer_write %v1, %arg1[%i, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v1, %arg1[%i, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
-  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
-    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = array<i1: true, true>} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   } else {
     scf.yield %v1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c0, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %x, %arg1[%c0, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -73,18 +73,18 @@ func.func @forward_nested_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %cf0 = arith.constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
-    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = array<i1: true, true>} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   } else {
-    vector.transfer_write %v1, %arg1[%i, %c0] {in_bounds = [true, true]} :
+    vector.transfer_write %v1, %arg1[%i, %c0] {in_bounds = array<i1: true, true>} :
       vector<1x4xf32>, memref<4x4xf32>
     scf.yield %v1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c0, %i] {in_bounds = [true, true]} :
+  vector.transfer_write %x, %arg1[%c0, %i] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -108,24 +108,24 @@ func.func @dead_store_region(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %cf0 = arith.constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
     scf.yield %v1 : vector<1x4xf32>
   } else {
-    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = [true, true]} :
+    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = array<i1: true, true>} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   }
   scf.if %arg0 {
-    vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+    vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
       vector<1x4xf32>, memref<4x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
-  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
-  %1 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = [true, true]} :
+  %1 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = array<i1: true, true>} :
     memref<4x4xf32>, vector<1x4xf32>
   return %1 : vector<1x4xf32>
 }
@@ -144,15 +144,15 @@ func.func @dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c1 = arith.constant 1 : index
   %cf0 = arith.constant 0.0 : f32
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
-    vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+    vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
       vector<1x4xf32>, memref<4x4xf32>
-    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = [true, true]} :
+    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = array<i1: true, true>} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   } else {
     scf.yield %v1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -172,13 +172,13 @@ func.func @dead_store_nested_region(%arg0: i1, %arg1: i1, %arg2 : memref<4x4xf32
   %c1 = arith.constant 1 : index
   %cf0 = arith.constant 0.0 : f32
   scf.if %arg0 {
-    %0 = vector.transfer_read %arg2[%i, %c0], %cf0 {in_bounds = [true, true]} :
+    %0 = vector.transfer_read %arg2[%i, %c0], %cf0 {in_bounds = array<i1: true, true>} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.if %arg1 {
-      vector.transfer_write %v1, %arg2[%c1, %c0] {in_bounds = [true, true]} :
+      vector.transfer_write %v1, %arg2[%c1, %c0] {in_bounds = array<i1: true, true>} :
         vector<1x4xf32>, memref<4x4xf32>
     }
-    vector.transfer_write %v0, %arg2[%c1, %c0] {in_bounds = [true, true]} :
+    vector.transfer_write %v0, %arg2[%c1, %c0] {in_bounds = array<i1: true, true>} :
       vector<1x4xf32>, memref<4x4xf32>
   }
   return
@@ -200,19 +200,19 @@ func.func @forward_dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c4 = arith.constant 4 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   // blocking write.
-  vector.transfer_write %v1, %alias[%c0, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v1, %alias[%c0, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x1xf32>, memref<2x2xf32, strided<[4, 1]>>
-  vector.transfer_write %v2, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v2, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   // blocking write.
-  vector.transfer_write %v1, %alias[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v1, %alias[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x1xf32>, memref<2x2xf32, strided<[4, 1]>>
-  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = array<i1: true, true>} :
     memref<4x4xf32>, vector<1x4xf32>
-  vector.transfer_write %v2, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+  vector.transfer_write %v2, %arg1[%c1, %c0] {in_bounds = array<i1: true, true>} :
     vector<1x4xf32>, memref<4x4xf32>
   return %0 : vector<1x4xf32>
 }
@@ -247,12 +247,12 @@ func.func @collapse_shape(%in_0: memref<1x20x1xi32>, %vec: vector<4xi32>) {
   %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x4x1xi32> into memref<4xi32>
   scf.for %arg0 = %c0 to %c20 step %c4 {
     %subview = memref.subview %in_0[0, %arg0, 0] [1, 4, 1] [1, 1, 1] : memref<1x20x1xi32> to memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
-    %1 = vector.transfer_read %subview[%c0, %c0, %c0], %c0_i32 {in_bounds = [true, true, true]} : memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>, vector<1x4x1xi32>
+    %1 = vector.transfer_read %subview[%c0, %c0, %c0], %c0_i32 {in_bounds = array<i1: true, true, true>} : memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>, vector<1x4x1xi32>
     // $alloca and $collapse_shape alias
-    vector.transfer_write %1, %alloca[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32>
-    vector.transfer_write %vec, %collapse_shape[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
-    %2 = vector.transfer_read %alloca[%c0, %c0, %c0], %c0_i32 {in_bounds = [true, true, true]} : memref<1x4x1xi32>, vector<1x4x1xi32>
-    vector.transfer_write %2, %subview[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
+    vector.transfer_write %1, %alloca[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} : vector<1x4x1xi32>, memref<1x4x1xi32>
+    vector.transfer_write %vec, %collapse_shape[%c0] {in_bounds = array<i1: true>} : vector<4xi32>, memref<4xi32>
+    %2 = vector.transfer_read %alloca[%c0, %c0, %c0], %c0_i32 {in_bounds = array<i1: true, true, true>} : memref<1x4x1xi32>, vector<1x4x1xi32>
+    vector.transfer_write %2, %subview[%c0, %c0, %c0] {in_bounds = array<i1: true, true, true>} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
   }
   return
 }
@@ -270,14 +270,14 @@ func.func @forward_dead_store_dynamic_same_index(
   %c4 = arith.constant 4 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  vector.transfer_write %v0, %buffer[%i, %i] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %v0, %buffer[%i, %i] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   // The following transfer op reads/writes to the same address so that we can forward.
-  %0 = vector.transfer_read %buffer[%i, %i], %cf0 {in_bounds = [true]} : memref<?x?xf32>, vector<4xf32>
+  %0 = vector.transfer_read %buffer[%i, %i], %cf0 {in_bounds = array<i1: true>} : memref<?x?xf32>, vector<4xf32>
   %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0) -> (vector<4xf32>) {
     %1 = arith.addf %acc, %acc : vector<4xf32>
     scf.yield %1 : vector<4xf32>
   }
-  vector.transfer_write %x, %buffer[%i, %i] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%i, %i] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   return
 }
 
@@ -295,15 +295,15 @@ func.func @dont_forward_dead_store_dynamic_overlap(
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   %i1 = affine.apply affine_map<(d0) -> (d0 + 3)>(%i0)
-  vector.transfer_write %v0, %buffer[%i0, %i0] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %v0, %buffer[%i0, %i0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   // The following transfer op writes to an overlapping range so we cannot forward.
-  vector.transfer_write %v0, %buffer[%i0, %i1] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%i0, %i0], %cf0 {in_bounds = [true]} : memref<?x?xf32>, vector<4xf32>
+  vector.transfer_write %v0, %buffer[%i0, %i1] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%i0, %i0], %cf0 {in_bounds = array<i1: true>} : memref<?x?xf32>, vector<4xf32>
   %x = scf.for %iv = %c0 to %c4 step %c1 iter_args(%acc = %0) -> (vector<4xf32>) {
     %1 = arith.addf %acc, %acc : vector<4xf32>
     scf.yield %1 : vector<4xf32>
   }
-  vector.transfer_write %x, %buffer[%i0, %i0] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%i0, %i0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   return
 }
 
@@ -322,15 +322,15 @@ func.func @forward_dead_store_dynamic_non_overlap_leading_dim(
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   %i1 = affine.apply affine_map<(d0) -> (d0 + 1)>(%i0)
-  vector.transfer_write %v0, %buffer[%i0, %i0] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %v0, %buffer[%i0, %i0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   // The following transfer op writes to an non-overlapping range so we can forward.
-  vector.transfer_write %v0, %buffer[%i1, %i0] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%i0, %i0], %cf0 {in_bounds = [true]} : memref<?x?xf32>, vector<4xf32>
+  vector.transfer_write %v0, %buffer[%i1, %i0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%i0, %i0], %cf0 {in_bounds = array<i1: true>} : memref<?x?xf32>, vector<4xf32>
   %x = scf.for %iv = %c0 to %c4 step %c1 iter_args(%acc = %0) -> (vector<4xf32>) {
     %1 = arith.addf %acc, %acc : vector<4xf32>
     scf.yield %1 : vector<4xf32>
   }
-  vector.transfer_write %x, %buffer[%i0, %i0] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%i0, %i0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   return
 }
 
@@ -349,15 +349,15 @@ func.func @forward_dead_store_dynamic_non_overlap_trailing_dim(
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   %i1 = affine.apply affine_map<(d0) -> (d0 + 4)>(%i0)
-  vector.transfer_write %v0, %buffer[%i0, %i0] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %v0, %buffer[%i0, %i0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   // The following transfer op writes to an non-overlapping range so we can forward.
-  vector.transfer_write %v0, %buffer[%i0, %i1] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%i0, %i0], %cf0 {in_bounds = [true]} : memref<?x?xf32>, vector<4xf32>
+  vector.transfer_write %v0, %buffer[%i0, %i1] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%i0, %i0], %cf0 {in_bounds = array<i1: true>} : memref<?x?xf32>, vector<4xf32>
   %x = scf.for %iv = %c0 to %c4 step %c1 iter_args(%acc = %0) -> (vector<4xf32>) {
     %1 = arith.addf %acc, %acc : vector<4xf32>
     scf.yield %1 : vector<4xf32>
   }
-  vector.transfer_write %x, %buffer[%i0, %i0] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%i0, %i0] {in_bounds = array<i1: true>} : vector<4xf32>, memref<?x?xf32>
   return
 }
 
@@ -376,13 +376,13 @@ func.func @forward_dead_constant_splat_store_with_masking(%buffer : memref<?x?xf
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
     %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
     scf.yield %1 : vector<[8]x[8]xf32>
   }
-  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
   return
 }
 
@@ -401,13 +401,13 @@ func.func @forward_dead_constant_splat_store_with_masking_unmasked_write(%buffer
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  vector.transfer_write %zero_splat, %buffer[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
     %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
     scf.yield %1 : vector<[8]x[8]xf32>
   }
-  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
   return
 }
 
@@ -426,13 +426,13 @@ func.func @forward_dead_constant_splat_store_with_masking_negative_0(%buffer : m
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
     %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
     scf.yield %1 : vector<[8]x[8]xf32>
   }
-  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
   return
 }
 
@@ -451,13 +451,13 @@ func.func @forward_dead_constant_splat_store_with_masking_negative_1(%buffer : m
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask_a {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask_b {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask_a {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask_b {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
     %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
     scf.yield %1 : vector<[8]x[8]xf32>
   }
-  vector.transfer_write %x, %buffer[%c0, %c0], %mask_a {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%c0, %c0], %mask_a {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
   return
 }
 
@@ -476,13 +476,13 @@ func.func @forward_dead_constant_splat_store_with_masking_negative_3(%buffer : m
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding {in_bounds = array<i1: true, true>} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
     %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
     scf.yield %1 : vector<[8]x[8]xf32>
   }
-  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
   return
 }
 
@@ -503,15 +503,15 @@ func.func @forward_and_eliminate_stores_through_trivial_aliases(
   %c1 = arith.constant 1 : index
   %c32 = arith.constant 32 : index
   %cst = arith.constant 0.0 : f32
-  vector.transfer_write %vec, %buffer[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  vector.transfer_write %vec, %buffer[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32>
   %direct_subview = memref.subview %buffer[0, 0] [%a_size, %a_size] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
   %cast = memref.cast %direct_subview : memref<?x?xf32, strided<[?, 1]>> to memref<?x?xf32>
   %subview_of_cast = memref.subview %cast[0, 0] [%another_size, %another_size] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
-  %21 = vector.transfer_read %direct_subview[%c0, %c0], %cst {in_bounds = [true, true]} : memref<?x?xf32, strided<[?, 1]>>, vector<[8]x[8]xf32>
+  %21 = vector.transfer_read %direct_subview[%c0, %c0], %cst {in_bounds = array<i1: true, true>} : memref<?x?xf32, strided<[?, 1]>>, vector<[8]x[8]xf32>
   %23 = scf.for %arg2 = %c0 to %c32 step %c1 iter_args(%arg3 = %21) -> (vector<[8]x[8]xf32>) {
     %24 = arith.addf %arg3, %arg3 : vector<[8]x[8]xf32>
     scf.yield %24 : vector<[8]x[8]xf32>
   }
-  vector.transfer_write %23, %subview_of_cast[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32, strided<[?, 1]>>
+  vector.transfer_write %23, %subview_of_cast[%c0, %c0] {in_bounds = array<i1: true, true>} : vector<[8]x[8]xf32>, memref<?x?xf32, strided<[?, 1]>>
   return
 }
