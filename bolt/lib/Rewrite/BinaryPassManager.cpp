@@ -357,8 +357,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
     Manager.registerPass(
         std::make_unique<VeneerElimination>(PrintVeneerElimination));
-
-    Manager.registerPass(std::make_unique<ADRRelaxationPass>());
   }
 
   if (BC.isRISCV()) {
@@ -492,6 +490,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<ReorderData>());
 
   if (BC.isAArch64()) {
+    Manager.registerPass(std::make_unique<ADRRelaxationPass>());
+
     // Tighten branches according to offset differences between branch and
     // targets. No extra instructions after this pass, otherwise we may have
     // relocations out of range and crash during linking.
