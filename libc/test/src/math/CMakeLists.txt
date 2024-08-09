@@ -203,6 +203,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  faddl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    faddl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.faddl
+)
+
+add_fp_unittest(
   trunc_test
   NEED_MPFR
   SUITE
