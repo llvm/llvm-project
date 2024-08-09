@@ -1093,6 +1093,14 @@ The integer codes are mapped to well-known attributes as follows.
 * code 86: ``memory``
 * code 87: ``nofpclass``
 * code 88: ``optdebug``
+* code 89: ``writable``
+* code 90: ``coro_only_destroy_when_complete``
+* code 91: ``dead_on_unwind``
+* code 92: ``range``
+* code 93: ``sanitize_numerical_stability``
+* code 94: ``initializes``
+* code 95: ``hybrid_patchable``
+* code 96: ``sanitize_realtime``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
