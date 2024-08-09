@@ -44,6 +44,7 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/Loads.h"
@@ -65,9 +66,9 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1608,8 +1609,9 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
     assert(CurLoop->contains(PredBB) &&
            "Expect all predecessors are in the loop");
     if (PN->getBasicBlockIndex(PredBB) >= 0) {
+      DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
       BasicBlock *NewPred = SplitBlockPredecessors(
-          ExitBB, PredBB, ".split.loop.exit", DT, LI, MSSAU, true);
+          ExitBB, PredBB, ".split.loop.exit", &DTU, LI, MSSAU, true);
       // Since we do not allow splitting EH-block with BlockColors in
       // canSplitPredecessors(), we can simply assign predecessor's color to
       // the new block.

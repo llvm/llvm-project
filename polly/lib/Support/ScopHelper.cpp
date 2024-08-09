@@ -14,6 +14,7 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/SCEVValidator.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -38,7 +39,7 @@ static cl::list<std::string> DebugFunctions(
 // Ensures that there is just one predecessor to the entry node from outside the
 // region.
 // The identity of the region entry node is preserved.
-static void simplifyRegionEntry(Region *R, DominatorTree *DT, LoopInfo *LI,
+static void simplifyRegionEntry(Region *R, DomTreeUpdater *DTU, LoopInfo *LI,
                                 RegionInfo *RI) {
   BasicBlock *EnteringBB = R->getEnteringBlock();
   BasicBlock *Entry = R->getEntry();
@@ -61,7 +62,7 @@ static void simplifyRegionEntry(Region *R, DominatorTree *DT, LoopInfo *LI,
         Preds.push_back(P);
 
     BasicBlock *NewEntering =
-        SplitBlockPredecessors(Entry, Preds, ".region_entering", DT, LI);
+        SplitBlockPredecessors(Entry, Preds, ".region_entering", DTU, LI);
 
     if (RI) {
       // The exit block of predecessing regions must be changed to NewEntering
@@ -102,7 +103,7 @@ static void simplifyRegionEntry(Region *R, DominatorTree *DT, LoopInfo *LI,
 }
 
 // Ensure that the region has a single block that branches to the exit node.
-static void simplifyRegionExit(Region *R, DominatorTree *DT, LoopInfo *LI,
+static void simplifyRegionExit(Region *R, DomTreeUpdater *DTU, LoopInfo *LI,
                                RegionInfo *RI) {
   BasicBlock *ExitBB = R->getExit();
   BasicBlock *ExitingBB = R->getExitingBlock();
@@ -125,7 +126,7 @@ static void simplifyRegionExit(Region *R, DominatorTree *DT, LoopInfo *LI,
     //          \ | /                  //
     //           BB                    //
     ExitingBB =
-        SplitBlockPredecessors(ExitBB, Preds, ".region_exiting", DT, LI);
+        SplitBlockPredecessors(ExitBB, Preds, ".region_exiting", DTU, LI);
     // Preds[0] Preds[1]      otherBB  //
     //        \  /           /         //
     // BB.region_exiting    /          //
@@ -157,8 +158,9 @@ void polly::simplifyRegion(Region *R, DominatorTree *DT, LoopInfo *LI,
   assert((!RI || DT) &&
          "RegionInfo requires DominatorTree to be updated as well");
 
-  simplifyRegionEntry(R, DT, LI, RI);
-  simplifyRegionExit(R, DT, LI, RI);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  simplifyRegionEntry(R, &DTU, LI, RI);
+  simplifyRegionExit(R, &DTU, LI, RI);
   assert(R->isSimple());
 }
 

@@ -153,12 +153,13 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // Make sure that created prolog loop is in simplified form
   SmallVector<BasicBlock *, 4> PrologExitPreds;
   Loop *PrologLoop = LI->getLoopFor(PrologLatch);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   if (PrologLoop) {
     for (BasicBlock *PredBB : predecessors(PrologExit))
       if (PrologLoop->contains(PredBB))
         PrologExitPreds.push_back(PredBB);
 
-    SplitBlockPredecessors(PrologExit, PrologExitPreds, ".unr-lcssa", DT, LI,
+    SplitBlockPredecessors(PrologExit, PrologExitPreds, ".unr-lcssa", &DTU, LI,
                            nullptr, PreserveLCSSA);
   }
 
@@ -177,7 +178,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
       B.CreateICmpULT(BECount, ConstantInt::get(BECount->getType(), Count - 1));
   // Split the exit to maintain loop canonicalization guarantees
   SmallVector<BasicBlock *, 4> Preds(predecessors(OriginalLoopLatchExit));
-  SplitBlockPredecessors(OriginalLoopLatchExit, Preds, ".unr-lcssa", DT, LI,
+  SplitBlockPredecessors(OriginalLoopLatchExit, Preds, ".unr-lcssa", &DTU, LI,
                          nullptr, PreserveLCSSA);
   // Add the branch to the exit block (around the unrolled loop)
   MDNode *BranchWeights = nullptr;
@@ -307,7 +308,8 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   assert(Exit && "Loop must have a single exit block only");
   // Split the epilogue exit to maintain loop canonicalization guarantees
   SmallVector<BasicBlock*, 4> Preds(predecessors(Exit));
-  SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI, nullptr,
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", &DTU, LI, nullptr,
                          PreserveLCSSA);
   // Add the branch to the exit block (around the unrolling loop)
   MDNode *BranchWeights = nullptr;
@@ -325,7 +327,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
 
   // Split the main loop exit to maintain canonicalization guarantees.
   SmallVector<BasicBlock*, 4> NewExitPreds{Latch};
-  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI, nullptr,
+  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", &DTU, LI, nullptr,
                          PreserveLCSSA);
 }
 
@@ -702,13 +704,14 @@ bool llvm::UnrollRuntimeLoopRemainder(
   BasicBlock *EpilogPreHeader = nullptr;
   BasicBlock *PrologPreHeader = nullptr;
 
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   if (UseEpilogRemainder) {
     // If epilog remainder
     // Split PreHeader to insert a branch around loop for unrolling.
     NewPreHeader = SplitBlock(PreHeader, PreHeader->getTerminator(), DT, LI);
     NewPreHeader->setName(PreHeader->getName() + ".new");
     // Split LatchExit to create phi nodes from branch above.
-    NewExit = SplitBlockPredecessors(LatchExit, {Latch}, ".unr-lcssa", DT, LI,
+    NewExit = SplitBlockPredecessors(LatchExit, {Latch}, ".unr-lcssa", &DTU, LI,
                                      nullptr, PreserveLCSSA);
     // NewExit gets its DebugLoc from LatchExit, which is not part of the
     // original Loop.
@@ -995,7 +998,6 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Merge latch into exit block.
     auto *ExitBB = RemainderLatch->getSingleSuccessor();
     assert(ExitBB && "required after breaking cond br backedge");
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
     MergeBlockIntoPredecessor(ExitBB, &DTU, LI);
   }
 

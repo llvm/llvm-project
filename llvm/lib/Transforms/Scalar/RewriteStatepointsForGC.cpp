@@ -1422,12 +1422,12 @@ static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
 // starting one of the successor blocks.  We also need to be able to insert the
 // gc.relocates only on the path which goes through the statepoint.  We might
 // need to split an edge to make this possible.
-static BasicBlock *
-normalizeForInvokeSafepoint(BasicBlock *BB, BasicBlock *InvokeParent,
-                            DominatorTree &DT) {
+static BasicBlock *normalizeForInvokeSafepoint(BasicBlock *BB,
+                                               BasicBlock *InvokeParent,
+                                               DomTreeUpdater &DTU) {
   BasicBlock *Ret = BB;
   if (!BB->getUniquePredecessor())
-    Ret = SplitBlockPredecessors(BB, InvokeParent, "", &DT);
+    Ret = SplitBlockPredecessors(BB, InvokeParent, "", &DTU);
 
   // Now that 'Ret' has unique predecessor we can safely remove all phi nodes
   // from it
@@ -2644,7 +2644,7 @@ static bool inlineGetBaseAndOffset(Function &F,
   return Changed;
 }
 
-static bool insertParsePoints(Function &F, DominatorTree &DT,
+static bool insertParsePoints(Function &F, DomTreeUpdater &DTU,
                               TargetTransformInfo &TTI,
                               SmallVectorImpl<CallBase *> &ToUpdate,
                               DefiningValueMapTy &DVCache,
@@ -2669,8 +2669,8 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     auto *II = dyn_cast<InvokeInst>(Call);
     if (!II)
       continue;
-    normalizeForInvokeSafepoint(II->getNormalDest(), II->getParent(), DT);
-    normalizeForInvokeSafepoint(II->getUnwindDest(), II->getParent(), DT);
+    normalizeForInvokeSafepoint(II->getNormalDest(), II->getParent(), DTU);
+    normalizeForInvokeSafepoint(II->getUnwindDest(), II->getParent(), DTU);
   }
 
   // A list of dummy calls added to the IR to keep various values obviously
@@ -2698,6 +2698,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 
   // A) Identify all gc pointers which are statically live at the given call
   // site.
+  DominatorTree &DT = DTU.getDomTree();
   findLiveReferences(F, DT, ToUpdate, Records, GC.get());
 
   /// Global mapping from live pointers to a base-defining-value.
@@ -3173,7 +3174,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
 
   if (!ParsePointNeeded.empty())
     MadeChange |=
-        insertParsePoints(F, DT, TTI, ParsePointNeeded, DVCache, KnownBases);
+        insertParsePoints(F, DTU, TTI, ParsePointNeeded, DVCache, KnownBases);
 
   return MadeChange;
 }
