@@ -211,11 +211,11 @@ public:
         case (LengthModifier::wf):
           if (bw == 0) {
             section.has_conv = false;
-          } else if (bw <= cpp::numeric_limits<int>::digits) {
+          } else if (bw <= cpp::numeric_limits<unsigned int>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
-          } else if (bw <= cpp::numeric_limits<long>::digits) {
+          } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long, conv_index);
-          } else if (bw <= cpp::numeric_limits<long long>::digits) {
+          } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long long, conv_index);
           } else {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, intmax_t, conv_index);
