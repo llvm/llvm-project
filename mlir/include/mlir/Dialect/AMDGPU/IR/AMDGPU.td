@@ -126,11 +126,7 @@ def AMDGPU_RawBufferLoadOp :
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
                    Optional<I32>:$sgprOffset)>,
-    Results<(outs AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value)> {
+    Results<(outs AnyType:$value)> {
 
   let summary = "Raw Buffer load, exposing GCN features";
   let description = [{
@@ -176,11 +172,7 @@ def AMDGPU_RawBufferLoadOp :
 def AMDGPU_RawBufferStoreOp :
     AMDGPU_Op<"raw_buffer_store", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value,
+    Arguments<(ins AnyType:$value,
                    Arg<AnyMemRef, "buffer to store to", [MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
