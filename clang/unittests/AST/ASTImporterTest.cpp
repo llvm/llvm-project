@@ -7855,10 +7855,10 @@ TEST_P(ImportAttributes, ImportPtGuardedVar) {
                       ToAttr);
 }
 
-TEST_P(ImportAttributes, ImportScopedLockable) {
-  ScopedLockableAttr *FromAttr, *ToAttr;
-  importAttr<CXXRecordDecl>("struct __attribute__((scoped_lockable)) test {};",
-                            FromAttr, ToAttr);
+TEST_P(ImportAttributes, ImportScopedCapability) {
+  ScopedCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>(
+      "struct __attribute__((scoped_capability)) test {};", FromAttr, ToAttr);
 }
 
 TEST_P(ImportAttributes, ImportCapability) {
@@ -8001,19 +8001,19 @@ TEST_P(ImportAttributes, ImportSharedTrylockFunction) {
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
-TEST_P(ImportAttributes, ImportLockReturned) {
-  LockReturnedAttr *FromAttr, *ToAttr;
+TEST_P(ImportAttributes, ImportCapabilityReturned) {
+  CapabilityReturnedAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
-      "void test(int A1) __attribute__((lock_returned(A1)));", FromAttr,
+      "void test(int A1) __attribute__((capability_returned(A1)));", FromAttr,
       ToAttr);
   checkImported(FromAttr->getArg(), ToAttr->getArg());
 }
 
-TEST_P(ImportAttributes, ImportLocksExcluded) {
-  LocksExcludedAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((locks_excluded(A1, A2)));",
-      FromAttr, ToAttr);
+TEST_P(ImportAttributes, ImportCapabilitiesExcluded) {
+  CapabilitiesExcludedAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>("void test(int A1, int A2) "
+                           "__attribute__((capabilities_excluded(A1, A2)));",
+                           FromAttr, ToAttr);
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 

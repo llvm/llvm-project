@@ -339,7 +339,7 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
       const CXXRecordDecl *RD = MD->getParent();
       // FIXME -- need to check this again on template instantiation
       if (!checkRecordDeclForAttr<CapabilityAttr>(RD) &&
-          !checkRecordDeclForAttr<ScopedLockableAttr>(RD))
+          !checkRecordDeclForAttr<ScopedCapabilityAttr>(RD))
         S.Diag(AL.getLoc(),
                diag::warn_thread_attribute_not_on_capability_member)
             << AL << MD->getParent();
@@ -633,7 +633,8 @@ static void handleExclusiveTrylockFunctionAttr(Sema &S, Decl *D,
       S.Context, AL, AL.getArgAsExpr(0), Args.data(), Args.size()));
 }
 
-static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleCapabilityReturnedAttr(Sema &S, Decl *D,
+                                         const ParsedAttr &AL) {
   // check that the argument is lockable object
   SmallVector<Expr*, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
@@ -641,10 +642,11 @@ static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (Size == 0)
     return;
 
-  D->addAttr(::new (S.Context) LockReturnedAttr(S.Context, AL, Args[0]));
+  D->addAttr(::new (S.Context) CapabilityReturnedAttr(S.Context, AL, Args[0]));
 }
 
-static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleCapabilitiesExcludedAttr(Sema &S, Decl *D,
+                                           const ParsedAttr &AL) {
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
@@ -657,7 +659,7 @@ static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr **StartArg = &Args[0];
 
   D->addAttr(::new (S.Context)
-                 LocksExcludedAttr(S.Context, AL, StartArg, Size));
+                 CapabilitiesExcludedAttr(S.Context, AL, StartArg, Size));
 }
 
 static bool checkFunctionConditionAttr(Sema &S, Decl *D, const ParsedAttr &AL,
@@ -6940,11 +6942,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_ExclusiveTrylockFunction:
     handleExclusiveTrylockFunctionAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_LockReturned:
-    handleLockReturnedAttr(S, D, AL);
+  case ParsedAttr::AT_CapabilityReturned:
+    handleCapabilityReturnedAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_LocksExcluded:
-    handleLocksExcludedAttr(S, D, AL);
+  case ParsedAttr::AT_CapabilitiesExcluded:
+    handleCapabilitiesExcludedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_SharedTrylockFunction:
     handleSharedTrylockFunctionAttr(S, D, AL);
