@@ -75,6 +75,8 @@ Stream::StreamKind Stream::getKind(StreamType Type) {
     return StreamKind::MemoryInfoList;
   case StreamType::MemoryList:
     return StreamKind::MemoryList;
+  case StreamType::Memory64List:
+    return StreamKind::Memory64List;
   case StreamType::ModuleList:
     return StreamKind::ModuleList;
   case StreamType::SystemInfo:
@@ -103,6 +105,8 @@ std::unique_ptr<Stream> Stream::create(StreamType Type) {
     return std::make_unique<MemoryInfoListStream>();
   case StreamKind::MemoryList:
     return std::make_unique<MemoryListStream>();
+  case StreamKind::Memory64List:
+    return std::make_unique<Memory64ListStream>();
   case StreamKind::ModuleList:
     return std::make_unique<ModuleListStream>();
   case StreamKind::RawContent:
@@ -256,6 +260,12 @@ void yaml::MappingTraits<MemoryInfo>::mapping(IO &IO, MemoryInfo &Info) {
   mapOptionalHex(IO, "Reserved1", Info.Reserved1, 0);
 }
 
+void yaml::MappingTraits<MemoryDescriptor_64>::mapping(
+    IO &IO, MemoryDescriptor_64 &Mem) {
+  mapRequiredHex(IO, "Start of memory range", Mem.StartOfMemoryRange);
+  mapRequiredHex(IO, "Data Size", Mem.DataSize);
+}
+
 void yaml::MappingTraits<VSFixedFileInfo>::mapping(IO &IO,
                                                    VSFixedFileInfo &Info) {
   mapOptionalHex(IO, "Signature", Info.Signature, 0);
@@ -312,6 +322,10 @@ static void streamMapping(yaml::IO &IO, MemoryListStream &Stream) {
   IO.mapRequired("Memory Ranges", Stream.Entries);
 }
 
+static void streamMapping(yaml::IO &IO, Memory64ListStream &Stream) {
+  IO.mapRequired("Memory Ranges", Stream.Entries);
+}
+
 static void streamMapping(yaml::IO &IO, ModuleListStream &Stream) {
   IO.mapRequired("Modules", Stream.Entries);
 }
@@ -352,6 +366,12 @@ static void streamMapping(yaml::IO &IO, TextContentStream &Stream) {
 
 void yaml::MappingContextTraits<MemoryDescriptor, yaml::BinaryRef>::mapping(
     IO &IO, MemoryDescriptor &Memory, BinaryRef &Content) {
+  mapRequiredHex(IO, "Start of Memory Range", Memory.StartOfMemoryRange);
+  IO.mapRequired("Content", Content);
+}
+
+void yaml::MappingContextTraits<MemoryDescriptor_64, yaml::BinaryRef>::mapping(
+    IO &IO, MemoryDescriptor_64 &Memory, BinaryRef &Content) {
   mapRequiredHex(IO, "Start of Memory Range", Memory.StartOfMemoryRange);
   IO.mapRequired("Content", Content);
 }
@@ -416,6 +436,9 @@ void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
   case MinidumpYAML::Stream::StreamKind::MemoryList:
     streamMapping(IO, llvm::cast<MemoryListStream>(*S));
     break;
+  case MinidumpYAML::Stream::StreamKind::Memory64List:
+    streamMapping(IO, llvm::cast<Memory64ListStream>(*S));
+    break;
   case MinidumpYAML::Stream::StreamKind::ModuleList:
     streamMapping(IO, llvm::cast<ModuleListStream>(*S));
     break;
@@ -442,6 +465,7 @@ std::string yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
   case MinidumpYAML::Stream::StreamKind::Exception:
   case MinidumpYAML::Stream::StreamKind::MemoryInfoList:
   case MinidumpYAML::Stream::StreamKind::MemoryList:
+  case MinidumpYAML::Stream::StreamKind::Memory64List:
   case MinidumpYAML::Stream::StreamKind::ModuleList:
   case MinidumpYAML::Stream::StreamKind::SystemInfo:
   case MinidumpYAML::Stream::StreamKind::TextContent:
@@ -493,6 +517,16 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
       Ranges.push_back({MD, *ExpectedContent});
     }
     return std::make_unique<MemoryListStream>(std::move(Ranges));
+  }
+  case StreamKind::Memory64List: {
+    auto ExpectedList = File.getMemory64List();
+    if (!ExpectedList)
+      return ExpectedList.takeError();
+    std::vector<MemoryDescriptor_64> Ranges;
+    for (const MemoryDescriptor_64 &MD : *ExpectedList) {
+      Ranges.push_back(MD);
+    }
+    return std::make_unique<Memory64ListStream>(std::move(Ranges));
   }
   case StreamKind::ModuleList: {
     auto ExpectedList = File.getModuleList();

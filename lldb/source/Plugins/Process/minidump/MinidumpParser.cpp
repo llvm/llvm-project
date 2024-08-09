@@ -553,43 +553,45 @@ static bool
 CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
                                  std::vector<MemoryRegionInfo> &regions) {
   Log *log = GetLog(LLDBLog::Modules);
+  // Cache the expected memory32 into an optional
+  // because double checking the expected triggers the unchecked warning.
+  std::optional<llvm::ArrayRef<MemoryDescriptor>> memory32_list;
   auto ExpectedMemory = parser.GetMinidumpFile().getMemoryList();
   if (!ExpectedMemory) {
     LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
                    "Failed to read memory list: {0}");
-    return false;
+  } else {
+    memory32_list = *ExpectedMemory;
   }
-  regions.reserve(ExpectedMemory->size());
-  for (const MemoryDescriptor &memory_desc : *ExpectedMemory) {
-    if (memory_desc.Memory.DataSize == 0)
-      continue;
-    MemoryRegionInfo region;
-    region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
-    region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
-    region.SetReadable(MemoryRegionInfo::eYes);
-    region.SetMapped(MemoryRegionInfo::eYes);
-    regions.push_back(region);
-  }
-  regions.shrink_to_fit();
-  return !regions.empty();
-}
 
-static bool
-CreateRegionsCacheFromMemory64List(MinidumpParser &parser,
-                                   std::vector<MemoryRegionInfo> &regions) {
+  size_t num_regions = memory32_list ? memory32_list->size() : 0;
+
   llvm::ArrayRef<uint8_t> data =
       parser.GetStream(StreamType::Memory64List);
-  if (data.empty())
-    return false;
+
   llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
-  uint64_t base_rva;
-  std::tie(memory64_list, base_rva) =
-      MinidumpMemoryDescriptor64::ParseMemory64List(data);
+  if (!data.empty()) {
+    uint64_t base_rva;
+    std::tie(memory64_list, base_rva) =
+        MinidumpMemoryDescriptor64::ParseMemory64List(data);
 
-  if (memory64_list.empty())
-    return false;
+    num_regions += memory64_list.size();
+  }
 
-  regions.reserve(memory64_list.size());
+  regions.reserve(num_regions);
+  if (memory32_list) {
+    for (const MemoryDescriptor &memory_desc : *memory32_list) {
+      if (memory_desc.Memory.DataSize == 0)
+        continue;
+      MemoryRegionInfo region;
+      region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
+      region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
+      region.SetReadable(MemoryRegionInfo::eYes);
+      region.SetMapped(MemoryRegionInfo::eYes);
+      regions.push_back(region);
+    }
+  }
+
   for (const auto &memory_desc : memory64_list) {
     if (memory_desc.data_size == 0)
       continue;
@@ -620,9 +622,7 @@ std::pair<MemoryRegionInfos, bool> MinidumpParser::BuildMemoryRegions() {
     return return_sorted(true);
   if (CreateRegionsCacheFromMemoryInfoList(*this, result))
     return return_sorted(true);
-  if (CreateRegionsCacheFromMemoryList(*this, result))
-    return return_sorted(false);
-  CreateRegionsCacheFromMemory64List(*this, result);
+  CreateRegionsCacheFromMemoryList(*this, result);
   return return_sorted(false);
 }
 
