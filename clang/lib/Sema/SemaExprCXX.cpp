@@ -39,6 +39,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/SemaObjC.h"
@@ -6187,6 +6188,23 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     return Self.DeduceTemplateArgumentsFromType(
                TSTToBeDeduced->getTemplateName().getAsTemplateDecl(), RhsT,
                Info) == TemplateDeductionResult::Success;
+  }
+  case BTT_IsScalarizedLayoutCompatible: {
+    if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType())
+      if (Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
+                                   diag::err_incomplete_type))
+        return true;
+    if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType())
+      if (Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                                   diag::err_incomplete_type))
+        return true;
+
+    DiagnoseVLAInCXXTypeTrait(Self, Lhs,
+                              tok::kw___is_scalarized_layout_compatible);
+    DiagnoseVLAInCXXTypeTrait(Self, Rhs,
+                              tok::kw___is_scalarized_layout_compatible);
+
+    return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
   }
   default:
     llvm_unreachable("not a BTT");
