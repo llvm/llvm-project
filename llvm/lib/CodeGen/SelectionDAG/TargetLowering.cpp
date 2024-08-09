@@ -6405,12 +6405,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                                 VT.getVectorElementCount());
-    // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
-    // custom lowered. This is very expensive so avoid it at all costs for
-    // constant divisors.
-    if ((isOperationExpand(ISD::SDIV, VT) &&
-         isOperationCustom(ISD::SDIVREM, VT.getScalarType())) ||
-        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
       X = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, X);
       Y = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, Y);
       Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
@@ -6593,12 +6588,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                                 VT.getVectorElementCount());
-    // Some targets like AMDGPU try to go from UDIV to UDIVREM which is then
-    // custom lowered. This is very expensive so avoid it at all costs for
-    // constant divisors.
-    if ((isOperationExpand(ISD::UDIV, VT) &&
-         isOperationCustom(ISD::UDIVREM, VT.getScalarType())) ||
-        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
       X = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, X);
       Y = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, Y);
       Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
@@ -9171,9 +9161,8 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
                         !isOperationLegalOrCustomOrPromote(ISD::XOR, VT)))
     return SDValue();
 
-  // Emit Table Lookup if ISD::CTPOP used in the fallback path below is going
-  // to be expanded or converted to a libcall.
-  if (!VT.isVector() && !isOperationLegalOrCustomOrPromote(ISD::CTPOP, VT) &&
+  // Emit Table Lookup if ISD::CTLZ and ISD::CTPOP are not legal.
+  if (!VT.isVector() && isOperationExpand(ISD::CTPOP, VT) &&
       !isOperationLegal(ISD::CTLZ, VT))
     if (SDValue V = CTTZTableLookup(Node, DAG, dl, VT, Op, NumBitsPerElt))
       return V;
@@ -9322,6 +9311,21 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, LHS, RHS),
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
 
+  // If the subtract doesn't overflow then just use abs(sub())
+  // NOTE: don't use frozen operands for value tracking.
+  bool IsNonNegative = DAG.SignBitIsZero(N->getOperand(1)) &&
+                       DAG.SignBitIsZero(N->getOperand(0));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, N->getOperand(0),
+                             N->getOperand(1)))
+    return DAG.getNode(ISD::ABS, dl, VT,
+                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, N->getOperand(1),
+                             N->getOperand(0)))
+    return DAG.getNode(ISD::ABS, dl, VT,
+                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
   SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
@@ -9334,6 +9338,23 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
     SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Diff, Cmp);
     return DAG.getNode(ISD::SUB, dl, VT, Cmp, Xor);
   }
+
+  // Similar to the branchless expansion, use the (sign-extended) usubo overflow
+  // flag if the (scalar) type is illegal as this is more likely to legalize
+  // cleanly:
+  // abdu(lhs, rhs) -> sub(xor(sub(lhs, rhs), uof(lhs, rhs)), uof(lhs, rhs))
+  if (!IsSigned && VT.isScalarInteger() && !isTypeLegal(VT)) {
+    SDValue USubO =
+        DAG.getNode(ISD::USUBO, dl, DAG.getVTList(VT, MVT::i1), {LHS, RHS});
+    SDValue Cmp = DAG.getNode(ISD::SIGN_EXTEND, dl, VT, USubO.getValue(1));
+    SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, USubO.getValue(0), Cmp);
+    return DAG.getNode(ISD::SUB, dl, VT, Xor, Cmp);
+  }
+
+  // FIXME: Should really try to split the vector in case it's legal on a
+  // subvector.
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return DAG.UnrollVectorOp(N);
 
   // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
@@ -10256,10 +10277,13 @@ SDValue TargetLowering::LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
 
   ArgListTy Args;
   ArgListEntry Entry;
-  std::string NameString = ("__emutls_v." + GA->getGlobal()->getName()).str();
-  Module *VariableModule = const_cast<Module*>(GA->getGlobal()->getParent());
+  const GlobalValue *GV =
+      cast<GlobalValue>(GA->getGlobal()->stripPointerCastsAndAliases());
+  SmallString<32> NameString("__emutls_v.");
+  NameString += GV->getName();
   StringRef EmuTlsVarName(NameString);
-  GlobalVariable *EmuTlsVar = VariableModule->getNamedGlobal(EmuTlsVarName);
+  const GlobalVariable *EmuTlsVar =
+      GV->getParent()->getNamedGlobal(EmuTlsVarName);
   assert(EmuTlsVar && "Cannot find EmuTlsVar ");
   Entry.Node = DAG.getGlobalAddress(EmuTlsVar, dl, PtrVT);
   Entry.Ty = VoidPtrType;

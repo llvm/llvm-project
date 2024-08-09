@@ -1219,7 +1219,7 @@ Corrected:
   return NameClassification::OverloadSet(UnresolvedLookupExpr::Create(
       Context, Result.getNamingClass(), SS.getWithLocInContext(Context),
       Result.getLookupNameInfo(), ADL, Result.begin(), Result.end(),
-      /*KnownDependent=*/false));
+      /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
 }
 
 ExprResult
@@ -7353,6 +7353,15 @@ void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
   }
 }
 
+// Checks if VD is declared at global scope or with C language linkage.
+static bool isMainVar(DeclarationName Name, VarDecl *VD) {
+  return Name.getAsIdentifierInfo() &&
+         Name.getAsIdentifierInfo()->isStr("main") &&
+         !VD->getDescribedVarTemplate() &&
+         (VD->getDeclContext()->getRedeclContext()->isTranslationUnit() ||
+          VD->isExternC());
+}
+
 NamedDecl *Sema::ActOnVariableDeclarator(
     Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
     LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
@@ -7964,8 +7973,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     D.setRedeclaration(CheckVariableDeclaration(NewVD, Previous));
   } else {
     // If this is an explicit specialization of a static data member, check it.
-    if (IsMemberSpecialization && !IsVariableTemplateSpecialization &&
-        !NewVD->isInvalidDecl() && CheckMemberSpecialization(NewVD, Previous))
+    if (IsMemberSpecialization && !IsVariableTemplate &&
+        !IsVariableTemplateSpecialization && !NewVD->isInvalidDecl() &&
+        CheckMemberSpecialization(NewVD, Previous))
       NewVD->setInvalidDecl();
 
     // Merge the decl with the existing one if appropriate.
@@ -8052,14 +8062,15 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   }
 
   // Special handling of variable named 'main'.
-  if (Name.getAsIdentifierInfo() && Name.getAsIdentifierInfo()->isStr("main") &&
-      NewVD->getDeclContext()->getRedeclContext()->isTranslationUnit() &&
-      !getLangOpts().Freestanding && !NewVD->getDescribedVarTemplate()) {
-
-    // C++ [basic.start.main]p3
-    // A program that declares a variable main at global scope is ill-formed.
+  if (!getLangOpts().Freestanding && isMainVar(Name, NewVD)) {
+    // C++ [basic.start.main]p3:
+    //   A program that declares
+    //    - a variable main at global scope, or
+    //    - an entity named main with C language linkage (in any namespace)
+    //   is ill-formed
     if (getLangOpts().CPlusPlus)
-      Diag(D.getBeginLoc(), diag::err_main_global_variable);
+      Diag(D.getBeginLoc(), diag::err_main_global_variable)
+          << NewVD->isExternC();
 
     // In C, and external-linkage variable named main results in undefined
     // behavior.
@@ -8738,7 +8749,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   if (!NewVD->hasLocalStorage() && T->isSizelessType() &&
-      !T.isWebAssemblyReferenceType()) {
+      !T.isWebAssemblyReferenceType() && !T->isHLSLSpecificType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;
     NewVD->setInvalidDecl();
     return;
@@ -10466,7 +10477,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                                 Previous))
           NewFD->setInvalidDecl();
       }
-    } else if (isMemberSpecialization && isa<CXXMethodDecl>(NewFD)) {
+    } else if (isMemberSpecialization && !FunctionTemplate) {
       if (CheckMemberSpecialization(NewFD, Previous))
           NewFD->setInvalidDecl();
     }
@@ -12210,7 +12221,18 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   return Redeclaration;
 }
 
-void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
+void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
+  // [basic.start.main]p3
+  //    The main function shall not be declared with a linkage-specification.
+  if (FD->isExternCContext() ||
+      (FD->isExternCXXContext() &&
+       FD->getDeclContext()->getRedeclContext()->isTranslationUnit())) {
+    Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification)
+        << FD->getLanguageLinkage();
+    FD->setInvalidDecl();
+    return;
+  }
+
   // C++11 [basic.start.main]p3:
   //   A program that [...] declares main to be inline, static or
   //   constexpr is ill-formed.
@@ -12840,7 +12862,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     InitializationKind Kind = InitializationKind::CreateForInit(
         VDecl->getLocation(), DirectInit, Init);
     // FIXME: Initialization should not be taking a mutable list of inits.
-    SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
+    SmallVector<Expr *, 8> InitsCopy(DeduceInits);
     return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
                                                        InitsCopy);
   }
@@ -18074,6 +18096,15 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       if (NumInitMethods > 1 || !Def->hasInitMethod())
         Diag(RD->getLocation(), diag::err_sycl_special_type_num_init_method);
     }
+
+    // If we're defining a dynamic class in a module interface unit, we always
+    // need to produce the vtable for it, even if the vtable is not used in the
+    // current TU.
+    //
+    // The case where the current class is not dynamic is handled in
+    // MarkVTableUsed.
+    if (getCurrentModule() && getCurrentModule()->isInterfaceOrPartition())
+      MarkVTableUsed(RD->getLocation(), RD, /*DefinitionRequired=*/true);
   }
 
   // Exit this scope of this tag's definition.
@@ -18336,8 +18367,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   QualType EltTy = Context.getBaseElementType(T);
   if (!EltTy->isDependentType() && !EltTy->containsErrors()) {
-    if (RequireCompleteSizedType(Loc, EltTy,
-                                 diag::err_field_incomplete_or_sizeless)) {
+    bool isIncomplete =
+        LangOpts.HLSL // HLSL allows sizeless builtin types
+            ? RequireCompleteType(Loc, EltTy, diag::err_incomplete_type)
+            : RequireCompleteSizedType(Loc, EltTy,
+                                       diag::err_field_incomplete_or_sizeless);
+    if (isIncomplete) {
       // Fields of incomplete type force their record to be invalid.
       Record->setInvalidDecl();
       InvalidDecl = true;
@@ -18952,9 +18987,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // elsewhere, after synthesized ivars are known.
       }
     } else if (!FDTy->isDependentType() &&
-               RequireCompleteSizedType(
-                   FD->getLocation(), FD->getType(),
-                   diag::err_field_incomplete_or_sizeless)) {
+               (LangOpts.HLSL // HLSL allows sizeless builtin types
+                    ? RequireCompleteType(FD->getLocation(), FD->getType(),
+                                          diag::err_incomplete_type)
+                    : RequireCompleteSizedType(
+                          FD->getLocation(), FD->getType(),
+                          diag::err_field_incomplete_or_sizeless))) {
       // Incomplete type
       FD->setInvalidDecl();
       EnclosingDecl->setInvalidDecl();

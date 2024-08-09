@@ -6122,7 +6122,7 @@ static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
   Type *IndexedType = ExtractValueInst::getIndexedType(From->getType(),
                                                              idx_range);
   Value *To = PoisonValue::get(IndexedType);
-  SmallVector<unsigned, 10> Idxs(idx_range.begin(), idx_range.end());
+  SmallVector<unsigned, 10> Idxs(idx_range);
   unsigned IdxSkip = Idxs.size();
 
   return BuildSubAggregate(From, To, IndexedType, Idxs, IdxSkip, InsertBefore);
@@ -9107,6 +9107,26 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   // Can we infer anything when the two compares have matching operands?
   if (L0 == R0 && L1 == R1)
     return isImpliedCondMatchingOperands(LPred, RPred);
+
+  // It only really makes sense in the context of signed comparison for "X - Y
+  // must be positive if X >= Y and no overflow".
+  // Take SGT as an example:  L0:x > L1:y and C >= 0
+  //                      ==> R0:(x -nsw y) < R1:(-C) is false
+  if ((LPred == ICmpInst::ICMP_SGT || LPred == ICmpInst::ICMP_SGE) &&
+      match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
+    if (match(R1, m_NonPositive()) &&
+        isImpliedCondMatchingOperands(LPred, RPred) == false)
+      return false;
+  }
+
+  // Take SLT as an example:  L0:x < L1:y and C <= 0
+  //                      ==> R0:(x -nsw y) < R1:(-C) is true
+  if ((LPred == ICmpInst::ICMP_SLT || LPred == ICmpInst::ICMP_SLE) &&
+      match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
+    if (match(R1, m_NonNegative()) &&
+        isImpliedCondMatchingOperands(LPred, RPred) == true)
+      return true;
+  }
 
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
   if (L0 == R0 &&

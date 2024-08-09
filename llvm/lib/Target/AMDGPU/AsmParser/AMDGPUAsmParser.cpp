@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -190,6 +191,8 @@ public:
     ImmTyMatrixBFMT,
     ImmTyMatrixAScale,
     ImmTyMatrixBScale,
+    ImmTyMatrixAReuse,
+    ImmTyMatrixBReuse,
     ImmTyScaleSel,
     ImmTyAuxData,
     ImmTyByteSel,
@@ -436,6 +439,8 @@ public:
   bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
   bool isMatrixAScale() const { return isImmTy(ImmTyMatrixAScale); }
   bool isMatrixBScale() const { return isImmTy(ImmTyMatrixBScale); }
+  bool isMatrixAReuse() const { return isImmTy(ImmTyMatrixAReuse); }
+  bool isMatrixBReuse() const { return isImmTy(ImmTyMatrixBReuse); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
   bool isDppFI() const { return isImmTy(ImmTyDppFI); }
@@ -1218,6 +1223,8 @@ public:
     case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
     case ImmTyMatrixAScale: OS << "ImmTyMatrixAScale"; break;
     case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
+    case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
+    case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyAuxData: OS << "ImmTyAuxData"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
@@ -1230,7 +1237,8 @@ public:
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Register:
-      OS << "<register " << getReg() << " mods: " << Reg.Mods << '>';
+      OS << "<register " << AMDGPUInstPrinter::getRegisterName(getReg())
+         << " mods: " << Reg.Mods << '>';
       break;
     case Immediate:
       OS << '<' << getImm();
@@ -1723,6 +1731,14 @@ public:
   ParseStatus parseTH(OperandVector &Operands, int64_t &TH);
   ParseStatus parseStringWithPrefix(StringRef Prefix, StringRef &Value,
                                     SMLoc &StringLoc);
+  ParseStatus parseStringOrIntWithPrefix(OperandVector &Operands,
+                                         StringRef Name,
+                                         ArrayRef<const char *> Ids,
+                                         int64_t &IntVal);
+  ParseStatus parseStringOrIntWithPrefix(OperandVector &Operands,
+                                         StringRef Name,
+                                         ArrayRef<const char *> Ids,
+                                         AMDGPUOperand::ImmTy Type);
 
   bool isModifier();
   bool isOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const;
@@ -7181,27 +7197,17 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
 
 ParseStatus AMDGPUAsmParser::parseScope(OperandVector &Operands,
                                         int64_t &Scope) {
-  Scope = AMDGPU::CPol::SCOPE_CU; // default;
+  static const unsigned Scopes[] = {CPol::SCOPE_CU, CPol::SCOPE_SE,
+                                    CPol::SCOPE_DEV, CPol::SCOPE_SYS};
 
-  StringRef Value;
-  SMLoc StringLoc;
-  ParseStatus Res;
+  ParseStatus Res = parseStringOrIntWithPrefix(
+      Operands, "scope", {"SCOPE_CU", "SCOPE_SE", "SCOPE_DEV", "SCOPE_SYS"},
+      Scope);
 
-  Res = parseStringWithPrefix("scope", Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
+  if (Res.isSuccess())
+    Scope = Scopes[Scope];
 
-  Scope = StringSwitch<int64_t>(Value)
-              .Case("SCOPE_CU", AMDGPU::CPol::SCOPE_CU)
-              .Case("SCOPE_SE", AMDGPU::CPol::SCOPE_SE)
-              .Case("SCOPE_DEV", AMDGPU::CPol::SCOPE_DEV)
-              .Case("SCOPE_SYS", AMDGPU::CPol::SCOPE_SYS)
-              .Default(0xffffffff);
-
-  if (Scope == 0xffffffff)
-    return Error(StringLoc, "invalid scope value");
-
-  return ParseStatus::Success;
+  return Res;
 }
 
 ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
@@ -7290,6 +7296,44 @@ ParseStatus AMDGPUAsmParser::parseStringWithPrefix(StringRef Prefix,
                                                   : ParseStatus::Failure;
 }
 
+ParseStatus AMDGPUAsmParser::parseStringOrIntWithPrefix(
+    OperandVector &Operands, StringRef Name, ArrayRef<const char *> Ids,
+    int64_t &IntVal) {
+  if (!trySkipId(Name, AsmToken::Colon))
+    return ParseStatus::NoMatch;
+
+  SMLoc StringLoc = getLoc();
+
+  StringRef Value;
+  if (isToken(AsmToken::Identifier)) {
+    Value = getTokenStr();
+    lex();
+
+    for (IntVal = 0; IntVal < (int64_t)Ids.size(); ++IntVal)
+      if (Value == Ids[IntVal])
+        break;
+  } else if (!parseExpr(IntVal))
+    return ParseStatus::Failure;
+
+  if (IntVal < 0 || IntVal >= (int64_t)Ids.size())
+    return Error(StringLoc, "invalid " + Twine(Name) + " value");
+
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseStringOrIntWithPrefix(
+    OperandVector &Operands, StringRef Name, ArrayRef<const char *> Ids,
+    AMDGPUOperand::ImmTy Type) {
+  SMLoc S = getLoc();
+  int64_t IntVal;
+
+  ParseStatus Res = parseStringOrIntWithPrefix(Operands, Name, Ids, IntVal);
+  if (Res.isSuccess())
+    Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S, Type));
+
+  return Res;
+}
+
 //===----------------------------------------------------------------------===//
 // MTBUF format
 //===----------------------------------------------------------------------===//
@@ -7345,29 +7389,11 @@ ParseStatus AMDGPUAsmParser::parseIndexKey16bit(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::tryParseMatrixFMT(OperandVector &Operands,
                                                StringRef Name,
                                                AMDGPUOperand::ImmTy Type) {
-  using namespace llvm::AMDGPU::WMMA;
-
-  SMLoc S = getLoc();
-  StringRef Value;
-  SMLoc StringLoc;
-  ParseStatus Res = parseStringWithPrefix(Name, Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
-
-  int64_t Int;
-  Int = StringSwitch<int64_t>(Value)
-        .Case("MATRIX_FMT_FP8", MatrixFMT::MATRIX_FMT_FP8)
-        .Case("MATRIX_FMT_BF8", MatrixFMT::MATRIX_FMT_BF8)
-        .Case("MATRIX_FMT_FP6", MatrixFMT::MATRIX_FMT_FP6)
-        .Case("MATRIX_FMT_BF6", MatrixFMT::MATRIX_FMT_BF6)
-        .Case("MATRIX_FMT_FP4", MatrixFMT::MATRIX_FMT_FP4)
-        .Default(0xffffffff);
-
-  if (Int == 0xffffffff)
-    return Error(StringLoc, "invalid " + Twine(Name) + " value");
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, Type));
-  return ParseStatus::Success;
+  return parseStringOrIntWithPrefix(Operands, Name,
+                                    {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",
+                                     "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
+                                     "MATRIX_FMT_FP4"},
+                                    Type);
 }
 
 ParseStatus AMDGPUAsmParser::parseMatrixAFMT(OperandVector &Operands) {
@@ -7383,35 +7409,13 @@ ParseStatus AMDGPUAsmParser::parseMatrixBFMT(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::tryParseMatrixScale(OperandVector &Operands,
                                                  StringRef Name,
                                                  AMDGPUOperand::ImmTy Type) {
-  using namespace llvm::AMDGPU::WMMA;
-
-  SMLoc S = getLoc();
-  StringRef Value;
-  SMLoc StringLoc;
-  ParseStatus Res = parseStringWithPrefix(Name, Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
-
-  int64_t Int;
-  Int =
-      StringSwitch<int64_t>(Value)
-          .Case("MATRIX_SCALE_DEFAULT", MatrixScale::MATRIX_SCALE_DEFAULT)
-          .Case("MATRIX_SCALE_ROW1", MatrixScale::MATRIX_SCALE_ROW1)
-          .Case("MATRIX_SCALE_WORD1", MatrixScale::MATRIX_SCALE_WORD1)
-          .Case("MATRIX_SCALE_ROW1_WORD1", MatrixScale::MATRIX_SCALE_ROW1_WORD1)
-          .Case("MATRIX_SCALE_BYTE1", MatrixScale::MATRIX_SCALE_BYTE1)
-          .Case("MATRIX_SCALE_ROW1_BYTE1", MatrixScale::MATRIX_SCALE_ROW1_BYTE1)
-          .Case("MATRIX_SCALE_WORD1_BYTE1",
-                MatrixScale::MATRIX_SCALE_WORD1_BYTE1)
-          .Case("MATRIX_SCALE_ROW1_WORD1_BYTE1",
-                MatrixScale::MATRIX_SCALE_ROW1_WORD1_BYTE1)
-          .Default(0xffffffff);
-
-  if (Int == 0xffffffff)
-    return Error(StringLoc, "invalid " + Twine(Name) + " value");
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, Type));
-  return ParseStatus::Success;
+  return parseStringOrIntWithPrefix(
+      Operands, Name,
+      {"MATRIX_SCALE_DEFAULT", "MATRIX_SCALE_ROW1", "MATRIX_SCALE_WORD1",
+       "MATRIX_SCALE_ROW1_WORD1", "MATRIX_SCALE_BYTE1",
+       "MATRIX_SCALE_ROW1_BYTE1", "MATRIX_SCALE_WORD1_BYTE1",
+       "MATRIX_SCALE_ROW1_WORD1_BYTE1"},
+      Type);
 }
 
 ParseStatus AMDGPUAsmParser::parseMatrixAScale(OperandVector &Operands) {
@@ -9447,6 +9451,14 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
                           AMDGPUOperand::ImmTyMatrixBScale, 0);
   }
 
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_a_reuse))
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixAReuse, 0);
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_b_reuse))
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixBReuse, 0);
+
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);
   if (NegLoIdx != -1)
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyNegLo);
@@ -10103,57 +10115,16 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
 ParseStatus AMDGPUAsmParser::parseSDWASel(OperandVector &Operands,
                                           StringRef Prefix,
                                           AMDGPUOperand::ImmTy Type) {
-  using namespace llvm::AMDGPU::SDWA;
-
-  SMLoc S = getLoc();
-  StringRef Value;
-
-  SMLoc StringLoc;
-  ParseStatus Res = parseStringWithPrefix(Prefix, Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
-
-  int64_t Int;
-  Int = StringSwitch<int64_t>(Value)
-        .Case("BYTE_0", SdwaSel::BYTE_0)
-        .Case("BYTE_1", SdwaSel::BYTE_1)
-        .Case("BYTE_2", SdwaSel::BYTE_2)
-        .Case("BYTE_3", SdwaSel::BYTE_3)
-        .Case("WORD_0", SdwaSel::WORD_0)
-        .Case("WORD_1", SdwaSel::WORD_1)
-        .Case("DWORD", SdwaSel::DWORD)
-        .Default(0xffffffff);
-
-  if (Int == 0xffffffff)
-    return Error(StringLoc, "invalid " + Twine(Prefix) + " value");
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, Type));
-  return ParseStatus::Success;
+  return parseStringOrIntWithPrefix(
+      Operands, Prefix,
+      {"BYTE_0", "BYTE_1", "BYTE_2", "BYTE_3", "WORD_0", "WORD_1", "DWORD"},
+      Type);
 }
 
 ParseStatus AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
-  using namespace llvm::AMDGPU::SDWA;
-
-  SMLoc S = getLoc();
-  StringRef Value;
-
-  SMLoc StringLoc;
-  ParseStatus Res = parseStringWithPrefix("dst_unused", Value, StringLoc);
-  if (!Res.isSuccess())
-    return Res;
-
-  int64_t Int;
-  Int = StringSwitch<int64_t>(Value)
-        .Case("UNUSED_PAD", DstUnused::UNUSED_PAD)
-        .Case("UNUSED_SEXT", DstUnused::UNUSED_SEXT)
-        .Case("UNUSED_PRESERVE", DstUnused::UNUSED_PRESERVE)
-        .Default(0xffffffff);
-
-  if (Int == 0xffffffff)
-    return Error(StringLoc, "invalid dst_unused value");
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, AMDGPUOperand::ImmTySDWADstUnused));
-  return ParseStatus::Success;
+  return parseStringOrIntWithPrefix(
+      Operands, "dst_unused", {"UNUSED_PAD", "UNUSED_SEXT", "UNUSED_PRESERVE"},
+      AMDGPUOperand::ImmTySDWADstUnused);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands) {

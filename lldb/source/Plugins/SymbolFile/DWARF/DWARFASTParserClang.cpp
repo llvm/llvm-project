@@ -269,8 +269,15 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
   }
 
   // We don't have a type definition and/or the import failed, but we need to
-  // add members to it. Start the definition to make that possible.
-  tag_decl_ctx->startDefinition();
+  // add members to it. Start the definition to make that possible. If the type
+  // has no external storage we also have to complete the definition. Otherwise,
+  // that will happen when we are asked to complete the type
+  // (CompleteTypeFromDWARF).
+  ast.StartTagDeclarationDefinition(type);
+  if (!tag_decl_ctx->hasExternalLexicalStorage()) {
+    ast.SetDeclIsForcefullyCompleted(tag_decl_ctx);
+    ast.CompleteTagDeclarationDefinition(type);
+  }
 }
 
 ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
@@ -1803,7 +1810,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   if (!clang_type) {
     clang_type = m_ast.CreateRecordType(
         containing_decl_ctx, GetOwningClangModule(die), attrs.accessibility,
-        attrs.name.GetCString(), tag_decl_kind, attrs.class_language, &metadata,
+        attrs.name.GetCString(), tag_decl_kind, attrs.class_language, metadata,
         attrs.exports_symbols);
   }
 
@@ -1883,43 +1890,18 @@ public:
                                                 // required if you don't have an
                                                 // ivar decl
       const char *property_setter_name, const char *property_getter_name,
-      uint32_t property_attributes, const ClangASTMetadata *metadata)
+      uint32_t property_attributes, ClangASTMetadata metadata)
       : m_class_opaque_type(class_opaque_type), m_property_name(property_name),
         m_property_opaque_type(property_opaque_type),
         m_property_setter_name(property_setter_name),
         m_property_getter_name(property_getter_name),
-        m_property_attributes(property_attributes) {
-    if (metadata != nullptr) {
-      m_metadata_up = std::make_unique<ClangASTMetadata>();
-      *m_metadata_up = *metadata;
-    }
-  }
-
-  DelayedAddObjCClassProperty(const DelayedAddObjCClassProperty &rhs) {
-    *this = rhs;
-  }
-
-  DelayedAddObjCClassProperty &
-  operator=(const DelayedAddObjCClassProperty &rhs) {
-    m_class_opaque_type = rhs.m_class_opaque_type;
-    m_property_name = rhs.m_property_name;
-    m_property_opaque_type = rhs.m_property_opaque_type;
-    m_property_setter_name = rhs.m_property_setter_name;
-    m_property_getter_name = rhs.m_property_getter_name;
-    m_property_attributes = rhs.m_property_attributes;
-
-    if (rhs.m_metadata_up) {
-      m_metadata_up = std::make_unique<ClangASTMetadata>();
-      *m_metadata_up = *rhs.m_metadata_up;
-    }
-    return *this;
-  }
+        m_property_attributes(property_attributes), m_metadata(metadata) {}
 
   bool Finalize() {
     return TypeSystemClang::AddObjCClassProperty(
         m_class_opaque_type, m_property_name, m_property_opaque_type,
         /*ivar_decl=*/nullptr, m_property_setter_name, m_property_getter_name,
-        m_property_attributes, m_metadata_up.get());
+        m_property_attributes, m_metadata);
   }
 
 private:
@@ -1929,7 +1911,7 @@ private:
   const char *m_property_setter_name;
   const char *m_property_getter_name;
   uint32_t m_property_attributes;
-  std::unique_ptr<ClangASTMetadata> m_metadata_up;
+  ClangASTMetadata m_metadata;
 };
 
 bool DWARFASTParserClang::ParseTemplateDIE(
@@ -2721,10 +2703,10 @@ void DWARFASTParserClang::ParseObjCProperty(
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
-  delayed_properties.push_back(DelayedAddObjCClassProperty(
+  delayed_properties.emplace_back(
       class_clang_type, propAttrs.prop_name,
       member_type->GetLayoutCompilerType(), propAttrs.prop_setter_name,
-      propAttrs.prop_getter_name, propAttrs.prop_attributes, &metadata));
+      propAttrs.prop_getter_name, propAttrs.prop_attributes, metadata);
 }
 
 llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(

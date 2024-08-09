@@ -437,8 +437,10 @@ class VOP3Pe_Base {
   bits<1> index_key_16bit;
   bits<3> matrix_a_fmt;
   bits<3> matrix_b_fmt;
-  bits<3> matrix_a_scale;
-  bits<3> matrix_b_scale;
+  bits<2> matrix_a_scale;
+  bits<2> matrix_b_scale;
+  bits<1> matrix_a_reuse;
+  bits<1> matrix_b_reuse;
 }
 
 class VOP3Pe <bits<7> op, VOPProfile P> : Enc64, VOP3Pe_Base {
@@ -452,11 +454,11 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2},
                      !if(P.HasMaxtrixScale, matrix_a_scale{1}, 0)); // op_sel(1)
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
-                     !if(P.HasMaxtrixScale, matrix_a_scale{2}, 0)); // op_sel(2)
+                     !if(P.HasMaxtrixScale, matrix_a_reuse, 0));    // op_sel(2)
 
   let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
                        P.IsDOT : 1,
-                       P.HasMaxtrixScale : matrix_b_scale{2},
+                       P.HasMaxtrixScale : matrix_b_reuse,
                        1: ?); // op_sel_hi(2)
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);

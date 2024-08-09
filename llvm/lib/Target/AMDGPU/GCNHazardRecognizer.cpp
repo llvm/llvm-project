@@ -1810,7 +1810,7 @@ bool GCNHazardRecognizer::fixCvtScaleForwardingHazard(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  auto IsHazardFn = [MI, TII, TRI, this](const MachineInstr &I) {
+  auto IsHazardFn = [MI, TII, TRI](const MachineInstr &I) {
     if (!AMDGPU::isCvtScaleF32_F32F16ToF8F4(I.getOpcode()))
       return false;
 

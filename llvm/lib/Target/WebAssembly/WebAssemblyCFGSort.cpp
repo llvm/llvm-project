@@ -186,10 +186,11 @@ struct Entry {
 /// Explore them.
 static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                        const WebAssemblyExceptionInfo &WEI,
-                       const MachineDominatorTree &MDT) {
+                       MachineDominatorTree &MDT) {
   // Remember original layout ordering, so we can update terminators after
   // reordering to point to the original layout successor.
   MF.RenumberBlocks();
+  MDT.updateBlockNumbers();
 
   // Prepare for a topological sort: Record the number of predecessors each
   // block has, ignoring loop backedges.
@@ -330,6 +331,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   }
   assert(Entries.empty() && "Active sort region list not finished");
   MF.RenumberBlocks();
+  MDT.updateBlockNumbers();
 
 #ifndef NDEBUG
   SmallSetVector<const SortRegion *, 8> OnStack;
