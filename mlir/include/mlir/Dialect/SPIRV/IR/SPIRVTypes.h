@@ -258,8 +258,9 @@ public:
   static SampledImageType
   getChecked(function_ref<InFlightDiagnostic()> emitError, Type imageType);
 
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type imageType);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   Type imageType);
 
   Type getImageType() const;
 
@@ -462,8 +463,9 @@ public:
   static MatrixType getChecked(function_ref<InFlightDiagnostic()> emitError,
                                Type columnType, uint32_t columnCount);
 
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type columnType, uint32_t columnCount);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   Type columnType, uint32_t columnCount);
 
   /// Returns true if the matrix elements are vectors of float elements.
   static bool isValidColumnType(Type columnType);
