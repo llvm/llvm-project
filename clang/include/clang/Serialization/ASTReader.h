@@ -130,7 +130,7 @@ public:
   ///
   /// \returns true to indicate the options are invalid or false otherwise.
   virtual bool ReadLanguageOptions(const LangOptions &LangOpts,
-                                   bool Complain,
+                                   StringRef ModuleFilename, bool Complain,
                                    bool AllowCompatibleDifferences) {
     return false;
   }
@@ -139,7 +139,8 @@ public:
   ///
   /// \returns true to indicate the target options are invalid, or false
   /// otherwise.
-  virtual bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  virtual bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                                 StringRef ModuleFilename, bool Complain,
                                  bool AllowCompatibleDifferences) {
     return false;
   }
@@ -150,7 +151,7 @@ public:
   /// otherwise.
   virtual bool
   ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                        bool Complain) {
+                        StringRef ModuleFilename, bool Complain) {
     return false;
   }
 
@@ -172,6 +173,7 @@ public:
   /// \returns true to indicate the header search options are invalid, or false
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                                       StringRef ModuleFilename,
                                        StringRef SpecificModuleCachePath,
                                        bool Complain) {
     return false;
@@ -200,6 +202,7 @@ public:
   /// \returns true to indicate the preprocessor options are invalid, or false
   /// otherwise.
   virtual bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+                                       StringRef ModuleFilename,
                                        bool ReadMacros, bool Complain,
                                        std::string &SuggestedPredefines) {
     return false;
@@ -262,20 +265,24 @@ public:
   bool ReadFullVersionInformation(StringRef FullVersion) override;
   void ReadModuleName(StringRef ModuleName) override;
   void ReadModuleMapFile(StringRef ModuleMapPath) override;
-  bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                         StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                             bool Complain) override;
+                             StringRef ModuleFilename, bool Complain) override;
   bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override;
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override;
 
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
@@ -299,16 +306,20 @@ public:
   PCHValidator(Preprocessor &PP, ASTReader &Reader)
       : PP(PP), Reader(Reader) {}
 
-  bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                         StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                             bool Complain) override;
+                             StringRef ModuleFilename, bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
@@ -325,7 +336,8 @@ public:
   SimpleASTReaderListener(Preprocessor &PP) : PP(PP) {}
 
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override;
 };
 
@@ -789,6 +801,11 @@ private:
   /// in the chain. The referenced declarations are deserialized and passed to
   /// the consumer eagerly.
   SmallVector<GlobalDeclID, 16> EagerlyDeserializedDecls;
+
+  /// The IDs of all vtables to emit. The referenced declarations are passed
+  /// to the consumers' HandleVTable eagerly after passing
+  /// EagerlyDeserializedDecls.
+  SmallVector<GlobalDeclID, 16> VTablesToEmit;
 
   /// The IDs of all tentative definitions stored in the chain.
   ///
@@ -1361,10 +1378,12 @@ private:
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
                                  unsigned ClientLoadCapabilities);
-  static ASTReadResult ReadOptionsBlock(
-      llvm::BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
-      bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
-      std::string &SuggestedPredefines);
+  static ASTReadResult
+  ReadOptionsBlock(llvm::BitstreamCursor &Stream, StringRef Filename,
+                   unsigned ClientLoadCapabilities,
+                   bool AllowCompatibleConfigurationMismatch,
+                   ASTReaderListener &Listener,
+                   std::string &SuggestedPredefines);
 
   /// Read the unhashed control block.
   ///
@@ -1373,12 +1392,11 @@ private:
   ASTReadResult readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
                                          unsigned ClientLoadCapabilities);
 
-  static ASTReadResult
-  readUnhashedControlBlockImpl(ModuleFile *F, llvm::StringRef StreamData,
-                               unsigned ClientLoadCapabilities,
-                               bool AllowCompatibleConfigurationMismatch,
-                               ASTReaderListener *Listener,
-                               bool ValidateDiagnosticOptions);
+  static ASTReadResult readUnhashedControlBlockImpl(
+      ModuleFile *F, llvm::StringRef StreamData, StringRef Filename,
+      unsigned ClientLoadCapabilities,
+      bool AllowCompatibleConfigurationMismatch, ASTReaderListener *Listener,
+      bool ValidateDiagnosticOptions);
 
   llvm::Error ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities);
   llvm::Error ReadExtensionBlock(ModuleFile &F);
@@ -1391,21 +1409,26 @@ private:
                                        unsigned ClientLoadCapabilities);
   llvm::Error ReadSubmoduleBlock(ModuleFile &F,
                                  unsigned ClientLoadCapabilities);
-  static bool ParseLanguageOptions(const RecordData &Record, bool Complain,
+  static bool ParseLanguageOptions(const RecordData &Record,
+                                   StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
                                    bool AllowCompatibleDifferences);
-  static bool ParseTargetOptions(const RecordData &Record, bool Complain,
+  static bool ParseTargetOptions(const RecordData &Record,
+                                 StringRef ModuleFilename, bool Complain,
                                  ASTReaderListener &Listener,
                                  bool AllowCompatibleDifferences);
-  static bool ParseDiagnosticOptions(const RecordData &Record, bool Complain,
+  static bool ParseDiagnosticOptions(const RecordData &Record,
+                                     StringRef ModuleFilename, bool Complain,
                                      ASTReaderListener &Listener);
   static bool ParseFileSystemOptions(const RecordData &Record, bool Complain,
                                      ASTReaderListener &Listener);
-  static bool ParseHeaderSearchOptions(const RecordData &Record, bool Complain,
+  static bool ParseHeaderSearchOptions(const RecordData &Record,
+                                       StringRef ModuleFilename, bool Complain,
                                        ASTReaderListener &Listener);
   static bool ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
                                      ASTReaderListener &Listener);
-  static bool ParsePreprocessorOptions(const RecordData &Record, bool Complain,
+  static bool ParsePreprocessorOptions(const RecordData &Record,
+                                       StringRef ModuleFilename, bool Complain,
                                        ASTReaderListener &Listener,
                                        std::string &SuggestedPredefines);
 
@@ -1500,6 +1523,7 @@ private:
   bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
+  void PassVTableToConsumer(CXXRecordDecl *RD);
 
   void finishPendingActions();
   void diagnoseOdrViolations();

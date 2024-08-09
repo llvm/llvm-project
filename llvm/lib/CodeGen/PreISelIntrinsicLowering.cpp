@@ -349,8 +349,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Function *Parent = CI->getParent()->getParent();
         TargetLibraryInfo &TLI = LookupTLI(*Parent);
+        // Intrinsics in unreachable code are not lowered.
         bool Changed = lowerConstantIntrinsics(*Parent, TLI, /*DT=*/nullptr);
-        assert(Changed && "lowerConstantIntrinsics did not lower intrinsic");
         return Changed;
       });
       break;

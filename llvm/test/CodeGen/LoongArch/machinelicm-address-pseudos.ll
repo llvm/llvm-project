@@ -15,11 +15,10 @@ define void @test_la_pcrel(i32 signext %n) {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    pcalau12i $a2, %pc_hi20(l)
-; LA32-NEXT:    addi.w $a2, $a2, %pc_lo12(l)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB0_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    ld.w $zero, $a2, 0
+; LA32-NEXT:    ld.w $zero, $a2, %pc_lo12(l)
 ; LA32-NEXT:    addi.w $a1, $a1, 1
 ; LA32-NEXT:    blt $a1, $a0, .LBB0_1
 ; LA32-NEXT:  # %bb.2: # %ret
@@ -29,11 +28,10 @@ define void @test_la_pcrel(i32 signext %n) {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    move $a1, $zero
 ; LA64-NEXT:    pcalau12i $a2, %pc_hi20(l)
-; LA64-NEXT:    addi.d $a2, $a2, %pc_lo12(l)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB0_1: # %loop
 ; LA64-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ld.w $zero, $a2, 0
+; LA64-NEXT:    ld.w $zero, $a2, %pc_lo12(l)
 ; LA64-NEXT:    addi.w $a1, $a1, 1
 ; LA64-NEXT:    blt $a1, $a0, .LBB0_1
 ; LA64-NEXT:  # %bb.2: # %ret
@@ -41,18 +39,17 @@ define void @test_la_pcrel(i32 signext %n) {
 ;
 ; LA64LARGE-LABEL: test_la_pcrel:
 ; LA64LARGE:       # %bb.0: # %entry
-; LA64LARGE-NEXT:    pcalau12i $a2, %pc_hi20(l)
-; LA64LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(l)
-; LA64LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(l)
-; LA64LARGE-NEXT:    lu52i.d $a3, $a1, %pc64_hi12(l)
-; LA64LARGE-NEXT:    move $a1, $zero
-; LA64LARGE-NEXT:    add.d $a2, $a3, $a2
+; LA64LARGE-NEXT:    pcalau12i $a1, %pc_hi20(l)
+; LA64LARGE-NEXT:    addi.d $a2, $zero, %pc_lo12(l)
+; LA64LARGE-NEXT:    lu32i.d $a2, %pc64_lo20(l)
+; LA64LARGE-NEXT:    lu52i.d $a2, $a2, %pc64_hi12(l)
+; LA64LARGE-NEXT:    move $a3, $zero
 ; LA64LARGE-NEXT:    .p2align 4, , 16
 ; LA64LARGE-NEXT:  .LBB0_1: # %loop
 ; LA64LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64LARGE-NEXT:    ld.w $zero, $a2, 0
-; LA64LARGE-NEXT:    addi.w $a1, $a1, 1
-; LA64LARGE-NEXT:    blt $a1, $a0, .LBB0_1
+; LA64LARGE-NEXT:    ldx.w $zero, $a2, $a1
+; LA64LARGE-NEXT:    addi.w $a3, $a3, 1
+; LA64LARGE-NEXT:    blt $a3, $a0, .LBB0_1
 ; LA64LARGE-NEXT:  # %bb.2: # %ret
 ; LA64LARGE-NEXT:    ret
 entry:
