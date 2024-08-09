@@ -4826,6 +4826,7 @@ cc_library(
         ":BuiltinToLLVMIRTranslation",
         ":ComplexToLLVM",
         ":ControlFlowToLLVM",
+        ":DLTITransformOps",
         ":FuncExtensions",
         ":FuncToLLVM",
         ":FuncTransformOps",
@@ -13985,6 +13986,53 @@ cc_library(
         ":DataLayoutInterfaces",
         ":IR",
         "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "DLTITransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/DLTI/TransformOps/DLTITransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":DLTIDialectTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "DLTITransformOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/DLTI/TransformOps/DLTITransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/DLTI/TransformOps/DLTITransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/DLTI/TransformOps/DLTITransformOps.td",
+    deps = [
+        ":DLTITransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "DLTITransformOps",
+    srcs = glob(["lib/Dialect/DLTI/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/DLTI/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":DLTIDialect",
+        ":DLTITransformOpsIncGen",
+        ":DataLayoutInterfaces",
+        ":IR",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformDialectUtils",
     ],
 )
 
