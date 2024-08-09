@@ -1725,5 +1725,76 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_index)
 __attribute__((convergent)) uint WaveGetLaneIndex();
 
+//===----------------------------------------------------------------------===//
+// sign builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T sign(T Val)
+/// \brief Returns -1 if \a Val is less than zero; 0 if \a Val equals zero; and
+/// 1 if \a Val is greater than zero. \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int16_t sign(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int16_t2 sign(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int16_t3 sign(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int16_t4 sign(int16_t4);
+#endif
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+half sign(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+half2 sign(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+half3 sign(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+half4 sign(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+float sign(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+float2 sign(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+float3 sign(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+float4 sign(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int64_t sign(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int64_t2 sign(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int64_t3 sign(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int64_t4 sign(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+double sign(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+double2 sign(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+double3 sign(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+double4 sign(double4);
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

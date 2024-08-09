@@ -78,6 +78,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Length, length)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Sign, sign)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
 
   //===----------------------------------------------------------------------===//

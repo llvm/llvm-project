@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
@@ -995,6 +996,14 @@ bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
                                   checkDoubleVector);
 }
+bool CheckFloatingOrSignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllSignedTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasSignedIntegerRepresentation() &&
+           !PassedType->hasFloatingRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.IntTy,
+                                  checkAllSignedTypes);
+}
 
 bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
@@ -1106,6 +1115,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
             TheCall, /*CheckForFloatArgs*/
             TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_sign: {
+    if (CheckFloatingOrSignedIntRepresentation(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic
