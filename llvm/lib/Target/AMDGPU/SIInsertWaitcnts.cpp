@@ -3007,6 +3007,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     Modified = true;
   }
   ReleaseVGPRInsts.clear();
+  SLoadAddresses.clear();
 
   return Modified;
 }

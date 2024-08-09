@@ -3731,7 +3731,8 @@ multiclass VPseudoVNCVTF_RM_W {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListFW in {
     foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
-      defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint, sew=e>,
+      defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint, sew=e,
+                                    TargetConstraintType=2>,
                 SchedUnary<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV", m.MX, e,
                            forcePassthruRead=true>;
   }

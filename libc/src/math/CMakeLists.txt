@@ -88,6 +88,7 @@ add_math_entrypoint_object(cospif)
 
 add_math_entrypoint_object(daddl)
 add_math_entrypoint_object(daddf128)
+add_math_entrypoint_object(ddivl)
 add_math_entrypoint_object(ddivf128)
 add_math_entrypoint_object(dmull)
 add_math_entrypoint_object(dmulf128)
@@ -436,10 +437,15 @@ add_math_entrypoint_object(scalbnf128)
 
 add_math_entrypoint_object(setpayload)
 add_math_entrypoint_object(setpayloadf)
+add_math_entrypoint_object(setpayloadl)
 add_math_entrypoint_object(setpayloadf16)
 add_math_entrypoint_object(setpayloadf128)
 
+add_math_entrypoint_object(setpayloadsig)
+add_math_entrypoint_object(setpayloadsigf)
+add_math_entrypoint_object(setpayloadsigl)
 add_math_entrypoint_object(setpayloadsigf16)
+add_math_entrypoint_object(setpayloadsigf128)
 
 add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
