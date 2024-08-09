@@ -1540,6 +1540,24 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: getpayload
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double *
+  - name: getpayloadl
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double *
+  - name: getpayloadf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float *     
   - name: getpayloadf16
     standards:
       - stdc
@@ -1547,6 +1565,13 @@ functions:
     arguments:
       - type: _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: getpayloadf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128 *
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ilogbf16
     standards:
       - stdc
