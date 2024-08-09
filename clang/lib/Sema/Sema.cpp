@@ -80,6 +80,14 @@
 using namespace clang;
 using namespace sema;
 
+namespace opts {
+llvm::cl::OptionCategory DumpAutoInference("DumpAutoInference");
+llvm::cl::opt<bool> DumpAutoTypeInference{
+    "fdump-auto-type-inference",
+    llvm::cl::desc("Dump compiler-deduced type for variables and return expressions declared using C++ 'auto' keyword"), llvm::cl::ZeroOrMore,
+    llvm::cl::cat(DumpAutoInference)};
+} // namespace opts
+
 SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
   return Lexer::getLocForEndOfToken(Loc, Offset, SourceMgr, LangOpts);
 }
@@ -567,6 +575,23 @@ void Sema::warnStackExhausted(SourceLocation Loc) {
   if (!WarnedStackExhausted) {
     Diag(Loc, diag::warn_stack_exhausted);
     WarnedStackExhausted = true;
+  }
+}
+
+// Emits diagnostic remark indicating the compiler-deduced types and return type
+// for variables and functions
+void Sema::DumpAutoTypeInference(SourceManager &SM, SourceLocation Loc,
+                                 bool isVar, ASTContext &Context,
+                                 llvm::StringRef Name, QualType DeducedType) {
+  if (SM.isWrittenInMainFile(Loc) &&
+      opts::DumpAutoTypeInference.getNumOccurrences()) {
+    DiagnosticsEngine &Diag = Context.getDiagnostics();
+    unsigned DiagID = isVar ? Diag.getCustomDiagID(DiagnosticsEngine::Remark,
+                                                   "type of '%0' deduced as %1")
+                            : Diag.getCustomDiagID(
+                                  DiagnosticsEngine::Remark,
+                                  "return type of function '%0' deduced as %1");
+    Diag.Report(Loc, DiagID) << Name << DeducedType;
   }
 }
 
