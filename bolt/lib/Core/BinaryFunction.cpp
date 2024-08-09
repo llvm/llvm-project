@@ -1499,6 +1499,8 @@ add_instruction:
 
   clearList(Relocations);
 
+  InputInstructionCount = Instructions.size();
+
   if (!IsSimple) {
     clearList(Instructions);
     return createNonFatalBOLTError("");
