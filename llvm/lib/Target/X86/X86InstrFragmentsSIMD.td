@@ -847,6 +847,91 @@ def X86vcvttp2iubs : SDNode<"X86ISD::CVTTP2IUBS",  SDTFloatToInt>;
 def X86vcvttp2ibsSAE : SDNode<"X86ISD::CVTTP2IBS_SAE", SDTFloatToInt>;
 def X86vcvttp2iubsSAE : SDNode<"X86ISD::CVTTP2IUBS_SAE", SDTFloatToInt>;
 
+def SDTAVX10CONVERT_I82F16 : SDTypeProfile<1, 2, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f16>, SDTCisSameAs<1, 2>
+]>;
+
+def SDTAVX10CONVERT_F16I8 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, f16>, SDTCVecEltisVT<1, i8>
+]>;
+
+def SDTAVX10CONVERT_I8F16 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f16>
+]>;
+
+def SDTAVX10CONVERT_I8F16_MASK : SDTypeProfile<1, 3, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f16>,
+  SDTCisSameAs<0, 2>, SDTCVecEltisVT<3, i1>,
+  SDTCisSameNumEltsAs<1, 3>
+]>;
+
+def SDTAVX10CONVERT_2I8F16 : SDTypeProfile<1, 2, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, i8>, SDTCVecEltisVT<2, f16>
+]>;
+
+def SDTAVX10CONVERT_2I8F16_MASK : SDTypeProfile<1, 4, [
+  SDTCVecEltisVT<0, i8>, SDTCisSameAs<0, 1>,
+  SDTCVecEltisVT<2, f16>, SDTCisSameAs<0, 3>, SDTCVecEltisVT<4, i1>,
+  SDTCisSameNumEltsAs<2, 4>
+]>;
+
+def X86vcvt2ps2phx : SDNode<"X86ISD::VCVT2PS2PHX",
+                     SDTypeProfile<1, 2, [SDTCVecEltisVT<0, f16>,
+                                           SDTCVecEltisVT<1, f32>,
+                                           SDTCisSameAs<1,2>]>>;
+def X86vcvt2ps2phxRnd : SDNode<"X86ISD::VCVT2PS2PHX_RND",
+                        SDTypeProfile<1, 3, [SDTCVecEltisVT<0, f16>,
+                                            SDTCVecEltisVT<1, f32>,
+                                            SDTCisSameAs<1,2>,
+                                            SDTCisVT<3, i32>]>>;
+// 3op
+def X86vcvtne2ph2bf8 : SDNode<"X86ISD::VCVTNE2PH2BF8",
+                       SDTAVX10CONVERT_I82F16>;
+def X86vcvtne2ph2bf8s : SDNode<"X86ISD::VCVTNE2PH2BF8S",
+                        SDTAVX10CONVERT_I82F16>;
+def X86vcvtne2ph2hf8 : SDNode<"X86ISD::VCVTNE2PH2HF8",
+                       SDTAVX10CONVERT_I82F16>;
+def X86vcvtne2ph2hf8s : SDNode<"X86ISD::VCVTNE2PH2HF8S",
+                       SDTAVX10CONVERT_I82F16>;
+// 2op no broadcast
+def X86vcvthf82ph : SDNode<"X86ISD::VCVTHF82PH",
+                    SDTAVX10CONVERT_F16I8>;
+
+// 2op
+def X86vcvtbiasph2bf8 : SDNode<"X86ISD::VCVTBIASPH2BF8",
+                        SDTAVX10CONVERT_2I8F16>;
+def X86vcvtbiasph2bf8s : SDNode<"X86ISD::VCVTBIASPH2BF8S",
+                         SDTAVX10CONVERT_2I8F16>;
+def X86vcvtbiasph2hf8 : SDNode<"X86ISD::VCVTBIASPH2HF8",
+                        SDTAVX10CONVERT_2I8F16>;
+def X86vcvtbiasph2hf8s : SDNode<"X86ISD::VCVTBIASPH2HF8S",
+                         SDTAVX10CONVERT_2I8F16>;
+def X86vcvtneph2bf8 : SDNode<"X86ISD::VCVTNEPH2BF8",
+                      SDTAVX10CONVERT_I8F16>;
+def X86vcvtneph2bf8s : SDNode<"X86ISD::VCVTNEPH2BF8S",
+                       SDTAVX10CONVERT_I8F16>;
+def X86vcvtneph2hf8 : SDNode<"X86ISD::VCVTNEPH2HF8",
+                      SDTAVX10CONVERT_I8F16>;
+def X86vcvtneph2hf8s : SDNode<"X86ISD::VCVTNEPH2HF8S",
+                       SDTAVX10CONVERT_I8F16>;
+
+def X86vmcvtbiasph2bf8 : SDNode<"X86ISD::VMCVTBIASPH2BF8",
+                         SDTAVX10CONVERT_2I8F16_MASK>;
+def X86vmcvtbiasph2bf8s : SDNode<"X86ISD::VMCVTBIASPH2BF8S",
+                          SDTAVX10CONVERT_2I8F16_MASK>;
+def X86vmcvtbiasph2hf8 : SDNode<"X86ISD::VMCVTBIASPH2HF8",
+                         SDTAVX10CONVERT_2I8F16_MASK>;
+def X86vmcvtbiasph2hf8s : SDNode<"X86ISD::VMCVTBIASPH2HF8S",
+                          SDTAVX10CONVERT_2I8F16_MASK>;
+def X86vmcvtneph2bf8 : SDNode<"X86ISD::VMCVTNEPH2BF8",
+                       SDTAVX10CONVERT_I8F16_MASK>;
+def X86vmcvtneph2bf8s : SDNode<"X86ISD::VMCVTNEPH2BF8S",
+                        SDTAVX10CONVERT_I8F16_MASK>;
+def X86vmcvtneph2hf8 : SDNode<"X86ISD::VMCVTNEPH2HF8",
+                       SDTAVX10CONVERT_I8F16_MASK>;
+def X86vmcvtneph2hf8s : SDNode<"X86ISD::VMCVTNEPH2HF8S",
+                        SDTAVX10CONVERT_I8F16_MASK>;
+
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
 //===----------------------------------------------------------------------===//
