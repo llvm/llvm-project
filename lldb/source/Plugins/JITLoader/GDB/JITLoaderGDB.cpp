@@ -194,6 +194,10 @@ void JITLoaderGDB::SetJITBreakpoint(lldb_private::ModuleList &module_list) {
   if (jit_addr == LLDB_INVALID_ADDRESS)
     return;
 
+#if defined(__AIX__)
+  return;
+#endif
+
   m_jit_descriptor_addr = GetSymbolAddress(
       module_list, ConstString("__jit_debug_descriptor"), eSymbolTypeData);
   if (m_jit_descriptor_addr == LLDB_INVALID_ADDRESS) {

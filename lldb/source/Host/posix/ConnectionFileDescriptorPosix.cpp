@@ -721,6 +721,7 @@ ConnectionFileDescriptor::ConnectFD(llvm::StringRef s,
 ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     llvm::StringRef s, socket_id_callback_type socket_id_callback,
     Status *error_ptr) {
+#if !defined(__AIX__)
 #if LLDB_ENABLE_POSIX
   std::string addr_str = s.str();
   // file:///PATH
@@ -753,6 +754,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
   m_io_sp = std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, true);
   return eConnectionStatusSuccess;
 #endif // LLDB_ENABLE_POSIX
+#endif
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
 }
 

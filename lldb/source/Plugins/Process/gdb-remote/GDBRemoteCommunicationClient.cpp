@@ -40,6 +40,10 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/JSON.h"
 
+#if defined(__AIX__)
+#include <sys/ldr.h>
+#endif
+
 #if defined(HAVE_LIBCOMPRESSION)
 #include <compression.h>
 #endif
@@ -1709,6 +1713,32 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
   }
   return error;
 }
+
+#if defined(__AIX__)
+Status GDBRemoteCommunicationClient::GetLDXINFO(struct ld_xinfo *info_ptr)
+{
+  Status error;
+
+  char packet[64];
+  const int packet_len = ::snprintf(packet, sizeof(packet), "qLDXINFO");
+  assert(packet_len < (int)sizeof(packet));
+  UNUSED_IF_ASSERT_DISABLED(packet_len);
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet, response) ==
+          PacketResult::Success &&
+      response.GetResponseType() == StringExtractorGDBRemote::eResponse) {
+    llvm::MutableArrayRef<uint8_t> infoData((uint8_t *)info_ptr, sizeof(struct ld_xinfo)*64);
+    size_t got_bytes = response.GetHexBytesAvail(infoData);
+    if (got_bytes != sizeof(struct ld_xinfo)*64) {
+      error.SetErrorString("qLDXINFO ret bad size");
+      return error;
+    }
+  } else {
+    error.SetErrorString("qLDXINFO is not supported");
+  }
+  return error;
+}
+#endif
 
 Status GDBRemoteCommunicationClient::GetQXferMemoryMapRegionInfo(
     lldb::addr_t addr, MemoryRegionInfo &region) {

@@ -92,6 +92,10 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if defined(__AIX__)
+#include <sys/ldr.h>
+#endif
+
 #define DEBUGSERVER_BASENAME "debugserver"
 using namespace lldb;
 using namespace lldb_private;
@@ -1513,7 +1517,7 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
   ThreadList old_thread_list_copy(old_thread_list);
   if (num_thread_ids > 0) {
     for (size_t i = 0; i < num_thread_ids; ++i) {
-      tid_t tid = m_thread_ids[i];
+        lldb::tid_t tid = m_thread_ids[i];
       ThreadSP thread_sp(
           old_thread_list_copy.RemoveThreadByProtocolID(tid, false));
       if (!thread_sp) {
@@ -2944,6 +2948,13 @@ Status ProcessGDBRemote::DoGetMemoryRegionInfo(addr_t load_addr,
   Status error(m_gdb_comm.GetMemoryRegionInfo(load_addr, region_info));
   return error;
 }
+
+#if defined(__AIX__)
+Status ProcessGDBRemote::DoGetLDXINFO(struct ld_xinfo *info_ptr) {
+  Status error(m_gdb_comm.GetLDXINFO(info_ptr));
+  return error;
+}
+#endif
 
 std::optional<uint32_t> ProcessGDBRemote::GetWatchpointSlotCount() {
   return m_gdb_comm.GetWatchpointSlotCount();
