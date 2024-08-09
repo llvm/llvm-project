@@ -7045,6 +7045,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     bool EffectivelyConstexprDestructor = true;
     // Avoid triggering vtable instantiation due to a dtor that is not
     // "effectively constexpr" for better compatibility.
+    // See https://github.com/llvm/llvm-project/issues/102293 for more info.
     if (isa<CXXDestructorDecl>(M)) {
       auto Check = [](QualType T, auto &&Check) -> bool {
         const CXXRecordDecl *RD =
@@ -7071,9 +7072,9 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     // function right away.
     // FIXME: We can defer doing this until the vtable is marked as used.
     if (CSM != CXXSpecialMemberKind::Invalid && !M->isDeleted() &&
-        M->isDefaulted() && M->isConstexpr() && M->size_overridden_methods())
-      if (EffectivelyConstexprDestructor)
-        DefineDefaultedFunction(*this, M, M->getLocation());
+        M->isDefaulted() && M->isConstexpr() && M->size_overridden_methods() &&
+        EffectivelyConstexprDestructor)
+      DefineDefaultedFunction(*this, M, M->getLocation());
 
     if (!Incomplete)
       CheckCompletedMemberFunction(M);
