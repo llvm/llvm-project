@@ -223,6 +223,54 @@ exit:
   ret void
 }
 
+define double @single_iteration_unknown_stride(i32 %arg, ptr %arg1, i1 %arg2) {
+; CHECK-LABEL: 'single_iteration_unknown_stride'
+; CHECK-NEXT:    loop.body:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %arg == 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep10 = getelementptr double, ptr %gep8, i64 %mul:
+; CHECK-NEXT:        {(8 + %arg1),+,(8 * (sext i32 %arg to i64))<nsw>}<%loop.body>
+; CHECK-NEXT:        --> {(8 + %arg1),+,8}<%loop.body>
+;
+entry:
+  br i1 %arg2, label %noloop.exit, label %loop.ph
+
+loop.ph:                                          ; preds = %entry
+  %sext7 = sext i32 %arg to i64
+  %gep8 = getelementptr i8, ptr %arg1, i64 8
+  br label %loop.body
+
+loop.body:                                        ; preds = %loop.body, %loop.ph
+  %phi = phi i64 [ 0, %loop.ph ], [ %add, %loop.body ]
+  %mul = mul i64 %phi, %sext7
+  %gep10 = getelementptr double, ptr %gep8, i64 %mul
+  %load11 = load double, ptr %gep10, align 8
+  store double %load11, ptr %arg1, align 8
+  %add = add i64 %phi, 1
+  %icmp = icmp eq i64 %phi, 0
+  br i1 %icmp, label %loop.exit, label %loop.body
+
+noloop.exit:                                      ; preds = %entry
+  %sext = sext i32 %arg to i64
+  %gep = getelementptr double, ptr %arg1, i64 %sext
+  %load5 = load double, ptr %gep, align 8
+  ret double %load5
+
+loop.exit:                                        ; preds = %loop.body
+  %sext2 = sext i32 %arg to i64
+  %gep2 = getelementptr double, ptr %arg1, i64 %sext2
+  %load6 = load double, ptr %gep2, align 8
+  ret double %load6
+}
+
 ; A loop with two symbolic strides.
 define void @two_strides(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride.1, i64 %stride.2) {
 ; CHECK-LABEL: 'two_strides'
