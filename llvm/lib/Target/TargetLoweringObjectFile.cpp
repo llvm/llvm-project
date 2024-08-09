@@ -213,7 +213,8 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   // Global variables require more detailed analysis.
   const auto *GVar = cast<GlobalVariable>(GO);
 
-  if (GVar->getSection() == ".swift1_autolink_entries")
+  if (GVar->getSection() == ".swift1_autolink_entries" ||
+      GVar->getSection() == ".swift_ast")
     return SectionKind::getMetadata();
 
   // Handle thread-local data first.
