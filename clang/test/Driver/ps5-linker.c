@@ -1,3 +1,10 @@
+// Test that -static is forwarded to the linker
+
+// RUN: %clang --target=x86_64-scei-ps5 -static %s -### 2>&1 | FileCheck --check-prefixes=CHECK-STATIC %s
+
+// CHECK-STATIC: {{ld(\.exe)?}}"
+// CHECK-STATIC-SAME: "-static"
+
 // Test the driver's control over the JustMyCode behavior with linker flags.
 
 // RUN: %clang --target=x86_64-scei-ps5 -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIB %s
