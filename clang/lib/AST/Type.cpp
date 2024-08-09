@@ -3316,6 +3316,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "unsigned __int128";
   case Half:
     return Policy.Half ? "half" : "__fp16";
+  case MFloat8:
+    return "__mfp8";
   case BFloat16:
     return "__bf16";
   case Float:
