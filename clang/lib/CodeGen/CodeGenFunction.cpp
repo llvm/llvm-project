@@ -884,6 +884,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("ptrauth-calls");
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
+  if (CodeGenOpts.PointerAuth.AuthTraps)
+    Fn->addFnAttr("ptrauth-auth-traps");
 
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;

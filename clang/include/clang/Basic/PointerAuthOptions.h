@@ -166,6 +166,9 @@ struct PointerAuthOptions {
   /// Do indirect goto label addresses need to be authenticated?
   bool IndirectGotos = false;
 
+  /// Do authentication failures cause a trap?
+  bool AuthTraps = false;
+
   /// The ABI for C function pointers.
   PointerAuthSchema FunctionPointers;
 
