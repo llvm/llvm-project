@@ -18,6 +18,7 @@
 
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -38,6 +39,9 @@ public:
 
   /// Clean up the name to remove symbols invalid in PTX.
   std::string cleanUpName(StringRef Name);
+
+  /// Clean up the debug symbols.
+  void cleanUpDebugSymbols(Module &M);
 };
 }
 
@@ -67,6 +71,9 @@ bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
     if (F.hasLocalLinkage())
       F.setName(cleanUpName(F.getName()));
 
+  // Clean up the debug symbols.
+  cleanUpDebugSymbols(M);
+
   return true;
 }
 
@@ -84,6 +91,38 @@ std::string NVPTXAssignValidGlobalNames::cleanUpName(StringRef Name) {
   }
 
   return ValidNameStream.str();
+}
+
+void NVPTXAssignValidGlobalNames::cleanUpDebugSymbols(Module &M) {
+  LLVMContext &Ctx = M.getContext();
+
+  for (Function &F : M.functions()) {
+    if (DISubprogram *SP = F.getSubprogram()) {
+      auto CleanedName = cleanUpName(SP->getLinkageName());
+      if (!CleanedName.empty()) {
+        SP->replaceLinkageName(MDString::get(Ctx, CleanedName));
+      }
+    }
+  }
+
+  for (GlobalVariable &GV : M.globals()) {
+    SmallVector<DIGlobalVariableExpression *, 1> GVs;
+    GV.getDebugInfo(GVs);
+    for (auto *GVE : GVs) {
+      DIGlobalVariable *GVMD = GVE->getVariable();
+      auto CleanedName = cleanUpName(GVMD->getLinkageName());
+      if (!CleanedName.empty()) {
+        DIGlobalVariable *NewGVMD = DIGlobalVariable::get(
+            Ctx, GVMD->getScope(), GVMD->getName(),
+            CleanedName, // Use the cleaned name as StringRef
+            GVMD->getFile(), GVMD->getLine(), GVMD->getType(),
+            GVMD->isLocalToUnit(), GVMD->isDefinition(),
+            GVMD->getStaticDataMemberDeclaration(), GVMD->getTemplateParams(),
+            GVMD->getAlignInBits(), GVMD->getAnnotations());
+        GVMD->replaceAllUsesWith(NewGVMD);
+      }
+    }
+  }
 }
 
 ModulePass *llvm::createNVPTXAssignValidGlobalNamesPass() {
