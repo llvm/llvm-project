@@ -630,6 +630,44 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   }
 }
 
+TEST_F(SandboxIRTest, InsertElementInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %ins0 = insertelement <2 x i8> poison, i8 %v0, i32 0
+  %ins1 = insertelement <2 x i8> %ins0, i8 %v1, i32 1
+  ret void
+}
+)IR");
+  Function &F = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &SBF = *Ctx.createFunction(&F);
+  unsigned ArgIdx = 0;
+  auto *Arg0 = SBF.getArg(ArgIdx++);
+  auto *Arg1 = SBF.getArg(ArgIdx++);
+  auto *SBB = &*SBF.begin();
+  auto It = SBB->begin();
+  auto *Ins0 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *Ins1 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(Ins0->getOpcode(), sandboxir::Instruction::Opcode::InsertElement);
+  EXPECT_EQ(Ins0->getOperand(1), Arg0);
+  EXPECT_EQ(Ins1->getOperand(1), Arg1);
+  EXPECT_EQ(Ins1->getOperand(0), Ins0);
+  auto *Poison = Ins0->getOperand(0);
+  auto *Idx = Ins0->getOperand(2);
+  auto *NewI1 =
+      cast<sandboxir::InsertElementInst>(sandboxir::InsertElementInst::create(
+          Poison, Arg0, Idx, Ret, Ctx, "NewIns1"));
+  EXPECT_EQ(NewI1->getOperand(0), Poison);
+  EXPECT_EQ(NewI1->getNextNode(), Ret);
+
+  auto *NewI2 =
+      cast<sandboxir::InsertElementInst>(sandboxir::InsertElementInst::create(
+          Poison, Arg0, Idx, SBB, Ctx, "NewIns2"));
+  EXPECT_EQ(NewI2->getPrevNode(), Ret);
+}
+
 TEST_F(SandboxIRTest, BranchInst) {
   parseIR(C, R"IR(
 define void @foo(i1 %cond0, i1 %cond2) {
