@@ -2196,37 +2196,11 @@ public:
       ISD = ISD::USUBO;
       break;
     case Intrinsic::smul_with_overflow:
-    case Intrinsic::umul_with_overflow: {
-      Type *MulTy = RetTy->getContainedType(0);
-      Type *OverflowTy = RetTy->getContainedType(1);
-      unsigned ExtSize = MulTy->getScalarSizeInBits() * 2;
-      Type *ExtTy = MulTy->getWithNewBitWidth(ExtSize);
-      bool IsSigned = IID == Intrinsic::smul_with_overflow;
-
-      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
-      TTI::CastContextHint CCH = TTI::CastContextHint::None;
-
-      InstructionCost Cost = 0;
-      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, MulTy, CCH, CostKind);
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
-      Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
-                                            CCH, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, ExtTy,
-                                              CostKind,
-                                              {TTI::OK_AnyValue, TTI::OP_None},
-                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
-
-      if (IsSigned)
-        Cost += thisT()->getArithmeticInstrCost(Instruction::AShr, MulTy,
-                                                CostKind,
-                                                {TTI::OK_AnyValue, TTI::OP_None},
-                                                {TTI::OK_UniformConstantValue, TTI::OP_None});
-
-      Cost += thisT()->getCmpSelInstrCost(
-          BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
-      return Cost;
-    }
+      ISD = ISD::SMULO;
+      break;
+    case Intrinsic::umul_with_overflow:
+      ISD = ISD::UMULO;
+      break;
     case Intrinsic::fptosi_sat:
     case Intrinsic::fptoui_sat: {
       if (Tys.empty())
@@ -2369,6 +2343,37 @@ public:
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy,
                                           OverflowTy, Pred, CostKind);
+      return Cost;
+    }
+    case Intrinsic::smul_with_overflow:
+    case Intrinsic::umul_with_overflow: {
+      Type *MulTy = RetTy->getContainedType(0);
+      Type *OverflowTy = RetTy->getContainedType(1);
+      unsigned ExtSize = MulTy->getScalarSizeInBits() * 2;
+      Type *ExtTy = MulTy->getWithNewBitWidth(ExtSize);
+      bool IsSigned = IID == Intrinsic::smul_with_overflow;
+
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
+      TTI::CastContextHint CCH = TTI::CastContextHint::None;
+
+      InstructionCost Cost = 0;
+      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, MulTy, CCH, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
+      Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
+                                            CCH, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, ExtTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+
+      if (IsSigned)
+        Cost += thisT()->getArithmeticInstrCost(
+            Instruction::AShr, MulTy, CostKind,
+            {TTI::OK_AnyValue, TTI::OP_None},
+            {TTI::OK_UniformConstantValue, TTI::OP_None});
+
+      Cost += thisT()->getCmpSelInstrCost(
+          BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
       return Cost;
     }
     case Intrinsic::sadd_sat:
