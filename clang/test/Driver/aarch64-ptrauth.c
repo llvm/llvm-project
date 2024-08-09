@@ -18,6 +18,13 @@
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=ALL
 // ALL: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination"
 
+// RUN: %clang -### -c --target=aarch64-elf -fno-ptrauth-elf-got -fptrauth-elf-got %s 2>&1 | FileCheck %s --check-prefix=ELFGOT
+// ELFGOT: "-cc1"{{.*}} "-fptrauth-elf-got"
+// ELFGOT-NOT: warning: -fptrauth-elf-got works only for ELF; option ignored [-Woption-ignored]
+
+// RUN: %clang -### -c --target=aarch64-darwin -fptrauth-elf-got %s 2>&1 | FileCheck %s --check-prefix=NOELFGOT
+// NOELFGOT: warning: -fptrauth-elf-got works only for ELF; option ignored [-Woption-ignored]
+
 // RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
 // PAUTHABI1:      "-cc1"{{.*}} "-triple" "aarch64-unknown-linux-pauthtest"
@@ -38,7 +45,7 @@
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fptrauth-type-info-vtable-pointer-discrimination -fptrauth-indirect-gotos -fptrauth-init-fini \
-// RUN:   -fptrauth-init-fini-address-discrimination %s 2>&1 | FileCheck %s --check-prefix=ERR1
+// RUN:   -fptrauth-init-fini-address-discrimination -fptrauth-elf-got %s 2>&1 | FileCheck %s --check-prefix=ERR1
 // ERR1:      error: unsupported option '-fptrauth-intrinsics' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-calls' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-returns' for target '{{.*}}'
@@ -49,6 +56,7 @@
 // ERR1-NEXT: error: unsupported option '-fptrauth-indirect-gotos' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-init-fini' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-init-fini-address-discrimination' for target '{{.*}}'
+// ERR1-NEXT: error: unsupported option '-fptrauth-elf-got' for target '{{.*}}'
 
 //// Only support PAuth ABI for Linux as for now.
 // RUN: not %clang -o /dev/null -c --target=aarch64-unknown -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR2
