@@ -123,6 +123,9 @@ public:
     return NoWrapKind;
   }
 
+  /// Return true if the instruction is commutative
+  bool isCommutative() const { return Instruction::isCommutative(getOpcode()); }
+
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Add ||
            I->getOpcode() == Instruction::Sub ||
