@@ -1401,6 +1401,7 @@ module std_private_iterator_concepts                [system] {
   export std_private_type_traits_is_reference
   export std_private_type_traits_remove_cvref
 }
+module std_private_iterator_const_iterator          [system] { header "__iterator/const_iterator.h" }
 module std_private_iterator_counted_iterator        [system] { header "__iterator/counted_iterator.h" }
 module std_private_iterator_cpp17_iterator_concepts [system] { header "__iterator/cpp17_iterator_concepts.h" }
 module std_private_iterator_data                    [system] { header "__iterator/data.h" }
@@ -1699,9 +1700,11 @@ module std_private_ranges_all                        [system] {
   export std_private_functional_perfect_forward
   export std_private_ranges_owning_view
 }
+module std_private_ranges_as_const_view              [system] { header "__ranges/as_const_view.h" }
 module std_private_ranges_as_rvalue_view             [system] { header "__ranges/as_rvalue_view.h" }
 module std_private_ranges_chunk_by_view              [system] { header "__ranges/chunk_by_view.h" }
 module std_private_ranges_common_view                [system] { header "__ranges/common_view.h" }
+module std_private_ranges_const_access               [system] { header "__ranges/const_access.h" }
 module std_private_ranges_concepts                   [system] {
   header "__ranges/concepts.h"
   export std_private_iterator_concepts
@@ -1712,7 +1715,6 @@ module std_private_ranges_counted                    [system] {
   export std_span
 }
 module std_private_ranges_dangling                   [system] { header "__ranges/dangling.h" }
-module std_private_ranges_data                       [system] { header "__ranges/data.h" }
 module std_private_ranges_drop_view                  [system] { header "__ranges/drop_view.h" }
 module std_private_ranges_drop_while_view            [system] { header "__ranges/drop_while_view.h" }
 module std_private_ranges_elements_view              [system] { header "__ranges/elements_view.h" }

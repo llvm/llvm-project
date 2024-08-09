@@ -271,6 +271,12 @@ struct is_same<T, T> { enum {value = 1}; };
     static_assert((test_macros_detail::is_same<__VA_ARGS__>::value), \
                  "Types differ unexpectedly")
 
+#define ASSERT_RUNTIME_AND_CONSTEXPR(...)                                                                              \
+  do {                                                                                                                 \
+    assert((__VA_ARGS__));                                                                                             \
+    static_assert(__VA_ARGS__);                                                                                        \
+  } while (0)
+
 #ifndef TEST_HAS_NO_EXCEPTIONS
 #define TEST_THROW(...) throw __VA_ARGS__
 #else

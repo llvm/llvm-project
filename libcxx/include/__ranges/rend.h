@@ -89,33 +89,6 @@ inline constexpr auto rend = __rend::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-// [range.access.crend]
-
-namespace ranges {
-namespace __crend {
-struct __fn {
-  template <class _Tp>
-    requires is_lvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::rend(static_cast<const remove_reference_t<_Tp>&>(__t))))
-          -> decltype(ranges::rend(static_cast<const remove_reference_t<_Tp>&>(__t))) {
-    return ranges::rend(static_cast<const remove_reference_t<_Tp>&>(__t));
-  }
-
-  template <class _Tp>
-    requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::rend(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::rend(static_cast<const _Tp&&>(__t))) {
-    return ranges::rend(static_cast<const _Tp&&>(__t));
-  }
-};
-} // namespace __crend
-
-inline namespace __cpo {
-inline constexpr auto crend = __crend::__fn{};
-} // namespace __cpo
-} // namespace ranges
-
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
