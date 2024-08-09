@@ -1020,7 +1020,9 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
   if (IID == llvm::Intrinsic::coro_end)
     Args.push_back(llvm::ConstantTokenNone::get(getLLVMContext()));
 
-  llvm::Function *F = CGM.getIntrinsic(IID);
+  llvm::Function *F = IID == llvm::Intrinsic::coro_noop
+                          ? CGM.getIntrinsic(IID, {CGM.GlobalsVoidPtrTy})
+                          : CGM.getIntrinsic(IID);
   llvm::CallInst *Call = Builder.CreateCall(F, Args);
 
   // Note: The following code is to enable to emit coro.id and coro.begin by
