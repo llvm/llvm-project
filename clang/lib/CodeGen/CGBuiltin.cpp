@@ -1083,7 +1083,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     // attribute.
     return nullptr;
 
-  const FieldDecl *CountedByFD = FAMDecl->findCountedByField();
+  const FieldDecl *CountedByFD = FAMDecl->FindCountedByField();
   if (!CountedByFD)
     // Can't find the field referenced by the "counted_by" attribute.
     return nullptr;
@@ -3703,7 +3703,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       if (!ME->HasSideEffects(getContext()) && IsFlexibleArrayMember &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FindCountedByField(FAMDecl))
+        if (const FieldDecl *CountFD = FAMDecl->FindCountedByField())
           Result = GetCountedByFieldExprGEP(ME, FAMDecl, CountFD);
       }
     }

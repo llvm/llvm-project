@@ -6462,24 +6462,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       currentEvaluationContext().ReferenceToConsteval.erase(DRE);
     }
   }
-
   return Call;
-}
-
-const FieldDecl *FindCountedByField(const FieldDecl *FD) {
-  if (!FD)
-    return nullptr;
-
-  const auto *CAT = FD->getType()->getAs<CountAttributedType>();
-  if (!CAT)
-    return nullptr;
-
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
-  const auto *CountDecl = CountDRE->getDecl();
-  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
-    CountDecl = IFD->getAnonField();
-
-  return dyn_cast<FieldDecl>(CountDecl);
 }
 
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
@@ -6692,7 +6675,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       if (!ME->HasSideEffects(Context) && IsFlexibleArrayMember &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
+        if (const FieldDecl *CountFD = FAMDecl->FindCountedByField()) {
           // The builtin returns a 'size_t *', however 'size_t' might not be
           // the type of the count field. Thus we create an explicit c-style
           // cast to ensure the proper types going forward.

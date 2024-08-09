@@ -4371,7 +4371,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+        if (const FieldDecl *CountFD = FAMDecl->FindCountedByField()) {
           if (std::optional<int64_t> Diff =
                   getOffsetDifferenceInBits(*this, CountFD, FAMDecl)) {
             CharUnits OffsetDiff = CGM.getContext().toCharUnitsFromBits(*Diff);
