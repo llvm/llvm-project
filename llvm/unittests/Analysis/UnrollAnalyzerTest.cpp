@@ -41,7 +41,7 @@ runUnrollAnalyzer(Module &M, StringRef FuncName,
   BasicBlock *Exiting = L->getExitingBlock();
 
   SimplifiedValuesVector.clear();
-  unsigned TripCount = SE.getSmallConstantTripCount(L, Exiting);
+  unsigned TripCount = SE.getSmallConstantTripCount(L, Exiting).value_or(0);
   for (unsigned Iteration = 0; Iteration < TripCount; Iteration++) {
     DenseMap<Value *, Value *> SimplifiedValues;
     UnrolledInstAnalyzer Analyzer(Iteration, SimplifiedValues, SE, L);

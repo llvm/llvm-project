@@ -316,7 +316,8 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (ItersAhead > getMaxPrefetchIterationsAhead())
     return MadeChange;
 
-  unsigned ConstantMaxTripCount = SE->getSmallConstantMaxTripCount(L);
+  unsigned ConstantMaxTripCount =
+      SE->getSmallConstantMaxTripCount(L).value_or(0);
   if (ConstantMaxTripCount && ConstantMaxTripCount < ItersAhead + 1)
     return MadeChange;
 
