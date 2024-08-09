@@ -69,6 +69,7 @@ def get_line2func_list(args, clang_args):
             "TranslationUnitDecl",
             "CXXRecordDecl",
             "ClassTemplateSpecializationDecl",
+            "FunctionTemplateDecl",
         ):
             # Specializations must use the loc from the specialization, not the
             # template, and search for the class's spelling as the specialization
@@ -89,6 +90,7 @@ def get_line2func_list(args, clang_args):
             "CXXConstructorDecl",
             "CXXDestructorDecl",
             "CXXConversionDecl",
+            "FunctionTemplateDecl",
         ):
             return
         if loc is None:
@@ -105,25 +107,35 @@ def get_line2func_list(args, clang_args):
             )
             return
 
-        # If there is no 'inner' object, it is a function declaration and we can
-        # skip it. However, function declarations may also contain an 'inner' list,
-        # but in that case it will only contains ParmVarDecls. If we find an entry
-        # that is not a ParmVarDecl, we know that this is a function definition.
-        has_body = False
-        if "inner" in node:
-            for i in node["inner"]:
-                if i.get("kind", "ParmVarDecl") != "ParmVarDecl":
-                    has_body = True
-                    break
-        if not has_body:
-            common.debug("Skipping function without body:", node["name"], "@", loc)
-            return
-        spell = node["name"]
-        if search is None:
-            search = spell
-        mangled = node.get("mangledName", spell)
-        ret[int(line) - 1].append((spell, mangled, search))
-
+        # If this is a FunctionTemplateDecl, we need to extract the mangled name
+        # of the template instantiation(s)
+        if node_kind == "FunctionTemplateDecl":
+            for inner in node.get("inner", []):
+                if inner["kind"] == "FunctionDecl":
+                    spell = inner["name"]
+                    mangled = inner.get("mangledName", spell)
+                    if search is None:
+                        search = spell
+                    ret[int(line) - 1].append((spell, mangled, search))
+        else:
+            # If there is no 'inner' object, it is a function declaration and we can
+            # skip it. However, function declarations may also contain an 'inner' list,
+            # but in that case it will only contains ParmVarDecls. If we find an entry
+            # that is not a ParmVarDecl, we know that this is a function definition.
+            has_body = False
+            if "inner" in node:
+                for i in node["inner"]:
+                    if i.get("kind", "ParmVarDecl") != "ParmVarDecl":
+                        has_body = True
+                        break
+            if not has_body:
+                common.debug("Skipping function without body:", node["name"], "@", loc)
+                return
+            spell = node["name"]
+            if search is None:
+                search = spell
+            mangled = node.get("mangledName", spell)
+            ret[int(line) - 1].append((spell, mangled, search))
     ast = json.loads(stdout)
     if ast["kind"] != "TranslationUnitDecl":
         common.error("Clang AST dump JSON format changed?")
