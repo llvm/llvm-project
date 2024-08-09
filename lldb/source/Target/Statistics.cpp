@@ -366,6 +366,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   if (include_targets) {
     if (target) {
       json_targets.emplace_back(target->ReportStatistics(options));
+      json_targets.emplace_back(target->GetSummaryStatisticsCache().ToJSON());
     } else {
       for (const auto &target : debugger.GetTargetList().Targets())
         json_targets.emplace_back(target->ReportStatistics(options));
@@ -419,4 +420,21 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   }
 
   return std::move(global_stats);
+}
+
+llvm::json::Value SummaryStatistics::ToJSON() const {
+  return json::Object {
+    {"invocationCount", GetSummaryCount()},
+    {"totalTime", GetTotalTime()},
+    {"averageTime", GetAverageTime()}
+  };
+}
+
+json::Value SummaryStatisticsCache::ToJSON() {
+  m_map_mutex.lock();
+  json::Array json_summary_stats;
+  for (const auto &summary_stat : m_summary_stats_map)
+    json_summary_stats.emplace_back(summary_stat.second.ToJSON());
+  m_map_mutex.unlock();
+  return json::Object{{"summaryProviderStatistics", std::move(json_summary_stats)}};
 }

@@ -46,7 +46,6 @@ add_lldb_library(lldbTarget
   Statistics.cpp
   StopInfo.cpp
   StructuredDataPlugin.cpp
-  SummaryStatistics.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetList.cpp

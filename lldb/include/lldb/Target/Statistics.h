@@ -17,6 +17,7 @@
 #include "llvm/Support/JSON.h"
 #include <atomic>
 #include <chrono>
+#include <mutex>
 #include <optional>
 #include <ratio>
 #include <string>
@@ -26,6 +27,7 @@ namespace lldb_private {
 
 using StatsClock = std::chrono::high_resolution_clock;
 using StatsTimepoint = std::chrono::time_point<StatsClock>;
+using Duration = std::chrono::duration<double>;
 
 class StatsDuration {
 public:
@@ -173,6 +175,83 @@ private:
   std::optional<bool> m_include_targets;
   std::optional<bool> m_include_modules;
   std::optional<bool> m_include_transcript;
+};
+
+/// A class that represents statistics about a TypeSummaryProviders invocations
+class SummaryStatistics {
+public:
+  SummaryStatistics() = default;
+  SummaryStatistics(lldb_private::ConstString name) : 
+    m_total_time(), m_name(name), m_summary_count(0) {}
+
+  SummaryStatistics(const SummaryStatistics &&rhs)
+      : m_total_time(), m_name(rhs.m_name), m_summary_count(rhs.m_summary_count.load(std::memory_order_relaxed)) {}
+
+  lldb_private::ConstString GetName() { return m_name; };
+  double GetAverageTime() const {
+    return m_total_time.get().count() / m_summary_count.load(std::memory_order_relaxed);
+  }
+
+  double GetTotalTime() const {
+    return m_total_time.get().count();
+  }
+
+  uint64_t GetSummaryCount() const {
+    return m_summary_count.load(std::memory_order_relaxed);
+  }
+
+  StatsDuration& GetDurationReference() {
+    return m_total_time;
+  }
+
+  llvm::json::Value ToJSON() const;
+
+  // Basic RAII class to increment the summary count when the call is complete.
+  // In the future this can be extended to collect information about the 
+  // elapsed time for a single request.
+  class SummaryInvocation {
+  public:
+    SummaryInvocation(SummaryStatistics &summary) : m_summary(summary) {}
+    ~SummaryInvocation() {
+      m_summary.OnInvoked();
+    }
+  private:
+    SummaryStatistics &m_summary;
+  };
+
+private:
+  /// Called when Summary Invocation is destructed.
+  void OnInvoked() {
+    m_summary_count.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  lldb_private::StatsDuration m_total_time;
+  lldb_private::ConstString m_name;
+  std::atomic<uint64_t> m_summary_count;
+};
+
+/// A class that wraps a std::map of SummaryStatistics objects behind a mutex.
+class SummaryStatisticsCache {
+public:
+  SummaryStatisticsCache() = default;
+  /// Get the SummaryStatistics object for a given provider name, or insert
+  /// if statistics for that provider is not in the map.
+  lldb_private::SummaryStatistics &GetSummaryStatisticsForProviderName(lldb_private::ConstString summary_provider_name) {
+    m_map_mutex.lock();
+    if (m_summary_stats_map.count(summary_provider_name) == 0) {
+      m_summary_stats_map.emplace(summary_provider_name, SummaryStatistics(summary_provider_name));
+    }
+
+    SummaryStatistics &summary_stats = m_summary_stats_map.at(summary_provider_name);
+    m_map_mutex.unlock();
+    return summary_stats;
+  }
+
+  llvm::json::Value ToJSON();
+
+private:
+  std::map<lldb_private::ConstString, lldb_private::SummaryStatistics> m_summary_stats_map;
+  std::mutex m_map_mutex;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.

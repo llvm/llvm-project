@@ -3194,13 +3194,12 @@ bool Target::SetSectionUnloaded(const lldb::SectionSP &section_sp,
 
 void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
 
-lldb_private::StatsDuration& Target::GetSummaryProviderDuration(lldb_private::ConstString summary_provider_name) {
-  if (m_summary_stats_map.count(summary_provider_name) == 0) {
-    SummaryStatistics summary_stats(summary_provider_name);
-    m_summary_stats_map.emplace(summary_provider_name, SummaryStatistics(summary_provider_name));
-  }
+lldb_private::SummaryStatistics& Target::GetSummaryStatisticsForProvider(lldb_private::ConstString summary_provider_name) {
+  return m_summary_statistics_cache.GetSummaryStatisticsForProviderName(summary_provider_name);
+}
 
-  return m_summary_stats_map[summary_provider_name].GetDurationReference();
+lldb_private::SummaryStatisticsCache& Target::GetSummaryStatisticsCache() {
+  return m_summary_statistics_cache;
 }
 
 void Target::SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info) {

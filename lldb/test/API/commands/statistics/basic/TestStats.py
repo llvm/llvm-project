@@ -250,6 +250,7 @@ class TestCase(TestBase):
             "launchOrAttachTime",
             "moduleIdentifiers",
             "targetCreateTime",
+            "summaryProviderStatistics"
         ]
         self.verify_keys(stats, '"stats"', keys_exist, None)
         self.assertGreater(stats["firstStopTime"], 0.0)

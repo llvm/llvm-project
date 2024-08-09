@@ -30,7 +30,6 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Target/Statistics.h"
-#include "lldb/Target/SummaryStatistics.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -1226,7 +1225,8 @@ public:
 
   void ClearAllLoadedSections();
 
-  lldb_private::StatsDuration& GetSummaryProviderDuration(lldb_private::ConstString summary_provider_name);
+  lldb_private::SummaryStatistics& GetSummaryStatisticsForProvider(lldb_private::ConstString summary_provider_name);
+  lldb_private::SummaryStatisticsCache& GetSummaryStatisticsCache();
 
   /// Set the \a Trace object containing processor trace information of this
   /// target.
@@ -1561,7 +1561,7 @@ protected:
   std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
-  std::map<lldb_private::ConstString, lldb_private::SummaryStatistics> m_summary_stats_map;
+  SummaryStatisticsCache m_summary_statistics_cache;
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
