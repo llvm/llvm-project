@@ -54,7 +54,7 @@ public:
   void setLabel(MCSymbol *Sym) { AddressTableBaseSym = Sym; }
 
 private:
-  MCSymbol *emitHeader(AsmPrinter &Asm, MCSection *Section);
+  MCSymbol *emitHeader(AsmPrinter &Asm);
 
   /// Symbol designates the start of the contribution to the address table.
   MCSymbol *AddressTableBaseSym = nullptr;
