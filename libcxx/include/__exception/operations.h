@@ -29,7 +29,9 @@ using terminate_handler = void (*)();
 _LIBCPP_EXPORTED_FROM_ABI terminate_handler set_terminate(terminate_handler) _NOEXCEPT;
 _LIBCPP_EXPORTED_FROM_ABI terminate_handler get_terminate() _NOEXCEPT;
 
-_LIBCPP_EXPORTED_FROM_ABI bool uncaught_exception() _NOEXCEPT;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION)
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 bool uncaught_exception() _NOEXCEPT;
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION)
 _LIBCPP_EXPORTED_FROM_ABI int uncaught_exceptions() _NOEXCEPT;
 
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr;
