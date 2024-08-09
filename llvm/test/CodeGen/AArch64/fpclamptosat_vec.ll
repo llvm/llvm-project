@@ -7,12 +7,8 @@
 define <2 x i32> @stest_f64i32(<2 x double> %x) {
 ; CHECK-LABEL: stest_f64i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcvtzs w8, d0
-; CHECK-NEXT:    fcvtzs w9, d1
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    sqxtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -45,12 +41,8 @@ entry:
 define <2 x i32> @ustest_f64i32(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcvtzu w8, d0
-; CHECK-NEXT:    fcvtzu w9, d1
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    sqxtun v0.2s, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -242,8 +234,8 @@ entry:
 define <4 x i16> @ustest_f32i16(<4 x float> %x) {
 ; CHECK-LABEL: ustest_f32i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    sqxtun v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -308,10 +300,10 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-CVT-NEXT:    fcvtzu v2.4s, v0.4s
-; CHECK-CVT-NEXT:    uqxtn v0.4h, v1.4s
-; CHECK-CVT-NEXT:    uqxtn2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtun v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtun2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: ustest_f16i16:
@@ -656,12 +648,8 @@ entry:
 define <2 x i32> @stest_f64i32_mm(<2 x double> %x) {
 ; CHECK-LABEL: stest_f64i32_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcvtzs w8, d0
-; CHECK-NEXT:    fcvtzs w9, d1
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    sqxtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -691,12 +679,8 @@ entry:
 define <2 x i32> @ustest_f64i32_mm(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i32_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcvtzu w8, d0
-; CHECK-NEXT:    fcvtzu w9, d1
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    sqxtun v0.2s, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -868,8 +852,8 @@ entry:
 define <4 x i16> @ustest_f32i16_mm(<4 x float> %x) {
 ; CHECK-LABEL: ustest_f32i16_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    sqxtun v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -929,10 +913,10 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-CVT-NEXT:    fcvtzu v2.4s, v0.4s
-; CHECK-CVT-NEXT:    uqxtn v0.4h, v1.4s
-; CHECK-CVT-NEXT:    uqxtn2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtun v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtun2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: ustest_f16i16_mm:
