@@ -32,11 +32,14 @@ public:
     // communicate on.
 
     // Construct an empty map, where empty means any port is allowed.
-    PortMap() = default;
+    PortMap() : m_mutex() {};
 
     // Make a port map with a range of free ports
     // from min_port to max_port-1.
     PortMap(uint16_t min_port, uint16_t max_port);
+
+    // Copy assignment operator to avoid copying m_mutex
+    PortMap &operator=(const PortMap &o);
 
     // Add a port to the map. If it is already in the map do not modify
     // its mapping. (used ports remain used, new ports start as free)
@@ -70,10 +73,12 @@ public:
 
   private:
     std::map<uint16_t, lldb::pid_t> m_port_map;
+    mutable std::mutex m_mutex;
   };
 
   GDBRemoteCommunicationServerPlatform(
-      const Socket::SocketProtocol socket_protocol, const char *socket_scheme);
+      const Socket::SocketProtocol socket_protocol, const char *socket_scheme,
+      const lldb_private::Args &args, uint16_t port_offset = 0);
 
   ~GDBRemoteCommunicationServerPlatform() override;
 
@@ -81,11 +86,7 @@ public:
 
   // Set both ports to zero to let the platform automatically bind to
   // a port chosen by the OS.
-  void SetPortMap(PortMap &&port_map);
-
-  void SetPortOffset(uint16_t port_offset);
-
-  void SetInferiorArguments(const lldb_private::Args &args);
+  static void SetPortMap(PortMap &&port_map);
 
   // Set port if you want to use a specific port number.
   // Otherwise port will be set to the port that was chosen for you.
@@ -96,14 +97,18 @@ public:
   void SetPendingGdbServer(lldb::pid_t pid, uint16_t port,
                            const std::string &socket_name);
 
+  lldb::thread_result_t ThreadProc();
+
 protected:
   const Socket::SocketProtocol m_socket_protocol;
   const std::string m_socket_scheme;
-  std::recursive_mutex m_spawned_pids_mutex;
+  const lldb_private::Args m_inferior_arguments;
+  const uint16_t m_port_offset;
   std::set<lldb::pid_t> m_spawned_pids;
+  static std::set<lldb::pid_t> g_spawned_pids;
+  static std::mutex g_spawned_pids_mutex;
 
-  PortMap m_port_map;
-  uint16_t m_port_offset;
+  static PortMap g_port_map;
   struct {
     lldb::pid_t pid;
     uint16_t port;
@@ -129,9 +134,11 @@ protected:
   PacketResult Handle_jSignalsInfo(StringExtractorGDBRemote &packet);
 
 private:
-  bool KillSpawnedProcess(lldb::pid_t pid);
+  void AddSpawnedProcess(lldb::pid_t pid);
+  static bool SpawnedProcessFinished(lldb::pid_t pid);
+  static bool KillSpawnedProcess(lldb::pid_t pid);
 
-  void DebugserverProcessReaped(lldb::pid_t pid);
+  static void DebugserverProcessReaped(lldb::pid_t pid, int signal, int status);
 
   static const FileSpec &GetDomainSocketDir();
 

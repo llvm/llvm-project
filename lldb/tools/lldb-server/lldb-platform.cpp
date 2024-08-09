@@ -32,9 +32,11 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/UriParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -282,10 +284,10 @@ int main_platform(int argc, char *argv[]) {
     }
   }
 
-  GDBRemoteCommunicationServerPlatform platform(
-      acceptor_up->GetSocketProtocol(), acceptor_up->GetSocketScheme());
-  if (port_offset > 0)
-    platform.SetPortOffset(port_offset);
+  if (!gdbserver_portmap.empty()) {
+    GDBRemoteCommunicationServerPlatform::SetPortMap(
+        std::move(gdbserver_portmap));
+  }
 
   do {
     const bool children_inherit_accept_socket = true;
@@ -297,85 +299,28 @@ int main_platform(int argc, char *argv[]) {
     }
     printf("Connection established.\n");
 
+    GDBRemoteCommunicationServerPlatform *platform =
+        new GDBRemoteCommunicationServerPlatform(
+            acceptor_up->GetSocketProtocol(), acceptor_up->GetSocketScheme(),
+            inferior_arguments, port_offset);
+    platform->SetConnection(std::unique_ptr<Connection>(conn));
+
     if (g_server) {
-      // Collect child zombie processes.
-#if !defined(_WIN32)
-      ::pid_t waitResult;
-      while ((waitResult = waitpid(-1, nullptr, WNOHANG)) > 0) {
-        // waitResult is the child pid
-        gdbserver_portmap.FreePortForProcess(waitResult);
-      }
-#endif
-      // TODO: Clean up portmap for Windows when children die
-      // See https://github.com/llvm/llvm-project/issues/90923
-
-      // After collecting zombie ports, get the next available
-      GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
-      llvm::Expected<uint16_t> available_port =
-          gdbserver_portmap.GetNextAvailablePort();
-      if (available_port) {
-        // GetNextAvailablePort() may return 0 if gdbserver_portmap is empty.
-        if (*available_port)
-          portmap_for_child.AllowPort(*available_port);
-      } else {
-        llvm::consumeError(available_port.takeError());
-        fprintf(stderr,
-                "no available gdbserver port for connection - dropping...\n");
-        delete conn;
-        continue;
-      }
-      platform.SetPortMap(std::move(portmap_for_child));
-
-      auto childPid = fork();
-      if (childPid) {
-        gdbserver_portmap.AssociatePortWithProcess(*available_port, childPid);
-        // Parent doesn't need a connection to the lldb client
-        delete conn;
-
-        // Parent will continue to listen for new connections.
-        continue;
-      } else {
-        // Child process will handle the connection and exit.
-        g_server = 0;
-        // Listening socket is owned by parent process.
-        acceptor_up.release();
+      std::optional<URI> uri = URI::Parse(conn->GetURI());
+      const std::string thread_name =
+          uri ? llvm::formatv("conn:{0}>", uri->port) : std::string("conn:?");
+      auto maybe_thread = ThreadLauncher::LaunchThread(
+          thread_name, [platform] { return platform->ThreadProc(); });
+      if (!maybe_thread) {
+        WithColor::error() << "failed to start thread: "
+                           << maybe_thread.takeError() << '\n';
+        delete platform;
       }
     } else {
       // If not running as a server, this process will not accept
       // connections while a connection is active.
       acceptor_up.reset();
-
-      // When not running in server mode, use all available ports
-      platform.SetPortMap(std::move(gdbserver_portmap));
-    }
-
-    platform.SetConnection(std::unique_ptr<Connection>(conn));
-
-    if (platform.IsConnected()) {
-      if (inferior_arguments.GetArgumentCount() > 0) {
-        lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        std::optional<uint16_t> port;
-        std::string socket_name;
-        Status error = platform.LaunchGDBServer(inferior_arguments,
-                                                "", // hostname
-                                                pid, port, socket_name);
-        if (error.Success())
-          platform.SetPendingGdbServer(pid, *port, socket_name);
-        else
-          fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
-      }
-
-      bool interrupt = false;
-      bool done = false;
-      while (!interrupt && !done) {
-        if (platform.GetPacketAndSendResponse(std::nullopt, error, interrupt,
-                                              done) !=
-            GDBRemoteCommunication::PacketResult::Success)
-          break;
-      }
-
-      if (error.Fail())
-        WithColor::error() << error.AsCString() << '\n';
+      platform->ThreadProc();
     }
   } while (g_server);
 
