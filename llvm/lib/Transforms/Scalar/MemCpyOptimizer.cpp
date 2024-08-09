@@ -69,6 +69,7 @@ static cl::opt<bool> EnableMemCpyOptWithoutLibcalls(
     cl::desc("Enable memcpyopt even when libcalls are disabled"));
 
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");
+STATISTIC(NumMemMoveInstr, "Number of memmove instructions deleted");
 STATISTIC(NumMemSetInfer, "Number of memsets inferred");
 STATISTIC(NumMoveToCpy, "Number of memmoves converted to memcpy");
 STATISTIC(NumCpyToSet, "Number of memcpys converted to memset");
@@ -1854,12 +1855,53 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   return false;
 }
 
+/// Memmove calls with overlapping src/dest buffers that come after a memset may
+/// be removed.
+bool MemCpyOptPass::mayBeMemMoveMemSetDependency(MemMoveInst *M) {
+  MemoryUseOrDef *MemMoveAccess = MSSA->getMemoryAccess(M);
+  if (!MemMoveAccess)
+    return false;
+
+  BatchAAResults BAA(*AA);
+  MemoryAccess *FirstDef = MemMoveAccess->getDefiningAccess();
+  MemoryLocation SourceLoc = MemoryLocation::getForSource(M);
+  MemoryAccess *SourceClobber =
+      MSSA->getWalker()->getClobberingMemoryAccess(FirstDef, SourceLoc, BAA);
+
+  MemSetInst *MS = nullptr;
+  if (auto *Def = dyn_cast<MemoryDef>(SourceClobber))
+    MS = dyn_cast_or_null<MemSetInst>(Def->getMemoryInst());
+
+  if (!MS || MS->getParent() != M->getParent())
+    return false;
+
+  // The destination buffer must have been memset'd.
+  if (!BAA.isMustAlias(MS->getDest(), M->getDest()))
+    return false;
+
+  // No clobbering writes in between.
+  if (writtenBetween(MSSA, BAA, SourceLoc, MSSA->getMemoryAccess(MS),
+                     MemMoveAccess))
+    return false;
+  return true;
+}
+
 /// Transforms memmove calls to memcpy calls when the src/dst are guaranteed
 /// not to alias.
-bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
+bool MemCpyOptPass::processMemMove(MemMoveInst *M, BasicBlock::iterator &BBI) {
   // See if the source could be modified by this memmove potentially.
-  if (isModSet(AA->getModRefInfo(M, MemoryLocation::getForSource(M))))
+  if (isModSet(AA->getModRefInfo(M, MemoryLocation::getForSource(M)))) {
+    // On the off-chance the memmove clobbers src with previously memset'd
+    // bytes, the memmove may be redundant.
+    if (mayBeMemMoveMemSetDependency(M)) {
+      LLVM_DEBUG(dbgs() << "Removed redundant memmove.\n");
+      ++BBI;
+      eraseInstruction(M);
+      ++NumMemMoveInstr;
+      return true;
+    }
     return false;
+  }
 
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Optimizing memmove -> memcpy: " << *M
                     << "\n");
@@ -2068,7 +2110,7 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
       else if (auto *M = dyn_cast<MemCpyInst>(I))
         RepeatInstruction = processMemCpy(M, BI);
       else if (auto *M = dyn_cast<MemMoveInst>(I))
-        RepeatInstruction = processMemMove(M);
+        RepeatInstruction = processMemMove(M, BI);
       else if (auto *CB = dyn_cast<CallBase>(I)) {
         for (unsigned i = 0, e = CB->arg_size(); i != e; ++i) {
           if (CB->isByValArgument(i))
