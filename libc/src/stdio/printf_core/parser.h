@@ -597,11 +597,11 @@ private:
             break;
           case (LengthModifier::w):
           case (LengthModifier::wf):
-            if (bw <= INT_WIDTH) {
+            if (bw <= cpp::numeric_limits<unsigned int>::digits) {
               conv_size = type_desc_from_type<int>();
-            } else if (bw <= LONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
               conv_size = type_desc_from_type<long>();
-            } else if (bw <= LLONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
               conv_size = type_desc_from_type<long long>();
             } else {
               conv_size = type_desc_from_type<intmax_t>();
