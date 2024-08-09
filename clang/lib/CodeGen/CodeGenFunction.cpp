@@ -846,9 +846,12 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr(llvm::Attribute::ShadowCallStack);
 
   if (SanOpts.has(SanitizerKind::Realtime)) {
-    for (const FunctionEffectWithCondition &Fe : FD->getFunctionEffects())
-      if (Fe.Effect.kind() == FunctionEffect::Kind::NonBlocking)
-        Fn->addFnAttr(llvm::Attribute::SanitizeRealtime);
+    if (FD && FD->getASTContext().hasAnyFunctionEffects()) {
+      for (const FunctionEffectWithCondition &Fe : FD->getFunctionEffects()) {
+        if (Fe.Effect.kind() == FunctionEffect::Kind::NonBlocking)
+          Fn->addFnAttr(llvm::Attribute::SanitizeRealtime);
+      }
+    }
   }
 
   // Apply fuzzing attribute to the function.
