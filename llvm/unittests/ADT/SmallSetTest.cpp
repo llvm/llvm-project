@@ -17,6 +17,66 @@
 
 using namespace llvm;
 
+TEST(SmallSetTest, ConstructorIteratorPair) {
+  auto L = {1, 2, 3, 4, 5};
+  SmallSet<int, 4> S(std::begin(L), std::end(L));
+  for (int Value : L)
+    EXPECT_TRUE(S.contains(Value));
+}
+
+TEST(SmallSet, ConstructorRange) {
+  auto L = {1, 2, 3, 4, 5};
+
+  SmallSet<int, 4> S(llvm::make_range(std::begin(L), std::end(L)));
+  for (int Value : L)
+    EXPECT_TRUE(S.contains(Value));
+}
+
+TEST(SmallSet, ConstructorInitializerList) {
+  auto L = {1, 2, 3, 4, 5};
+  SmallSet<int, 4> S = {1, 2, 3, 4, 5};
+  for (int Value : L)
+    EXPECT_TRUE(S.contains(Value));
+}
+
+TEST(SmallSet, CopyConstructor) {
+  SmallSet<int, 4> S = {1, 2, 3};
+  SmallSet<int, 4> T = S;
+
+  EXPECT_EQ(S, T);
+}
+
+TEST(SmallSet, MoveConstructor) {
+  auto L = {1, 2, 3};
+  SmallSet<int, 4> S = L;
+  SmallSet<int, 4> T = std::move(S);
+
+  EXPECT_TRUE(T.size() == L.size());
+  for (int Value : L) {
+    EXPECT_TRUE(T.contains(Value));
+  }
+}
+
+TEST(SmallSet, CopyAssignment) {
+  SmallSet<int, 4> S = {1, 2, 3};
+  SmallSet<int, 4> T;
+  T = S;
+
+  EXPECT_EQ(S, T);
+}
+
+TEST(SmallSet, MoveAssignment) {
+  auto L = {1, 2, 3};
+  SmallSet<int, 4> S = L;
+  SmallSet<int, 4> T;
+  T = std::move(S);
+
+  EXPECT_TRUE(T.size() == L.size());
+  for (int Value : L) {
+    EXPECT_TRUE(T.contains(Value));
+  }
+}
+
 TEST(SmallSetTest, Insert) {
 
   SmallSet<int, 4> s1;

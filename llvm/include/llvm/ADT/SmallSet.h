@@ -14,14 +14,13 @@
 #ifndef LLVM_ADT_SMALLSET_H
 #define LLVM_ADT_SMALLSET_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/type_traits.h"
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <set>
 #include <type_traits>
 #include <utility>
@@ -155,6 +154,22 @@ public:
   using const_iterator = SmallSetIterator<T, N, C>;
 
   SmallSet() = default;
+  SmallSet(const SmallSet &) = default;
+  SmallSet(SmallSet &&) = default;
+
+  template <typename IterT> explicit SmallSet(IterT Begin, IterT End) {
+    this->insert(Begin, End);
+  }
+
+  template <typename RangeT>
+  explicit SmallSet(const iterator_range<RangeT> &R) {
+    this->insert(R.begin(), R.end());
+  }
+
+  SmallSet(std::initializer_list<T> L) { this->insert(L.begin(), L.end()); }
+
+  SmallSet &operator=(const SmallSet &) = default;
+  SmallSet &operator=(SmallSet &&) = default;
 
   [[nodiscard]] bool empty() const { return Vector.empty() && Set.empty(); }
 
