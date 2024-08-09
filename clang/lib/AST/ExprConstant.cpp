@@ -1915,6 +1915,22 @@ static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
 static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
                                EvalInfo &Info);
 
+/// Support for atomic builtins
+static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info);
+static bool EvaluateAtomicWeak(const AtomicExpr *E, EvalInfo &Info);
+static bool EvaluateAtomicLoad(const AtomicExpr *E, APValue &Result,
+                               EvalInfo &Info);
+static bool EvaluatePointerAndStoreValueInto(Expr *ResultPtr,
+                                             APValue &ValueToStore,
+                                             EvalInfo &Info);
+static bool EvaluateAtomicLoadInto(const AtomicExpr *E, EvalInfo &Info);
+static bool EvaluateAtomicStore(const AtomicExpr *E, EvalInfo &Info);
+static bool EvaluateAtomicExchangeInto(const AtomicExpr *E, EvalInfo &Info);
+static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
+                                  EvalInfo &Info, bool StoreToResultAfter);
+static bool EvaluateAtomicCompareExchange(const AtomicExpr *E, APValue &Result,
+                                          EvalInfo &Info);
+
 //===----------------------------------------------------------------------===//
 // Misc utilities
 //===----------------------------------------------------------------------===//
@@ -7947,6 +7963,66 @@ public:
       return Error(E);
     }
     return StmtVisitorTy::Visit(Source);
+  }
+
+  bool VisitAtomicExpr(const AtomicExpr *E) {
+    if (!EvaluateAtomicOrder(E, Info))
+      return false;
+
+    APValue LocalResult;
+    switch (E->getOp()) {
+    default:
+      return Error(E);
+    case AtomicExpr::AO__c11_atomic_load:
+    case AtomicExpr::AO__atomic_load_n:
+      if (!EvaluateAtomicLoad(E, LocalResult, Info))
+        return Error(E);
+      return DerivedSuccess(LocalResult, E);
+    case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
+    case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
+    case AtomicExpr::AO__atomic_compare_exchange:
+    case AtomicExpr::AO__atomic_compare_exchange_n:
+      if (!EvaluateAtomicCompareExchange(E, LocalResult, Info))
+        return Error(E);
+      return DerivedSuccess(LocalResult, E);
+    case AtomicExpr::AO__c11_atomic_exchange:
+    case AtomicExpr::AO__atomic_exchange_n:
+      if (!EvaluateAtomicLoad(E, LocalResult, Info))
+        return Error(E);
+      if (!EvaluateAtomicStore(E, Info))
+        return Error(E);
+      return DerivedSuccess(LocalResult, E);
+    case AtomicExpr::AO__c11_atomic_fetch_add:
+    case AtomicExpr::AO__c11_atomic_fetch_sub:
+    case AtomicExpr::AO__c11_atomic_fetch_and:
+    case AtomicExpr::AO__c11_atomic_fetch_or:
+    case AtomicExpr::AO__c11_atomic_fetch_xor:
+    case AtomicExpr::AO__c11_atomic_fetch_nand:
+    case AtomicExpr::AO__c11_atomic_fetch_max:
+    case AtomicExpr::AO__c11_atomic_fetch_min:
+    case AtomicExpr::AO__atomic_fetch_add:
+    case AtomicExpr::AO__atomic_fetch_sub:
+    case AtomicExpr::AO__atomic_fetch_and:
+    case AtomicExpr::AO__atomic_fetch_xor:
+    case AtomicExpr::AO__atomic_fetch_or:
+    case AtomicExpr::AO__atomic_fetch_nand:
+    case AtomicExpr::AO__atomic_fetch_max:
+    case AtomicExpr::AO__atomic_fetch_min:
+      if (!EvaluateAtomicFetchOp(E, LocalResult, Info, false))
+        return Error(E);
+      return DerivedSuccess(LocalResult, E);
+    case AtomicExpr::AO__atomic_add_fetch:
+    case AtomicExpr::AO__atomic_sub_fetch:
+    case AtomicExpr::AO__atomic_and_fetch:
+    case AtomicExpr::AO__atomic_xor_fetch:
+    case AtomicExpr::AO__atomic_or_fetch:
+    case AtomicExpr::AO__atomic_nand_fetch:
+    case AtomicExpr::AO__atomic_max_fetch:
+    case AtomicExpr::AO__atomic_min_fetch:
+      if (!EvaluateAtomicFetchOp(E, LocalResult, Info, true))
+        return Error(E);
+      return DerivedSuccess(LocalResult, E);
+    }
   }
 
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
@@ -15733,6 +15809,25 @@ public:
     }
   }
 
+  bool VisitAtomicExpr(const AtomicExpr *E) {
+    if (!EvaluateAtomicOrder(E, Info))
+      return false;
+
+    switch (E->getOp()) {
+    default:
+      return Error(E);
+    case AtomicExpr::AO__atomic_load:
+      return EvaluateAtomicLoadInto(E, Info);
+    case AtomicExpr::AO__atomic_exchange:
+      return EvaluateAtomicExchangeInto(E, Info);
+    case AtomicExpr::AO__c11_atomic_init:
+    case AtomicExpr::AO__c11_atomic_store:
+    case AtomicExpr::AO__atomic_store:
+    case AtomicExpr::AO__atomic_store_n:
+      return EvaluateAtomicStore(E, Info);
+    }
+  }
+
   bool VisitCallExpr(const CallExpr *E) {
     if (!IsConstantEvaluatedBuiltinCall(E))
       return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -15745,6 +15840,14 @@ public:
 
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
+
+    case Builtin::BI__c11_atomic_thread_fence:
+    case Builtin::BI__c11_atomic_signal_fence:
+    case Builtin::BI__atomic_thread_fence:
+    case Builtin::BI__atomic_signal_fence: {
+      [[maybe_unused]] APSInt IgnoredAtomicOrdering;
+      return EvaluateInteger(E->getArg(0), IgnoredAtomicOrdering, Info);
+    }
 
     default:
       return false;
@@ -17263,4 +17366,440 @@ bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
   return EvaluateBuiltinStrLen(this, Result, Info);
+}
+
+static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info) {
+  // we ignore results, but we need to evaluate them
+  [[maybe_unused]] APSInt OrderIgnoredResult;
+
+  if (E->getOp() != AtomicExpr::AO__c11_atomic_init) {
+    const Expr *OrderSuccess = E->getOrder();
+    if (OrderSuccess &&
+        !EvaluateInteger(OrderSuccess, OrderIgnoredResult, Info))
+      return false;
+  }
+
+  if (E->isCmpXChg()) {
+    const Expr *OrderFail = E->getOrderFail();
+    if (!EvaluateInteger(OrderFail, OrderIgnoredResult, Info))
+      return false;
+  }
+
+  return true;
+}
+
+static bool EvaluateAtomicWeak(const AtomicExpr *E, EvalInfo &Info) {
+  // we ignore results, but we need to evaluate them
+  [[maybe_unused]] APSInt WeakIgnoredResult;
+
+  if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
+      E->getOp() == AtomicExpr::AO__atomic_compare_exchange) {
+    const Expr *Weak = E->getWeak();
+    if (!EvaluateInteger(Weak, WeakIgnoredResult, Info))
+      return false;
+  }
+
+  return true;
+}
+
+static bool EvaluateAtomicLoad(const AtomicExpr *E, APValue &Result,
+                               EvalInfo &Info) {
+  LValue AtomicStorageLV;
+
+  if (!EvaluatePointer(E->getPtr(), AtomicStorageLV, Info))
+    return false;
+
+  return handleLValueToRValueConversion(Info, E->getPtr(), E->getValueType(),
+                                        AtomicStorageLV, Result);
+}
+
+static bool EvaluatePointerAndStoreValueInto(Expr *ResultPtr,
+                                             APValue &ValueToStore,
+                                             EvalInfo &Info) {
+  assert(ResultPtr->getType()->isPointerType());
+  QualType PointeeTy = ResultPtr->getType()->getPointeeType();
+  LValue PointeeLV;
+
+  if (!EvaluatePointer(ResultPtr, PointeeLV, Info))
+    return false;
+
+  return handleAssignment(Info, ResultPtr, PointeeLV, PointeeTy, ValueToStore);
+}
+
+static bool EvaluateAtomicLoadInto(const AtomicExpr *E, EvalInfo &Info) {
+  APValue LocalResult;
+
+  if (!EvaluateAtomicLoad(E, LocalResult, Info))
+    return false;
+
+  if (!EvaluatePointerAndStoreValueInto(E->getVal1(), LocalResult, Info))
+    return false;
+
+  return true;
+}
+
+static bool EvaluateAtomicStore(const AtomicExpr *E, EvalInfo &Info) {
+  LValue AtomicStorageLV;
+
+  if (!EvaluatePointer(E->getPtr(), AtomicStorageLV, Info))
+    return false;
+
+  APValue ProvidedValue;
+
+  // GCC's atomic_store takes pointer to value, not value itself
+  if (E->getOp() == AtomicExpr::AO__atomic_store) {
+    LValue ProvidedLV;
+    if (!EvaluatePointer(E->getVal1(), ProvidedLV, Info))
+      return false;
+
+    if (!handleLValueToRValueConversion(Info, E->getVal1(),
+                                        E->getVal1()->getType(), ProvidedLV,
+                                        ProvidedValue))
+      return false;
+
+  } else {
+    if (!Evaluate(ProvidedValue, Info, E->getVal1()))
+      return false;
+  }
+  if (!handleAssignment(Info, E, AtomicStorageLV, E->getValueType(),
+                        ProvidedValue))
+    return false;
+
+  return true;
+}
+
+static bool EvaluateAtomicExchangeInto(const AtomicExpr *E, EvalInfo &Info) {
+  assert(E->getOp() == AtomicExpr::AO__atomic_exchange);
+  // implementation of GCC's exchange (non _n version)
+  LValue AtomicStorageLV;
+  if (!EvaluatePointer(E->getPtr(), AtomicStorageLV, Info))
+    return false;
+
+  // read previous value
+  APValue PreviousValue;
+  if (!handleLValueToRValueConversion(Info, E->getPtr(), E->getValueType(),
+                                      AtomicStorageLV, PreviousValue))
+    return false;
+
+  // get provided value from argument (pointer)
+  LValue ProvidedLV;
+  if (!EvaluatePointer(E->getVal1(), ProvidedLV, Info))
+    return false;
+
+  APValue ProvidedValue;
+  if (!handleLValueToRValueConversion(Info, E->getVal1(),
+                                      E->getVal1()->getType(), ProvidedLV,
+                                      ProvidedValue))
+    return false;
+
+  // store provided value to atomic value
+  if (!handleAssignment(Info, E, AtomicStorageLV, E->getValueType(),
+                        ProvidedValue))
+    return false;
+
+  // store previous value in output pointer
+  if (!EvaluatePointerAndStoreValueInto(E->getVal2(), PreviousValue, Info))
+    return false;
+
+  return true;
+}
+
+static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
+                                  EvalInfo &Info, bool StoreToResultAfter) {
+  // read atomic
+  LValue AtomicStorageLV;
+  QualType AtomicValueTy = E->getValueType();
+  if (!EvaluatePointer(E->getPtr(), AtomicStorageLV, Info))
+    return false;
+
+  APValue CurrentValue;
+  if (!handleLValueToRValueConversion(Info, E->getPtr(), E->getType(),
+                                      AtomicStorageLV, CurrentValue))
+    return false;
+
+  // store current value for fetch-OP operations
+  if (!StoreToResultAfter)
+    Result = CurrentValue;
+
+  // read argument for fetch OP
+  APValue ArgumentVal;
+  if (!Evaluate(ArgumentVal, Info, E->getVal1()))
+    return false;
+
+  // calculate new value
+  APValue Replacement;
+  if (AtomicValueTy->isIntegralOrEnumerationType()) {
+    // both arguments are integers
+    const APSInt AtomicInt = CurrentValue.getInt();
+    const APSInt ArgumentInt = ArgumentVal.getInt();
+
+    switch (E->getOp()) {
+    case AtomicExpr::AO__c11_atomic_fetch_add:
+    case AtomicExpr::AO__atomic_fetch_add:
+    case AtomicExpr::AO__atomic_add_fetch:
+      Replacement = APValue(AtomicInt + ArgumentInt);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_sub:
+    case AtomicExpr::AO__atomic_fetch_sub:
+    case AtomicExpr::AO__atomic_sub_fetch:
+      Replacement = APValue(AtomicInt - ArgumentInt);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_and:
+    case AtomicExpr::AO__atomic_fetch_and:
+    case AtomicExpr::AO__atomic_and_fetch:
+      Replacement = APValue(AtomicInt & ArgumentInt);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_or:
+    case AtomicExpr::AO__atomic_fetch_or:
+    case AtomicExpr::AO__atomic_or_fetch:
+      Replacement = APValue(AtomicInt | ArgumentInt);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_xor:
+    case AtomicExpr::AO__atomic_fetch_xor:
+    case AtomicExpr::AO__atomic_xor_fetch:
+      Replacement = APValue(AtomicInt ^ ArgumentInt);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_nand:
+    case AtomicExpr::AO__atomic_fetch_nand:
+    case AtomicExpr::AO__atomic_nand_fetch:
+      Replacement = APValue(~(AtomicInt & ArgumentInt));
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_max:
+    case AtomicExpr::AO__atomic_fetch_max:
+    case AtomicExpr::AO__atomic_max_fetch:
+      Replacement =
+          APValue((AtomicInt > ArgumentInt) ? AtomicInt : ArgumentInt);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_min:
+    case AtomicExpr::AO__atomic_fetch_min:
+    case AtomicExpr::AO__atomic_min_fetch:
+      Replacement =
+          APValue((AtomicInt < ArgumentInt) ? AtomicInt : ArgumentInt);
+      break;
+    default:
+      return false;
+    }
+  } else if (AtomicValueTy->isRealFloatingType()) {
+    // both arguments are float operations
+    const llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    APFloat AtomicFlt = CurrentValue.getFloat();
+    const APFloat ArgumentFlt = ArgumentVal.getFloat();
+    APFloat::opStatus St;
+
+    switch (E->getOp()) {
+    case AtomicExpr::AO__c11_atomic_fetch_add: // GCC atomics doesn't support
+                                               // floats
+      St = AtomicFlt.add(ArgumentFlt, RM);
+      Replacement = APValue(AtomicFlt);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_sub:
+      St = AtomicFlt.subtract(ArgumentFlt, RM);
+      Replacement = APValue(AtomicFlt);
+      break;
+    default:
+      return false;
+    }
+
+    if (!checkFloatingPointResult(Info, E, St))
+      return false;
+
+  } else if (AtomicValueTy->isPointerType()) {
+    // pointer + int arguments
+    LValue AtomicPtr;
+    AtomicPtr.setFrom(Info.Ctx, CurrentValue);
+
+    APSInt ArgumentInt = ArgumentVal.getInt();
+
+    // calculate size of pointee object
+    CharUnits SizeOfPointee;
+    if (!HandleSizeof(Info, E->getExprLoc(), AtomicValueTy->getPointeeType(),
+                      SizeOfPointee))
+      return false;
+
+    // GCC's atomic_fetch add/sub compute new pointer by bytes and not
+    // sizeof(T)
+    switch (E->getOp()) {
+    case AtomicExpr::AO__atomic_fetch_add:
+    case AtomicExpr::AO__atomic_add_fetch:
+    case AtomicExpr::AO__atomic_fetch_sub:
+    case AtomicExpr::AO__atomic_sub_fetch: {
+      const auto sizeOfOneItem = APSInt(
+          APInt(ArgumentInt.getBitWidth(), SizeOfPointee.getQuantity(), false),
+          false);
+      // incrementing pointer by size which is not dividable by pointee size
+      // is UB and therefore disallowed
+      if ((ArgumentInt % sizeOfOneItem) != 0)
+        return false;
+
+      ArgumentInt /= sizeOfOneItem;
+    } break;
+    default:
+      break;
+    }
+
+    switch (E->getOp()) {
+    case AtomicExpr::AO__c11_atomic_fetch_add:
+    case AtomicExpr::AO__atomic_fetch_add:
+    case AtomicExpr::AO__atomic_add_fetch:
+      AtomicPtr.adjustOffsetAndIndex(Info, E, ArgumentInt, SizeOfPointee);
+      break;
+    case AtomicExpr::AO__c11_atomic_fetch_sub:
+    case AtomicExpr::AO__atomic_fetch_sub:
+    case AtomicExpr::AO__atomic_sub_fetch:
+      ArgumentInt.negate();
+      AtomicPtr.adjustOffsetAndIndex(Info, E, ArgumentInt, SizeOfPointee);
+      break;
+    default:
+      return false;
+    }
+
+    AtomicPtr.moveInto(Replacement);
+  } else {
+    // not float,int,pointer?
+    return false;
+  }
+
+  // OP-fetch operation store result, not previous value
+  if (StoreToResultAfter)
+    Result = Replacement;
+
+  // store result to atomic's storage
+  return handleAssignment(Info, E, AtomicStorageLV, AtomicValueTy, Replacement);
+}
+
+static bool EvaluateAtomicCompareExchange(const AtomicExpr *E, APValue &Result,
+                                          EvalInfo &Info) {
+  EvaluateAtomicWeak(E, Info);
+
+  // dereference _Atomic * (atomic value)
+  LValue AtomicLV;
+  QualType AtomicTy = E->getValueType();
+  if (!EvaluatePointer(E->getPtr(), AtomicLV, Info))
+    return false;
+
+  // dereference T * (expected value)
+  LValue ExpectedLV;
+  QualType ExpectedTy = E->getVal1()->getType()->getPointeeType();
+  if (!EvaluatePointer(E->getVal1(), ExpectedLV, Info))
+    return false;
+
+  // get values for atomic and expected
+  APValue AtomicVal;
+  APValue ExpectedVal;
+
+  // convert pointer to value
+  if (!handleLValueToRValueConversion(Info, E->getPtr(), AtomicTy, AtomicLV,
+                                      AtomicVal))
+    return false;
+
+  if (!handleLValueToRValueConversion(Info, E->getVal1(), ExpectedTy,
+                                      ExpectedLV, ExpectedVal))
+    return false;
+
+  bool DoExchange = false;
+
+  // compare atomic<int> and friends
+  if (AtomicTy->isIntegralOrEnumerationType() &&
+      ExpectedTy->isIntegralOrEnumerationType()) {
+    const APSInt AtomicInt = AtomicVal.getInt();
+    const APSInt ExpectedInt = ExpectedVal.getInt();
+    if (AtomicInt == ExpectedInt)
+      DoExchange = true;
+
+  } else if (AtomicTy->isRealFloatingType() &&
+             ExpectedTy->isRealFloatingType()) {
+    const APFloat AtomicFlt = AtomicVal.getFloat();
+    const APFloat ExpectedFlt = ExpectedVal.getFloat();
+    if (AtomicFlt == ExpectedFlt)
+      DoExchange = true;
+
+  } else if (AtomicTy->isPointerType() && ExpectedTy->isPointerType()) {
+    // get LValue of objects pointed to
+    LValue LHS;
+    LHS.setFrom(Info.Ctx, AtomicVal);
+
+    LValue RHS;
+    RHS.setFrom(Info.Ctx, ExpectedVal);
+
+    if (HasSameBase(LHS, RHS)) {
+      const CharUnits &LHSOffset = LHS.getLValueOffset();
+      const CharUnits &RHSOffset = RHS.getLValueOffset();
+
+      const unsigned PtrSize = Info.Ctx.getTypeSize(AtomicTy);
+      assert(PtrSize <= 64 && "Pointer width is larger than expected");
+      const uint64_t Mask = ~0ULL >> (64 - PtrSize);
+
+      const uint64_t CompareLHS = LHSOffset.getQuantity() & Mask;
+      const uint64_t CompareRHS = RHSOffset.getQuantity() & Mask;
+
+      if (CompareLHS == CompareRHS)
+        DoExchange = true;
+
+    } else {
+
+      // it's implementation-defined to compare distinct literals
+      // it's not constant-evaluation
+      if ((IsLiteralLValue(LHS) || IsLiteralLValue(RHS)) && LHS.Base &&
+          RHS.Base)
+        return false;
+
+      if (IsWeakLValue(LHS) || IsWeakLValue(RHS))
+        return false;
+
+      if ((!LHS.Base && !LHS.Offset.isZero()) ||
+          (!RHS.Base && !RHS.Offset.isZero()))
+        return false;
+
+      if (LHS.Base && LHS.Offset.isZero() &&
+          isOnePastTheEndOfCompleteObject(Info.Ctx, RHS))
+        return false;
+
+      if (RHS.Base && RHS.Offset.isZero() &&
+          isOnePastTheEndOfCompleteObject(Info.Ctx, LHS))
+        return false;
+
+      if ((RHS.Base && isZeroSized(RHS)) || (LHS.Base && isZeroSized(LHS)))
+        return false;
+
+      // after all it's a different object
+      DoExchange = false;
+    }
+
+  } else {
+    return false;
+  }
+
+  APValue Replacement;
+  if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange) {
+    // GCC atomic_compare_exchange provides pointer and not value
+    LValue ReplacementLV;
+    if (!EvaluatePointer(E->getVal2(), ReplacementLV, Info))
+      return false;
+
+    if (!handleLValueToRValueConversion(Info, E->getVal2(),
+                                        E->getVal2()->getType(), ReplacementLV,
+                                        Replacement))
+      return false;
+
+  } else {
+    if (!Evaluate(Replacement, Info, E->getVal2()))
+      return false;
+  }
+
+  if (DoExchange) {
+    // if values are same do the exchange with replacement value
+    // but first I must evaluate the replacement value
+
+    // and assign it to atomic
+    if (!handleAssignment(Info, E, AtomicLV, AtomicTy, Replacement))
+      return false;
+  }
+
+  // to expected pointer I need to put previous value in atomic
+  if (!handleAssignment(Info, E, ExpectedLV, ExpectedTy, AtomicVal))
+    return false;
+
+  // and return boolean if I did the exchange
+  Result = APValue(Info.Ctx.MakeIntValue(DoExchange, E->getType()));
+  return true;
 }
