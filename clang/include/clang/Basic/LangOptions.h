@@ -571,7 +571,7 @@ public:
   GPUDefaultStreamKind GPUDefaultStream;
 
   /// Which overflow patterns should be excluded from sanitizer instrumentation
-  int OverflowPatternExclusionMask = 0;
+  unsigned OverflowPatternExclusionMask = 0;
 
   std::vector<std::string> OverflowPatternExclusionValues;
 

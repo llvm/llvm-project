@@ -1,3 +1,9 @@
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test -S -emit-llvm -o - | FileCheck %s --check-prefix=ADD
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const -S -emit-llvm -o - | FileCheck %s --check-prefix=NEGATE
+// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while -S -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
+
 // Ensure some common overflow-dependent or overflow-prone code patterns don't
 // trigger the overflow sanitizers. In many cases, overflow warnings caused by
 // these patterns are seen as "noise" and result in users turning off
@@ -15,11 +21,6 @@
 // unsigned negation, for example:
 // unsigned long A = -1UL;
 
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test -S -emit-llvm -o - | FileCheck %s --check-prefix=ADD
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const -S -emit-llvm -o - | FileCheck %s --check-prefix=NEGATE
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while -S -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
 
 // CHECK-NOT: handle{{.*}}overflow
 

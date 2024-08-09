@@ -2777,6 +2777,26 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   llvm_unreachable("Unknown SignedOverflowBehaviorTy");
 }
 
+/// For the purposes of overflow pattern exclusion, does this match the
+/// "while(i--)" pattern?
+static bool matchesPostDecrInWhile(const UnaryOperator *UO, bool isInc,
+                                   bool isPre, ASTContext &Ctx) {
+  if (isInc || isPre)
+    return false;
+
+  // -fsanitize-overflow-pattern-exclusion=post-decr-while
+  if (!Ctx.getLangOpts().isOverflowPatternExcluded(
+          LangOptions::OverflowPatternExclusionKind::PostDecrInWhile))
+    return false;
+
+  // all Parents (usually just one) must be a WhileStmt
+  for (const auto &Parent : Ctx.getParentMapContext().getParents(*UO))
+    if (!Parent.get<WhileStmt>())
+      return false;
+
+  return true;
+}
+
 namespace {
 /// Handles check and update for lastprivate conditional variables.
 class OMPLastprivateConditionalUpdateRAII {
@@ -2889,15 +2909,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     QualType promotedType;
     bool canPerformLossyDemotionCheck = false;
 
-    // Is the pattern "while (i--)" and overflow exclusion?
-    bool disableSanitizer =
-        (!isInc && !isPre &&
-         CGF.getContext().getLangOpts().isOverflowPatternExcluded(
-             LangOptions::OverflowPatternExclusionKind::PostDecrInWhile) &&
-         llvm::all_of(CGF.getContext().getParentMapContext().getParents(*E),
-                      [&](const DynTypedNode &Parent) -> bool {
-                        return Parent.get<WhileStmt>();
-                      }));
+    bool excludeOverflowPattern =
+        matchesPostDecrInWhile(E, isInc, isPre, CGF.getContext());
 
     if (CGF.getContext().isPromotableIntegerType(type)) {
       promotedType = CGF.getContext().getPromotedIntegerType(type);
@@ -2959,7 +2972,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
     } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
                CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
-               !disableSanitizer) {
+               !excludeOverflowPattern) {
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {
