@@ -633,6 +633,7 @@ module std_private_algorithm_comp_ref_type                               [system
 module std_private_algorithm_copy                                        [system] {
   header "__algorithm/copy.h"
   export std_private_algorithm_copy_move_common
+  export std_private_utility_pair
 }
 module std_private_algorithm_copy_backward                               [system] { header "__algorithm/copy_backward.h" }
 module std_private_algorithm_copy_if                                     [system] { header "__algorithm/copy_if.h" }
@@ -2134,3 +2135,32 @@ module std_private_utility_unreachable             [system] { header "__utility/
 module std_private_variant_monostate               [system] { header "__variant/monostate.h" }
 
 module std_private_vector_fwd                      [system] { header "__fwd/vector.h" }
+module std_private_vector_comparison               [system] { header "__vector/comparison.h" }
+module std_private_vector_erase                    [system] { header "__vector/erase.h" }
+module std_private_vector_formatter                [system] {
+  header "__vector/formatter.h"
+  export std_private_format_formatter
+}
+module std_private_vector_pmr                      [system] {
+  header "__vector/pmr.h"
+  export std_private_memory_resource_polymorphic_allocator
+}
+module std_private_vector_swap                     [system] { header "__vector/swap.h" }
+module std_private_vector_vector_bool              [system] {
+  header "__vector/vector_bool.h"
+  export std_private_bit_reference
+  export std_private_functional_unary_function
+  export std_private_fwd_bit_reference
+  export std_private_memory_allocator
+  export std_private_vector_comparison
+  export std_private_vector_fwd
+  export std_private_vector_swap
+}
+module std_private_vector_vector                   [system] {
+  header "__vector/vector.h"
+  export std_private_iterator_wrap_iter
+  export std_private_memory_allocator
+  export std_private_vector_comparison
+  export std_private_vector_fwd
+  export std_private_vector_swap
+}

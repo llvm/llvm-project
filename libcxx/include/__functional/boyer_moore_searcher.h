@@ -22,9 +22,9 @@
 #include <__memory/shared_ptr.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/pair.h>
+#include <__vector/vector.h>
 #include <array>
 #include <unordered_map>
-#include <vector>
 
 #if _LIBCPP_STD_VER >= 17
 

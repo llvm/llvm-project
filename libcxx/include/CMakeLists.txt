@@ -871,6 +871,13 @@ set(files
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
+  __vector/comparison.h
+  __vector/erase.h
+  __vector/formatter.h
+  __vector/pmr.h
+  __vector/swap.h
+  __vector/vector.h
+  __vector/vector_bool.h
   __verbose_abort
   algorithm
   any

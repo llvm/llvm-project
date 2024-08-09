@@ -13,10 +13,10 @@
 #include <__config>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
+#include <__vector/vector.h>
 #include <cstddef>
 #include <iosfwd>
 #include <numeric>
-#include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

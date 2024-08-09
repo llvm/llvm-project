@@ -664,7 +664,9 @@ random cstdlib
 random initializer_list
 random iosfwd
 random limits
+random new
 random numeric
+random stdexcept
 random string
 random type_traits
 random vector

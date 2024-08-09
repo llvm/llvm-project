@@ -578,7 +578,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #  include <array>
 #  include <initializer_list>
 #  include <unordered_map>
-#  include <vector>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
@@ -593,6 +592,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
+#  include <vector>
 #endif
 
 #endif // _LIBCPP_FUNCTIONAL
