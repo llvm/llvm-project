@@ -15,7 +15,7 @@ typedef struct {
 } my_st;
 
 // CIR-SPIRV64: cir.func @func(
-// LLVM-SPIRV64: @func(
+// LLVM-SPIRV64: define spir_kernel void @func(
 kernel void func(global long *arg) {
   int res1[sizeof(my_st)  == 24 ? 1 : -1]; // expected-no-diagnostics
   int res2[sizeof(void *) ==  8 ? 1 : -1]; // expected-no-diagnostics

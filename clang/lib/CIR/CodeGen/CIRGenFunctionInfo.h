@@ -250,9 +250,17 @@ public:
     return getExtParameterInfos()[argIndex];
   }
 
-  /// getCallingConvention - REturn the user specified calling convention, which
+  /// getCallingConvention - Return the user specified calling convention, which
   /// has been translated into a CIR CC.
-  mlir::cir::CallingConv getCallingConvention() const { return CallingConvention; }
+  mlir::cir::CallingConv getCallingConvention() const {
+    return CallingConvention;
+  }
+
+  /// getEffectiveCallingConvention - Return the actual calling convention to
+  /// use, which may depend on the ABI.
+  mlir::cir::CallingConv getEffectiveCallingConvention() const {
+    return EffectiveCallingConvention;
+  }
 
   clang::CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
 

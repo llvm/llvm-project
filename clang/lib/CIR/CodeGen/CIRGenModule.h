@@ -551,6 +551,10 @@ public:
   void setFunctionAttributes(GlobalDecl GD, mlir::cir::FuncOp F,
                              bool IsIncompleteFunction, bool IsThunk);
 
+  /// Set the CIR function attributes (sext, zext, etc).
+  void setCIRFunctionAttributes(GlobalDecl GD, const CIRGenFunctionInfo &info,
+                                 mlir::cir::FuncOp func, bool isThunk);
+
   void buildGlobalDefinition(clang::GlobalDecl D,
                              mlir::Operation *Op = nullptr);
   void buildGlobalFunctionDefinition(clang::GlobalDecl D, mlir::Operation *Op);
