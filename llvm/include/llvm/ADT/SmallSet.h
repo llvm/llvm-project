@@ -118,9 +118,9 @@ public:
 
   SmallSetIterator &operator++() { // Preincrement
     if (IsSmall)
-      VecIter++;
+      ++VecIter;
     else
-      SetIter++;
+      ++SetIter;
     return *this;
   }
 
