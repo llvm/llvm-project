@@ -16174,6 +16174,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
       [[fallthrough]];
 
     case Intrinsic::fma:
+    case Intrinsic::fmuladd:
       if (isa<VectorType>(I->getType()) &&
           cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
           !Subtarget->hasFullFP16())
