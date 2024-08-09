@@ -5,7 +5,6 @@ import lldb
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbtest as lldbtest
 import os
-import unittest2
 
 
 class TestSBValueUpdates(lldbtest.TestBase):

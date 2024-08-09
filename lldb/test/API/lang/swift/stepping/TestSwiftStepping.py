@@ -18,7 +18,6 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import platform
-import unittest2
 
 class TestSwiftStepping(lldbtest.TestBase):
 

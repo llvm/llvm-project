@@ -19,7 +19,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
 import re
-import unittest2
 import shutil
 
 class TestObjCIVarDiscovery(TestBase):
