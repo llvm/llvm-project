@@ -38,7 +38,7 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
     return std::make_unique<MachObjectWriter>(
         cast<MCMachObjectTargetWriter>(std::move(TW)), OS, IsLE);
   case Triple::COFF:
-    return createWinCOFFObjectWriter(
+    return std::make_unique<WinCOFFObjectWriter>(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
   case Triple::ELF:
     return std::make_unique<ELFObjectWriter>(
@@ -69,7 +69,7 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
   case Triple::COFF:
-    return createWinCOFFDwoObjectWriter(
+    return std::make_unique<WinCOFFObjectWriter>(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   case Triple::ELF:
     return std::make_unique<ELFObjectWriter>(
