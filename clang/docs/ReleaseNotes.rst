@@ -175,6 +175,8 @@ Bug Fixes in This Version
   be used in C++.
 - Fixed a failed assertion when checking required literal types in C context. (#GH101304).
 - Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
+- Fixed a crash when diagnosing format strings and encountering an empty
+  delimited escape sequence (e.g., ``"\o{}"``). #GH102218
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
