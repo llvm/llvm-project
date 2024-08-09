@@ -4730,3 +4730,10 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Documentation = [ClspvLibclcBuiltinDoc];
   let SimpleHandler = 1;
 }
+
+def AsmDialect: DeclOrStmtAttr {
+  let Spellings = [Clang<"asm_dialect">];
+  let Subjects = SubjectList<[GCCAsmStmt, Function], ErrorDiag, "'asm' inline assembly statements or functions">;
+  let Args = [EnumArgument<"Dialect", "Kind", /*is_string=*/true, ["intel", "att", "reset", ""], ["Intel", "ATT", "Global", "Local"]>];
+  let Documentation = [Undocumented];
+}

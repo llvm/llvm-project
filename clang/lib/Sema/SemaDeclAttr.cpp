@@ -5599,6 +5599,21 @@ DLLExportAttr *Sema::mergeDLLExportAttr(Decl *D,
   return ::new (Context) DLLExportAttr(Context, CI);
 }
 
+static void handleAsmDialectAttr(Sema &S, Decl *D, const ParsedAttr &A) {
+  StringRef Name;
+  SourceLocation LiteralLoc;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, Name, &LiteralLoc))
+    return;
+
+  AsmDialectAttr::Kind Kind;
+  if (Name.empty() || !AsmDialectAttr::ConvertStrToKind(Name, Kind)) {
+    S.Diag(LiteralLoc, diag::warn_attribute_type_not_supported) << A << Name;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) AsmDialectAttr(S.Context, A, Kind));
+}
+
 static void handleDLLAttr(Sema &S, Decl *D, const ParsedAttr &A) {
   if (isa<ClassTemplatePartialSpecializationDecl>(D) &&
       (S.Context.getTargetInfo().shouldDLLImportComdatSymbols())) {
@@ -6415,6 +6430,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_AMDGPUMaxNumWorkGroups:
     S.AMDGPU().handleAMDGPUMaxNumWorkGroupsAttr(D, AL);
+    break;
+  case ParsedAttr::AT_AsmDialect:
+    handleAsmDialectAttr(S, D, AL);
     break;
   case ParsedAttr::AT_AVRSignal:
     S.AVR().handleSignalAttr(D, AL);
