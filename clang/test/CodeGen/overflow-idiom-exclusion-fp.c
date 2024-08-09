@@ -1,7 +1,7 @@
-// Check for potential false positives from patterns that _almost_ match classic overflow-dependent or overflow-prone code patterns
 // RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -emit-llvm -o - | FileCheck %s
 
+// Check for potential false positives from patterns that _almost_ match classic overflow-dependent or overflow-prone code patterns
 extern unsigned a, b, c;
 extern int u, v, w;
 
