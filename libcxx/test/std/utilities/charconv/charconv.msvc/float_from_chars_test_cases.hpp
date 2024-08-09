@@ -121,7 +121,6 @@ inline constexpr FloatFromCharsTestCase float_from_chars_test_cases[] = {
      "2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
      "2222222222222222222e-45",
         chars_format::scientific, 1006, errc{}, 0x0.000004p-126f},
-
     // VSO-733765 "<charconv>: [Feedback] double std::from_chars behavior on exponent out of range"
     // LWG-3081 "Floating point from_chars API does not distinguish between overflow and underflow"
     // These test cases exercise every overflow/underflow codepath.

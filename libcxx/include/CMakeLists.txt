@@ -235,6 +235,7 @@ set(files
   __bit/rotate.h
   __bit_reference
   __charconv/chars_format.h
+  __charconv/from_chars_floating_point.h
   __charconv/from_chars_integral.h
   __charconv/from_chars_result.h
   __charconv/tables.h

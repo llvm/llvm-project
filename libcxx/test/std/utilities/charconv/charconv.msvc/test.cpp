@@ -27,6 +27,8 @@
 #include <utility>
 #include <vector>
 
+#include <ranges> // TODO REMOVE
+
 #include "double_fixed_precision_to_chars_test_cases_1.hpp"
 #include "double_fixed_precision_to_chars_test_cases_2.hpp"
 #include "double_fixed_precision_to_chars_test_cases_3.hpp"
@@ -45,6 +47,7 @@
 #include "float_hex_precision_to_chars_test_cases.hpp"
 #include "float_scientific_precision_to_chars_test_cases.hpp"
 #include "float_to_chars_test_cases.hpp"
+#include "floating_point_test_cases.hpp"
 
 using namespace std;
 
@@ -389,7 +392,22 @@ void test_from_chars(const string_view input, const BaseOrFmt base_or_fmt, const
     if constexpr (is_integral_v<T>) {
         assert(mode == TestFromCharsMode::Normal);
     }
-
+#if 1
+    else {
+      // Not implemented yet.
+      if (base_or_fmt == std::chars_format::hex)
+        return;
+      // LWG3456. Pattern used by std::from_chars is underspecified
+      if (base_or_fmt == std::chars_format::scientific && correct_ec == std::errc{} && opt_correct &&
+          !std::isfinite(*opt_correct))
+        // Based on the wording in the Standard scientific can't be NaN or Inf.
+        return;
+      if (base_or_fmt == std::chars_format::fixed && correct_ec == std::errc{} &&
+          std::ranges::contains(input, 'e', [](char c) { return std::tolower(c); }))
+        // Fixed should not contain an exponent. MSVC terminates at e, libc++ marks as invalid.
+        return;
+    }
+#endif
     constexpr T unmodified = 111;
 
     T dest = unmodified;
@@ -589,8 +607,8 @@ void test_floating_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint
     // "-1.2345678901234567e-100" or "-1.23456789e-10"
     constexpr std::size_t buffer_size = IsDouble ? 24 : 15;
     char buffer[buffer_size];
-// TODO Enable once std::from_chars has floating point support.
-#if 0
+
+#ifdef TEST_HAS_FROM_CHARS_FLOATING_POINT
     FloatingType val;
 #endif
 
@@ -614,8 +632,7 @@ void test_floating_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint
         {
             const auto to_result = to_chars(buffer, end(buffer), input, chars_format::scientific);
             assert_message_bits(to_result.ec == errc{}, "to_result.ec", bits);
-// TODO Enable once std::from_chars has floating point support.
-#if 0
+#ifdef TEST_HAS_FROM_CHARS_FLOATING_POINT
             const char* const last = to_result.ptr;
 
             const auto from_result = from_chars(buffer, last, val);
@@ -623,7 +640,7 @@ void test_floating_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint
             assert_message_bits(from_result.ptr == last, "from_result.ptr", bits);
             assert_message_bits(from_result.ec == errc{}, "from_result.ec", bits);
             assert_message_bits(_Bit_cast<UIntType>(val) == bits, "round-trip", bits);
-#endif
+#endif // TEST_HAS_FROM_CHARS_FLOATING_POINT
         }
 
         {
@@ -786,8 +803,7 @@ void test_floating_prefixes(mt19937_64& mt64) {
     }
 }
 
-// TODO Enable once std::from_chars has floating point support.
-#if 0
+#ifdef TEST_HAS_FROM_CHARS_FLOATING_POINT
 template <typename T>
 void test_floating_from_chars(const chars_format fmt) {
     test_from_chars<T>("", fmt, 0, inv_arg); // no characters
@@ -855,11 +871,20 @@ void test_floating_from_chars(const chars_format fmt) {
 
     // The UCRT considers indeterminate NaN to be negative quiet NaN with no payload bits set.
     // It parses "nan(ind)" and "-nan(ind)" identically.
+	//
+	//
+	// TODO Evaluate this code, probably needs to be commented out.
+	//
+	//
+#if 0
     test_from_chars<T>("nan(InD)", fmt, 8, errc{}, -qnan);
+#endif
     test_from_chars<T>("-nan(InD)", fmt, 9, errc{}, -qnan);
 
+#if 0
     test_from_chars<T>("nan(SnAn)", fmt, 9, errc{}, nullopt, TestFromCharsMode::SignalingNaN);
     test_from_chars<T>("-nan(SnAn)", fmt, 10, errc{}, nullopt, TestFromCharsMode::SignalingNaN);
+#endif
 
     switch (fmt) {
     case chars_format::general:
@@ -941,7 +966,7 @@ void test_floating_from_chars(const chars_format fmt) {
         break;
     }
 }
-#endif
+#endif // TEST_HAS_FROM_CHARS_FLOATING_POINT
 
 template <typename T>
 void test_floating_to_chars(
@@ -953,13 +978,11 @@ void test_floating_to_chars(
 void all_floating_tests(mt19937_64& mt64) {
     test_floating_prefixes(mt64);
 
-// TODO Enable once std::from_chars has floating point support.
-#if 0
+#ifdef TEST_HAS_FROM_CHARS_FLOATING_POINT
     for (const auto& fmt : {chars_format::general, chars_format::scientific, chars_format::fixed, chars_format::hex}) {
         test_floating_from_chars<float>(fmt);
         test_floating_from_chars<double>(fmt);
     }
-
     // Test rounding.
 
     // See float_from_chars_test_cases.hpp in this directory.
@@ -993,7 +1016,8 @@ void all_floating_tests(mt19937_64& mt64) {
     for (const auto& p : floating_point_test_cases_double) {
         test_from_chars<double>(p.first, chars_format::general, strlen(p.first), errc{}, _Bit_cast<double>(p.second));
     }
-#endif
+#endif //  TEST_HAS_FROM_CHARS_FLOATING_POINT
+
     // See float_to_chars_test_cases.hpp in this directory.
     for (const auto& t : float_to_chars_test_cases) {
         if (t.fmt == chars_format{}) {

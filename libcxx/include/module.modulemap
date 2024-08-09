@@ -1075,18 +1075,19 @@ module std_private_bit_invert_if      [system] { header "__bit/invert_if.h" }
 module std_private_bit_popcount       [system] { header "__bit/popcount.h" }
 module std_private_bit_rotate         [system] { header "__bit/rotate.h" }
 
-module std_private_charconv_chars_format            [system] { header "__charconv/chars_format.h" }
-module std_private_charconv_from_chars_integral     [system] { header "__charconv/from_chars_integral.h" }
-module std_private_charconv_from_chars_result       [system] { header "__charconv/from_chars_result.h" }
-module std_private_charconv_tables                  [system] { header "__charconv/tables.h" }
-module std_private_charconv_to_chars                [system] { header "__charconv/to_chars.h" }
-module std_private_charconv_to_chars_base_10        [system] { header "__charconv/to_chars_base_10.h" }
-module std_private_charconv_to_chars_floating_point [system] { header "__charconv/to_chars_floating_point.h" }
-module std_private_charconv_to_chars_integral       [system] {
+module std_private_charconv_chars_format              [system] { header "__charconv/chars_format.h" }
+module std_private_charconv_from_chars_integral       [system] { header "__charconv/from_chars_integral.h" }
+module std_private_charconv_from_chars_result         [system] { header "__charconv/from_chars_result.h" }
+module std_private_charconv_tables                    [system] { header "__charconv/tables.h" }
+module std_private_charconv_to_chars                  [system] { header "__charconv/to_chars.h" }
+module std_private_charconv_to_chars_base_10          [system] { header "__charconv/to_chars_base_10.h" }
+module std_private_charconv_to_chars_floating_point   [system] { header "__charconv/to_chars_floating_point.h" }
+module std_private_charconv_from_chars_floating_point [system] { header "__charconv/from_chars_floating_point.h" }
+module std_private_charconv_to_chars_integral         [system] {
   header "__charconv/to_chars_integral.h"
   export std_private_charconv_traits
 }
-module std_private_charconv_to_chars_result         [system] {
+module std_private_charconv_to_chars_result           [system] {
   header "__charconv/to_chars_result.h"
   export *
 }
