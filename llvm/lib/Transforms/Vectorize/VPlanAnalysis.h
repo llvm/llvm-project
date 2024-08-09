@@ -26,6 +26,8 @@ struct VPWidenSelectRecipe;
 class VPReplicateRecipe;
 class VPRecipeBase;
 class VPlan;
+class SCEV;
+class ScalarEvolution;
 class Type;
 
 /// An analysis for type-inference for VPValues.
@@ -67,6 +69,15 @@ public:
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
+
+namespace vputils {
+
+/// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
+/// SCEV expression could be constructed.
+const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+
+} // namespace vputils
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
