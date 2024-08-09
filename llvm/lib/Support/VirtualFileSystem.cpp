@@ -2945,8 +2945,21 @@ recursive_directory_iterator::increment(std::error_code &EC) {
   return *this;
 }
 
+void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
+                                  unsigned IndentLevel) const {
+  printIndent(OS, IndentLevel);
+  OS << "TracingFileSystem\n";
+  if (Type == PrintType::Summary)
+    return;
+
+  if (Type == PrintType::Contents)
+    Type = PrintType::Summary;
+  getUnderlyingFS().print(OS, Type, IndentLevel + 1);
+}
+
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
+const char TracingFileSystem::ID = 0;
