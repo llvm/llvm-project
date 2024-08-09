@@ -743,10 +743,11 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"dsqrtl", RetValSpec<DoubleType>, [ArgSpec<LongDoubleType>]>,
 
-          FunctionSpec<"totalorder", RetValSpec<IntType>, [ArgSpec<DoublePtr>, ArgSpec<DoublePtr>]>,
-	  FunctionSpec<"totalorderf", RetValSpec<IntType>, [ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]>,
-	  GuardedFunctionSpec<"totalorderf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
-	  GuardedFunctionSpec<"totalorderf128", RetValSpec<IntType>, [ArgSpec<Float128Ptr>, ArgSpec<Float128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
+          FunctionSpec<"totalorder", RetValSpec<IntType>, [ArgSpec<ConstDoublePtr>, ArgSpec<ConstDoublePtr>]>,
+	  FunctionSpec<"totalorderf", RetValSpec<IntType>, [ArgSpec<ConstFloatPtr>, ArgSpec<ConstFloatPtr>]>,
+	  FunctionSpec<"totalorderl", RetValSpec<IntType>, [ArgSpec<ConstLongDoublePtr>, ArgSpec<ConstLongDoublePtr>]>,
+	  GuardedFunctionSpec<"totalorderf16", RetValSpec<IntType>, [ArgSpec<ConstFloat16Ptr>, ArgSpec<ConstFloat16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
+	  GuardedFunctionSpec<"totalorderf128", RetValSpec<IntType>, [ArgSpec<ConstFloat128Ptr>, ArgSpec<ConstFloat128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"totalordermag", RetValSpec<IntType>, [ArgSpec<DoublePtr>, ArgSpec<DoublePtr>]>,
 	  FunctionSpec<"totalordermagf", RetValSpec<IntType>, [ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]>,

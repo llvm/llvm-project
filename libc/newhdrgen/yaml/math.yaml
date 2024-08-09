@@ -1839,14 +1839,43 @@ functions:
       - type: float128 *
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
+  - name: totalorder
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const double *
+      - type: const double *
+  - name: totalorderf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const float *
+      - type: const float *
+  - name: totalorderl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const long double *
+      - type: const long double *
   - name: totalorderf16
     standards:
       - stdc
     return_type: int
     arguments:
-      - type: _Float16 *
-      - type: _Float16 *
+      - type: const _Float16 *
+      - type: const _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: totalorderf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const float128 *
+      - type: const float128 *
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: totalordermagf16
     standards:
       - stdc
