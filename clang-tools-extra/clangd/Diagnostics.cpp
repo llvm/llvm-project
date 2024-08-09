@@ -579,7 +579,9 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
       // Warnings controlled by -Wfoo are better recognized by that name.
-      StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
+      StringRef Warning = Tidy->getDiagnosticsEngine()
+                              ->getDiagnosticIDs()
+                              ->getWarningOptionForDiag(Diag.ID);
       if (!Warning.empty()) {
         Diag.Name = ("-W" + Warning).str();
       } else {
@@ -909,7 +911,7 @@ bool isBuiltinDiagnosticSuppressed(unsigned ID,
     if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
       return true;
   }
-  StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(ID);
+  StringRef Warning = DiagnosticIDs{}.getWarningOptionForDiag(ID);
   if (!Warning.empty() && Suppress.contains(Warning))
     return true;
   return false;

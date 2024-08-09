@@ -91,7 +91,7 @@ public:
                                     ? " [" + PD->getCheckerName() + "]"
                                     : "")
                                    .str();
-
+      // assert(!DiagEng.isIgnored(WarnID, PD->getLocation().asLocation()));
       reportPiece(WarnID, PD->getLocation().asLocation(),
                   (PD->getShortDescription() + WarningMsg).str(),
                   PD->path.back()->getRanges(), PD->path.back()->getFixits());

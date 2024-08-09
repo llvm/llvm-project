@@ -835,7 +835,7 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
       if (!getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
       if (SemaRef.IsLastErrorImmediate &&
-          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+          getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -866,7 +866,7 @@ Sema::SemaDiagnosticBuilder SemaCUDA::DiagIfHostCode(SourceLocation Loc,
       if (getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
       if (SemaRef.IsLastErrorImmediate &&
-          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+          getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)

@@ -79,6 +79,8 @@ public:
     this->DiagEngine = DiagEngine;
   }
 
+  const DiagnosticsEngine *getDiagnosticsEngine() const { return DiagEngine; }
+
   ~ClangTidyContext();
 
   /// Report any errors detected using this method.
