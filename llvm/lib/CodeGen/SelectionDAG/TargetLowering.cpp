@@ -6285,6 +6285,7 @@ SDValue TargetLowering::buildSDIVPow2WithCMov(
 /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
 SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalization,
+                                  bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
@@ -6405,7 +6406,12 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                                 VT.getVectorElementCount());
-    if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
+    // custom lowered. This is very expensive so avoid it at all costs for
+    // constant divisors.
+    if ((!IsAfterLegalTypes && isOperationExpand(ISD::SDIV, VT) &&
+         isOperationCustom(ISD::SDIVREM, VT.getScalarType())) ||
+        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
       X = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, X);
       Y = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, Y);
       Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
@@ -6447,6 +6453,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
 /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
 SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalization,
+                                  bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
@@ -6588,7 +6595,12 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                                 VT.getVectorElementCount());
-    if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    // Some targets like AMDGPU try to go from UDIV to UDIVREM which is then
+    // custom lowered. This is very expensive so avoid it at all costs for
+    // constant divisors.
+    if ((!IsAfterLegalTypes && isOperationExpand(ISD::UDIV, VT) &&
+         isOperationCustom(ISD::UDIVREM, VT.getScalarType())) ||
+        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
       X = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, X);
       Y = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, Y);
       Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
