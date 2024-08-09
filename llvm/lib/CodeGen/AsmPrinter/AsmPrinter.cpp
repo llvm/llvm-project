@@ -107,6 +107,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -154,6 +155,11 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
+
+static cl::opt<bool> EmitJumpTableSizesSection(
+    "emit-jump-table-sizes-section",
+    cl::desc("Emit a section containing jump table addresses and sizes"),
+    cl::Hidden, cl::init(false));
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -2764,6 +2770,27 @@ void AsmPrinter::emitJumpTableInfo() {
     for (const MachineBasicBlock *MBB : JTBBs)
       emitJumpTableEntry(MJTI, MBB, JTI);
   }
+
+  if (EmitJumpTableSizesSection && TM.getTargetTriple().isOSBinFormatELF() &&
+      !JT.empty()) {
+    MCSymbolELF *LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
+    int Flags = F.hasComdat() ? ELF::SHF_GROUP : 0;
+    StringRef GroupName = F.hasComdat() ? F.getComdat()->getName() : "";
+
+    MCSection *JumpTableSizesSection = OutContext.getELFSection(
+        ".debug_llvm_jump_table_sizes", ELF::SHT_LLVM_JT_SIZES, Flags, 0,
+        GroupName, F.hasComdat(), MCSection::NonUniqueID, LinkedToSym);
+
+    OutStreamer->switchSection(JumpTableSizesSection);
+
+    for (unsigned JTI = 0, E = JT.size(); JTI != E; ++JTI) {
+      const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
+      OutStreamer->emitSymbolValue(GetJTISymbol(JTI),
+                                   TM.getProgramPointerSize());
+      OutStreamer->emitIntValue(JTBBs.size(), TM.getProgramPointerSize());
+    }
+  }
+
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }

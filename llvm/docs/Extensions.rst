@@ -554,6 +554,12 @@ time. This section is generated when the compiler enables fat LTO. This section
 has the ``SHF_EXCLUDE`` flag so that it is stripped from the final executable
 or shared library.
 
+``SHT_LLVM_JT_SIZES`` Section (Jump table addresses and sizes)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section stores pairs of (jump table address, number of entries).
+This information is useful for tools that need to statically reconstruct
+the control flow of executables.
+
 CodeView-Dependent
 ------------------
 
