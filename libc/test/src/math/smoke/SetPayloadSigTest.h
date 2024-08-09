@@ -40,7 +40,7 @@ public:
     default_snan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 1 +
                                                   FPBits::EXP_BIAS);
     T default_snan_payload = default_snan_payload_bits.get_val();
-    
+
     EXPECT_EQ(1, func(&res, default_snan_payload));
   }
 
@@ -61,7 +61,7 @@ public:
     EXPECT_TRUE(FPBits(res).is_signaling_nan());
     EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x123).uintval(),
               FPBits(res).uintval());
-    
+
     FPBits nan_payload_bits = FPBits::one();
     nan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 2 +
                                          FPBits::EXP_BIAS);
