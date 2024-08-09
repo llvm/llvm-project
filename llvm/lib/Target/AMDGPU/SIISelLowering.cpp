@@ -2512,19 +2512,20 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
   GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
   bool InPreloadSequence = true;
   unsigned InIdx = 0;
+  bool AlignedForImplictArgs = false;
   for (auto &Arg : F.args()) {
     if (!InPreloadSequence || !Arg.hasInRegAttr())
       break;
 
-    int ArgIdx = Arg.getArgNo();
+    unsigned ArgIdx = Arg.getArgNo();
     // Don't preload non-original args or parts not in the current preload
     // sequence.
-    if (InIdx < Ins.size() && (!Ins[InIdx].isOrigArg() ||
-                               (int)Ins[InIdx].getOrigArgIndex() != ArgIdx))
+    if (InIdx < Ins.size() &&
+        (!Ins[InIdx].isOrigArg() || Ins[InIdx].getOrigArgIndex() != ArgIdx))
       break;
 
     for (; InIdx < Ins.size() && Ins[InIdx].isOrigArg() &&
-           (int)Ins[InIdx].getOrigArgIndex() == ArgIdx;
+           Ins[InIdx].getOrigArgIndex() == ArgIdx;
          InIdx++) {
       assert(ArgLocs[ArgIdx].isMemLoc());
       auto &ArgLoc = ArgLocs[InIdx];
@@ -2533,6 +2534,23 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
       unsigned NumAllocSGPRs =
           alignTo(ArgLoc.getLocVT().getFixedSizeInBits(), 32) / 32;
+
+      // Add padding SPGR to fix alignment for hidden arguments.
+      if (!AlignedForImplictArgs &&
+          F.getAttributes().hasAttributeAtIndex(AttributeList::FirstArgIndex +
+                                                    Arg.getArgNo(),
+                                                "amdgpu-hidden-argument")) {
+        unsigned OffsetBefore = LastExplicitArgOffset;
+        LastExplicitArgOffset = alignTo(
+            LastExplicitArgOffset, Subtarget->getAlignmentForImplicitArgPtr());
+        if (OffsetBefore != LastExplicitArgOffset) {
+          unsigned PaddingSGPRs =
+              alignTo(LastExplicitArgOffset - OffsetBefore, 4) / 4;
+          Info.allocateUserSGPRs(PaddingSGPRs);
+          ArgOffset += PaddingSGPRs * 4;
+        }
+        AlignedForImplictArgs = true;
+      }
 
       // Arg is preloaded into the previous SGPR.
       if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {

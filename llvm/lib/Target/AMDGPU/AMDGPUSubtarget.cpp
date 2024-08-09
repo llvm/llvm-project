@@ -611,6 +611,11 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
   MaxAlign = Align(1);
 
   for (const Argument &Arg : F.args()) {
+    if (F.getAttributes().hasAttributeAtIndex(AttributeList::FirstArgIndex +
+                                                  Arg.getArgNo(),
+                                              "amdgpu-hidden-argument"))
+      continue;
+
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
     Align Alignment = DL.getValueOrABITypeAlignment(
