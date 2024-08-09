@@ -246,9 +246,6 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
         clEnumValN(
             TailFoldingStyle::Data, "data",
             "Create lane mask for data only, using active.lane.mask intrinsic"),
-        clEnumValN(TailFoldingStyle::DataWithoutLaneMask,
-                   "data-without-lane-mask",
-                   "Create lane mask with compare/stepvector"),
         clEnumValN(TailFoldingStyle::DataAndControlFlow, "data-and-control",
                    "Create lane mask using active.lane.mask intrinsic, and use "
                    "it for both data and control flow"),
@@ -1477,12 +1474,10 @@ public:
         // FIXME: implement support for max safe dependency distance.
         Legal->isSafeForAnyVectorWidth();
     if (!EVLIsLegal) {
-      // If for some reason EVL mode is unsupported, fallback to
-      // DataWithoutLaneMask to try to vectorize the loop with folded tail
-      // in a generic way.
+      // If for some reason EVL mode is unsupported, fallback to Data to try to
+      // vectorize the loop with folded tail in a generic way.
       ChosenTailFoldingStyle =
-          std::make_pair(TailFoldingStyle::DataWithoutLaneMask,
-                         TailFoldingStyle::DataWithoutLaneMask);
+          std::make_pair(TailFoldingStyle::Data, TailFoldingStyle::Data);
       LLVM_DEBUG(
           dbgs()
           << "LV: Preference for VP intrinsics indicated. Will "
