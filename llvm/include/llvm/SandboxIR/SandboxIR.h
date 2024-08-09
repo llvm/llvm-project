@@ -111,6 +111,7 @@ class Context;
 class Function;
 class Instruction;
 class SelectInst;
+class InsertElementInst;
 class BranchInst;
 class UnaryInstruction;
 class LoadInst;
