@@ -13,6 +13,7 @@
 #include "Unix.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -24,7 +25,16 @@
 #endif
 
 #ifdef __linux__
+#include <linux/magic.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/vfs.h>
+
+#include <fstream>
+
+// We use a weak reference to avoid requiring to link against libselinux just
+// for this but if users do so anyway, we'll make use of it.
+extern "C" int is_selinux_enabled(void) LLVM_ATTRIBUTE_WEAK;
 #endif
 
 #ifdef __APPLE__
@@ -321,50 +331,148 @@ void Memory::InvalidateInstructionCache(const void *Addr, size_t Len) {
   ValgrindDiscardTranslations(Addr, Len);
 }
 
-static inline bool isPermissionError(int err) {
-  // PaX uses EPERM, SELinux uses EACCES
-  return err == EPERM || err == EACCES;
-}
-
-bool Memory::execProtectionChangeNeedsNewMapping() {
 #if defined(__linux__)
-  static int status = -1;
-
-  if (status != -1)
-    return status;
-
+static int checkPaX() {
   // Try to get the status from /proc/self/status, looking for PaX flags.
   if (auto file = MemoryBuffer::getFileAsStream("/proc/self/status")) {
     auto pax_flags =
         (*file)->getBuffer().rsplit("PaX:").second.split('\n').first.trim();
     if (!pax_flags.empty())
       // 'M' indicates MPROTECT is enabled
-      return (status = pax_flags.find('M') != StringRef::npos);
+      return pax_flags.find('M') != StringRef::npos;
   }
 
+  return -1;
+}
+
+// see linux/security/selinux/selinuxfs.c
+#ifndef SEL_INO_MASK
+#define SEL_INO_MASK 0x00ffffff
+#endif
+#ifndef SEL_CLASS_INO_OFFSET
+#define SEL_CLASS_INO_OFFSET 0x04000000
+#endif
+#ifndef SEL_VEC_MAX
+#define SEL_VEC_MAX 32
+#endif
+#ifndef SELINUX_MAGIC
+#define SELINUX_MAGIC 0xf97cff8c
+#endif
+
+#define SEL_MNT "/sys/fs/selinux"
+
+static int SELinuxEnabled() {
+  if (is_selinux_enabled)
+    return is_selinux_enabled();
+
+  struct statfs fsbuf;
+  if (statfs(SEL_MNT, &fsbuf) < 0)
+    return -1;
+
+  return (unsigned int)fsbuf.f_type == (unsigned int)SELINUX_MAGIC;
+}
+
+// Test if the current context is allowed to "execmem"
+static int checkSELinux() {
+  int se_status = SELinuxEnabled();
+  if (se_status <= 0)
+    return se_status;
+
+  auto context = MemoryBuffer::getFileAsStream("/proc/self/attr/current");
+  if (!context)
+    return -1;
+
+  // The inode encodes class and permission bits
+  struct stat sbuf;
+  if (stat(SEL_MNT "/class/process/perms/execmem", &sbuf))
+    return -1;
+
+  if (!(sbuf.st_ino & SEL_CLASS_INO_OFFSET))
+    return -1;
+
+  int clazz = (sbuf.st_ino & SEL_INO_MASK) / (SEL_VEC_MAX + 1);
+  int xperm = (sbuf.st_ino & SEL_INO_MASK) % (SEL_VEC_MAX + 1) - 1;
+  if (xperm < 0 || xperm > 31)
+    return -1;
+
+  unsigned int execmem = 1U << xperm;
+
+  std::fstream access(SEL_MNT "/access", std::ios::in | std::ios::out);
+  if (!access)
+    return -1;
+
+  access << (*context)->getBuffer().str().c_str() << " "
+         << (*context)->getBuffer().str().c_str() << " " << clazz << " "
+         << std::hex << execmem;
+  access.flush();
+  if (access.bad())
+    return -1;
+
+  unsigned int lo, hi;
+  access >> lo >> hi;
+  if (access.bad())
+    return -1;
+
+  uint64_t allowed = (uint64_t)hi << 32 | lo;
+  return !(allowed & execmem);
+}
+
+static bool isPermissionError(int err) {
+  // PaX uses EPERM, SELinux uses EACCES
+  return err == EPERM || err == EACCES;
+}
+
+static int checkSyscall() {
   // Create a temporary writable mapping and try to make it executable.  If
   // this fails, test 'errno' to ensure it failed because we were not allowed
   // to create such a mapping and not because of some transient error.
   size_t size = Process::getPageSizeEstimate();
   void *addr = ::mmap(NULL, size, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (addr == MAP_FAILED) {
+  if (addr == MAP_FAILED)
     // Must be low on memory or have too many mappings already, not much we can
     // do here.
+    return 0;
+
+  int status;
+  if (::mprotect(addr, size, PROT_READ | PROT_EXEC) < 0)
+    status = isPermissionError(errno);
+  else
     status = 0;
-  } else {
-    if (::mprotect(addr, size, PROT_READ | PROT_EXEC) < 0)
-      status = isPermissionError(errno);
-    else
-      status = 0;
-    ::munmap(addr, size);
-  }
+  ::munmap(addr, size);
 
   return status;
-#else
-  return false;
-#endif
 }
+
+bool Memory::execProtectionChangeNeedsNewMapping() {
+  static int status = -1;
+  int pax, selinux;
+
+  if (status != -1)
+    return status;
+
+  // check PaX first, easiest
+  if ((pax = checkPaX()) == 1)
+    return (status = 1);
+
+  // SELinux may still deny even if PaX allows
+  if ((selinux = checkSELinux()) == 1)
+    return (status = 1);
+
+  // if either has a verdict, it's governing the behaviour
+  if (pax == 0 || selinux == 0)
+    return (status = 0);
+
+  // inconclusive results, do a runtime check
+  status = checkSyscall();
+
+  return status;
+}
+#else
+bool Memory::execProtectionChangeNeedsNewMapping() {
+  return false;
+}
+#endif
 
 } // namespace sys
 } // namespace llvm
