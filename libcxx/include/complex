@@ -930,12 +930,26 @@ imag(_Tp) {
 
 // abs
 
+_LIBCPP_HIDE_FROM_ABI inline float abs(const std::complex<float> __c) { return __builtin_cabsf(__c.__builtin()); }
+
+_LIBCPP_HIDE_FROM_ABI inline double abs(const std::complex<double> __c) { return __builtin_cabs(__c.__builtin()); }
+
+_LIBCPP_HIDE_FROM_ABI inline long double abs(const std::complex<long double> __c) {
+  return __builtin_cabsl(__c.__builtin());
+}
+
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp abs(const complex<_Tp>& __c) {
   return std::hypot(__c.real(), __c.imag());
 }
 
 // arg
+
+inline _LIBCPP_HIDE_FROM_ABI float arg(const complex<float>& __c) { return __builtin_cargf(__c.__builtin()); }
+inline _LIBCPP_HIDE_FROM_ABI double arg(const complex<double>& __c) { return __builtin_carg(__c.__builtin()); }
+inline _LIBCPP_HIDE_FROM_ABI long double arg(const complex<long double>& __c) {
+  return __builtin_cargl(__c.__builtin());
+}
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp arg(const complex<_Tp>& __c) {
@@ -1039,6 +1053,18 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> polar(const _Tp& __rho, const _Tp& __theta = 
 
 // log
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> log(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_clogf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> log(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_clog(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> log(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_clogl(__value.__builtin()));
+}
+
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> log(const complex<_Tp>& __x) {
   return complex<_Tp>(std::log(std::abs(__x)), std::arg(__x));
@@ -1053,21 +1079,36 @@ inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> log10(const complex<_Tp>& __x) {
 
 // sqrt
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> sqrt(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_csqrtf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> sqrt(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_csqrt(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> sqrt(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_csqrtl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> sqrt(const complex<_Tp>& __x) {
-  if (std::__constexpr_isinf(__x.imag()))
-    return complex<_Tp>(_Tp(INFINITY), __x.imag());
-  if (std::__constexpr_isinf(__x.real())) {
-    if (__x.real() > _Tp(0))
-      return complex<_Tp>(
-          __x.real(), std::__constexpr_isnan(__x.imag()) ? __x.imag() : std::copysign(_Tp(0), __x.imag()));
-    return complex<_Tp>(
-        std::__constexpr_isnan(__x.imag()) ? __x.imag() : _Tp(0), std::copysign(__x.real(), __x.imag()));
-  }
   return std::polar(std::sqrt(std::abs(__x)), std::arg(__x) / _Tp(2));
 }
 
 // exp
+
+inline _LIBCPP_HIDE_FROM_ABI complex<float> exp(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_cexpf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> exp(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_cexp(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> exp(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_cexpl(__value.__builtin()));
+}
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> exp(const complex<_Tp>& __x) {
@@ -1075,21 +1116,24 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> exp(const complex<_Tp>& __x) {
   if (__i == 0) {
     return complex<_Tp>(std::exp(__x.real()), std::copysign(_Tp(0), __x.imag()));
   }
-  if (std::__constexpr_isinf(__x.real())) {
-    if (__x.real() < _Tp(0)) {
-      if (!std::__constexpr_isfinite(__i))
-        __i = _Tp(1);
-    } else if (__i == 0 || !std::__constexpr_isfinite(__i)) {
-      if (std::__constexpr_isinf(__i))
-        __i = _Tp(NAN);
-      return complex<_Tp>(__x.real(), __i);
-    }
-  }
   _Tp __e = std::exp(__x.real());
   return complex<_Tp>(__e * std::cos(__i), __e * std::sin(__i));
 }
 
 // pow
+
+inline _LIBCPP_HIDE_FROM_ABI complex<float> pow(const complex<float>& __lhs, const complex<float>& __rhs) {
+  return complex<float>(__from_builtin_tag(), __builtin_cpowf(__lhs.__builtin(), __rhs.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> pow(const complex<double>& __lhs, const complex<double>& __rhs) {
+  return complex<double>(__from_builtin_tag(), __builtin_cpow(__lhs.__builtin(), __rhs.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double>
+pow(const complex<long double>& __lhs, const complex<long double>& __rhs) {
+  return complex<long double>(__from_builtin_tag(), __builtin_cpowl(__lhs.__builtin(), __rhs.__builtin()));
+}
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> pow(const complex<_Tp>& __x, const complex<_Tp>& __y) {
@@ -1124,77 +1168,63 @@ inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> __sqr(const complex<_Tp>& __x) {
 
 // asinh
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> asinh(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_casinhf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> asinh(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_casinh(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> asinh(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_casinhl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> asinh(const complex<_Tp>& __x) {
   const _Tp __pi(atan2(+0., -0.));
-  if (std::__constexpr_isinf(__x.real())) {
-    if (std::__constexpr_isnan(__x.imag()))
-      return __x;
-    if (std::__constexpr_isinf(__x.imag()))
-      return complex<_Tp>(__x.real(), std::copysign(__pi * _Tp(0.25), __x.imag()));
-    return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
-  }
-  if (std::__constexpr_isnan(__x.real())) {
-    if (std::__constexpr_isinf(__x.imag()))
-      return complex<_Tp>(__x.imag(), __x.real());
-    if (__x.imag() == 0)
-      return __x;
-    return complex<_Tp>(__x.real(), __x.real());
-  }
-  if (std::__constexpr_isinf(__x.imag()))
-    return complex<_Tp>(std::copysign(__x.imag(), __x.real()), std::copysign(__pi / _Tp(2), __x.imag()));
   complex<_Tp> __z = std::log(__x + std::sqrt(std::__sqr(__x) + _Tp(1)));
   return complex<_Tp>(std::copysign(__z.real(), __x.real()), std::copysign(__z.imag(), __x.imag()));
 }
 
 // acosh
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> acosh(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_cacoshf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> acosh(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_cacosh(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> acosh(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_cacoshl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> acosh(const complex<_Tp>& __x) {
   const _Tp __pi(atan2(+0., -0.));
-  if (std::__constexpr_isinf(__x.real())) {
-    if (std::__constexpr_isnan(__x.imag()))
-      return complex<_Tp>(std::abs(__x.real()), __x.imag());
-    if (std::__constexpr_isinf(__x.imag())) {
-      if (__x.real() > 0)
-        return complex<_Tp>(__x.real(), std::copysign(__pi * _Tp(0.25), __x.imag()));
-      else
-        return complex<_Tp>(-__x.real(), std::copysign(__pi * _Tp(0.75), __x.imag()));
-    }
-    if (__x.real() < 0)
-      return complex<_Tp>(-__x.real(), std::copysign(__pi, __x.imag()));
-    return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
-  }
-  if (std::__constexpr_isnan(__x.real())) {
-    if (std::__constexpr_isinf(__x.imag()))
-      return complex<_Tp>(std::abs(__x.imag()), __x.real());
-    return complex<_Tp>(__x.real(), __x.real());
-  }
-  if (std::__constexpr_isinf(__x.imag()))
-    return complex<_Tp>(std::abs(__x.imag()), std::copysign(__pi / _Tp(2), __x.imag()));
   complex<_Tp> __z = std::log(__x + std::sqrt(std::__sqr(__x) - _Tp(1)));
   return complex<_Tp>(std::copysign(__z.real(), _Tp(0)), std::copysign(__z.imag(), __x.imag()));
 }
 
 // atanh
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> atanh(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_catanhf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> atanh(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_catanh(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> atanh(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_catanhl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> atanh(const complex<_Tp>& __x) {
   const _Tp __pi(atan2(+0., -0.));
-  if (std::__constexpr_isinf(__x.imag())) {
-    return complex<_Tp>(std::copysign(_Tp(0), __x.real()), std::copysign(__pi / _Tp(2), __x.imag()));
-  }
-  if (std::__constexpr_isnan(__x.imag())) {
-    if (std::__constexpr_isinf(__x.real()) || __x.real() == 0)
-      return complex<_Tp>(std::copysign(_Tp(0), __x.real()), __x.imag());
-    return complex<_Tp>(__x.imag(), __x.imag());
-  }
-  if (std::__constexpr_isnan(__x.real())) {
-    return complex<_Tp>(__x.real(), __x.real());
-  }
-  if (std::__constexpr_isinf(__x.real())) {
-    return complex<_Tp>(std::copysign(_Tp(0), __x.real()), std::copysign(__pi / _Tp(2), __x.imag()));
-  }
   if (std::abs(__x.real()) == _Tp(1) && __x.imag() == _Tp(0)) {
     return complex<_Tp>(std::copysign(_Tp(INFINITY), __x.real()), std::copysign(_Tp(0), __x.imag()));
   }
@@ -1204,53 +1234,80 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> atanh(const complex<_Tp>& __x) {
 
 // sinh
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> sinh(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_csinhf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> sinh(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_csinh(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> sinh(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_csinhl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> sinh(const complex<_Tp>& __x) {
-  if (std::__constexpr_isinf(__x.real()) && !std::__constexpr_isfinite(__x.imag()))
-    return complex<_Tp>(__x.real(), _Tp(NAN));
-  if (__x.real() == 0 && !std::__constexpr_isfinite(__x.imag()))
-    return complex<_Tp>(__x.real(), _Tp(NAN));
-  if (__x.imag() == 0 && !std::__constexpr_isfinite(__x.real()))
-    return __x;
   return complex<_Tp>(std::sinh(__x.real()) * std::cos(__x.imag()), std::cosh(__x.real()) * std::sin(__x.imag()));
 }
 
 // cosh
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> cosh(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_ccoshf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> cosh(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_ccosh(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> cosh(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_ccoshl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> cosh(const complex<_Tp>& __x) {
-  if (std::__constexpr_isinf(__x.real()) && !std::__constexpr_isfinite(__x.imag()))
-    return complex<_Tp>(std::abs(__x.real()), _Tp(NAN));
-  if (__x.real() == 0 && !std::__constexpr_isfinite(__x.imag()))
-    return complex<_Tp>(_Tp(NAN), __x.real());
   if (__x.real() == 0 && __x.imag() == 0)
     return complex<_Tp>(_Tp(1), __x.imag());
-  if (__x.imag() == 0 && !std::__constexpr_isfinite(__x.real()))
-    return complex<_Tp>(std::abs(__x.real()), __x.imag());
   return complex<_Tp>(std::cosh(__x.real()) * std::cos(__x.imag()), std::sinh(__x.real()) * std::sin(__x.imag()));
 }
 
 // tanh
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> tanh(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_ctanhf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> tanh(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_ctanh(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> tanh(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_ctanhl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> tanh(const complex<_Tp>& __x) {
-  if (std::__constexpr_isinf(__x.real())) {
-    if (!std::__constexpr_isfinite(__x.imag()))
-      return complex<_Tp>(std::copysign(_Tp(1), __x.real()), _Tp(0));
-    return complex<_Tp>(std::copysign(_Tp(1), __x.real()), std::copysign(_Tp(0), std::sin(_Tp(2) * __x.imag())));
-  }
-  if (std::__constexpr_isnan(__x.real()) && __x.imag() == 0)
-    return __x;
   _Tp __2r(_Tp(2) * __x.real());
   _Tp __2i(_Tp(2) * __x.imag());
   _Tp __d(std::cosh(__2r) + std::cos(__2i));
   _Tp __2rsh(std::sinh(__2r));
-  if (std::__constexpr_isinf(__2rsh) && std::__constexpr_isinf(__d))
-    return complex<_Tp>(__2rsh > _Tp(0) ? _Tp(1) : _Tp(-1), __2i > _Tp(0) ? _Tp(0) : _Tp(-0.));
   return complex<_Tp>(__2rsh / __d, std::sin(__2i) / __d);
 }
 
 // asin
+
+inline _LIBCPP_HIDE_FROM_ABI complex<float> asin(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_casinf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> asin(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_casin(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> asin(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_casinl(__value.__builtin()));
+}
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> asin(const complex<_Tp>& __x) {
@@ -1260,29 +1317,22 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> asin(const complex<_Tp>& __x) {
 
 // acos
 
+_LIBCPP_HIDE_FROM_ABI inline complex<float> acos(const complex<float>& __x) {
+  return complex<float>(__from_builtin_tag(), __builtin_cacosf(__x.__builtin()));
+}
+
+_LIBCPP_HIDE_FROM_ABI inline complex<double> acos(const complex<double>& __x) {
+  return complex<double>(__from_builtin_tag(), __builtin_cacos(__x.__builtin()));
+}
+
+_LIBCPP_HIDE_FROM_ABI inline complex<long double> acos(const complex<long double>& __x) {
+  return complex<long double>(__from_builtin_tag(), __builtin_cacosl(__x.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> acos(const complex<_Tp>& __x) {
   const _Tp __pi(atan2(+0., -0.));
-  if (std::__constexpr_isinf(__x.real())) {
-    if (std::__constexpr_isnan(__x.imag()))
-      return complex<_Tp>(__x.imag(), __x.real());
-    if (std::__constexpr_isinf(__x.imag())) {
-      if (__x.real() < _Tp(0))
-        return complex<_Tp>(_Tp(0.75) * __pi, -__x.imag());
-      return complex<_Tp>(_Tp(0.25) * __pi, -__x.imag());
-    }
-    if (__x.real() < _Tp(0))
-      return complex<_Tp>(__pi, std::signbit(__x.imag()) ? -__x.real() : __x.real());
-    return complex<_Tp>(_Tp(0), std::signbit(__x.imag()) ? __x.real() : -__x.real());
-  }
-  if (std::__constexpr_isnan(__x.real())) {
-    if (std::__constexpr_isinf(__x.imag()))
-      return complex<_Tp>(__x.real(), -__x.imag());
-    return complex<_Tp>(__x.real(), __x.real());
-  }
-  if (std::__constexpr_isinf(__x.imag()))
-    return complex<_Tp>(__pi / _Tp(2), -__x.imag());
-  if (__x.real() == 0 && (__x.imag() == 0 || std::isnan(__x.imag())))
+  if (__x.real() == 0 && (__x.imag() == 0))
     return complex<_Tp>(__pi / _Tp(2), -__x.imag());
   complex<_Tp> __z = std::log(__x + std::sqrt(std::__sqr(__x) - _Tp(1)));
   if (std::signbit(__x.imag()))
@@ -1292,6 +1342,18 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> acos(const complex<_Tp>& __x) {
 
 // atan
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> atan(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_catanf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> atan(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_catan(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> atan(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_catanl(__value.__builtin()));
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> atan(const complex<_Tp>& __x) {
   complex<_Tp> __z = std::atanh(complex<_Tp>(-__x.imag(), __x.real()));
@@ -1299,6 +1361,18 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> atan(const complex<_Tp>& __x) {
 }
 
 // sin
+
+inline _LIBCPP_HIDE_FROM_ABI complex<float> sin(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_csinf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> sin(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_csin(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> sin(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_csinl(__value.__builtin()));
+}
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> sin(const complex<_Tp>& __x) {
@@ -1308,12 +1382,36 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> sin(const complex<_Tp>& __x) {
 
 // cos
 
+inline _LIBCPP_HIDE_FROM_ABI complex<float> cos(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_ccosf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> cos(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_ccos(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> cos(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_ccosl(__value.__builtin()));
+}
+
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> cos(const complex<_Tp>& __x) {
   return std::cosh(complex<_Tp>(-__x.imag(), __x.real()));
 }
 
 // tan
+
+inline _LIBCPP_HIDE_FROM_ABI complex<float> tan(const complex<float>& __value) {
+  return complex<float>(__from_builtin_tag(), __builtin_ctanf(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<double> tan(const complex<double>& __value) {
+  return complex<double>(__from_builtin_tag(), __builtin_ctan(__value.__builtin()));
+}
+
+inline _LIBCPP_HIDE_FROM_ABI complex<long double> tan(const complex<long double>& __value) {
+  return complex<long double>(__from_builtin_tag(), __builtin_ctanl(__value.__builtin()));
+}
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> tan(const complex<_Tp>& __x) {
