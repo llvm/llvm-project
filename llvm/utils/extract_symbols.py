@@ -24,7 +24,7 @@ import multiprocessing
 import argparse
 import platform
 
-# Define a function which extracts a list of pairs of (symbols, is_def) from a
+# Define a function which extracts a list of pairs of (symbols, is_def, is_data) from a
 # library using llvm-nm becuase it can work both with regular and bitcode files.
 # We use subprocess.Popen and yield a symbol at a time instead of using
 # subprocess.check_output and returning a list as, especially on Windows, waiting
@@ -53,14 +53,14 @@ def nm_get_symbols(tool, lib):
         # The -P flag displays the size field for symbols only when applicable,
         # so the last field is optional. There's no space after the value field,
         # but \s+ match newline also, so \s+\S* will match the optional size field.
-        match = re.match("^(\S+)\s+[BDGRSTuVW]\s+\S+\s+\S*$", line)
+        match = re.match("^(\S+)\s+([BDGRSTuVW])\s+\S+\s+\S*$", line)
         if match:
-            yield (match.group(1), True)
+            yield (match.group(1), True, match.group(2) != "T")
         # Look for undefined symbols, which have type U and may or may not
         # (depending on which nm is being used) have value and size.
         match = re.match("^(\S+)\s+U\s+(\S+\s+\S*)?$", line)
         if match:
-            yield (match.group(1), False)
+            yield (match.group(1), False, False)
     process.wait()
 
 
@@ -74,6 +74,18 @@ def readobj_is_32bit_windows(tool, lib):
         match = re.match("Format: (\S+)", line)
         if match:
             return match.group(1) == "COFF-i386"
+    return False
+
+
+# Define a function which determines if the target is Windows
+def readobj_is_windows(tool, lib):
+    output = subprocess.check_output(
+        [tool, "--file-header", lib], universal_newlines=True
+    )
+    for line in output.splitlines():
+        match = re.match("Format: (\S+)", line)
+        if match:
+            return match.group(1).startswith("COFF-")
     return False
 
 
@@ -307,14 +319,17 @@ def extract_symbols(arg):
     llvm_nm_path, should_keep_symbol, calling_convention_decoration, lib = arg
     symbol_defs = dict()
     symbol_refs = set()
-    for (symbol, is_def) in nm_get_symbols(llvm_nm_path, lib):
+    symbol_data = set()
+    for symbol, is_def, is_data in nm_get_symbols(llvm_nm_path, lib):
         symbol = should_keep_symbol(symbol, calling_convention_decoration)
         if symbol:
             if is_def:
                 symbol_defs[symbol] = 1 + symbol_defs.setdefault(symbol, 0)
+                if is_data:
+                    symbol_data.add(symbol)
             else:
                 symbol_refs.add(symbol)
-    return (symbol_defs, symbol_refs)
+    return (symbol_defs, symbol_refs, symbol_data)
 
 
 def get_template_name(sym, mangling):
@@ -426,6 +441,9 @@ if __name__ == "__main__":
     # library in the list
     calling_convention_decoration = readobj_is_32bit_windows(args.readobj, libs[0])
 
+    # Check if we should append "DATA" flag after the symbol name
+    append_data_flag = readobj_is_windows(args.readobj, libs[0])
+
     # Extract symbols from libraries in parallel. This is a huge time saver when
     # doing a debug build, as there are hundreds of thousands of symbols in each
     # library.
@@ -459,11 +477,14 @@ if __name__ == "__main__":
     # Merge everything into a single dict
     symbol_defs = dict()
     symbol_refs = set()
-    for (this_lib_defs, this_lib_refs) in libs_symbols:
+    symbol_data = set()
+    for this_lib_defs, this_lib_refs, this_lib_data in libs_symbols:
         for k, v in list(this_lib_defs.items()):
             symbol_defs[k] = v + symbol_defs.setdefault(k, 0)
         for sym in list(this_lib_refs):
             symbol_refs.add(sym)
+        for sym in list(this_lib_data):
+            symbol_data.add(sym)
 
     # Find which template instantiations are referenced at least once.
     template_instantiation_refs = set()
@@ -488,4 +509,7 @@ if __name__ == "__main__":
             continue
         template = get_template_name(k, args.mangling)
         if v == 1 and (not template or template in template_instantiation_refs):
-            print(k, file=outfile)
+            if append_data_flag and k in symbol_data:
+                print(k, "DATA", file=outfile)
+            else:
+                print(k, file=outfile)
