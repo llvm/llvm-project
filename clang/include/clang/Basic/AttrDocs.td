@@ -1419,6 +1419,28 @@ is not specified.
   }];
 }
 
+def ExplicitDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+The ``clang::explicit`` attribute indicates that the field must be initialized
+explicitly by the caller when the class is constructed.
+
+Example usage:
+
+.. code-block:: c++
+
+  struct some_aggregate {
+    int x;
+    int y [[clang::explicit]];
+  };
+
+  some_aggregate create() {
+    return {.x = 1};  // error: y is not initialized explicitly
+  }
+
+  }];
+}
+
 def NoUniqueAddressDocs : Documentation {
   let Category = DocCatField;
   let Content = [{

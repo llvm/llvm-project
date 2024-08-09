@@ -1472,3 +1472,25 @@ template<typename T> struct Outer {
   };
 };
 Outer<int>::Inner outerinner;
+
+void aggregate() {
+  struct B {
+    [[clang::explicit]] int f1;
+  };
+
+  struct S : B { // expected-warning {{uninitialized}}
+    int f2;
+    int f3 [[clang::explicit]];
+  };
+
+#if __cplusplus >= 202002L
+  S a({}, 0);  // expected-warning {{'f1' is left uninitialized}} expected-warning {{'f3' is left uninitialized}}
+#endif
+  S b{.f3 = 1}; // expected-warning {{'f1' is left uninitialized}}
+  S c{.f2 = 5}; // expected-warning {{'f1' is left uninitialized}} expected-warning {{'f3' is left uninitialized}} expected-warning {{'f3' is left uninitialized}}
+  c = {{}, 0};  // expected-warning {{'f1' is left uninitialized}} expected-warning {{'f3' is left uninitialized}}
+  S d; // expected-warning {{uninitialized}} expected-note {{constructor}}
+  (void)b;
+  (void)c;
+  (void)d;
+}

@@ -5942,6 +5942,10 @@ static void handleNoMergeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(NoMergeAttr::Create(S.Context, AL));
 }
 
+static void handleExplicitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  D->addAttr(ExplicitAttr::Create(S.Context, AL));
+}
+
 static void handleNoUniqueAddressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(NoUniqueAddressAttr::Create(S.Context, AL));
 }
@@ -6846,6 +6850,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NoMerge:
     handleNoMergeAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_Explicit:
+    handleExplicitAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NoUniqueAddress:
     handleNoUniqueAddressAttr(S, D, AL);
