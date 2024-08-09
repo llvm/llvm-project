@@ -26,6 +26,7 @@ add_clang_library(clangTidyBugproneModule
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
   IncorrectEnableIfCheck.cpp
+  IncorrectEnableSharedFromThisCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
