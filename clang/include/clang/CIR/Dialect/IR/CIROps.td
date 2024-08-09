@@ -3777,11 +3777,11 @@ def AllocExceptionOp : CIR_Op<"alloc.exception"> {
     cir.if %10 {
         %11 = cir.alloc_exception 8 -> !cir.ptr<!void>
         ... // store exception content into %11
-        cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>, ...
+        cir.throw %11 : !cir.ptr<!cir.ptr<!u8i>>, ...
     ```
   }];
 
-  let arguments = (ins UI64Attr:$size);
+  let arguments = (ins I64Attr:$size);
   let results = (outs Res<CIR_PointerType, "",
                       [MemAlloc<DefaultResource>]>:$addr);
 
@@ -3797,10 +3797,7 @@ def AllocExceptionOp : CIR_Op<"alloc.exception"> {
 // ThrowOp
 //===----------------------------------------------------------------------===//
 
-def ThrowOp : CIR_Op<"throw", [
-                     ParentOneOf<["FuncOp", "ScopeOp", "IfOp", "SwitchOp",
-                                  "DoWhileOp", "WhileOp", "ForOp"]>,
-                     Terminator]> {
+def ThrowOp : CIR_Op<"throw"> {
   let summary = "(Re)Throws an exception";
   let description = [{
     Very similar to __cxa_throw:
@@ -3821,23 +3818,22 @@ def ThrowOp : CIR_Op<"throw", [
       // if (b == 0)
       //   throw "Division by zero condition!";
       cir.if %10 {
-        %11 = cir.alloc_exception(!cir.ptr<!u8i>) -> <!cir.ptr<!u8i>>
+        %11 = cir.alloc_exception 8 -> !cir.ptr<!void>
         ...
         cir.store %13, %11 : // Store string addr for "Division by zero condition!"
-        cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>, @"typeinfo for char const*")
+        cir.throw %11 : !cir.ptr<!cir.ptr<!u8i>>, @"typeinfo for char const*"
     ```
   }];
 
-  let arguments = (ins Optional<CIR_AnyType>:$exception_ptr,
+  let arguments = (ins Optional<CIR_PointerType>:$exception_ptr,
                        OptionalAttr<FlatSymbolRefAttr>:$type_info,
                        OptionalAttr<FlatSymbolRefAttr>:$dtor);
 
   let assemblyFormat = [{
-    `(`
-      ($exception_ptr^ `:` type($exception_ptr))?
-      (`,` $type_info^)?
-      (`,` $dtor^)?
-    `)` attr-dict
+    ($exception_ptr^ `:` type($exception_ptr))?
+    (`,` $type_info^)?
+    (`,` $dtor^)?
+    attr-dict
   }];
 
   let extraClassDeclaration = [{

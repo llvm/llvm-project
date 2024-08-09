@@ -3751,6 +3751,45 @@ public:
   }
 };
 
+class CIRThrowOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ThrowOp> {
+public:
+  using OpConversionPattern<mlir::cir::ThrowOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ThrowOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // Get or create `declare void @__cxa_throw(ptr, ptr, ptr)`
+    StringRef fnName = "__cxa_throw";
+    auto modOp = op->getParentOfType<mlir::ModuleOp>();
+    auto enclosingFnOp = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+    auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+    auto voidTy = mlir::LLVM::LLVMVoidType::get(rewriter.getContext());
+    auto fnTy = mlir::LLVM::LLVMFunctionType::get(
+        voidTy, {llvmPtrTy, llvmPtrTy, llvmPtrTy},
+        /*isVarArg=*/false);
+    getOrCreateLLVMFuncOp(rewriter, op.getLoc(), modOp, enclosingFnOp, fnName,
+                          fnTy);
+    mlir::Value typeInfo = rewriter.create<mlir::LLVM::AddressOfOp>(
+        op.getLoc(), mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+        adaptor.getTypeInfoAttr());
+
+    mlir::Value dtor;
+    if (op.getDtor()) {
+      dtor = rewriter.create<mlir::LLVM::AddressOfOp>(
+          op.getLoc(), mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+          adaptor.getDtorAttr());
+    } else {
+      dtor = rewriter.create<mlir::LLVM::ZeroOp>(
+          op.getLoc(), mlir::LLVM::LLVMPointerType::get(rewriter.getContext()));
+    }
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op, mlir::TypeRange{}, fnName,
+        mlir::ValueRange{adaptor.getExceptionPtr(), typeInfo, dtor});
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter,
                                          mlir::DataLayout &dataLayout) {
@@ -3789,8 +3828,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRSqrtOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
       CIRFModOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering, CIRPowOpLowering,
       CIRClearCacheOpLowering, CIRUndefOpLowering, CIREhTypeIdOpLowering,
-      CIRCatchParamOpLowering, CIRResumeOpLowering,
-      CIRAllocExceptionOpLowering>(converter, patterns.getContext());
+      CIRCatchParamOpLowering, CIRResumeOpLowering, CIRAllocExceptionOpLowering,
+      CIRThrowOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
