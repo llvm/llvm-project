@@ -440,12 +440,6 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
       continue;
     }
 
-    // If there is no name, then there is no need to look anything up for this
-    // DIE.
-    const char *name = die.GetName();
-    if (!name || !name[0])
-      return;
-
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
       context.push_back({kind, ConstString(name)});
@@ -471,7 +465,7 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
       push_ctx(CompilerContextKind::Typedef, die.GetName());
       break;
     case DW_TAG_base_type:
-      push_ctx(CompilerContextKind::Builtin, name);
+      push_ctx(CompilerContextKind::Builtin, die.GetName());
       break;
     // If any of the tags below appear in the parent chain, stop the decl
     // context and return. Prior to these being in here, if a type existed in a
