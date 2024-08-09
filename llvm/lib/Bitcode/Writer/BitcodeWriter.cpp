@@ -4150,7 +4150,7 @@ static void writeTypeIdSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
 
 static void writeTypeIdCompatibleVtableSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, StringTableBuilder &StrtabBuilder,
-    const std::string &Id, const TypeIdCompatibleVtableInfo &Summary,
+    StringRef Id, const TypeIdCompatibleVtableInfo &Summary,
     ValueEnumerator &VE) {
   NameVals.push_back(StrtabBuilder.add(Id));
   NameVals.push_back(Id.size());
