@@ -114,7 +114,7 @@ unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
 
   // llvm::lower_bound gives the number of EOL before PtrOffset. Add 1 to get
   // the line number.
-  return llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
+  return BaseLine + llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
 }
 
 /// Look up a given \p Ptr in the buffer, determining which line it came
@@ -136,6 +136,10 @@ const char *SourceMgr::SrcBuffer::getPointerForLineNumberSpecialized(
     unsigned LineNo) const {
   std::vector<T> &Offsets =
       GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
+
+  // Offset the LineNo where the Buffer starts
+  if (LineNo >= BaseLine)
+    LineNo -= BaseLine;
 
   // We start counting line and column numbers from 1.
   if (LineNo != 0)
@@ -169,6 +173,7 @@ SourceMgr::SrcBuffer::getPointerForLineNumber(unsigned LineNo) const {
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
     : Buffer(std::move(Other.Buffer)), OffsetCache(Other.OffsetCache),
+      BaseLine(Other.BaseLine), BaseCol(Other.BaseCol),
       IncludeLoc(Other.IncludeLoc) {
   Other.OffsetCache = nullptr;
 }
@@ -202,7 +207,7 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   size_t NewlineOffs = StringRef(BufStart, Ptr - BufStart).find_last_of("\n\r");
   if (NewlineOffs == StringRef::npos)
     NewlineOffs = ~(size_t)0;
-  return std::make_pair(LineNo, Ptr - BufStart - NewlineOffs);
+  return std::make_pair(LineNo, Ptr - BufStart - NewlineOffs + SB.BaseCol);
 }
 
 // FIXME: Note that the formatting of source locations is spread between
@@ -237,6 +242,10 @@ SMLoc SourceMgr::FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
   const char *Ptr = SB.getPointerForLineNumber(LineNo);
   if (!Ptr)
     return SMLoc();
+
+  // Offset the ColNo where Buffer starts
+  if (ColNo >= SB.BaseCol)
+    ColNo -= SB.BaseCol;
 
   // We start counting line and column numbers from 1.
   if (ColNo != 0)
