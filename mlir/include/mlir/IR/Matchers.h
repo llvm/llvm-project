@@ -115,10 +115,8 @@ struct infer_int_range_op_binder {
       return false;
 
     // Set the range of all integer operands to the maximal range.
-    SmallVector<IntegerValueRange> argRanges;
-    argRanges.reserve(op->getNumOperands());
-    for (Value operand : op->getOperands())
-      argRanges.emplace_back(IntegerValueRange::getMaxRange(operand));
+    SmallVector<IntegerValueRange> argRanges =
+        llvm::map_to_vector(op->getOperands(), IntegerValueRange::getMaxRange);
 
     // Infer the result result range if possible.
     bool matched = false;
