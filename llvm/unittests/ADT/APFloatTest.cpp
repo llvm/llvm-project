@@ -560,6 +560,81 @@ TEST(APFloatTest, FMA) {
     EXPECT_EQ(-8.85242279E-41f, f1.convertToFloat());
   }
 
+  // The `addOrSubtractSignificand` can be considered to have 9 possible cases
+  // when subtracting: all combinations of {cmpLessThan, cmpGreaterThan,
+  // cmpEqual} and {no loss, loss from lhs, loss from rhs}. Test each reachable
+  // case here.
+
+  // Regression test for failing the `assert(!carry)` in
+  // `addOrSubtractSignificand` and normalizing the exponent even when the
+  // significand is zero if there is a lost fraction.
+  // This tests cmpEqual, loss from lhs
+  {
+    APFloat f1(-1.4728589E-38f);
+    APFloat f2(3.7105144E-6f);
+    APFloat f3(5.5E-44f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(-0.0f, f1.convertToFloat());
+  }
+
+  // Test cmpGreaterThan, no loss
+  {
+    APFloat f1(2.0f);
+    APFloat f2(2.0f);
+    APFloat f3(-3.5f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(0.5f, f1.convertToFloat());
+  }
+
+  // Test cmpLessThan, no loss
+  {
+    APFloat f1(2.0f);
+    APFloat f2(2.0f);
+    APFloat f3(-4.5f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(-0.5f, f1.convertToFloat());
+  }
+
+  // Test cmpEqual, no loss
+  {
+    APFloat f1(2.0f);
+    APFloat f2(2.0f);
+    APFloat f3(-4.0f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(0.0f, f1.convertToFloat());
+  }
+
+  // Test cmpLessThan, loss from lhs
+  {
+    APFloat f1(2.0000002f);
+    APFloat f2(2.0000002f);
+    APFloat f3(-32.0f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(-27.999998f, f1.convertToFloat());
+  }
+
+  // Test cmpGreaterThan, loss from rhs
+  {
+    APFloat f1(1e10f);
+    APFloat f2(1e10f);
+    APFloat f3(-2.0000002f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(1e20f, f1.convertToFloat());
+  }
+
+  // Test cmpGreaterThan, loss from lhs
+  {
+    APFloat f1(1e-36f);
+    APFloat f2(0.0019531252f);
+    APFloat f3(-1e-45f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(1.953124e-39f, f1.convertToFloat());
+  }
+
+  // {cmpEqual, cmpLessThan} with loss from rhs can't occur for the usage in
+  // `fusedMultiplyAdd` as `multiplySignificand` normalises the MSB of lhs to
+  // one bit below the top.
+
   // Test using only a single instance of APFloat.
   {
     APFloat F(1.5);
@@ -7586,5 +7661,80 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
   APFloat SmallestDenorm = APFloat::getSmallest(APFloat::Float4E2M1FN(), false);
   EXPECT_TRUE(SmallestDenorm.isDenormal());
   EXPECT_EQ(0x0.8p0, SmallestDenorm.convertToFloat());
+}
+
+TEST(APFloatTest, AddOrSubtractSignificand) {
+  class TestIEEEFloat : detail::IEEEFloat {
+    TestIEEEFloat(bool sign, ExponentType exponent, integerPart significand)
+        : detail::IEEEFloat(1.0) {
+      // `addOrSubtractSignificand` only uses the sign, exponent and significand
+      this->sign = sign;
+      this->exponent = exponent;
+      this->significand.part = significand;
+    }
+
+  public:
+    static void runTest(bool subtract, bool lhsSign, ExponentType lhsExponent,
+                        integerPart lhsSignificand, bool rhsSign,
+                        ExponentType rhsExponent, integerPart rhsSignificand,
+                        bool expectedSign, ExponentType expectedExponent,
+                        integerPart expectedSignificand,
+                        lostFraction expectedLoss) {
+      TestIEEEFloat lhs(lhsSign, lhsExponent, lhsSignificand);
+      TestIEEEFloat rhs(rhsSign, rhsExponent, rhsSignificand);
+      lostFraction resultLoss = lhs.addOrSubtractSignificand(rhs, subtract);
+      EXPECT_EQ(resultLoss, expectedLoss);
+      EXPECT_EQ(lhs.sign, expectedSign);
+      EXPECT_EQ(lhs.exponent, expectedExponent);
+      EXPECT_EQ(lhs.significand.part, expectedSignificand);
+    }
+  };
+
+  // Test cases are all combinations of:
+  // {equal exponents, LHS larger exponent, RHS larger exponent}
+  // {equal significands, LHS larger significand, RHS larger significand}
+  // {no loss, loss}
+
+  // Equal exponents (loss cannot occur as their is no shifting)
+  TestIEEEFloat::runTest(true, false, 1, 0x10, false, 1, 0x5, false, 1, 0xb,
+                         lfExactlyZero);
+  TestIEEEFloat::runTest(false, false, -2, 0x20, true, -2, 0x20, false, -2, 0,
+                         lfExactlyZero);
+  TestIEEEFloat::runTest(false, true, 3, 0x20, false, 3, 0x30, false, 3, 0x10,
+                         lfExactlyZero);
+
+  // LHS larger exponent
+  // LHS significand greater after shitfing
+  TestIEEEFloat::runTest(true, false, 7, 0x100, false, 3, 0x100, false, 6,
+                         0x1e0, lfExactlyZero);
+  TestIEEEFloat::runTest(true, false, 7, 0x100, false, 3, 0x101, false, 6,
+                         0x1df, lfMoreThanHalf);
+  // Significands equal after shitfing
+  TestIEEEFloat::runTest(true, false, 7, 0x100, false, 3, 0x1000, false, 6, 0,
+                         lfExactlyZero);
+  TestIEEEFloat::runTest(true, false, 7, 0x100, false, 3, 0x1001, true, 6, 0,
+                         lfLessThanHalf);
+  // RHS significand greater after shitfing
+  TestIEEEFloat::runTest(true, false, 7, 0x100, false, 3, 0x10000, true, 6,
+                         0x1e00, lfExactlyZero);
+  TestIEEEFloat::runTest(true, false, 7, 0x100, false, 3, 0x10001, true, 6,
+                         0x1e00, lfLessThanHalf);
+
+  // RHS larger exponent
+  // RHS significand greater after shitfing
+  TestIEEEFloat::runTest(true, false, 3, 0x100, false, 7, 0x100, true, 6, 0x1e0,
+                         lfExactlyZero);
+  TestIEEEFloat::runTest(true, false, 3, 0x101, false, 7, 0x100, true, 6, 0x1df,
+                         lfMoreThanHalf);
+  // Significands equal after shitfing
+  TestIEEEFloat::runTest(true, false, 3, 0x1000, false, 7, 0x100, false, 6, 0,
+                         lfExactlyZero);
+  TestIEEEFloat::runTest(true, false, 3, 0x1001, false, 7, 0x100, false, 6, 0,
+                         lfLessThanHalf);
+  // LHS significand greater after shitfing
+  TestIEEEFloat::runTest(true, false, 3, 0x10000, false, 7, 0x100, false, 6,
+                         0x1e00, lfExactlyZero);
+  TestIEEEFloat::runTest(true, false, 3, 0x10001, false, 7, 0x100, false, 6,
+                         0x1e00, lfLessThanHalf);
 }
 } // namespace
