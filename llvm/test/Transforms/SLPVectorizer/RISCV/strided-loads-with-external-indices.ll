@@ -7,6 +7,7 @@ define void @test() {
 ; CHECK-LABEL: define void @test
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB4_I_I65_US:%.*]] = or i64 0, 1
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    [[ADD_I_I62_US:%.*]] = shl i64 0, 0
@@ -17,8 +18,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[CMP_I_I_I_I67_US:%.*]] = icmp slt i32 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
-; CHECK-NEXT:    [[SPEC_SELECT_I_I68_US:%.*]] = select i1 false, i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[SPEC_SELECT_I_I68_US:%.*]] = select i1 false, i64 [[SUB4_I_I65_US]], i64 0
 ; CHECK-NEXT:    br label [[BODY]]
 ;
 entry:

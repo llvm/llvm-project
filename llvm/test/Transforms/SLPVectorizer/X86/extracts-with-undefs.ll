@@ -7,7 +7,7 @@ define void @test() {
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0.000000e+00, [[BODY]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ 0.000000e+00, [[BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ zeroinitializer, [[BODY]] ]
 ; CHECK-NEXT:    [[MUL_I478_I:%.*]] = fmul fast double [[PHI1]], 0.000000e+00
 ; CHECK-NEXT:    [[MUL7_I485_I:%.*]] = fmul fast double undef, 0.000000e+00
 ; CHECK-NEXT:    [[ADD8_I_I:%.*]] = fadd fast double [[MUL_I478_I]], [[MUL7_I485_I]]
@@ -16,16 +16,15 @@ define void @test() {
 ; CHECK:       exit:
 ; CHECK-NEXT:    br i1 false, label [[IF_THEN135_I:%.*]], label [[IF_END209_I:%.*]]
 ; CHECK:       if.then135.i:
-; CHECK-NEXT:    [[CMP145_I:%.*]] = fcmp fast olt double [[PHI1]], 0.000000e+00
-; CHECK-NEXT:    [[CMP152_I:%.*]] = fcmp fast olt double [[PHI2]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> <i1 poison, i1 false>, i1 [[CMP152_I]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[TMP0]], <2 x double> zeroinitializer, <2 x double> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x double> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast olt <2 x double> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> <i1 poison, i1 false>, <2 x i1> [[TMP1]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> zeroinitializer, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    br label [[IF_END209_I]]
 ; CHECK:       if.end209.i:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x double> [ [[TMP4]], [[IF_THEN135_I]] ], [ zeroinitializer, [[EXIT]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ [[TMP6]], [[IF_THEN135_I]] ], [ zeroinitializer, [[EXIT]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
