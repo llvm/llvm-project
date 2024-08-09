@@ -1353,8 +1353,8 @@ bool SPIRVInstructionSelector::selectFrac(Register ResVReg,
 }
 
 bool SPIRVInstructionSelector::selectNormalize(Register ResVReg,
-                                          const SPIRVType *ResType,
-                                          MachineInstr &I) const {
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
 
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
