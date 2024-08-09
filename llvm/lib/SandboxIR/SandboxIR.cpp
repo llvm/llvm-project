@@ -1419,6 +1419,44 @@ void OpaqueInst::dump() const {
 }
 #endif // NDEBUG
 
+Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
+                                 Instruction *InsertBefore, Context &Ctx,
+                                 const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  llvm::Value *NewV =
+      Builder.CreateInsertElement(Vec->Val, NewElt->Val, Idx->Val, Name);
+  if (auto *NewInsert = dyn_cast<llvm::InsertElementInst>(NewV))
+    return Ctx.createInsertElementInst(NewInsert);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
+                                 BasicBlock *InsertAtEnd, Context &Ctx,
+                                 const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::Value *NewV =
+      Builder.CreateInsertElement(Vec->Val, NewElt->Val, Idx->Val, Name);
+  if (auto *NewInsert = dyn_cast<llvm::InsertElementInst>(NewV))
+    return Ctx.createInsertElementInst(NewInsert);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+#ifndef NDEBUG
+void InsertElementInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void InsertElementInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 Constant *Constant::createInt(Type *Ty, uint64_t V, Context &Ctx,
                               bool IsSigned) {
   llvm::Constant *LLVMC = llvm::ConstantInt::get(Ty, V, IsSigned);
@@ -1551,6 +1589,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<SelectInst>(new SelectInst(LLVMSel, *this));
     return It->second.get();
   }
+  case llvm::Instruction::InsertElement: {
+    auto *LLVMIns = cast<llvm::InsertElementInst>(LLVMV);
+    It->second = std::unique_ptr<InsertElementInst>(
+        new InsertElementInst(LLVMIns, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Br: {
     auto *LLVMBr = cast<llvm::BranchInst>(LLVMV);
     It->second = std::unique_ptr<BranchInst>(new BranchInst(LLVMBr, *this));
@@ -1646,6 +1690,13 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
 SelectInst *Context::createSelectInst(llvm::SelectInst *SI) {
   auto NewPtr = std::unique_ptr<SelectInst>(new SelectInst(SI, *this));
   return cast<SelectInst>(registerValue(std::move(NewPtr)));
+}
+
+InsertElementInst *
+Context::createInsertElementInst(llvm::InsertElementInst *IEI) {
+  auto NewPtr =
+      std::unique_ptr<InsertElementInst>(new InsertElementInst(IEI, *this));
+  return cast<InsertElementInst>(registerValue(std::move(NewPtr)));
 }
 
 BranchInst *Context::createBranchInst(llvm::BranchInst *BI) {
