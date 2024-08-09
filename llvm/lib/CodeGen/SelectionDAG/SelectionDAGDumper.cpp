@@ -206,6 +206,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
+  case ISD::FSQRT_ROUND:                return "fsqrt_round";
   case ISD::FCBRT:                      return "fcbrt";
   case ISD::FSIN:                       return "fsin";
   case ISD::STRICT_FSIN:                return "strict_fsin";
@@ -284,14 +285,19 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FSHR:                       return "fshr";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
+  case ISD::FADD_ROUND:                 return "fadd_round";
   case ISD::FSUB:                       return "fsub";
   case ISD::STRICT_FSUB:                return "strict_fsub";
+  case ISD::FSUB_ROUND:                 return "fsub_round";
   case ISD::FMUL:                       return "fmul";
   case ISD::STRICT_FMUL:                return "strict_fmul";
+  case ISD::FMUL_ROUND:                 return "fmul_round";
   case ISD::FDIV:                       return "fdiv";
   case ISD::STRICT_FDIV:                return "strict_fdiv";
+  case ISD::FDIV_ROUND:                 return "fdiv_round";
   case ISD::FMA:                        return "fma";
   case ISD::STRICT_FMA:                 return "strict_fma";
+  case ISD::FMA_ROUND:                  return "fma_round";
   case ISD::FMAD:                       return "fmad";
   case ISD::FREM:                       return "frem";
   case ISD::STRICT_FREM:                return "strict_frem";
@@ -387,8 +393,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::SINT_TO_FP:                 return "sint_to_fp";
   case ISD::STRICT_SINT_TO_FP:          return "strict_sint_to_fp";
+  case ISD::SINT_TO_FP_ROUND:           return "sint_to_fp_round";
   case ISD::UINT_TO_FP:                 return "uint_to_fp";
   case ISD::STRICT_UINT_TO_FP:          return "strict_uint_to_fp";
+  case ISD::UINT_TO_FP_ROUND:           return "uint_to_fp_round";
   case ISD::FP_TO_SINT:                 return "fp_to_sint";
   case ISD::STRICT_FP_TO_SINT:          return "strict_fp_to_sint";
   case ISD::FP_TO_UINT:                 return "fp_to_uint";

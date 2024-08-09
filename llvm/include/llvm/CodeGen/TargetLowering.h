@@ -354,6 +354,12 @@ public:
     return IsStrictFPEnabled;
   }
 
+  /// Returns true if the target supports static rounding mode for the given
+  /// instruction.
+  virtual bool isStaticRoundingSupportedFor(const Instruction &I) const {
+    return false;
+  }
+
 protected:
   /// Initialize all of the actions to default values.
   void initActions();
