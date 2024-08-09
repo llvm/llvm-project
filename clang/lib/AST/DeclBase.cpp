@@ -1124,20 +1124,36 @@ bool Decl::isInAnotherModuleUnit() const {
   if (!M)
     return false;
 
+  // FIXME or NOTE: maybe we need to be clear about the semantics
+  // of clang header modules. e.g., if this lives in a clang header
+  // module included by the current unit, should we return false
+  // here?
+  //
+  // This is clear for header units as the specification says the
+  // header units live in a synthesised translation unit. So we
+  // can return false here.
   M = M->getTopLevelModule();
-  // FIXME: It is problematic if the header module lives in another module
-  // unit. Consider to fix this by techniques like
-  // ExternalASTSource::hasExternalDefinitions.
-  if (M->isHeaderLikeModule())
+  if (!M->isNamedModule())
     return false;
 
-  // A global module without parent implies that we're parsing the global
-  // module. So it can't be in another module unit.
-  if (M->isGlobalModule())
-    return false;
-
-  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::isInCurrentModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M || !M->isNamedModule())
+    return false;
+
+  return M == getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::shouldEmitInExternalSource() const {
+  ExternalASTSource *Source = getASTContext().getExternalSource();
+  if (!Source)
+    return false;
+
+  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
 }
 
 bool Decl::isFromExplicitGlobalModule() const {

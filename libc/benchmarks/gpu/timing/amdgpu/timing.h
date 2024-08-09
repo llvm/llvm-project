@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_GPU_TIMING_AMDGPU
 #define LLVM_LIBC_UTILS_GPU_TIMING_AMDGPU
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/common.h"
@@ -16,14 +17,6 @@
 #include "src/__support/macros/config.h"
 
 #include <stdint.h>
-
-// AMDGPU does not support input register constraints for i1 and i8, so we must
-// cast them to uint16_t's before loading them into registers.
-#define FORCE_TO_REGISTER(TYPE, VARIABLE)                                      \
-  if constexpr (cpp::is_same_v<TYPE, char> || cpp::is_same_v<TYPE, bool>)      \
-    asm("" ::"v"(static_cast<uint16_t>(VARIABLE)));                            \
-  else                                                                         \
-    asm("" ::"v"(VARIABLE))
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -50,8 +43,6 @@ template <typename F, typename T>
   volatile T storage = t;
   T arg = storage;
 
-  FORCE_TO_REGISTER(T, arg);
-
   // The AMDGPU architecture needs to wait on pending results.
   gpu::memory_fence();
   // Get the current timestamp from the clock.
@@ -59,7 +50,6 @@ template <typename F, typename T>
 
   // This forces the compiler to load the input argument and run the clock
   // cycle counter before the profiling region.
-  FORCE_TO_REGISTER(T, arg);
   asm("" ::"s"(start));
 
   // Run the function under test and return its value.
@@ -67,8 +57,15 @@ template <typename F, typename T>
 
   // This inline assembly performs a no-op which forces the result to both
   // be used and prevents us from exiting this region before it's complete.
-  asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
-      static_cast<uint32_t>(result)));
+  if constexpr (cpp::is_same_v<decltype(result), char> ||
+                cpp::is_same_v<decltype(result), bool>)
+    // AMDGPU does not support input register constraints for i1 and i8, so we
+    // cast it to a 32-bit integer. This does not add an additional assembly
+    // instruction (https://godbolt.org/z/zxGqv8G91).
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
+        static_cast<uint32_t>(result)));
+  else
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(result));
 
   // Obtain the current timestamp after running the calculation and force
   // ordering.
@@ -87,25 +84,49 @@ template <typename F, typename T1, typename T2>
   T1 arg1 = storage1;
   T2 arg2 = storage2;
 
-  FORCE_TO_REGISTER(T1, arg1);
-  FORCE_TO_REGISTER(T2, arg2);
-
   gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
-  FORCE_TO_REGISTER(T1, arg1);
-  FORCE_TO_REGISTER(T2, arg2);
   asm("" ::"s"(start));
 
   auto result = f(arg1, arg2);
 
-  asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
-      static_cast<uint32_t>(result)));
+  if constexpr (cpp::is_same_v<decltype(result), char> ||
+                cpp::is_same_v<decltype(result), bool>)
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
+        static_cast<uint32_t>(result)));
+  else
+    asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(result));
 
   uint64_t stop = gpu::processor_clock();
   asm("" ::"s"(stop));
   gpu::memory_fence();
 
+  return stop - start;
+}
+
+// Provides throughput benchmarking.
+template <typename F, typename T, size_t N>
+[[gnu::noinline]] static LIBC_INLINE uint64_t
+throughput(F f, const cpp::array<T, N> &inputs) {
+  asm("" ::"v"(&inputs));
+
+  gpu::memory_fence();
+  uint64_t start = gpu::processor_clock();
+
+  asm("" ::"s"(start));
+
+  for (auto input : inputs) {
+    auto result = f(input);
+
+    asm("" ::"v"(result));
+  }
+
+  uint64_t stop = gpu::processor_clock();
+  asm("" ::"s"(stop));
+  gpu::memory_fence();
+
+  // Return the time elapsed.
   return stop - start;
 }
 

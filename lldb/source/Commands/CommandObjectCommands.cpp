@@ -322,7 +322,13 @@ rather than using a positional placeholder:"
 
 (lldb) command alias bl3 breakpoint set -f %1 -l 3
 
-    Always sets a breakpoint on line 3 of whatever file is indicated.)");
+    Always sets a breakpoint on line 3 of whatever file is indicated.
+
+)"
+
+        "If the alias abbreviation or the full alias command collides with another \
+existing command, the command resolver will prefer to use the alias over any \
+other command as far as there is only one alias command match.");
 
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
