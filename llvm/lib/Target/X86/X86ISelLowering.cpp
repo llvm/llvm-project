@@ -59555,3 +59555,18 @@ Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
   return TargetLowering::getPrefLoopAlignment();
 }
+
+bool X86TargetLowering::isDesirableToCommuteWithShift(
+    const SDNode *N, CombineLevel Level) const {
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
+  SDValue ShiftLHS = N->getOperand(0);
+  if ((ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+       !(ShiftLHS->hasOneUse() && ShiftLHS.getOperand(0)->hasOneUse())) ||
+      !ShiftLHS->hasOneUse())
+    return false;
+
+  return true;
+}
