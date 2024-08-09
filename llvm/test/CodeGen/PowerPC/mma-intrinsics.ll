@@ -115,22 +115,20 @@ declare <512 x i1> @llvm.ppc.mma.xxsetaccz()
 define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-LABEL: int_xxsetaccz:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsetaccz acc0
-; CHECK-NEXT:    xxmfacc acc0
+; CHECK-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
-; CHECK-NEXT:    stxv vs1, 32(r3)
-; CHECK-NEXT:    stxv vs2, 16(r3)
-; CHECK-NEXT:    stxv vs3, 0(r3)
+; CHECK-NEXT:    stxv vs0, 32(r3)
+; CHECK-NEXT:    stxv vs0, 16(r3)
+; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: int_xxsetaccz:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsetaccz acc0
-; CHECK-BE-NEXT:    xxmfacc acc0
-; CHECK-BE-NEXT:    stxv vs1, 16(r3)
+; CHECK-BE-NEXT:    xxlxor vs0, vs0, vs0
+; CHECK-BE-NEXT:    stxv vs0, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
-; CHECK-BE-NEXT:    stxv vs3, 48(r3)
-; CHECK-BE-NEXT:    stxv vs2, 32(r3)
+; CHECK-BE-NEXT:    stxv vs0, 48(r3)
+; CHECK-BE-NEXT:    stxv vs0, 32(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
@@ -143,22 +141,20 @@ declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble
 define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-LABEL: disass_acc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsetaccz acc0
-; CHECK-NEXT:    xxmfacc acc0
-; CHECK-NEXT:    stxv vs3, 0(r3)
-; CHECK-NEXT:    stxv vs2, 0(r4)
-; CHECK-NEXT:    stxv vs1, 0(r5)
+; CHECK-NEXT:    xxlxor vs0, vs0, vs0 
+; CHECK-NEXT:    stxv vs0, 0(r3)
+; CHECK-NEXT:    stxv vs0, 0(r4)
+; CHECK-NEXT:    stxv vs0, 0(r5)
 ; CHECK-NEXT:    stxv vs0, 0(r6)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: disass_acc:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsetaccz acc0
-; CHECK-BE-NEXT:    xxmfacc acc0
+; CHECK-BE-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
-; CHECK-BE-NEXT:    stxv vs1, 0(r4)
-; CHECK-BE-NEXT:    stxv vs2, 0(r5)
-; CHECK-BE-NEXT:    stxv vs3, 0(r6)
+; CHECK-BE-NEXT:    stxv vs0, 0(r4)
+; CHECK-BE-NEXT:    stxv vs0, 0(r5)
+; CHECK-BE-NEXT:    stxv vs0, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
