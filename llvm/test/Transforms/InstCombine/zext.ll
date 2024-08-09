@@ -867,3 +867,53 @@ entry:
   %res = zext nneg i2 %x to i32
   ret i32 %res
 }
+
+define i32 @zext_trunc_nuw(i16 %x) {
+; CHECK-LABEL: @zext_trunc_nuw(
+; CHECK-NEXT:    [[E1:%.*]] = zext nneg i16 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[E1]]
+;
+  %c = trunc nuw i16 %x to i8
+  %e = zext i8 %c to i32
+  ret i32 %e
+}
+
+define i16 @zext_trunc_nuw_2(i32 %x) {
+; CHECK-LABEL: @zext_trunc_nuw_2(
+; CHECK-NEXT:    [[E:%.*]] = trunc nuw i32 [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[E]]
+;
+  %c = trunc nuw i32 %x to i8
+  %e = zext i8 %c to i16
+  ret i16 %e
+}
+
+define i16 @zext_trunc_nuw_3(i16 %x) {
+; CHECK-LABEL: @zext_trunc_nuw_3(
+; CHECK-NEXT:    ret i16 [[E:%.*]]
+;
+  %c = trunc nuw i16 %x to i8
+  %e = zext i8 %c to i16
+  ret i16 %e
+}
+
+define <2 x i32> @zext_trunc_nuw_vec(<2 x i16> %x) {
+; CHECK-LABEL: @zext_trunc_nuw_vec(
+; CHECK-NEXT:    [[E1:%.*]] = zext nneg <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[E1]]
+;
+  %c = trunc nuw <2 x i16> %x to <2 x i8>
+  %e = zext <2 x i8> %c to <2 x i32>
+  ret <2 x i32> %e
+}
+
+define i32 @zext_trunc(i16 %x) {
+; CHECK-LABEL: @zext_trunc(
+; CHECK-NEXT:    [[E:%.*]] = and i16 [[X:%.*]], 255
+; CHECK-NEXT:    [[E1:%.*]] = zext nneg i16 [[E]] to i32
+; CHECK-NEXT:    ret i32 [[E1]]
+;
+  %c = trunc i16 %x to i8
+  %e = zext i8 %c to i32
+  ret i32 %e
+}
