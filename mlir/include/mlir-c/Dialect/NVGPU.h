@@ -33,4 +33,6 @@ MLIR_CAPI_EXPORTED MlirType mlirNVGPUTensorMapDescriptorTypeGet(
 }
 #endif
 
+#include "mlir/Dialect/NVGPU/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_NVGPU_H
