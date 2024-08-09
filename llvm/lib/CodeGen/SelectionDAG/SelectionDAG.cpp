@@ -5141,10 +5141,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly,
     return true;
 
   EVT VT = Op.getValueType();
-  APInt DemandedElts =
-      VT.isVector() ? APInt::getAllOnes(
-                          VT.isScalableVector() ? 1 : VT.getVectorNumElements())
-                    : APInt(1, 1);
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
   return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts, PoisonOnly, Depth);
 }
 
@@ -5237,14 +5236,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, bool PoisonOnly,
                                           bool ConsiderFlags,
                                           unsigned Depth) const {
-  // Since the number of lanes in a scalable vector is unknown at compile time,
-  // we track one bit which is implicitly broadcast to all lanes.  This means
-  // that all lanes in a scalable vector are considered demanded.
   EVT VT = Op.getValueType();
-  APInt DemandedElts =
-      VT.isVector() ? APInt::getAllOnes(
-                          VT.isScalableVector() ? 1 : VT.getVectorNumElements())
-                    : APInt(1, 1);
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
   return canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly, ConsiderFlags,
                                 Depth);
 }
