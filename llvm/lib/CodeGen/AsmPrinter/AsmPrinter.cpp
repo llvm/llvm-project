@@ -3967,6 +3967,9 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     CurrentSectionBeginSym = MBB.getSymbol();
   }
 
+  for (auto &Handler : DebugHandlers)
+    Handler->beginCodeAlignment(MBB);
+
   // Emit an alignment directive for this block, if needed.
   const Align Alignment = MBB.getAlignment();
   if (Alignment != Align(1))

@@ -104,20 +104,19 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
 static bool lowerIntrinsics(Module &M) {
   bool Updated = false;
 
-#define DXIL_OP_INTRINSIC_MAP
-#include "DXILOperation.inc"
-#undef DXIL_OP_INTRINSIC_MAP
-
   for (Function &F : make_early_inc_range(M.functions())) {
     if (!F.isDeclaration())
       continue;
     Intrinsic::ID ID = F.getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic)
+    switch (ID) {
+    default:
       continue;
-    auto LowerIt = LowerMap.find(ID);
-    if (LowerIt == LowerMap.end())
-      continue;
-    lowerIntrinsic(LowerIt->second, F, M);
+#define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
+  case Intrin:                                                                 \
+    lowerIntrinsic(OpCode, F, M);                                              \
+    break;
+#include "DXILOperation.inc"
+    }
     Updated = true;
   }
   return Updated;

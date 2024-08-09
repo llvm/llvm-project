@@ -1460,15 +1460,19 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
 
     if (opts::ShowDensity) {
-      uint64_t Instructions = Function.getInputInstructionCount();
-      // In case of BOLT split functions registered in BAT, samples are
-      // automatically attributed to the main fragment. Add instructions from
-      // all fragments.
+      uint64_t Size = Function.getSize();
+      // In case of BOLT split functions registered in BAT, executed traces are
+      // automatically attributed to the main fragment. Add up function sizes
+      // for all fragments.
       if (IsHotParentOfBOLTSplitFunction)
         for (const BinaryFunction *Fragment : Function.getFragments())
-          Instructions += Fragment->getInputInstructionCount();
-      double Density = (double)1.0 * SampleCount / Instructions;
+          Size += Fragment->getSize();
+      double Density = (double)1.0 * Function.getExecutedBytes() / Size;
       FuncDensityList.emplace_back(Density, SampleCount);
+      LLVM_DEBUG(BC.outs() << Function << ": executed bytes "
+                           << Function.getExecutedBytes() << ", size (b) "
+                           << Size << ", density " << Density
+                           << ", sample count " << SampleCount << '\n');
     }
   }
   BC.NumProfiledFuncs = ProfiledFunctions.size();

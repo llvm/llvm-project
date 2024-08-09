@@ -1993,7 +1993,6 @@ define double @test63(<2 x double> %a) {
 ; CHECK-LE-LABEL: test63:
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    xxswapd vs1, v2
-; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
   %v = extractelement <2 x double> %a, i32 0
   ret double %v
@@ -2006,13 +2005,11 @@ define double @test64(<2 x double> %a) {
 ; CHECK-LABEL: test64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxswapd vs1, v2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test64:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    xxswapd vs1, v2
-; CHECK-REG-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test64:

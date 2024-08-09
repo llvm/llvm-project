@@ -69,8 +69,7 @@ ResourceInfo ResourceInfo::SRV(Value *Symbol, StringRef Name,
   ResourceInfo RI(ResourceClass::SRV, Kind, Symbol, Name);
   assert(RI.isTyped() && !(RI.isStruct() || RI.isMultiSample()) &&
          "Invalid ResourceKind for SRV constructor.");
-  RI.Typed.ElementTy = ElementTy;
-  RI.Typed.ElementCount = ElementCount;
+  RI.setTyped(ElementTy, ElementCount);
   return RI;
 }
 
@@ -80,11 +79,11 @@ ResourceInfo ResourceInfo::RawBuffer(Value *Symbol, StringRef Name) {
 }
 
 ResourceInfo ResourceInfo::StructuredBuffer(Value *Symbol, StringRef Name,
-                                            uint32_t Stride, Align Alignment) {
+                                            uint32_t Stride,
+                                            MaybeAlign Alignment) {
   ResourceInfo RI(ResourceClass::SRV, ResourceKind::StructuredBuffer, Symbol,
                   Name);
-  RI.Struct.Stride = Stride;
-  RI.Struct.Alignment = Alignment;
+  RI.setStruct(Stride, Alignment);
   return RI;
 }
 
@@ -93,9 +92,8 @@ ResourceInfo ResourceInfo::Texture2DMS(Value *Symbol, StringRef Name,
                                        uint32_t ElementCount,
                                        uint32_t SampleCount) {
   ResourceInfo RI(ResourceClass::SRV, ResourceKind::Texture2DMS, Symbol, Name);
-  RI.Typed.ElementTy = ElementTy;
-  RI.Typed.ElementCount = ElementCount;
-  RI.MultiSample.Count = SampleCount;
+  RI.setTyped(ElementTy, ElementCount);
+  RI.setMultiSample(SampleCount);
   return RI;
 }
 
@@ -105,9 +103,8 @@ ResourceInfo ResourceInfo::Texture2DMSArray(Value *Symbol, StringRef Name,
                                             uint32_t SampleCount) {
   ResourceInfo RI(ResourceClass::SRV, ResourceKind::Texture2DMSArray, Symbol,
                   Name);
-  RI.Typed.ElementTy = ElementTy;
-  RI.Typed.ElementCount = ElementCount;
-  RI.MultiSample.Count = SampleCount;
+  RI.setTyped(ElementTy, ElementCount);
+  RI.setMultiSample(SampleCount);
   return RI;
 }
 
@@ -118,34 +115,27 @@ ResourceInfo ResourceInfo::UAV(Value *Symbol, StringRef Name,
   ResourceInfo RI(ResourceClass::UAV, Kind, Symbol, Name);
   assert(RI.isTyped() && !(RI.isStruct() || RI.isMultiSample()) &&
          "Invalid ResourceKind for UAV constructor.");
-  RI.Typed.ElementTy = ElementTy;
-  RI.Typed.ElementCount = ElementCount;
-  RI.UAVFlags.GloballyCoherent = GloballyCoherent;
-  RI.UAVFlags.IsROV = IsROV;
-  RI.UAVFlags.HasCounter = false;
+  RI.setTyped(ElementTy, ElementCount);
+  RI.setUAV(GloballyCoherent, /*HasCounter=*/false, IsROV);
   return RI;
 }
 
 ResourceInfo ResourceInfo::RWRawBuffer(Value *Symbol, StringRef Name,
                                        bool GloballyCoherent, bool IsROV) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::RawBuffer, Symbol, Name);
-  RI.UAVFlags.GloballyCoherent = GloballyCoherent;
-  RI.UAVFlags.IsROV = IsROV;
-  RI.UAVFlags.HasCounter = false;
+  RI.setUAV(GloballyCoherent, /*HasCounter=*/false, IsROV);
   return RI;
 }
 
 ResourceInfo ResourceInfo::RWStructuredBuffer(Value *Symbol, StringRef Name,
-                                              uint32_t Stride, Align Alignment,
+                                              uint32_t Stride,
+                                              MaybeAlign Alignment,
                                               bool GloballyCoherent, bool IsROV,
                                               bool HasCounter) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::StructuredBuffer, Symbol,
                   Name);
-  RI.Struct.Stride = Stride;
-  RI.Struct.Alignment = Alignment;
-  RI.UAVFlags.GloballyCoherent = GloballyCoherent;
-  RI.UAVFlags.IsROV = IsROV;
-  RI.UAVFlags.HasCounter = HasCounter;
+  RI.setStruct(Stride, Alignment);
+  RI.setUAV(GloballyCoherent, HasCounter, IsROV);
   return RI;
 }
 
@@ -155,12 +145,9 @@ ResourceInfo ResourceInfo::RWTexture2DMS(Value *Symbol, StringRef Name,
                                          uint32_t SampleCount,
                                          bool GloballyCoherent) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::Texture2DMS, Symbol, Name);
-  RI.Typed.ElementTy = ElementTy;
-  RI.Typed.ElementCount = ElementCount;
-  RI.UAVFlags.GloballyCoherent = GloballyCoherent;
-  RI.UAVFlags.IsROV = false;
-  RI.UAVFlags.HasCounter = false;
-  RI.MultiSample.Count = SampleCount;
+  RI.setTyped(ElementTy, ElementCount);
+  RI.setUAV(GloballyCoherent, /*HasCounter=*/false, /*IsROV=*/false);
+  RI.setMultiSample(SampleCount);
   return RI;
 }
 
@@ -171,12 +158,9 @@ ResourceInfo ResourceInfo::RWTexture2DMSArray(Value *Symbol, StringRef Name,
                                               bool GloballyCoherent) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::Texture2DMSArray, Symbol,
                   Name);
-  RI.Typed.ElementTy = ElementTy;
-  RI.Typed.ElementCount = ElementCount;
-  RI.UAVFlags.GloballyCoherent = GloballyCoherent;
-  RI.UAVFlags.IsROV = false;
-  RI.UAVFlags.HasCounter = false;
-  RI.MultiSample.Count = SampleCount;
+  RI.setTyped(ElementTy, ElementCount);
+  RI.setUAV(GloballyCoherent, /*HasCounter=*/false, /*IsROV=*/false);
+  RI.setMultiSample(SampleCount);
   return RI;
 }
 
@@ -184,10 +168,8 @@ ResourceInfo ResourceInfo::FeedbackTexture2D(Value *Symbol, StringRef Name,
                                              SamplerFeedbackType FeedbackTy) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::FeedbackTexture2D, Symbol,
                   Name);
-  RI.UAVFlags.GloballyCoherent = false;
-  RI.UAVFlags.IsROV = false;
-  RI.UAVFlags.HasCounter = false;
-  RI.Feedback.Type = FeedbackTy;
+  RI.setUAV(/*GloballyCoherent=*/false, /*HasCounter=*/false, /*IsROV=*/false);
+  RI.setFeedback(FeedbackTy);
   return RI;
 }
 
@@ -196,24 +178,22 @@ ResourceInfo::FeedbackTexture2DArray(Value *Symbol, StringRef Name,
                                      SamplerFeedbackType FeedbackTy) {
   ResourceInfo RI(ResourceClass::UAV, ResourceKind::FeedbackTexture2DArray,
                   Symbol, Name);
-  RI.UAVFlags.GloballyCoherent = false;
-  RI.UAVFlags.IsROV = false;
-  RI.UAVFlags.HasCounter = false;
-  RI.Feedback.Type = FeedbackTy;
+  RI.setUAV(/*GloballyCoherent=*/false, /*HasCounter=*/false, /*IsROV=*/false);
+  RI.setFeedback(FeedbackTy);
   return RI;
 }
 
 ResourceInfo ResourceInfo::CBuffer(Value *Symbol, StringRef Name,
                                    uint32_t Size) {
   ResourceInfo RI(ResourceClass::CBuffer, ResourceKind::CBuffer, Symbol, Name);
-  RI.CBufferSize = Size;
+  RI.setCBuffer(Size);
   return RI;
 }
 
 ResourceInfo ResourceInfo::Sampler(Value *Symbol, StringRef Name,
                                    SamplerType SamplerTy) {
   ResourceInfo RI(ResourceClass::Sampler, ResourceKind::Sampler, Symbol, Name);
-  RI.SamplerTy = SamplerTy;
+  RI.setSampler(SamplerTy);
   return RI;
 }
 
@@ -306,7 +286,7 @@ MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
 
 std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps() const {
   uint32_t ResourceKind = llvm::to_underlying(Kind);
-  uint32_t AlignLog2 = isStruct() ? Log2(Struct.Alignment) : 0;
+  uint32_t AlignLog2 = isStruct() ? Struct.AlignLog2 : 0;
   bool IsUAV = isUAV();
   bool IsROV = IsUAV && UAVFlags.IsROV;
   bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;

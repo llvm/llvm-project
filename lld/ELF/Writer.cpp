@@ -1875,13 +1875,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   sortSections();
 
   // Create a list of OutputSections, assign sectionIndex, and populate
-  // in.shStrTab.
+  // in.shStrTab. If -z nosectionheader is specified, drop non-ALLOC sections.
   for (SectionCommand *cmd : script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
       OutputSection *osec = &osd->osec;
+      if (!in.shStrTab && !(osec->flags & SHF_ALLOC))
+        continue;
       outputSections.push_back(osec);
       osec->sectionIndex = outputSections.size();
-      osec->shName = in.shStrTab->addString(osec->name);
+      if (in.shStrTab)
+        osec->shName = in.shStrTab->addString(osec->name);
     }
 
   // Prefer command line supplied address over other constraints.
@@ -2703,6 +2706,10 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   auto *eHdr = reinterpret_cast<Elf_Ehdr *>(Out::bufferStart);
   eHdr->e_type = getELFType();
   eHdr->e_entry = getEntryAddr();
+
+  // If -z nosectionheader is specified, omit the section header table.
+  if (!in.shStrTab)
+    return;
   eHdr->e_shoff = sectionHeaderOff;
 
   // Write the section header table.

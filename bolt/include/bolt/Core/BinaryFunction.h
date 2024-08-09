@@ -242,9 +242,6 @@ private:
   /// Original size of the function.
   uint64_t Size;
 
-  /// Original instruction count of the function, if disassembly succeeded.
-  uint64_t InputInstructionCount{0};
-
   /// Address of the function in output.
   uint64_t OutputAddress{0};
 
@@ -389,6 +386,9 @@ private:
 
   /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
+
+  /// Dynamically executed function bytes, used for density computation.
+  uint64_t ExecutedBytes{0};
 
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
@@ -1846,6 +1846,9 @@ public:
   /// to this function.
   void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
 
+  /// Return the number of dynamically executed bytes, from raw perf data.
+  uint64_t getExecutedBytes() const { return ExecutedBytes; }
+
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.
   uint64_t getKnownExecutionCount() const {
@@ -2175,9 +2178,6 @@ public:
 
   /// Get the number of instructions within this function.
   uint64_t getInstructionCount() const;
-
-  /// Get the original number of instructions.
-  uint64_t getInputInstructionCount() const { return InputInstructionCount; }
 
   const CFIInstrMapType &getFDEProgram() const { return FrameInstructions; }
 

@@ -2294,12 +2294,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_Shift(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_CMP(SDNode *N) {
-  SDValue LHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(0))
-                    : SExtPromotedInteger(N->getOperand(0));
-  SDValue RHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(1))
-                    : SExtPromotedInteger(N->getOperand(1));
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (N->getOpcode() == ISD::SCMP) {
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+  } else {
+    SExtOrZExtPromotedOperands(LHS, RHS);
+  }
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS), 0);
 }
@@ -3395,13 +3398,13 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
       Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::UADDO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::UADDO_CARRY, dl, VTList, HiOps);
     } else {
       Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::USUBO, dl, VTList, ArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::USUBO_CARRY, dl, VTList, HiOps);
     }
     return;

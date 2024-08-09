@@ -53,7 +53,9 @@ Deprecations and Removals
 - TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
   the safe mode will be removed in LLVM 20.
 
-- TODO: The C++20 synchronization library will be removed entirely in language modes prior to C++20 in LLVM 20.
+- Support for the C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been
+  removed in language modes prior to C++20. If you are using these features prior to C++20, you will need to
+  update to ``-std=c++20``.
 
 - TODO: The relational operators for ``std::chrono::weekday`` will be removed entirely, and the
   ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension will be

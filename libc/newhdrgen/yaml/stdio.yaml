@@ -105,6 +105,14 @@ functions:
       - type: const char *__restrict
       - type: const char *__restrict
       - type: ...
+  - name: vsscanf
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: va_list
   - name: scanf
     standards: 
       - stdc
