@@ -200,6 +200,14 @@
 #include <avx512vlbf16intrin.h>
 #endif
 
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AVX10_2__)
+#include <avx10_2satcvtdsintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AVX10_2_512__)
+#include <avx10_2_512satcvtdsintrin.h>
+#endif
+
 #if !defined(__SCE__) || __has_feature(modules) || defined(__PKU__)
 #include <pkuintrin.h>
 #endif

@@ -324,7 +324,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasSSE2()) {
+  if (Subtarget.hasAVX10_2() || Subtarget.hasAVX10_2_512()) {
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Legal);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Legal);
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
+    }
+  } else if (Subtarget.hasSSE2()) {
     // Custom lowering for saturating float to int conversions.
     // We handle promotion to larger result types manually.
     for (MVT VT : { MVT::i8, MVT::i16, MVT::i32 }) {
@@ -34090,6 +34097,16 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CTEST)
   NODE_NAME_CASE(CLOAD)
   NODE_NAME_CASE(CSTORE)
+  NODE_NAME_CASE(CVTTS2SIS)
+  NODE_NAME_CASE(CVTTS2UIS)
+  NODE_NAME_CASE(CVTTS2SIS_SAE)
+  NODE_NAME_CASE(CVTTS2UIS_SAE)
+  NODE_NAME_CASE(CVTTP2SIS)
+  NODE_NAME_CASE(MCVTTP2SIS)
+  NODE_NAME_CASE(CVTTP2UIS_SAE)
+  NODE_NAME_CASE(CVTTP2SIS_SAE)
+  NODE_NAME_CASE(CVTTP2UIS)
+  NODE_NAME_CASE(MCVTTP2UIS)
   }
   return nullptr;
 #undef NODE_NAME_CASE
@@ -37502,7 +37519,9 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VFPROUND:
   case X86ISD::VMFPROUND:
   case X86ISD::CVTPS2PH:
-  case X86ISD::MCVTPS2PH: {
+  case X86ISD::MCVTPS2PH:
+  case X86ISD::MCVTTP2SIS:
+  case X86ISD::MCVTTP2UIS: {
     // Truncations/Conversions - upper elements are known zero.
     EVT SrcVT = Op.getOperand(0).getValueType();
     if (SrcVT.isVector()) {
