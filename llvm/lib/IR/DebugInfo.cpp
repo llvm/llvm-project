@@ -1494,9 +1494,8 @@ LLVMDIBuilderCreateMemberPointerType(LLVMDIBuilderRef Builder,
                                      uint32_t AlignInBits,
                                      LLVMDIFlags Flags) {
   return wrap(unwrap(Builder)->createMemberPointerType(
-                  unwrapDI<DIType>(PointeeType),
-                  unwrapDI<DIType>(ClassType), AlignInBits, SizeInBits,
-                  map_from_llvmDIFlags(Flags)));
+      unwrapDI<DIType>(PointeeType), unwrapDI<DIType>(ClassType), SizeInBits,
+      AlignInBits, map_from_llvmDIFlags(Flags)));
 }
 
 LLVMMetadataRef
