@@ -1,0 +1,4 @@
+# This profile indicates 1000 mispredict samples for instructions 11 source
+# lines into in the sel_arr function.
+sel_arr:1:0
+  11: 1000

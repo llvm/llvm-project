@@ -43,6 +43,7 @@ add_llvm_component_library(LLVMipo
   StripSymbols.cpp
   SyntheticCountsPropagation.cpp
   ThinLTOBitcodeWriter.cpp
+  UnpredictableProfileLoader.cpp
   WholeProgramDevirt.cpp
 
   ADDITIONAL_HEADER_DIRS

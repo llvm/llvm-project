@@ -68,6 +68,7 @@
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
+#include "llvm/Transforms/IPO/UnpredictableProfileLoader.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
@@ -1106,6 +1107,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+    // Run after inlining decisions made by SampleProfileLoader. This can apply
+    // mispredict metadata to specific inlined callees.
+    MPM.addPass(UnpredictableProfileLoaderPass(PGOOpt->ProfileFile));
     // Do not invoke ICP in the LTOPrelink phase as it makes it hard
     // for the profile annotation to be accurate in the LTO backend.
     if (!isLTOPreLink(Phase))
