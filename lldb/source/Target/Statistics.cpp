@@ -224,12 +224,12 @@ void TargetStats::IncreaseSourceMapDeduceCount() {
   ++m_source_map_deduce_count;
 }
 
-void TargetStats::IncreaseSourceRealpathAttemptCount() {
-  ++m_source_realpath_attempt_count;
+void TargetStats::IncreaseSourceRealpathAttemptCount(uint32_t count) {
+  m_source_realpath_attempt_count += count;
 }
 
-void TargetStats::IncreaseSourceRealpathCompatibleCount() {
-  ++m_source_realpath_compatible_count;
+void TargetStats::IncreaseSourceRealpathCompatibleCount(uint32_t count) {
+  m_source_realpath_compatible_count += count;
 }
 
 bool DebuggerStats::g_collecting_stats = false;

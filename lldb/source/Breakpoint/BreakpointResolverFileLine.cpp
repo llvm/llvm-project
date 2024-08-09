@@ -291,8 +291,8 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   const uint32_t line = m_location_spec.GetLine().value_or(0);
   const std::optional<uint16_t> column = m_location_spec.GetColumn();
 
-  RealpathPrefixes realpath_prefixes =
-      GetBreakpoint()->GetTarget().GetSourceRealpathPrefixes();
+  Target &target = GetBreakpoint()->GetTarget();
+  RealpathPrefixes realpath_prefixes = target.GetSourceRealpathPrefixes();
 
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
   for (size_t i = 0; i < num_comp_units; i++) {
@@ -303,6 +303,12 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
                                     sc_list, &realpath_prefixes);
     }
   }
+
+  // Gather stats into the Target
+  target.GetStatistics().IncreaseSourceRealpathAttemptCount(
+      realpath_prefixes.GetSourceRealpathAttemptCount());
+  target.GetStatistics().IncreaseSourceRealpathCompatibleCount(
+      realpath_prefixes.GetSourceRealpathCompatibleCount());
 
   FilterContexts(sc_list);
 

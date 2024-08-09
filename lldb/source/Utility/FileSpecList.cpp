@@ -165,7 +165,7 @@ IsCompatibleResult IsCompatible(const FileSpec &curr_file,
 
 size_t SupportFileList::FindCompatibleIndex(
     size_t start_idx, const FileSpec &file_spec,
-    const RealpathPrefixes *realpath_prefixes) const {
+    RealpathPrefixes *realpath_prefixes) const {
   const size_t num_files = m_files.size();
   if (start_idx >= num_files)
     return UINT32_MAX;
@@ -180,10 +180,10 @@ size_t SupportFileList::FindCompatibleIndex(
     if (realpath_prefixes && result == IsCompatibleResult::kOnlyFileMatch) {
       if (std::optional<FileSpec> resolved_curr_file =
               realpath_prefixes->ResolveSymlinks(curr_file)) {
-        if (IsCompatible(*resolved_curr_file, file_spec)) {
+        if (IsCompatible(*resolved_curr_file, file_spec) ==
+            IsCompatibleResult::kBothDirectoryAndFileMatch) {
           // Stats and logging.
-          if (lldb::TargetSP target = realpath_prefixes->GetTarget())
-            target->GetStatistics().IncreaseSourceRealpathCompatibleCount();
+          realpath_prefixes->IncreaseSourceRealpathCompatibleCount();
           Log *log = GetLog(LLDBLog::Source);
           LLDB_LOGF(log,
                     "Realpath'ed support file %s is compatible to input file",

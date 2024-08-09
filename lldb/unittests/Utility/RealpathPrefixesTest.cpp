@@ -24,8 +24,7 @@ TEST(RealpathPrefixesTest, MatchingAbsolutePrefix) {
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
   file_spec_list.EmplaceBack("/dir1");
-  RealpathPrefixes prefixes(std::move(file_spec_list));
-  prefixes.SetFileSystem(fs);
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
   std::optional<FileSpec> ret =
@@ -42,8 +41,7 @@ TEST(RealpathPrefixesTest, MatchingRelativePrefix) {
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
   file_spec_list.EmplaceBack("dir1");
-  RealpathPrefixes prefixes(std::move(file_spec_list));
-  prefixes.SetFileSystem(fs);
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
   std::optional<FileSpec> ret =
@@ -62,8 +60,7 @@ TEST(RealpathPrefixesTest, WindowsAndCaseInsensitive) {
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
   file_spec_list.EmplaceBack(FileSpec("f:\\dir1", FileSpec::Style::windows));
-  RealpathPrefixes prefixes(std::move(file_spec_list));
-  prefixes.SetFileSystem(fs);
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
   std::optional<FileSpec> ret = prefixes.ResolveSymlinks(
@@ -83,8 +80,7 @@ TEST(RealpathPrefixesTest, MatchingAndMismatchingPrefix) {
   file_spec_list.EmplaceBack("/fake/path1");
   file_spec_list.EmplaceBack("/dir1"); // Matching prefix
   file_spec_list.EmplaceBack("/fake/path2");
-  RealpathPrefixes prefixes(std::move(file_spec_list));
-  prefixes.SetFileSystem(fs);
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
   std::optional<FileSpec> ret =
@@ -101,8 +97,7 @@ TEST(RealpathPrefixesTest, ComplexPrefixes) {
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
   file_spec_list.EmplaceBack("./dir1/foo/../bar/.."); // Equivalent to "/dir1"
-  RealpathPrefixes prefixes(std::move(file_spec_list));
-  prefixes.SetFileSystem(fs);
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
   std::optional<FileSpec> ret =
@@ -119,8 +114,7 @@ TEST(RealpathPrefixesTest, MismatchingPrefixes) {
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
   file_spec_list.EmplaceBack("/dir3");
-  RealpathPrefixes prefixes(std::move(file_spec_list));
-  prefixes.SetFileSystem(fs);
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
   std::optional<FileSpec> ret =
@@ -137,8 +131,7 @@ TEST(RealpathPrefixesTest, Realpath) {
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
   file_spec_list.EmplaceBack("/symlink_dir");
-  RealpathPrefixes prefixes(std::move(file_spec_list));
-  prefixes.SetFileSystem(fs);
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
   std::optional<FileSpec> ret =

@@ -8,8 +8,6 @@
 
 #include "lldb/Utility/RealpathPrefixes.h"
 
-#include "lldb/Target/Statistics.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -17,34 +15,40 @@
 
 using namespace lldb_private;
 
-RealpathPrefixes::RealpathPrefixes(const FileSpecList &file_spec_list)
-    : m_fs(llvm::vfs::getRealFileSystem()) {
+RealpathPrefixes::RealpathPrefixes(
+    const FileSpecList &file_spec_list,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs)
+    : m_fs(fs) {
   m_prefixes.reserve(file_spec_list.GetSize());
   for (const FileSpec &file_spec : file_spec_list) {
     m_prefixes.emplace_back(file_spec.GetPath());
   }
 }
 
-void RealpathPrefixes::SetFileSystem(
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs) {
-  m_fs = fs;
-}
-
 std::optional<FileSpec>
-RealpathPrefixes::ResolveSymlinks(const FileSpec &file_spec) const {
+RealpathPrefixes::ResolveSymlinks(const FileSpec &file_spec) {
   if (m_prefixes.empty())
     return std::nullopt;
 
-  auto is_prefix = [](llvm::StringRef a, llvm::StringRef b,
-                      bool case_sensitive) -> bool {
-    return case_sensitive ? a.consume_front(b) : a.consume_front_insensitive(b);
+  // Test if `b` is a *path* prefix of `a` (not just *string* prefix).
+  // E.g. "/foo/bar" is a path prefix of "/foo/bar/baz" but not "/foo/barbaz".
+  auto is_path_prefix = [](llvm::StringRef a, llvm::StringRef b,
+                           bool case_sensitive,
+                           llvm::sys::path::Style style) -> bool {
+    if (case_sensitive ? a.consume_front(b) : a.consume_front_insensitive(b))
+      // If `b` isn't "/", then it won't end with "/" because it comes from
+      // `FileSpec`. After `a` consumes `b`, `a` should either be empty (i.e.
+      // `a` == `b`) or end with "/" (the remainder of `a` is a subdirectory).
+      return b == "/" || a.empty() ||
+             llvm::sys::path::is_separator(a[0], style);
+    return false;
   };
   std::string file_spec_path = file_spec.GetPath();
   for (const std::string &prefix : m_prefixes) {
-    if (is_prefix(file_spec_path, prefix, file_spec.IsCaseSensitive())) {
+    if (is_path_prefix(file_spec_path, prefix, file_spec.IsCaseSensitive(),
+                       file_spec.GetPathStyle())) {
       // Stats and logging.
-      if (lldb::TargetSP target = m_target.lock())
-        target->GetStatistics().IncreaseSourceRealpathAttemptCount();
+      IncreaseSourceRealpathAttemptCount();
       Log *log = GetLog(LLDBLog::Source);
       LLDB_LOGF(log, "Realpath'ing support file %s", file_spec_path.c_str());
 

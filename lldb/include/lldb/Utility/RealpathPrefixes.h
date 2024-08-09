@@ -21,21 +21,36 @@ namespace lldb_private {
 
 class RealpathPrefixes {
 public:
-  // Prefixes are obtained from FileSpecList, through FileSpec::GetPath(), which
-  // ensures that the paths are normalized. For example:
-  // "./foo/.." -> ""
-  // "./foo/../bar" -> "bar"
-  explicit RealpathPrefixes(const FileSpecList &file_spec_list);
+  /// \param[in] file_spec_list
+  ///     Prefixes are obtained from FileSpecList, through FileSpec::GetPath(),
+  ///     which ensures that the paths are normalized. For example:
+  ///     "./foo/.." -> ""
+  ///     "./foo/../bar" -> "bar"
+  ///
+  /// \param[in] fs
+  ///     An optional filesystem to use for realpath'ing. If not set, the real
+  ///     filesystem will be used.
+  explicit RealpathPrefixes(const FileSpecList &file_spec_list,
+                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs =
+                                llvm::vfs::getRealFileSystem());
 
-  // Sets an optional filesystem to use for realpath'ing. If not set, the real
-  // filesystem will be used.
-  void SetFileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
+  std::optional<FileSpec> ResolveSymlinks(const FileSpec &file_spec);
 
-  // Sets an optional Target instance to gather statistics.
-  void SetTarget(const lldb::TargetSP& target) { m_target = target; }
-  lldb::TargetSP GetTarget() const { return m_target.lock(); }
-
-  std::optional<FileSpec> ResolveSymlinks(const FileSpec &file_spec) const;
+  // If/when Statistics.h/cpp is moved into Utility, we can remove these
+  // methods, hold a (weak) pointer to `TargetStats` and directly increment
+  // on that object.
+  void IncreaseSourceRealpathAttemptCount() {
+    ++m_source_realpath_attempt_count;
+  }
+  uint32_t GetSourceRealpathAttemptCount() const {
+    return m_source_realpath_attempt_count;
+  };
+  void IncreaseSourceRealpathCompatibleCount() {
+    ++m_source_realpath_compatible_count;
+  }
+  uint32_t GetSourceRealpathCompatibleCount() const {
+    return m_source_realpath_compatible_count;
+  }
 
 private:
   // Paths that start with one of the prefixes in this list will be realpath'ed
@@ -51,14 +66,10 @@ private:
 
   // The optional Target instance to gather statistics.
   lldb::TargetWP m_target;
-};
 
-class RealpathPrefixesStats {
-public:
-  virtual ~RealpathPrefixesStats() = default;
-
-  virtual void IncreaseSourceRealpathAttemptCount() = 0;
-  virtual void IncreaseSourceRealpathCompatibleCount() = 0;
+  // Statistics that we temprarily hold here, to be gathered into TargetStats
+  uint32_t m_source_realpath_attempt_count = 0;
+  uint32_t m_source_realpath_compatible_count = 0;
 };
 
 } // namespace lldb_private

@@ -396,11 +396,10 @@ public:
   ///     realpath'ed to resolve any symlinks.
   ///
   /// \see enum SymbolContext::Scope
-  void
-  ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
-                       lldb::SymbolContextItem resolve_scope,
-                       SymbolContextList &sc_list,
-                       const RealpathPrefixes *realpath_prefixes = nullptr);
+  void ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
+                            lldb::SymbolContextItem resolve_scope,
+                            SymbolContextList &sc_list,
+                            RealpathPrefixes *realpath_prefixes = nullptr);
 
   /// Get whether compiler optimizations were enabled for this compile unit
   ///

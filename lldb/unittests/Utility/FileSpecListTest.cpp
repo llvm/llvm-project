@@ -136,12 +136,11 @@ TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
       FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
 
   // Prepare RealpathPrefixes
-  FileSpecList temp;
-  temp.EmplaceBack("/symlink_dir");
-  RealpathPrefixes prefixes(std::move(temp));
-  prefixes.SetFileSystem(fs);
+  FileSpecList file_spec_list;
+  file_spec_list.EmplaceBack("/symlink_dir");
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
-  // Prepare FileSpecList
+  // Prepare support file list
   SupportFileList support_file_list;
   support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
 
@@ -161,12 +160,11 @@ TEST(SupportFileListTest, SymlinkedRelativePaths) {
       FileSpec("symlink_dir/foo.h"), FileSpec("real_dir/foo.h")));
 
   // Prepare RealpathPrefixes
-  FileSpecList temp;
-  temp.EmplaceBack("symlink_dir");
-  RealpathPrefixes prefixes(std::move(temp));
-  prefixes.SetFileSystem(fs);
+  FileSpecList file_spec_list;
+  file_spec_list.EmplaceBack("symlink_dir");
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
-  // Prepare FileSpecList
+  // Prepare support file list
   SupportFileList support_file_list;
   support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
 
@@ -174,6 +172,30 @@ TEST(SupportFileListTest, SymlinkedRelativePaths) {
   size_t ret = support_file_list.FindCompatibleIndex(
       0, FileSpec("real_dir/foo.h"), &prefixes);
   EXPECT_EQ(ret, (size_t)0);
+}
+
+// Support file is a symlink to the breakpoint file.
+// A matching prefix is set.
+// Input file only match basename and not directory.
+// Should find the two incompatible.
+TEST(SupportFileListTest, RealpathOnlyMatchFileName) {
+  // Prepare FS
+  llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
+      FileSpec("symlink_dir/foo.h"), FileSpec("real_dir/foo.h")));
+
+  // Prepare RealpathPrefixes
+  FileSpecList file_spec_list;
+  file_spec_list.EmplaceBack("symlink_dir");
+  RealpathPrefixes prefixes(file_spec_list, fs);
+
+  // Prepare support file list
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("some_other_dir/foo.h"), &prefixes);
+  EXPECT_EQ(ret, UINT32_MAX);
 }
 
 // Support file is a symlink to the breakpoint file.
@@ -186,12 +208,11 @@ TEST(SupportFileListTest, PartialBreakpointPath) {
       FileSpec("symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
 
   // Prepare RealpathPrefixes
-  FileSpecList temp;
-  temp.EmplaceBack("symlink_dir");
-  RealpathPrefixes prefixes(std::move(temp));
-  prefixes.SetFileSystem(fs);
+  FileSpecList file_spec_list;
+  file_spec_list.EmplaceBack("symlink_dir");
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
-  // Prepare FileSpecList
+  // Prepare support file list
   SupportFileList support_file_list;
   support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
 
@@ -211,12 +232,11 @@ TEST(SupportFileListTest, DifferentBasename) {
       FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/bar.h")));
 
   // Prepare RealpathPrefixes
-  FileSpecList temp;
-  temp.EmplaceBack("/symlink_dir");
-  RealpathPrefixes prefixes(std::move(temp));
-  prefixes.SetFileSystem(fs);
+  FileSpecList file_spec_list;
+  file_spec_list.EmplaceBack("/symlink_dir");
+  RealpathPrefixes prefixes(file_spec_list, fs);
 
-  // Prepare FileSpecList
+  // Prepare support file list
   SupportFileList support_file_list;
   support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
 
@@ -230,7 +250,7 @@ TEST(SupportFileListTest, DifferentBasename) {
 // The support file and the breakpoint file are different.
 // Should find the two incompatible.
 TEST(SupportFileListTest, NoPrefixes) {
-  // Prepare FileSpecList
+  // Prepare support file list
   SupportFileList support_file_list;
   support_file_list.EmplaceBack(FileSpec("/real_dir/bar.h"));
 
@@ -244,7 +264,7 @@ TEST(SupportFileListTest, NoPrefixes) {
 // The support file and the breakpoint file are the same.
 // Should find the two compatible.
 TEST(SupportFileListTest, SameFile) {
-  // Prepare FileSpecList
+  // Prepare support file list
   SupportFileList support_file_list;
   support_file_list.EmplaceBack(FileSpec("/real_dir/foo.h"));
 

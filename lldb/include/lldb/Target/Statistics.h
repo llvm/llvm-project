@@ -176,7 +176,7 @@ private:
 };
 
 /// A class that represents statistics for a since lldb_private::Target.
-class TargetStats : public RealpathPrefixesStats {
+class TargetStats {
 public:
   llvm::json::Value ToJSON(Target &target,
                            const lldb_private::StatisticsOptions &options);
@@ -185,8 +185,8 @@ public:
   void SetFirstPrivateStopTime();
   void SetFirstPublicStopTime();
   void IncreaseSourceMapDeduceCount();
-  virtual void IncreaseSourceRealpathAttemptCount() override;
-  virtual void IncreaseSourceRealpathCompatibleCount() override;
+  void IncreaseSourceRealpathAttemptCount(uint32_t count);
+  void IncreaseSourceRealpathCompatibleCount(uint32_t count);
 
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }

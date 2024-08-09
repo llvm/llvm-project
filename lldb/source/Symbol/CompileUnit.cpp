@@ -215,7 +215,7 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
 
 std::vector<uint32_t>
 FindFileIndexes(const SupportFileList &files, const FileSpec &file,
-                const RealpathPrefixes *realpath_prefixes = nullptr) {
+                RealpathPrefixes *realpath_prefixes = nullptr) {
   std::vector<uint32_t> result;
   uint32_t idx = -1;
   while ((idx = files.FindCompatibleIndex(idx + 1, file, realpath_prefixes)) !=
@@ -249,7 +249,7 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
 void CompileUnit::ResolveSymbolContext(
     const SourceLocationSpec &src_location_spec,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list,
-    const RealpathPrefixes *realpath_prefixes) {
+    RealpathPrefixes *realpath_prefixes) {
   const FileSpec file_spec = src_location_spec.GetFileSpec();
   const uint32_t line = src_location_spec.GetLine().value_or(0);
   const bool check_inlines = src_location_spec.GetCheckInlines();

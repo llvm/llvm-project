@@ -71,9 +71,9 @@ public:
   /// \return
   ///     The index of the file that matches \a file if it is found,
   ///     else UINT32_MAX is returned.
-  size_t FindCompatibleIndex(
-      size_t idx, const FileSpec &file,
-      const RealpathPrefixes *realpath_prefixes = nullptr) const;
+  size_t
+  FindCompatibleIndex(size_t idx, const FileSpec &file,
+                      RealpathPrefixes *realpath_prefixes = nullptr) const;
 
   template <class... Args> void EmplaceBack(Args &&...args) {
     m_files.push_back(
