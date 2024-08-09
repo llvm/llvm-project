@@ -16,7 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 
 using namespace llvm;
 

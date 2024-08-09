@@ -75,6 +75,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -889,20 +890,18 @@ static void debugVectorizationMessage(const StringRef Prefix,
 /// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
 /// RemarkName is the identifier for the remark.  If \p I is passed it is an
 /// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
-/// the location of the remark.  \return the remark object that can be
-/// streamed to.
-static OptimizationRemarkAnalysis createLVAnalysis(const char *PassName,
-    StringRef RemarkName, Loop *TheLoop, Instruction *I) {
-  Value *CodeRegion = TheLoop->getHeader();
-  DebugLoc DL = TheLoop->getStartLoc();
-
-  if (I) {
-    CodeRegion = I->getParent();
-    // If there is no debug location attached to the instruction, revert back to
-    // using the loop's.
-    if (I->getDebugLoc())
-      DL = I->getDebugLoc();
-  }
+/// the location of the remark. If \p DL is passed, use it as debug location for
+/// the remark. \return the remark object that can be streamed to.
+static OptimizationRemarkAnalysis
+createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
+                 Instruction *I, DebugLoc DL = {}) {
+  Value *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
+  // If debug location is attached to the instruction, use it. Otherwise if DL
+  // was not provided, use the loop's.
+  if (I && I->getDebugLoc())
+    DL = I->getDebugLoc();
+  else if (!DL)
+    DL = TheLoop->getStartLoc();
 
   return OptimizationRemarkAnalysis(PassName, RemarkName, DL, CodeRegion);
 }
@@ -943,15 +942,17 @@ void reportVectorizationFailure(const StringRef DebugMsg,
 
 /// Reports an informative message: print \p Msg for debugging purposes as well
 /// as an optimization remark. Uses either \p I as location of the remark, or
-/// otherwise \p TheLoop.
+/// otherwise \p TheLoop. If \p DL is passed, use it as debug location for the
+/// remark. If \p DL is passed, use it as debug location for the remark.
 static void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                             Instruction *I = nullptr) {
+                                    OptimizationRemarkEmitter *ORE,
+                                    Loop *TheLoop, Instruction *I = nullptr,
+                                    DebugLoc DL = {}) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
   LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
-  ORE->emit(
-      createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop, I)
-      << Msg);
+  ORE->emit(createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop,
+                             I, DL)
+            << Msg);
 }
 
 /// Report successful vectorization of the loop. In case an outer loop is
@@ -1538,12 +1539,8 @@ public:
   /// Returns the expected execution cost. The unit of the cost does
   /// not matter because we use the 'cost' units to compare different
   /// vector widths. The cost that is returned is *not* normalized by
-  /// the factor width. If \p Invalid is not nullptr, this function
-  /// will add a pair(Instruction*, ElementCount) to \p Invalid for
-  /// each instruction that has an Invalid cost for the given VF.
-  InstructionCost
-  expectedCost(ElementCount VF,
-               SmallVectorImpl<InstructionVFPair> *Invalid = nullptr);
+  /// the factor width.
+  InstructionCost expectedCost(ElementCount VF);
 
   bool hasPredStores() const { return NumPredStores > 0; }
 
@@ -2635,8 +2632,9 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
   }
 
   // Create phi nodes to merge from the  backedge-taken check block.
-  PHINode *BCResumeVal = PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
-                                         LoopScalarPreHeader->getFirstNonPHI());
+  PHINode *BCResumeVal =
+      PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
+                      LoopScalarPreHeader->getFirstNonPHIIt());
   // Copy original phi DL over to the new one.
   BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
 
@@ -3345,7 +3343,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   if (!blockNeedsPredicationForAnyReason(I->getParent()) ||
       isSafeToSpeculativelyExecute(I) ||
       (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
-      isa<BranchInst, PHINode>(I))
+      isa<BranchInst, PHINode, AllocaInst>(I))
     return false;
 
   // If the instruction was executed conditionally in the original scalar loop,
@@ -4350,24 +4348,38 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   return CmpFn(RTCostA, RTCostB);
 }
 
-static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
-                                   OptimizationRemarkEmitter *ORE,
-                                   Loop *TheLoop) {
+void LoopVectorizationPlanner::emitInvalidCostRemarks(
+    OptimizationRemarkEmitter *ORE) {
+  using RecipeVFPair = std::pair<VPRecipeBase *, ElementCount>;
+  LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
+  SmallVector<RecipeVFPair> InvalidCosts;
+  for (const auto &Plan : VPlans) {
+    for (ElementCount VF : Plan->vectorFactors()) {
+      VPCostContext CostCtx(CM.TTI, Legal->getWidestInductionType(), LLVMCtx,
+                            CM);
+      auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
+      for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+        for (auto &R : *VPBB) {
+          if (!R.cost(VF, CostCtx).isValid())
+            InvalidCosts.emplace_back(&R, VF);
+        }
+      }
+    }
+  }
   if (InvalidCosts.empty())
     return;
 
   // Emit a report of VFs with invalid costs in the loop.
 
-  // Group the remarks per instruction, keeping the instruction order from
-  // InvalidCosts.
-  std::map<Instruction *, unsigned> Numbering;
+  // Group the remarks per recipe, keeping the recipe order from InvalidCosts.
+  DenseMap<VPRecipeBase *, unsigned> Numbering;
   unsigned I = 0;
   for (auto &Pair : InvalidCosts)
     if (!Numbering.count(Pair.first))
       Numbering[Pair.first] = I++;
 
-  // Sort the list, first on instruction(number) then on VF.
-  sort(InvalidCosts, [&Numbering](InstructionVFPair &A, InstructionVFPair &B) {
+  // Sort the list, first on recipe(number) then on VF.
+  sort(InvalidCosts, [&Numbering](RecipeVFPair &A, RecipeVFPair &B) {
     if (Numbering[A.first] != Numbering[B.first])
       return Numbering[A.first] < Numbering[B.first];
     const auto &LHS = A.second;
@@ -4376,38 +4388,64 @@ static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
            std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
   });
 
-  // For a list of ordered instruction-vf pairs:
-  //   [(load, vf1), (load, vf2), (store, vf1)]
-  // Group the instructions together to emit separate remarks for:
-  //   load  (vf1, vf2)
-  //   store (vf1)
-  auto Tail = ArrayRef<InstructionVFPair>(InvalidCosts);
-  auto Subset = ArrayRef<InstructionVFPair>();
+  // For a list of ordered recipe-VF pairs:
+  //   [(load, VF1), (load, VF2), (store, VF1)]
+  // group the recipes together to emit separate remarks for:
+  //   load  (VF1, VF2)
+  //   store (VF1)
+  auto Tail = ArrayRef<RecipeVFPair>(InvalidCosts);
+  auto Subset = ArrayRef<RecipeVFPair>();
   do {
     if (Subset.empty())
       Subset = Tail.take_front(1);
 
-    Instruction *I = Subset.front().first;
+    VPRecipeBase *R = Subset.front().first;
 
-    // If the next instruction is different, or if there are no other pairs,
+    unsigned Opcode =
+        TypeSwitch<const VPRecipeBase *, unsigned>(R)
+            .Case<VPHeaderPHIRecipe>(
+                [](const auto *R) { return Instruction::PHI; })
+            .Case<VPWidenSelectRecipe>(
+                [](const auto *R) { return Instruction::Select; })
+            .Case<VPWidenStoreRecipe>(
+                [](const auto *R) { return Instruction::Store; })
+            .Case<VPWidenLoadRecipe>(
+                [](const auto *R) { return Instruction::Load; })
+            .Case<VPWidenCallRecipe>(
+                [](const auto *R) { return Instruction::Call; })
+            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
+                  VPWidenCastRecipe>(
+                [](const auto *R) { return R->getOpcode(); })
+            .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
+              return R->getStoredValues().empty() ? Instruction::Load
+                                                  : Instruction::Store;
+            });
+
+    // If the next recipe is different, or if there are no other pairs,
     // emit a remark for the collated subset. e.g.
-    //   [(load, vf1), (load, vf2))]
+    //   [(load, VF1), (load, VF2))]
     // to emit:
-    //  remark: invalid costs for 'load' at VF=(vf, vf2)
-    if (Subset == Tail || Tail[Subset.size()].first != I) {
+    //  remark: invalid costs for 'load' at VF=(VF1, VF2)
+    if (Subset == Tail || Tail[Subset.size()].first != R) {
       std::string OutString;
       raw_string_ostream OS(OutString);
       assert(!Subset.empty() && "Unexpected empty range");
-      OS << "Instruction with invalid costs prevented vectorization at VF=(";
+      OS << "Recipe with invalid costs prevented vectorization at VF=(";
       for (const auto &Pair : Subset)
         OS << (Pair.second == Subset.front().second ? "" : ", ") << Pair.second;
       OS << "):";
-      if (auto *CI = dyn_cast<CallInst>(I))
-        OS << " call to " << CI->getCalledFunction()->getName();
-      else
-        OS << " " << I->getOpcodeName();
+      if (Opcode == Instruction::Call) {
+        auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
+        Function *CalledFn =
+            WidenCall ? WidenCall->getCalledScalarFunction()
+                      : cast<Function>(R->getOperand(R->getNumOperands() - 1)
+                                           ->getLiveInIRValue());
+        OS << " call to " << CalledFn->getName();
+      } else
+        OS << " " << Instruction::getOpcodeName(Opcode);
       OS.flush();
-      reportVectorizationInfo(OutString, "InvalidCost", ORE, TheLoop, I);
+      reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
+                              R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
       Subset = {};
     } else
@@ -4536,14 +4574,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
     ChosenFactor.Cost = InstructionCost::getMax();
   }
 
-  SmallVector<InstructionVFPair> InvalidCosts;
   for (auto &P : VPlans) {
     for (ElementCount VF : P->vectorFactors()) {
       // The cost for scalar VF=1 is already calculated, so ignore it.
       if (VF.isScalar())
         continue;
 
-      InstructionCost C = CM.expectedCost(VF, &InvalidCosts);
+      InstructionCost C = CM.expectedCost(VF);
       VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
 #ifndef NDEBUG
@@ -4577,8 +4614,6 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
         ChosenFactor = Candidate;
     }
   }
-
-  emitInvalidCostRemarks(InvalidCosts, ORE, OrigLoop);
 
   if (!EnableCondStoresVectorization && CM.hasPredStores()) {
     reportVectorizationFailure(
@@ -5484,8 +5519,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
   return Discount;
 }
 
-InstructionCost LoopVectorizationCostModel::expectedCost(
-    ElementCount VF, SmallVectorImpl<InstructionVFPair> *Invalid) {
+InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   InstructionCost Cost;
 
   // For each block.
@@ -5504,10 +5538,6 @@ InstructionCost LoopVectorizationCostModel::expectedCost(
       // Check if we should override the cost.
       if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0)
         C = InstructionCost(ForceTargetInstructionCost);
-
-      // Keep a list of instructions with invalid costs.
-      if (Invalid && !C.isValid())
-        Invalid->emplace_back(&I, VF);
 
       BlockCost += C;
       LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
@@ -6694,14 +6724,18 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     return RequiresScalarEpilogue &&
            !TheLoop->contains(cast<Instruction>(U)->getParent());
   };
+  MapVector<Value *, SmallVector<Value *>> DeadInvariantStoreOps;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       // Find all stores to invariant variables. Since they are going to sink
       // outside the loop we do not need calculate cost for them.
       StoreInst *SI;
       if ((SI = dyn_cast<StoreInst>(&I)) &&
-          Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
+          Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         ValuesToIgnore.insert(&I);
+        auto I = DeadInvariantStoreOps.insert({SI->getPointerOperand(), {}});
+        I.first->second.push_back(SI->getValueOperand());
+      }
 
       if (VecValuesToIgnore.contains(&I) || ValuesToIgnore.contains(&I))
         continue;
@@ -6742,6 +6776,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     DeadInterleavePointerOps.append(Op->op_begin(), Op->op_end());
   }
 
+  for (const auto &[_, Ops] : DeadInvariantStoreOps) {
+    for (Value *Op : ArrayRef(Ops).drop_back())
+      DeadOps.push_back(Op);
+  }
   // Mark ops that would be trivially dead and are only used by ignored
   // instructions as free.
   BasicBlock *Header = TheLoop->getHeader();
@@ -6752,8 +6790,8 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         (isa<PHINode>(Op) && Op->getParent() == Header) ||
         !wouldInstructionBeTriviallyDead(Op, TLI) ||
         any_of(Op->users(), [this, IsLiveOutDead](User *U) {
-          return !VecValuesToIgnore.contains(U) && ValuesToIgnore.contains(U) &&
-                 !IsLiveOutDead(U);
+          return !VecValuesToIgnore.contains(U) &&
+                 !ValuesToIgnore.contains(U) && !IsLiveOutDead(U);
         }))
       continue;
 
@@ -8190,7 +8228,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
     if (CM.isPredicatedInst(I)) {
-      SmallVector<VPValue *> Ops(Operands.begin(), Operands.end());
+      SmallVector<VPValue *> Ops(Operands);
       VPValue *Mask = getBlockInMask(I->getParent());
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
@@ -9108,70 +9146,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   VPlanTransforms::clearReductionWrapFlags(*Plan);
 }
 
-void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
-  assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
-         "Not a pointer induction according to InductionDescriptor!");
-  assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
-         "Unexpected type.");
-  assert(!onlyScalarsGenerated(State.VF.isScalable()) &&
-         "Recipe should have been replaced");
-
-  auto *IVR = getParent()->getPlan()->getCanonicalIV();
-  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0, /*IsScalar*/ true));
-  Type *PhiType = IndDesc.getStep()->getType();
-
-  // Build a pointer phi
-  Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
-  Type *ScStValueType = ScalarStartValue->getType();
-  PHINode *NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
-                                           CanonicalIV->getIterator());
-
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
-
-  // A pointer induction, performed by using a gep
-  BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
-
-  Value *ScalarStepValue = State.get(getOperand(1), VPIteration(0, 0));
-  Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
-  Value *NumUnrolledElems =
-      State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, State.UF));
-  Value *InductionGEP = GetElementPtrInst::Create(
-      State.Builder.getInt8Ty(), NewPointerPhi,
-      State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
-      InductionLoc);
-  // Add induction update using an incorrect block temporarily. The phi node
-  // will be fixed after VPlan execution. Note that at this point the latch
-  // block cannot be used, as it does not exist yet.
-  // TODO: Model increment value in VPlan, by turning the recipe into a
-  // multi-def and a subclass of VPHeaderPHIRecipe.
-  NewPointerPhi->addIncoming(InductionGEP, VectorPH);
-
-  // Create UF many actual address geps that use the pointer
-  // phi as base and a vectorized version of the step value
-  // (<step*0, ..., step*N>) as offset.
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Type *VecPhiType = VectorType::get(PhiType, State.VF);
-    Value *StartOffsetScalar =
-        State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, Part));
-    Value *StartOffset =
-        State.Builder.CreateVectorSplat(State.VF, StartOffsetScalar);
-    // Create a vector of consecutive numbers from zero to VF.
-    StartOffset = State.Builder.CreateAdd(
-        StartOffset, State.Builder.CreateStepVector(VecPhiType));
-
-    assert(ScalarStepValue == State.get(getOperand(1), VPIteration(Part, 0)) &&
-           "scalar step must be the same across all parts");
-    Value *GEP = State.Builder.CreateGEP(
-        State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(
-            StartOffset,
-            State.Builder.CreateVectorSplat(State.VF, ScalarStepValue),
-            "vector.gep"));
-    State.set(this, GEP, Part);
-  }
-}
-
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "VPDerivedIVRecipe being replicated.");
 
@@ -9867,6 +9841,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Plan how to best vectorize, return the best VF and its cost.
   std::optional<VectorizationFactor> MaybeVF = LVP.plan(UserVF, UserIC);
 
+  if (ORE->allowExtraAnalysis(LV_NAME))
+    LVP.emitInvalidCostRemarks(ORE);
+
   VectorizationFactor VF = VectorizationFactor::Disabled();
   unsigned IC = 1;
 
@@ -10029,7 +10006,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
-        assert(EPI.MainLoopVF == VF.Width && "VFs must match");
         std::unique_ptr<VPlan> BestMainPlan(BestPlan.duplicate());
         const auto &[ExpandedSCEVs, ReductionResumeValues] = LVP.executePlan(
             EPI.MainLoopVF, EPI.MainLoopUF, *BestMainPlan, MainILV, DT, true);

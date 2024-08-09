@@ -46,6 +46,8 @@ export namespace std {
   using std::formatter;
 
 #if _LIBCPP_STD_VER >= 23
+  using std::enable_nonlocking_formatter_optimization;
+
   // [format.formattable], concept formattable
   using std::formattable;
 #endif

@@ -150,6 +150,12 @@ libc_support_library(
     hdrs = ["hdr/stdio_macros.h"],
 )
 
+
+libc_support_library(
+    name = "hdr_limits_macros",
+    hdrs = ["hdr/limits_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -362,7 +368,7 @@ libc_support_library(
         "__support_cpp_type_traits",
         "__support_macros_attributes",
         ":__support_macros_properties_types",
-        ":llvm_libc_macros_limits_macros",
+        ":hdr_limits_macros",
     ],
 )
 
@@ -658,8 +664,6 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_cpp_string_view",
         ":__support_ctype_utils",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_str_to_integer",
@@ -1078,22 +1082,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_osutil_pid",
-    srcs = ["src/__support/OSUtil/linux/pid.cpp"],
-    hdrs = ["src/__support/OSUtil/pid.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_macros_attributes",
-        ":__support_macros_optimization",
-        ":__support_osutil_syscall",
-        ":types_pid_t",
-    ],
-)
-
-libc_support_library(
     name = "__support_stringutil",
     srcs = glob(["src/__support/StringUtil/tables/**/*.h"]) + [
         "src/__support/StringUtil/error_to_string.cpp",
@@ -1440,6 +1428,41 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
+    ],
+)
+
+libc_support_library(
+    name = "range_reduction_double",
+    hdrs = [
+        "src/math/generic/range_reduction_double_common.h",
+        "src/math/generic/range_reduction_double_fma.h",
+        "src/math/generic/range_reduction_double_nofma.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_rounding_mode",
+        ":__support_integer_literals",
+    ],
+)
+
+libc_support_library(
+    name = "sincos_eval",
+    hdrs = [
+        "src/math/generic/sincos_eval.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
     ],
 )
 
@@ -2098,6 +2121,17 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "cos",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
+    ],
+)
+
+libc_math_function(
     name = "sincosf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -2106,6 +2140,17 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "sincos",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
     ],
 )
 
@@ -2124,6 +2169,17 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "sin",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
+    ],
+)
+
+libc_math_function(
     name = "tanf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -2134,6 +2190,17 @@ libc_math_function(
         ":__support_macros_properties_cpu_features",
         ":range_reduction",
         ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "tan",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":range_reduction_double",
+        ":sincos_eval",
     ],
 )
 
@@ -3040,20 +3107,6 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
-    ],
-)
-
-libc_function(
-    name = "getpid",
-    srcs = ["src/unistd/linux/getpid.cpp"],
-    hdrs = ["src/unistd/getpid.h"],
-    deps = [
-        ":__support_common",
-        ":__support_macros_config",
-        ":__support_osutil_pid",
-        ":__support_osutil_syscall",
-        ":errno",
-        ":types_pid_t",
     ],
 )
 

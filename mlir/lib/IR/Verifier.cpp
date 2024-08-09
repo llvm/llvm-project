@@ -268,7 +268,7 @@ LogicalResult OperationVerifier::verifyOnExit(Operation &op) {
 /// verifyBlockPostChildren.
 LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   SmallVector<WorkItem> worklist{{&op}};
-  DenseSet<WorkItem> seen;
+  SmallPtrSet<WorkItem, 8> seen;
   while (!worklist.empty()) {
     WorkItem top = worklist.back();
 

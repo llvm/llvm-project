@@ -930,6 +930,8 @@ TEST(Error, C_API) {
     });
   EXPECT_TRUE(GotCSE) << "Failed to round-trip ErrorList via C API";
   EXPECT_TRUE(GotCE) << "Failed to round-trip ErrorList via C API";
+
+  LLVMCantFail(wrap(Error::success()));
 }
 
 TEST(Error, FileErrorTest) {

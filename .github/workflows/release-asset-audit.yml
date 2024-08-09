@@ -40,7 +40,7 @@ jobs:
             var fs = require('fs');
             var body = ''
             if (fs.existsSync('./comment')) {
-              body = JSON.parse(fs.readFileSync('./comment')) + "\n\n";
+              body = fs.readFileSync('./comment') + "\n\n";
             }
             body = body + `\n\nhttps://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
 

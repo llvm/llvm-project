@@ -19,18 +19,12 @@
 
 using std::experimental::propagate_const;
 
-namespace std {
-template <> struct hash<X>
-{
+template <>
+struct std::hash<X> {
   typedef X first_argument_type;
 
-  std::size_t operator()(const first_argument_type&) const
-  {
-    return 99;
-  }
-
+  std::size_t operator()(const first_argument_type&) const { return 99; }
 };
-} // namespace std
 
 int main(int, char**) {
 

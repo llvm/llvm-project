@@ -896,7 +896,7 @@ define i64 @imm64_8() nounwind {
 ; RV64-NOPOOL-LABEL: imm64_8:
 ; RV64-NOPOOL:       # %bb.0:
 ; RV64-NOPOOL-NEXT:    lui a0, 583
-; RV64-NOPOOL-NEXT:    addiw a0, a0, -1875
+; RV64-NOPOOL-NEXT:    addi a0, a0, -1875
 ; RV64-NOPOOL-NEXT:    slli a0, a0, 14
 ; RV64-NOPOOL-NEXT:    addi a0, a0, -947
 ; RV64-NOPOOL-NEXT:    slli a0, a0, 12
@@ -925,7 +925,7 @@ define i64 @imm64_8() nounwind {
 ; RV64IZBB-LABEL: imm64_8:
 ; RV64IZBB:       # %bb.0:
 ; RV64IZBB-NEXT:    lui a0, 583
-; RV64IZBB-NEXT:    addiw a0, a0, -1875
+; RV64IZBB-NEXT:    addi a0, a0, -1875
 ; RV64IZBB-NEXT:    slli a0, a0, 14
 ; RV64IZBB-NEXT:    addi a0, a0, -947
 ; RV64IZBB-NEXT:    slli a0, a0, 12
@@ -937,7 +937,7 @@ define i64 @imm64_8() nounwind {
 ; RV64IZBS-LABEL: imm64_8:
 ; RV64IZBS:       # %bb.0:
 ; RV64IZBS-NEXT:    lui a0, 583
-; RV64IZBS-NEXT:    addiw a0, a0, -1875
+; RV64IZBS-NEXT:    addi a0, a0, -1875
 ; RV64IZBS-NEXT:    slli a0, a0, 14
 ; RV64IZBS-NEXT:    addi a0, a0, -947
 ; RV64IZBS-NEXT:    slli a0, a0, 12
@@ -949,7 +949,7 @@ define i64 @imm64_8() nounwind {
 ; RV64IXTHEADBB-LABEL: imm64_8:
 ; RV64IXTHEADBB:       # %bb.0:
 ; RV64IXTHEADBB-NEXT:    lui a0, 583
-; RV64IXTHEADBB-NEXT:    addiw a0, a0, -1875
+; RV64IXTHEADBB-NEXT:    addi a0, a0, -1875
 ; RV64IXTHEADBB-NEXT:    slli a0, a0, 14
 ; RV64IXTHEADBB-NEXT:    addi a0, a0, -947
 ; RV64IXTHEADBB-NEXT:    slli a0, a0, 12
@@ -969,7 +969,7 @@ define i64 @imm64_8() nounwind {
 ; RV64-REMAT-LABEL: imm64_8:
 ; RV64-REMAT:       # %bb.0:
 ; RV64-REMAT-NEXT:    lui a0, 583
-; RV64-REMAT-NEXT:    addiw a0, a0, -1875
+; RV64-REMAT-NEXT:    addi a0, a0, -1875
 ; RV64-REMAT-NEXT:    slli a0, a0, 14
 ; RV64-REMAT-NEXT:    addi a0, a0, -947
 ; RV64-REMAT-NEXT:    slli a0, a0, 12

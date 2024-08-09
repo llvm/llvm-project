@@ -8,16 +8,16 @@ enums: []
 objects: []
 functions:
   - name: statvfs
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: struct statvfs *__restrict
   - name: fstatvfs
-    standards: 
+    standards:
       - POSIX
     return_type: int
-    arguments: 
+    arguments:
       - type: int
       - type: struct statvfs *

@@ -182,7 +182,7 @@ static bool isMaskRegOp(const MachineInstr &MI) {
 /// Note that this is different from "agnostic" as defined by the vector
 /// specification.  Agnostic requires each lane to either be undisturbed, or
 /// take the value -1; no other value is allowed.
-static bool hasUndefinedMergeOp(const MachineInstr &MI) {
+static bool hasUndefinedPassthru(const MachineInstr &MI) {
 
   unsigned UseOpIdx;
   if (!MI.isRegTiedToUseOperand(0, &UseOpIdx))
@@ -443,13 +443,13 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
-    // For vmv.s.x and vfmv.s.f, if the merge operand is *undefined*, we don't
+    // For vmv.s.x and vfmv.s.f, if the passthru is *undefined*, we don't
     // need to preserve any other bits and are thus compatible with any larger,
     // etype and can disregard policy bits.  Warning: It's tempting to try doing
     // this for any tail agnostic operation, but we can't as TA requires
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
-    if (hasUndefinedMergeOp(MI)) {
+    if (hasUndefinedPassthru(MI)) {
       if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
@@ -458,7 +458,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     }
   }
 
-  // vmv.x.s, and vmv.f.s are unconditional and ignore everything except SEW.
+  // vmv.x.s, and vfmv.f.s are unconditional and ignore everything except SEW.
   if (isScalarExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
     Res.LMUL = DemandedFields::LMULNone;
@@ -469,7 +469,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
 
   if (RISCVII::hasVLOp(MI.getDesc().TSFlags)) {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
-    // A slidedown/slideup with an *undefined* merge op can freely clobber
+    // A slidedown/slideup with an *undefined* passthru can freely clobber
     // elements not copied from the source vector (e.g. masked off, tail, or
     // slideup's prefix). Notes:
     // * We can't modify SEW here since the slide amount is in units of SEW.
@@ -478,7 +478,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // * The LMUL1 restriction is for machines whose latency may depend on VL.
     // * As above, this is only legal for tail "undefined" not "agnostic".
     if (isVSlideInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedMergeOp(MI)) {
+        hasUndefinedPassthru(MI)) {
       Res.VLAny = false;
       Res.VLZeroness = true;
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
@@ -492,7 +492,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // careful to not increase the number of active vector registers (unlike for
     // vmv.s.x.)
     if (isScalarSplatInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedMergeOp(MI)) {
+        hasUndefinedPassthru(MI)) {
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
       Res.SEWLMULRatio = false;
       Res.VLAny = false;
@@ -1000,7 +1000,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
   bool TailAgnostic = true;
   bool MaskAgnostic = true;
-  if (!hasUndefinedMergeOp(MI)) {
+  if (!hasUndefinedPassthru(MI)) {
     // Start with undisturbed.
     TailAgnostic = false;
     MaskAgnostic = false;

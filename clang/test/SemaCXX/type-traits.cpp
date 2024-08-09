@@ -1041,42 +1041,6 @@ void is_pointer()
   static_assert(!__is_pointer(void (StructWithMembers::*) ()));
 }
 
-void is_null_pointer() {
-  StructWithMembers x;
-
-  static_assert(__is_nullptr(decltype(nullptr)));
-  static_assert(!__is_nullptr(void *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(char *));
-  static_assert(!__is_nullptr(int *));
-  static_assert(!__is_nullptr(int **));
-  static_assert(!__is_nullptr(ClassType *));
-  static_assert(!__is_nullptr(Derives *));
-  static_assert(!__is_nullptr(Enum *));
-  static_assert(!__is_nullptr(IntArNB *));
-  static_assert(!__is_nullptr(Union *));
-  static_assert(!__is_nullptr(UnionAr *));
-  static_assert(!__is_nullptr(StructWithMembers *));
-  static_assert(!__is_nullptr(void (*)()));
-
-  static_assert(!__is_nullptr(void));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(char));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(ClassType));
-  static_assert(!__is_nullptr(Derives));
-  static_assert(!__is_nullptr(Enum));
-  static_assert(!__is_nullptr(IntArNB));
-  static_assert(!__is_nullptr(Union));
-  static_assert(!__is_nullptr(UnionAr));
-  static_assert(!__is_nullptr(StructWithMembers));
-  static_assert(!__is_nullptr(int StructWithMembers::*));
-  static_assert(!__is_nullptr(void(StructWithMembers::*)()));
-}
-
 void is_member_object_pointer()
 {
   StructWithMembers x;
@@ -1738,6 +1702,11 @@ struct CStructWithFMA2 {
   int f[];
 };
 
+template<int N>
+struct UniqueEmpty {};
+template<typename... Bases>
+struct D : Bases... {};
+
 void is_layout_compatible(int n)
 {
   static_assert(__is_layout_compatible(void, void));
@@ -1841,6 +1810,12 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(EnumClassLayout, int));
   static_assert(!__is_layout_compatible(EnumForward, int));
   static_assert(!__is_layout_compatible(EnumClassForward, int));
+  static_assert(__is_layout_compatible(CStruct, D<CStruct>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, CStruct>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, D<UniqueEmpty<1>, CStruct>, D<UniqueEmpty<2>>>));
+  static_assert(__is_layout_compatible(CStruct, D<CStructWithQualifiers>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, CStructWithQualifiers>));
+  static_assert(__is_layout_compatible(CStructWithQualifiers, D<UniqueEmpty<0>, D<UniqueEmpty<1>, CStruct>, D<UniqueEmpty<2>>>));
 }
 
 namespace IPIBO {

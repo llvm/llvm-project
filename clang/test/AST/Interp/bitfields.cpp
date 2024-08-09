@@ -1,10 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify %s
-// RUN: %clang_cc1 -verify=ref -Wno-bitfield-constant-conversion %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref -Wno-bitfield-constant-conversion %s
-
-// expected-no-diagnostics
-// ref-no-diagnostics
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify=expected,both %s
+// RUN: %clang_cc1 -verify=ref,both -Wno-bitfield-constant-conversion %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both -Wno-bitfield-constant-conversion %s
 
 namespace Basic {
   struct A {
@@ -122,4 +119,12 @@ namespace test0 {
   void b(C &c) {
     c.onebit = int_source();
   }
+}
+
+namespace NonConstBitWidth {
+  int n3 = 37; // both-note {{declared here}}
+  struct S {
+    int l : n3; // both-error {{constant expression}} \
+                // both-note {{read of non-const variable}}
+  };
 }

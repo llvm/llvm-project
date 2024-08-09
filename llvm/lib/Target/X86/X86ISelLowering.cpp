@@ -2475,8 +2475,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
     // clang-format off
    for (ISD::NodeType Op :
-         {ISD::FCEIL,  ISD::STRICT_FCEIL,
+         {ISD::FACOS,  ISD::STRICT_FACOS,
+          ISD::FASIN,  ISD::STRICT_FASIN,
+          ISD::FATAN,  ISD::STRICT_FATAN,
+          ISD::FCEIL,  ISD::STRICT_FCEIL,
           ISD::FCOS,   ISD::STRICT_FCOS,
+          ISD::FCOSH,  ISD::STRICT_FCOSH,
           ISD::FEXP,   ISD::STRICT_FEXP,
           ISD::FFLOOR, ISD::STRICT_FFLOOR,
           ISD::FREM,   ISD::STRICT_FREM,
@@ -2484,7 +2488,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FLOG10, ISD::STRICT_FLOG10,
           ISD::FPOW,   ISD::STRICT_FPOW,
           ISD::FSIN,   ISD::STRICT_FSIN,
-          ISD::FTAN,   ISD::STRICT_FTAN})
+          ISD::FSINH,  ISD::STRICT_FSINH,
+          ISD::FTAN,   ISD::STRICT_FTAN,
+          ISD::FTANH,  ISD::STRICT_FTANH})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
@@ -3435,12 +3441,9 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   if (BaseCost >= 0 && Subtarget.hasCCMP())
     BaseCost += BrMergingCcmpBias;
   // a == b && a == c is a fast pattern on x86.
-  ICmpInst::Predicate Pred;
   if (BaseCost >= 0 && Opc == Instruction::And &&
-      match(Lhs, m_ICmp(Pred, m_Value(), m_Value())) &&
-      Pred == ICmpInst::ICMP_EQ &&
-      match(Rhs, m_ICmp(Pred, m_Value(), m_Value())) &&
-      Pred == ICmpInst::ICMP_EQ)
+      match(Lhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())) &&
+      match(Rhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())))
     BaseCost += 1;
   return {BaseCost, BrMergingLikelyBias.getValue(),
           BrMergingUnlikelyBias.getValue()};
@@ -4292,7 +4295,7 @@ static SDValue getAVX512Node(unsigned Opcode, const SDLoc &DL, MVT VT,
     DstVT = MVT::getVectorVT(SVT, 512 / SVT.getSizeInBits());
 
   // Canonicalize src operands.
-  SmallVector<SDValue> SrcOps(Ops.begin(), Ops.end());
+  SmallVector<SDValue> SrcOps(Ops);
   for (SDValue &Op : SrcOps) {
     MVT OpVT = Op.getSimpleValueType();
     // Just pass through scalar operands.
@@ -30526,8 +30529,7 @@ enum BitTestKind : unsigned {
 static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
   using namespace llvm::PatternMatch;
   BitTestKind BTK = UndefBit;
-  auto *C = dyn_cast<ConstantInt>(V);
-  if (C) {
+  if (auto *C = dyn_cast<ConstantInt>(V)) {
     // Check if V is a power of 2 or NOT power of 2.
     if (isPowerOf2_64(C->getZExtValue()))
       BTK = ConstantBit;
@@ -30537,8 +30539,7 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
   }
 
   // Check if V is some power of 2 pattern known to be non-zero
-  auto *I = dyn_cast<Instruction>(V);
-  if (I) {
+  if (auto *I = dyn_cast<Instruction>(V)) {
     bool Not = false;
     // Check if we have a NOT
     Value *PeekI;
@@ -30575,13 +30576,12 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
 
       Value *BitV = I->getOperand(1);
 
+      // Read past a shiftmask instruction to find count
       Value *AndOp;
-      const APInt *AndC;
-      if (match(BitV, m_c_And(m_Value(AndOp), m_APInt(AndC)))) {
-        // Read past a shiftmask instruction to find count
-        if (*AndC == (I->getType()->getPrimitiveSizeInBits() - 1))
-          BitV = AndOp;
-      }
+      uint64_t ShiftMask = I->getType()->getPrimitiveSizeInBits() - 1;
+      if (match(BitV, m_c_And(m_Value(AndOp), m_SpecificInt(ShiftMask))))
+        BitV = AndOp;
+
       return {BitV, BTK};
     }
   }
@@ -30760,10 +30760,12 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -30771,10 +30773,12 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op))))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -30785,18 +30789,21 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
              Pred == CmpInst::ICMP_SLT;
-    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-      return Pred == CmpInst::ICMP_SGT;
+    if (match(I->user_back(),
+              m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+      return true;
     return false;
   }
   if (Opc == AtomicRMWInst::Xor) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -34023,6 +34030,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTNEPS2BF16)
   NODE_NAME_CASE(MCVTNEPS2BF16)
   NODE_NAME_CASE(DPBF16PS)
+  NODE_NAME_CASE(DPFP16PS)
+  NODE_NAME_CASE(MPSADBW)
   NODE_NAME_CASE(LWPINS)
   NODE_NAME_CASE(MGATHER)
   NODE_NAME_CASE(MSCATTER)
@@ -34047,6 +34056,24 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VPDPBUUDS)
   NODE_NAME_CASE(VPDPBSSD)
   NODE_NAME_CASE(VPDPBSSDS)
+  NODE_NAME_CASE(VPDPWSUD)
+  NODE_NAME_CASE(VPDPWSUDS)
+  NODE_NAME_CASE(VPDPWUSD)
+  NODE_NAME_CASE(VPDPWUSDS)
+  NODE_NAME_CASE(VPDPWUUD)
+  NODE_NAME_CASE(VPDPWUUDS)
+  NODE_NAME_CASE(VMINMAX)
+  NODE_NAME_CASE(VMINMAX_SAE)
+  NODE_NAME_CASE(VMINMAXS)
+  NODE_NAME_CASE(VMINMAXS_SAE)
+  NODE_NAME_CASE(CVTP2IBS)
+  NODE_NAME_CASE(CVTP2IUBS)
+  NODE_NAME_CASE(CVTP2IBS_RND)
+  NODE_NAME_CASE(CVTP2IUBS_RND)
+  NODE_NAME_CASE(CVTTP2IBS)
+  NODE_NAME_CASE(CVTTP2IUBS)
+  NODE_NAME_CASE(CVTTP2IBS_SAE)
+  NODE_NAME_CASE(CVTTP2IUBS_SAE)
   NODE_NAME_CASE(AESENC128KL)
   NODE_NAME_CASE(AESDEC128KL)
   NODE_NAME_CASE(AESENC256KL)
@@ -39287,7 +39314,7 @@ static SDValue combineX86ShuffleChainWithExtract(
   // Attempt to peek through inputs and adjust mask when we extract from an
   // upper subvector.
   int AdjustedMasks = 0;
-  SmallVector<SDValue, 4> WideInputs(Inputs.begin(), Inputs.end());
+  SmallVector<SDValue, 4> WideInputs(Inputs);
   for (unsigned I = 0; I != NumInputs; ++I) {
     SDValue &Input = WideInputs[I];
     Input = peekThroughBitcasts(Input);
@@ -39972,8 +39999,7 @@ static SDValue combineX86ShufflesRecursively(
   HasVariableMask |= IsOpVariableMask;
 
   // Update the list of shuffle nodes that have been combined so far.
-  SmallVector<const SDNode *, 16> CombinedNodes(SrcNodes.begin(),
-                                                SrcNodes.end());
+  SmallVector<const SDNode *, 16> CombinedNodes(SrcNodes);
   CombinedNodes.push_back(Op.getNode());
 
   // See if we can recurse into each shuffle source op (if it's a target

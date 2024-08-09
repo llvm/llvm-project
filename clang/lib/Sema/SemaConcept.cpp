@@ -531,6 +531,10 @@ static ExprResult calculateConstraintSatisfaction(
 
     std::optional<unsigned>
     EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) const {
+
+      // We should ignore errors in the presence of packs of different size.
+      Sema::SFINAETrap Trap(S);
+
       Expr *Pattern = FE->getPattern();
 
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
@@ -1457,8 +1461,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
           : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
   Sema::InstantiatingTemplate Inst(
       S, InstLocBegin,
-      Sema::InstantiatingTemplate::ParameterMappingSubstitution{}, Concept,
-      {InstLocBegin, InstLocEnd});
+      Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+      Atomic.ConstraintDecl, {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
@@ -1632,7 +1636,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
         Kind, std::move(*Sub), FE->getPattern()}};
   }
 
-  return NormalizedConstraint{new (S.Context) AtomicConstraint(S, E)};
+  return NormalizedConstraint{new (S.Context) AtomicConstraint(E, D)};
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(

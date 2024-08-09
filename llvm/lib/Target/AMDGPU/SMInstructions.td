@@ -11,7 +11,10 @@ def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 let EncoderMethod = "getSMEMOffsetEncoding",
     DecoderMethod = "decodeSMEMOffset" in {
 def SMEMOffset : ImmOperand<i32, "SMEMOffset", 1>;
-def SMEMOffsetMod : NamedIntOperand<i32, "offset", 0>;
+def SMEMOffsetMod : NamedIntOperand<i32, "offset", 0> {
+  let AlwaysPrint = 1;
+  let PrintInHex = 1;
+}
 def OptSMEMOffsetMod : NamedIntOperand<i32, "offset"> {
   let ImmTy = SMEMOffsetMod.ImmTy;
   let PredicateMethod = SMEMOffsetMod.PredicateMethod;
