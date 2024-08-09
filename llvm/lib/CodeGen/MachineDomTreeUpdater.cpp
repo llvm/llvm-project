@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdaterImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
