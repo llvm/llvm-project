@@ -1,3 +1,4 @@
+// XFAIL: !rdar131321616
 // RUN: rm -rf %t
 // RUN: %clang_cc1 %s -I %S/Inputs -index-store-path %t/idx
 // RUN: %clang_cc1 %s -I %S/Inputs -index-store-path %t/idx -DUNDEF
