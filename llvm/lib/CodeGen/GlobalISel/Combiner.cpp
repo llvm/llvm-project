@@ -153,7 +153,7 @@ bool Combiner::combineMachineInstrs() {
     // down RPOT.
     Changed = false;
 
-    RAIIDelegateInstaller DelInstall(MF, ObserverWrapper.get());
+    RAIIMFObsDelInstaller DelInstall(MF, *ObserverWrapper);
     for (MachineBasicBlock *MBB : post_order(&MF)) {
       for (MachineInstr &CurMI :
            llvm::make_early_inc_range(llvm::reverse(*MBB))) {
