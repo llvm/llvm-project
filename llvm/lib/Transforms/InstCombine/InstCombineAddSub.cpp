@@ -1217,15 +1217,12 @@ static Instruction *canonicalizeLowbitMask(BinaryOperator &I,
     return nullptr;
 
   Constant *MinusOne = Constant::getAllOnesValue(NBits->getType());
-  Value *NotMask = Builder.CreateShl(MinusOne, NBits, "notmask");
-  // Be wary of constant folding.
-  if (auto *BOp = dyn_cast<BinaryOperator>(NotMask)) {
-    // Always NSW. But NUW propagates from `add`.
-    BOp->setHasNoSignedWrap();
-    BOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-  }
+  Value *Sub = Builder.CreateSub(
+      ConstantInt::get(NBits->getType(),
+                       NBits->getType()->getScalarSizeInBits() - 1),
+      NBits);
 
-  return BinaryOperator::CreateNot(NotMask, I.getName());
+  return BinaryOperator::CreateLShr(MinusOne, Sub, I.getName());
 }
 
 static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {

@@ -10,9 +10,9 @@ define i8 @and_add_shl(i8 %x) {
 ; CHECK-SAME: (i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ult i8 [[X]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
-; CHECK-NEXT:    [[SUB:%.*]] = and i8 [[NOTMASK]], 32
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SUB]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 7
+; CHECK-NEXT:    [[SUB:%.*]] = lshr i8 -1, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SUB]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %op1_p2 = icmp ule i8 %x, 5
@@ -48,9 +48,9 @@ define i8 @and_add_shl_overlap(i8 %x) {
 ; CHECK-SAME: (i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ult i8 [[X]], 7
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
-; CHECK-NEXT:    [[SUB:%.*]] = and i8 [[NOTMASK]], 32
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SUB]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 7
+; CHECK-NEXT:    [[SUB:%.*]] = lshr i8 -1, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SUB]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %op1_p2 = icmp ule i8 %x, 6

@@ -351,10 +351,10 @@ define i64 @test14(i64 %x, i32 %y) {
 
 define i64 @test15(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i32 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[NOTMASK]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[UREM:%.*]] = zext nneg i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 31, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 -1, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[X:%.*]]
+; CHECK-NEXT:    [[UREM:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    ret i64 [[UREM]]
 ;
   %shl = shl i32 1, %y
@@ -724,10 +724,10 @@ define <2 x i1> @test25_vec(<2 x i32> %A) {
 
 define i1 @test26(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i32 -1, [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[NOTMASK]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    [[E:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 31, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 -1, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[E]]
 ;
   %C = shl i32 1, %B ; not a constant

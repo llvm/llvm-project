@@ -245,9 +245,10 @@ define i8 @shl1_decrement(i8 %x, i8 %y) {
 define i8 @shl1_decrement_commute(i8 %x, i8 noundef %p) {
 ; CHECK-LABEL: @shl1_decrement_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = ashr i8 [[P:%.*]], 1
-; CHECK-NEXT:    [[MULSHL:%.*]] = shl i8 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[M1:%.*]] = sub i8 [[MULSHL]], [[Y]]
-; CHECK-NEXT:    ret i8 [[M1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = lshr i8 -1, [[TMP1]]
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y]], [[X1]]
+; CHECK-NEXT:    ret i8 [[M]]
 ;
   %y = ashr i8 %p, 1 ; thwart complexity-based canonicalization
   %pow2x = shl i8 1, %x
@@ -286,8 +287,8 @@ define i8 @shl1_nsw_decrement(i8 %x, i8 %y) {
 
 define i32 @shl1_decrement_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shl1_decrement_use(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i32 -1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = xor i32 [[NOTMASK]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 31, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = lshr i32 -1, [[TMP1]]
 ; CHECK-NEXT:    call void @use32(i32 [[X1]])
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[M]]

@@ -309,9 +309,9 @@ define i128 @rem_euclid_i128(i128 %0) {
 
 define i8 @rem_euclid_non_const_pow2(i8 %0, i8 %1) {
 ; CHECK-LABEL: @rem_euclid_non_const_pow2(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[NOTMASK]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP3]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i8 7, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i8 -1, [[TMP3]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP4]], [[TMP1:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %pow2 = shl i8 1, %0
