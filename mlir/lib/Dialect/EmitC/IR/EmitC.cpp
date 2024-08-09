@@ -1131,7 +1131,6 @@ static void printSwitchCases(OpAsmPrinter &parser, Operation *op,
     parser << "case " << value << ": ";
     parser.printRegion(*region, /*printEntryBlockArgs=*/false);
   }
-  return;
 }
 
 ParseResult SwitchOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1179,21 +1178,19 @@ ParseResult SwitchOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-void SwitchOp::print(OpAsmPrinter &parser) {
-  parser << ' ';
-  parser << getArg();
+void SwitchOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p << getArg();
   SmallVector<StringRef, 2> elidedAttrs;
   elidedAttrs.push_back("cases");
-  parser.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
-  parser << ' ';
-  printSwitchCases(parser, *this, getCasesAttr(), getCaseRegions());
-  parser.printNewline();
-  parser << "default";
-  parser << ' ';
-  parser.printRegion(getDefaultRegion(), /*printEntryBlockArgs=*/true,
-                     /*printBlockTerminators=*/true);
-
-  return;
+  p.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
+  p << ' ';
+  printSwitchCases(p, *this, getCasesAttr(), getCaseRegions());
+  p.printNewline();
+  p << "default";
+  p << ' ';
+  p.printRegion(getDefaultRegion(), /*printEntryBlockArgs=*/true,
+                /*printBlockTerminators=*/true);
 }
 
 static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,
@@ -1250,7 +1247,6 @@ Block &emitc::SwitchOp::getCaseBlock(unsigned idx) {
 void SwitchOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
   llvm::copy(getRegions(), std::back_inserter(successors));
-  return;
 }
 
 void SwitchOp::getEntrySuccessorRegions(
@@ -1274,7 +1270,6 @@ void SwitchOp::getEntrySuccessorRegions(
     }
   }
   successors.emplace_back(&getDefaultRegion());
-  return;
 }
 
 void SwitchOp::getRegionInvocationBounds(
@@ -1296,8 +1291,6 @@ void SwitchOp::getRegionInvocationBounds(
   for (unsigned regIndex = 0, regNum = getNumRegions(); regIndex < regNum;
        ++regIndex)
     bounds.emplace_back(/*lb=*/0, /*ub=*/regIndex == liveIndex);
-
-  return;
 }
 
 //===----------------------------------------------------------------------===//

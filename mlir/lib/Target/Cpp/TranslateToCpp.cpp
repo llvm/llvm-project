@@ -464,7 +464,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::SwitchOp switchOp) {
   raw_indented_ostream &os = emitter.ostream();
 
-  os << "\nswitch(" << emitter.getOrCreateName(switchOp.getArg()) << ") {";
+  os << "\nswitch (" << emitter.getOrCreateName(switchOp.getArg()) << ") {";
 
   for (auto pair : llvm::zip(switchOp.getCases(), switchOp.getCaseRegions())) {
     os << "\ncase "
