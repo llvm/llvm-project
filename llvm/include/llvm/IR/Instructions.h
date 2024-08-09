@@ -2537,7 +2537,7 @@ public:
   /// edges that this phi node will have (use 0 if you really have no idea).
   static PHINode *Create(Type *Ty, unsigned NumReservedValues,
                          const Twine &NameStr = "",
-                         InsertPosition InsertBefore = (BasicBlock*)nullptr) {
+                         InsertPosition InsertBefore = nullptr) {
     return new PHINode(Ty, NumReservedValues, NameStr, InsertBefore);
   }
 
