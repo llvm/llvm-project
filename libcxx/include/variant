@@ -261,6 +261,10 @@ namespace std {
 #include <new>
 #include <version>
 
+#if __has_feature(memory_sanitizer)
+#  include <sanitizer/msan_interface.h>
+#endif
+
 // standard-mandated includes
 
 // [variant.syn]
@@ -781,6 +785,10 @@ _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_TriviallyAvailable,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__dtor() = default,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy() noexcept {
+#  if __has_feature(memory_sanitizer)
+      if (!std::is_constant_evaluated())
+        __sanitizer_dtor_callback(&this->__data, sizeof(this->__data));
+#  endif
       this->__index = __variant_npos<__index_t>;
     } _LIBCPP_EAT_SEMICOLON);
 
