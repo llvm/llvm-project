@@ -26,22 +26,27 @@ using namespace llvm;
 /// an external function. This handles hard cases such as when there was already
 /// a prototype for the external function, but that prototype doesn't match the
 /// arguments we expect to pass in.
-template <class ArgIt>
-static CallInst *ReplaceCallWith(const char *NewFn, CallInst *CI,
-                                 ArgIt ArgBegin, ArgIt ArgEnd,
-                                 Type *RetTy) {
+CallInst *IntrinsicLowering::ReplaceCallWith(const char *NewFn, CallInst *CI,
+                                             ArrayRef<Value *> Args,
+                                             Type *RetTy) {
+  if (!AllowLibraryFunctionCalls) {
+    report_fatal_error(
+        "Trying to lower a call to '" + CI->getCalledFunction()->getName() +
+        "' to a call to an external function '" + NewFn +
+        "', but intrinsic lowering was configured to not allow such lowering.");
+  }
+
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
   Module *M = CI->getModule();
   // Get or insert the definition now.
   std::vector<Type *> ParamTys;
-  for (ArgIt I = ArgBegin; I != ArgEnd; ++I)
-    ParamTys.push_back((*I)->getType());
+  for (auto *I : Args)
+    ParamTys.push_back(I->getType());
   FunctionCallee FCache =
       M->getOrInsertFunction(NewFn, FunctionType::get(RetTy, ParamTys, false));
 
   IRBuilder<> Builder(CI->getParent(), CI->getIterator());
-  SmallVector<Value *, 8> Args(ArgBegin, ArgEnd);
   CallInst *NewCI = Builder.CreateCall(FCache, Args);
   NewCI->setName(CI->getName());
   if (!CI->use_empty())
@@ -199,24 +204,23 @@ static Value *LowerCTLZ(LLVMContext &Context, Value *V, Instruction *IP) {
   return LowerCTPOP(Context, V, IP);
 }
 
-static void ReplaceFPIntrinsicWithCall(CallInst *CI, const char *Fname,
-                                       const char *Dname,
-                                       const char *LDname) {
+void IntrinsicLowering::ReplaceFPIntrinsicWithCall(CallInst *CI,
+                                                   const char *Fname,
+                                                   const char *Dname,
+                                                   const char *LDname) {
+  SmallVector<Value *> Args{CI->args()};
   switch (CI->getArgOperand(0)->getType()->getTypeID()) {
   default: llvm_unreachable("Invalid type in intrinsic");
   case Type::FloatTyID:
-    ReplaceCallWith(Fname, CI, CI->arg_begin(), CI->arg_end(),
-                    Type::getFloatTy(CI->getContext()));
+    ReplaceCallWith(Fname, CI, Args, Type::getFloatTy(CI->getContext()));
     break;
   case Type::DoubleTyID:
-    ReplaceCallWith(Dname, CI, CI->arg_begin(), CI->arg_end(),
-                    Type::getDoubleTy(CI->getContext()));
+    ReplaceCallWith(Dname, CI, Args, Type::getDoubleTy(CI->getContext()));
     break;
   case Type::X86_FP80TyID:
   case Type::FP128TyID:
   case Type::PPC_FP128TyID:
-    ReplaceCallWith(LDname, CI, CI->arg_begin(), CI->arg_end(),
-                    CI->getArgOperand(0)->getType());
+    ReplaceCallWith(LDname, CI, Args, CI->getArgOperand(0)->getType());
     break;
   }
 }
@@ -352,7 +356,8 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     Ops[0] = CI->getArgOperand(0);
     Ops[1] = CI->getArgOperand(1);
     Ops[2] = Size;
-    ReplaceCallWith("memcpy", CI, Ops, Ops+3, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memcpy", CI, {Ops, Ops + 3},
+                    CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::memmove: {
@@ -363,7 +368,8 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     Ops[0] = CI->getArgOperand(0);
     Ops[1] = CI->getArgOperand(1);
     Ops[2] = Size;
-    ReplaceCallWith("memmove", CI, Ops, Ops+3, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memmove", CI, {Ops, Ops + 3},
+                    CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::memset: {
@@ -378,7 +384,8 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
                                    Type::getInt32Ty(Context),
                                    /* isSigned */ false);
     Ops[2] = Size;
-    ReplaceCallWith("memset", CI, Ops, Ops+3, CI->getArgOperand(0)->getType());
+    ReplaceCallWith("memset", CI, {Ops, Ops + 3},
+                    CI->getArgOperand(0)->getType());
     break;
   }
   case Intrinsic::sqrt: {
