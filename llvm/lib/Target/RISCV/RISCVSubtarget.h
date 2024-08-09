@@ -308,6 +308,8 @@ public:
   }
 
   bool supportsInitUndef() const override { return hasVInstructions(); }
+
+  bool enableEarlyIfConversion() const override;
 };
 } // End llvm namespace
 

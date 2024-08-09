@@ -151,6 +151,19 @@ public:
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
 
+  int getICmpCost(ArrayRef<MachineOperand> Cond,
+                  const TargetSchedModel &SchedModel) const;
+  void insertICmp(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                  const DebugLoc &DL, Register DstReg,
+                  ArrayRef<MachineOperand> Cond) const;
+  bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
+                       Register, Register, Register, int &, int &,
+                       int &) const override;
+  void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                    const DebugLoc &DL, Register DstReg,
+                    ArrayRef<MachineOperand> Cond, Register TrueReg,
+                    Register FalseReg) const override;
+
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
   std::optional<DestSourcePair>
