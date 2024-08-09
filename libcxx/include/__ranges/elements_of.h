@@ -13,11 +13,11 @@
 #include <__config>
 #include <__memory/allocator.h>
 #include <__ranges/concepts.h>
-#include <__utility/move.h>
+#include <__utility/forward.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -29,32 +29,27 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <range _Range, class _Allocator = allocator<byte>> struct elements_of {
+template <range _Range, class _Allocator = allocator<byte>>
+struct elements_of {
   _LIBCPP_NO_UNIQUE_ADDRESS _Range range;
   _LIBCPP_NO_UNIQUE_ADDRESS _Allocator allocator = _Allocator();
 
-#if defined(_LIBCPP_COMPILER_CLANG_BASED) &&                                   \
-    defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
   // This explicit constructor is required because AppleClang 15 hasn't
   // implemented P0960R3.
-  template <std::ranges::range _Range2,
-            class _Allocator2 = std::allocator<std::byte>>
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(
-      _Range2 &&Range, _Allocator2 &&Alloc = _Allocator())
-      : range(std::forward<_Range2>(Range)),
-        allocator(std::forward<_Allocator2>(Alloc)) {}
-#endif
+  template <std::ranges::range _Range2, class _Allocator2 = std::allocator<std::byte>>
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(_Range2&& Range, _Allocator2&& Alloc = _Allocator())
+      : range(std::forward<_Range2>(Range)), allocator(std::forward<_Allocator2>(Alloc)) {}
+#  endif
 };
 
 template <class _Range, class _Allocator = allocator<byte>>
-#if defined(_LIBCPP_COMPILER_CLANG_BASED) &&                                   \
-    defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
 // This explicit constraint is required because AppleClang 15 might not deduce
 // the correct type for `_Range` without it.
-  requires range<_Range &&>
-#endif
-elements_of(_Range &&,
-            _Allocator = _Allocator()) -> elements_of<_Range &&, _Allocator>;
+  requires range<_Range&&>
+#  endif
+elements_of(_Range&&, _Allocator = _Allocator()) -> elements_of<_Range&&, _Allocator>;
 
 } // namespace ranges
 
