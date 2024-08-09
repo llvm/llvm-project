@@ -40,6 +40,7 @@ add_clang_library(clangTidyBugproneModule
   MisplacedPointerArithmeticInAllocCheck.cpp
   MisplacedWideningCastCheck.cpp
   MoveForwardingReferenceCheck.cpp
+  MoveSharedPointerContentsCheck.cpp
   MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
