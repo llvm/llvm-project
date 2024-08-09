@@ -9,9 +9,7 @@ void f1(void) {
   d = (&x + 1) - &x; // no-warning ('&x' is like a single-element array)
   d = &x - (&x + 1); // no-warning
   d = (&x + 0) - &x; // no-warning
-
-  d = (z + 9) - z; // no-warning (pointers to same array)
-  d = (z + 10) - z; // no-warning (pointer to "one after the end")
+  d = (z + 10) - z; // no-warning
 }
 
 void f2(void) {

@@ -2503,12 +2503,9 @@ chunks. According to the C standard §6.5.6 only subtraction of pointers that
 point into (or one past the end) the same array object is valid (for this
 purpose non-array variables are like arrays of size 1). This checker only
 searches for different memory objects at subtraction, but does not check if the
-array index is correct (
-:ref:`alpha.security.ArrayBoundsV2 <alpha-security-ArrayBoundsV2>` checks the
-index to some extent).
-
-Furthermore, only cases are reported where stack-allocated objects are involved
-(no warnings on pointers to memory allocated by `malloc`).
+array index is correct. Furthermore, only cases are reported where
+stack-allocated objects are involved (no warnings on pointers to memory
+allocated by `malloc`).
 
 .. code-block:: c
 
