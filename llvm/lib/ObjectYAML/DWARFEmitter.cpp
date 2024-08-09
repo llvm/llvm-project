@@ -405,8 +405,8 @@ static Expected<uint64_t> writeDIE(const DWARFYAML::Data &DI, uint64_t CUIndex,
 }
 
 Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (uint64_t I = 0; I < DI.CompileUnits.size(); ++I) {
-    const DWARFYAML::Unit &Unit = DI.CompileUnits[I];
+  for (uint64_t I = 0; I < DI.Units.size(); ++I) {
+    const DWARFYAML::Unit &Unit = DI.Units[I];
     uint8_t AddrSize;
     if (Unit.AddrSize)
       AddrSize = *Unit.AddrSize;
@@ -414,8 +414,24 @@ Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
       AddrSize = DI.Is64BitAddrSize ? 8 : 4;
     dwarf::FormParams Params = {Unit.Version, AddrSize, Unit.Format};
     uint64_t Length = 3; // sizeof(version) + sizeof(address_size)
-    Length += Unit.Version >= 5 ? 1 : 0;       // sizeof(unit_type)
     Length += Params.getDwarfOffsetByteSize(); // sizeof(debug_abbrev_offset)
+    if (Unit.Version >= 5) {
+      ++Length; // sizeof(unit_type)
+      switch (Unit.Type) {
+      case dwarf::DW_UT_compile:
+      case dwarf::DW_UT_partial:
+      default:
+        break;
+      case dwarf::DW_UT_type:
+      case dwarf::DW_UT_split_type:
+        // sizeof(type_signature) + sizeof(type_offset)
+        Length += 8 + Params.getDwarfOffsetByteSize();
+        break;
+      case dwarf::DW_UT_skeleton:
+      case dwarf::DW_UT_split_compile:
+        Length += 8; // sizeof(dwo_id)
+      }
+    }
 
     // Since the length of the current compilation unit is undetermined yet, we
     // firstly write the content of the compilation unit to a buffer to
@@ -461,6 +477,21 @@ Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
       writeInteger((uint8_t)Unit.Type, OS, DI.IsLittleEndian);
       writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
       writeDWARFOffset(AbbrevTableOffset, Unit.Format, OS, DI.IsLittleEndian);
+      switch (Unit.Type) {
+      case dwarf::DW_UT_compile:
+      case dwarf::DW_UT_partial:
+      default:
+        break;
+      case dwarf::DW_UT_type:
+      case dwarf::DW_UT_split_type:
+        writeInteger(Unit.TypeSignatureOrDwoID, OS, DI.IsLittleEndian);
+        writeDWARFOffset(Unit.TypeOffset, Unit.Format, OS, DI.IsLittleEndian);
+        break;
+      case dwarf::DW_UT_skeleton:
+      case dwarf::DW_UT_split_compile:
+        writeInteger(Unit.TypeSignatureOrDwoID, OS, DI.IsLittleEndian);
+        break;
+      }
     } else {
       writeDWARFOffset(AbbrevTableOffset, Unit.Format, OS, DI.IsLittleEndian);
       writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
