@@ -6106,6 +6106,51 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         DAG.getNode(AArch64ISD::CTTZ_ELTS, dl, MVT::i64, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, dl, Op.getValueType());
   }
+  case Intrinsic::experimental_vector_match: {
+    SDValue ID =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_match, dl, MVT::i64);
+
+    auto Op1 = Op.getOperand(1);
+    auto Op2 = Op.getOperand(2);
+    auto Mask = Op.getOperand(3);
+    auto SegmentSize =
+        cast<ConstantSDNode>(Op.getOperand(4))->getLimitedValue();
+
+    EVT VT = Op.getValueType();
+    auto MinNumElts = VT.getVectorMinNumElements();
+
+    assert(Op1.getValueType() == Op2.getValueType() && "Type mismatch.");
+    assert(Op1.getValueSizeInBits().getKnownMinValue() == 128 &&
+           "Custom lower only works on 128-bit segments.");
+    assert((Op1.getValueType().getVectorElementType() == MVT::i8 ||
+            Op1.getValueType().getVectorElementType() == MVT::i16) &&
+           "Custom lower only supports 8-bit or 16-bit characters.");
+    assert(SegmentSize == MinNumElts && "Custom lower needs segment size to "
+                                        "match minimum number of elements.");
+
+    if (VT.isScalableVector())
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, ID, Mask, Op1, Op2);
+
+    // We can use the SVE2 match instruction to lower this intrinsic by
+    // converting the operands to scalable vectors, doing a match, and then
+    // extracting a fixed-width subvector from the scalable vector.
+
+    EVT OpVT = Op1.getValueType();
+    EVT OpContainerVT = getContainerForFixedLengthVector(DAG, OpVT);
+    EVT MatchVT = OpContainerVT.changeElementType(MVT::i1);
+
+    auto ScalableOp1 = convertToScalableVector(DAG, OpContainerVT, Op1);
+    auto ScalableOp2 = convertToScalableVector(DAG, OpContainerVT, Op2);
+    auto ScalableMask = DAG.getNode(ISD::SIGN_EXTEND, dl, OpVT, Mask);
+    ScalableMask = convertFixedMaskToScalableVector(ScalableMask, DAG);
+
+    SDValue Match = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MatchVT, ID,
+                                ScalableMask, ScalableOp1, ScalableOp2);
+
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT,
+                       DAG.getNode(ISD::SIGN_EXTEND, dl, OpContainerVT, Match),
+                       DAG.getVectorIdxConstant(0, dl));
+  }
   }
 }
 
@@ -26546,6 +26591,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
       return;
     }
+    case Intrinsic::experimental_vector_match:
     case Intrinsic::get_active_lane_mask: {
       if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
         return;

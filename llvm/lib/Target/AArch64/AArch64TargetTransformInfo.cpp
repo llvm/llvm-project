@@ -3856,6 +3856,18 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   }
 }
 
+bool AArch64TTIImpl::hasVectorMatch(VectorType *VT, unsigned SegSize) const {
+  // Check that the target has SVE2 (and SVE is available), that `VT' is a
+  // legal type for MATCH, and that the segment size is 128-bit.
+  if (ST->hasSVE2() && ST->isSVEAvailable() &&
+      VT->getPrimitiveSizeInBits().getKnownMinValue() == 128 &&
+      VT->getElementCount().getKnownMinValue() == SegSize &&
+      (VT->getElementCount().getKnownMinValue() == 8 ||
+       VT->getElementCount().getKnownMinValue() == 16))
+    return true;
+  return false;
+}
+
 InstructionCost
 AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                        FastMathFlags FMF,

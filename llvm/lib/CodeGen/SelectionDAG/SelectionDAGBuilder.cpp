@@ -8099,6 +8099,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
              DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ResultVT, Vec, Index));
     return;
   }
+  case Intrinsic::experimental_vector_match: {
+    auto *VT = dyn_cast<VectorType>(I.getOperand(0)->getType());
+    auto SegmentSize = cast<ConstantInt>(I.getOperand(3))->getLimitedValue();
+    const auto &TTI =
+        TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
+    assert(VT && TTI.hasVectorMatch(VT, SegmentSize) && "Unsupported type!");
+    visitTargetIntrinsic(I, Intrinsic);
+    return;
+  }
   case Intrinsic::vector_reverse:
     visitVectorReverse(I);
     return;
