@@ -127,9 +127,9 @@ TEST(SupportFileListTest, RelativePathMatchesWindows) {
 }
 
 // Support file is a symlink to the breakpoint file.
-// A matching prefix is set.
-// Should find the two compatible.
 // Absolute paths are used.
+// A matching prefix is set.
+// Should find it compatible.
 TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
@@ -151,9 +151,33 @@ TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
 }
 
 // Support file is a symlink to the breakpoint file.
-// A matching prefix is set.
-// Should find the two compatible.
+// Absolute paths are used.
+// A matching prefix is set, which is the root directory.
+// Should find it compatible.
+TEST(SupportFileListTest, RootDirectory) {
+  // Prepare FS
+  llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
+      FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
+
+  // Prepare RealpathPrefixes
+  FileSpecList file_spec_list;
+  file_spec_list.EmplaceBack("/");
+  RealpathPrefixes prefixes(file_spec_list, fs);
+
+  // Prepare support file list
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("/real_dir/foo.h"), &prefixes);
+  EXPECT_EQ(ret, (size_t)0);
+}
+
+// Support file is a symlink to the breakpoint file.
 // Relative paths are used.
+// A matching prefix is set.
+// Should find it compatible.
 TEST(SupportFileListTest, SymlinkedRelativePaths) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
@@ -177,7 +201,7 @@ TEST(SupportFileListTest, SymlinkedRelativePaths) {
 // Support file is a symlink to the breakpoint file.
 // A matching prefix is set.
 // Input file only match basename and not directory.
-// Should find the two incompatible.
+// Should find it incompatible.
 TEST(SupportFileListTest, RealpathOnlyMatchFileName) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
@@ -199,9 +223,33 @@ TEST(SupportFileListTest, RealpathOnlyMatchFileName) {
 }
 
 // Support file is a symlink to the breakpoint file.
+// A prefix is set, which is a matching string prefix, but not a path prefix.
+// Should find it incompatible.
+TEST(SupportFileListTest, DirectoryMatchStringPrefixButNotWholeDirectoryName) {
+  // Prepare FS
+  llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
+      FileSpec("symlink_dir/foo.h"), FileSpec("real_dir/foo.h")));
+
+  // Prepare RealpathPrefixes
+  FileSpecList file_spec_list;
+  file_spec_list.EmplaceBack("symlink"); // This is a string prefix of the
+                                         // symlink but not a path prefix.
+  RealpathPrefixes prefixes(file_spec_list, fs);
+
+  // Prepare support file list
+  SupportFileList support_file_list;
+  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+
+  // Test
+  size_t ret = support_file_list.FindCompatibleIndex(
+      0, FileSpec("real_dir/foo.h"), &prefixes);
+  EXPECT_EQ(ret, UINT32_MAX);
+}
+
+// Support file is a symlink to the breakpoint file.
 // A matching prefix is set.
 // However, the breakpoint is set with a partial path.
-// Should find the two compatible.
+// Should find it compatible.
 TEST(SupportFileListTest, PartialBreakpointPath) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
@@ -225,7 +273,7 @@ TEST(SupportFileListTest, PartialBreakpointPath) {
 // Support file is a symlink to the breakpoint file.
 // A matching prefix is set.
 // However, the basename is different between the symlink and its target.
-// Should find the two incompatible.
+// Should find it incompatible.
 TEST(SupportFileListTest, DifferentBasename) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
@@ -248,7 +296,7 @@ TEST(SupportFileListTest, DifferentBasename) {
 
 // No prefixes are configured.
 // The support file and the breakpoint file are different.
-// Should find the two incompatible.
+// Should find it incompatible.
 TEST(SupportFileListTest, NoPrefixes) {
   // Prepare support file list
   SupportFileList support_file_list;
@@ -262,7 +310,7 @@ TEST(SupportFileListTest, NoPrefixes) {
 
 // No prefixes are configured.
 // The support file and the breakpoint file are the same.
-// Should find the two compatible.
+// Should find it compatible.
 TEST(SupportFileListTest, SameFile) {
   // Prepare support file list
   SupportFileList support_file_list;
