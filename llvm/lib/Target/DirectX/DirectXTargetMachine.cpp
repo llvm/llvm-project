@@ -46,7 +46,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILTranslateMetadataPass(*PR);
-  initializeDXILResourceWrapperPass(*PR);
+  initializeDXILResourceMDWrapperPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
 }
 
@@ -102,8 +102,7 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
 
 DirectXTargetMachine::~DirectXTargetMachine() {}
 
-void DirectXTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "DirectXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }

@@ -388,8 +388,6 @@ public:
     return MVT::i32;
   }
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
-
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 };
@@ -575,8 +573,6 @@ enum NodeType : unsigned {
   TBUFFER_LOAD_FORMAT_D16,
   DS_ORDERED_COUNT,
   ATOMIC_CMP_SWAP,
-  ATOMIC_LOAD_FMIN,
-  ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,
   BUFFER_LOAD_UBYTE,
   BUFFER_LOAD_USHORT,

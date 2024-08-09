@@ -352,14 +352,22 @@ define void @buffer_store_f64__voffset_add(ptr addrspace(8) inreg %rsrc, double 
 ; VERDE-LABEL: buffer_store_f64__voffset_add:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CHECK-LABEL: buffer_store_f64__voffset_add:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
@@ -371,14 +379,22 @@ define void @buffer_store_v2f64__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x 
 ; VERDE-LABEL: buffer_store_v2f64__voffset_add:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CHECK-LABEL: buffer_store_v2f64__voffset_add:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
@@ -390,14 +406,22 @@ define void @buffer_store_i64__voffset_add(ptr addrspace(8) inreg %rsrc, i64 %da
 ; VERDE-LABEL: buffer_store_i64__voffset_add:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CHECK-LABEL: buffer_store_i64__voffset_add:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
@@ -409,18 +433,674 @@ define void @buffer_store_v2i64__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x 
 ; VERDE-LABEL: buffer_store_v2i64__voffset_add:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CHECK-LABEL: buffer_store_v2i64__voffset_add:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   call void @llvm.amdgcn.raw.ptr.buffer.store.v2i64(<2 x i64> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p0__voffset_add(ptr addrspace(8) inreg %rsrc, ptr %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p0__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p0__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p0(ptr %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p0__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p0__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p0__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p0(<2 x ptr> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p1__voffset_add(ptr addrspace(8) inreg %rsrc, ptr addrspace(1) %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p1__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p1__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p1(ptr addrspace(1) %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p1__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr addrspace(1)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p1__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p1__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p1(<2 x ptr addrspace(1)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p4__voffset_add(ptr addrspace(8) inreg %rsrc, ptr addrspace(4) %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p4__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p4__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p4(ptr addrspace(4) %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p4__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr addrspace(4)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p4__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p4__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p4(<2 x ptr addrspace(4)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p999__voffset_add(ptr addrspace(8) inreg %rsrc, ptr addrspace(999) %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p999__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p999__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p999(ptr addrspace(999) %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p999__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr addrspace(999)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p999__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p999__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p999(<2 x ptr addrspace(999)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p2__voffset_add(ptr addrspace(8) inreg %rsrc, ptr addrspace(2) %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p2__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p2__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p2(ptr addrspace(2) %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p2__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr addrspace(2)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p2__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p2__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p2(<2 x ptr addrspace(2)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v3p2__voffset_add(ptr addrspace(8) inreg %rsrc, <3 x ptr addrspace(2)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v3p2__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v3p2__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3p2(<3 x ptr addrspace(2)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v4p2__voffset_add(ptr addrspace(8) inreg %rsrc, <4 x ptr addrspace(2)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v4p2__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v4p2__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4p2(<4 x ptr addrspace(2)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p3__voffset_add(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p3__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p3__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p3(ptr addrspace(3) %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p3__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr addrspace(3)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p3__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p3__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p3(<2 x ptr addrspace(3)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v3p3__voffset_add(ptr addrspace(8) inreg %rsrc, <3 x ptr addrspace(3)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v3p3__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v3p3__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3p3(<3 x ptr addrspace(3)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v4p3__voffset_add(ptr addrspace(8) inreg %rsrc, <4 x ptr addrspace(3)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v4p3__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v4p3__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4p3(<4 x ptr addrspace(3)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p5__voffset_add(ptr addrspace(8) inreg %rsrc, ptr addrspace(5) %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p5__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p5__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p5(ptr addrspace(5) %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p5__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr addrspace(5)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p5__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p5__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p5(<2 x ptr addrspace(5)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v3p5__voffset_add(ptr addrspace(8) inreg %rsrc, <3 x ptr addrspace(5)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v3p5__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v3p5__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3p5(<3 x ptr addrspace(5)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v4p5__voffset_add(ptr addrspace(8) inreg %rsrc, <4 x ptr addrspace(5)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v4p5__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v4p5__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4p5(<4 x ptr addrspace(5)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_p6__voffset_add(ptr addrspace(8) inreg %rsrc, ptr addrspace(6) %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_p6__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_p6__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.p6(ptr addrspace(6) %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2p6__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x ptr addrspace(6)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2p6__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2p6__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2p6(<2 x ptr addrspace(6)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v3p6__voffset_add(ptr addrspace(8) inreg %rsrc, <3 x ptr addrspace(6)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v3p6__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v3p6__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx3 v[0:2], v3, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3p6(<3 x ptr addrspace(6)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v4p6__voffset_add(ptr addrspace(8) inreg %rsrc, <4 x ptr addrspace(6)> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v4p6__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    s_mov_b32 s11, s17
+; VERDE-NEXT:    s_mov_b32 s10, s16
+; VERDE-NEXT:    s_mov_b32 s9, s7
+; VERDE-NEXT:    s_mov_b32 s8, s6
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v4p6__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s11, s17
+; CHECK-NEXT:    s_mov_b32 s10, s16
+; CHECK-NEXT:    s_mov_b32 s9, s7
+; CHECK-NEXT:    s_mov_b32 s8, s6
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4p6(<4 x ptr addrspace(6)> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret void
 }
 

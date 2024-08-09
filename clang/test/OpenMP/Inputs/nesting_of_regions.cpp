@@ -4882,6 +4882,12 @@ void foo() {
   }
 #pragma omp target // expected-error {{target construct with nested teams region contains statements outside of the teams construct}}
   {
+#pragma omp teams  // expected-note {{nested teams construct here}}
+    ++a;
+    ++a;           // expected-note {{statement outside teams construct here}}
+  }
+#pragma omp target // expected-error {{target construct with nested teams region contains statements outside of the teams construct}}
+  {
     while (0)      // expected-note {{statement outside teams construct here}}
 #pragma omp teams  // expected-note {{nested teams construct here}}
     ++a;
@@ -5336,11 +5342,6 @@ void foo() {
 #pragma omp target parallel for
   for (int i = 0; i < 10; ++i) {
 #pragma omp barrier // expected-error {{region cannot be closely nested inside 'target parallel for' region}}
-    bar();
-  }
-#pragma omp target parallel for
-  for (int i = 0; i < 10; ++i) {
-#pragma omp scan // expected-error {{region cannot be closely nested inside 'target parallel for' region}}
     bar();
   }
 #pragma omp target parallel for
@@ -7140,7 +7141,7 @@ void foo() {
   }
 #pragma omp target simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{region cannot be closely nested inside 'target simd' region; perhaps you forget to enclose 'omp scan' directive into a for, simd, for simd, parallel for, or parallel for simd region?}} omp51-error {{region cannot be closely nested inside 'target simd' region; perhaps you forget to enclose 'omp scan' directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
+#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}} omp51-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp target simd
@@ -14133,6 +14134,12 @@ void foo() {
 #pragma omp teams // expected-note {{nested teams construct here}}
     ++a;
   }
+#pragma omp target // expected-error {{target construct with nested teams region contains statements outside of the teams construct}}
+  {
+#pragma omp teams // expected-note {{nested teams construct here}}
+    ++a;
+    ++a;          // expected-note {{statement outside teams construct here}}
+  }
 #pragma omp target
   {
 #pragma omp taskloop
@@ -14567,11 +14574,6 @@ void foo() {
 #pragma omp target parallel for
   for (int i = 0; i < 10; ++i) {
 #pragma omp barrier // expected-error {{region cannot be closely nested inside 'target parallel for' region}}
-    bar();
-  }
-#pragma omp target parallel for
-  for (int i = 0; i < 10; ++i) {
-#pragma omp scan // expected-error {{region cannot be closely nested inside 'target parallel for' region}}
     bar();
   }
 #pragma omp target parallel for
@@ -16673,7 +16675,7 @@ void foo() {
   }
 #pragma omp target simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{region cannot be closely nested inside 'target simd' region; perhaps you forget to enclose 'omp scan' directive into a for, simd, for simd, parallel for, or parallel for simd region?}} omp51-error {{region cannot be closely nested inside 'target simd' region; perhaps you forget to enclose 'omp scan' directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
+#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}} omp51-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp target simd

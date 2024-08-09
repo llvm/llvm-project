@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) #0 {
 ; GCN-LABEL: atomic_max_i32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s11, 0xf000
 ; GCN-NEXT:    s_mov_b32 s10, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
@@ -23,10 +23,10 @@ define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN-NEXT:    buffer_load_dwordx2 v[1:2], v[1:2], s[8:11], 0 addr64 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %atomic
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0xf
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0xf
 ; GCN-NEXT:    s_mov_b32 s8, s10
 ; GCN-NEXT:    s_mov_b32 s9, s10
 ; GCN-NEXT:    s_mov_b32 s6, -1
@@ -58,7 +58,7 @@ exit:
 define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) #0 {
 ; GCN-LABEL: atomic_max_i32_noret:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xb
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
@@ -67,10 +67,10 @@ define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    buffer_load_dwordx2 v[1:2], v[1:2], s[4:7], 0 addr64 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %atomic
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0xf
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0xf
 ; GCN-NEXT:    s_mov_b32 s4, s6
 ; GCN-NEXT:    s_mov_b32 s5, s6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

@@ -1707,11 +1707,11 @@ LogicalResult AffineDmaStartOp::fold(ArrayRef<Attribute> cstOperands,
 void AffineDmaStartOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getSrcMemRef(),
+  effects.emplace_back(MemoryEffects::Read::get(), &getSrcMemRefMutable(),
                        SideEffects::DefaultResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), getDstMemRef(),
+  effects.emplace_back(MemoryEffects::Write::get(), &getDstMemRefMutable(),
                        SideEffects::DefaultResource::get());
-  effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
+  effects.emplace_back(MemoryEffects::Read::get(), &getTagMemRefMutable(),
                        SideEffects::DefaultResource::get());
 }
 
@@ -1797,7 +1797,7 @@ LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
 void AffineDmaWaitOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
+  effects.emplace_back(MemoryEffects::Read::get(), &getTagMemRefMutable(),
                        SideEffects::DefaultResource::get());
 }
 
@@ -4146,11 +4146,9 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
       llvm::append_range(flatExprs, map.getValue().getResults());
       auto operandsRef = llvm::ArrayRef(mapOperands);
       auto dimsRef = operandsRef.take_front(map.getValue().getNumDims());
-      SmallVector<OpAsmParser::UnresolvedOperand> dims(dimsRef.begin(),
-                                                       dimsRef.end());
+      SmallVector<OpAsmParser::UnresolvedOperand> dims(dimsRef);
       auto symsRef = operandsRef.drop_front(map.getValue().getNumDims());
-      SmallVector<OpAsmParser::UnresolvedOperand> syms(symsRef.begin(),
-                                                       symsRef.end());
+      SmallVector<OpAsmParser::UnresolvedOperand> syms(symsRef);
       flatDimOperands.append(map.getValue().getNumResults(), dims);
       flatSymOperands.append(map.getValue().getNumResults(), syms);
       numMapsPerGroup.push_back(map.getValue().getNumResults());

@@ -51,27 +51,29 @@ void cuf::AllocOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 }
 
 template <typename Op>
-static mlir::LogicalResult checkCudaAttr(Op op) {
+static llvm::LogicalResult checkCudaAttr(Op op) {
   if (op.getDataAttr() == cuf::DataAttribute::Device ||
       op.getDataAttr() == cuf::DataAttribute::Managed ||
-      op.getDataAttr() == cuf::DataAttribute::Unified)
+      op.getDataAttr() == cuf::DataAttribute::Unified ||
+      op.getDataAttr() == cuf::DataAttribute::Pinned)
     return mlir::success();
-  return op.emitOpError("expect device, managed or unified cuda attribute");
+  return op.emitOpError()
+         << "expect device, managed, pinned or unified cuda attribute";
 }
 
-mlir::LogicalResult cuf::AllocOp::verify() { return checkCudaAttr(*this); }
+llvm::LogicalResult cuf::AllocOp::verify() { return checkCudaAttr(*this); }
 
 //===----------------------------------------------------------------------===//
 // FreeOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cuf::FreeOp::verify() { return checkCudaAttr(*this); }
+llvm::LogicalResult cuf::FreeOp::verify() { return checkCudaAttr(*this); }
 
 //===----------------------------------------------------------------------===//
 // AllocateOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cuf::AllocateOp::verify() {
+llvm::LogicalResult cuf::AllocateOp::verify() {
   if (getPinned() && getStream())
     return emitOpError("pinned and stream cannot appears at the same time");
   if (!mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getBox().getType())))
@@ -94,17 +96,19 @@ mlir::LogicalResult cuf::AllocateOp::verify() {
 // DataTransferOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cuf::DataTransferOp::verify() {
+llvm::LogicalResult cuf::DataTransferOp::verify() {
   mlir::Type srcTy = getSrc().getType();
   mlir::Type dstTy = getDst().getType();
   if ((fir::isa_ref_type(srcTy) && fir::isa_ref_type(dstTy)) ||
-      (fir::isa_box_type(srcTy) && fir::isa_box_type(dstTy)))
+      (fir::isa_box_type(srcTy) && fir::isa_box_type(dstTy)) ||
+      (fir::isa_ref_type(srcTy) && fir::isa_box_type(dstTy)) ||
+      (fir::isa_box_type(srcTy) && fir::isa_ref_type(dstTy)))
     return mlir::success();
   if (fir::isa_trivial(srcTy) &&
       matchPattern(getSrc().getDefiningOp(), mlir::m_Constant()))
     return mlir::success();
   return emitOpError()
-         << "expect src and dst to be both references or descriptors or src to "
+         << "expect src and dst to be references or descriptors or src to "
             "be a constant";
 }
 
@@ -112,7 +116,7 @@ mlir::LogicalResult cuf::DataTransferOp::verify() {
 // DeallocateOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cuf::DeallocateOp::verify() {
+llvm::LogicalResult cuf::DeallocateOp::verify() {
   if (!mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getBox().getType())))
     return emitOpError(
         "expect box to be a reference to class or box type value");
@@ -223,7 +227,7 @@ void printCUFKernelLoopControl(
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
-mlir::LogicalResult cuf::KernelOp::verify() {
+llvm::LogicalResult cuf::KernelOp::verify() {
   if (getLowerbound().size() != getUpperbound().size() ||
       getLowerbound().size() != getStep().size())
     return emitOpError(

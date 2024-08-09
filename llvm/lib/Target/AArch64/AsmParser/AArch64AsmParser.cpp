@@ -3674,6 +3674,7 @@ static const struct Extension {
     {"rcpc", {AArch64::FeatureRCPC}},
     {"rng", {AArch64::FeatureRandGen}},
     {"sve", {AArch64::FeatureSVE}},
+    {"sve-b16b16", {AArch64::FeatureSVEB16B16}},
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve2-aes", {AArch64::FeatureSVE2AES}},
     {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
@@ -8094,8 +8095,8 @@ ParseStatus AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
   if (getParser().parseExpression(ImmL))
     return ParseStatus::NoMatch;
 
-  unsigned ImmFVal = dyn_cast<MCConstantExpr>(ImmF)->getValue();
-  unsigned ImmLVal = dyn_cast<MCConstantExpr>(ImmL)->getValue();
+  unsigned ImmFVal = cast<MCConstantExpr>(ImmF)->getValue();
+  unsigned ImmLVal = cast<MCConstantExpr>(ImmL)->getValue();
 
   Operands.push_back(
       AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));

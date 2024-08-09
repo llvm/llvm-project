@@ -543,6 +543,24 @@ bb8:                                              ; preds = %bb2
   ret void
 }
 
+; GCN-LABEL: {{^}}insert_or_disj_index:
+; GCN: v_mov_b32_e32 v[[#VIDX:]], 0
+
+; MOVREL: s_mov_b32 m0, s{{[0-9]+}}
+; MOVREL: v_movreld_b32_e32 v[[#VIDX + 1]], v{{[0-9]+}}
+
+; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, gpr_idx(DST)
+; IDXMODE: v_mov_b32_e32 v[[#VIDX + 1]], v{{[0-9]+}}
+; IDXMODE: s_set_gpr_idx_off
+define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace(4) %in, i32 %val, <4 x i32> inreg %desc, i32 inreg %A) {
+entry:
+  %idx = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %desc, i32 %A, i32 0, i32 0)
+  %off = or disjoint i32 %idx, 1
+  %v = insertelement <16 x i32> zeroinitializer, i32 %val, i32 %off
+  store <16 x i32> %v, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare void @llvm.amdgcn.s.barrier() #2
 

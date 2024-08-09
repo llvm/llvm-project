@@ -28,6 +28,7 @@ add_llvm_library(omptarget
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 
   LINK_COMPONENTS
+  FrontendOpenMP
   Support
   Object
 

@@ -21,7 +21,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -1204,7 +1203,10 @@ OpFoldResult arith::RemFOp::fold(FoldAdaptor adaptor) {
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(),
                                       [](const APFloat &a, const APFloat &b) {
                                         APFloat result(a);
-                                        (void)result.remainder(b);
+                                        // APFloat::mod() offers the remainder
+                                        // behavior we want, i.e. the result has
+                                        // the sign of LHS operand.
+                                        (void)result.mod(b);
                                         return result;
                                       });
 }
@@ -1737,6 +1739,8 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   APInt bits = llvm::isa<FloatAttr>(operand)
                    ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()
                    : llvm::cast<IntegerAttr>(operand).getValue();
+  assert(resType.getIntOrFloatBitWidth() == bits.getBitWidth() &&
+         "trying to fold on broken IR: operands have incompatible types");
 
   if (auto resFloatType = llvm::dyn_cast<FloatType>(resType))
     return FloatAttr::get(resType,

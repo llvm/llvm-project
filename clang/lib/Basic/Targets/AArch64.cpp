@@ -204,7 +204,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs" &&
+      Name != "pauthtest")
     return false;
 
   ABI = Name;
@@ -216,6 +217,12 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     // aapcs-soft is not allowed for targets with an FPU, to avoid there being
     // two incomatible ABIs.
     Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
+    return false;
+  }
+  if (getTriple().getEnvironment() == llvm::Triple::PAuthTest &&
+      getTriple().getOS() != llvm::Triple::Linux) {
+    Diags.Report(diag::err_target_unsupported_abi_for_triple)
+        << getTriple().getEnvironmentName() << getTriple().getTriple();
     return false;
   }
   return true;
@@ -449,6 +456,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
 
+  if (HasSVE2p1)
+    Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
+
   if (HasSVE2 && HasSVE2AES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
@@ -467,8 +477,15 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   if (HasSME2) {
-    Builder.defineMacro("__ARM_FEATURE_SME");
-    Builder.defineMacro("__ARM_FEATURE_SME2");
+    Builder.defineMacro("__ARM_FEATURE_SME", "1");
+    Builder.defineMacro("__ARM_FEATURE_SME2", "1");
+    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
+  }
+
+  if (HasSME2p1) {
+    Builder.defineMacro("__ARM_FEATURE_SME", "1");
+    Builder.defineMacro("__ARM_FEATURE_SME2", "1");
+    Builder.defineMacro("__ARM_FEATURE_SME2p1", "1");
     Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
   }
 
@@ -673,26 +690,22 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->FmvPriority;
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return Ext->Priority;
   return 0;
 }
 
 unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
   // Take the maximum priority as per feature cost, so more features win.
-  return llvm::AArch64::ExtensionInfo::MaxFMVPriority;
+  constexpr unsigned MaxFMVPriority = 1000;
+  return MaxFMVPriority;
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return !Ext->DependentFeatures.empty();
+  // FMV extensions which imply no backend features do not affect codegen.
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return !Ext->Features.empty();
   return false;
-}
-
-StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->DependentFeatures;
-  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
@@ -700,7 +713,7 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   llvm::SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, "+");
   for (auto &Feature : Features)
-    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+    if (!llvm::AArch64::parseFMVExtension(Feature.trim()).has_value())
       return false;
   return true;
 }
@@ -743,8 +756,10 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
+      .Case("sve2p1", FPU & SveMode && HasSVE2p1)
       .Case("sme", HasSME)
       .Case("sme2", HasSME2)
+      .Case("sme2p1", HasSME2p1)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
@@ -820,6 +835,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullFP16 = true;
       HasSVE2 = true;
     }
+    if (Feature == "+sve2p1") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+      HasSVE2p1 = true;
+    }
     if (Feature == "+sve2-aes") {
       FPU |= NeonMode;
       FPU |= SveMode;
@@ -868,6 +890,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+sme2") {
       HasSME = true;
       HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "+sme2p1") {
+      HasSME = true;
+      HasSME2 = true;
+      HasSME2p1 = true;
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
@@ -1064,57 +1093,17 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   return true;
 }
 
-bool AArch64TargetInfo::initFeatureMap(
-    llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
-    const std::vector<std::string> &FeaturesVec) const {
-  std::vector<std::string> UpdatedFeaturesVec;
-  // Parse the CPU and add any implied features.
-  std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
-  if (CpuInfo) {
-    auto Exts = CpuInfo->getImpliedExtensions();
-    std::vector<StringRef> CPUFeats;
-    llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
-    for (auto F : CPUFeats) {
-      assert((F[0] == '+' || F[0] == '-') && "Expected +/- in target feature!");
-      UpdatedFeaturesVec.push_back(F.str());
-    }
-  }
-
-  // Process target and dependent features. This is done in two loops collecting
-  // them into UpdatedFeaturesVec: first to add dependent '+'features, second to
-  // add target '+/-'features that can later disable some of features added on
-  // the first loop. Function Multi Versioning features begin with '?'.
-  for (const auto &Feature : FeaturesVec)
-    if (((Feature[0] == '?' || Feature[0] == '+')) &&
-        AArch64TargetInfo::doesFeatureAffectCodeGen(Feature.substr(1))) {
-      StringRef DepFeatures =
-          AArch64TargetInfo::getFeatureDependencies(Feature.substr(1));
-      SmallVector<StringRef, 1> AttrFeatures;
-      DepFeatures.split(AttrFeatures, ",");
-      for (auto F : AttrFeatures)
-        UpdatedFeaturesVec.push_back(F.str());
-    }
-  for (const auto &Feature : FeaturesVec)
-    if (Feature[0] != '?') {
-      std::string UpdatedFeature = Feature;
-      if (Feature[0] == '+') {
-        std::optional<llvm::AArch64::ExtensionInfo> Extension =
-            llvm::AArch64::parseArchExtension(Feature.substr(1));
-        if (Extension)
-          UpdatedFeature = Extension->Feature.str();
-      }
-      UpdatedFeaturesVec.push_back(UpdatedFeature);
-    }
-
-  return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
-}
-
 // Parse AArch64 Target attributes, which are a comma separated list of:
 //  "arch=<arch>" - parsed to features as per -march=..
 //  "cpu=<cpu>" - parsed to features as per -mcpu=.., with CPU set to <cpu>
 //  "tune=<cpu>" - TuneCPU set to <cpu>
 //  "feature", "no-feature" - Add (or remove) feature.
 //  "+feature", "+nofeature" - Add (or remove) feature.
+//
+// A feature may correspond to an Extension (anything with a corresponding
+// AEK_), in which case an ExtensionSet is used to parse it and expand its
+// dependencies. If the feature does not yield a successful parse then it
+// is passed through.
 ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
   if (Features == "default")
@@ -1124,22 +1113,30 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   bool FoundArch = false;
 
   auto SplitAndAddFeatures = [](StringRef FeatString,
-                                std::vector<std::string> &Features) {
+                                std::vector<std::string> &Features,
+                                llvm::AArch64::ExtensionSet &FeatureBits) {
     SmallVector<StringRef, 8> SplitFeatures;
     FeatString.split(SplitFeatures, StringRef("+"), -1, false);
     for (StringRef Feature : SplitFeatures) {
-      StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
-      if (!FeatureName.empty())
-        Features.push_back(FeatureName.str());
+      if (FeatureBits.parseModifier(Feature))
+        continue;
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
+      if (Feature.starts_with("no"))
+        Features.push_back("-" + Feature.drop_front(2).str());
       else
-        // Pushing the original feature string to give a sema error later on
-        // when they get checked.
-        if (Feature.starts_with("no"))
-          Features.push_back("-" + Feature.drop_front(2).str());
-        else
-          Features.push_back("+" + Feature.str());
+        Features.push_back("+" + Feature.str());
     }
   };
+
+  llvm::AArch64::ExtensionSet FeatureBits;
+  // Reconstruct the bitset from the command line option features.
+  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten,
+                                            Ret.Features);
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
@@ -1163,9 +1160,9 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       // Ret.Features.
       if (!AI)
         continue;
-      Ret.Features.push_back(AI->ArchFeature.str());
+      FeatureBits.addArchDefaults(*AI);
       // Add any extra features, after the +
-      SplitAndAddFeatures(Split.second, Ret.Features);
+      SplitAndAddFeatures(Split.second, Ret.Features, FeatureBits);
     } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
@@ -1175,7 +1172,10 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
         std::pair<StringRef, StringRef> Split =
             Feature.split("=").second.trim().split("+");
         Ret.CPU = Split.first;
-        SplitAndAddFeatures(Split.second, Ret.Features);
+        if (auto CpuInfo = llvm::AArch64::parseCpu(Ret.CPU)) {
+          FeatureBits.addCPUDefaults(*CpuInfo);
+          SplitAndAddFeatures(Split.second, Ret.Features, FeatureBits);
+        }
       }
     } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
@@ -1183,25 +1183,23 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       else
         Ret.Tune = Feature.split("=").second.trim();
     } else if (Feature.starts_with("+")) {
-      SplitAndAddFeatures(Feature, Ret.Features);
-    } else if (Feature.starts_with("no-")) {
-      StringRef FeatureName =
-          llvm::AArch64::getArchExtFeature(Feature.split("-").second);
-      if (!FeatureName.empty())
-        Ret.Features.push_back("-" + FeatureName.drop_front(1).str());
-      else
-        Ret.Features.push_back("-" + Feature.split("-").second.str());
+      SplitAndAddFeatures(Feature, Ret.Features, FeatureBits);
     } else {
-      // Try parsing the string to the internal target feature name. If it is
-      // invalid, add the original string (which could already be an internal
-      // name). These should be checked later by isValidFeatureName.
-      StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
-      if (!FeatureName.empty())
-        Ret.Features.push_back(FeatureName.str());
+      if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
+        continue;
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
+      if (Feature.starts_with("no-"))
+        Ret.Features.push_back("-" + Feature.drop_front(3).str());
       else
         Ret.Features.push_back("+" + Feature.str());
     }
   }
+  FeatureBits.toLLVMFeatureList(Ret.Features);
   return Ret;
 }
 
@@ -1571,6 +1569,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_Swift:
   case CC_SwiftAsync:
   case CC_Win64:

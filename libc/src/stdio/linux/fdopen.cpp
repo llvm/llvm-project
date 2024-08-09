@@ -9,9 +9,10 @@
 #include "src/stdio/fdopen.h"
 
 #include "src/__support/File/linux/file.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode)) {
   auto result = LIBC_NAMESPACE::create_file_from_fd(fd, mode);
@@ -22,4 +23,4 @@ LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode)) {
   return reinterpret_cast<::FILE *>(result.value());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

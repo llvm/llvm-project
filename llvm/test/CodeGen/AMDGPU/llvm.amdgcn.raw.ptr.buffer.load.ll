@@ -1180,14 +1180,22 @@ define double @buffer_load_f64__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %v
 ; PREGFX10-LABEL: buffer_load_f64__voffset_add:
 ; PREGFX10:       ; %bb.0:
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[4:7], 0 offen offset:60
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: buffer_load_f64__voffset_add:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[4:7], 0 offen offset:60
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1206,14 +1214,22 @@ define <2 x double> @buffer_load_v2f64__voffset_add(ptr addrspace(8) inreg %rsrc
 ; PREGFX10-LABEL: buffer_load_v2f64__voffset_add:
 ; PREGFX10:       ; %bb.0:
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[4:7], 0 offen offset:60
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: buffer_load_v2f64__voffset_add:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[4:7], 0 offen offset:60
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1232,14 +1248,22 @@ define i64 @buffer_load_i64__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voff
 ; PREGFX10-LABEL: buffer_load_i64__voffset_add:
 ; PREGFX10:       ; %bb.0:
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[4:7], 0 offen offset:60
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: buffer_load_i64__voffset_add:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[4:7], 0 offen offset:60
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1258,14 +1282,22 @@ define <2 x i64> @buffer_load_v2i64__voffset_add(ptr addrspace(8) inreg %rsrc, i
 ; PREGFX10-LABEL: buffer_load_v2i64__voffset_add:
 ; PREGFX10:       ; %bb.0:
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[4:7], 0 offen offset:60
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: buffer_load_v2i64__voffset_add:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[4:7], 0 offen offset:60
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1278,6 +1310,778 @@ define <2 x i64> @buffer_load_v2i64__voffset_add(ptr addrspace(8) inreg %rsrc, i
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x i64> @llvm.amdgcn.raw.ptr.buffer.load.v2i64(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x i64> %data
+}
+
+define ptr @buffer_load_p0__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p0__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p0__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p0__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr @llvm.amdgcn.raw.ptr.buffer.load.p0(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr %data
+}
+
+define <2 x ptr> @buffer_load_v2p0__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p0__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p0__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p0__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr> @llvm.amdgcn.raw.ptr.buffer.load.p0(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr> %data
+}
+
+define ptr addrspace(1) @buffer_load_p1__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p1__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p1__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p1__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr addrspace(1) @llvm.amdgcn.raw.ptr.buffer.load.p1(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr addrspace(1) %data
+}
+
+define <2 x ptr addrspace(1)> @buffer_load_v2p1__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p1__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p1__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p1__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr addrspace(1)> @llvm.amdgcn.raw.ptr.buffer.load.p1(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr addrspace(1)> %data
+}
+
+define ptr addrspace(4) @buffer_load_p4__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p4__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p4__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p4__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr addrspace(4) @llvm.amdgcn.raw.ptr.buffer.load.p4(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr addrspace(4) %data
+}
+
+define <2 x ptr addrspace(4)> @buffer_load_v2p4__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p4__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p4__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p4__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr addrspace(4)> @llvm.amdgcn.raw.ptr.buffer.load.p4(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr addrspace(4)> %data
+}
+
+define ptr addrspace(999) @buffer_load_p999__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p999__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p999__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p999__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr addrspace(999) @llvm.amdgcn.raw.ptr.buffer.load.p999(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr addrspace(999) %data
+}
+
+define <2 x ptr addrspace(999)> @buffer_load_v2p999__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p999__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p999__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p999__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr addrspace(999)> @llvm.amdgcn.raw.ptr.buffer.load.p999(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr addrspace(999)> %data
+}
+
+define ptr addrspace(2) @buffer_load_p2__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p2__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p2__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p2__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr addrspace(2) @llvm.amdgcn.raw.ptr.buffer.load.p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr addrspace(2) %data
+}
+
+define <2 x ptr addrspace(2)> @buffer_load_v2p2__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p2__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p2__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p2__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr addrspace(2)> @llvm.amdgcn.raw.ptr.buffer.load.v2p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr addrspace(2)> %data
+}
+
+define <3 x ptr addrspace(2)> @buffer_load_v3p2__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; GFX10-LABEL: buffer_load_v3p2__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v3p2__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <3 x ptr addrspace(2)> @llvm.amdgcn.raw.ptr.buffer.load.v3p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <3 x ptr addrspace(2)> %data
+}
+
+define <4 x ptr addrspace(2)> @buffer_load_v4p2__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v4p2__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v4p2__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v4p2__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <4 x ptr addrspace(2)> @llvm.amdgcn.raw.ptr.buffer.load.v4p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <4 x ptr addrspace(2)> %data
+}
+
+define ptr addrspace(3) @buffer_load_p3__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p3__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p3__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p3__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr addrspace(3) @llvm.amdgcn.raw.ptr.buffer.load.p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr addrspace(3) %data
+}
+
+define <2 x ptr addrspace(3)> @buffer_load_v2p3__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p3__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p3__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p3__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr addrspace(3)> @llvm.amdgcn.raw.ptr.buffer.load.v2p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr addrspace(3)> %data
+}
+
+define <3 x ptr addrspace(3)> @buffer_load_v3p3__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; GFX10-LABEL: buffer_load_v3p3__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v3p3__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <3 x ptr addrspace(3)> @llvm.amdgcn.raw.ptr.buffer.load.v3p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <3 x ptr addrspace(3)> %data
+}
+
+define <4 x ptr addrspace(3)> @buffer_load_v4p3__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v4p3__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v4p3__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v4p3__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <4 x ptr addrspace(3)> @llvm.amdgcn.raw.ptr.buffer.load.v4p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <4 x ptr addrspace(3)> %data
+}
+
+define ptr addrspace(5) @buffer_load_p5__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p5__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p5__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p5__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr addrspace(5) @llvm.amdgcn.raw.ptr.buffer.load.p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr addrspace(5) %data
+}
+
+define <2 x ptr addrspace(5)> @buffer_load_v2p5__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p5__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p5__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p5__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr addrspace(5)> @llvm.amdgcn.raw.ptr.buffer.load.v2p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr addrspace(5)> %data
+}
+
+define <3 x ptr addrspace(5)> @buffer_load_v3p5__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; GFX10-LABEL: buffer_load_v3p5__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v3p5__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <3 x ptr addrspace(5)> @llvm.amdgcn.raw.ptr.buffer.load.v3p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <3 x ptr addrspace(5)> %data
+}
+
+define <4 x ptr addrspace(5)> @buffer_load_v4p5__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v4p5__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v4p5__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v4p5__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <4 x ptr addrspace(5)> @llvm.amdgcn.raw.ptr.buffer.load.v4p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <4 x ptr addrspace(5)> %data
+}
+
+define ptr addrspace(6) @buffer_load_p6__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_p6__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_p6__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_p6__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call ptr addrspace(6) @llvm.amdgcn.raw.ptr.buffer.load.p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret ptr addrspace(6) %data
+}
+
+define <2 x ptr addrspace(6)> @buffer_load_v2p6__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v2p6__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v2p6__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v2p6__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <2 x ptr addrspace(6)> @llvm.amdgcn.raw.ptr.buffer.load.v2p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <2 x ptr addrspace(6)> %data
+}
+
+define <3 x ptr addrspace(6)> @buffer_load_v3p6__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; GFX10-LABEL: buffer_load_v3p6__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v3p6__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <3 x ptr addrspace(6)> @llvm.amdgcn.raw.ptr.buffer.load.v3p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <3 x ptr addrspace(6)> %data
+}
+
+define <4 x ptr addrspace(6)> @buffer_load_v4p6__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffset) {
+; PREGFX10-LABEL: buffer_load_v4p6__voffset_add:
+; PREGFX10:       ; %bb.0:
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PREGFX10-NEXT:    s_mov_b32 s11, s17
+; PREGFX10-NEXT:    s_mov_b32 s10, s16
+; PREGFX10-NEXT:    s_mov_b32 s9, s7
+; PREGFX10-NEXT:    s_mov_b32 s8, s6
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: buffer_load_v4p6__voffset_add:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s11, s17
+; GFX10-NEXT:    s_mov_b32 s10, s16
+; GFX10-NEXT:    s_mov_b32 s9, s7
+; GFX10-NEXT:    s_mov_b32 s8, s6
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[8:11], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: buffer_load_v4p6__voffset_add:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:60
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  %data = call <4 x ptr addrspace(6)> @llvm.amdgcn.raw.ptr.buffer.load.v4p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret <4 x ptr addrspace(6)> %data
 }
 
 declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32) #0

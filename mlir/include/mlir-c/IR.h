@@ -428,6 +428,14 @@ MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
                                            intptr_t largeElementLimit);
 
+/// Enables the elision of large resources strings by omitting them from the
+/// `dialect_resources` section. The `largeResourceLimit` is used to configure
+/// what is considered to be a "large" resource by providing an upper limit to
+/// the string size.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsElideLargeResourceString(MlirOpPrintingFlags flags,
+                                            intptr_t largeResourceLimit);
+
 /// Enable or disable printing of debug information (based on `enable`). If
 /// 'prettyForm' is set to true, debug information is printed in a more readable
 /// 'pretty' form. Note: The IR generated with 'prettyForm' is not parsable.
@@ -449,6 +457,10 @@ mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 /// Do not verify the operation when using custom operation printers.
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
+
+/// Skip printing regions.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags);
 
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.

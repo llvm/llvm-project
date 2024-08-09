@@ -760,10 +760,6 @@ val void_type : llcontext -> lltype
     [llvm::Type::LabelTy]. *)
 val label_type : llcontext -> lltype
 
-(** [x86_mmx_type c] returns the x86 64-bit MMX register type in the
-    context [c]. See [llvm::Type::X86_MMXTy]. *)
-val x86_mmx_type : llcontext -> lltype
-
 (** [type_by_name m name] returns the specified type from the current module
     if it exists.
     See the method [llvm::Module::getTypeByName] *)
@@ -1135,11 +1131,6 @@ val const_nuw_mul : llvalue -> llvalue -> llvalue
     constants.
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
-
-(** [const_shl c1 c2] returns the constant integer [c1] left-shifted by the
-    constant integer [c2].
-    See the method [llvm::ConstantExpr::getShl]. *)
-val const_shl : llvalue -> llvalue -> llvalue
 
 (** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
     with source element type [srcty] and the constant integers indices from the

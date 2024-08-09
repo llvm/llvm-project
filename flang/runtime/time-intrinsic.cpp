@@ -64,20 +64,29 @@ template <typename Unused = void> double GetCpuTime(fallback_implementation) {
 // clock_gettime is implemented in the pthread library for MinGW.
 // Using it here would mean that all programs that link libFortranRuntime are
 // required to also link to pthread. Instead, don't use the function.
-#undef CLOCKID
-#elif defined CLOCK_PROCESS_CPUTIME_ID
-#define CLOCKID CLOCK_PROCESS_CPUTIME_ID
-#elif defined CLOCK_THREAD_CPUTIME_ID
-#define CLOCKID CLOCK_THREAD_CPUTIME_ID
-#elif defined CLOCK_MONOTONIC
-#define CLOCKID CLOCK_MONOTONIC
-#elif defined CLOCK_REALTIME
-#define CLOCKID CLOCK_REALTIME
+#undef CLOCKID_CPU_TIME
+#undef CLOCKID_ELAPSED_TIME
 #else
-#undef CLOCKID
+// Determine what clock to use for CPU time.
+#if defined CLOCK_PROCESS_CPUTIME_ID
+#define CLOCKID_CPU_TIME CLOCK_PROCESS_CPUTIME_ID
+#elif defined CLOCK_THREAD_CPUTIME_ID
+#define CLOCKID_CPU_TIME CLOCK_THREAD_CPUTIME_ID
+#else
+#undef CLOCKID_CPU_TIME
 #endif
 
-#ifdef CLOCKID
+// Determine what clock to use for elapsed time.
+#if defined CLOCK_MONOTONIC
+#define CLOCKID_ELAPSED_TIME CLOCK_MONOTONIC
+#elif defined CLOCK_REALTIME
+#define CLOCKID_ELAPSED_TIME CLOCK_REALTIME
+#else
+#undef CLOCKID_ELAPSED_TIME
+#endif
+#endif
+
+#ifdef CLOCKID_CPU_TIME
 // POSIX implementation using clock_gettime. This is only enabled where
 // clock_gettime is available.
 template <typename T = int, typename U = struct timespec>
@@ -86,59 +95,16 @@ double GetCpuTime(preferred_implementation,
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
   struct timespec tspec;
-  if (clock_gettime(CLOCKID, &tspec) == 0) {
+  if (clock_gettime(CLOCKID_CPU_TIME, &tspec) == 0) {
     return tspec.tv_nsec * 1.0e-9 + tspec.tv_sec;
   }
   // Return some negative value to represent failure.
   return -1.0;
 }
-#endif
+#endif // CLOCKID_CPU_TIME
 
 using count_t = std::int64_t;
 using unsigned_count_t = std::uint64_t;
-
-// Computes HUGE(INT(0,kind)) as an unsigned integer value.
-static constexpr inline unsigned_count_t GetHUGE(int kind) {
-  if (kind > 8) {
-    kind = 8;
-  }
-  return (unsigned_count_t{1} << ((8 * kind) - 1)) - 1;
-}
-
-// This is the fallback implementation, which should work everywhere. Note that
-// in general we can't recover after std::clock has reached its maximum value.
-template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
-  std::clock_t timestamp{std::clock()};
-  if (timestamp == static_cast<std::clock_t>(-1)) {
-    // Return -HUGE(COUNT) to represent failure.
-    return -static_cast<count_t>(GetHUGE(kind));
-  }
-  // Convert the timestamp to std::uint64_t with wrap-around. The timestamp is
-  // most likely a floating-point value (since C'11), so compute the modulus
-  // carefully when one is required.
-  constexpr auto maxUnsignedCount{std::numeric_limits<unsigned_count_t>::max()};
-  if constexpr (std::numeric_limits<std::clock_t>::max() > maxUnsignedCount) {
-    timestamp -= maxUnsignedCount * std::floor(timestamp / maxUnsignedCount);
-  }
-  unsigned_count_t unsignedCount{static_cast<unsigned_count_t>(timestamp)};
-  // Return the modulus of the unsigned integral count with HUGE(COUNT)+1.
-  // The result is a signed integer but never negative.
-  return static_cast<count_t>(unsignedCount % (GetHUGE(kind) + 1));
-}
-
-template <typename Unused = void>
-count_t GetSystemClockCountRate(int kind, fallback_implementation) {
-  return CLOCKS_PER_SEC;
-}
-
-template <typename Unused = void>
-count_t GetSystemClockCountMax(int kind, fallback_implementation) {
-  constexpr auto max_clock_t{std::numeric_limits<std::clock_t>::max()};
-  unsigned_count_t maxCount{GetHUGE(kind)};
-  return max_clock_t <= maxCount ? static_cast<count_t>(max_clock_t)
-                                 : static_cast<count_t>(maxCount);
-}
 
 // POSIX implementation using clock_gettime where available.  The clock_gettime
 // result is in nanoseconds, which is converted as necessary to
@@ -149,17 +115,19 @@ constexpr unsigned_count_t DS_PER_SEC{10u};
 constexpr unsigned_count_t MS_PER_SEC{1'000u};
 constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
-#ifdef CLOCKID
-template <typename T = int, typename U = struct timespec>
-count_t GetSystemClockCount(int kind, preferred_implementation,
-    // We need some dummy parameters to pass to decltype(clock_gettime).
-    T ClockId = 0, U *Timespec = nullptr,
-    decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
-  struct timespec tspec;
-  const unsigned_count_t huge{GetHUGE(kind)};
-  if (clock_gettime(CLOCKID, &tspec) != 0) {
-    return -huge; // failure
+// Computes HUGE(INT(0,kind)) as an unsigned integer value.
+static constexpr inline unsigned_count_t GetHUGE(int kind) {
+  if (kind > 8) {
+    kind = 8;
   }
+  return (unsigned_count_t{1} << ((8 * kind) - 1)) - 1;
+}
+
+// Function converts a std::timespec_t into the desired count to
+// be returned by the timing functions in accordance with the requested
+// kind at the call site.
+count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
+  const unsigned_count_t huge{GetHUGE(kind)};
   unsigned_count_t sec{static_cast<unsigned_count_t>(tspec.tv_sec)};
   unsigned_count_t nsec{static_cast<unsigned_count_t>(tspec.tv_nsec)};
   if (kind >= 8) {
@@ -170,7 +138,52 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
     return (sec * DS_PER_SEC + (nsec / (NS_PER_SEC / DS_PER_SEC))) % (huge + 1);
   }
 }
+
+#ifndef _AIX
+// This is the fallback implementation, which should work everywhere.
+template <typename Unused = void>
+count_t GetSystemClockCount(int kind, fallback_implementation) {
+  struct timespec tspec;
+
+  if (timespec_get(&tspec, TIME_UTC) < 0) {
+    // Return -HUGE(COUNT) to represent failure.
+    return -static_cast<count_t>(GetHUGE(kind));
+  }
+
+  // Compute the timestamp as seconds plus nanoseconds in accordance
+  // with the requested kind at the call site.
+  return ConvertTimeSpecToCount(kind, tspec);
+}
 #endif
+
+template <typename Unused = void>
+count_t GetSystemClockCountRate(int kind, fallback_implementation) {
+  return kind >= 8 ? NS_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
+}
+
+template <typename Unused = void>
+count_t GetSystemClockCountMax(int kind, fallback_implementation) {
+  unsigned_count_t maxCount{GetHUGE(kind)};
+  return maxCount;
+}
+
+#ifdef CLOCKID_ELAPSED_TIME
+template <typename T = int, typename U = struct timespec>
+count_t GetSystemClockCount(int kind, preferred_implementation,
+    // We need some dummy parameters to pass to decltype(clock_gettime).
+    T ClockId = 0, U *Timespec = nullptr,
+    decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
+  struct timespec tspec;
+  const unsigned_count_t huge{GetHUGE(kind)};
+  if (clock_gettime(CLOCKID_ELAPSED_TIME, &tspec) != 0) {
+    return -huge; // failure
+  }
+
+  // Compute the timestamp as seconds plus nanoseconds in accordance
+  // with the requested kind at the call site.
+  return ConvertTimeSpecToCount(kind, tspec);
+}
+#endif // CLOCKID_ELAPSED_TIME
 
 template <typename T = int, typename U = struct timespec>
 count_t GetSystemClockCountRate(int kind, preferred_implementation,

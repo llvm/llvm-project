@@ -68,9 +68,14 @@ enum class BroadcastableToResult {
   DimensionMismatch = 2,
   SourceTypeNotAVector = 3
 };
+
+struct VectorDim {
+  int64_t dim;
+  bool isScalable;
+};
 BroadcastableToResult
 isBroadcastableTo(Type srcType, VectorType dstVectorType,
-                  std::pair<int, int> *mismatchingDims = nullptr);
+                  std::pair<VectorDim, VectorDim> *mismatchingDims = nullptr);
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -79,6 +84,10 @@ void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,
 /// Collect a set of patterns that fold arithmetic extension on floating point
 /// into vector contract for the backends with native support.
 void populateFoldArithExtensionPatterns(RewritePatternSet &patterns);
+
+/// Collect a set of patterns that fold elementwise op on vectors to the vector
+/// dialect.
+void populateElementwiseToVectorOpsPatterns(RewritePatternSet &patterns);
 
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);

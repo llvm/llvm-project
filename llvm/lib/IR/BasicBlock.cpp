@@ -175,8 +175,8 @@ template <> void llvm::invalidateParentIListOrdering(BasicBlock *BB) {
 
 // Explicit instantiation of SymbolTableListTraits since some of the methods
 // are not in the public header file...
-template class llvm::SymbolTableListTraits<Instruction,
-                                           ilist_iterator_bits<true>>;
+template class llvm::SymbolTableListTraits<
+    Instruction, ilist_iterator_bits<true>, ilist_parent<BasicBlock>>;
 
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
@@ -189,6 +189,7 @@ BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
     assert(!InsertBefore &&
            "Cannot insert block before another block with no function!");
 
+  end().getNodePtr()->setParent(this);
   setName(Name);
   if (NewParent)
     setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
@@ -239,6 +240,8 @@ BasicBlock::~BasicBlock() {
 
 void BasicBlock::setParent(Function *parent) {
   // Set Parent=parent, updating instruction symtab entries as appropriate.
+  if (Parent != parent)
+    Number = parent ? parent->NextBlockNum++ : -1u;
   InstList.setSymTabObject(&Parent, parent);
 }
 
@@ -288,6 +291,10 @@ void BasicBlock::moveAfter(BasicBlock *MovePos) {
 
 const Module *BasicBlock::getModule() const {
   return getParent()->getParent();
+}
+
+const DataLayout &BasicBlock::getDataLayout() const {
+  return getModule()->getDataLayout();
 }
 
 const CallInst *BasicBlock::getTerminatingMustTailCall() const {
@@ -621,9 +628,7 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   // to reflect that the incoming branches will be from the New block and not
   // from predecessors of the 'this' block.
   // Save predecessors to separate vector before modifying them.
-  SmallVector<BasicBlock *, 4> Predecessors;
-  for (BasicBlock *Pred : predecessors(this))
-    Predecessors.push_back(Pred);
+  SmallVector<BasicBlock *, 4> Predecessors(predecessors(this));
   for (BasicBlock *Pred : Predecessors) {
     Instruction *TI = Pred->getTerminator();
     TI->replaceSuccessorWith(this, New);

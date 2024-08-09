@@ -123,6 +123,9 @@ enum {
   // 3 -> widening case
   TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
   TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
+
+  ActiveElementsAffectResultShift = TargetOverlapConstraintTypeShift + 2,
+  ActiveElementsAffectResultMask = 1ULL << ActiveElementsAffectResultShift,
 };
 
 // Helper functions to read TSFlags.
@@ -170,6 +173,12 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
 
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
+
+/// \returns true if the result isn't element-wise,
+/// e.g. vredsum.vs/vcompress.vm/viota.m
+static inline bool activeElementsAffectResult(uint64_t TSFlags) {
+  return TSFlags & ActiveElementsAffectResultMask;
+}
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
@@ -269,7 +278,9 @@ enum OperandType : unsigned {
   OPERAND_UIMM3,
   OPERAND_UIMM4,
   OPERAND_UIMM5,
+  OPERAND_UIMM5_LSB0,
   OPERAND_UIMM6,
+  OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM8_LSB00,
@@ -279,6 +290,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM12,
+  OPERAND_UIMM16,
+  OPERAND_UIMM32,
   OPERAND_ZERO,
   OPERAND_SIMM5,
   OPERAND_SIMM5_PLUS1,

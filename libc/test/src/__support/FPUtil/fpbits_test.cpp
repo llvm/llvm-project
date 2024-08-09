@@ -238,6 +238,7 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
   case FP::QUIET_NAN:
     return T::quiet_nan(sign);
   }
+  __builtin_unreachable();
 }
 
 // Tests all properties for all types of float.

@@ -3,7 +3,8 @@
 // CHECK-LABEL: arith_constants
 func.func @arith_constants() {
   // CHECK: emitc.constant
-  // CHECK-SAME: value = 0 : index
+  // CHECK-SAME: value = 0
+  // CHECK-SAME: () -> !emitc.size_t
   %c_index = arith.constant 0 : index
   // CHECK: emitc.constant
   // CHECK-SAME: value = 0 : i32
@@ -75,13 +76,18 @@ func.func @arith_integer_ops_signed_nsw(%arg0: i32, %arg1: i32) {
 // -----
 
 // CHECK-LABEL: arith_index
-func.func @arith_index(%arg0: index, %arg1: index) {
-  // CHECK: emitc.add %arg0, %arg1 : (index, index) -> index
-  %0 = arith.addi %arg0, %arg1 : index
-  // CHECK: emitc.sub %arg0, %arg1 : (index, index) -> index
-  %1 = arith.subi %arg0, %arg1 : index
-  // CHECK: emitc.mul %arg0, %arg1 : (index, index) -> index
-  %2 = arith.muli %arg0, %arg1 : index
+func.func @arith_index(%arg0: i32, %arg1: i32) {
+  // CHECK: %[[CST0:.*]] = emitc.cast %{{.*}} : {{.*}} to !emitc.size_t
+  %cst0 = arith.index_cast %arg0 : i32 to index
+  // CHECK: %[[CST1:.*]] = emitc.cast %{{.*}} : {{.*}} to !emitc.size_t
+  %cst1 = arith.index_cast %arg1 : i32 to index
+
+  // CHECK: emitc.add %[[CST0]], %[[CST1]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  %0 = arith.addi %cst0, %cst1 : index
+  // CHECK: emitc.sub %[[CST0]], %[[CST1]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  %1 = arith.subi %cst0, %cst1 : index
+  // CHECK: emitc.mul %[[CST0]], %[[CST1]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  %2 = arith.muli %cst0, %cst1 : index
 
   return
 }
@@ -133,6 +139,116 @@ func.func @arith_signed_integer_div_rem(%arg0: i32, %arg1: i32) {
   %0 = arith.divsi %arg0, %arg1 : i32
   // CHECK: emitc.rem %arg0, %arg1 : (i32, i32) -> i32
   %1 = arith.remsi %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: arith_shift_left
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
+func.func @arith_shift_left(%arg0: i32, %arg1: i32) {
+  // CHECK-DAG: %[[C1:[^ ]*]] = emitc.cast %[[ARG0]] : i32 to ui32
+  // CHECK-DAG: %[[C2:[^ ]*]] = emitc.cast %[[ARG1]] : i32 to ui32
+  // CHECK-DAG: %[[SizeConstant:[^ ]*]] = "emitc.constant"{{.*}}value = 32
+  // CHECK-DAG: %[[CmpNoExcess:[^ ]*]] = emitc.cmp lt, %[[C2]], %[[SizeConstant]] : (ui32, ui32) -> i1
+  // CHECK-DAG: %[[Zero:[^ ]*]] = "emitc.constant"{{.*}}value = 0
+  // CHECK: %[[ShiftRes:[^ ]*]] = emitc.expression : ui32
+  // CHECK: %[[SHL:[^ ]*]] = emitc.bitwise_left_shift %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[Ternary:[^ ]*]] = emitc.conditional %[[CmpNoExcess]], %[[SHL]], %[[Zero]] : ui32
+  // CHECK: emitc.yield %[[Ternary]] : ui32
+  // CHECK: emitc.cast %[[ShiftRes]] : ui32 to i32
+  %1 = arith.shli %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: arith_shift_right
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
+func.func @arith_shift_right(%arg0: i32, %arg1: i32) {
+  // CHECK-DAG: %[[C1:[^ ]*]] = emitc.cast %[[ARG0]] : i32 to ui32
+  // CHECK-DAG: %[[C2:[^ ]*]] = emitc.cast %[[ARG1]] : i32 to ui32
+  // CHECK-DAG: %[[SizeConstant:[^ ]*]] = "emitc.constant"{{.*}}value = 32{{.*}}ui32
+  // CHECK-DAG: %[[CmpNoExcess:[^ ]*]] = emitc.cmp lt, %[[C2]], %[[SizeConstant]] : (ui32, ui32) -> i1
+  // CHECK-DAG: %[[Zero:[^ ]*]] = "emitc.constant"{{.*}}value = 0{{.*}}ui32
+  // CHECK: %[[ShiftRes:[^ ]*]] = emitc.expression : ui32
+  // CHECK: %[[SHR:[^ ]*]] = emitc.bitwise_right_shift %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[Ternary:[^ ]*]] = emitc.conditional %[[CmpNoExcess]], %[[SHR]], %[[Zero]] : ui32
+  // CHECK: emitc.yield %[[Ternary]] : ui32
+  // CHECK: emitc.cast %[[ShiftRes]] : ui32 to i32
+  %2 = arith.shrui %arg0, %arg1 : i32
+
+  // CHECK-DAG: %[[SC2:[^ ]*]] = emitc.cast %[[ARG1]] : i32 to ui32
+  // CHECK-DAG: %[[SSizeConstant:[^ ]*]] = "emitc.constant"{{.*}}value = 32{{.*}}ui32
+  // CHECK-DAG: %[[SCmpNoExcess:[^ ]*]] = emitc.cmp lt, %[[SC2]], %[[SSizeConstant]] : (ui32, ui32) -> i1
+  // CHECK-DAG: %[[SZero:[^ ]*]] = "emitc.constant"{{.*}}value = 0{{.*}}i32
+  // CHECK: %[[SShiftRes:[^ ]*]] = emitc.expression : i32
+  // CHECK: %[[SHRSI:[^ ]*]] = emitc.bitwise_right_shift %[[ARG0]], %[[SC2]] : (i32, ui32) -> i32
+  // CHECK: %[[STernary:[^ ]*]] = emitc.conditional %[[SCmpNoExcess]], %[[SHRSI]], %[[SZero]] : i32
+  // CHECK: emitc.yield %[[STernary]] : i32
+  %3 = arith.shrsi %arg0, %arg1 : i32
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: arith_shift_left_index
+// CHECK-SAME: %[[AMOUNT:.*]]: i32
+func.func @arith_shift_left_index(%amount: i32) {
+  %cst0 = "arith.constant"() {value = 42 : index} : () -> (index)
+  %cast1 = arith.index_cast %amount : i32 to index
+  // CHECK-DAG: %[[C1:[^ ]*]] = "emitc.constant"(){{.*}}value = 42{{.*}}!emitc.size_t
+  // CHECK-DAG: %[[Cast1:[^ ]*]] = emitc.cast %[[AMOUNT]] : i32 to !emitc.ptrdiff_t
+  // CHECK-DAG: %[[AmountIdx:[^ ]*]] = emitc.cast %[[Cast1]] : !emitc.ptrdiff_t to !emitc.size_t
+  // CHECK-DAG: %[[Byte:[^ ]*]] = "emitc.constant"{{.*}}value = 8{{.*}}index
+  // CHECK-DAG: %[[SizeOf:[^ ]*]] = emitc.call_opaque "sizeof"(%[[Byte]]) : (!emitc.size_t) -> !emitc.size_t
+  // CHECK-DAG: %[[SizeConstant:[^ ]*]] = emitc.mul %[[Byte]], %[[SizeOf]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK-DAG: %[[CmpNoExcess:[^ ]*]] = emitc.cmp lt, %[[AmountIdx]], %[[SizeConstant]] : (!emitc.size_t, !emitc.size_t) -> i1
+  // CHECK-DAG: %[[Zero:[^ ]*]] = "emitc.constant"{{.*}}value = 0
+  // CHECK: %[[ShiftRes:[^ ]*]] = emitc.expression : !emitc.size_t
+  // CHECK: %[[SHL:[^ ]*]] = emitc.bitwise_left_shift %[[C1]], %[[AmountIdx]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK: %[[Ternary:[^ ]*]] = emitc.conditional %[[CmpNoExcess]], %[[SHL]], %[[Zero]] : !emitc.size_t
+  // CHECK: emitc.yield %[[Ternary]] : !emitc.size_t
+  %1 = arith.shli %cst0, %cast1 : index
+  return
+}
+
+// -----
+
+// CHECK-LABEL: arith_shift_right_index
+// CHECK-SAME: %[[AMOUNT:.*]]: i32
+func.func @arith_shift_right_index(%amount: i32) {
+  // CHECK-DAG: %[[C1:[^ ]*]] = "emitc.constant"(){{.*}}value = 42{{.*}}!emitc.size_t
+  // CHECK-DAG: %[[Cast1:[^ ]*]] = emitc.cast %[[AMOUNT]] : i32 to !emitc.ptrdiff_t
+  // CHECK-DAG: %[[AmountIdx:[^ ]*]] = emitc.cast %[[Cast1]] : !emitc.ptrdiff_t to !emitc.size_t
+  %arg0 = "arith.constant"() {value = 42 : index} : () -> (index)
+  %arg1 = arith.index_cast %amount : i32 to index
+
+  // CHECK-DAG: %[[Byte:[^ ]*]] = "emitc.constant"{{.*}}value = 8{{.*}}index
+  // CHECK-DAG: %[[SizeOf:[^ ]*]] = emitc.call_opaque "sizeof"(%[[Byte]]) : (!emitc.size_t) -> !emitc.size_t
+  // CHECK-DAG: %[[SizeConstant:[^ ]*]] = emitc.mul %[[Byte]], %[[SizeOf]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK-DAG: %[[CmpNoExcess:[^ ]*]] = emitc.cmp lt, %[[AmountIdx]], %[[SizeConstant]] : (!emitc.size_t, !emitc.size_t) -> i1
+  // CHECK-DAG: %[[Zero:[^ ]*]] = "emitc.constant"{{.*}}value = 0{{.*}}!emitc.size_t
+  // CHECK: %[[ShiftRes:[^ ]*]] = emitc.expression : !emitc.size_t
+  // CHECK: %[[SHR:[^ ]*]] = emitc.bitwise_right_shift %[[C1]], %[[AmountIdx]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK: %[[Ternary:[^ ]*]] = emitc.conditional %[[CmpNoExcess]], %[[SHR]], %[[Zero]] : !emitc.size_t
+  // CHECK: emitc.yield %[[Ternary]] : !emitc.size_t
+  %2 = arith.shrui %arg0, %arg1 : index
+
+  // CHECK-DAG: %[[SC1:[^ ]*]] = emitc.cast %[[C1]] : !emitc.size_t to !emitc.ptrdiff_t
+  // CHECK-DAG: %[[SByte:[^ ]*]] = "emitc.constant"{{.*}}value = 8{{.*}}index{{.*}}!emitc.size_t
+  // CHECK-DAG: %[[SSizeOf:[^ ]*]] = emitc.call_opaque "sizeof"(%[[SByte]]) : (!emitc.size_t) -> !emitc.size_t
+  // CHECK-DAG: %[[SSizeConstant:[^ ]*]] = emitc.mul %[[SByte]], %[[SSizeOf]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK-DAG: %[[SCmpNoExcess:[^ ]*]] = emitc.cmp lt, %[[AmountIdx]], %[[SSizeConstant]] : (!emitc.size_t, !emitc.size_t) -> i1
+  // CHECK-DAG: %[[SZero:[^ ]*]] = "emitc.constant"{{.*}}value = 0{{.*}}!emitc.ptrdiff_t
+  // CHECK: %[[SShiftRes:[^ ]*]] = emitc.expression : !emitc.ptrdiff_t
+  // CHECK: %[[SHRSI:[^ ]*]] = emitc.bitwise_right_shift %[[SC1]], %[[AmountIdx]] : (!emitc.ptrdiff_t, !emitc.size_t) -> !emitc.ptrdiff_t
+  // CHECK: %[[STernary:[^ ]*]] = emitc.conditional %[[SCmpNoExcess]], %[[SHRSI]], %[[SZero]] : !emitc.ptrdiff_t
+  // CHECK: emitc.yield %[[STernary]] : !emitc.ptrdiff_t
+  // CHECK: emitc.cast %[[SShiftRes]] : !emitc.ptrdiff_t to !emitc.size_t
+  %3 = arith.shrsi %arg0, %arg1 : index
+
   return
 }
 
@@ -420,6 +536,38 @@ func.func @arith_cmpi_predicates(%arg0: i32, %arg1: i32) {
   return
 }
 
+func.func @arith_cmpi_index(%arg0: i32, %arg1: i32) -> i1 {
+  // CHECK-LABEL: arith_cmpi_index
+
+  // CHECK: %[[Cst0:.*]] = emitc.cast %{{.*}} : {{.*}} to !emitc.size_t
+  %idx0 = arith.index_cast %arg0 : i32 to index
+  // CHECK: %[[Cst1:.*]] = emitc.cast %{{.*}} : {{.*}} to !emitc.size_t
+  %idx1 = arith.index_cast %arg0 : i32 to index
+
+  // CHECK-DAG: [[ULT:[^ ]*]] = emitc.cmp lt, %[[Cst0]], %[[Cst1]] : (!emitc.size_t, !emitc.size_t) -> i1
+  %ult = arith.cmpi ult, %idx0, %idx1 : index
+
+  // CHECK-DAG: %[[CastArg0:[^ ]*]] = emitc.cast %[[Cst0]] : !emitc.size_t to !emitc.ptrdiff_t
+  // CHECK-DAG: %[[CastArg1:[^ ]*]] = emitc.cast %[[Cst1]] : !emitc.size_t to !emitc.ptrdiff_t
+  // CHECK-DAG: %[[SLT:[^ ]*]] = emitc.cmp lt, %[[CastArg0]], %[[CastArg1]] : (!emitc.ptrdiff_t, !emitc.ptrdiff_t) -> i1
+  %slt = arith.cmpi slt, %idx0, %idx1 : index
+
+  // CHECK: return %[[SLT]]
+  return %slt: i1
+}
+
+
+// -----
+
+func.func @arith_negf(%arg0: f32) -> f32 {
+  // CHECK-LABEL: arith_negf
+  // CHECK-SAME: %[[Arg0:[^ ]*]]: f32
+  // CHECK: %[[N:[^ ]*]] = emitc.unary_minus %[[Arg0]] : (f32) -> f32
+  %n = arith.negf %arg0 : f32
+  // CHECK: return %[[N]]
+  return %n: f32
+}
+
 // -----
 
 func.func @arith_float_to_int_cast_ops(%arg0: f32, %arg1: f64) {
@@ -465,6 +613,13 @@ func.func @arith_trunci(%arg0: i32) -> i8 {
   // CHECK: %[[Trunc:.*]] = emitc.cast %[[CastUI]] : ui32 to ui8
   // CHECK: emitc.cast %[[Trunc]] : ui8 to i8
   %truncd = arith.trunci %arg0 : i32 to i8
+
+  // CHECK: %[[Const:.*]] = "emitc.constant"
+  // CHECK-SAME: value = 1
+  // CHECK-SAME: () -> i32
+  // CHECK: %[[AndOne:.*]] = emitc.bitwise_and %[[Arg0]], %[[Const]] : (i32, i32) -> i32
+  // CHECK: %[[Conv:.*]] = emitc.cast %[[AndOne]] : i32 to i1
+  %bool = arith.trunci %arg0 : i32 to i1
 
   return %truncd : i8
 }
@@ -517,4 +672,66 @@ func.func @arith_extui_i1_to_i32(%arg0: i1) {
   // CHECK: emitc.cast %[[Conv1]] : ui32 to i32
   %idx = arith.extui %arg0 : i1 to i32
   return
+}
+
+// -----
+
+func.func @arith_index_cast(%arg0: i32) -> i32 {
+  // CHECK-LABEL: arith_index_cast
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
+  // CHECK: %[[Conv0:.*]] = emitc.cast %[[Arg0]] : i32 to !emitc.ptrdiff_t
+  // CHECK: %[[Conv1:.*]] = emitc.cast %[[Conv0]] : !emitc.ptrdiff_t to !emitc.size_t
+  %idx = arith.index_cast %arg0 : i32 to index
+  // CHECK: %[[Conv2:.*]] = emitc.cast %[[Conv1]] : !emitc.size_t to !emitc.ptrdiff_t
+  // CHECK: %[[Conv3:.*]] = emitc.cast %[[Conv2]] : !emitc.ptrdiff_t to i32
+  %int = arith.index_cast %idx : index to i32
+
+  // CHECK: %[[Const:.*]] = "emitc.constant"
+  // CHECK-SAME: value = 1
+  // CHECK-SAME: () -> !emitc.size_t
+  // CHECK: %[[AndOne:.*]] = emitc.bitwise_and %[[Conv1]], %[[Const]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK: %[[Conv4:.*]] = emitc.cast %[[AndOne]] : !emitc.size_t to i1
+  %bool = arith.index_cast %idx : index to i1
+
+  return %int : i32
+}
+
+// -----
+
+func.func @arith_index_castui(%arg0: i32) -> i32 {
+  // CHECK-LABEL: arith_index_castui
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
+  // CHECK: %[[Conv0:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
+  // CHECK: %[[Conv1:.*]] = emitc.cast %[[Conv0]] : ui32 to !emitc.size_t
+  %idx = arith.index_castui %arg0 : i32 to index
+  // CHECK: %[[Conv2:.*]] = emitc.cast %[[Conv1]] : !emitc.size_t to ui32
+  // CHECK: %[[Conv3:.*]] = emitc.cast %[[Conv2]] : ui32 to i32
+  %int = arith.index_castui %idx : index to i32
+
+  // CHECK: %[[Const:.*]] = "emitc.constant"
+  // CHECK-SAME: value = 1
+  // CHECK-SAME: () -> !emitc.size_t
+  // CHECK: %[[AndOne:.*]] = emitc.bitwise_and %[[Conv1]], %[[Const]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK: %[[Conv4:.*]] = emitc.cast %[[AndOne]] : !emitc.size_t to i1
+  %bool = arith.index_castui %idx : index to i1
+
+  return %int : i32
+}
+
+// -----
+
+func.func @arith_divui_remui(%arg0: i32, %arg1: i32) -> i32 {
+  // CHECK-LABEL: arith_divui_remui
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32, %[[Arg1:[^ ]*]]: i32)
+  // CHECK: %[[Conv0:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
+  // CHECK: %[[Conv1:.*]] = emitc.cast %[[Arg1]] : i32 to ui32
+  // CHECK: %[[Div:.*]] = emitc.div %[[Conv0]], %[[Conv1]] : (ui32, ui32) -> ui32
+  %div = arith.divui %arg0, %arg1 : i32
+
+  // CHECK: %[[Conv2:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
+  // CHECK: %[[Conv3:.*]] = emitc.cast %[[Arg1]] : i32 to ui32
+  // CHECK: %[[Rem:.*]] = emitc.rem %[[Conv2]], %[[Conv3]] : (ui32, ui32) -> ui32
+  %rem = arith.remui %arg0, %arg1 : i32
+
+  return %div : i32
 }

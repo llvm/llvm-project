@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="sparse-emit-strategy=sparse-iterator" --sparse-space-collapse --lower-sparse-iteration-to-scf | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="sparse-emit-strategy=sparse-iterator" --cse --sparse-space-collapse --lower-sparse-iteration-to-scf --loop-invariant-code-motion | FileCheck %s
 
 
 #COO = #sparse_tensor.encoding<{
@@ -7,8 +7,7 @@
     d1 : singleton(nonunique, soa),
     d2 : singleton(nonunique, soa),
     d3 : singleton(soa)
-  ),
-  explicitVal = 1 : i32
+  )
 }>
 
 // CHECK-LABEL:   func.func @sqsum(
@@ -17,7 +16,10 @@
 // CHECK-DAG:       %[[POS_BUF:.*]] = sparse_tensor.positions %{{.*}} {level = 0 : index} : tensor<?x?x?x?xi32, #sparse> to memref<?xindex>
 // CHECK:           %[[POS_LO:.*]] = memref.load %[[POS_BUF]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:           %[[POS_HI:.*]] = memref.load %[[POS_BUF]]{{\[}}%[[C1]]] : memref<?xindex>
+// CHECK:           %[[VAL_BUF:.*]] = sparse_tensor.values %{{.*}} : tensor<?x?x?x?xi32, #sparse> to memref<?xi32>
 // CHECK:           %[[SQ_SUM:.*]] = scf.for %[[POS:.*]] = %[[POS_LO]] to %[[POS_HI]] step %[[C1]] {{.*}} {
+// CHECK:             %[[VAL:.*]] = memref.load %[[VAL_BUF]]{{\[}}%[[POS]]] : memref<?xi32>
+// CHECK:             %[[MUL:.*]] = arith.muli %[[VAL]], %[[VAL]] : i32
 // CHECK:             %[[SUM:.*]] = arith.addi
 // CHECK:             scf.yield %[[SUM]] : i32
 // CHECK:           }

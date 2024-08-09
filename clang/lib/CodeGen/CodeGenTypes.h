@@ -126,7 +126,30 @@ public:
   /// ConvertType in that it is used to convert to the memory representation for
   /// a type.  For example, the scalar representation for _Bool is i1, but the
   /// memory representation is usually i8 or i32, depending on the target.
-  llvm::Type *ConvertTypeForMem(QualType T, bool ForBitField = false);
+  llvm::Type *ConvertTypeForMem(QualType T);
+
+  /// Check whether the given type needs to be laid out in memory
+  /// using an opaque byte-array type because its load/store type
+  /// does not have the correct alloc size in the LLVM data layout.
+  /// If this is false, the load/store type (convertTypeForLoadStore)
+  /// and memory representation type (ConvertTypeForMem) will
+  /// be the same type.
+  bool typeRequiresSplitIntoByteArray(QualType ASTTy,
+                                      llvm::Type *LLVMTy = nullptr);
+
+  /// Given that T is a scalar type, return the IR type that should
+  /// be used for load and store operations.  For example, this might
+  /// be i8 for _Bool or i96 for _BitInt(65).  The store size of the
+  /// load/store type (as reported by LLVM's data layout) is always
+  /// the same as the alloc size of the memory representation type
+  /// returned by ConvertTypeForMem.
+  ///
+  /// As an optimization, if you already know the scalar value type
+  /// for T (as would be returned by ConvertType), you can pass
+  /// it as the second argument so that it does not need to be
+  /// recomputed in common cases where the value type and
+  /// load/store type are the same.
+  llvm::Type *convertTypeForLoadStore(QualType T, llvm::Type *LLVMTy = nullptr);
 
   /// GetFunctionType - Get the LLVM function type for \arg Info.
   llvm::FunctionType *GetFunctionType(const CGFunctionInfo &Info);

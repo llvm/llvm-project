@@ -58,6 +58,10 @@ static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
 
 namespace {
 
+// Including the generated SSE2AVX compression tables.
+#define GET_X86_SSE2AVX_TABLE
+#include "X86GenInstrMapping.inc"
+
 static const char OpPrecedence[] = {
     0,  // IC_OR
     1,  // IC_XOR
@@ -475,7 +479,9 @@ private:
     unsigned getLength() const { return CurType.Length; }
     int64_t getImm() { return Imm + IC.execute(); }
     bool isValidEndState() const {
-      return State == IES_RBRAC || State == IES_INTEGER;
+      return State == IES_RBRAC || State == IES_RPAREN ||
+             State == IES_INTEGER || State == IES_REGISTER ||
+             State == IES_OFFSET;
     }
 
     // Is the intel expression appended after an operand index.
@@ -1898,9 +1904,6 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
     case AsmToken::Error:
       return Error(getLexer().getErrLoc(), getLexer().getErr());
       break;
-    case AsmToken::EndOfStatement:
-      Done = true;
-      break;
     case AsmToken::Real:
       // DotOperator: [ebx].0
       UpdateLocLex = false;
@@ -2318,7 +2321,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
     return Error(Tok.getLoc(), "Expected { at this point");
   Parser.Lex(); // Eat "{"
   Tok = Parser.getTok();
-  if (Tok.getIdentifier() != "dfv")
+  if (Tok.getIdentifier().lower() != "dfv")
     return Error(Tok.getLoc(), "Expected dfv at this point");
   Parser.Lex(); // Eat "dfv"
   Tok = Parser.getTok();
@@ -2338,7 +2341,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
   unsigned CFlags = 0;
   for (unsigned I = 0; I < 4; ++I) {
     Tok = Parser.getTok();
-    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier())
+    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier().lower())
                          .Case("of", 0x8)
                          .Case("sf", 0x4)
                          .Case("zf", 0x2)
@@ -3745,13 +3748,44 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
+static bool convertSSEToAVX(MCInst &Inst) {
+  ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
+  unsigned Opcode = Inst.getOpcode();
+  const auto I = llvm::lower_bound(Table, Opcode);
+  if (I == Table.end() || I->OldOpc != Opcode)
+    return false;
+
+  Inst.setOpcode(I->NewOpc);
+  // AVX variant of BLENDVPD/BLENDVPS/PBLENDVB instructions has more
+  // operand compare to SSE variant, which is added below
+  if (X86::isBLENDVPD(Opcode) || X86::isBLENDVPS(Opcode) ||
+      X86::isPBLENDVB(Opcode))
+    Inst.addOperand(Inst.getOperand(2));
+
+  return true;
+}
+
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
+  if (MCOptions.X86Sse2Avx && convertSSEToAVX(Inst))
+    return true;
+
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
       X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))
     return true;
 
   if (X86::optimizeShiftRotateWithImmediateOne(Inst))
     return true;
+
+  auto replaceWithCCMPCTEST = [&](unsigned Opcode) -> bool {
+    if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {
+      Inst.setFlags(~(X86::IP_USE_EVEX)&Inst.getFlags());
+      Inst.setOpcode(Opcode);
+      Inst.addOperand(MCOperand::createImm(0));
+      Inst.addOperand(MCOperand::createImm(10));
+      return true;
+    }
+    return false;
+  };
 
   switch (Inst.getOpcode()) {
   default: return false;
@@ -3784,6 +3818,61 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
     Inst.setOpcode(X86::INT3);
     return true;
   }
+  // `{evex} cmp <>, <>` is alias of `ccmpt {dfv=} <>, <>`, and
+  // `{evex} test <>, <>` is alias of `ctest {dfv=} <>, <>`
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    return replaceWithCCMPCTEST(X86::TO);
+    FROM_TO(CMP64rr, CCMP64rr)
+    FROM_TO(CMP64mi32, CCMP64mi32)
+    FROM_TO(CMP64mi8, CCMP64mi8)
+    FROM_TO(CMP64mr, CCMP64mr)
+    FROM_TO(CMP64ri32, CCMP64ri32)
+    FROM_TO(CMP64ri8, CCMP64ri8)
+    FROM_TO(CMP64rm, CCMP64rm)
+
+    FROM_TO(CMP32rr, CCMP32rr)
+    FROM_TO(CMP32mi, CCMP32mi)
+    FROM_TO(CMP32mi8, CCMP32mi8)
+    FROM_TO(CMP32mr, CCMP32mr)
+    FROM_TO(CMP32ri, CCMP32ri)
+    FROM_TO(CMP32ri8, CCMP32ri8)
+    FROM_TO(CMP32rm, CCMP32rm)
+
+    FROM_TO(CMP16rr, CCMP16rr)
+    FROM_TO(CMP16mi, CCMP16mi)
+    FROM_TO(CMP16mi8, CCMP16mi8)
+    FROM_TO(CMP16mr, CCMP16mr)
+    FROM_TO(CMP16ri, CCMP16ri)
+    FROM_TO(CMP16ri8, CCMP16ri8)
+    FROM_TO(CMP16rm, CCMP16rm)
+
+    FROM_TO(CMP8rr, CCMP8rr)
+    FROM_TO(CMP8mi, CCMP8mi)
+    FROM_TO(CMP8mr, CCMP8mr)
+    FROM_TO(CMP8ri, CCMP8ri)
+    FROM_TO(CMP8rm, CCMP8rm)
+
+    FROM_TO(TEST64rr, CTEST64rr)
+    FROM_TO(TEST64mi32, CTEST64mi32)
+    FROM_TO(TEST64mr, CTEST64mr)
+    FROM_TO(TEST64ri32, CTEST64ri32)
+
+    FROM_TO(TEST32rr, CTEST32rr)
+    FROM_TO(TEST32mi, CTEST32mi)
+    FROM_TO(TEST32mr, CTEST32mr)
+    FROM_TO(TEST32ri, CTEST32ri)
+
+    FROM_TO(TEST16rr, CTEST16rr)
+    FROM_TO(TEST16mi, CTEST16mi)
+    FROM_TO(TEST16mr, CTEST16mr)
+    FROM_TO(TEST16ri, CTEST16ri)
+
+    FROM_TO(TEST8rr, CTEST8rr)
+    FROM_TO(TEST8mi, CTEST8mi)
+    FROM_TO(TEST8mr, CTEST8mr)
+    FROM_TO(TEST8ri, CTEST8ri)
+#undef FROM_TO
   }
 }
 
@@ -3849,6 +3938,14 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         return Warning(Ops[0]->getStartLoc(), "mask, index, and destination "
                                               "registers should be distinct");
     }
+  } else if (isTCMMIMFP16PS(Opcode) || isTCMMRLFP16PS(Opcode) ||
+             isTDPBF16PS(Opcode) || isTDPFP16PS(Opcode) || isTDPBSSD(Opcode) ||
+             isTDPBSUD(Opcode) || isTDPBUSD(Opcode) || isTDPBUUD(Opcode)) {
+    unsigned SrcDest = Inst.getOperand(0).getReg();
+    unsigned Src1 = Inst.getOperand(2).getReg();
+    unsigned Src2 = Inst.getOperand(3).getReg();
+    if (SrcDest == Src1 || SrcDest == Src2 || Src1 == Src2)
+      return Error(Ops[0]->getStartLoc(), "all tmm registers must be distinct");
   }
 
   // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to
@@ -4127,7 +4224,10 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_Unsupported;
     break;
   case OpcodePrefix_EVEX:
-    if ((TSFlags & X86II::EncodingMask) != X86II::EVEX)
+    if (is64BitMode() && (TSFlags & X86II::EncodingMask) != X86II::EVEX &&
+        !X86::isCMP(Opc) && !X86::isTEST(Opc))
+      return Match_Unsupported;
+    if (!is64BitMode() && (TSFlags & X86II::EncodingMask) != X86II::EVEX)
       return Match_Unsupported;
     break;
   }

@@ -895,6 +895,25 @@ func.func @store_unlimited_polymorphic_box(%arg0 : !fir.class<none>, %arg1 : !fi
 
 // -----
 
+func.func @store_assumed_rank_box(%box: !fir.box<!fir.array<*:f32>>, %ref: !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  fir.store %box to %ref : !fir.ref<!fir.box<!fir.array<*:f32>>>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @store_assumed_rank_box(
+// CHECK-SAME:                                      %[[VAL_0:[^:]*]]: !llvm.ptr,
+// CHECK-SAME:                                      %[[VAL_1:.*]]: !llvm.ptr) {
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(24 : i32) : i32
+// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_4:.*]] = llvm.load %[[VAL_3]] : !llvm.ptr -> i8
+// CHECK:           %[[VAL_5:.*]] = llvm.sext %[[VAL_4]] : i8 to i32
+// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(24 : i32) : i32
+// CHECK:           %[[VAL_7:.*]] = llvm.mul %[[VAL_6]], %[[VAL_5]] : i32
+// CHECK:           %[[VAL_8:.*]] = llvm.add %[[VAL_2]], %[[VAL_7]] : i32
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %[[VAL_8]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+
+// -----
+
 // Test `fir.load` --> `llvm.load` conversion
 
 func.func @test_load_index(%addr : !fir.ref<index>) {
@@ -1031,8 +1050,9 @@ func.func @extract_elesize(%arg0: !fir.box<f32>) -> i32 {
 // CHECK-LABEL: llvm.func @extract_elesize(
 // CHECK-SAME:                             %[[ARG0:.*]]: !llvm.ptr) -> i32
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[ELE_SIZE:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i32
-// CHECK:         llvm.return %[[ELE_SIZE]] : i32
+// CHECK:         %[[ELE_SIZE:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i64
+// CHECK:         %[[ELE_SIZE_CONV:.*]] = llvm.trunc %[[ELE_SIZE]] : i64 to i32
+// CHECK:         llvm.return %[[ELE_SIZE_CONV]] : i32
 
 // -----
 
@@ -1066,9 +1086,10 @@ func.func @box_isalloc(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // CHECK-LABEL: llvm.func @box_isalloc(
 // CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr) -> i1
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i32
+// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i8
+// CHECK:         %[[ATTR_CONV:.*]] = llvm.sext %[[ATTR]] : i8 to i32
 // CHECK:         %[[ATTR_ISALLOC:.*]] = llvm.mlir.constant(2 : i32) : i32
-// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR]], %[[ATTR_ISALLOC]]  : i32
+// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR_CONV]], %[[ATTR_ISALLOC]]  : i32
 // CHECK:         %[[CMP_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[IS_ALLOC:.*]] = llvm.icmp "ne" %[[AND]], %[[CMP_C0]] : i32
 // CHECK:         llvm.return %[[IS_ALLOC]] : i1
@@ -1087,9 +1108,10 @@ func.func @box_isptr(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // CHECK-LABEL: llvm.func @box_isptr(
 // CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr) -> i1
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i32
+// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i8
+// CHECK:         %[[ATTR_CONV:.*]] = llvm.sext %[[ATTR]] : i8 to i32
 // CHECK:         %[[ATTR_ISALLOC:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR]], %[[ATTR_ISALLOC]]  : i32
+// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR_CONV]], %[[ATTR_ISALLOC]]  : i32
 // CHECK:         %[[CMP_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[IS_ALLOC:.*]] = llvm.icmp "ne" %[[AND]], %[[CMP_C0]] : i32
 // CHECK:         llvm.return %[[IS_ALLOC]] : i1
@@ -1274,6 +1296,20 @@ func.func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.arra
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[PROD3]] x !llvm.array<4 x i32> : (i64) -> !llvm.ptr<5>
 // AMDGPU: [[RES:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK: llvm.return [[RES]] : !llvm.ptr
+
+// -----
+
+// Test alloca of assumed-rank box
+
+func.func @alloca_assumed_rank_box() -> !fir.ref<!fir.box<!fir.array<*:f32>>> {
+  %a = fir.alloca !fir.box<!fir.array<*:f32>>
+  return %a : !fir.ref<!fir.box<!fir.array<*:f32>>>
+}
+// CHECK-LABEL: llvm.func @alloca_assumed_rank_box
+// CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: llvm.alloca %[[ONE]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)> : (i64) -> !llvm.ptr
+// AMDGPU: %[[AA:.*]] = llvm.alloca %[[ONE]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)> : (i64) -> !llvm.ptr<5>
+// AMDGPU: llvm.addrspacecast %[[AA]] : !llvm.ptr<5> to !llvm.ptr
 
 // -----
 
@@ -1620,7 +1656,7 @@ func.func @embox0(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:         %[[I64_ELEM_SIZE:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[DESC:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 // CHECK:         %[[DESC0:.*]] = llvm.insertvalue %[[I64_ELEM_SIZE]], %[[DESC]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[CFI_VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[CFI_VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[DESC1:.*]] = llvm.insertvalue %[[CFI_VERSION]], %[[DESC0]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -1752,11 +1788,10 @@ func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
 // CHECK-NO-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() {addr_space = 0 : i32} : i8
 // CHECK-LABEL: llvm.func @embox1
 // CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(42 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
+// CHECK:         %{{.*}} = llvm.insertvalue %[[VERSION]], %{{.*}}[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)> 
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I8]], %{{.*}}[4] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
-// CHECK:         %[[F18ADDENDUM:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:         %[[F18ADDENDUM_I8:.*]] = llvm.trunc %[[F18ADDENDUM]] : i32 to i8
-// CHECK:         %{{.*}} = llvm.insertvalue %[[F18ADDENDUM_I8]], %{{.*}}[6] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
 // CHECK:         %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TDESC]], %{{.*}}[7] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
 
@@ -1846,7 +1881,7 @@ func.func @xembox0(%arg0: !fir.ref<!fir.array<?xi32>>) {
 // CHECK:         %[[ELEM_LEN_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[BOX0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[BOX1:.*]] = llvm.insertvalue %[[ELEM_LEN_I64]], %[[BOX0]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
-// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[BOX2:.*]] = llvm.insertvalue %[[VERSION]], %[[BOX1]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -1948,7 +1983,7 @@ func.func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 // CHECK:         %[[ELEM_LEN_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[BOX0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[BOX1:.*]] = llvm.insertvalue %[[ELEM_LEN_I64]], %[[BOX0]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
-// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[BOX2:.*]] = llvm.insertvalue %[[VERSION]], %[[BOX1]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i64>>)>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -2014,7 +2049,6 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // GENERIC:       %[[ALLOCA:.*]] = llvm.alloca %[[ALLOCA_SIZE]] x !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // AMDGPU:        %[[AA:.*]] = llvm.alloca %[[ALLOCA_SIZE]] x !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
 // AMDGPU:        %[[ALLOCA:.*]] = llvm.addrspacecast %[[AA]] : !llvm.ptr<5> to !llvm.ptr
-// CHECK:         %[[C20:.*]] = llvm.mlir.constant(20 : index) : i64
 // CHECK:         %[[ALLOCA_SIZE_X:.*]] = llvm.mlir.constant(1 : i64) : i64
 // GENERIC:       %[[X:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr
 // AMDGPU:        %[[AC:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr<5>
@@ -2023,6 +2057,7 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // GENERIC:       %[[V:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr
 // AMDGPU:        %[[AB:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr<5>
 // AMDGPU:        %[[V:.*]] = llvm.addrspacecast %[[AB]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK:         %[[C20:.*]] = llvm.mlir.constant(20 : index) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C10:.*]] = llvm.mlir.constant(10 : i64) : i64
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
@@ -2032,7 +2067,7 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // CHECK:         %[[ELEM_LEN_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 // CHECK:         %[[BOX0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[BOX1:.*]] = llvm.insertvalue %[[ELEM_LEN_I64]], %[[BOX0]][1] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
-// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:         %[[BOX2:.*]] = llvm.insertvalue %[[VERSION]], %[[BOX1]][2] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[RANK:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
@@ -2335,7 +2370,7 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 //CHECK:    %[[ELEM_SIZE_I64:.*]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 //CHECK:    %[[RBOX:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 //CHECK:    %[[RBOX_TMP1:.*]] = llvm.insertvalue %[[ELEM_SIZE_I64]], %[[RBOX]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-//CHECK:    %[[CFI_VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+//CHECK:    %[[CFI_VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 //CHECK:    %[[RBOX_TMP2:.*]] = llvm.insertvalue %[[CFI_VERSION]], %[[RBOX_TMP1]][2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 //CHECK:    %[[RANK:.*]] = llvm.mlir.constant(1 : i32) : i32
 //CHECK:    %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
