@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/MemoryTagManager.h"
+#include "llvm/IR/LegacyPassManager.h"
 
 namespace lldb_private {
 
@@ -129,6 +130,17 @@ public:
                                        RegisterContext &reg_context) const {
     return false;
   }
+
+  // Takes a Pass Manager and adds passes for this Architecture that should be
+  // run before IRForTarget
+  virtual std::unique_ptr<llvm::legacy::PassManager>
+  GetArchitectureCustomPasses(const ExecutionContext &exe_ctx,
+                              const llvm::StringRef expr) const {
+    return nullptr;
+  }
+
+  static constexpr llvm::StringLiteral s_target_incompatibility_marker =
+      "target_incompatibility_detected";
 };
 
 } // namespace lldb_private

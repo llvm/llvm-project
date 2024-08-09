@@ -124,6 +124,9 @@ private:
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance
                                                         // instead.
   bool m_is_rv64; // true if target is riscv64; false if target is riscv32
+  static constexpr size_t s_regs_for_args_count =
+      8U; // number of argument registers (the base integer calling convention
+          // provides 8 argument registers, a0-a7)
 };
 
 #endif // liblldb_ABISysV_riscv_h_

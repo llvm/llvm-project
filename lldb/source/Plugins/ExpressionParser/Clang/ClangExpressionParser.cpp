@@ -43,8 +43,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1440,6 +1442,27 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
               __FUNCTION__, m_expr.FunctionName());
 
     custom_passes.EarlyPasses->run(*llvm_module_up);
+  }
+
+  std::unique_ptr<llvm::legacy::PassManager> arch_passes(nullptr);
+  if (lldb::TargetSP target_sp = exe_ctx.GetTargetSP()) {
+    Architecture *arch = target_sp->GetArchitecturePlugin();
+    if (arch) {
+      arch_passes =
+          arch->GetArchitectureCustomPasses(exe_ctx, m_expr.FunctionName());
+    }
+  }
+
+  if (arch_passes)
+    arch_passes->run(*llvm_module_up);
+
+  if (llvm_module_up->getNamedMetadata(
+          Architecture::s_target_incompatibility_marker)) {
+    err.SetErrorToGenericError();
+    err.SetErrorStringWithFormat(
+        "%s - Architecture passes failure on function %s\n. Function "
+        "contains unsupported function calls",
+        __FUNCTION__, m_expr.FunctionName());
   }
 
   execution_unit_sp = std::make_shared<IRExecutionUnit>(
