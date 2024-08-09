@@ -66,8 +66,7 @@ bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
   return ProfDataName->getString() == Name;
 }
 
-template <typename T,
-          typename = typename std::enable_if<std::is_arithmetic_v<T>>>
+template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 static void extractFromBranchWeightMD(const MDNode *ProfileData,
                                       SmallVectorImpl<T> &Weights) {
   assert(isBranchWeightMD(ProfileData) && "wrong metadata");
