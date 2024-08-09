@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -329,12 +330,27 @@ void AArch64InstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       .addImm(16);
 }
 
-// Branch analysis.
+bool AArch64InstrInfo::isCondBranchPredictable(
+    const MachineInstr &CondBr, const MachineLoopInfo &MLI) const {
+  MachineLoop *Loop = MLI.getLoopFor(CondBr.getParent());
+  if (!Loop)
+    return false;
+  return Loop->isLoopInvariant(CondBr, /*ExcludeReg=*/0, /*RecursionDepth=*/2);
+}
+
 bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *&TBB,
                                      MachineBasicBlock *&FBB,
                                      SmallVectorImpl<MachineOperand> &Cond,
                                      bool AllowModify) const {
+  return analyzeBranch(MBB, TBB, FBB, Cond, nullptr, nullptr, AllowModify);
+}
+
+// Branch analysis.
+bool AArch64InstrInfo::analyzeBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
+    SmallVectorImpl<MachineOperand> &Cond, bool *IsPredictable,
+    const MachineLoopInfo *MLI, bool AllowModify) const {
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
@@ -362,6 +378,8 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (isCondBranchOpcode(LastOpc)) {
       // Block ends with fall-through condbranch.
       parseCondBranch(LastInst, TBB, Cond);
+      if (IsPredictable && MLI)
+        *IsPredictable = isCondBranchPredictable(*LastInst, *MLI);
       return false;
     }
     return true; // Can't handle indirect branch.
@@ -404,6 +422,8 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       if (isCondBranchOpcode(LastOpc)) {
         // Block ends with fall-through condbranch.
         parseCondBranch(LastInst, TBB, Cond);
+        if (IsPredictable && MLI)
+          *IsPredictable = isCondBranchPredictable(*LastInst, *MLI);
         return false;
       }
       return true; // Can't handle indirect branch.
@@ -420,6 +440,8 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   if (isCondBranchOpcode(SecondLastOpc) && isUncondBranchOpcode(LastOpc)) {
     parseCondBranch(SecondLastInst, TBB, Cond);
     FBB = LastInst->getOperand(0).getMBB();
+    if (IsPredictable && MLI)
+      *IsPredictable = isCondBranchPredictable(*SecondLastInst, *MLI);
     return false;
   }
 
