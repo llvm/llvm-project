@@ -6088,6 +6088,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefToLLVM",
         ":Pass",
+        ":SPIRVCommonAttrToLLVMConversion",
         ":SPIRVDialect",
         ":SPIRVUtils",
         ":Support",
