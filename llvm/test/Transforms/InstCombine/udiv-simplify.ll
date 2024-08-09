@@ -99,6 +99,18 @@ define i8 @udiv_demanded_low_bits_set(i8 %a) {
   ret i8 %u
 }
 
+define i8 @udiv_large_value(i8 %a) {
+; CHECK-LABEL: @udiv_large_value(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], -76
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -76
+; CHECK-NEXT:    [[U:%.*]] = zext i1 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[U]]
+;
+  %o = or i8 %a, 180
+  %u = udiv i8 %a, %o
+  ret i8 %u
+}
+
 ; This can't divide evenly, so it is poison.
 
 define i8 @udiv_exact_demanded_low_bits_set(i8 %a) {
