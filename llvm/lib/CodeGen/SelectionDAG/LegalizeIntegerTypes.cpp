@@ -192,6 +192,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SUB:
   case ISD::VP_MUL:      Res = PromoteIntRes_SimpleIntBinOp(N); break;
 
+  case ISD::ABDS:
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
   case ISD::VP_SMIN:
@@ -201,6 +202,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SDIV:
   case ISD::VP_SREM:     Res = PromoteIntRes_SExtIntBinOp(N); break;
 
+  case ISD::ABDU:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORU:
   case ISD::VP_UMIN:
@@ -2704,7 +2706,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SET_ROUNDING(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Operand = N->getOperand(OpNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
   NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
@@ -2713,7 +2715,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
   assert(OpNo >= 7);
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Operand = N->getOperand(OpNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
   NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
@@ -2791,6 +2793,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::PARITY:      ExpandIntRes_PARITY(N, Lo, Hi); break;
   case ISD::Constant:    ExpandIntRes_Constant(N, Lo, Hi); break;
   case ISD::ABS:         ExpandIntRes_ABS(N, Lo, Hi); break;
+  case ISD::ABDS:
+  case ISD::ABDU:        ExpandIntRes_ABD(N, Lo, Hi); break;
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTLZ:        ExpandIntRes_CTLZ(N, Lo, Hi); break;
   case ISD::CTPOP:       ExpandIntRes_CTPOP(N, Lo, Hi); break;
@@ -3850,33 +3854,20 @@ void DAGTypeLegalizer::ExpandIntRes_CTLZ(SDNode *N,
   Hi = DAG.getConstant(0, dl, NVT);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
-  SDValue Op = N->getOperand(0);
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
+void DAGTypeLegalizer::ExpandIntRes_ABD(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Result = TLI.expandABD(N, DAG);
+  SplitInteger(Result, Lo, Hi);
+}
 
-  if (TLI.getOperationAction(ISD::CTPOP, VT) == TargetLoweringBase::LibCall) {
-    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-    if (VT == MVT::i32)
-      LC = RTLIB::CTPOP_I32;
-    else if (VT == MVT::i64)
-      LC = RTLIB::CTPOP_I64;
-    else if (VT == MVT::i128)
-      LC = RTLIB::CTPOP_I128;
-    assert(LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC) &&
-           "LibCall explicitly requested, but not available");
-    TargetLowering::MakeLibCallOptions CallOptions;
-    SDValue Res = TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, DL).first;
-    SplitInteger(Res, Lo, Hi);
-    return;
-  }
-
+void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N,
+                                          SDValue &Lo, SDValue &Hi) {
+  SDLoc dl(N);
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)
-  GetExpandedInteger(Op, Lo, Hi);
+  GetExpandedInteger(N->getOperand(0), Lo, Hi);
   EVT NVT = Lo.getValueType();
-  Lo = DAG.getNode(ISD::ADD, DL, NVT, DAG.getNode(ISD::CTPOP, DL, NVT, Lo),
-                   DAG.getNode(ISD::CTPOP, DL, NVT, Hi));
-  Hi = DAG.getConstant(0, DL, NVT);
+  Lo = DAG.getNode(ISD::ADD, dl, NVT, DAG.getNode(ISD::CTPOP, dl, NVT, Lo),
+                   DAG.getNode(ISD::CTPOP, dl, NVT, Hi));
+  Hi = DAG.getConstant(0, dl, NVT);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CTTZ(SDNode *N,

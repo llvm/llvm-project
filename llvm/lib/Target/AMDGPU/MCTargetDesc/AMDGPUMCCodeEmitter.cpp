@@ -83,6 +83,10 @@ public:
                    SmallVectorImpl<MCFixup> &Fixups,
                    const MCSubtargetInfo &STI) const;
 
+  void encodeGSrcSimple(const MCInst &MI, unsigned OpNo, APInt &Op,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const;
+
 private:
   uint64_t getImplicitOpSelHiEncoding(int Opcode) const;
   void getMachineOpValueCommon(const MCInst &MI, const MCOperand &MO,
@@ -733,6 +737,19 @@ void AMDGPUMCCodeEmitter::encodeGVGPR(const MCInst &MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   Op = MRI.getEncodingValue(MO.getReg()) & AMDGPU::HWEncoding::REG_IDX_MASK;
+}
+
+void AMDGPUMCCodeEmitter::encodeGSrcSimple(const MCInst &MI, unsigned OpNo,
+                                           APInt &Op,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg() && AMDGPU::isVGPR(MO.getReg(), MRI)) {
+    Op = 0x400 | AMDGPU::getHWRegIndex(MO.getReg(), MRI);
+    return;
+  }
+
+  getMachineOpValue(MI, MO, Op, Fixups, STI);
 }
 
 #include "AMDGPUGenMCCodeEmitter.inc"

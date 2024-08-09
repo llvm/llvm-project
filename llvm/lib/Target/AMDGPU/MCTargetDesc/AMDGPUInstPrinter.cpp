@@ -1965,7 +1965,21 @@ void AMDGPUInstPrinter::printSema(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo & /*STI*/,
                                    raw_ostream &O) {
+  if (OpNo == 0)
+    O << ' ';
   O << getRegisterName(MI->getOperand(OpNo).getReg());
+}
+
+void AMDGPUInstPrinter::printGSrcSimple(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+  if (MO.isReg() && AMDGPU::isVGPR(MO.getReg(), MRI)) {
+    O << getRegisterName(MO.getReg());
+    return;
+  }
+
+  printOperand(MI, OpNo, STI, O);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

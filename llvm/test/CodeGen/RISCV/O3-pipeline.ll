@@ -62,7 +62,6 @@
 ; CHECK-NEXT:       Constant Hoisting
 ; CHECK-NEXT:       Replace intrinsics with calls to vector library
 ; CHECK-NEXT:       Partially inline calls to library functions
-; CHECK-NEXT:       Expand vector predication intrinsics
 ; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
@@ -117,6 +116,7 @@
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
+; CHECK-NEXT:       RISC-V Landing Pad Setup
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
@@ -195,6 +195,7 @@
 ; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       RISC-V Zcmp move merging pass
 ; CHECK-NEXT:       RISC-V Zcmp Push/Pop optimization pass 
+; CHECK-NEXT:       RISC-V Indirect Branch Tracking
 ; CHECK-NEXT:       RISC-V pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Unpack machine instruction bundles

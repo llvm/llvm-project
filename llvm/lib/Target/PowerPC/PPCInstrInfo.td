@@ -1931,12 +1931,14 @@ def POPCNTB : XForm_11<31, 122, (outs gprc:$RA), (ins gprc:$RST),
                        [(set i32:$RA, (int_ppc_popcntb i32:$RST))]>;
 
 def CDTBCD : XForm_11<31, 282, (outs gprc:$RA), (ins gprc:$RST),
-                      "cdtbcd $RA, $RST", IIC_IntGeneral, []>;
+                      "cdtbcd $RA, $RST", IIC_IntGeneral,
+                       [(set i32:$RA, (int_ppc_cdtbcd i32:$RST))]>;
 def CBCDTD : XForm_11<31, 314, (outs gprc:$RA), (ins gprc:$RST),
-                      "cbcdtd $RA, $RST", IIC_IntGeneral, []>;
-
+                      "cbcdtd $RA, $RST", IIC_IntGeneral,
+                       [(set i32:$RA, (int_ppc_cbcdtd i32:$RST))]>;
 def ADDG6S : XOForm_1<31, 74, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
-                      "addg6s $RT, $RA, $RB", IIC_IntGeneral, []>;
+                      "addg6s $RT, $RA, $RB", IIC_IntGeneral,
+                       [(set i32:$RT, (int_ppc_addg6s i32:$RA, i32:$RB))]>;
 
 //===----------------------------------------------------------------------===//
 // PPC32 Load Instructions.

@@ -37,22 +37,17 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : Enc64 {
   bits<11> src1;
   bits<6> aux_data;
 
-  // TODO-GFX13: Inst{9-0} = vdst;
-  let Inst{7-0} = vdst{7-0};
+  let Inst{9-0} = vdst;
   let Inst{11-10} = ?;    // vdst_idx
   let Inst{13} = ?;       // supr
 
   let Inst{22-15} = op;
   let Inst{31-24} = 0xdc; // encoding
 
-  // TODO-GFX13: Inst{42-32} = src0;
-  let Inst{39-32} = src0{7-0};
-  let Inst{42} = src0{8};
+  let Inst{42-32} = src0;
   let Inst{44-43} = ?;    // src0_idx
 
-  // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{52-45} = !if(pfl.HasSrc1, src1{7-0}, ?);
-  let Inst{55} = !if(pfl.HasSrc1, src1{8}, ?);
+  let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = ?;    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
@@ -238,7 +233,9 @@ def IterationCnt {
 class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy, _HasAux, 0, 0, 0> {
   bit HasAux = _HasAux;
 
-  let Src1RC64 = !if(!eq(Src1VT, i64), SCSrc_b64, VSrc_f32);
+  let DstRC = GVGPR;
+  let Src0RC64 = GSrcSimple;
+  let Src1RC64 = !if(!eq(Src1VT, i64), SCSrc_b64, GSrcSimple);
   let Ins64 = !con((ins Src0RC64:$src0), !if(HasSrc1, (ins Src1RC64:$src1), (ins)), !if(HasAux, (ins AuxData:$aux_data), (ins)));
 
   string Src1Asm = !if(HasSrc1, ", $src1", "");
@@ -1311,24 +1308,24 @@ multiclass VOP3M_SWMMAC_K1_K2_K4_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X128_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
 }
 
-defm V_SWMMAC_F32_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0x83>;
-defm V_SWMMAC_F16_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0x84>;
-defm V_SWMMAC_F32_16X16X32_BF16  : VOP3M_SWMMAC_Real_gfx13 <0x85>;
-defm V_SWMMAC_BF16_16X16X32_BF16 : VOP3M_SWMMAC_Real_gfx13 <0x86>;
-defm V_SWMMAC_F32_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x87>;
-defm V_SWMMAC_F32_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x88>;
-defm V_SWMMAC_F32_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x89>;
-defm V_SWMMAC_F32_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x8a>;
-defm V_SWMMAC_F16_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x8b>;
-defm V_SWMMAC_F16_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x8c>;
-defm V_SWMMAC_F16_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x8d>;
-defm V_SWMMAC_F16_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x8e>;
-defm V_SWMMAC_I32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0x8f>;
-defm V_SWMMAC_F32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0x90>;
-defm V_SWMMAC_I32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0x91>;
-defm V_SWMMAC_F32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0x92>;
-defm V_SWMMAC_F32I32_16X16_IU8   : VOP3M_SWMMAC_K1_K2_Real <0x93>;
-defm V_SWMMAC_F32I32_16X16_IU4   : VOP3M_SWMMAC_K1_K2_K4_Real <0x94>;
+defm V_SWMMAC_F32_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0xb0>;
+defm V_SWMMAC_F16_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0xb1>;
+defm V_SWMMAC_F32_16X16X32_BF16  : VOP3M_SWMMAC_Real_gfx13 <0xb2>;
+defm V_SWMMAC_BF16_16X16X32_BF16 : VOP3M_SWMMAC_Real_gfx13 <0xb3>;
+defm V_SWMMAC_F32_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xb4>;
+defm V_SWMMAC_F32_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xb5>;
+defm V_SWMMAC_F32_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xb6>;
+defm V_SWMMAC_F32_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xb7>;
+defm V_SWMMAC_F16_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xb8>;
+defm V_SWMMAC_F16_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xb9>;
+defm V_SWMMAC_F16_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xba>;
+defm V_SWMMAC_F16_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xbb>;
+defm V_SWMMAC_I32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0xbc>;
+defm V_SWMMAC_F32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0xbd>;
+defm V_SWMMAC_I32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0xbe>;
+defm V_SWMMAC_F32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0xbf>;
+defm V_SWMMAC_F32I32_16X16_IU8   : VOP3M_SWMMAC_K1_K2_Real <0xc0>;
+defm V_SWMMAC_F32I32_16X16_IU4   : VOP3M_SWMMAC_K1_K2_K4_Real <0xc1>;
 
 // TODO-GFX13: Add support for VOP3 encoding.
 multiclass FMA_Tensor_Real_Shape<bits<8> op, string psName, string mnemo> {

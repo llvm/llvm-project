@@ -1039,7 +1039,7 @@ StructType::get(ArrayRef<Type> memberTypes,
   assert(!memberTypes.empty() && "Struct needs at least one member type");
   // Sort the decorations.
   SmallVector<StructType::MemberDecorationInfo, 4> sortedDecorations(
-      memberDecorations.begin(), memberDecorations.end());
+      memberDecorations);
   llvm::array_pod_sort(sortedDecorations.begin(), sortedDecorations.end());
   return Base::get(memberTypes.vec().front().getContext(),
                    /*identifier=*/StringRef(), memberTypes, offsetInfo,

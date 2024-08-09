@@ -4453,9 +4453,11 @@ class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD> :
       llvm_i32_ty,      // matrix a scale exponential
       llvm_i32_ty,      // matrix_b_scale
       llvm_i32_ty,      // matrix b scale exponential
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<8>>,
-     IntrWillReturn, IntrNoCallback, IntrNoFree]
+     ImmArg<ArgIndex<10>>, ImmArg<ArgIndex<11>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1210 = {

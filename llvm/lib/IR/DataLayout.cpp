@@ -865,11 +865,6 @@ Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
 }
 
-/// TODO: Remove this function once the transition to Align is over.
-uint64_t DataLayout::getPrefTypeAlignment(Type *Ty) const {
-  return getPrefTypeAlign(Ty).value();
-}
-
 Align DataLayout::getPrefTypeAlign(Type *Ty) const {
   return getAlignment(Ty, false);
 }

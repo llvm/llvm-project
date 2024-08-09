@@ -1184,7 +1184,7 @@ SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,
                                  ArrayRef<Value> sizes,
                                  ArrayRef<scf::ForOp> targets) {
   SmallVector<SmallVector<scf::ForOp, 8>, 8> res;
-  SmallVector<scf::ForOp, 8> currentTargets(targets.begin(), targets.end());
+  SmallVector<scf::ForOp, 8> currentTargets(targets);
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);

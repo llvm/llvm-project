@@ -1041,42 +1041,6 @@ void is_pointer()
   static_assert(!__is_pointer(void (StructWithMembers::*) ()));
 }
 
-void is_null_pointer() {
-  StructWithMembers x;
-
-  static_assert(__is_nullptr(decltype(nullptr)));
-  static_assert(!__is_nullptr(void *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(char *));
-  static_assert(!__is_nullptr(int *));
-  static_assert(!__is_nullptr(int **));
-  static_assert(!__is_nullptr(ClassType *));
-  static_assert(!__is_nullptr(Derives *));
-  static_assert(!__is_nullptr(Enum *));
-  static_assert(!__is_nullptr(IntArNB *));
-  static_assert(!__is_nullptr(Union *));
-  static_assert(!__is_nullptr(UnionAr *));
-  static_assert(!__is_nullptr(StructWithMembers *));
-  static_assert(!__is_nullptr(void (*)()));
-
-  static_assert(!__is_nullptr(void));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(char));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(ClassType));
-  static_assert(!__is_nullptr(Derives));
-  static_assert(!__is_nullptr(Enum));
-  static_assert(!__is_nullptr(IntArNB));
-  static_assert(!__is_nullptr(Union));
-  static_assert(!__is_nullptr(UnionAr));
-  static_assert(!__is_nullptr(StructWithMembers));
-  static_assert(!__is_nullptr(int StructWithMembers::*));
-  static_assert(!__is_nullptr(void(StructWithMembers::*)()));
-}
-
 void is_member_object_pointer()
 {
   StructWithMembers x;

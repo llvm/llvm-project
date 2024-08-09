@@ -204,21 +204,6 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
-CallBrInstSetDefaultDest::CallBrInstSetDefaultDest(CallBrInst *CallBr,
-                                                   Tracker &Tracker)
-    : IRChangeBase(Tracker), CallBr(CallBr) {
-  OrigDefaultDest = CallBr->getDefaultDest();
-}
-void CallBrInstSetDefaultDest::revert() {
-  CallBr->setDefaultDest(OrigDefaultDest);
-}
-#ifndef NDEBUG
-void CallBrInstSetDefaultDest::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif
-
 CallBrInstSetIndirectDest::CallBrInstSetIndirectDest(CallBrInst *CallBr,
                                                      unsigned Idx,
                                                      Tracker &Tracker)
@@ -254,6 +239,27 @@ void MoveInstr::revert() {
 
 #ifndef NDEBUG
 void MoveInstr::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void InsertIntoBB::revert() { InsertedI->removeFromParent(); }
+
+InsertIntoBB::InsertIntoBB(Instruction *InsertedI, Tracker &Tracker)
+    : IRChangeBase(Tracker), InsertedI(InsertedI) {}
+
+#ifndef NDEBUG
+void InsertIntoBB::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void CreateAndInsertInst::revert() { NewI->eraseFromParent(); }
+
+#ifndef NDEBUG
+void CreateAndInsertInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }

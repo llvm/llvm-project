@@ -1197,7 +1197,7 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
 endif( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
 
 # Make sure we don't get -rdynamic in every binary. For those that need it,
-# use export_executable_symbols(target).
+# use EXPORT_SYMBOLS argument.
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
 include(AddLLVM)
@@ -1238,7 +1238,7 @@ if( LLVM_INCLUDE_UTILS )
   if( LLVM_INCLUDE_TESTS )
     set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE) 
+    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )

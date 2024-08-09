@@ -3487,6 +3487,229 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       "Function must not be called with an addressing mode it can't handle");
 }
 
+/// Return true if the opcode is a post-index ld/st instruction, which really
+/// loads from base+0.
+static bool isPostIndexLdStOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+  case AArch64::LD1Fourv16b_POST:
+  case AArch64::LD1Fourv1d_POST:
+  case AArch64::LD1Fourv2d_POST:
+  case AArch64::LD1Fourv2s_POST:
+  case AArch64::LD1Fourv4h_POST:
+  case AArch64::LD1Fourv4s_POST:
+  case AArch64::LD1Fourv8b_POST:
+  case AArch64::LD1Fourv8h_POST:
+  case AArch64::LD1Onev16b_POST:
+  case AArch64::LD1Onev1d_POST:
+  case AArch64::LD1Onev2d_POST:
+  case AArch64::LD1Onev2s_POST:
+  case AArch64::LD1Onev4h_POST:
+  case AArch64::LD1Onev4s_POST:
+  case AArch64::LD1Onev8b_POST:
+  case AArch64::LD1Onev8h_POST:
+  case AArch64::LD1Rv16b_POST:
+  case AArch64::LD1Rv1d_POST:
+  case AArch64::LD1Rv2d_POST:
+  case AArch64::LD1Rv2s_POST:
+  case AArch64::LD1Rv4h_POST:
+  case AArch64::LD1Rv4s_POST:
+  case AArch64::LD1Rv8b_POST:
+  case AArch64::LD1Rv8h_POST:
+  case AArch64::LD1Threev16b_POST:
+  case AArch64::LD1Threev1d_POST:
+  case AArch64::LD1Threev2d_POST:
+  case AArch64::LD1Threev2s_POST:
+  case AArch64::LD1Threev4h_POST:
+  case AArch64::LD1Threev4s_POST:
+  case AArch64::LD1Threev8b_POST:
+  case AArch64::LD1Threev8h_POST:
+  case AArch64::LD1Twov16b_POST:
+  case AArch64::LD1Twov1d_POST:
+  case AArch64::LD1Twov2d_POST:
+  case AArch64::LD1Twov2s_POST:
+  case AArch64::LD1Twov4h_POST:
+  case AArch64::LD1Twov4s_POST:
+  case AArch64::LD1Twov8b_POST:
+  case AArch64::LD1Twov8h_POST:
+  case AArch64::LD1i16_POST:
+  case AArch64::LD1i32_POST:
+  case AArch64::LD1i64_POST:
+  case AArch64::LD1i8_POST:
+  case AArch64::LD2Rv16b_POST:
+  case AArch64::LD2Rv1d_POST:
+  case AArch64::LD2Rv2d_POST:
+  case AArch64::LD2Rv2s_POST:
+  case AArch64::LD2Rv4h_POST:
+  case AArch64::LD2Rv4s_POST:
+  case AArch64::LD2Rv8b_POST:
+  case AArch64::LD2Rv8h_POST:
+  case AArch64::LD2Twov16b_POST:
+  case AArch64::LD2Twov2d_POST:
+  case AArch64::LD2Twov2s_POST:
+  case AArch64::LD2Twov4h_POST:
+  case AArch64::LD2Twov4s_POST:
+  case AArch64::LD2Twov8b_POST:
+  case AArch64::LD2Twov8h_POST:
+  case AArch64::LD2i16_POST:
+  case AArch64::LD2i32_POST:
+  case AArch64::LD2i64_POST:
+  case AArch64::LD2i8_POST:
+  case AArch64::LD3Rv16b_POST:
+  case AArch64::LD3Rv1d_POST:
+  case AArch64::LD3Rv2d_POST:
+  case AArch64::LD3Rv2s_POST:
+  case AArch64::LD3Rv4h_POST:
+  case AArch64::LD3Rv4s_POST:
+  case AArch64::LD3Rv8b_POST:
+  case AArch64::LD3Rv8h_POST:
+  case AArch64::LD3Threev16b_POST:
+  case AArch64::LD3Threev2d_POST:
+  case AArch64::LD3Threev2s_POST:
+  case AArch64::LD3Threev4h_POST:
+  case AArch64::LD3Threev4s_POST:
+  case AArch64::LD3Threev8b_POST:
+  case AArch64::LD3Threev8h_POST:
+  case AArch64::LD3i16_POST:
+  case AArch64::LD3i32_POST:
+  case AArch64::LD3i64_POST:
+  case AArch64::LD3i8_POST:
+  case AArch64::LD4Fourv16b_POST:
+  case AArch64::LD4Fourv2d_POST:
+  case AArch64::LD4Fourv2s_POST:
+  case AArch64::LD4Fourv4h_POST:
+  case AArch64::LD4Fourv4s_POST:
+  case AArch64::LD4Fourv8b_POST:
+  case AArch64::LD4Fourv8h_POST:
+  case AArch64::LD4Rv16b_POST:
+  case AArch64::LD4Rv1d_POST:
+  case AArch64::LD4Rv2d_POST:
+  case AArch64::LD4Rv2s_POST:
+  case AArch64::LD4Rv4h_POST:
+  case AArch64::LD4Rv4s_POST:
+  case AArch64::LD4Rv8b_POST:
+  case AArch64::LD4Rv8h_POST:
+  case AArch64::LD4i16_POST:
+  case AArch64::LD4i32_POST:
+  case AArch64::LD4i64_POST:
+  case AArch64::LD4i8_POST:
+  case AArch64::LDAPRWpost:
+  case AArch64::LDAPRXpost:
+  case AArch64::LDIAPPWpost:
+  case AArch64::LDIAPPXpost:
+  case AArch64::LDPDpost:
+  case AArch64::LDPQpost:
+  case AArch64::LDPSWpost:
+  case AArch64::LDPSpost:
+  case AArch64::LDPWpost:
+  case AArch64::LDPXpost:
+  case AArch64::LDRBBpost:
+  case AArch64::LDRBpost:
+  case AArch64::LDRDpost:
+  case AArch64::LDRHHpost:
+  case AArch64::LDRHpost:
+  case AArch64::LDRQpost:
+  case AArch64::LDRSBWpost:
+  case AArch64::LDRSBXpost:
+  case AArch64::LDRSHWpost:
+  case AArch64::LDRSHXpost:
+  case AArch64::LDRSWpost:
+  case AArch64::LDRSpost:
+  case AArch64::LDRWpost:
+  case AArch64::LDRXpost:
+  case AArch64::ST1Fourv16b_POST:
+  case AArch64::ST1Fourv1d_POST:
+  case AArch64::ST1Fourv2d_POST:
+  case AArch64::ST1Fourv2s_POST:
+  case AArch64::ST1Fourv4h_POST:
+  case AArch64::ST1Fourv4s_POST:
+  case AArch64::ST1Fourv8b_POST:
+  case AArch64::ST1Fourv8h_POST:
+  case AArch64::ST1Onev16b_POST:
+  case AArch64::ST1Onev1d_POST:
+  case AArch64::ST1Onev2d_POST:
+  case AArch64::ST1Onev2s_POST:
+  case AArch64::ST1Onev4h_POST:
+  case AArch64::ST1Onev4s_POST:
+  case AArch64::ST1Onev8b_POST:
+  case AArch64::ST1Onev8h_POST:
+  case AArch64::ST1Threev16b_POST:
+  case AArch64::ST1Threev1d_POST:
+  case AArch64::ST1Threev2d_POST:
+  case AArch64::ST1Threev2s_POST:
+  case AArch64::ST1Threev4h_POST:
+  case AArch64::ST1Threev4s_POST:
+  case AArch64::ST1Threev8b_POST:
+  case AArch64::ST1Threev8h_POST:
+  case AArch64::ST1Twov16b_POST:
+  case AArch64::ST1Twov1d_POST:
+  case AArch64::ST1Twov2d_POST:
+  case AArch64::ST1Twov2s_POST:
+  case AArch64::ST1Twov4h_POST:
+  case AArch64::ST1Twov4s_POST:
+  case AArch64::ST1Twov8b_POST:
+  case AArch64::ST1Twov8h_POST:
+  case AArch64::ST1i16_POST:
+  case AArch64::ST1i32_POST:
+  case AArch64::ST1i64_POST:
+  case AArch64::ST1i8_POST:
+  case AArch64::ST2GPostIndex:
+  case AArch64::ST2Twov16b_POST:
+  case AArch64::ST2Twov2d_POST:
+  case AArch64::ST2Twov2s_POST:
+  case AArch64::ST2Twov4h_POST:
+  case AArch64::ST2Twov4s_POST:
+  case AArch64::ST2Twov8b_POST:
+  case AArch64::ST2Twov8h_POST:
+  case AArch64::ST2i16_POST:
+  case AArch64::ST2i32_POST:
+  case AArch64::ST2i64_POST:
+  case AArch64::ST2i8_POST:
+  case AArch64::ST3Threev16b_POST:
+  case AArch64::ST3Threev2d_POST:
+  case AArch64::ST3Threev2s_POST:
+  case AArch64::ST3Threev4h_POST:
+  case AArch64::ST3Threev4s_POST:
+  case AArch64::ST3Threev8b_POST:
+  case AArch64::ST3Threev8h_POST:
+  case AArch64::ST3i16_POST:
+  case AArch64::ST3i32_POST:
+  case AArch64::ST3i64_POST:
+  case AArch64::ST3i8_POST:
+  case AArch64::ST4Fourv16b_POST:
+  case AArch64::ST4Fourv2d_POST:
+  case AArch64::ST4Fourv2s_POST:
+  case AArch64::ST4Fourv4h_POST:
+  case AArch64::ST4Fourv4s_POST:
+  case AArch64::ST4Fourv8b_POST:
+  case AArch64::ST4Fourv8h_POST:
+  case AArch64::ST4i16_POST:
+  case AArch64::ST4i32_POST:
+  case AArch64::ST4i64_POST:
+  case AArch64::ST4i8_POST:
+  case AArch64::STGPostIndex:
+  case AArch64::STGPpost:
+  case AArch64::STPDpost:
+  case AArch64::STPQpost:
+  case AArch64::STPSpost:
+  case AArch64::STPWpost:
+  case AArch64::STPXpost:
+  case AArch64::STRBBpost:
+  case AArch64::STRBpost:
+  case AArch64::STRDpost:
+  case AArch64::STRHHpost:
+  case AArch64::STRHpost:
+  case AArch64::STRQpost:
+  case AArch64::STRSpost:
+  case AArch64::STRWpost:
+  case AArch64::STRXpost:
+  case AArch64::STZ2GPostIndex:
+  case AArch64::STZGPostIndex:
+    return true;
+  }
+}
+
 bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, TypeSize &Width,
@@ -3518,8 +3741,11 @@ bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
 
   // Compute the offset. Offset is calculated as the immediate operand
   // multiplied by the scaling factor. Unscaled instructions have scaling factor
-  // set to 1.
-  if (LdSt.getNumExplicitOperands() == 3) {
+  // set to 1. Postindex are a special case which have an offset of 0.
+  if (isPostIndexLdStOpcode(LdSt.getOpcode())) {
+    BaseOp = &LdSt.getOperand(2);
+    Offset = 0;
+  } else if (LdSt.getNumExplicitOperands() == 3) {
     BaseOp = &LdSt.getOperand(1);
     Offset = LdSt.getOperand(2).getImm() * Scale.getKnownMinValue();
   } else {
@@ -3529,10 +3755,7 @@ bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
   }
   OffsetIsScalable = Scale.isScalable();
 
-  if (!BaseOp->isReg() && !BaseOp->isFI())
-    return false;
-
-  return true;
+  return BaseOp->isReg() || BaseOp->isFI();
 }
 
 MachineOperand &
@@ -3622,8 +3845,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     break;
   case AArch64::STRWpost:
   case AArch64::LDRWpost:
-    Scale = TypeSize::getFixed(4);
-    Width = TypeSize::getFixed(32);
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(4);
     MinOffset = -256;
     MaxOffset = 255;
     break;
@@ -3690,13 +3913,15 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 255;
     break;
-  // LDP / STP
+  // LDP / STP (including pre/post inc)
   case AArch64::LDPQi:
   case AArch64::LDNPQi:
   case AArch64::STPQi:
   case AArch64::STNPQi:
+  case AArch64::STPQpre:
+  case AArch64::LDPQpost:
     Scale = TypeSize::getFixed(16);
-    Width = TypeSize::getFixed(32);
+    Width = TypeSize::getFixed(16 * 2);
     MinOffset = -64;
     MaxOffset = 63;
     break;
@@ -3708,8 +3933,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STPDi:
   case AArch64::STNPXi:
   case AArch64::STNPDi:
+  case AArch64::STPXpre:
+  case AArch64::LDPXpost:
+  case AArch64::STPDpre:
+  case AArch64::LDPDpost:
     Scale = TypeSize::getFixed(8);
-    Width = TypeSize::getFixed(16);
+    Width = TypeSize::getFixed(8 * 2);
     MinOffset = -64;
     MaxOffset = 63;
     break;
@@ -3722,26 +3951,9 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STNPWi:
   case AArch64::STNPSi:
     Scale = TypeSize::getFixed(4);
-    Width = TypeSize::getFixed(8);
+    Width = TypeSize::getFixed(4 * 2);
     MinOffset = -64;
     MaxOffset = 63;
-    break;
-  // pre/post inc
-  case AArch64::STPQpre:
-  case AArch64::LDPQpost:
-    Scale = TypeSize::getFixed(16);
-    Width = TypeSize::getFixed(16);
-    MinOffset = -1024;
-    MaxOffset = 1008;
-    break;
-  case AArch64::STPXpre:
-  case AArch64::LDPXpost:
-  case AArch64::STPDpre:
-  case AArch64::LDPDpost:
-    Scale = TypeSize::getFixed(8);
-    Width = TypeSize::getFixed(8);
-    MinOffset = -512;
-    MaxOffset = 504;
     break;
   case AArch64::StoreSwiftAsyncContext:
     // Store is an STRXui, but there might be an ADDXri in the expansion too.

@@ -63,6 +63,7 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
   static constexpr unsigned OpNum = 4;
   static constexpr unsigned BitsPerField = 2;
   static constexpr unsigned NumFields = 8;
+  static constexpr unsigned FieldMask = (1 << BitsPerField) - 1;
   using ModeType = PackedVector<unsigned, BitsPerField,
                                 std::bitset<BitsPerField * NumFields>>;
 
@@ -72,6 +73,12 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
     ModeTy() : ModeType(0) {}
 
     operator int64_t() const { return raw_bits().to_ulong(); }
+
+    static ModeTy fullMask() {
+      ModeTy M;
+      M.raw_bits().flip();
+      return M;
+    }
   };
 
 public:
@@ -97,8 +104,18 @@ private:
   const SIRegisterInfo *TRI;
   const SIMachineFunctionInfo *MFI;
 
+  /// Most recent s_set_* instruction.
+  MachineInstr *MostRecentModeSet;
+
+  /// Whether the current mode is known.
+  bool CurrentModeKnown;
+
   /// Current mode bits.
-  ModeTy Mode;
+  ModeTy CurrentMode;
+
+  /// Current mask of mode bits that instructions since MostRecentModeSet care
+  /// about.
+  ModeTy CurrentMask;
 
   /// Number of current hard clause instructions.
   unsigned ClauseLen;
@@ -110,13 +127,13 @@ private:
   unsigned ClauseBreaks;
 
   /// Last hard clause instruction.
-  MachineBasicBlock::instr_iterator Clause;
+  MachineInstr *Clause;
 
   /// Insert mode change before \p I. \returns true if mode was changed.
-  bool setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
+  bool setMode(ModeTy NewMode, ModeTy Mask, MachineInstr *I);
 
   /// Reset mode to default.
-  void resetMode(MachineBasicBlock::instr_iterator I) { setMode(ModeTy(), I); }
+  void resetMode(MachineInstr *I) { setMode(ModeTy(), ModeTy::fullMask(), I); }
 
   /// If \p MO references VGPRs, return the MSBs. Otherwise, return nullopt.
   std::optional<unsigned> getMSBs(const MachineOperand &MO) const;
@@ -124,40 +141,49 @@ private:
   /// Handle single \p MI. \return true if changed.
   bool runOnMachineInstr(MachineInstr &MI);
 
-  /// Handle single \p MI given \p Ops operands bit mapping.
-  /// Optionally takes second array \p Ops2.
+  /// Compute the mode and mode mask for a single \p MI given \p Ops operands
+  /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
-  /// \return true if any VGPRs are used in MI.
-  bool computeModeForMSBs(ModeTy &NewMode, MachineInstr &MI,
-                          const unsigned Ops[OpNum],
-                          const unsigned *Ops2 = nullptr);
+  void computeMode(ModeTy &NewMode, ModeTy &Mask, MachineInstr &MI,
+                   const unsigned Ops[OpNum], const unsigned *Ops2 = nullptr);
 
-  /// Abstraction between which index register is used and where the signifying
-  /// bits are stored.
-  inline void updateModeForIDX(ModeTy &Mode, const ModeTy &Mask);
-
-  bool lowerIDX(ModeTy &NewMode, MachineInstr &MI);
+  void lowerIDX(MachineInstr &MI);
 
   /// Check if an instruction \p I is within a clause and returns a suitable
   /// iterator to insert mode change. It may also modify the S_CLAUSE
   /// instruction to extend it or drop the clause if it cannot be adjusted.
-  MachineBasicBlock::instr_iterator
-  handleClause(MachineBasicBlock::instr_iterator I);
+  MachineInstr *handleClause(MachineInstr *I);
 };
 
-bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
-                                      MachineBasicBlock::instr_iterator I) {
-  if (NewMode == Mode)
-    return false;
+bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
+                                      MachineInstr *I) {
+  assert((NewMode.raw_bits() & ~Mask.raw_bits()).none());
+
+  if (CurrentModeKnown) {
+    auto Delta = NewMode.raw_bits() ^ CurrentMode.raw_bits();
+
+    if ((Delta & Mask.raw_bits()).none())
+      return false;
+
+    if (MostRecentModeSet && (Delta & CurrentMask.raw_bits()).none()) {
+      CurrentMode |= NewMode;
+      CurrentMask |= Mask;
+
+      MostRecentModeSet->getOperand(0).setImm(CurrentMode);
+      return true;
+    }
+  }
 
   I = handleClause(I);
-  BuildMI(*I->getParent(), I, nullptr,
-          TII->get(ST->hasVGPRIndexingRegisters() ? AMDGPU::S_SET_VGPR_FRAMES
+  MostRecentModeSet =
+      BuildMI(*I->getParent(), I, {}, TII->get(ST->hasVGPRIndexingRegisters() ? AMDGPU::S_SET_VGPR_FRAMES
                                                   : AMDGPU::S_SET_VGPR_MSB))
-      .addImm(NewMode);
+          .addImm(NewMode);
 
-  Mode = NewMode;
+  CurrentMode = NewMode;
+  CurrentMask = Mask;
+  CurrentModeKnown = true;
   return true;
 }
 
@@ -175,80 +201,75 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
   return Idx >> 8;
 }
 
-void AMDGPULowerVGPREncoding::updateModeForIDX(ModeTy &Mode,
-                                               const ModeTy &Mask) {
-  for (unsigned I = 0; I < OpNum; ++I) {
-    Mode[I] = Mask[I];
-  }
-}
-
-bool AMDGPULowerVGPREncoding::lowerIDX(ModeTy &NewMode, MachineInstr &MI) {
+void AMDGPULowerVGPREncoding::lowerIDX(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
+  bool IsLoad = Opc == AMDGPU::V_LOAD_IDX;
+
   // The RC in MachineInstrDesc for V_LOAD/STORE_IDX can contain many
   // possible register sizes, we need to use the register info instead.
   const auto *TRI = ST->getRegisterInfo();
-  auto Reg =
-      MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op))
-          .getReg();
-  const auto *RC = TRI->getPhysRegBaseClass(Reg);
+  MachineOperand &DataOp =
+      MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op));
+  const auto *RC = TRI->getPhysRegBaseClass(DataOp.getReg());
   auto Size = TRI->getRegSizeInBits(*RC);
-  assert(Size == 32 &&
-         "TODO-GFX13 Support lowering non-32-bit sizes for V_LOAD/STORE_IDX");
+  assert((Size % 32) == 0 &&
+         "TODO-GFX13 Support lowering non-multiple-of-32-bit sizes for "
+         "V_LOAD/STORE_IDX");
+  unsigned DataRegNum = TRI->getHWRegIndex(DataOp.getReg());
+
   Register IdxReg =
       MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
           .getReg();
   unsigned IdxRegVal = IdxReg - AMDGPU::IDX0;
-  bool IsLoad = Opc == AMDGPU::V_LOAD_IDX;
-  // src0, src1, src2, dst
-  ModeTy UsedIdxRegs;
-  if (IsLoad)
-    UsedIdxRegs[0] = IdxRegVal;
-  else
-    UsedIdxRegs[3] = IdxRegVal;
-  updateModeForIDX(NewMode, UsedIdxRegs);
 
-  // Synthesize the offset VGPR
   int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
   assert(OffsetIdx != -1 && "Malformed V_LOAD/STORE_IDX instruction");
   unsigned Offset = MI.getOperand(OffsetIdx).getImm();
-  assert(Offset < MFI->getLaneSharedVGPRSize() && "Offset out of range");
-  // Laneshared allocation starts at VGPR0
-  unsigned OffsetVGPRReg = AMDGPU::VGPR0 + Offset;
-  MachineOperand OffsetVGPR = MachineOperand::CreateReg(OffsetVGPRReg, 0);
 
-  // Insert V_MOV
+  // src0, src1, src2, dst
+  ModeTy NewMode;
+  ModeTy Mask;
+  if (IsLoad)
+    NewMode[0] = IdxRegVal;
+  else
+    NewMode[3] = IdxRegVal;
+  Mask[0] = 3;
+  Mask[3] = 3;
+  Mask[4] = 3;
+  Mask[7] = 3;
+
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
-  auto MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), OpDesc);
-  if (IsLoad) {
-    // IsUndef because there may be no writes to the register from this function
-    OffsetVGPR.setIsUndef(true);
-    MIB.add(MI.getOperand(0)) // loaded value
-        .add(OffsetVGPR);
-  } else {
-    OffsetVGPR.setIsDef(true);
-    // clang-format off
-    MIB.add(OffsetVGPR)
-        .add(MI.getOperand(0)); // stored value
-    // clang-format on
+  for (unsigned i = 0; i < (Size / 32); ++i) {
+    unsigned CurOffset = (Offset + i) & 0x3ff;
+    unsigned CurData = DataRegNum + i;
+
+    auto MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), OpDesc);
+    if (IsLoad) {
+      MIB.addDef(AMDGPU::VGPR0 + CurData)
+          .addUse(AMDGPU::VGPR0 + CurOffset, RegState::Undef);
+
+      NewMode[7] = CurData >> 8;
+      NewMode[4] = CurOffset >> 8;
+    } else {
+      MIB.addDef(AMDGPU::VGPR0 + CurOffset)
+          .addUse(AMDGPU::VGPR0 + CurData, DataOp.isUndef() ? RegState::Undef : 0);
+      NewMode[7] = CurOffset >> 8;
+      NewMode[4] = CurData >> 8;
+    }
+
+    setMode(NewMode, Mask, &*MIB);
   }
 
-  // An earlier pass should have already inserted the SET_GPR_IDX before the
-  // V_LOAD/STORE_IDX
-
   MI.eraseFromParent();
-
-  auto Ops = AMDGPU::getVGPRLoweringOperandTables(MIB->getDesc());
-  assert(Ops.first);
-  computeModeForMSBs(NewMode, *MIB, Ops.first, Ops.second);
-
-  return setMode(NewMode, MIB->getIterator());
 }
 
-bool AMDGPULowerVGPREncoding::computeModeForMSBs(ModeTy &Mode, MachineInstr &MI,
-                                                 const unsigned Ops[OpNum],
-                                                 const unsigned *Ops2) {
-  bool RegUsed = false;
-  ModeTy NewMode = Mode;
+void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
+                                            MachineInstr &MI,
+                                            const unsigned Ops[OpNum],
+                                            const unsigned *Ops2) {
+  NewMode = {};
+  Mask = {};
+
   for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
@@ -274,7 +295,6 @@ bool AMDGPULowerVGPREncoding::computeModeForMSBs(ModeTy &Mode, MachineInstr &MI,
         MSBits = getMSBs(*Op);
     }
 
-    // Keep unused bits from the old mask to minimize switches.
     if (!MSBits.has_value())
       continue;
 
@@ -287,49 +307,42 @@ bool AMDGPULowerVGPREncoding::computeModeForMSBs(ModeTy &Mode, MachineInstr &MI,
           TII->hasVALU32BitEncoding(MI.getOpcode()))))
       continue;
 
-    // If any registers are used, even if MSBs are unchanged, we need to update
-    // idx select bits.
-    RegUsed = true;
-
     unsigned IdxOffset = ST->hasVGPRIndexingRegisters() ? 4 : 0;
     NewMode[I + IdxOffset] = MSBits.value();
-  }
+    Mask[I + IdxOffset] = FieldMask;
 
-  Mode = NewMode;
-  return RegUsed;
+    if (ST->hasVGPRIndexingRegisters())
+      Mask[I] = FieldMask;
+  }
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
-  ModeTy NewMode = Mode;
   unsigned Opc = MI.getOpcode();
   // TODO-GFX13 Support BUNDLEs with multiple V_LOAD/STORE_IDX instructions
-  if (Opc == AMDGPU::V_LOAD_IDX || Opc == AMDGPU::V_STORE_IDX)
-    return lowerIDX(NewMode, MI);
+  if (Opc == AMDGPU::V_LOAD_IDX || Opc == AMDGPU::V_STORE_IDX) {
+    lowerIDX(MI);
+    return true;
+  }
 
   auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
   if (Ops.first) {
-    bool VGPRAreUsed = computeModeForMSBs(NewMode, MI, Ops.first, Ops.second);
-    if (VGPRAreUsed && ST->hasVGPRIndexingRegisters()) {
-      // Idx registers are used, and we should reset them to 0.
-      ModeTy IdxRegsUsed;
-      updateModeForIDX(NewMode, IdxRegsUsed);
-    }
-    return setMode(NewMode, MI.getIterator());
+    ModeTy NewMode, Mask;
+    computeMode(NewMode, Mask, MI, Ops.first, Ops.second);
+    return setMode(NewMode, Mask, &MI);
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
 
   return false;
 }
 
-MachineBasicBlock::instr_iterator
-AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
+MachineInstr *AMDGPULowerVGPREncoding::handleClause(MachineInstr *I) {
   if (!ClauseRemaining)
     return I;
 
   // A clause cannot start with a special instruction, place it right before
   // the clause.
   if (ClauseRemaining == ClauseLen) {
-    I = std::prev(Clause);
+    I = Clause->getPrevNode();
     assert(I->isBundle());
     return I;
   }
@@ -365,24 +378,29 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
-  Mode.reset();
+  CurrentMode.reset();
+  CurrentMask.reset();
+  CurrentModeKnown = true;
   for (auto &MBB : MF) {
+    MostRecentModeSet = nullptr;
+
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
       if (MI.isMetaInstruction())
         continue;
 
       if (MI.isTerminator() || MI.isCall()) {
         if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
-            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED)
-          Mode.reset();
-        else
-          resetMode(MI.getIterator());
+            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
+          CurrentMode.reset();
+          CurrentModeKnown = true;
+        } else
+          resetMode(&MI);
         continue;
       }
 
       if (MI.isInlineAsm()) {
         if (TII->hasVGPRUses(MI))
-          resetMode(MI.getIterator());
+          resetMode(&MI);
         continue;
       }
 
@@ -391,7 +409,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
         ClauseLen = MI.getOperand(0).getImm();
         ClauseBreaks = (ClauseLen >> 8) & 15;
         ClauseLen = ClauseRemaining = (ClauseLen & 63) + 1;
-        Clause = MI.getIterator();
+        Clause = &MI;
         continue;
       }
 
@@ -399,6 +417,15 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
 
       if (ClauseRemaining)
         --ClauseRemaining;
+    }
+
+    // If we're falling through to a block that has at least one other
+    // predecessor, we no longer know the mode.
+    MachineBasicBlock *Next = MBB.getNextNode();
+    if (Next && Next->pred_size() >= 2 &&
+        llvm::is_contained(Next->predecessors(), &MBB)) {
+      if (CurrentMode.raw_bits().any())
+        CurrentModeKnown = false;
     }
   }
 

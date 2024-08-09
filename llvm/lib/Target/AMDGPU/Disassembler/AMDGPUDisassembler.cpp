@@ -1813,6 +1813,16 @@ MCOperand AMDGPUDisassembler::decodeGVGPR(unsigned Val) const {
   return createRegOperand(AMDGPU::VGPR_32RegClassID, Val);
 }
 
+MCOperand AMDGPUDisassembler::decodeGSrcSimple(unsigned Val) const {
+  assert(isUInt<11>(Val));
+  bool IsVGPR = Val & 0x400;
+  if (IsVGPR)
+    return createRegOperand(AMDGPU::VGPR_32RegClassID, Val & 0x3ff);
+  return decodeSrcOp(AMDGPUDisassembler::OPW32, /* EncImm= */ Val,
+                     /* MandatoryLiteral= */ false, /* ImmWidth= */ 32,
+                     AMDGPU::OperandSemantics::INT);
+}
+
 // Bit 0 of DstY isn't stored in the instruction, because it's always the
 // opposite of bit 0 of DstX.
 MCOperand AMDGPUDisassembler::decodeVOPDDstYOp(MCInst &Inst,

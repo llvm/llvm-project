@@ -7211,7 +7211,7 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // create different versions of the function for different OMP internal
     // variables.
     auto Linkage = this->M.getTargetTriple().rfind("wasm32") == 0
-                       ? GlobalValue::ExternalLinkage
+                       ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
                                   Constant::getNullValue(Ty), Elem.first(),
