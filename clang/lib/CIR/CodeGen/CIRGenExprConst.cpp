@@ -1675,7 +1675,22 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &CGM,
                                                QualType destType) {
   // For an _Atomic-qualified constant, we may need to add tail padding.
   if (auto AT = destType->getAs<AtomicType>()) {
-    assert(0 && "not implemented");
+    QualType destValueType = AT->getValueType();
+    C = emitForMemory(CGM, C, destValueType);
+
+    uint64_t innerSize = CGM.getASTContext().getTypeSize(destValueType);
+    uint64_t outerSize = CGM.getASTContext().getTypeSize(destType);
+    if (innerSize == outerSize)
+      return C;
+
+    assert(innerSize < outerSize && "emitted over-large constant for atomic");
+    auto &builder = CGM.getBuilder();
+    auto zeroArray = builder.getZeroInitAttr(
+        mlir::cir::ArrayType::get(builder.getContext(), builder.getUInt8Ty(),
+                                  (outerSize - innerSize) / 8));
+    SmallVector<mlir::Attribute, 4> anonElts = {C, zeroArray};
+    auto arrAttr = mlir::ArrayAttr::get(builder.getContext(), anonElts);
+    return builder.getAnonConstStruct(arrAttr, false);
   }
 
   // Zero-extend bool.
