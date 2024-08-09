@@ -20,7 +20,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
 import platform
-import unittest2
 from lldbsuite.test.builders.darwin import get_triple
 
 import sys

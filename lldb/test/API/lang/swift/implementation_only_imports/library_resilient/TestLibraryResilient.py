@@ -19,7 +19,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
 import time
-import unittest2
 
 class TestLibraryResilient(TestBase):
     def launch_info(self):

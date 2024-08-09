@@ -19,7 +19,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
 import time
-import unittest2
 
 @skipIfDarwin # rdar://problem/54322424 Sometimes failing, sometimes truncated output.
 class TestMainExecutable(TestBase):

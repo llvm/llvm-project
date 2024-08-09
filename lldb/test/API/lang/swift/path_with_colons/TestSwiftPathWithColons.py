@@ -19,7 +19,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
 import shutil
-import unittest2
 
 
 # this should be a perfectly general feature but I could not

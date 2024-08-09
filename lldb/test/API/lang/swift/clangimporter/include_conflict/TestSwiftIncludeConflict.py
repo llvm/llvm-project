@@ -15,7 +15,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
-import unittest2
 import shutil
 
 class TestSwiftIncludeConflict(TestBase):

@@ -15,7 +15,6 @@ import os
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
-import unittest2
 
 
 class TestSwiftInterfaceDSYM(TestBase):

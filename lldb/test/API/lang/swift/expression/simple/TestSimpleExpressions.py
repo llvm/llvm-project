@@ -18,7 +18,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import sys
-import unittest2
 
 
 class TestSimpleSwiftExpressions(TestBase):

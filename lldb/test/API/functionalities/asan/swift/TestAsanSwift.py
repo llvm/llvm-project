@@ -18,7 +18,6 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test_event.build_exception import BuildError
 import os
-import unittest2
 import json
 
 
