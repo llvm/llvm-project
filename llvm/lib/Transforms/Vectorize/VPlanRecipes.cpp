@@ -48,6 +48,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
+  case VPScalarStoreSC:
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return true;
@@ -101,6 +102,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBranchOnMaskSC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
+  case VPScalarStoreSC:
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return false;
@@ -605,14 +607,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
         ReducedPartRdx = RdxDesc.isSigned()
                              ? Builder.CreateSExt(ReducedPartRdx, PhiTy)
                              : Builder.CreateZExt(ReducedPartRdx, PhiTy);
-    }
-
-    // If there were stores of the reduction value to a uniform memory address
-    // inside the loop, create the final store here.
-    if (StoreInst *SI = RdxDesc.IntermediateStore) {
-      auto *NewSI = Builder.CreateAlignedStore(
-          ReducedPartRdx, SI->getPointerOperand(), SI->getAlign());
-      propagateMetadata(NewSI, SI);
     }
 
     return ReducedPartRdx;
@@ -1924,6 +1918,29 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
   O << " = " << Instruction::getOpcodeName(Opcode) << " ";
   printOperands(O, SlotTracker);
   O << " to " << *ResultTy;
+}
+#endif
+
+void VPScalarStoreRecipe::execute(VPTransformState &State) {
+  [[maybe_unused]] bool IsAllOperandsUniformAfterVectorization =
+      all_of(operands(), [](VPValue *Op) {
+        return vputils::isUniformAfterVectorization(Op);
+      });
+  assert(IsAllOperandsUniformAfterVectorization &&
+         "ScalarStore requests uniform operands");
+  IRBuilderBase &Builder = State.Builder;
+  Value *StoredVal = State.get(getStoredVal(), State.UF - 1, /*IsScalar*/ true);
+  Value *Addr = State.get(getAddress(), State.UF - 1, /*IsScalar*/ true);
+  StoreInst *NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
+  NewSI->setDebugLoc(getDebugLoc());
+  State.addMetadata(NewSI, SI);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPScalarStoreRecipe::print(raw_ostream &O, const Twine &Indent,
+                                VPSlotTracker &SlotTracker) const {
+  O << Indent << "SCALAR-STORE ";
+  printOperands(O, SlotTracker);
 }
 #endif
 

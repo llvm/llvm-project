@@ -1246,6 +1246,25 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
   }
+
+  {
+    VPValue StoredVal;
+    VPValue Addr;
+    VPScalarStoreRecipe Recipe(&StoredVal, &Addr, Align(1));
+    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
+
+    auto *Store = new StoreInst(PoisonValue::get(Int32),
+                                PoisonValue::get(Int32Ptr), false, Align(1));
+    VPScalarStoreRecipe RecipeWithSI(*Store, &StoredVal, &Addr);
+    EXPECT_TRUE(RecipeWithSI.mayHaveSideEffects());
+    EXPECT_FALSE(RecipeWithSI.mayReadFromMemory());
+    EXPECT_TRUE(RecipeWithSI.mayWriteToMemory());
+    EXPECT_TRUE(RecipeWithSI.mayReadOrWriteMemory());
+    delete Store;
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

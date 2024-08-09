@@ -932,6 +932,7 @@ public:
     case VPRecipeBase::VPScalarCastSC:
       return true;
     case VPRecipeBase::VPInterleaveSC:
+    case VPRecipeBase::VPScalarStoreSC:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
@@ -1102,6 +1103,7 @@ protected:
 public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
+           R->getVPDefID() == VPRecipeBase::VPScalarStoreSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
@@ -2955,6 +2957,60 @@ public:
 #endif
 
   VPValue *getStepValue() const { return getOperand(1); }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+};
+
+/// A recipe to represent scalar stores that are outside the vector loop region.
+/// Both the stored value and the address must be uniform, and finally, only a
+/// single store instance will be generated.
+class VPScalarStoreRecipe : public VPRecipeBase {
+  /// The alignment information of this store.
+  MaybeAlign Alignment = std::nullopt;
+  /// The ingredient store of this recipe.
+  StoreInst *SI = nullptr;
+
+public:
+  VPScalarStoreRecipe(VPValue *StoredVal, VPValue *Addr,
+                      MaybeAlign Align = std::nullopt, DebugLoc DL = {})
+      : VPRecipeBase(VPDef::VPScalarStoreSC, {StoredVal, Addr}, DL),
+        Alignment(Align) {}
+
+  VPScalarStoreRecipe(StoreInst &SI, VPValue *StoredVal, VPValue *Addr)
+      : VPRecipeBase(VPDef::VPScalarStoreSC, {StoredVal, Addr},
+                     SI.getDebugLoc()),
+        Alignment(getLoadStoreAlignment(&SI)), SI(&SI) {}
+
+  ~VPScalarStoreRecipe() override = default;
+
+  VPScalarStoreRecipe *clone() override {
+    if (SI)
+      return new VPScalarStoreRecipe(*SI, getStoredVal(), getAddress());
+    return new VPScalarStoreRecipe(getStoredVal(), getAddress(), Alignment,
+                                   getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPScalarStoreSC)
+
+  /// Generate the scalar store instruction for intermediate store.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Return the value stored by this recipe.
+  VPValue *getStoredVal() const { return getOperand(0); }
+
+  /// Return the address accessed by this recipe.
+  VPValue *getAddress() const { return getOperand(1); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
