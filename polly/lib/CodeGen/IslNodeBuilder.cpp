@@ -597,8 +597,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // TODO: Ideally, we would use the pass manager's TargetLibraryInfoPass and
   // AssumptionAnalysis instead of our own. They contain more target-specific
   // information than we have available here: TargetLibraryInfoImpl can be a
-  // derived class determine by TargetMachine, AssumptionCache can be configured
-  // using an TargetTransformInfo object also derived from TargetMachine.
+  // derived class determined by TargetMachine, AssumptionCache can be configured
+  // using a TargetTransformInfo object also derived from TargetMachine.
   TargetLibraryInfoImpl BaselineInfoImpl(
       Triple(SubFn->getParent()->getTargetTriple()));
   TargetLibraryInfo CalleeTLI(BaselineInfoImpl, SubFn);
@@ -614,6 +614,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ExprBuilder.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
   Builder.SetInsertPoint(&*LoopBody);
 
+
+  
   // Update the ValueMap to use instructions in the subfunction. Note that
   // "GlobalMap" used in BlockGenerator/IslExprBuilder is a reference to this
   // ValueMap.
