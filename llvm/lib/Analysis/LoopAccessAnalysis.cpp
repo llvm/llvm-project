@@ -2911,7 +2911,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
 
   if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
     if (isa<SCEVUnknown>(C->getOperand()))
-      return V;
+      return C->getOperand();
 
   return nullptr;
 }
@@ -2927,7 +2927,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // computation of an interesting IV - but we chose not to as we
   // don't have a cost model here, and broadening the scope exposes
   // far too many unprofitable cases.
-  const SCEV *StrideExpr = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
+  ScalarEvolution *SE = PSE->getSE();
+  const SCEV *StrideExpr = getStrideFromPointer(Ptr, SE, TheLoop);
   if (!StrideExpr)
     return;
 
@@ -2953,40 +2954,22 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // of various possible stride specializations, considering the alternatives
   // of using gather/scatters (if available).
 
-  const SCEV *MaxBTC = PSE->getSymbolicMaxBackedgeTakenCount();
+  // Stride is zero-extended or truncated, so BTC can be subtracted.
+  const SCEV *BTC = PSE->getBackedgeTakenCount();
+  const SCEV *CastedStride =
+      SE->getTruncateOrZeroExtend(StrideExpr, BTC->getType());
+  const SCEV *StrideMinusBTC = SE->getMinusSCEV(CastedStride, BTC);
 
-  // Match the types so we can compare the stride and the MaxBTC.
-  // The Stride can be positive/negative, so we sign extend Stride;
-  // The backedgeTakenCount is non-negative, so we zero extend MaxBTC.
-  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
-  uint64_t StrideTypeSizeBits = DL.getTypeSizeInBits(StrideExpr->getType());
-  uint64_t BETypeSizeBits = DL.getTypeSizeInBits(MaxBTC->getType());
-  const SCEV *CastedStride = StrideExpr;
-  const SCEV *CastedBECount = MaxBTC;
-  ScalarEvolution *SE = PSE->getSE();
-  if (BETypeSizeBits >= StrideTypeSizeBits)
-    CastedStride = SE->getNoopOrSignExtend(StrideExpr, MaxBTC->getType());
-  else
-    CastedBECount = SE->getZeroExtendExpr(MaxBTC, StrideExpr->getType());
-  const SCEV *StrideMinusBETaken = SE->getMinusSCEV(CastedStride, CastedBECount);
-  // Since TripCount == BackEdgeTakenCount + 1, checking:
-  // "Stride >= TripCount" is equivalent to checking:
-  // Stride - MaxBTC> 0
-  if (SE->isKnownPositive(StrideMinusBETaken)) {
-    LLVM_DEBUG(
-        dbgs() << "LAA: Stride>=TripCount; No point in versioning as the "
-                  "Stride==1 predicate will imply that the loop executes "
-                  "at most once.\n");
+  // Stride - BTC > 0 is equivalent to Stride >= TripCount, but computing
+  // TripCount from BTC would introduce more casts, and Stride - TC might fail
+  // the known-non-negative test.
+  if (SE->isKnownPositive(StrideMinusBTC)) {
+    LLVM_DEBUG(dbgs() << "LAA: Not versioning with Stride==1 predicate.\n");
     return;
   }
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
 
-  // Strip back off the integer cast, and check that our result is a
-  // SCEVUnknown as we expect.
-  const SCEV *StrideBase = StrideExpr;
-  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
-    StrideBase = C->getOperand();
-  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
+  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideExpr);
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
