@@ -203,8 +203,7 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
 static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
                                            size_t NumDefs,
                                            StringRef ImporterModule) {
-  // We can import a local from another module if all inputs are compiled
-  // with full paths or when there is one definition.
+  // We can import a local when there is one definition.
   if (NumDefs == 1)
     return false;
   // In other cases, make sure we import the copy in the caller's module if the
