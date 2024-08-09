@@ -260,7 +260,7 @@ public:
     return Source->getInstr()->isPHI() || Dep.getSUnit()->getInstr()->isPHI();
   }
 
-  bool isLoopCarriedDep(SUnit *Source, const SDep &Dep, bool isSucc = true);
+  bool isLoopCarriedDep(SUnit *Source, const SDep &Dep, bool IsSucc = true);
 
   /// The distance function, which indicates that operation V of iteration I
   /// depends on operations U of iteration I-distance.
@@ -292,6 +292,8 @@ public:
 
   static bool classof(const ScheduleDAGInstrs *DAG) { return true; }
 
+  bool mayOverlapInLaterIter(const MachineInstr *MIA, const MachineInstr *MIB);
+
 private:
   void addLoopCarriedDependences(AAResults *AA);
   void updatePhiDependences();
@@ -311,7 +313,7 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  bool computeDelta(MachineInstr &MI, unsigned &Delta);
+  bool computeDelta(const MachineInstr &MI, int &Delta);
   MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
