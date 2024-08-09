@@ -9132,7 +9132,8 @@ int __kmp_pause_resource(kmp_pause_status_t level) {
       __kmp_soft_pause();
       return 0;
     }
-  } else if (level == kmp_hard_paused) { // requesting hard pause
+  } else if (level == kmp_hard_paused || level == kmp_stop_tool_paused) {
+    // requesting hard pause or stop_tool pause
     if (__kmp_pause_status != kmp_not_paused) {
       // error message about already being paused
       return 1;
