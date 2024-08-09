@@ -44,7 +44,7 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
@@ -127,7 +127,7 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]

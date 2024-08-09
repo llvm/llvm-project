@@ -23,8 +23,8 @@
 ; CHECKUF1: %[[IDXA:.*]] = getelementptr inbounds double, ptr %a, i64 %index
 ; CHECKUF1: store <vscale x 4 x double> %[[FADD]], ptr %[[IDXA]], align 8
 ; CHECKUF1: %index.next = add nuw i64 %index, %[[VSCALEX4]]
-; CHECKUF1: %[[CMP:.*]] = icmp eq i64 %index.next, %n.vec
-; CHECKUF1: br i1 %[[CMP]], label %middle.block, label %vector.body, !llvm.loop !0
+; CHECKUF1: %[[CMP:.*]] = icmp ult i64 %index.next, %n.vec
+; CHECKUF1: br i1 %[[CMP]], label %vector.body, label %middle.block, !llvm.loop !0
 
 
 ; For an interleave factor of 2, vscale is scaled by 8 instead of 4 (and thus shifted left by 3 instead of 2).
@@ -61,8 +61,8 @@
 ; CHECKUF2: store <vscale x 4 x double> %[[FADD]], ptr %[[IDXA]], align 8
 ; CHECKUF2: store <vscale x 4 x double> %[[FADD_NEXT]], ptr %[[IDXA_NEXT]], align 8
 ; CHECKUF2: %index.next = add nuw i64 %index, %[[VSCALEX8]]
-; CHECKUF2: %[[CMP:.*]] = icmp eq i64 %index.next, %n.vec
-; CHECKUF2: br i1 %[[CMP]], label %middle.block, label %vector.body, !llvm.loop !0
+; CHECKUF2: %[[CMP:.*]] = icmp ult i64 %index.next, %n.vec
+; CHECKUF2: br i1 %[[CMP]], label %vector.body, label %middle.block, !llvm.loop !0
 
 define void @loop(i32 %N, ptr nocapture %a, ptr nocapture readonly %b) {
 entry:

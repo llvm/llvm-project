@@ -28,8 +28,8 @@ define void @cond_inv_load_i32i32i16(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP7]], ptr [[TMP8]], i32 4, <vscale x 4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -39,12 +39,12 @@ define void @cond_inv_load_i32i32i16(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[I_07]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP11:%.*]] = load i16, ptr [[INV]], align 2
-; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[INV]], align 2
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP10]] to i32
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_07]]
 ; CHECK-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
@@ -106,8 +106,8 @@ define void @cond_inv_load_f64f64f64(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[WIDE_MASKED_GATHER]], ptr [[TMP7]], i32 8, <vscale x 4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -117,13 +117,13 @@ define void @cond_inv_load_f64f64f64(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[COND]], i64 [[I_08]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[TMP9]], 4.000000e-01
+; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[TMP8]], 4.000000e-01
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[INV]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[INV]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[I_08]]
-; CHECK-NEXT:    store double [[TMP10]], ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    store double [[TMP9]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
@@ -186,8 +186,8 @@ define void @invariant_load_cond(ptr noalias nocapture %a, ptr nocapture readonl
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP9]], ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[TMP7]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -197,15 +197,15 @@ define void @invariant_load_cond(ptr noalias nocapture %a, ptr nocapture readonl
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP12]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP11]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 168
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]

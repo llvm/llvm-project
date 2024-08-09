@@ -54,7 +54,7 @@ define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef read
 ; CHECK-NEXT:    store <vscale x 8 x half> [[TMP16]], ptr [[TMP19]], align 2
 ; CHECK-NEXT:    store <vscale x 8 x half> [[TMP17]], ptr [[TMP22]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]

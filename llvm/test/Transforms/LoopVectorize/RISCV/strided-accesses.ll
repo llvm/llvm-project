@@ -39,7 +39,7 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP16]], <vscale x 4 x ptr> [[TMP15]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
@@ -111,7 +111,7 @@ define void @single_constant_stride_int_iv(ptr %p) {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP13]], <vscale x 4 x ptr> [[TMP12]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -196,7 +196,7 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP20]], <vscale x 4 x ptr> [[TMP16]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
@@ -264,7 +264,7 @@ define void @single_stride_int_scaled(ptr %p, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP10]], ptr [[TMP9]], align 4
 ; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NOSTRIDED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NOSTRIDED:       middle.block:
 ; NOSTRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -348,7 +348,7 @@ define void @single_stride_int_iv(ptr %p, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP10]], ptr [[TMP9]], align 4
 ; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NOSTRIDED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NOSTRIDED:       middle.block:
 ; NOSTRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -482,7 +482,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP15]], i32 0
 ; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP14]], ptr [[TMP16]], align 4
 ; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
-; NOSTRIDED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NOSTRIDED-NEXT:    [[TMP17:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NOSTRIDED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; NOSTRIDED:       middle.block:
 ; NOSTRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -559,7 +559,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP20]], <vscale x 4 x ptr> [[TMP21]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)), !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; STRIDED-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; STRIDED-NEXT:    [[TMP22:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; STRIDED-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; STRIDED:       middle.block:
 ; STRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -629,7 +629,7 @@ define void @double_stride_int_iv(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP10]], ptr [[TMP9]], align 4
 ; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NOSTRIDED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; NOSTRIDED:       middle.block:
 ; NOSTRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -782,7 +782,7 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP13]]
 ; STRIDED-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP17]]
 ; STRIDED-NEXT:    [[PTR_IND12]] = getelementptr i8, ptr [[POINTER_PHI11]], i64 [[TMP25]]
-; STRIDED-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; STRIDED-NEXT:    [[TMP31:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; STRIDED-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; STRIDED:       middle.block:
 ; STRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]

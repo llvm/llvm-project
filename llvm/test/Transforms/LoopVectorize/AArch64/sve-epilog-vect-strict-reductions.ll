@@ -42,7 +42,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP19]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[TMP18]], <vscale x 4 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -58,19 +58,19 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[N]], [[N_MOD_VF3]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi float [ [[BC_MERGE_RDX]], [[VEC_EPILOG_PH]] ], [ [[TMP24:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX6]], 0
+; CHECK-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT8:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi float [ [[BC_MERGE_RDX]], [[VEC_EPILOG_PH]] ], [ [[TMP24:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX5]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[TMP22]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x float>, ptr [[TMP23]], align 4
-; CHECK-NEXT:    [[TMP24]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI7]], <2 x float> [[WIDE_LOAD8]])
-; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC4]]
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x float>, ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP24]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI6]], <2 x float> [[WIDE_LOAD7]])
+; CHECK-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX5]], 2
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[N]], [[N_VEC4]]
-; CHECK-NEXT:    br i1 [[CMP_N5]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[N]], [[N_VEC4]]
+; CHECK-NEXT:    br i1 [[CMP_N9]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX10:%.*]] = phi float [ [[TMP24]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0xFFFFFFFFE0000000, [[ITER_CHECK]] ], [ [[TMP19]], [[VEC_EPILOG_ITER_CHECK]] ]

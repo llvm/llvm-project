@@ -50,7 +50,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    store <vscale x 4 x i32> [[TMP17]], ptr [[TMP19]], align 4
 ; VLENUNK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; VLENUNK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; VLENUNK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VLENUNK-NEXT:    [[TMP20:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VLENUNK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VLENUNK:       middle.block:
 ; VLENUNK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]

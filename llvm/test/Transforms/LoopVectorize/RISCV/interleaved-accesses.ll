@@ -36,7 +36,7 @@ define void @load_store_factor2_i32(ptr %p) {
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> [[TMP15]])
 ; CHECK-NEXT:    store <vscale x 8 x i32> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -142,7 +142,7 @@ define void @load_store_factor2_i32(ptr %p) {
 ; SCALABLE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> [[TMP15]])
 ; SCALABLE-NEXT:    store <vscale x 8 x i32> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; SCALABLE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP17:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -225,7 +225,7 @@ define void @load_store_factor2_i64(ptr %p) {
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> [[TMP12]], <vscale x 2 x i64> [[TMP15]])
 ; CHECK-NEXT:    store <vscale x 4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -331,7 +331,7 @@ define void @load_store_factor2_i64(ptr %p) {
 ; SCALABLE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> [[TMP12]], <vscale x 2 x i64> [[TMP15]])
 ; SCALABLE-NEXT:    store <vscale x 4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 8
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; SCALABLE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP17:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -1188,7 +1188,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -1296,7 +1296,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP13]], i32 0
 ; SCALABLE-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP14]], align 4
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; SCALABLE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -1376,7 +1376,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -1484,7 +1484,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[TMP13]], i32 0
 ; SCALABLE-NEXT:    store <vscale x 2 x i64> [[TMP12]], ptr [[TMP14]], align 8
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; SCALABLE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]

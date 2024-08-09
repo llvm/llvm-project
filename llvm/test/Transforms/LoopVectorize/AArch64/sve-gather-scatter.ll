@@ -25,8 +25,8 @@ define void @gather_nxv4i32_ind64(ptr noalias nocapture readonly %a, ptr noalias
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[WIDE_MASKED_GATHER]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -36,11 +36,11 @@ define void @gather_nxv4i32_ind64(ptr noalias nocapture readonly %a, ptr noalias
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[TMP10]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    store float [[TMP9]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -93,8 +93,8 @@ define void @scatter_nxv4i32_ind32(ptr noalias nocapture %a, ptr noalias nocaptu
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], <vscale x 4 x i64> [[TMP7]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x ptr> [[TMP8]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -104,12 +104,12 @@ define void @scatter_nxv4i32_ind32(ptr noalias nocapture %a, ptr noalias nocaptu
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
-; CHECK-NEXT:    [[IDXPROM4:%.*]] = sext i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[IDXPROM4:%.*]] = sext i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IDXPROM4]]
-; CHECK-NEXT:    store float [[TMP10]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    store float [[TMP9]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -159,8 +159,8 @@ define void @scatter_inv_nxv4i32(ptr noalias nocapture %inv, ptr noalias nocaptu
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x ptr> [[BROADCAST_SPLAT]], i32 4, <vscale x 4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -170,8 +170,8 @@ define void @scatter_inv_nxv4i32(ptr noalias nocapture %inv, ptr noalias nocaptu
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i32 3, ptr [[INV]], align 4
@@ -230,8 +230,8 @@ define void @gather_inv_nxv4i32(ptr noalias nocapture %a, ptr noalias nocapture 
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[BROADCAST_SPLAT]], i32 4, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP5]], i32 4, <vscale x 4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -241,12 +241,12 @@ define void @gather_inv_nxv4i32(ptr noalias nocapture %a, ptr noalias nocapture 
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[TMP7]], 3
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[INV]], align 4
-; CHECK-NEXT:    store i32 [[TMP9]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[INV]], align 4
+; CHECK-NEXT:    store i32 [[TMP8]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -318,8 +318,8 @@ define void @gather_nxv4i32_ind64_stride2(ptr noalias nocapture %a, ptr noalias 
 ; CHECK-NEXT:    store <vscale x 4 x float> [[WIDE_MASKED_GATHER2]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[STEP_ADD]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -330,9 +330,9 @@ define void @gather_nxv4i32_ind64_stride2(ptr noalias nocapture %a, ptr noalias 
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[ARRAYIDX_IDX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[TMP16]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    store float [[TMP15]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

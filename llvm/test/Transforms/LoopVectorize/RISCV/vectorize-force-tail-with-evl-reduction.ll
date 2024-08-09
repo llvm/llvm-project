@@ -50,7 +50,7 @@ define i32 @add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[TMP10]] = add <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -214,7 +214,7 @@ define i32 @or(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[TMP10]] = or <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -295,7 +295,7 @@ define i32 @and(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[TMP10]] = and <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -376,7 +376,7 @@ define i32 @xor(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[TMP10]] = xor <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -460,7 +460,7 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP10]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.smin.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -546,7 +546,7 @@ define i32 @smax(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP10]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -632,7 +632,7 @@ define i32 @umin(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp ult <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP10]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.umin.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -718,7 +718,7 @@ define i32 @umax(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp ugt <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP10]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> [[TMP10]])
@@ -801,7 +801,7 @@ define float @fadd(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[TMP10]] = fadd reassoc <vscale x 4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call reassoc float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP10]])
@@ -968,7 +968,7 @@ define float @fmin(ptr %a, i64 %n, float %start) #0 {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = fcmp fast olt <vscale x 4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP10]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> [[TMP10]])
@@ -1054,7 +1054,7 @@ define float @fmax(ptr %a, i64 %n, float %start) #0 {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = fcmp fast ogt <vscale x 4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP10]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[VEC_PHI]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> [[TMP10]])
@@ -1308,7 +1308,7 @@ define float @fmuladd(ptr %a, ptr %b, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP11]], align 4
 ; NO-VP-NEXT:    [[TMP12]] = call reassoc <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD1]], <vscale x 4 x float> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP13:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP14:%.*]] = call reassoc float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP12]])
@@ -1394,7 +1394,7 @@ define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; NO-VP-NEXT:    [[TMP10]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP9]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP10]])
@@ -1480,7 +1480,7 @@ define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; NO-VP-NEXT:    [[TMP9:%.*]] = fcmp fast olt <vscale x 4 x float> [[WIDE_LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
 ; NO-VP-NEXT:    [[TMP10]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP9]]
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP10]])

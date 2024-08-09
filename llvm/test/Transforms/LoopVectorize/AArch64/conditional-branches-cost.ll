@@ -709,7 +709,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP16]], i32 0
 ; DEFAULT-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> zeroinitializer, ptr [[TMP17]], i32 4, <vscale x 4 x i1> [[TMP15]]), !alias.scope [[META20:![0-9]+]], !noalias [[META21:![0-9]+]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
-; DEFAULT-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]

@@ -76,7 +76,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP36]], ptr [[TMP40]], align 1
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP37]], ptr [[TMP43]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP12]]
-; DEFAULT-NEXT:    [[TMP44:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    [[TMP44:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP44]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
@@ -115,7 +115,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP62:%.*]] = getelementptr i8, ptr [[TMP61]], i32 0
 ; DEFAULT-NEXT:    store <vscale x 4 x i8> [[TMP60]], ptr [[TMP62]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX10]], [[TMP50]]
-; DEFAULT-NEXT:    [[TMP63:%.*]] = icmp eq i64 [[INDEX_NEXT12]], [[N_VEC6]]
+; DEFAULT-NEXT:    [[TMP63:%.*]] = icmp uge i64 [[INDEX_NEXT12]], [[N_VEC6]]
 ; DEFAULT-NEXT:    br i1 [[TMP63]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DEFAULT:       vec.epilog.middle.block:
 ; DEFAULT-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC6]]

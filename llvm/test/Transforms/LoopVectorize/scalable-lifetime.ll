@@ -32,7 +32,7 @@ define void @test(ptr %d) {
 ; CHECK-NEXT:    store <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 100, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP8]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 128, [[N_VEC]]
@@ -104,7 +104,7 @@ define void @testloopvariant(ptr %d) {
 ; CHECK-NEXT:    store <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 100, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP8]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 128, [[N_VEC]]

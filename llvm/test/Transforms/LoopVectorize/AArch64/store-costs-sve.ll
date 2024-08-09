@@ -33,7 +33,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP9]], i32 0
 ; DEFAULT-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP10]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
-; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 101, [[N_VEC]]
@@ -60,7 +60,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i32 0
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> zeroinitializer, ptr [[TMP20]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], [[TMP17]]
-; DEFAULT-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
+; DEFAULT-NEXT:    [[TMP21:%.*]] = icmp uge i64 [[INDEX_NEXT6]], [[N_VEC3]]
 ; DEFAULT-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DEFAULT:       vec.epilog.middle.block:
 ; DEFAULT-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 101, [[N_VEC3]]
@@ -212,7 +212,7 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
 ; DEFAULT-NEXT:    store <vscale x 2 x i8> [[TMP25]], ptr [[TMP27]], align 1, !alias.scope [[META14:![0-9]+]], !noalias [[META11]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX5]], [[TMP20]]
-; DEFAULT-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC]]
+; DEFAULT-NEXT:    [[TMP28:%.*]] = icmp uge i64 [[INDEX_NEXT8]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP28]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; DEFAULT:       vec.epilog.middle.block:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 0, [[N_VEC]]

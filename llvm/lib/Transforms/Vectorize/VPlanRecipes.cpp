@@ -524,7 +524,10 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     // First create the compare.
     Value *IV = State.get(getOperand(0), Part, /*IsScalar*/ true);
     Value *TC = State.get(getOperand(1), Part, /*IsScalar*/ true);
-    Value *Cond = Builder.CreateICmpEQ(IV, TC);
+    // Use ICMP_UGE so that SCEV can analyse the bound of loop count for
+    // scalable VF.
+    Value *Cond = Builder.CreateICmp(
+        State.VF.isScalable() ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_EQ, IV, TC);
 
     // Now create the branch.
     auto *Plan = getParent()->getPlan();

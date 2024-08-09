@@ -33,7 +33,7 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP11]], align 32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 200, [[N_VEC]]
@@ -156,7 +156,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP11]], align 32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 200, [[N_VEC]]
@@ -222,7 +222,7 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP11]], align 32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 200, [[N_VEC]]
