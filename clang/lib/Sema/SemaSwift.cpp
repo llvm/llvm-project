@@ -724,6 +724,9 @@ void SemaSwift::AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
   }
 
   switch (abi) {
+  case ParameterABI::HLSLOut:
+  case ParameterABI::HLSLInOut:
+    llvm_unreachable("explicit attribute for non-swift parameter ABI?");
   case ParameterABI::Ordinary:
     llvm_unreachable("explicit attribute for ordinary parameter ABI?");
 

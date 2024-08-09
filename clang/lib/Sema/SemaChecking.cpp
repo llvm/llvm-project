@@ -11427,6 +11427,19 @@ static void AnalyzeImplicitConversions(
     return;
   }
 
+  if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
+    // The base expression is only used to initialize the parameter for
+    // arguments to `inout` parameters, so we only traverse down the base
+    // expression for `inout` cases.
+    if (OutArgE->isInOut())
+      WorkList.push_back({OutArgE->getBase(), CC, IsListInit});
+    // In all cases where there is a writeback conversion we should analyze its
+    // conversions.
+    if (OutArgE->getWriteback())
+      WorkList.push_back({OutArgE->getWriteback(), CC, IsListInit});
+    return;
+  }
+
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     // Do a somewhat different check with comparison operators.
     if (BO->isComparisonOp())

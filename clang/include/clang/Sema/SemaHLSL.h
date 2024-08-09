@@ -61,6 +61,11 @@ public:
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
+
+  ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
+
+  QualType getInoutParameterType(QualType Ty);
 };
 
 } // namespace clang
