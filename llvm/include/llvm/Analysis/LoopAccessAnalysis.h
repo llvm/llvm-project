@@ -37,6 +37,8 @@ class Value;
 struct VectorizerParams {
   /// Maximum SIMD width.
   static const unsigned MaxVectorWidth;
+  /// Maximum LMUL factor.
+  static const unsigned MaxVectorLMUL;
 
   /// VF as overridden by the user.
   static unsigned VectorizationFactor;
@@ -220,6 +222,23 @@ public:
     return MaxSafeVectorWidthInBits;
   }
 
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding.
+  std::optional<uint64_t> getStoreLoadForwardSafeVFPowerOf2() const {
+    if (MaxStoreLoadForwardSafeVF.first == std::numeric_limits<uint64_t>::max())
+      return std::nullopt;
+    return MaxStoreLoadForwardSafeVF.first;
+  }
+
+  /// Return safe non-power-of-2 number of elements, which do not prevent
+  /// store-load forwarding.
+  std::optional<uint64_t> getStoreLoadForwardSafeVFNonPowerOf2() const {
+    if (MaxStoreLoadForwardSafeVF.second ==
+        std::numeric_limits<uint64_t>::max())
+      return std::nullopt;
+    return MaxStoreLoadForwardSafeVF.second;
+  }
+
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
   bool shouldRetryWithRuntimeCheck() const {
@@ -307,6 +326,12 @@ private:
   /// The size of the element is taken from the memory access that is most
   /// restrictive.
   uint64_t MaxSafeVectorWidthInBits = -1U;
+
+  /// Maximum number of elements (power-of-2 and non-power-of-2), which do not
+  /// prevent store-load forwarding.
+  std::pair<uint64_t, uint64_t> MaxStoreLoadForwardSafeVF =
+      std::make_pair(std::numeric_limits<uint64_t>::max(),
+                     std::numeric_limits<uint64_t>::max());
 
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.

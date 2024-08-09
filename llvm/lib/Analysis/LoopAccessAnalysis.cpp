@@ -100,6 +100,8 @@ static cl::opt<unsigned> MemoryCheckMergeThreshold(
 
 /// Maximum SIMD width.
 const unsigned VectorizerParams::MaxVectorWidth = 64;
+/// Maximum LMUL factor.
+const unsigned VectorizerParams::MaxVectorLMUL = 8;
 
 /// We collect dependences up to this threshold.
 static cl::opt<unsigned>
@@ -1760,31 +1762,64 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // cause any slowdowns.
   const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
-  uint64_t MaxVFWithoutSLForwardIssues = std::min(
-      VectorizerParams::MaxVectorWidth * TypeByteSize, MinDepDistBytes);
+  uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 =
+      std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
+               MaxStoreLoadForwardSafeVF.first);
+  uint64_t MaxVFWithoutSLForwardIssuesNonPowerOf2 =
+      std::min(VectorizerParams::MaxVectorLMUL *
+                   VectorizerParams::MaxVectorWidth * TypeByteSize,
+               MaxStoreLoadForwardSafeVF.second);
 
   // Compute the smallest VF at which the store and load would be misaligned.
-  for (uint64_t VF = 2 * TypeByteSize; VF <= MaxVFWithoutSLForwardIssues;
-       VF *= 2) {
+  for (uint64_t VF = 2 * TypeByteSize;
+       VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
     // If the number of vector iteration between the store and the load are
     // small we could incur conflicts.
     if (Distance % VF && Distance / VF < NumItersForStoreLoadThroughMemory) {
-      MaxVFWithoutSLForwardIssues = (VF >> 1);
+      MaxVFWithoutSLForwardIssuesPowerOf2 = (VF >> 1);
+      break;
+    }
+  }
+  // RISCV VLA supports non-power-2 vector factor. So, we iterate in a
+  // backward order to find largest VF, which allows aligned stores-loads or
+  // the number of iterations between conflicting memory addresses is not less
+  // than 8 (NumItersForStoreLoadThroughMemory).
+  for (uint64_t VF = MaxVFWithoutSLForwardIssuesNonPowerOf2,
+                E = 2 * TypeByteSize;
+       VF >= E; VF -= TypeByteSize) {
+    if (Distance % VF == 0 ||
+        Distance / VF >= NumItersForStoreLoadThroughMemory) {
+      uint64_t GCD = MaxStoreLoadForwardSafeVF.second ==
+                             std::numeric_limits<uint64_t>::max()
+                         ? VF
+                         : std::gcd(MaxStoreLoadForwardSafeVF.second, VF);
+      MaxVFWithoutSLForwardIssuesNonPowerOf2 = GCD;
       break;
     }
   }
 
-  if (MaxVFWithoutSLForwardIssues < 2 * TypeByteSize) {
+  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2 * TypeByteSize &&
+      MaxVFWithoutSLForwardIssuesNonPowerOf2 < 2 * TypeByteSize) {
     LLVM_DEBUG(
         dbgs() << "LAA: Distance " << Distance
                << " that could cause a store-load forwarding conflict\n");
     return true;
   }
 
-  if (MaxVFWithoutSLForwardIssues < MinDepDistBytes &&
-      MaxVFWithoutSLForwardIssues !=
-          VectorizerParams::MaxVectorWidth * TypeByteSize)
-    MinDepDistBytes = MaxVFWithoutSLForwardIssues;
+  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2 * TypeByteSize)
+    MaxStoreLoadForwardSafeVF.first = 1;
+  else if (MaxVFWithoutSLForwardIssuesPowerOf2 <
+               MaxStoreLoadForwardSafeVF.first &&
+           MaxVFWithoutSLForwardIssuesPowerOf2 !=
+               VectorizerParams::MaxVectorWidth * TypeByteSize)
+    MaxStoreLoadForwardSafeVF.first = MaxVFWithoutSLForwardIssuesPowerOf2;
+  if (MaxVFWithoutSLForwardIssuesNonPowerOf2 < 2 * TypeByteSize)
+    MaxStoreLoadForwardSafeVF.second = 1;
+  else if (MaxVFWithoutSLForwardIssuesNonPowerOf2 <
+               MaxStoreLoadForwardSafeVF.second &&
+           MaxVFWithoutSLForwardIssuesNonPowerOf2 !=
+               VectorizerParams::MaxVectorWidth * TypeByteSize)
+    MaxStoreLoadForwardSafeVF.second = MaxVFWithoutSLForwardIssuesNonPowerOf2;
   return false;
 }
 
