@@ -378,7 +378,7 @@ public:
   Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const;
   double convertToDouble() const;
-#ifdef HAS_IEE754_FLOAT128
+#if defined(HAS_IEE754_FLOAT128)
   float128 convertToQuad() const;
 #endif
   float convertToFloat() const;
@@ -1279,7 +1279,7 @@ public:
   /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host float type without loss of precision. It can be IEEEquad and
   /// shorter semantics, like IEEEdouble and others.
-#ifdef HAS_IEE754_FLOAT128
+#if defined(HAS_IEE754_FLOAT128)
   float128 convertToQuad() const;
 #endif
 
