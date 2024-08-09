@@ -37246,6 +37246,12 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownBits::mul(Known, Known2);
     break;
   }
+  case X86ISD::BSR:
+    // BSR(0) is undef, but any use of BSR already accounts for non-zero inputs.
+    // Similar KnownBits behaviour to CTLZ_ZERO_UNDEF.
+    // TODO: Bound with input known bits?
+    Known.Zero.setBitsFrom(Log2_32(BitWidth));
+    break;
   case X86ISD::SETCC:
     Known.Zero.setBitsFrom(1);
     break;
