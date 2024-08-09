@@ -11,8 +11,8 @@
 // RUN: sed "s|EXPECTED_RESOURCE_DIR|%{readfile:%t/resource-dir.txt}|g; s|DIR|%/t|g" %t/P1689.json.in > %t/P1689.json && \
 // RUN: env EXPECTED_RESOURCE_DIR=%{readfile:%t/resource-dir.txt} clang-scan-deps -compilation-database %t/P1689.json -format=p1689 | FileCheck %t/a.cpp -DPREFIX=%/t && \
 // RUN: env EXPECTED_RESOURCE_DIR=%{readfile:%t/resource-dir.txt} clang-scan-deps -format=p1689 \
-// RUN:     -- %t/clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/a.cpp -o %t/a.o \
-// RUN:     -resource-dir %{env:EXPECTED_RESOURCE_DIR} | FileCheck %t/a.cpp -DPREFIX=%/t
+// RUN:   -- %t/clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/a.cpp -o %t/a.o \
+// RUN:      -resource-dir %{env:EXPECTED_RESOURCE_DIR} | FileCheck %t/a.cpp -DPREFIX=%/t
 
 //--- P1689.json.in
 [
