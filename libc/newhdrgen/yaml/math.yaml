@@ -498,6 +498,28 @@ functions:
     return_type: long double
     arguments:
       - type: long double
+  - name: fadd
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: double
+      - type: double
+  - name: faddf128
+    standards:
+      - llvm_libc_ext
+    return_type: float
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: faddl
+    standards:
+      - faddl
+    return_type: float
+    arguments:
+      - type: long double
+      - type: long double
   - name: fdim
     standards:
       - stdc
@@ -2264,14 +2286,43 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: totalorder
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const double *
+      - type: const double *
+  - name: totalorderf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const float *
+      - type: const float *
+  - name: totalorderf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const float128 *
+      - type: const float128 *
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: totalorderf16
     standards:
       - stdc
     return_type: int
     arguments:
-      - type: _Float16 *
-      - type: _Float16 *
+      - type: const _Float16 *
+      - type: const _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: totalorderl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const long double *
+      - type: const long double *
   - name: totalordermagf16
     standards:
       - stdc

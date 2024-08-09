@@ -4080,7 +4080,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // of the component build_vectors.  We eagerly lower to scalable and
     // insert_subvector here to avoid DAG combining it back to a large
     // build_vector.
-    SmallVector<SDValue> BuildVectorOps(Op->op_begin(), Op->op_end());
+    SmallVector<SDValue> BuildVectorOps(Op->ops());
     unsigned NumOpElts = M1VT.getVectorMinNumElements();
     SDValue Vec = DAG.getUNDEF(ContainerVT);
     for (unsigned i = 0; i < VT.getVectorNumElements(); i += ElemsPerVReg) {
@@ -8782,7 +8782,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
   unsigned SplatOp = II->ScalarOperand + 1 + HasChain;
   assert(SplatOp < Op.getNumOperands());
 
-  SmallVector<SDValue, 8> Operands(Op->op_begin(), Op->op_end());
+  SmallVector<SDValue, 8> Operands(Op->ops());
   SDValue &ScalarOp = Operands[SplatOp];
   MVT OpVT = ScalarOp.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
