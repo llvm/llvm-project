@@ -593,8 +593,7 @@ class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class Priv<string opcodestr, bits<7> funct7>
-    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1, GPR:$rs2),
-              opcodestr, "">;
+    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins), opcodestr, "">;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class Priv_rr<string opcodestr, bits<7> funct7>
@@ -1543,8 +1542,8 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(riscv_sret_glue), (SRET (XLenVT X0), (XLenVT X0))>;
-def : Pat<(riscv_mret_glue), (MRET (XLenVT X0), (XLenVT X0))>;
+def : Pat<(riscv_sret_glue), (SRET)>;
+def : Pat<(riscv_mret_glue), (MRET)>;
 
 let isCall = 1, Defs = [X1] in {
 let Predicates = [NoStdExtZicfilp] in

@@ -102,6 +102,7 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaDefinitionLParen)                                                 \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \

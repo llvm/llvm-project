@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-disable-checker=cplusplus -analyzer-config c++-inlining=constructors -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-inlining=constructors -verify %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -119,16 +119,6 @@ struct s5 {
 };
 
 void g1(void) {
-  // FIXME: This test requires -analyzer-disable-checker=cplusplus,
-  // because of the checker's weird behaviour in case of arrays.
-  // E.g.:
-  //        s3 *arr = new s3[4];
-  //        s3 *arr2 = new (arr + 1) s3[1];
-  //                   ^~~~~~~~~~~~~~~~~~~
-  //                   warning: 12 bytes is possibly not enough
-  //                            for array allocation which requires
-  //                            4 bytes.
-
   s5::c = 0;
   s5 *arr = new s5[4];
   new (arr + 1) s5[3];

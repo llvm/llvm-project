@@ -504,7 +504,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
     return false;
 
   LLVMContext &Ctx = PtrI->getContext();
-  IRBuilder<InstSimplifyFolder> Builder(Ctx, *DL);
+  IRBuilder Builder(Ctx, InstSimplifyFolder(*DL));
   Builder.SetInsertPoint(PtrI);
 
   Value *BasePtr, *Stride;

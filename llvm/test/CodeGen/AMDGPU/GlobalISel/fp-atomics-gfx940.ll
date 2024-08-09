@@ -36,7 +36,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat(ptr %ptr) {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
 ; GFX940-NEXT:    s_endpgm
-  %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst
+  %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -52,7 +52,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(ptr %ptr) #0 {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
 ; GFX940-NEXT:    s_endpgm
-  %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst
+  %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -77,7 +77,7 @@ define float @flat_atomic_fadd_f32_rtn_pat(ptr %ptr, float %data) {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
-  %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst
+  %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst, !amdgpu.no.remote.memory !0
   ret float %ret
 }
 
@@ -287,3 +287,5 @@ define void @flat_atomic_fadd_noret_v2f16_agent_offset(ptr %ptr, <2 x half> %val
 }
 
 attributes #0 = { "denormal-fp-math-f32"="ieee,ieee" }
+
+!0 = !{}

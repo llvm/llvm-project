@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/auxv/getauxval.h"
-#include "config/linux/app.h"
+#include "config/app.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"

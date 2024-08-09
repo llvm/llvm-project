@@ -33,7 +33,12 @@ public:
     EXPECT_EQ(1, func(&res, T(-1.0)));
     EXPECT_EQ(1, func(&res, T(0x42.1p+0)));
     EXPECT_EQ(1, func(&res, T(-0x42.1p+0)));
-    EXPECT_EQ(1, func(&res, T(StorageType(1) << (FPBits::FRACTION_LEN - 1))));
+
+    FPBits nan_payload_bits = FPBits::one();
+    nan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 1 +
+                                         FPBits::EXP_BIAS);
+    T nan_payload = nan_payload_bits.get_val();
+    EXPECT_EQ(1, func(&res, nan_payload));
   }
 
   void testValidPayloads(SetPayloadFunc func) {
@@ -57,7 +62,15 @@ public:
     EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 0x123).uintval(),
               FPBits(res).uintval());
 
-    EXPECT_EQ(0, func(&res, T(FPBits::FRACTION_MASK >> 1)));
+    // The following code is creating a NaN payload manually to prevent a
+    // conversion from BigInt to float128.
+    FPBits nan_payload_bits = FPBits::one();
+    nan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 2 +
+                                         FPBits::EXP_BIAS);
+    nan_payload_bits.set_mantissa(FPBits::SIG_MASK - 3);
+    T nan_payload = nan_payload_bits.get_val();
+
+    EXPECT_EQ(0, func(&res, nan_payload));
     EXPECT_TRUE(FPBits(res).is_quiet_nan());
     EXPECT_EQ(
         FPBits::quiet_nan(Sign::POS, FPBits::FRACTION_MASK >> 1).uintval(),

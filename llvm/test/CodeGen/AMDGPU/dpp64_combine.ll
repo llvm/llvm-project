@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A
-; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64
+; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,GFX940
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11
 
@@ -74,7 +74,7 @@ define amdgpu_kernel void @dpp64_div(ptr addrspace(1) %arg, i64 %in1) {
 ; DPP64: v_mov_b32_dpp
 ; GFX90A: v_add_co_u32_e32
 ; GFX90A: v_addc_co_u32_e32
-; DPPMOV64: v_lshl_add_u64
+; GFX940: v_lshl_add_u64
 ; GFX10: v_mov_b32_dpp
 ; GFX10: v_add_co_u32
 ; GFX10: v_add_co_ci_u32_e32

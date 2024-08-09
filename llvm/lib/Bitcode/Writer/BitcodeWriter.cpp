@@ -843,6 +843,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_MEMORY;
   case Attribute::SanitizeNumericalStability:
     return bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY;
+  case Attribute::SanitizeRealtime:
+    return bitc::ATTR_KIND_SANITIZE_REALTIME;
   case Attribute::SpeculativeLoadHardening:
     return bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING;
   case Attribute::SwiftError:
@@ -1088,8 +1090,9 @@ void ModuleBitcodeWriter::writeTypeTable() {
     case Type::FP128TyID:     Code = bitc::TYPE_CODE_FP128;     break;
     case Type::PPC_FP128TyID: Code = bitc::TYPE_CODE_PPC_FP128; break;
     case Type::LabelTyID:     Code = bitc::TYPE_CODE_LABEL;     break;
-    case Type::MetadataTyID:  Code = bitc::TYPE_CODE_METADATA;  break;
-    case Type::X86_MMXTyID:   Code = bitc::TYPE_CODE_X86_MMX;   break;
+    case Type::MetadataTyID:
+      Code = bitc::TYPE_CODE_METADATA;
+      break;
     case Type::X86_AMXTyID:   Code = bitc::TYPE_CODE_X86_AMX;   break;
     case Type::TokenTyID:     Code = bitc::TYPE_CODE_TOKEN;     break;
     case Type::IntegerTyID:

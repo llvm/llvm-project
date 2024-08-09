@@ -1045,18 +1045,6 @@ def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
 
 def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls that are both writable and executable">,
-  CheckerOptions<[
-    CmdLineOption<Integer,
-                  "MmapProtExec",
-                  "Specifies the value of PROT_EXEC",
-                  "0x04",
-                  Released>,
-    CmdLineOption<Integer,
-                  "MmapProtRead",
-                  "Specifies the value of PROT_READ",
-                  "0x01",
-                  Released>
-  ]>,
   Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,

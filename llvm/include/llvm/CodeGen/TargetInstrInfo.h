@@ -46,6 +46,7 @@ class LiveIntervals;
 class LiveVariables;
 class MachineLoop;
 class MachineMemOperand;
+class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCAsmInfo;
 class MCInst;

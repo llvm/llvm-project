@@ -64,6 +64,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
@@ -634,7 +635,10 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    return ppc::getPPCTargetCPU(D, Args, T);
+    if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+      return std::string(
+          llvm::PPC::getNormalizedPPCTargetCPU(T, A->getValue()));
+    return std::string(llvm::PPC::getNormalizedPPCTargetCPU(T));
 
   case llvm::Triple::csky:
     if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
@@ -1238,6 +1242,25 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
 
   return true;
+}
+
+void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
+                                        const JobAction &JA,
+                                        const llvm::opt::ArgList &Args,
+                                        llvm::opt::ArgStringList &CmdArgs) {
+  if (!JA.isHostOffloading(Action::OFK_OpenMP))
+    return;
+
+  // For all the host OpenMP offloading compile jobs we need to pass the targets
+  // information using -fopenmp-targets= option.
+  constexpr llvm::StringLiteral Targets("-fopenmp-targets=");
+
+  SmallVector<std::string> Triples;
+  auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+  std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
+                 [](auto TC) { return TC.second->getTripleString(); });
+  CmdArgs.push_back(
+      Args.MakeArgString(Twine(Targets) + llvm::join(Triples, ",")));
 }
 
 /// Add Fortran runtime libs
@@ -1953,8 +1976,8 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   return std::make_tuple(RelocM, 0U, false);
 }
 
-// `-falign-functions` indicates that the functions should be aligned to a
-// 16-byte boundary.
+// `-falign-functions` indicates that the functions should be aligned to the
+// backend's preferred alignment.
 //
 // `-falign-functions=1` is the same as `-fno-align-functions`.
 //

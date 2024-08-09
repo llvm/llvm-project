@@ -1320,7 +1320,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (!definesFullReg(*DefMI, SrcReg))
     return false;
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(AA, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return false;
   const MCInstrDesc &MCID = DefMI->getDesc();
   if (MCID.getNumDefs() != 1)

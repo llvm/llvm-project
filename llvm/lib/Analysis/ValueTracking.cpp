@@ -254,8 +254,7 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
   return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    ICmpInst::Predicate P;
-    return match(U, m_ICmp(P, m_Value(), m_Zero()));
+    return match(U, m_ICmp(m_Value(), m_Zero()));
   });
 }
 
@@ -2594,10 +2593,10 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
 }
 
 static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
-  ICmpInst::Predicate Pred;
-  return (match(Op0, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op1), m_Zero()))) ||
-          match(Op1, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op0), m_Zero())))) &&
-         Pred == ICmpInst::ICMP_EQ;
+  return match(Op0, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op1), m_Zero()))) ||
+         match(Op1, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op0), m_Zero())));
 }
 
 static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
@@ -6123,7 +6122,7 @@ static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
   Type *IndexedType = ExtractValueInst::getIndexedType(From->getType(),
                                                              idx_range);
   Value *To = PoisonValue::get(IndexedType);
-  SmallVector<unsigned, 10> Idxs(idx_range.begin(), idx_range.end());
+  SmallVector<unsigned, 10> Idxs(idx_range);
   unsigned IdxSkip = Idxs.size();
 
   return BuildSubAggregate(From, To, IndexedType, Idxs, IdxSkip, InsertBefore);
@@ -6796,17 +6795,6 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
 bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
   return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
       V, /* AllowLifetime */ true, /* AllowDroppable */ true);
-}
-
-bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
-  if (!LI.isUnordered())
-    return true;
-  const Function &F = *LI.getFunction();
-  // Speculative load may create a race that did not exist in the source.
-  return F.hasFnAttribute(Attribute::SanitizeThread) ||
-    // Speculative load may load data from dirty regions.
-    F.hasFnAttribute(Attribute::SanitizeAddress) ||
-    F.hasFnAttribute(Attribute::SanitizeHWAddress);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
@@ -9119,6 +9107,26 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   // Can we infer anything when the two compares have matching operands?
   if (L0 == R0 && L1 == R1)
     return isImpliedCondMatchingOperands(LPred, RPred);
+
+  // It only really makes sense in the context of signed comparison for "X - Y
+  // must be positive if X >= Y and no overflow".
+  // Take SGT as an example:  L0:x > L1:y and C >= 0
+  //                      ==> R0:(x -nsw y) < R1:(-C) is false
+  if ((LPred == ICmpInst::ICMP_SGT || LPred == ICmpInst::ICMP_SGE) &&
+      match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
+    if (match(R1, m_NonPositive()) &&
+        isImpliedCondMatchingOperands(LPred, RPred) == false)
+      return false;
+  }
+
+  // Take SLT as an example:  L0:x < L1:y and C <= 0
+  //                      ==> R0:(x -nsw y) < R1:(-C) is true
+  if ((LPred == ICmpInst::ICMP_SLT || LPred == ICmpInst::ICMP_SLE) &&
+      match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
+    if (match(R1, m_NonNegative()) &&
+        isImpliedCondMatchingOperands(LPred, RPred) == true)
+      return true;
+  }
 
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
   if (L0 == R0 &&
