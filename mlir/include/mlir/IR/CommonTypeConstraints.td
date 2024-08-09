@@ -494,6 +494,14 @@ class VectorOfRankAndType<list<int> allowedRanks,
   VectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
+// Fixed-width vector where the rank is from the given `allowedRanks` list and
+// the type is from the given `allowedTypes` list
+class FixedVectorOfRankAndType<list<int> allowedRanks,
+                          list<Type> allowedTypes> : AllOfType<
+  [FixedVectorOf<allowedTypes>, VectorOfRank<allowedRanks>],
+  FixedVectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
+  "::mlir::VectorType">;
+
 // Whether the number of elements of a vector is from the given
 // `allowedLengths` list
 class IsVectorOfLengthPred<list<int> allowedLengths> :
@@ -592,7 +600,7 @@ class VectorOfLengthAndType<list<int> allowedLengths,
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,
-                                    list<Type> allowedTypes> : AllOfType<
+                                 list<Type> allowedTypes> : AllOfType<
   [FixedVectorOf<allowedTypes>, FixedVectorOfLength<allowedLengths>],
   FixedVectorOf<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
