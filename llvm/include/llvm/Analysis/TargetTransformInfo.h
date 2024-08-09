@@ -1746,6 +1746,10 @@ public:
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                              Align Alignment) const;
 
+  /// \returns Returns true if the target supports vector match operations for
+  /// the vector type `VT` using a segment size of `SegSize`.
+  bool hasVectorMatch(VectorType *VT, unsigned SegSize) const;
+
   struct VPLegalization {
     enum VPTransform {
       // keep the predicating parameter
@@ -2184,6 +2188,7 @@ public:
   virtual bool supportsScalableVectors() const = 0;
   virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                                      Align Alignment) const = 0;
+  virtual bool hasVectorMatch(VectorType *VT, unsigned SegSize) const = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
@@ -2950,6 +2955,10 @@ public:
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                              Align Alignment) const override {
     return Impl.hasActiveVectorLength(Opcode, DataType, Alignment);
+  }
+
+  bool hasVectorMatch(VectorType *VT, unsigned SegSize) const override {
+    return Impl.hasVectorMatch(VT, SegSize);
   }
 
   VPLegalization

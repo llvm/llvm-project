@@ -19642,6 +19642,51 @@ are undefined.
     }
 
 
+'``llvm.experimental.vector.match.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. Support for specific vector types is target
+dependent.
+
+::
+
+    declare <<n> x i1> @llvm.experimental.vector.match(<<n> x <ty>> %op1, <<n> x <ty>> %op2, <<n> x i1> %mask, i32 <segsize>)
+    declare <vscale x <n> x i1> @llvm.experimental.vector.match(<vscale x <n> x <ty>> %op1, <vscale x <n> x <ty>> %op2, <vscale x <n> x i1> %mask, i32 <segsize>)
+
+Overview:
+"""""""""
+
+Find elements of the first argument matching any elements of the second.
+
+Arguments:
+""""""""""
+
+The first argument is the search vector, the second argument is the vector of
+elements we are searching for (i.e. for which we consider a match successful),
+and the third argument is a mask that controls which elements of the first
+argument are active. The fourth argument is an immediate that sets the segment
+size for the search window.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.vector.match``' intrinsic compares each element in the
+first argument against potentially several elements of the second, placing
+``1`` in the corresponding element of the output vector if any comparison is
+successful, and ``0`` otherwise. Inactive elements in the mask are set to ``0``
+in the output. The segment size controls the number of elements of the second
+argument that are compared against.
+
+For example, for vectors with 16 elements, if ``segsize = 16`` then each
+element of the first argument is compared against all 16 elements of the second
+argument; but if ``segsize = 4``, then each of the first four elements of the
+first argument is compared against the first four elements of the second
+argument, each of the second four elements of the first argument is compared
+against the second four elements of the second argument, and so forth.
+
 Matrix Intrinsics
 -----------------
 
