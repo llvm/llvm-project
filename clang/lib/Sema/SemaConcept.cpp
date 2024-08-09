@@ -951,7 +951,8 @@ namespace {
 
 static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
-    const Expr *ConstrExpr) {
+    const Expr *ConstrExpr,
+    const Decl *PreferredInnermostAssociatedDecl = nullptr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
       /*Innermost=*/std::nullopt,
@@ -961,6 +962,13 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
 
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
+
+  if (PreferredInnermostAssociatedDecl)
+    if (MLTAL.getAssociatedDecl(MLTAL.getNumLevels() - 1).first !=
+        PreferredInnermostAssociatedDecl)
+      MLTAL.replaceInnermostTemplateArguments(
+          const_cast<Decl *>(PreferredInnermostAssociatedDecl),
+          MLTAL.getInnermost());
 
   Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
 
@@ -1011,15 +1019,25 @@ bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
   // C++ [temp.constr.decl]p4
   if (Old && !New.isInvalid() && !New.ContainsDecl(Old) &&
       Old->getLexicalDeclContext() != New.getLexicalDeclContext()) {
+    const Decl *PreferredInnermostAssociatedDecl = nullptr;
+    if (const NamedDecl *ND = New.getDecl();
+        ND && Old->getDeclContext() == New.getDeclContext() &&
+        Old->getDeclName() == ND->getDeclName() &&
+        Old->getCanonicalDecl() != ND->getCanonicalDecl())
+      PreferredInnermostAssociatedDecl = Old;
     if (const Expr *SubstConstr =
-            SubstituteConstraintExpressionWithoutSatisfaction(*this, Old,
-                                                              OldConstr))
+            SubstituteConstraintExpressionWithoutSatisfaction(
+                *this, Old, OldConstr,
+                /*PreferredInnermostAssociatedDecl=*/
+                PreferredInnermostAssociatedDecl))
       OldConstr = SubstConstr;
     else
       return false;
     if (const Expr *SubstConstr =
-            SubstituteConstraintExpressionWithoutSatisfaction(*this, New,
-                                                              NewConstr))
+            SubstituteConstraintExpressionWithoutSatisfaction(
+                *this, New, NewConstr,
+                /*PreferredInnermostAssociatedDecl=*/
+                PreferredInnermostAssociatedDecl))
       NewConstr = SubstConstr;
     else
       return false;

@@ -244,6 +244,8 @@ enum class TemplateSubstitutionKind : char {
                     AssociatedDecl) &&
                "Trying to change incorrect declaration?");
         TemplateArgumentLists[0].Args = Args;
+        TemplateArgumentLists[0].AssociatedDeclAndFinal.setPointer(
+            AssociatedDecl);
       } else {
         --NumRetainedOuterLevels;
         TemplateArgumentLists.push_back(
