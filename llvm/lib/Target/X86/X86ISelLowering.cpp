@@ -1318,6 +1318,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE,       VT, Custom);
       setOperationAction(ISD::CTLZ,             VT, Custom);
     }
+    setOperationAction(ISD::BITREVERSE,         MVT::i8,    Custom);
+    setOperationAction(ISD::BITREVERSE,         MVT::i16,   Custom);
 
     // These might be better off as horizontal vector ops.
     setOperationAction(ISD::ADD,                MVT::i16, Custom);
@@ -1538,6 +1540,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setCondCodeAction(ISD::SETLT, VT, Custom);
       setCondCodeAction(ISD::SETLE, VT, Custom);
     }
+
+    // TODO: Support AVX1 once i32 bitreverse codegen is better.
+    if (Subtarget.hasInt256())
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
 
     setOperationAction(ISD::SETCC,          MVT::v4f64, Custom);
     setOperationAction(ISD::SETCC,          MVT::v8f32, Custom);
@@ -1934,6 +1940,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setCondCodeAction(ISD::SETLT, VT, Custom);
       setCondCodeAction(ISD::SETLE, VT, Custom);
     }
+
+    if (HasBWI)
+      setOperationAction(ISD::BITREVERSE,   MVT::i64, Custom);
 
     setOperationAction(ISD::SETCC,          MVT::v8f64, Custom);
     setOperationAction(ISD::SETCC,          MVT::v16f32, Custom);
@@ -31518,11 +31527,51 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitVectorIntUnary(Op, DAG, DL);
 
-  // Lower i8/i16/i32/i64 as vXi8 BITREVERSE + BSWAP
   if (!VT.isVector()) {
     assert(
         (VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i16 || VT == MVT::i8) &&
         "Only tested for i8/i16/i32/i64");
+
+    // Lower i8/i16/i32 with vXi8 AND+CMPEQ+MOVMSK trick.
+    // Broadcast each byte across 8 bytes in byteswaped order, test if each bit
+    // is set and use MOVMSK/VPTESTMB to pack the bit results together.
+    if (!Subtarget.hasGFNI()) {
+      assert((VT == MVT::i8 || VT == MVT::i16 ||
+              (VT == MVT::i32 && Subtarget.hasInt256()) ||
+              (VT == MVT::i64 && Subtarget.hasBWI())) &&
+             "Unsupported scalar bitreverse");
+      unsigned VecBits = std::max<unsigned>(VT.getSizeInBits() * 8, 128);
+      unsigned NumBytes = VecBits / 8;
+      MVT ConstVT = MVT::getVectorVT(MVT::i64, VecBits / 64);
+      MVT ByteVT = MVT::getVectorVT(MVT::i8, VecBits / 8);
+      MVT SrcVT = MVT::getVectorVT(VT, VecBits / VT.getScalarSizeInBits());
+      SDValue Splat = DAG.getBitcast(ByteVT, DAG.getSplat(SrcVT, DL, In));
+
+      // Repeat each byte 8 times in reverse order.
+      SmallVector<int, 32> ByteSplatMask;
+      for (unsigned I = 0, E = VT.getSizeInBits() / 8; I != E; ++I)
+        ByteSplatMask.append(8, (E - 1) - I);
+      ByteSplatMask.append(NumBytes - ByteSplatMask.size(), -1);
+      SDValue Bytes =
+          DAG.getVectorShuffle(ByteVT, DL, Splat, Splat, ByteSplatMask);
+
+      SDValue Mask = DAG.getBitcast(
+          ByteVT, DAG.getConstant(0x102040810204080ULL, DL, ConstVT));
+      SDValue And = DAG.getNode(ISD::AND, DL, ByteVT, Bytes, Mask);
+      if (Subtarget.hasBWI() && (VT == MVT::i64 || Subtarget.hasVLX())) {
+        MVT CmpVT = MVT::getVectorVT(MVT::i1, NumBytes);
+        SDValue Zero = DAG.getConstant(0, DL, ByteVT);
+        SDValue Cmp = DAG.getSetCC(DL, CmpVT, And, Zero, ISD::CondCode::SETNE);
+        SDValue Msk = DAG.getBitcast(MVT::getIntegerVT(NumBytes), Cmp);
+        return DAG.getZExtOrTrunc(Msk, DL, VT);
+      } else {
+        SDValue Cmp = DAG.getSetCC(DL, ByteVT, And, Mask, ISD::CondCode::SETEQ);
+        SDValue Msk = getPMOVMSKB(DL, Cmp, DAG, Subtarget);
+        return DAG.getZExtOrTrunc(Msk, DL, VT);
+      }
+    }
+
+    // Lower i8/i16/i32/i64 as vXi8 BITREVERSE + BSWAP
     MVT VecVT = MVT::getVectorVT(VT, 128 / VT.getSizeInBits());
     SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, In);
     Res = DAG.getNode(ISD::BITREVERSE, DL, MVT::v16i8,
