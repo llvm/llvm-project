@@ -128,6 +128,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
 
 def ParallelOp : OpenMP_Op<"parallel", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
     DeclareOpInterfaceMethods<LoopWrapperInterface>,
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
     RecursiveMemoryEffects
@@ -356,7 +357,9 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
 //===----------------------------------------------------------------------===//
 
 def WsloopOp : OpenMP_Op<"wsloop", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClauseSkip<assemblyFormat = true>,
@@ -432,7 +435,9 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
 //===----------------------------------------------------------------------===//
 
 def SimdOp : OpenMP_Op<"simd", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_LinearClause,
@@ -499,7 +504,9 @@ def YieldOp : OpenMP_Op<"yield",
 // Distribute construct [2.9.4.1]
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_DistScheduleClause, OpenMP_OrderClause,
@@ -587,8 +594,9 @@ def TaskOp : OpenMP_Op<"task", traits = [
 
 def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>, RecursiveMemoryEffects,
-    SingleBlock
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
     OpenMP_IfClause, OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,

@@ -142,6 +142,42 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   ];
 }
 
+def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
+  let description = [{
+    OpenMP operations that can represent a single leaf of a composite OpenMP
+    construct.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Check whether the operation is representing a leaf of a composite OpenMP
+        construct.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isComposite",
+      (ins ), [{}], [{
+        return $_op->hasAttr("omp.composite");
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Mark the operation as part of an OpenMP composite construct.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setComposite",
+      (ins "bool":$val), [{}], [{
+        if (val)
+          $_op->setDiscardableAttr("omp.composite", mlir::UnitAttr::get($_op->getContext()));
+        else
+          $_op->removeDiscardableAttr("omp.composite");
+      }]
+    >
+  ];
+}
+
 def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
   let description = [{
     OpenMP operations that support declare target have this interface.
