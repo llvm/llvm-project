@@ -461,6 +461,7 @@ public:
     } else {
       AddDecl(D->getFriendDecl());
     }
+    Hash.AddBoolean(D->isVariadic());
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
