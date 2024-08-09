@@ -37,10 +37,10 @@ set(BOLT_RT_FLAGS
   -fno-stack-protector
   -fPIC
   -mgeneral-regs-only)
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+if(CMAKE_TARGET_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-sse")
 endif()
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+if(CMAKE_TARGET_SYSTEM_PROCESSOR STREQUAL "aarch64")
   check_cxx_compiler_flag("-mno-outline-atomics" CXX_SUPPORTS_OUTLINE_ATOMICS)
   if (CXX_SUPPORTS_OUTLINE_ATOMICS)
     set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-outline-atomics")

@@ -84,8 +84,7 @@ set(BOLT_ENABLE_RUNTIME_default OFF)
 if ((CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
     OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
-      OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    AND (NOT CMAKE_CROSSCOMPILING))
+      OR CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
   set(BOLT_ENABLE_RUNTIME_default ON)
 endif()
 option(BOLT_ENABLE_RUNTIME "Enable BOLT runtime" ${BOLT_ENABLE_RUNTIME_default})
@@ -136,35 +135,60 @@ if (LLVM_INCLUDE_TESTS)
 endif()
 
 if (BOLT_ENABLE_RUNTIME)
-  message(STATUS "Building BOLT runtime libraries for X86")
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    set(HOST_NAME "X86")
+  elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    set(HOST_NAME "AArch64")
+  elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64")
+    set(HOST_NAME "RISCV")
+  endif()
+
+  foreach(tgt ${BOLT_TARGETS_TO_BUILD})
+    message(STATUS "Building BOLT runtime libraries for ${tgt}")
   set(extra_args "")
   if(CMAKE_SYSROOT)
     list(APPEND extra_args -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
 
+    if(${tgt} STREQUAL ${HOST_NAME})
+      set(BOLT_RT_C_COMPILER ${CMAKE_C_COMPILER})
+      set(BOLT_RT_CXX_COMPILER ${CMAKE_CXX_COMPILER})
+      set(BOLT_RT_LIBRARY_DIR "${LLVM_LIBRARY_DIR}")
+    elseif(${tgt} STREQUAL "AArch64")
+      set(BOLT_RT_C_COMPILER aarch64-linux-gnu-gcc)
+      set(BOLT_RT_CXX_COMPILER aarch64-linux-gnu-g++)
+      set(BOLT_RT_LIBRARY_DIR "${LLVM_LIBRARY_DIR}/AArch64")
+    elseif(${tgt} STREQUAL "RISCV")
+      set(BOLT_RT_C_COMPILER riscv64-unknown-linux-gnu-gcc)
+      set(BOLT_RT_CXX_COMPILER riscv64-unknown-linux-gnu-g++)
+      set(BOLT_RT_LIBRARY_DIR "${LLVM_LIBRARY_DIR}/RISCV")
+    endif()
+
   include(ExternalProject)
-  ExternalProject_Add(bolt_rt
+    ExternalProject_Add(bolt_rt_${tgt}
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/runtime"
-    STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-stamps
-    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins
-    CMAKE_ARGS -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-               -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+      STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-stamps
+      BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-bins
+      CMAKE_ARGS
+                 -DCMAKE_C_COMPILER=${BOLT_RT_C_COMPILER}
+                 -DCMAKE_CXX_COMPILER=${BOLT_RT_CXX_COMPILER}
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                -DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}
-               -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
+                 -DLLVM_LIBRARY_DIR=${BOLT_RT_LIBRARY_DIR}
                -DBOLT_BUILT_STANDALONE=${BOLT_BUILT_STANDALONE}
                ${extra_args}
     INSTALL_COMMAND ""
     BUILD_ALWAYS True
     )
-  install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/cmake_install.cmake \)"
+      install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-${tgt}-bins/cmake_install.cmake \)"
     COMPONENT bolt)
-  add_llvm_install_targets(install-bolt_rt
-    DEPENDS bolt_rt bolt
+    add_llvm_install_targets(install-bolt_rt_${tgt}
+      DEPENDS bolt_rt_${tgt} bolt
     COMPONENT bolt)
   set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_instr.a")
   set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_hugify.a")
+  endforeach()
 endif()
 
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
