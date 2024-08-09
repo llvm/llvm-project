@@ -281,8 +281,8 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_compile_unit<{{.*}}>
   mlirAttributeDump(mlirLLVMDIModuleAttrGetScope(di_module));
 
-  // CHECK: 1 : i32
-  mlirAttributeDump(mlirLLVMDIFlagsAttrGet(ctx, 0x1));
+  // CHECK: 16777216 : i32
+  mlirAttributeDump(mlirLLVMDIFlagsAttrGet(ctx, MlirLLVMDIFlagsEnumClass));
 
   // CHECK: #llvm.di_lexical_block<{{.*}}>
   mlirAttributeDump(
@@ -312,9 +312,9 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_subroutine_type<{{.*}}>
   mlirAttributeDump(subroutine_type);
 
-  MlirAttribute di_subprogram =
-      mlirLLVMDISubprogramAttrGet(ctx, id, compile_unit, compile_unit, foo, bar,
-                                  file, 1, 2, 0, subroutine_type);
+  MlirAttribute di_subprogram = mlirLLVMDISubprogramAttrGet(
+      ctx, id, compile_unit, compile_unit, foo, bar, file, 1, 2,
+      MlirLLVMDISubprogramFlagsDefinition, subroutine_type);
   // CHECK: #llvm.di_subprogram<{{.*}}>
   mlirAttributeDump(di_subprogram);
 
@@ -348,6 +348,17 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
       ctx, 0, id, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1, &di_type,
       expression, expression, expression, expression));
+
+  // CHECK: #llvm.di_namespace<{{.*}}>
+  mlirAttributeDump(mlirLLVMDINamespaceAttrGet(ctx, foo, compile_unit, true));
+
+  MlirType type = mlirIntegerTypeGet(ctx, 64);
+
+  // CHECK: #llvm.di_subrange<count = 1 : i64, lowerBound = 1 : i64, upperBound
+  // CHECK-SAME: = 10 : i64, stride = 1 : i64>
+  mlirAttributeDump(mlirLLVMDISubrangeAttrGet(
+      ctx, mlirIntegerAttrGet(type, 1), mlirIntegerAttrGet(type, 1),
+      mlirIntegerAttrGet(type, 10), mlirIntegerAttrGet(type, 1)));
 }
 
 int main(void) {

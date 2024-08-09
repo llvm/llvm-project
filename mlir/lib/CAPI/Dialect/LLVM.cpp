@@ -243,7 +243,7 @@ mlirLLVMDICompileUnitAttrGet(MlirContext ctx, MlirAttribute id,
       DINameTableKind(nameTableKind)));
 }
 
-MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, uint64_t value) {
+MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, MlirLLVMDIFlags value) {
   return wrap(DIFlagsAttr::get(unwrap(ctx), DIFlags(value)));
 }
 
@@ -289,11 +289,19 @@ MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
                           [](Attribute a) { return cast<DITypeAttr>(a); })));
 }
 
+MlirAttribute mlirLLVMDINamespaceAttrGet(MlirContext ctx, MlirAttribute name,
+                                         MlirAttribute scope,
+                                         bool exportSymbols) {
+  return wrap(DINamespaceAttr::get(unwrap(ctx), cast<StringAttr>(unwrap(name)),
+                                   cast<DIScopeAttr>(unwrap(scope)),
+                                   exportSymbols));
+}
+
 MlirAttribute mlirLLVMDISubprogramAttrGet(
     MlirContext ctx, MlirAttribute id, MlirAttribute compileUnit,
     MlirAttribute scope, MlirAttribute name, MlirAttribute linkageName,
     MlirAttribute file, unsigned int line, unsigned int scopeLine,
-    uint64_t subprogramFlags, MlirAttribute type) {
+    MlirLLVMDISubprogramFlags subprogramFlags, MlirAttribute type) {
   return wrap(DISubprogramAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)),
       cast<DICompileUnitAttr>(unwrap(compileUnit)),
@@ -313,6 +321,21 @@ unsigned int mlirLLVMDISubprogramAttrGetLine(MlirAttribute diSubprogram) {
 
 unsigned int mlirLLVMDISubprogramAttrGetScopeLine(MlirAttribute diSubprogram) {
   return cast<DISubprogramAttr>(unwrap(diSubprogram)).getScopeLine();
+}
+
+MlirIdentifier
+mlirLLVMDISubprogramAttrGetLinkageName(MlirAttribute diSubprogram) {
+  return wrap(cast<DISubprogramAttr>(unwrap(diSubprogram)).getLinkageName());
+}
+
+MlirIdentifier mlirLLVMDISubprogramAttrGetName(MlirAttribute diSubprogram) {
+  return wrap(cast<DISubprogramAttr>(unwrap(diSubprogram)).getName());
+}
+
+MlirLLVMDISubprogramFlags
+mlirLLVMDISubprogramAttrGetSubprogramFlags(MlirAttribute diSubprogram) {
+  return static_cast<MlirLLVMDISubprogramFlags>(
+      cast<DISubprogramAttr>(unwrap(diSubprogram)).getSubprogramFlags());
 }
 
 MlirAttribute
@@ -344,4 +367,80 @@ MlirAttribute mlirLLVMDIModuleAttrGet(MlirContext ctx, MlirAttribute file,
 
 MlirAttribute mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule) {
   return wrap(cast<DIModuleAttr>(unwrap(diModule)).getScope());
+}
+
+MlirIdentifier mlirLLVMDIModuleAttrGetApinotes(MlirAttribute diModule) {
+  return wrap(cast<DIModuleAttr>(unwrap(diModule)).getApinotes());
+}
+
+MlirIdentifier mlirLLVMDIModuleAttrGetConfigMacros(MlirAttribute diModule) {
+  return wrap(cast<DIModuleAttr>(unwrap(diModule)).getConfigMacros());
+}
+
+MlirAttribute mlirLLVMDIModuleAttrGetFile(MlirAttribute diModule) {
+  return wrap(cast<DIModuleAttr>(unwrap(diModule)).getFile());
+}
+
+MlirIdentifier mlirLLVMDIModuleAttrGetIncludePath(MlirAttribute diModule) {
+  return wrap(cast<DIModuleAttr>(unwrap(diModule)).getIncludePath());
+}
+
+bool mlirLLVMDIModuleAttrGetIsDecl(MlirAttribute diModule) {
+  return cast<DIModuleAttr>(unwrap(diModule)).getIsDecl();
+}
+
+MlirAttribute mlirLLVMDISubrangeAttrGet(MlirContext ctx, MlirAttribute count,
+                                        MlirAttribute lowerBound,
+                                        MlirAttribute upperBound,
+                                        MlirAttribute stride) {
+  return wrap(DISubrangeAttr::get(unwrap(ctx), cast<IntegerAttr>(unwrap(count)),
+                                  cast<IntegerAttr>(unwrap(lowerBound)),
+                                  cast<IntegerAttr>(unwrap(upperBound)),
+                                  cast<IntegerAttr>(unwrap(stride))));
+}
+
+MlirAttribute mlirLLVMAtomicOrderingAttrGet(MlirContext ctx,
+                                            MlirLLVMAtomicOrdering ordering) {
+  return wrap(AtomicOrderingAttr::get(unwrap(ctx), AtomicOrdering(ordering)));
+}
+
+MlirAttribute mlirLLVMAtomicBinOpAttrGet(MlirContext ctx,
+                                         MlirLLVMAtomicBinOp val) {
+  return wrap(AtomicBinOpAttr::get(unwrap(ctx), AtomicBinOp(val)));
+}
+
+MlirAttribute mlirLLVMVisibilityAttrGet(MlirContext ctx,
+                                        MlirLLVMVisibility visibility) {
+  return wrap(VisibilityAttr::get(unwrap(ctx), Visibility(visibility)));
+}
+
+MlirAttribute mlirLLVMUnnamedAddrAttrGet(MlirContext ctx,
+                                         MlirLLVMUnnamedAddr val) {
+  return wrap(UnnamedAddrAttr::get(unwrap(ctx), UnnamedAddr(val)));
+}
+
+MlirAttribute mlirLLVMICmpPredicateAttrGet(MlirContext ctx,
+                                           MlirLLVMICmpPredicate val) {
+  return wrap(ICmpPredicateAttr::get(unwrap(ctx), ICmpPredicate(val)));
+}
+
+MlirAttribute mlirLLVMFCmpPredicateAttrGet(MlirContext ctx,
+                                           MlirLLVMFCmpPredicate val) {
+  return wrap(FCmpPredicateAttr::get(unwrap(ctx), FCmpPredicate(val)));
+}
+
+MlirAttribute mlirLLVMFramePointerKindAttrGet(MlirContext ctx,
+                                              MlirLLVMFramePointerKind val) {
+  return wrap(FramePointerKindAttr::get(
+      unwrap(ctx), framePointerKind::FramePointerKind(val)));
+}
+
+MlirAttribute mlirLLVMFastmathFlagsAttrGet(MlirContext ctx,
+                                           MlirLLVMFastmathFlags val) {
+  return wrap(FastmathFlagsAttr::get(unwrap(ctx), FastmathFlags(val)));
+}
+
+MlirAttribute mlirLLVMModRefInfoAttrGet(MlirContext ctx,
+                                        MlirLLVMModRefInfo val) {
+  return wrap(ModRefInfoAttr::get(unwrap(ctx), ModRefInfo(val)));
 }

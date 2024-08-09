@@ -67,6 +67,27 @@ static void emitEnumClass(const Record &enumDef, StringRef enumName,
   os << "};\n\n";
 }
 
+static void emitCEnum(const Record &enumDef, StringRef enumName,
+                      StringRef underlyingType, StringRef description,
+                      const std::vector<EnumAttrCase> &enumerants,
+                      raw_ostream &os) {
+  os << "// " << description << "\n";
+  os << "enum MlirLLVM" << enumName << " {\n";
+
+  for (const auto &enumerant : enumerants) {
+    auto symbol = makeIdentifier(enumerant.getSymbol());
+    auto value = enumerant.getValue();
+    if (value >= 0) {
+      os << formatv("  MlirLLVM{0}{1} = {2},\n", enumName, symbol, value);
+    } else {
+      os << formatv("  MlirLLVM{0}{0},\n", enumName, symbol);
+    }
+  }
+  os << "};\n";
+  os << "typedef enum MlirLLVM" << enumName << " MlirLLVM" << enumName
+     << ";\n\n";
+}
+
 static void emitParserPrinter(const EnumAttr &enumAttr, StringRef qualName,
                               StringRef cppNamespace, raw_ostream &os) {
   if (enumAttr.getUnderlyingType().empty() ||
@@ -642,12 +663,41 @@ public:
   emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
 }
 
+static void emitCEnumDecl(const Record &enumDef, raw_ostream &os) {
+  EnumAttr enumAttr(enumDef);
+  StringRef enumName = enumAttr.getEnumClassName();
+  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
+  StringRef description = enumAttr.getSummary();
+  auto enumerants = enumAttr.getAllCases();
+
+  // Emit the enum class definition
+  emitCEnum(enumDef, enumName, underlyingType, description, enumerants, os);
+}
+
 static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Declarations", os, recordKeeper);
 
   auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
   for (const auto *def : defs)
     emitEnumDecl(*def, os);
+
+  return false;
+}
+
+static bool emitCEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
+  llvm::emitSourceFileHeader("Enum C Utility Declarations", os, recordKeeper);
+
+  os << "#ifdef __cplusplus\n";
+  os << "extern \"C\" {\n";
+  os << "#endif\n\n";
+
+  auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
+  for (const auto *def : defs)
+    emitCEnumDecl(*def, os);
+
+  os << "\n\n#ifdef __cplusplus\n";
+  os << "}\n";
+  os << "#endif\n";
 
   return false;
 }
@@ -696,6 +746,14 @@ static mlir::GenRegistration
                  [](const RecordKeeper &records, raw_ostream &os) {
                    return emitEnumDecls(records, os);
                  });
+
+// Registers the enum utility generator to mlir-tblgen.
+static mlir::GenRegistration
+    genCEnumDecls("gen-enum-capi-decls",
+                  "Generate CAPI enum utility declarations",
+                  [](const RecordKeeper &records, raw_ostream &os) {
+                    return emitCEnumDecls(records, os);
+                  });
 
 // Registers the enum utility generator to mlir-tblgen.
 static mlir::GenRegistration
