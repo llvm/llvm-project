@@ -10733,6 +10733,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
   SDValue BasePtr = MemSD->getBasePtr();
 
   SDValue Mask, PassThru, VL;
+  bool IsExpandingLoad = false;
   if (const auto *VPLoad = dyn_cast<VPLoadSDNode>(Op)) {
     Mask = VPLoad->getMask();
     PassThru = DAG.getUNDEF(VT);
@@ -10741,6 +10742,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     const auto *MLoad = cast<MaskedLoadSDNode>(Op);
     Mask = MLoad->getMask();
     PassThru = MLoad->getPassThru();
+    IsExpandingLoad = MLoad->isExpandingLoad();
   }
 
   bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
@@ -10760,16 +10762,49 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
   if (!VL)
     VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
-  unsigned IntID =
-      IsUnmasked ? Intrinsic::riscv_vle : Intrinsic::riscv_vle_mask;
+  SDValue Index;
+  if (!IsUnmasked && IsExpandingLoad) {
+    MVT IndexVT = ContainerVT;
+    if (ContainerVT.isFloatingPoint())
+      IndexVT = IndexVT.changeVectorElementTypeToInteger();
+
+    MVT IndexEltVT = IndexVT.getVectorElementType();
+    if (Subtarget.isRV32() && IndexEltVT.bitsGT(XLenVT))
+      IndexVT = IndexVT.changeVectorElementType(XLenVT);
+
+    // If index vector is an i8 vector and the element count exceeds 256, we
+    // should change the element type of index vector to i16 to avoid overflow.
+    if (IndexEltVT == MVT::i8 && VT.getVectorNumElements() > 256) {
+      // FIXME: We need to do vector splitting manually for LMUL=8 cases.
+      if (getLMUL(IndexVT) == RISCVII::LMUL_8)
+        return SDValue();
+      IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+    }
+
+    Index =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
+                    DAG.getTargetConstant(Intrinsic::riscv_viota, DL, XLenVT),
+                    DAG.getUNDEF(IndexVT), Mask, VL);
+    if (uint64_t EltSize = ContainerVT.getScalarSizeInBits(); EltSize > 8)
+      Index = DAG.getNode(RISCVISD::SHL_VL, DL, IndexVT, Index,
+                          DAG.getConstant(Log2_64(EltSize / 8), DL, IndexVT),
+                          DAG.getUNDEF(IndexVT), Mask, VL);
+  }
+
+  unsigned IntID = IsUnmasked        ? Intrinsic::riscv_vle
+                   : IsExpandingLoad ? Intrinsic::riscv_vluxei_mask
+                                     : Intrinsic::riscv_vle_mask;
   SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
   if (IsUnmasked)
     Ops.push_back(DAG.getUNDEF(ContainerVT));
   else
     Ops.push_back(PassThru);
   Ops.push_back(BasePtr);
-  if (!IsUnmasked)
+  if (!IsUnmasked) {
+    if (IsExpandingLoad)
+      Ops.push_back(Index);
     Ops.push_back(Mask);
+  }
   Ops.push_back(VL);
   if (!IsUnmasked)
     Ops.push_back(DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT));
