@@ -253,7 +253,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AlignPackStack(AlignPackInfo(getLangOpts().XLPragmaPack)),
       DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
       CodeSegStack(nullptr), StrictGuardStackCheckStack(false),
-      FpPragmaStack(FPOptionsOverride()), CurInitSeg(nullptr),
+      FpPragmaStack(FPOptionsOverride()),
+      AtomicPragmaStack(AtomicOptionsOverride()), CurInitSeg(nullptr),
       VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
       StdCoroutineTraitsCache(nullptr), IdResolver(pp),
       OriginalLexicalContext(nullptr), StdInitializerList(nullptr),
@@ -2756,6 +2757,13 @@ Sema::FPFeaturesStateRAII::~FPFeaturesStateRAII() {
   S.CurFPFeatures = OldFPFeaturesState;
   S.FpPragmaStack.CurrentValue = OldOverrides;
   S.PP.setCurrentFPEvalMethod(OldFPPragmaLocation, OldEvalMethod);
+}
+
+Sema::AtomicOptionsRAII::AtomicOptionsRAII(Sema &S_)
+    : S(S_), SavedAOO(S.getCurAtomicOptionsOverrides()) {}
+
+Sema::AtomicOptionsRAII::~AtomicOptionsRAII() {
+  S.setCurAtomicOptionsOverrides(SavedAOO);
 }
 
 bool Sema::isDeclaratorFunctionLike(Declarator &D) {

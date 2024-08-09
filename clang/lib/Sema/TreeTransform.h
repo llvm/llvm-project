@@ -7852,9 +7852,12 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
                                               bool IsStmtExpr) {
   Sema::CompoundScopeRAII CompoundScope(getSema());
   Sema::FPFeaturesStateRAII FPSave(getSema());
+  Sema::AtomicOptionsRAII SaveAtomicOpts(getSema());
+
   if (S->hasStoredFPFeatures())
     getSema().resetFPOptions(
         S->getStoredFPFeatures().applyOverrides(getSema().getLangOpts()));
+  getSema().setCurAtomicOptionsOverrides(S->getStoredAtomicOptionsOrDefault());
 
   const Stmt *ExprResult = S->getStmtExprResult();
   bool SubStmtInvalid = false;

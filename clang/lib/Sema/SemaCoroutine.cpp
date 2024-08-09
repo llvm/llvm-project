@@ -1159,7 +1159,8 @@ static CompoundStmt *buildCoroutineBody(Stmt *Body, ASTContext &Context) {
   // statement for consistency.
   assert(isa<CXXTryStmt>(Body) && "Unimaged coroutine body type");
   return CompoundStmt::Create(Context, {Body}, FPOptionsOverride(),
-                              SourceLocation(), SourceLocation());
+                              AtomicOptionsOverride(), SourceLocation(),
+                              SourceLocation());
 }
 
 CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,

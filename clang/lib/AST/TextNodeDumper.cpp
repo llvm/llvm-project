@@ -990,6 +990,13 @@ void TextNodeDumper::printFPOptions(FPOptionsOverride FPO) {
 #include "clang/Basic/FPOptions.def"
 }
 
+void TextNodeDumper::printAtomicOptions(AtomicOptionsOverride AO) {
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  if (AO.has##NAME##Override())                                                \
+    OS << " Atomic" #NAME "=" << AO.get##NAME##Override();
+#include "clang/Basic/AtomicOptions.def"
+}
+
 void TextNodeDumper::visitTextComment(const comments::TextComment *C,
                                       const comments::FullComment *) {
   OS << " Text=\"" << C->getText() << "\"";
@@ -2867,6 +2874,8 @@ void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
   VisitStmt(S);
   if (S->hasStoredFPFeatures())
     printFPOptions(S->getStoredFPFeatures());
+  if (S->hasStoredAtomicOptions())
+    printAtomicOptions(S->getStoredAtomicOptions());
 }
 
 void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {

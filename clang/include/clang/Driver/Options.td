@@ -2303,6 +2303,14 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
 
+def fatomic_EQ : CommaJoined<["-"], "fatomic=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Specify atomic codegen options as a comma-separated list of "
+           "key:value pairs, allowed keys and values are "
+           "no_fine_grained_memory:on|off, no_remote_memory:on|off, "
+           "ignore_denormal_mode:on|off">,
+  MarshallingInfoStringVector<LangOpts<"AtomicOptionsAsWritten">>;
+
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,

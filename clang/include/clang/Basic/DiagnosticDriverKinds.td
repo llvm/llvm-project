@@ -301,6 +301,13 @@ def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_value_with_suggestion : Error<
     "invalid value '%1' in '%0', expected one of: %2">;
 def err_drv_alignment_not_power_of_two : Error<"alignment is not a power of 2 in '%0'">;
+
+def err_drv_invalid_atomic_option : Error<
+  "invalid argument '%0' to -fatomic=; must be a "
+  "comma-separated list of key:value pairs, where allowed keys are "
+  "'no_fine_grained_memory', 'no_remote_memory', 'ignore_denormal_mode', "
+  "and values are 'on' or 'off', and each key must be unique">;
+
 def err_drv_invalid_remap_file : Error<
     "invalid option '%0' not of the form <from-file>;<to-file>">;
 def err_drv_invalid_gcc_install_dir : Error<"'%0' does not contain a GCC installation">;

@@ -152,6 +152,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
+    /// True if the compound statement has one or more pragmas that set some
+    /// atomic options.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasAtomicOptions : 1;
+
     unsigned NumStmts;
   };
 
@@ -1603,7 +1608,8 @@ public:
 /// CompoundStmt - This represents a group of statements like { stmt stmt }.
 class CompoundStmt final
     : public Stmt,
-      private llvm::TrailingObjects<CompoundStmt, Stmt *, FPOptionsOverride> {
+      private llvm::TrailingObjects<CompoundStmt, Stmt *, FPOptionsOverride,
+                                    AtomicOptionsOverride> {
   friend class ASTStmtReader;
   friend TrailingObjects;
 
@@ -1614,7 +1620,8 @@ class CompoundStmt final
   SourceLocation RBraceLoc;
 
   CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
-               SourceLocation LB, SourceLocation RB);
+               AtomicOptionsOverride AtomicOptions, SourceLocation LB,
+               SourceLocation RB);
   explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty) {}
 
   void setStmts(ArrayRef<Stmt *> Stmts);
@@ -1625,13 +1632,24 @@ class CompoundStmt final
     *getTrailingObjects<FPOptionsOverride>() = F;
   }
 
+  /// Set AtomicOptionsOverride in trailing storage. Used only by Serialization.
+  void setStoredAtomicOptions(AtomicOptionsOverride A) {
+    assert(hasStoredAtomicOptions());
+    *getTrailingObjects<AtomicOptionsOverride>() = A;
+  }
+
   size_t numTrailingObjects(OverloadToken<Stmt *>) const {
     return CompoundStmtBits.NumStmts;
   }
 
+  size_t numTrailingObjects(OverloadToken<FPOptionsOverride>) const {
+    return CompoundStmtBits.HasFPFeatures;
+  }
+
 public:
   static CompoundStmt *Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
-                              FPOptionsOverride FPFeatures, SourceLocation LB,
+                              FPOptionsOverride FPFeatures,
+                              AtomicOptionsOverride, SourceLocation LB,
                               SourceLocation RB);
 
   // Build an empty compound statement with a location.
@@ -1641,16 +1659,20 @@ public:
       : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(EndLoc) {
     CompoundStmtBits.NumStmts = 0;
     CompoundStmtBits.HasFPFeatures = 0;
+    CompoundStmtBits.HasAtomicOptions = 0;
   }
 
   // Build an empty compound statement.
   static CompoundStmt *CreateEmpty(const ASTContext &C, unsigned NumStmts,
-                                   bool HasFPFeatures);
+                                   bool HasFPFeatures, bool HasAtomicOptions);
 
   bool body_empty() const { return CompoundStmtBits.NumStmts == 0; }
   unsigned size() const { return CompoundStmtBits.NumStmts; }
 
   bool hasStoredFPFeatures() const { return CompoundStmtBits.HasFPFeatures; }
+  bool hasStoredAtomicOptions() const {
+    return CompoundStmtBits.HasAtomicOptions;
+  }
 
   /// Get FPOptionsOverride from trailing storage.
   FPOptionsOverride getStoredFPFeatures() const {
@@ -1661,6 +1683,18 @@ public:
   /// Get the store FPOptionsOverride or default if not stored.
   FPOptionsOverride getStoredFPFeaturesOrDefault() const {
     return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
+  /// Get AtomicOptionsOverride from trailing storage.
+  AtomicOptionsOverride getStoredAtomicOptions() const {
+    assert(hasStoredAtomicOptions());
+    return *getTrailingObjects<AtomicOptionsOverride>();
+  }
+
+  /// Get the stored AtomicOptionsOverride or default if not stored.
+  AtomicOptionsOverride getStoredAtomicOptionsOrDefault() const {
+    return hasStoredAtomicOptions() ? getStoredAtomicOptions()
+                                    : AtomicOptionsOverride();
   }
 
   using body_iterator = Stmt **;

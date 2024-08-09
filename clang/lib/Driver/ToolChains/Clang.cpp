@@ -5881,6 +5881,32 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
 
+  if (Arg *AtomicArg = Args.getLastArg(options::OPT_fatomic_EQ)) {
+    if (!AtomicArg->getNumValues()) {
+      D.Diag(clang::diag::warn_drv_empty_joined_argument)
+          << AtomicArg->getAsString(Args);
+    } else {
+      bool Valid = true;
+      std::set<StringRef> Keys;
+      for (StringRef Option : AtomicArg->getValues()) {
+        SmallVector<StringRef, 2> KeyValue;
+        Option.split(KeyValue, ":");
+        if (KeyValue.size() != 2 ||
+            (KeyValue[1] != "on" && KeyValue[1] != "off") ||
+            (KeyValue[0] != "no_fine_grained_memory" &&
+             KeyValue[0] != "no_remote_memory" &&
+             KeyValue[0] != "ignore_denormal_mode") ||
+            !Keys.insert(KeyValue[0]).second) {
+          Valid = false;
+          D.Diag(diag::err_drv_invalid_atomic_option) << Option;
+          break;
+        }
+      }
+      if (Valid)
+        CmdArgs.push_back(Args.MakeArgString(AtomicArg->getAsString(Args)));
+    }
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {
     const llvm::Triple::ArchType Arch = TC.getArch();
     if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {

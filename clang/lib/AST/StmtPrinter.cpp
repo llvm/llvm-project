@@ -130,6 +130,7 @@ namespace {
     void PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                      bool ForceNoStmt = false);
     void PrintFPPragmas(CompoundStmt *S);
+    void PrintAtomicPragmas(CompoundStmt *S);
 
     void PrintExpr(Expr *E) {
       if (E)
@@ -178,6 +179,7 @@ void StmtPrinter::PrintRawCompoundStmt(CompoundStmt *Node) {
   assert(Node && "Compound statement cannot be null");
   OS << "{" << NL;
   PrintFPPragmas(Node);
+  PrintAtomicPragmas(Node);
   for (auto *I : Node->body())
     PrintStmt(I);
 
@@ -241,6 +243,27 @@ void StmtPrinter::PrintFPPragmas(CompoundStmt *S) {
       llvm_unreachable("Invalid rounding mode");
     }
     OS << NL;
+  }
+}
+
+void StmtPrinter::PrintAtomicPragmas(CompoundStmt *S) {
+  if (!S->hasStoredAtomicOptions())
+    return;
+  AtomicOptionsOverride AO = S->getStoredAtomicOptions();
+
+  if (AO.hasNoRemoteMemoryOverride()) {
+    Indent() << "#pragma clang atomic no_remote_memory("
+             << (AO.getNoRemoteMemoryOverride() ? "on" : "off") << ")\n";
+  }
+
+  if (AO.hasNoFineGrainedMemoryOverride()) {
+    Indent() << "#pragma clang atomic no_finegrained_memory("
+             << (AO.getNoFineGrainedMemoryOverride() ? "on" : "off") << ")\n";
+  }
+
+  if (AO.hasIgnoreDenormalModeOverride()) {
+    Indent() << "#pragma clang atomic ignore_denormal_mode("
+             << (AO.getIgnoreDenormalModeOverride() ? "on" : "off") << ")\n";
   }
 }
 

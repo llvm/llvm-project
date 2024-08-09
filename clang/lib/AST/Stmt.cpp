@@ -364,13 +364,17 @@ int64_t Stmt::getID(const ASTContext &Context) const {
 }
 
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
+                           AtomicOptionsOverride AtomicOptions,
                            SourceLocation LB, SourceLocation RB)
     : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB) {
   CompoundStmtBits.NumStmts = Stmts.size();
   CompoundStmtBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
+  CompoundStmtBits.HasAtomicOptions = AtomicOptions.requiresTrailingStorage();
   setStmts(Stmts);
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
+  if (hasStoredAtomicOptions())
+    setStoredAtomicOptions(AtomicOptions);
 }
 
 void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
@@ -382,22 +386,27 @@ void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
 
 CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                                    FPOptionsOverride FPFeatures,
+                                   AtomicOptionsOverride AtomicOpts,
                                    SourceLocation LB, SourceLocation RB) {
-  void *Mem =
-      C.Allocate(totalSizeToAlloc<Stmt *, FPOptionsOverride>(
-                     Stmts.size(), FPFeatures.requiresTrailingStorage()),
-                 alignof(CompoundStmt));
-  return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB);
+  void *Mem = C.Allocate(
+      totalSizeToAlloc<Stmt *, FPOptionsOverride, AtomicOptionsOverride>(
+          Stmts.size(), FPFeatures.requiresTrailingStorage(),
+          AtomicOpts.requiresTrailingStorage()),
+      alignof(CompoundStmt));
+  return new (Mem) CompoundStmt(Stmts, FPFeatures, AtomicOpts, LB, RB);
 }
 
 CompoundStmt *CompoundStmt::CreateEmpty(const ASTContext &C, unsigned NumStmts,
-                                        bool HasFPFeatures) {
+                                        bool HasFPFeatures,
+                                        bool HasAtomicOptions) {
   void *Mem = C.Allocate(
-      totalSizeToAlloc<Stmt *, FPOptionsOverride>(NumStmts, HasFPFeatures),
+      totalSizeToAlloc<Stmt *, FPOptionsOverride, AtomicOptionsOverride>(
+          NumStmts, HasFPFeatures, HasAtomicOptions),
       alignof(CompoundStmt));
   CompoundStmt *New = new (Mem) CompoundStmt(EmptyShell());
   New->CompoundStmtBits.NumStmts = NumStmts;
   New->CompoundStmtBits.HasFPFeatures = HasFPFeatures;
+  New->CompoundStmtBits.HasAtomicOptions = HasAtomicOptions;
   return New;
 }
 

@@ -856,6 +856,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::annot_pragma_fp:
     HandlePragmaFP();
     break;
+  case tok::annot_pragma_atomic:
+    HandlePragmaAtomic();
+    break;
   case tok::annot_pragma_opencl_extension:
     HandlePragmaOpenCLExtension();
     return nullptr;
