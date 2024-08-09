@@ -5022,6 +5022,7 @@ cc_library(
         ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
