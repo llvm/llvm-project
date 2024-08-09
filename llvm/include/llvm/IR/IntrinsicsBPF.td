@@ -13,11 +13,11 @@
 // Specialized loads from packet
 let TargetPrefix = "bpf" in {  // All intrinsics start with "llvm.bpf."
   def int_bpf_load_byte : ClangBuiltin<"__builtin_bpf_load_byte">,
-              Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
+              DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
   def int_bpf_load_half : ClangBuiltin<"__builtin_bpf_load_half">,
-              Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
+              DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
   def int_bpf_load_word : ClangBuiltin<"__builtin_bpf_load_word">,
-              Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
+              DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
   def int_bpf_pseudo : ClangBuiltin<"__builtin_bpf_pseudo">,
               Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]>;
   def int_bpf_preserve_field_info : ClangBuiltin<"__builtin_bpf_preserve_field_info">,
