@@ -119,7 +119,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
 
   // fmul (select Cond, 1.0, -1.0), OtherOp --> select Cond, OtherOp, -OtherOp
   // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
-  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(1.0),
+  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_FPOne(),
                                            m_SpecificFP(-1.0))),
                          m_Value(OtherOp)))) {
     IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
@@ -130,7 +130,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
   // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
   if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(-1.0),
-                                           m_SpecificFP(1.0))),
+                                           m_FPOne())),
                          m_Value(OtherOp)))) {
     IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
     Builder.setFastMathFlags(I.getFastMathFlags());
@@ -763,12 +763,10 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   //  2) X * 1.0/sqrt(X) -> X/sqrt(X)
   // We always expect the backend to reduce X/sqrt(X) to sqrt(X), if it
   // has the necessary (reassoc) fast-math-flags.
-  if (I.hasNoSignedZeros() &&
-      match(Op0, (m_FDiv(m_SpecificFP(1.0), m_Value(Y)))) &&
+  if (I.hasNoSignedZeros() && match(Op0, (m_FDiv(m_FPOne(), m_Value(Y)))) &&
       match(Y, m_Sqrt(m_Value(X))) && Op1 == X)
     return BinaryOperator::CreateFDivFMF(X, Y, &I);
-  if (I.hasNoSignedZeros() &&
-      match(Op1, (m_FDiv(m_SpecificFP(1.0), m_Value(Y)))) &&
+  if (I.hasNoSignedZeros() && match(Op1, (m_FDiv(m_FPOne(), m_Value(Y)))) &&
       match(Y, m_Sqrt(m_Value(X))) && Op0 == X)
     return BinaryOperator::CreateFDivFMF(X, Y, &I);
 
@@ -1926,7 +1924,7 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     // m_OneUse check is avoided because even in the case of the multiple uses
     // for 1.0/Y, the number of instructions remain the same and a division is
     // replaced by a multiplication.
-    if (match(Op1, m_FDiv(m_SpecificFP(1.0), m_Value(Y))))
+    if (match(Op1, m_FDiv(m_FPOne(), m_Value(Y))))
       return BinaryOperator::CreateFMulFMF(Y, Op0, &I);
   }
 
