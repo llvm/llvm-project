@@ -27,8 +27,8 @@ TEST(CachedCyclicReplacerTest, testNoRecursion) {
 TEST(CachedCyclicReplacerTest, testInPlaceRecursionPruneAnywhere) {
   // Replacer cycles through ints 0 -> 1 -> 2 -> 0 -> ...
   CachedCyclicReplacer<int, int> replacer(
-      /*replacer=*/[&](int n) { return replacer((n + 1) % 3); },
-      /*cycleBreaker=*/[&](int n) { return -1; });
+      /*replacer=*/[&replacer](int n) { return replacer((n + 1) % 3); },
+      /*cycleBreaker=*/[](int n) { return -1; });
 
   // Starting at 0.
   EXPECT_EQ(replacer(0), -1);
