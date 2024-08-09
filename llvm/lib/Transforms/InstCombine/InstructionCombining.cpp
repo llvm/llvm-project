@@ -4872,6 +4872,76 @@ void InstCombinerImpl::tryToSinkInstructionDbgValues(
   }
 }
 
+// Fold:
+//  (binop X, C)
+// Where X can only be one of two possible values to:
+//  (select (icmp eq X, C0), (binop C0, C), (binop C1, C))
+//
+// We don't do this for all binops, only those not handled by
+// `foldSelectICmpAnd` which does the inverse.
+Instruction *
+InstCombinerImpl::foldOpWithTwoPossibleValuesToSelect(BinaryOperator &I) {
+
+  switch (I.getOpcode()) {
+    // Handled in `foldSelectICmpAnd` where we go the other way.
+  case Instruction::Add:
+  case Instruction::Or:
+  case Instruction::Sub:
+  case Instruction::Xor:
+    return nullptr;
+  default:
+    break;
+  }
+
+  for (unsigned OpIdx = 0; OpIdx < 2; ++OpIdx) {
+    switch (I.getOpcode()) {
+    case Instruction::Shl:
+    case Instruction::AShr:
+    case Instruction::LShr:
+      if (OpIdx == 1)
+        return nullptr;
+      break;
+    default:
+      break;
+    }
+    ConstantInt *C;
+    if (!match(I.getOperand(OpIdx), m_ConstantInt(C)))
+      continue;
+
+    Value *Other = I.getOperand(1 - OpIdx);
+    KnownBits OtherKnown = computeKnownBits(Other, /*Depth=*/0, &I);
+
+    // See if the other op has only two possible values.
+    if ((OtherKnown.One | OtherKnown.Zero).popcount() !=
+        (OtherKnown.getBitWidth() - 1))
+      continue;
+
+    // Get the two possible values.
+    Constant *OtherC0 =
+        ConstantInt::get(C->getType(), OtherKnown.getMaxValue());
+    Constant *OtherC1 =
+        ConstantInt::get(C->getType(), OtherKnown.getMinValue());
+
+    assert(OtherC0 != OtherC1 && "This should have been constant folded!");
+    Constant *SelTC, *SelFC;
+    // See if we can create a select with two constants.
+    if (OpIdx == 0) {
+      SelTC = ConstantFoldBinaryOpOperands(I.getOpcode(), C, OtherC0, DL);
+      SelFC = ConstantFoldBinaryOpOperands(I.getOpcode(), C, OtherC1, DL);
+    } else {
+      SelTC = ConstantFoldBinaryOpOperands(I.getOpcode(), OtherC0, C, DL);
+      SelFC = ConstantFoldBinaryOpOperands(I.getOpcode(), OtherC1, C, DL);
+    }
+    if (!SelTC || !SelFC)
+      continue;
+
+    Value *SelCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Other, OtherC0);
+    return SelectInst::Create(SelCmp, SelTC, SelFC);
+  }
+
+  return nullptr;
+}
+
 void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
     Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
     BasicBlock *DestBlock,
