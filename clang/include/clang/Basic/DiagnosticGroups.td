@@ -1570,3 +1570,9 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// Warnings regarding the usage of __attribute__((wraps)) on non-integer types.
+def UselessWrapsAttr : DiagGroup<"useless-wraps-attribute">;
+
+// Warnings about the wraps attribute getting implicitly discarded
+def ImpDiscardedWrapsAttr : DiagGroup<"implicitly-discarded-wraps-attribute">;

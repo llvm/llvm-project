@@ -2850,6 +2850,10 @@ bool QualType::isWebAssemblyFuncrefType() const {
          getAddressSpace() == LangAS::wasm_funcref;
 }
 
+bool QualType::hasWrapsAttr() const {
+  return !isNull() && getTypePtr()->hasAttr(attr::Wraps);
+}
+
 QualType::PrimitiveDefaultInitializeKind
 QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
   if (const auto *RT =

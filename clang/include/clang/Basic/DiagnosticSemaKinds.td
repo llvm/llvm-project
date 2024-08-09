@@ -6624,6 +6624,13 @@ def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
+def warn_wraps_attr_var_decl_type_not_integer : Warning<
+  "using attribute 'wraps' with non-integer type '%0' has no function">,
+  InGroup<UselessWrapsAttr>;
+def warn_wraps_attr_maybe_lost : Warning<
+  "'wraps' attribute may be implicitly discarded when converted to %0">,
+  InGroup<ImpDiscardedWrapsAttr>;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.

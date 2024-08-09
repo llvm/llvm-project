@@ -734,6 +734,9 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   QualType ExprTy = Context.getCanonicalType(E->getType());
   QualType TypeTy = Context.getCanonicalType(Ty);
 
+  if (E->getType().getTypePtr()->isIntegerType() && E->getType().hasWrapsAttr())
+    Ty = Context.getAttributedType(attr::Wraps, Ty, Ty);
+
   if (ExprTy == TypeTy)
     return E;
 
