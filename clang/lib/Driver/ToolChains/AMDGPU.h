@@ -129,7 +129,7 @@ protected:
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
 public:
   ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
-                const llvm::opt::ArgList &Args);
+                const llvm::opt::ArgList &Args, bool isHostTCMSVC=false);
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,

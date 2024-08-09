@@ -428,6 +428,9 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
       RocmInstallation(D, Triple, Args) {
+  
+  RocmInstallation->setHostWindows(true);
+
   getProgramPaths().push_back(getDriver().Dir);
 
   std::optional<llvm::StringRef> VCToolsDir, VCToolsVersion;
@@ -453,6 +456,7 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
       llvm::findVCToolChainViaSetupConfig(getVFS(), VCToolsVersion,
                                           VCToolChainPath, VSLayout) ||
       llvm::findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
+
 }
 
 Tool *MSVCToolChain::buildLinker() const {
