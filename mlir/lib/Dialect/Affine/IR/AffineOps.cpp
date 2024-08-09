@@ -2562,7 +2562,7 @@ bool mlir::affine::isAffineInductionVar(Value val) {
 
 AffineForOp mlir::affine::getForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);
-  if (!ivArg || !ivArg.getOwner())
+  if (!ivArg || !ivArg.getOwner() || !ivArg.getOwner()->getParent())
     return AffineForOp();
   auto *containingInst = ivArg.getOwner()->getParent()->getParentOp();
   if (auto forOp = dyn_cast<AffineForOp>(containingInst))
