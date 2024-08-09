@@ -6,6 +6,12 @@
 // RUN: FileCheck --input-file=%t1.ll %s -check-prefix=LLVM
 // RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -fno-clangir-direct-lowering -S -emit-llvm %s -o %t2.ll
 // RUN: FileCheck --input-file=%t2.ll %s -check-prefix=LLVM
+// RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -fclangir-direct-lowering -c -emit-llvm %s -o %t1.bc
+// RUN: llvm-dis %t1.bc -o %t1.bc.ll
+// RUN: FileCheck --input-file=%t1.bc.ll %s -check-prefix=LLVM
+// RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -fno-clangir-direct-lowering -c -emit-llvm %s -o %t2.bc
+// RUN: llvm-dis %t2.bc -o %t2.bc.ll
+// RUN: FileCheck --input-file=%t2.bc.ll %s -check-prefix=LLVM
 // RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -c %s -o %t.o
 // RUN: llvm-objdump -d %t.o | FileCheck %s -check-prefix=OBJ
 // RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -clangir-disable-passes -S -Xclang -emit-cir %s -o %t.cir
