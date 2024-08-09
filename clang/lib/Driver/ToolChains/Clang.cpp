@@ -4951,8 +4951,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsHostOffloadingAction =
       JA.isHostOffloading(Action::OFK_OpenMP) ||
       (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
+       C.getActiveOffloadKinds() != Action::OFK_None &&
        Args.hasFlag(options::OPT_offload_new_driver,
-                    options::OPT_no_offload_new_driver, false));
+                    options::OPT_no_offload_new_driver, true));
 
   bool IsRDCMode =
       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
@@ -5279,7 +5280,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (IsUsingLTO) {
       if (IsDeviceOffloadAction && !JA.isDeviceOffloading(Action::OFK_OpenMP) &&
           !Args.hasFlag(options::OPT_offload_new_driver,
-                        options::OPT_no_offload_new_driver, false) &&
+                        options::OPT_no_offload_new_driver, true) &&
           !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,
@@ -6744,8 +6745,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Forward the new driver to change offloading code generation.
-  if (Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver, false))
+  if (C.getActiveOffloadKinds() != Action::OFK_None &&
+      Args.hasFlag(options::OPT_offload_new_driver,
+                   options::OPT_no_offload_new_driver, true))
     CmdArgs.push_back("--offload-new-driver");
 
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);

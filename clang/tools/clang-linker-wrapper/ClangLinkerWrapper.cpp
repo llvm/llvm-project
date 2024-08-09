@@ -1623,8 +1623,7 @@ getDeviceInput(const ArgList &Args) {
             : std::string(Arg->getValue());
 
     if (!Filename && Arg->getOption().matches(OPT_library))
-      reportError(
-          createStringError("unable to find library -l%s", Arg->getValue()));
+      return createStringError("unable to find library -l%s", Arg->getValue());
 
     if (!Filename || !sys::fs::exists(*Filename) ||
         sys::fs::is_directory(*Filename))
@@ -1636,6 +1635,10 @@ getDeviceInput(const ArgList &Args) {
       return createFileError(*Filename, EC);
 
     MemoryBufferRef Buffer = **BufferOrErr;
+    if (identify_magic(Buffer.getBuffer()) == file_magic::elf_shared_object)
+      return createStringError(
+          "clang offload bundles are deprecated. Recompile with "
+          "'--no-offload-new-driver'");
     if (identify_magic(Buffer.getBuffer()) == file_magic::elf_shared_object)
       continue;
 
