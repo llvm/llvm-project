@@ -351,7 +351,7 @@ static SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
   SmallVector<int> Mask;
   unsigned AccumulateLength = 0;
   for (Value *V : VL) {
-    ShuffleVectorInst *SV = cast<ShuffleVectorInst>(V);
+    auto *SV = cast<ShuffleVectorInst>(V);
     for (int M : SV->getShuffleMask())
       Mask.push_back(M == PoisonMaskElem ? PoisonMaskElem
                                          : AccumulateLength + M);
@@ -10217,7 +10217,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // shufflevector will be eliminated by instcombine because the
         // shufflevector masks are used in order (guaranteed by
         // getShufflevectorNumGroups). The vector cost is 0.
-        return InstructionCost();
+        return TTI::TCC_Free;
       });
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
