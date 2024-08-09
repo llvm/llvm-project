@@ -52,6 +52,7 @@ add_llvm_component_library(LLVMCodeGen
   DFAPacketizer.cpp
   DwarfEHPrepare.cpp
   EarlyIfConversion.cpp
+  EarlyReturnPass.cpp
   EdgeBundles.cpp
   EHContGuardCatchret.cpp
   ExecutionDomainFix.cpp
