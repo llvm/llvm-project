@@ -89,13 +89,14 @@ public:
 /// State encapsulating if a the variable creation has been successful,
 /// unsuccessful, or no variable has been created at all.
 struct VarCreationState {
-  std::optional<bool> S = std::nullopt;
+  enum SS { Failure = 0, Success = 1, NotCreated, DummyCreated } S;
   VarCreationState() = default;
-  VarCreationState(bool b) : S(b) {}
-  static VarCreationState NotCreated() { return VarCreationState(); }
+  VarCreationState(SS b) : S(b) {}
+  VarCreationState(bool b) : S(b ? Success : Failure) {}
 
-  operator bool() const { return S && *S; }
-  bool notCreated() const { return !S; }
+  operator bool() const { return S == Success; }
+  bool notCreated() const { return S == NotCreated; }
+  bool dummyCreated() const { return S == DummyCreated; }
 };
 
 /// Compilation context for expressions.
