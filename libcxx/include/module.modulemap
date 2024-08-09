@@ -1532,6 +1532,10 @@ module std_private_memory_ranges_uninitialized_algorithms [system] {
   export std_private_algorithm_in_out_result
 }
 module std_private_memory_raw_storage_iterator            [system] { header "__memory/raw_storage_iterator.h" }
+module std_private_memory_scoped_temporary_buffer         [system] {
+  header "__memory/scoped_temporary_buffer.h"
+  export std_private_type_traits_is_constant_evaluated
+}
 module std_private_memory_shared_ptr                      [system] {
   header "__memory/shared_ptr.h"
   export std_private_memory_uninitialized_algorithms

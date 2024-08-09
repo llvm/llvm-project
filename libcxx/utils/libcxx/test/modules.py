@@ -52,13 +52,6 @@ SkipDeclarations["random"] = [
     "std::operator==",
 ]
 
-# TODO MODULES remove zombie names
-# https://libcxx.llvm.org/Status/Cxx20.html#note-p0619
-SkipDeclarations["memory"] = [
-    "std::return_temporary_buffer",
-    "std::get_temporary_buffer",
-]
-
 # include/__type_traits/is_swappable.h
 SkipDeclarations["type_traits"] = [
     "std::swap",
