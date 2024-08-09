@@ -1341,7 +1341,11 @@ void is_trivial2()
   static_assert(__is_trivial(UnionAr));
   static_assert(__is_trivial(TrivialStruct));
   static_assert(__is_trivial(AllDefaulted));
+#if __cplusplus >= 201703L
+  static_assert(!__is_trivial(AllDeleted));
+#else
   static_assert(__is_trivial(AllDeleted));
+#endif
 
   static_assert(!__is_trivial(void));
   static_assert(!__is_trivial(NonTrivialStruct));
@@ -1383,7 +1387,11 @@ void is_trivially_copyable2()
   static_assert(__is_trivially_copyable(TrivialStruct));
   static_assert(__is_trivially_copyable(NonTrivialStruct));
   static_assert(__is_trivially_copyable(AllDefaulted));
+#if __cplusplus >= 201703L
+  static_assert(!__is_trivially_copyable(AllDeleted));
+#else
   static_assert(__is_trivially_copyable(AllDeleted));
+#endif
 
   static_assert(!__is_trivially_copyable(void));
   static_assert(!__is_trivially_copyable(SuperNonTrivialStruct));
