@@ -116,7 +116,7 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
   };
 
   std::string ErrorMessage;
-  int SecondsToWait = 10;
+  int SecondsToWait = 60;
   if (std::optional<std::string> Str =
           llvm::sys::Process::GetEnv("CLANG_TOOLCHAIN_PROGRAM_TIMEOUT")) {
     if (!llvm::to_integer(*Str, SecondsToWait))
