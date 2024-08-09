@@ -536,14 +536,13 @@ define void @testRedundantPrimeUnprime(ptr %dst, <16 x i8> %vc) nounwind {
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -112(r1)
-; CHECK-NEXT:    xxsetaccz acc0
 ; CHECK-NEXT:    xxsetaccz acc1
 ; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    xxmfacc acc0
+; CHECK-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
-; CHECK-NEXT:    stxv vs1, 32(r3)
-; CHECK-NEXT:    stxv vs2, 16(r3)
-; CHECK-NEXT:    stxv vs3, 0(r3)
+; CHECK-NEXT:    stxv vs0, 32(r3)
+; CHECK-NEXT:    stxv vs0, 16(r3)
+; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    xvf32gerpp acc1, v2, v2
 ; CHECK-NEXT:    xxmfacc acc1
 ; CHECK-NEXT:    stxv vs4, 80(r1)
@@ -568,15 +567,14 @@ define void @testRedundantPrimeUnprime(ptr %dst, <16 x i8> %vc) nounwind {
 ; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    std r0, 16(r1)
 ; CHECK-BE-NEXT:    stdu r1, -192(r1)
-; CHECK-BE-NEXT:    xxsetaccz acc0
 ; CHECK-BE-NEXT:    xxsetaccz acc1
 ; CHECK-BE-NEXT:    std r30, 176(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    mr r30, r3
-; CHECK-BE-NEXT:    xxmfacc acc0
-; CHECK-BE-NEXT:    stxv vs1, 16(r3)
+; CHECK-BE-NEXT:    xxlxor vs0, vs0, vs0
+; CHECK-BE-NEXT:    stxv vs0, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
-; CHECK-BE-NEXT:    stxv vs3, 48(r3)
-; CHECK-BE-NEXT:    stxv vs2, 32(r3)
+; CHECK-BE-NEXT:    stxv vs0, 48(r3)
+; CHECK-BE-NEXT:    stxv vs0, 32(r3)
 ; CHECK-BE-NEXT:    xvf32gerpp acc1, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc1
 ; CHECK-BE-NEXT:    stxv vs4, 112(r1)
