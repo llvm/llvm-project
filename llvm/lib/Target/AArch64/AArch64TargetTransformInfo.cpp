@@ -1183,7 +1183,8 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
     return std::nullopt;
 
   // Where the dupq is a lane 0 replicate of a vector insert
-  if (!cast<ConstantInt>(DupQLane->getArgOperand(1))->isZero())
+  auto *DupQLaneOp1 = dyn_cast<ConstantInt>(DupQLane->getArgOperand(1));
+  if (!DupQLaneOp1 || !DupQLaneOp1->isZero())
     return std::nullopt;
 
   auto *VecIns = dyn_cast<IntrinsicInst>(DupQLane->getArgOperand(0));
