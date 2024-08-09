@@ -28,7 +28,7 @@ for.body17.lr.ph:                                 ; preds = %for.end22, %for.con
 
 for.body17:                                       ; preds = %for.body17, %for.body17.lr.ph
   %outvalue.141 = phi i64 [ undef, %for.body17.lr.ph ], [ %add19, %for.body17 ]
-  %inptr.040 = phi ptr [ %add.ptr, %for.body17.lr.ph ], [ undef, %for.body17 ]
+  %inptr.040 = phi ptr [ %add.ptr, %for.body17.lr.ph ], [ poison, %for.body17 ]
   %1 = load i8, ptr %inptr.040
   %add19 = mul nsw i64 0, %outvalue.141
   br i1 false, label %for.body17, label %for.end22
