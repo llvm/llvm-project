@@ -54,6 +54,8 @@ struct GCNRegPressure {
     }
     return std::max(Value[VGPR32], Value[AGPR32]);
   }
+  unsigned getArchVGPRNum() const { return Value[VGPR32];}
+
   unsigned getAGPRNum() const { return Value[AGPR32]; }
 
   unsigned getVGPRTuplesWeight() const { return std::max(Value[VGPR_TUPLE],
