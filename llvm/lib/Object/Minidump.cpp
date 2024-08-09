@@ -53,6 +53,27 @@ Expected<std::string> MinidumpFile::getString(size_t Offset) const {
   return Result;
 }
 
+Expected<std::vector<const minidump::ExceptionStream *>>
+MinidumpFile::getExceptionStreams() const {
+
+  std::vector<const minidump::ExceptionStream *> exceptionStreamList;
+  for (const auto &directory : Streams) {
+    if (directory.Type == StreamType::Exception) {
+      llvm::Expected<minidump::ExceptionStream *> ExpectedStream =
+          getStreamFromDirectory<minidump::ExceptionStream *>(directory);
+      if (!ExpectedStream)
+        return ExpectedStream.takeError();
+
+      exceptionStreamList.push_back(ExpectedStream.get());
+    }
+  }
+
+  if (exceptionStreamList.empty())
+    return createError("No exception streams found");
+
+  return exceptionStreamList;
+}
+
 Expected<iterator_range<MinidumpFile::MemoryInfoIterator>>
 MinidumpFile::getMemoryInfoList() const {
   std::optional<ArrayRef<uint8_t>> Stream =
@@ -127,6 +148,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
     return ExpectedStreams.takeError();
 
   DenseMap<StreamType, std::size_t> StreamMap;
+  std::vector<std::size_t> ExceptionStreams;
   for (const auto &StreamDescriptor : llvm::enumerate(*ExpectedStreams)) {
     StreamType Type = StreamDescriptor.value().Type;
     const LocationDescriptor &Loc = StreamDescriptor.value().Location;
@@ -139,6 +161,15 @@ MinidumpFile::create(MemoryBufferRef Source) {
     if (Type == StreamType::Unused && Loc.DataSize == 0) {
       // Ignore dummy streams. This is technically ill-formed, but a number of
       // existing minidumps seem to contain such streams.
+      continue;
+    }
+
+    // We treat exceptions differently here because the LLDB minidump
+    // makes some assumptions about uniqueness, all the streams other than
+    // exceptions are lists. But exceptions are not a list, they are single
+    // streams that point back to their thread So we will omit them here, and
+    // will find them when needed in the MinidumpFile.
+    if (Type == StreamType::Exception) {
       continue;
     }
 

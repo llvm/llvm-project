@@ -82,14 +82,24 @@ public:
     return getListStream<minidump::Thread>(minidump::StreamType::ThreadList);
   }
 
-  /// Returns the contents of the Exception stream.  An error is returned if the
-  /// file does not contain this stream, or the stream is smaller than the size
-  /// of the ExceptionStream structure.  The internal consistency of the stream
-  /// is not checked in any way.
-  Expected<const minidump::ExceptionStream &> getExceptionStream() const {
-    return getStream<minidump::ExceptionStream>(
-        minidump::StreamType::Exception);
+  /// Returns the contents of the Exception stream. An error is returned if the
+  /// associated stream is smaller than the size of the ExceptionStream
+  /// structure. Or the directory supplied is not of kind exception stream.
+  Expected<const minidump::ExceptionStream &>
+  getExceptionStream(minidump::Directory Directory) const {
+    if (Directory.Type != minidump::StreamType::Exception) {
+      return createError("Not an exception stream");
+    }
+
+    return getStreamFromDirectory<minidump::ExceptionStream>(Directory);
   }
+
+  /// Returns the contents of the Exception streams.  An error is returned if
+  /// any of the streams are smaller than the size of the ExceptionStream
+  /// structure. The internal consistency of the stream is not checked in any
+  /// way.
+  Expected<std::vector<const minidump::ExceptionStream *>>
+  getExceptionStreams() const;
 
   /// Returns the list of descriptors embedded in the MemoryList stream. The
   /// descriptors provide the content of interesting regions of memory at the
@@ -175,6 +185,12 @@ private:
   /// Return the stream of the given type, cast to the appropriate type. Checks
   /// that the stream is large enough to hold an object of this type.
   template <typename T>
+  Expected<const T &>
+  getStreamFromDirectory(minidump::Directory Directory) const;
+
+  /// Return the stream of the given type, cast to the appropriate type. Checks
+  /// that the stream is large enough to hold an object of this type.
+  template <typename T>
   Expected<const T &> getStream(minidump::StreamType Stream) const;
 
   /// Return the contents of a stream which contains a list of fixed-size items,
@@ -186,6 +202,15 @@ private:
   ArrayRef<minidump::Directory> Streams;
   DenseMap<minidump::StreamType, std::size_t> StreamMap;
 };
+
+template <typename T>
+Expected<const T &>
+MinidumpFile::getStreamFromDirectory(minidump::Directory Directory) const {
+  ArrayRef<uint8_t> Stream = getRawStream(Directory);
+  if (Stream.size() >= sizeof(T))
+    return *reinterpret_cast<const T *>(Stream.data());
+  return createEOFError();
+}
 
 template <typename T>
 Expected<const T &> MinidumpFile::getStream(minidump::StreamType Type) const {

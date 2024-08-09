@@ -491,3 +491,17 @@ class MiniDumpNewTestCase(TestBase):
         spec_dir_norm = os.path.normcase(module.GetFileSpec().GetDirectory())
         exe_dir_norm = os.path.normcase(exe_dir)
         self.assertEqual(spec_dir_norm, exe_dir_norm)
+
+    def test_multiple_exceptions_or_signals(self):
+        """Test that lldb can read the exception information from the Minidump."""
+        print("Starting to read multiple-sigsev.yaml")
+        self.process_from_yaml("multiple-sigsev.yaml")
+        print("Done reading multiple-sigsev.yaml")
+        self.check_state()
+        # This process crashed due to a segmentation fault in both it's threads.
+        self.assertEqual(self.process.GetNumThreads(), 2)
+        for i in range(2):
+            thread = self.process.GetThreadAtIndex(i)
+            self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
+            stop_description = thread.GetStopDescription(256)
+            self.assertIn("SIGSEGV", stop_description)
