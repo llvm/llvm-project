@@ -23,7 +23,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
-import unittest2
 
 
 class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
