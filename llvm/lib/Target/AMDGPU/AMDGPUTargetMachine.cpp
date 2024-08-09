@@ -656,10 +656,10 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
 
 Error AMDGPUTargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts, MCContext &Ctx,
+    PassBuilder &PB) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PB);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }
 
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {

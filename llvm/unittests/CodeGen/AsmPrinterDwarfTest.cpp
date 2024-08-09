@@ -401,7 +401,8 @@ protected:
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
     legacy::PassManager PM;
     PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
-    PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
+    PM.add(new AsmPrinterLegacy(std::unique_ptr<AsmPrinter>(
+        TestPrinter->releaseAP()))); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
     M->setDataLayout(LLVMTM->createDataLayout());
@@ -451,7 +452,8 @@ protected:
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
     legacy::PassManager PM;
     PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
-    PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
+    PM.add(new AsmPrinterLegacy(std::unique_ptr<AsmPrinter>(
+        TestPrinter->releaseAP()))); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
     M->setDataLayout(LLVMTM->createDataLayout());

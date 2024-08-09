@@ -20,7 +20,7 @@ class R600CodeGenPassBuilder
     : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
 public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
-                         PassInstrumentationCallbacks *PIC);
+                         PassBuilder &PB);
 
   void addPreISel(AddIRPass &addPass) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;

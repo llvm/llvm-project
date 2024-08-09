@@ -15,9 +15,8 @@
 using namespace llvm;
 
 AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
-    AMDGPUTargetMachine &TM, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC)
-    : CodeGenPassBuilder(TM, Opts, PIC) {
+    AMDGPUTargetMachine &TM, const CGPassBuilderOption &Opts, PassBuilder &PB)
+    : CodeGenPassBuilder(TM, Opts, PB) {
   Opt.RequiresCodeGenSCCOrder = true;
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.
