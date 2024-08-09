@@ -406,7 +406,7 @@ void Operation::updateOrderIfNecessary() {
   assert(block && "expected valid parent");
 
   // If the order is valid for this operation there is nothing to do.
-  if (hasValidOrder())
+  if (hasValidOrder() || llvm::hasSingleElement(*block))
     return;
   Operation *blockFront = &block->front();
   Operation *blockBack = &block->back();
@@ -502,14 +502,9 @@ Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
 /// keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
   assert(!op->getBlock() && "already in an operation block!");
-  
-  Block *curParent = getContainingBlock();
-  op->block = curParent;
-
+  op->block = getContainingBlock();
   // Invalidate the order on the operation.
   op->orderIndex = Operation::kInvalidOrderIdx;
-  // Invalidate the ordering of the parent block.
-  curParent->invalidateOpOrder();
 }
 
 /// This is a trait method invoked when an operation is removed from a block.
