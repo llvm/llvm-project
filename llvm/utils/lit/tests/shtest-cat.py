@@ -18,3 +18,7 @@
 # CHECK: # error: command failed with exit status: 1
 
 # CHECK: PASS: shtest-cat :: cat.txt ({{[^)]*}})
+
+# CHECK: Total Discovered Tests: 3
+# CHECK: Passed: 1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Failed: 2 {{\([0-9]*\.[0-9]*%\)}}
