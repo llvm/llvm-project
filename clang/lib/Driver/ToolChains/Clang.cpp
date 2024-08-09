@@ -7698,6 +7698,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       (C.isForDiagnostics() && !HaveModules))
     CmdArgs.push_back("-frewrite-includes");
 
+  if (Args.hasFlag(options::OPT_fzos_extensions,
+                   options::OPT_fno_zos_extensions, false))
+    CmdArgs.push_back("-fzos-extensions");
+  else if (Args.hasArg(options::OPT_fno_zos_extensions))
+    CmdArgs.push_back("-fno-zos-extensions");
+
   // Only allow -traditional or -traditional-cpp outside in preprocessing modes.
   if (Arg *A = Args.getLastArg(options::OPT_traditional,
                                options::OPT_traditional_cpp)) {
