@@ -896,6 +896,38 @@ ToConstrainedExceptMD(LangOptions::FPExceptionModeKind Kind) {
   }
 }
 
+bool CIRGenFunction::ShouldSkipSanitizerInstrumentation() {
+  if (!CurFuncDecl)
+    return false;
+  return CurFuncDecl->hasAttr<DisableSanitizerInstrumentationAttr>();
+}
+
+/// Return true if the current function should be instrumented with XRay nop
+/// sleds.
+bool CIRGenFunction::ShouldXRayInstrumentFunction() const {
+  return CGM.getCodeGenOpts().XRayInstrumentFunctions;
+}
+
+static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &Ctx) {
+  auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
+  if (!MD || !MD->getDeclName().getAsIdentifierInfo() ||
+      !MD->getDeclName().getAsIdentifierInfo()->isStr("allocate") ||
+      (MD->getNumParams() != 1 && MD->getNumParams() != 2))
+    return false;
+
+  if (MD->parameters()[0]->getType().getCanonicalType() != Ctx.getSizeType())
+    return false;
+
+  if (MD->getNumParams() == 2) {
+    auto *PT = MD->parameters()[1]->getType()->getAs<clang::PointerType>();
+    if (!PT || !PT->isVoidPointerType() ||
+        !PT->getPointeeType().isConstQualified())
+      return false;
+  }
+
+  return true;
+}
+
 void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                                    mlir::cir::FuncOp Fn,
                                    const CIRGenFunctionInfo &FnInfo,
@@ -932,32 +964,109 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   } while (0);
 
   if (D) {
+    const bool SanitizeBounds = SanOpts.hasOneOf(SanitizerKind::Bounds);
+    SanitizerMask no_sanitize_mask;
     bool NoSanitizeCoverage = false;
-    (void)NoSanitizeCoverage;
 
-    for (auto Attr : D->specific_attrs<NoSanitizeAttr>()) {
-      (void)Attr;
-      llvm_unreachable("NYI");
+    for (auto *Attr : D->specific_attrs<NoSanitizeAttr>()) {
+      no_sanitize_mask |= Attr->getMask();
+      // SanitizeCoverage is not handled by SanOpts.
+      if (Attr->hasCoverage())
+        NoSanitizeCoverage = true;
     }
 
-    // SanitizeCoverage is not handled by SanOpts
+    // Apply the no_sanitize* attributes to SanOpts.
+    SanOpts.Mask &= ~no_sanitize_mask;
+    if (no_sanitize_mask & SanitizerKind::Address)
+      SanOpts.set(SanitizerKind::KernelAddress, false);
+    if (no_sanitize_mask & SanitizerKind::KernelAddress)
+      SanOpts.set(SanitizerKind::Address, false);
+    if (no_sanitize_mask & SanitizerKind::HWAddress)
+      SanOpts.set(SanitizerKind::KernelHWAddress, false);
+    if (no_sanitize_mask & SanitizerKind::KernelHWAddress)
+      SanOpts.set(SanitizerKind::HWAddress, false);
+
+    // TODO(cir): set llvm::Attribute::NoSanitizeBounds
+    if (SanitizeBounds && !SanOpts.hasOneOf(SanitizerKind::Bounds))
+      assert(!MissingFeatures::sanitizeOther());
+
+    // TODO(cir): set llvm::Attribute::NoSanitizeCoverage
     if (NoSanitizeCoverage && CGM.getCodeGenOpts().hasSanitizeCoverage())
-      llvm_unreachable("NYI");
+      assert(!MissingFeatures::sanitizeOther());
+
+    // Some passes need the non-negated no_sanitize attribute. Pass them on.
+    if (CGM.getCodeGenOpts().hasSanitizeBinaryMetadata()) {
+      // TODO(cir): set no_sanitize_thread
+      if (no_sanitize_mask & SanitizerKind::Thread)
+        assert(!MissingFeatures::sanitizeOther());
+    }
   }
 
-  // Apply sanitizer attributes to the function.
-  if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
-                       SanitizerKind::HWAddress |
-                       SanitizerKind::KernelHWAddress | SanitizerKind::MemTag |
-                       SanitizerKind::Thread | SanitizerKind::Memory |
-                       SanitizerKind::KernelMemory | SanitizerKind::SafeStack |
-                       SanitizerKind::ShadowCallStack | SanitizerKind::Fuzzer |
-                       SanitizerKind::FuzzerNoLink |
-                       SanitizerKind::CFIUnrelatedCast | SanitizerKind::Null))
-    llvm_unreachable("NYI");
+  if (ShouldSkipSanitizerInstrumentation()) {
+    assert(!MissingFeatures::sanitizeOther());
+  } else {
+    // Apply sanitizer attributes to the function.
+    if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress))
+      assert(!MissingFeatures::sanitizeOther());
+    if (SanOpts.hasOneOf(SanitizerKind::HWAddress |
+                         SanitizerKind::KernelHWAddress))
+      assert(!MissingFeatures::sanitizeOther());
+    if (SanOpts.has(SanitizerKind::MemtagStack))
+      assert(!MissingFeatures::sanitizeOther());
+    if (SanOpts.has(SanitizerKind::Thread))
+      assert(!MissingFeatures::sanitizeOther());
+    if (SanOpts.has(SanitizerKind::NumericalStability))
+      assert(!MissingFeatures::sanitizeOther());
+    if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
+      assert(!MissingFeatures::sanitizeOther());
+  }
+  if (SanOpts.has(SanitizerKind::SafeStack))
+    assert(!MissingFeatures::sanitizeOther());
+  if (SanOpts.has(SanitizerKind::ShadowCallStack))
+    assert(!MissingFeatures::sanitizeOther());
 
-  // TODO: XRay
-  // TODO: PGO
+  // Apply fuzzing attribute to the function.
+  if (SanOpts.hasOneOf(SanitizerKind::Fuzzer | SanitizerKind::FuzzerNoLink))
+    assert(!MissingFeatures::sanitizeOther());
+
+  // Ignore TSan memory acesses from within ObjC/ObjC++ dealloc, initialize,
+  // .cxx_destruct, __destroy_helper_block_ and all of their calees at run time.
+  if (SanOpts.has(SanitizerKind::Thread)) {
+    if (const auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  // Ignore unrelated casts in STL allocate() since the allocator must cast
+  // from void* to T* before object initialization completes. Don't match on the
+  // namespace because not all allocators are in std::
+  if (D && SanOpts.has(SanitizerKind::CFIUnrelatedCast)) {
+    if (matchesStlAllocatorFn(D, getContext()))
+      SanOpts.Mask &= ~SanitizerKind::CFIUnrelatedCast;
+  }
+
+  // Ignore null checks in coroutine functions since the coroutines passes
+  // are not aware of how to move the extra UBSan instructions across the split
+  // coroutine boundaries.
+  if (D && SanOpts.has(SanitizerKind::Null))
+    if (FD && FD->getBody() &&
+        FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
+      SanOpts.Mask &= ~SanitizerKind::Null;
+
+  // Apply xray attributes to the function (as a string, for now)
+  if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
+    assert(!MissingFeatures::xray());
+  } else {
+    assert(!MissingFeatures::xray());
+  }
+
+  if (ShouldXRayInstrumentFunction()) {
+    assert(!MissingFeatures::xray());
+  }
+
+  if (CGM.getCodeGenOpts().getProfileInstr() != CodeGenOptions::ProfileNone) {
+    assert(!MissingFeatures::getProfileCount());
+  }
 
   unsigned Count, Offset;
   if (const auto *Attr =

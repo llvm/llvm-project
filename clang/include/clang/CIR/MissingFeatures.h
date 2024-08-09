@@ -65,6 +65,7 @@ struct MissingFeatures {
   static bool sanitizeVLABound() { return false; }
   static bool sanitizerBuiltin() { return false; }
   static bool sanitizerReturn() { return false; }
+  static bool sanitizeOther() { return false; }
 
   // ObjC
   static bool setObjCGCLValueClass() { return false; }
@@ -128,6 +129,7 @@ struct MissingFeatures {
   static bool volatileTypes() { return false; }
   static bool syncScopeID() { return false; }
 
+  // Misc
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -175,6 +177,7 @@ struct MissingFeatures {
   static bool escapedLocals() { return false; }
   static bool deferredReplacements() { return false; }
   static bool shouldInstrumentFunction() { return false; }
+  static bool xray() { return false; }
 
   // Inline assembly
   static bool asmGoto() { return false; }
