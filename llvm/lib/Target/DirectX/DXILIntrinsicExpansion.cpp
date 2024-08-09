@@ -43,6 +43,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_length:
+  case Intrinsic::dx_normalize:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return true;
@@ -229,6 +230,54 @@ static bool expandLog10Intrinsic(CallInst *Orig) {
   return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
 }
 
+static bool expandNormalizeIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Type *Ty = Orig->getType();
+  Type *EltTy = Ty->getScalarType();
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+
+  Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
+  auto *XVec = dyn_cast<FixedVectorType>(Ty);
+  if (!XVec) {
+    if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
+      const APFloat &fpVal = constantFP->getValueAPF();
+      if (fpVal.isZero())
+        report_fatal_error(Twine("Invalid input scalar: length is zero"),
+                           /* gen_crash_diag=*/false);
+    }
+    Value *Result = Builder.CreateFDiv(X, X);
+
+    Orig->replaceAllUsesWith(Result);
+    Orig->eraseFromParent();
+    return true;
+  }
+
+  unsigned XVecSize = XVec->getNumElements();
+  Value *Sum = Builder.CreateFMul(Elt, Elt);
+  for (unsigned I = 1; I < XVecSize; I++) {
+    Elt = Builder.CreateExtractElement(X, I);
+    Value *Mul = Builder.CreateFMul(Elt, Elt);
+    Sum = Builder.CreateFAdd(Sum, Mul);
+  }
+  Value *Length = Builder.CreateIntrinsic(
+      EltTy, Intrinsic::sqrt, ArrayRef<Value *>{Sum}, nullptr, "elt.sqrt");
+
+  // verify that the length is non-zero
+  if (auto *constantFP = dyn_cast<ConstantFP>(Length)) {
+    const APFloat &fpVal = constantFP->getValueAPF();
+    if (fpVal.isZero())
+      report_fatal_error(Twine("Invalid input vector: length is zero"),
+                         /* gen_crash_diag=*/false);
+  }
+  Value *LengthVec = Builder.CreateVectorSplat(XVecSize, Length);
+  Value *Result = Builder.CreateFDiv(X, LengthVec);
+
+  Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
+}
+
 static bool expandPowIntrinsic(CallInst *Orig) {
 
   Value *X = Orig->getOperand(0);
@@ -314,6 +363,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandLerpIntrinsic(Orig);
   case Intrinsic::dx_length:
     return expandLengthIntrinsic(Orig);
+  case Intrinsic::dx_normalize:
+    return expandNormalizeIntrinsic(Orig);
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return expandIntegerDot(Orig, F.getIntrinsicID());
