@@ -615,10 +615,10 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #0 {
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VALUE]] syncscope("wavefront") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
-; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
+; GFX90A-NEXT:    [[RES:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    ret float [[LOADED_PHI]]
+; GFX90A-NEXT:    ret float [[RES]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
 ; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
