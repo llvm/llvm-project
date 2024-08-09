@@ -876,21 +876,48 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const MipsSubtarget &Subtarget) {
-  // Pattern match INS.
-  //  $dst = or (and $src1 , mask0), (and (shl $src, pos), mask1),
-  //  where mask1 = (2**size - 1) << pos, mask0 = ~mask1
-  //  => ins $dst, $src, size, pos, $src1
   if (DCI.isBeforeLegalizeOps() || !Subtarget.hasExtractInsert())
     return SDValue();
 
   SDValue And0 = N->getOperand(0), And1 = N->getOperand(1);
   unsigned SMPos0, SMSize0, SMPos1, SMSize1;
   ConstantSDNode *CN, *CN1;
+  uint64_t Pos = 0;
 
   // See if Op's first operand matches (and $src1 , mask0).
   if (And0.getOpcode() != ISD::AND)
     return SDValue();
 
+  if (And0.getOpcode() == ISD::AND && And1.getOpcode() == ISD::SHL) {
+    // Pattern match INS.
+    //   $dst = or (and $src1, (2**size0 - 1)), (shl $src2, mask1)
+    //   where size0 = mask1, pos + size = 32, SMPos0 = 0
+    //   ==> ins $src1, $src2, pos, size, pos = mask1, size = 32 - pos;
+    if (!(CN = dyn_cast<ConstantSDNode>(And0.getOperand(1))) ||
+        !isShiftedMask_64(CN->getZExtValue(), SMPos0, SMSize0))
+      return SDValue();
+
+    if (!(CN = dyn_cast<ConstantSDNode>(And1.getOperand(1))))
+      return SDValue();
+    Pos = CN->getZExtValue();
+
+    if (SMPos0 != 0 || SMSize0 != Pos || SMPos0 + SMSize0 > 32)
+      return SDValue();
+
+    SDLoc DL(N);
+    EVT ValTy = N->getValueType(0);
+    SMPos1 = Pos;
+    SMSize1 = 32 - SMPos1;
+    return DAG.getNode(MipsISD::Ins, DL, ValTy, And1.getOperand(0),
+                       DAG.getConstant(SMPos1, DL, MVT::i32),
+                       DAG.getConstant(SMSize1, DL, MVT::i32),
+                       And0.getOperand(0));
+  }
+
+  // Pattern match INS.
+  //  $dst = or (and $src1 , mask0), (and (shl $src, pos), mask1),
+  //  where mask1 = (2**size - 1) << pos, mask0 = ~mask1
+  //  => ins $dst, $src, size, pos, $src1
   if (!(CN = dyn_cast<ConstantSDNode>(And0.getOperand(1))) ||
       !isShiftedMask_64(~CN->getSExtValue(), SMPos0, SMSize0))
     return SDValue();
