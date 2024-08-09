@@ -5235,6 +5235,12 @@ private:
                                                llvm::Value *EmittedE,
                                                bool IsDynamic);
 
+  /// Try to calculate the sub-object size (i.e. \p Type's least significant
+  /// bit is set). It afoids the complication in conveying the sub-object
+  /// information to the backend.
+  llvm::Value *tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
+                                           llvm::IntegerType *ResType);
+
   /// Emits the size of E, as required by __builtin_object_size. This
   /// function is aware of pass_object_size parameters, and will act accordingly
   /// if E is a parameter with the pass_object_size attribute.
