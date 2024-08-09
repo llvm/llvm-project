@@ -48,15 +48,21 @@ constexpr bool test_range() {
   }
   {
     // designated initializer
-    std::same_as<elements_of_t> decltype(auto) elements_of = std::ranges::elements_of{
-        .range     = r,
-        .allocator = Allocator(),
-    };
-    [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_range = elements_of.range;
-    if (!std::is_constant_evaluated()) {
-      assert(std::ranges::distance(elements_of_range) == 4);
+  
+    // AppleClang 15 hasn't implemented P0960R3, so `std::ranges::elements_of` requires a
+    // user-defined constructor, making it non-aggregate and therefore incompatible with designated
+    // initializers.
+    if constexpr (std::is_aggregate_v<elements_of_t>) {
+      std::same_as<elements_of_t> decltype(auto) elements_of = std::ranges::elements_of{
+          .range     = r,
+          .allocator = Allocator(),
+      };
+      [[maybe_unused]] std::same_as<Range&> decltype(auto) elements_of_range = elements_of.range;
+      if (!std::is_constant_evaluated()) {
+        assert(std::ranges::distance(elements_of_range) == 4);
+      }
+      [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
     }
-    [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
   }
   {
     // copy constructor
