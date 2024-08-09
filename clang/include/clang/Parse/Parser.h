@@ -489,6 +489,49 @@ class Parser : public CodeCompletionHandler {
   /// a statement expression and builds a suitable expression statement.
   StmtResult handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx);
 
+  class AssumeParseAssociatedStmtRAII {
+    Parser &Parent;
+    OpenMPDirectiveKind DKind;
+
+  public:
+    AssumeParseAssociatedStmtRAII(Parser &Parent, SourceLocation Loc,
+                                  OpenMPDirectiveKind DKind)
+        : Parent(Parent), DKind(DKind) {
+
+      if (DKind == llvm::omp::Directive::OMPD_assume) {
+
+        if (Parent.Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+          Parent.ConsumeAnyToken();
+
+        DeclarationNameInfo DirName;
+        Parent.Actions.OpenMP().StartOpenMPDSABlock(
+            DKind, DirName, Parent.Actions.getCurScope(), Loc);
+      }
+    }
+
+    StmtResult GetAssociatedStmtAndEndScope(SourceLocation Loc) {
+
+      if (DKind == llvm::omp::Directive::OMPD_assume) {
+        StmtResult AssociatedStmt = Parent.ParseStatement();
+        AssociatedStmt =
+            Parent.Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(
+                AssociatedStmt.get());
+
+        Parent.ParseOpenMPEndAssumesDirective(Loc);
+
+        return AssociatedStmt;
+      }
+    }
+
+    ~AssumeParseAssociatedStmtRAII() {
+      if (DKind == llvm::omp::Directive::OMPD_assume) {
+        Parent.Actions.OpenMP().EndOpenMPDSABlock(nullptr);
+        if (Parent.Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+          Parent.ConsumeAnyToken();
+      }
+    }
+  };
+
 public:
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;
@@ -3440,8 +3483,8 @@ private:
                                      SourceLocation Loc);
 
   /// Parse 'omp [begin] assume[s]' directive.
-  void ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
-                                   SourceLocation Loc);
+  StmtResult ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
+                                         SourceLocation Loc);
 
   /// Parse 'omp end assumes' directive.
   void ParseOpenMPEndAssumesDirective(SourceLocation Loc);

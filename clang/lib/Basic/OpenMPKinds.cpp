@@ -769,6 +769,9 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_parallel:
       CaptureRegions.push_back(OMPD_parallel);
       break;
+    case OMPD_assume:
+      CaptureRegions.push_back(OMPD_assume);
+      break;
     case OMPD_target:
       CaptureRegions.push_back(OMPD_task);
       CaptureRegions.push_back(OMPD_target);

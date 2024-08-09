@@ -106,6 +106,9 @@ public:
   /// Act on \p D, a function definition inside of an `omp [begin/end] assumes`.
   void ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D);
 
+  /// Act on \p D, Associated statements of `omp assume`.
+  StmtResult ActOnFinishedStatementInOpenMPAssumeScope(Stmt *);
+
   /// Can we exit an OpenMP declare variant scope at the moment.
   bool isInOpenMPDeclareVariantScope() const {
     return !OMPDeclareVariantScopes.empty();

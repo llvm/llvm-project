@@ -520,6 +520,10 @@ def OMP_Allocators : Directive<"allocators"> {
   let association = AS_Block;
   let category = CA_Executable;
 }
+def OMP_Assume : Directive<"assume"> {
+  let association = AS_None;
+  let category = CA_Informational;
+}
 def OMP_Assumes : Directive<"assumes"> {
   let association = AS_None;
   let category = CA_Informational;

@@ -3516,7 +3516,8 @@ void SemaOpenMP::ActOnOpenMPAssumesDirective(SourceLocation Loc,
 
   auto *AA =
       OMPAssumeAttr::Create(getASTContext(), llvm::join(Assumptions, ","), Loc);
-  if (DKind == llvm::omp::Directive::OMPD_begin_assumes) {
+  if (DKind == llvm::omp::Directive::OMPD_begin_assumes ||
+      DKind == llvm::omp::Directive::OMPD_assume) {
     OMPAssumeScoped.push_back(AA);
     return;
   }
@@ -7003,6 +7004,36 @@ void SemaOpenMP::ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D) {
   }
   for (OMPAssumeAttr *AA : OMPAssumeGlobal)
     FD->addAttr(AA);
+}
+
+StmtResult
+SemaOpenMP::ActOnFinishedStatementInOpenMPAssumeScope(Stmt *AssociatedStmt) {
+
+  if (AssociatedStmt) {
+    // Add OMPAssumeAttr to all the CapturedDecl present with the
+    // AssociatedStmt, for example:
+    //
+    // -OMPSimdDirective
+    //  `-CapturedStmt
+    //    `-CapturedDecl
+    //      ....
+    //      -OMPAssumeAttr
+    const char *CName = AssociatedStmt->getStmtClassName();
+    if ((strstr(CName, "OMP") != NULL) &&
+        (strstr(CName, "Directive") != NULL)) {
+      for (Stmt *Child : AssociatedStmt->children()) {
+        auto *CS = dyn_cast<CapturedStmt>(Child);
+        if (CS) {
+          CapturedDecl *CD = CS->getCapturedDecl();
+          if (CD) {
+            for (OMPAssumeAttr *AA : OMPAssumeScoped)
+              CD->addAttr(AA);
+          }
+        }
+      }
+    }
+  }
+  return AssociatedStmt;
 }
 
 SemaOpenMP::OMPDeclareVariantScope::OMPDeclareVariantScope(OMPTraitInfo &TI)
