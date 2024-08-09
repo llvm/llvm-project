@@ -199,7 +199,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream)
   // the behavior in the test. This is not part of the public API.
 #  ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
   return _LIBCPP_TESTING_PRINT_IS_TERMINAL(__stream);
-#  elif _LIBCPP_AVAILABILITY_HAS_PRINT == 0
+#  elif _LIBCPP_AVAILABILITY_HAS_PRINT == 0 || defined(_LIBCPP_HAS_NO_TERMINAL)
   return false;
 #  elif defined(_LIBCPP_WIN32API)
   return std::__is_windows_terminal(__stream);

@@ -378,6 +378,7 @@ macros = {
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
+    "_LIBCPP_HAS_NO_TERMINAL": "no-terminal",
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
