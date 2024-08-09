@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h"
-#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
+#include "mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
