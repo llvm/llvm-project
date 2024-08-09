@@ -492,6 +492,14 @@ private:
   /// Whether a metadata node is allowed to be, or contain, a DILocation.
   enum class AreDebugLocsAllowed { No, Yes };
 
+  /// Metadata that should be treated as a range, with slightly different
+  /// requirements.
+  enum class RangeLikeMetadataKind {
+    Range,           // MD_range
+    AbsoluteSymbol,  // MD_absolute_symbol
+    NoaliasAddrspace // MD_noalias_addrspace
+  };
+
   // Verification methods...
   void visitGlobalValue(const GlobalValue &GV);
   void visitGlobalVariable(const GlobalVariable &GV);
@@ -515,8 +523,8 @@ private:
   void visitModuleFlagCGProfileEntry(const MDOperand &MDO);
   void visitFunction(const Function &F);
   void visitBasicBlock(BasicBlock &BB);
-  void verifyRangeMetadata(const Value &V, const MDNode *Range, Type *Ty,
-                           bool IsAbsoluteSymbol, bool IsAddrSpaceRange);
+  void verifyRangeLikeMetadata(const Value &V, const MDNode *Range, Type *Ty,
+                               RangeLikeMetadataKind Kind);
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
@@ -761,8 +769,9 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
     // FIXME: Why is getMetadata on GlobalValue protected?
     if (const MDNode *AbsoluteSymbol =
             GO->getMetadata(LLVMContext::MD_absolute_symbol)) {
-      verifyRangeMetadata(*GO, AbsoluteSymbol, DL.getIntPtrType(GO->getType()),
-                          true, false);
+      verifyRangeLikeMetadata(*GO, AbsoluteSymbol,
+                              DL.getIntPtrType(GO->getType()),
+                              RangeLikeMetadataKind::AbsoluteSymbol);
     }
   }
 
@@ -4137,9 +4146,8 @@ static bool isContiguous(const ConstantRange &A, const ConstantRange &B) {
 
 /// Verify !range and !absolute_symbol metadata. These have the same
 /// restrictions, except !absolute_symbol allows the full set.
-void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
-                                   Type *Ty, bool IsAbsoluteSymbol,
-                                   bool IsAddrSpaceRange) {
+void Verifier::verifyRangeLikeMetadata(const Value &I, const MDNode *Range,
+                                       Type *Ty, RangeLikeMetadataKind Kind) {
   unsigned NumOperands = Range->getNumOperands();
   Check(NumOperands % 2 == 0, "Unfinished range!", Range);
   unsigned NumRanges = NumOperands / 2;
@@ -4157,7 +4165,7 @@ void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
     Check(High->getType() == Low->getType(), "Range pair types must match!",
           &I);
 
-    if (IsAddrSpaceRange) {
+    if (Kind == RangeLikeMetadataKind::NoaliasAddrspace) {
       Check(High->getType()->isIntegerTy(32),
             "noalias.addrspace type must be i32!", &I);
     } else {
@@ -4174,7 +4182,9 @@ void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
           "The upper and lower limits cannot be the same value", &I);
 
     ConstantRange CurRange(LowV, HighV);
-    Check(!CurRange.isEmptySet() && (IsAbsoluteSymbol || !CurRange.isFullSet()),
+    Check(!CurRange.isEmptySet() &&
+              (Kind == RangeLikeMetadataKind::AbsoluteSymbol ||
+               !CurRange.isFullSet()),
           "Range must not be empty!", Range);
     if (i != 0) {
       Check(CurRange.intersectWith(LastRange).isEmptySet(),
@@ -4202,14 +4212,15 @@ void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
 void Verifier::visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty) {
   assert(Range && Range == I.getMetadata(LLVMContext::MD_range) &&
          "precondition violation");
-  verifyRangeMetadata(I, Range, Ty, false, false);
+  verifyRangeLikeMetadata(I, Range, Ty, RangeLikeMetadataKind::Range);
 }
 
 void Verifier::visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range,
                                              Type *Ty) {
   assert(Range && Range == I.getMetadata(LLVMContext::MD_noalias_addrspace) &&
          "precondition violation");
-  verifyRangeMetadata(I, Range, Ty, false, true);
+  verifyRangeLikeMetadata(I, Range, Ty,
+                          RangeLikeMetadataKind::NoaliasAddrspace);
 }
 
 void Verifier::checkAtomicMemAccessSize(Type *Ty, const Instruction *I) {
