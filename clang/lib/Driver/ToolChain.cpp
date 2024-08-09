@@ -766,8 +766,18 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     return {};
   };
 
-  if (auto Path = getPathForTriple(getTriple()))
+  llvm::Triple Triple = getTriple();
+
+  // Try triple as is.
+  if (auto Path = getPathForTriple(Triple))
     return *Path;
+
+  // Match transformations in CompilerRTUtils.cmake:get_compiler_rt_target.
+  if (Triple.getArchName() == "amd64")
+    Triple.setArch(Triple::x86_64);
+
+  if (Triple.getArchName() == "sparc64")
+    Triple.setArch(Triple::sparcv9);
 
   // When building with per target runtime directories, various ways of naming
   // the Arm architecture may have been normalised to simply "arm".
@@ -784,15 +794,14 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   //
   // M profile Arm is bare metal and we know they will not be using the per
   // target runtime directory layout.
-  if (getTriple().getArch() == Triple::arm && !getTriple().isArmMClass()) {
-    llvm::Triple ArmTriple = getTriple();
-    ArmTriple.setArch(Triple::arm);
-    if (auto Path = getPathForTriple(ArmTriple))
-      return *Path;
-  }
+  if (Triple.getArch() == Triple::arm && !Triple.isArmMClass())
+    Triple.setArch(Triple::arm);
 
-  if (getTriple().isAndroid())
+  if (Triple.isAndroid())
     return getFallbackAndroidTargetPath(BaseDir);
+
+  if (auto Path = getPathForTriple(Triple))
+    return *Path;
 
   return {};
 }
