@@ -54,11 +54,11 @@ void CheckAllocaIsInEntryBlock(void) {
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    store ptr @.str, ptr [[FMT]], align 8
 // CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[FMT]], align 8
-// CHECK-64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 0
+// CHECK-64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 0
 // CHECK-64-NEXT:    store i32 1, ptr [[TMP2]], align 4
-// CHECK-64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 1
+// CHECK-64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 1
 // CHECK-64-NEXT:    store i64 2, ptr [[TMP3]], align 8
-// CHECK-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 2
+// CHECK-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 2
 // CHECK-64-NEXT:    store double 3.000000e+00, ptr [[TMP4]], align 8
 // CHECK-64-NEXT:    [[TMP5:%.*]] = call i32 @vprintf(ptr [[TMP1]], ptr [[TMP]])
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit()
@@ -99,7 +99,7 @@ void CheckAllocaIsInEntryBlock(void) {
 // CHECK-64-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-64-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-64:       if.then:
-// CHECK-64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PRINTF_ARGS_1]], ptr [[TMP]], i32 0, i32 0
+// CHECK-64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS_1]], ptr [[TMP]], i32 0, i32 0
 // CHECK-64-NEXT:    store i32 42, ptr [[TMP2]], align 4
 // CHECK-64-NEXT:    [[TMP3:%.*]] = call i32 @vprintf(ptr @.str2, ptr [[TMP]])
 // CHECK-64-NEXT:    br label [[IF_END]]
@@ -123,11 +123,11 @@ void CheckAllocaIsInEntryBlock(void) {
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    store ptr @.str, ptr [[FMT]], align 4
 // CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[FMT]], align 4
-// CHECK-32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 0
 // CHECK-32-NEXT:    store i32 1, ptr [[TMP2]], align 4
-// CHECK-32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 1
+// CHECK-32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 1
 // CHECK-32-NEXT:    store i64 2, ptr [[TMP3]], align 8
-// CHECK-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 2
+// CHECK-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS]], ptr [[TMP]], i32 0, i32 2
 // CHECK-32-NEXT:    store double 3.000000e+00, ptr [[TMP4]], align 8
 // CHECK-32-NEXT:    [[TMP5:%.*]] = call i32 @vprintf(ptr [[TMP1]], ptr [[TMP]])
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit()
@@ -168,7 +168,7 @@ void CheckAllocaIsInEntryBlock(void) {
 // CHECK-32-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-32-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-32:       if.then:
-// CHECK-32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PRINTF_ARGS_1]], ptr [[TMP]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[PRINTF_ARGS_1]], ptr [[TMP]], i32 0, i32 0
 // CHECK-32-NEXT:    store i32 42, ptr [[TMP2]], align 4
 // CHECK-32-NEXT:    [[TMP3:%.*]] = call i32 @vprintf(ptr @.str2, ptr [[TMP]])
 // CHECK-32-NEXT:    br label [[IF_END]]

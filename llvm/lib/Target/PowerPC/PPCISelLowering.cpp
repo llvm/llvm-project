@@ -14344,8 +14344,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
       continue;
     }
 
-    SmallVector<SDValue, 3> Ops(PromOp.getNode()->op_begin(),
-                                PromOp.getNode()->op_end());
+    SmallVector<SDValue, 3> Ops(PromOp.getNode()->ops());
 
     // If there are any constant inputs, make sure they're replaced now.
     for (unsigned i = 0; i < 2; ++i)

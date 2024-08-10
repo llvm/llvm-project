@@ -10,6 +10,13 @@ types:
 enums: []
 objects: []
 functions:
+  - name: __sched_getcpucount
+    standards:
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: size_t
+      - type: const cpu_set_t *
   - name: sched_get_priority_max
     standards:
       - POSIX
@@ -79,10 +86,3 @@ functions:
     return_type: int
     arguments:
       - type: void
-  - name: __sched_getcpucount
-    standards:
-      - llvm_libc_ext
-    return_type: int
-    arguments:
-      - type: size_t
-      - type: const cpu_set_t *
