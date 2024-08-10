@@ -25860,10 +25860,6 @@ TEST_F(FormatTest, RequiresClausesPositions) {
   Style.RequiresClausePosition = FormatStyle::RCPS_OwnLineWithBrace;
   Style.IndentRequiresClause = true;
 
-  // The default in LLVM style is REI_OuterScope, but these tests were written
-  // when the default was REI_Keyword.
-  Style.RequiresExpressionIndentation = FormatStyle::REI_Keyword;
-
   verifyFormat("template <typename T>\n"
                "  requires(Foo<T> && std::trait<T>)\n"
                "struct Bar;",

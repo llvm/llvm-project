@@ -5683,15 +5683,13 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
            (Style.BreakTemplateDeclarations == FormatStyle::BTDS_Leave &&
             Right.NewlinesBefore > 0);
   }
-  if (Left.ClosesRequiresClause && Right.isNot(tok::semi)) {
+  if (Left.ClosesRequiresClause) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithPreceding:
-      return true;
+      return Right.isNot(tok::semi);
     case FormatStyle::RCPS_OwnLineWithBrace:
-      if (Right.isNot(tok::l_brace))
-        return true;
-      break;
+      return !Right.isOneOf(tok::semi, tok::l_brace);
     default:
       break;
     }

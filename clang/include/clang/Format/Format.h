@@ -2823,7 +2823,8 @@ struct FormatStyle {
   PPDirectiveIndentStyle IndentPPDirectives;
 
   /// Indent the requires clause in a template. This only applies when
-  /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  /// ``RequiresClausePosition`` is ``OwnLine``, ``OwnLineWithBrace``,
+  /// or ``WithFollowing``.
   ///
   /// In clang-format 12, 13 and 14 it was named ``IndentRequires``.
   /// \code
