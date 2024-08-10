@@ -4146,9 +4146,7 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
 
   // Make sure that no matter which SCEV in PC1.MaybePoison is actually poison,
   // it will also make S poison by being part of PC2.MaybePoison.
-  return all_of(PC1.MaybePoison, [&](const SCEVUnknown *S) {
-    return PC2.MaybePoison.contains(S);
-  });
+  return llvm::set_is_subset(PC1.MaybePoison, PC2.MaybePoison);
 }
 
 void ScalarEvolution::getPoisonGeneratingValues(
