@@ -283,12 +283,22 @@ public:
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
+struct AMDGPUAttributorOptions {
+  bool IsClosedWorld = false;
+};
+
 class AMDGPUAttributorPass : public PassInfoMixin<AMDGPUAttributorPass> {
 private:
   TargetMachine &TM;
 
+  AMDGPUAttributorOptions Options;
+
+  /// Asserts whether we can assume whole program visibility.
+  bool HasWholeProgramVisibility = false;
+
 public:
-  AMDGPUAttributorPass(TargetMachine &TM) : TM(TM){};
+  AMDGPUAttributorPass(TargetMachine &TM, AMDGPUAttributorOptions Options = {})
+      : TM(TM), Options(Options) {};
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
