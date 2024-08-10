@@ -106,6 +106,7 @@ enum GPUKind : uint32_t {
   GK_GFX1150 = 94,
   GK_GFX1151 = 95,
   GK_GFX1152 = 96,
+
 #if LLPC_BUILD_GFX12
   GK_GFX115F = 97,
 #endif /* LLPC_BUILD_GFX12 */
@@ -123,6 +124,7 @@ enum GPUKind : uint32_t {
 #else /* LLPC_BUILD_GFX12 */
   GK_AMDGCN_LAST = GK_GFX1201,
 #endif /* LLPC_BUILD_GFX12 */
+
 
   GK_GFX9_GENERIC = 192,
   GK_GFX10_1_GENERIC = 193,
