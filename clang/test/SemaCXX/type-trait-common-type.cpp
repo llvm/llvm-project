@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++17 %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
 
-#if !__has_builtin(__common_type)
+#if !__has_builtin(__builtin_common_type)
 #  error
 #endif
 
 // expected-note@*:* {{template declaration from hidden source: template <template <class ...> class, template <class> class, class, class ...>}}
 
 void test() {
-  __common_type<> a; // expected-error {{too few template arguments for template '__common_type'}}
+  __builtin_common_type<> a; // expected-error {{too few template arguments for template '__builtin_common_type'}}
 }
 
 struct empty_type {};
@@ -25,7 +25,7 @@ template <class... Args>
 using common_type_t = typename common_type<Args...>::type;
 
 template <class... Args>
-using common_type_base = __common_type<common_type_t, type_identity, empty_type, Args...>;
+using common_type_base = __builtin_common_type<common_type_t, type_identity, empty_type, Args...>;
 
 template <class... Args>
 struct common_type : common_type_base<Args...> {};

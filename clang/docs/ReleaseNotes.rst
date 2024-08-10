@@ -65,7 +65,7 @@ sections with improvements to Clang's support for those languages.
 C++ Language Changes
 --------------------
 
-- The builtin type alias ``__common_type`` has been added to improve the
+- The builtin type alias ``__builtin_common_type`` has been added to improve the
   performance of ``std::common_type``.
 
 C++17 Feature Support

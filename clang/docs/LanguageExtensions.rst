@@ -1516,7 +1516,7 @@ Builtin type aliases
 
 Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
 
-__common_type
+__builtin_common_type
 -------------
 
 .. code-block:: c++
@@ -1525,7 +1525,7 @@ __common_type
             template <class TypeMember> class HasTypeMember,
             class HasNoTypeMember,
             class... Ts>
-  using __common_type = ...;
+  using __builtin_common_type = ...;
 
 This alias is used for implementing ``std::common_type``. If ``std::common_type`` should contain a ``type`` member,
 it is an alias to ``HasTypeMember<TheCommonType>``. Otherwise it is an alias to ``HasNoTypeMember``. The

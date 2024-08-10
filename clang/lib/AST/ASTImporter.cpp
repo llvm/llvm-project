@@ -5413,8 +5413,8 @@ ExpectedDecl ASTNodeImporter::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   case BuiltinTemplateKind::BTK__type_pack_element:
     ToD = Importer.getToContext().getTypePackElementDecl();
     break;
-  case BuiltinTemplateKind::BTK__common_type:
-    ToD = Importer.getToContext().getCommonTypeDecl();
+  case BuiltinTemplateKind::BTK__builtin_common_type:
+    ToD = Importer.getToContext().getBuiltinCommonTypeDecl();
     break;
   }
   assert(ToD && "BuiltinTemplateDecl of unsupported kind!");

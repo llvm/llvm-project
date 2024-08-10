@@ -1170,11 +1170,11 @@ ASTContext::getTypePackElementDecl() const {
   return TypePackElementDecl;
 }
 
-BuiltinTemplateDecl *ASTContext::getCommonTypeDecl() const {
-  if (!CommonTypeDecl)
-    CommonTypeDecl =
-        buildBuiltinTemplateDecl(BTK__common_type, getCommonTypeName());
-  return CommonTypeDecl;
+BuiltinTemplateDecl *ASTContext::getBuiltinCommonTypeDecl() const {
+  if (!BuiltinCommonTypeDecl)
+    BuiltinCommonTypeDecl = buildBuiltinTemplateDecl(
+        BTK__builtin_common_type, getBuiltinCommonTypeName());
+  return BuiltinCommonTypeDecl;
 }
 
 RecordDecl *ASTContext::buildImplicitRecord(StringRef Name,

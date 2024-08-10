@@ -311,8 +311,8 @@ enum BuiltinTemplateKind : int {
   /// This names the __type_pack_element BuiltinTemplateDecl.
   BTK__type_pack_element,
 
-  /// This names the __common_type BuiltinTemplateDecl.
-  BTK__common_type,
+  /// This names the __builtin_common_type BuiltinTemplateDecl.
+  BTK__builtin_common_type,
 };
 
 } // end namespace clang

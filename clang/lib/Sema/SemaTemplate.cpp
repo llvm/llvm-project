@@ -3058,7 +3058,7 @@ void Sema::NoteAllFoundTemplates(TemplateName Name) {
   }
 }
 
-static QualType commonTypeImpl(Sema &S, TemplateName BaseTemplate,
+static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
                                SourceLocation TemplateLoc,
                                ArrayRef<TemplateArgument> Ts) {
   auto lookUpCommonType = [&](TemplateArgument T1,
@@ -3066,7 +3066,7 @@ static QualType commonTypeImpl(Sema &S, TemplateName BaseTemplate,
     // Don't bother looking for other specializations if both types are
     // builtins - users aren't allowed to specialize for them
     if (T1.getAsType()->isBuiltinType() && T2.getAsType()->isBuiltinType())
-      return commonTypeImpl(S, BaseTemplate, TemplateLoc, {T1, T2});
+      return builtinCommonTypeImpl(S, BaseTemplate, TemplateLoc, {T1, T2});
 
     TemplateArgumentListInfo Args;
     Args.addArgument(TemplateArgumentLoc(
@@ -3275,7 +3275,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     return Ts.getPackAsArray()[N].getAsType();
   }
 
-  case BTK__common_type: {
+  case BTK__builtin_common_type: {
     assert(Converted.size() == 4);
     if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
       return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
@@ -3285,7 +3285,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     TemplateName HasTypeMember = Converted[1].getAsTemplate();
     QualType HasNoTypeMember = Converted[2].getAsType();
     ArrayRef<TemplateArgument> Ts = Converted[3].getPackAsArray();
-    if (auto CT = commonTypeImpl(SemaRef, BaseTemplate, TemplateLoc, Ts);
+    if (auto CT = builtinCommonTypeImpl(SemaRef, BaseTemplate, TemplateLoc, Ts);
         !CT.isNull()) {
       TemplateArgumentListInfo TAs;
       TAs.addArgument(TemplateArgumentLoc(

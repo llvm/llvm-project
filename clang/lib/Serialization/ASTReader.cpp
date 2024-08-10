@@ -7791,7 +7791,7 @@ static Decl *getPredefinedDecl(ASTContext &Context, PredefinedDeclIDs ID) {
     return Context.getTypePackElementDecl();
 
   case PREDEF_DECL_COMMON_TYPE_ID:
-    return Context.getCommonTypeDecl();
+    return Context.getBuiltinCommonTypeDecl();
   }
   llvm_unreachable("PredefinedDeclIDs unknown enum value");
 }

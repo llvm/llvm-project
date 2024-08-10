@@ -1608,8 +1608,8 @@ createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
                                        nullptr);
 }
 
-static TemplateParameterList *createCommonTypeList(const ASTContext &C,
-                                                   DeclContext *DC) {
+static TemplateParameterList *createBuiltinCommonTypeList(const ASTContext &C,
+                                                          DeclContext *DC) {
   // class... Args
   auto *Args =
       TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
@@ -1669,8 +1669,8 @@ static TemplateParameterList *createBuiltinTemplateParameterList(
     return createMakeIntegerSeqParameterList(C, DC);
   case BTK__type_pack_element:
     return createTypePackElementParameterList(C, DC);
-  case BTK__common_type:
-    return createCommonTypeList(C, DC);
+  case BTK__builtin_common_type:
+    return createBuiltinCommonTypeList(C, DC);
   }
 
   llvm_unreachable("unhandled BuiltinTemplateKind!");

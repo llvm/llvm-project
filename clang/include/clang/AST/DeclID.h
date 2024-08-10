@@ -85,7 +85,7 @@ enum PredefinedDeclIDs {
   /// The internal '__type_pack_element' template.
   PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 17,
 
-  /// The internal '__common_type' template.
+  /// The internal '__builtin_common_type' template.
   PREDEF_DECL_COMMON_TYPE_ID = 18,
 };
 
