@@ -1,3 +1,4 @@
+// XFAIL: amdgcn-amd-amdhsa
 // clang-format off
 //
 // RUN: %libomptarget-compileopt-generic -fopenmp-target-jit

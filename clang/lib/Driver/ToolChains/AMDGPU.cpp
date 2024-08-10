@@ -665,11 +665,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      StringRef TcTargetID) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
-  StringRef TargetID;
-  if (Args.hasArg(options::OPT_mcpu_EQ))
-    TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  else if (Args.hasArg(options::OPT_march_EQ))
-    TargetID = Args.getLastArgValue(options::OPT_march_EQ);
+  StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
 
   // Use this toolchain's TargetID if mcpu is not defined
   if (TargetID.empty() && !TcTargetID.empty())

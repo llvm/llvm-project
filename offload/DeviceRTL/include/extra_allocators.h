@@ -88,6 +88,7 @@ void __kmpc_flush_acqrel(IdentTy *Loc);
 void *__kmpc_task_allow_completion_event(IdentTy *loc_ref, uint32_t gtid,
                                          TaskDescriptorTy *task);
 ///}
+
 } // extern "C"
 
 /// Extra API exposed by ROCm
