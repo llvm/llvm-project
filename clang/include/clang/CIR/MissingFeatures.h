@@ -114,6 +114,9 @@ struct MissingFeatures {
 
   // Fast math.
   static bool fastMathGuard() { return false; }
+  // Should be implemented with a moduleOp level attribute and directly
+  // mapped to LLVM - those can be set directly for every relevant LLVM IR
+  // dialect operation (log10, ...).
   static bool fastMathFlags() { return false; }
   static bool fastMathFuncAttributes() { return false; }
 
