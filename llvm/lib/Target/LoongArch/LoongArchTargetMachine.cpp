@@ -35,6 +35,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
@@ -151,6 +152,7 @@ public:
   }
 
   void addIRPasses() override;
+  void addCodeGenPrepare() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -176,6 +178,12 @@ void LoongArchPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
+}
+
+void LoongArchPassConfig::addCodeGenPrepare() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createTypePromotionLegacyPass());
+  TargetPassConfig::addCodeGenPrepare();
 }
 
 bool LoongArchPassConfig::addInstSelector() {
@@ -209,6 +217,8 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
 
 void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchMergeBaseOffsetOptPass());
 }
 
 bool LoongArchPassConfig::addRegAssignAndRewriteFast() {

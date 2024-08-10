@@ -134,6 +134,8 @@ template <typename ContextT> class GenericCycleInfoCompute {
     DFSInfo() = default;
     explicit DFSInfo(unsigned Start) : Start(Start) {}
 
+    explicit operator bool() const { return Start; }
+
     /// Whether this node is an ancestor (or equal to) the node \p Other
     /// in the DFS tree.
     bool isAncestorOf(const DFSInfo &Other) const {
@@ -231,6 +233,8 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
 
     for (BlockT *Pred : predecessors(HeaderCandidate)) {
       const DFSInfo PredDFSInfo = BlockDFSInfo.lookup(Pred);
+      // This automatically ignores unreachable predecessors since they have
+      // zeros in their DFSInfo.
       if (CandidateInfo.isAncestorOf(PredDFSInfo))
         Worklist.push_back(Pred);
     }
@@ -257,6 +261,10 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
         const DFSInfo PredDFSInfo = BlockDFSInfo.lookup(Pred);
         if (CandidateInfo.isAncestorOf(PredDFSInfo)) {
           Worklist.push_back(Pred);
+        } else if (!PredDFSInfo) {
+          // Ignore an unreachable predecessor. It will will incorrectly cause
+          // Block to be treated as a cycle entry.
+          LLVM_DEBUG(errs() << " skipped unreachable predecessor.\n");
         } else {
           IsEntry = true;
         }

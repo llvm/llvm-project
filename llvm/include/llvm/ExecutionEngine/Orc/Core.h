@@ -1297,7 +1297,7 @@ private:
   JITDylib(ExecutionSession &ES, std::string Name);
 
   std::pair<AsynchronousSymbolQuerySet, std::shared_ptr<SymbolDependenceMap>>
-  removeTracker(ResourceTracker &RT);
+  IL_removeTracker(ResourceTracker &RT);
 
   void transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
 

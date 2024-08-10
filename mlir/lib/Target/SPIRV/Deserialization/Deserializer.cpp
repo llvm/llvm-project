@@ -19,7 +19,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -250,6 +249,15 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     decorations[words[0]].set(
         symbol, FPFastMathModeAttr::get(opBuilder.getContext(),
                                         static_cast<FPFastMathMode>(words[2])));
+    break;
+  case spirv::Decoration::FPRoundingMode:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single integer literal";
+    }
+    decorations[words[0]].set(
+        symbol, FPRoundingModeAttr::get(opBuilder.getContext(),
+                                        static_cast<FPRoundingMode>(words[2])));
     break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:

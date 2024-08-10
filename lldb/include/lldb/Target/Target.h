@@ -141,6 +141,8 @@ public:
 
   PathMappingList &GetSourcePathMap() const;
 
+  PathMappingList &GetObjectPathMap() const;
+
   bool GetAutoSourceMapRelative() const;
 
   FileSpecList GetExecutableSearchPaths();

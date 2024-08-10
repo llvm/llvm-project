@@ -33,6 +33,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -224,8 +225,7 @@ void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
-void NVPTXTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
@@ -343,6 +343,7 @@ void NVPTXPassConfig::addIRPasses() {
   }
 
   addPass(createAtomicExpandLegacyPass());
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===

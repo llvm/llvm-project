@@ -11,6 +11,9 @@
 #define __has_builtin(x) 0
 #endif
 
+// Make sure these are included first so they don't conflict with the system.
+#include <limits.h>
+
 #include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
@@ -39,14 +42,17 @@ static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
 static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
               "Incorrect maximum port count");
 
-template <uint32_t lane_size> void handle_printf(rpc::Server::Port &port) {
+template <bool packed, uint32_t lane_size>
+void handle_printf(rpc::Server::Port &port) {
   FILE *files[lane_size] = {nullptr};
   // Get the appropriate output stream to use.
-  if (port.get_opcode() == RPC_PRINTF_TO_STREAM)
+  if (port.get_opcode() == RPC_PRINTF_TO_STREAM ||
+      port.get_opcode() == RPC_PRINTF_TO_STREAM_PACKED)
     port.recv([&](rpc::Buffer *buffer, uint32_t id) {
       files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
     });
-  else if (port.get_opcode() == RPC_PRINTF_TO_STDOUT)
+  else if (port.get_opcode() == RPC_PRINTF_TO_STDOUT ||
+           port.get_opcode() == RPC_PRINTF_TO_STDOUT_PACKED)
     std::fill(files, files + lane_size, stdout);
   else
     std::fill(files, files + lane_size, stderr);
@@ -60,6 +66,28 @@ template <uint32_t lane_size> void handle_printf(rpc::Server::Port &port) {
   // Recieve the format string and arguments from the client.
   port.recv_n(format, format_sizes,
               [&](uint64_t size) { return new char[size]; });
+
+  // Parse the format string to get the expected size of the buffer.
+  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+    if (!format[lane])
+      continue;
+
+    WriteBuffer wb(nullptr, 0);
+    Writer writer(&wb);
+
+    internal::DummyArgList<packed> printf_args;
+    Parser<internal::DummyArgList<packed> &> parser(
+        reinterpret_cast<const char *>(format[lane]), printf_args);
+
+    for (FormatSection cur_section = parser.get_next_section();
+         !cur_section.raw_string.empty();
+         cur_section = parser.get_next_section())
+      ;
+    args_sizes[lane] = printf_args.read_count();
+  }
+  port.send([&](rpc::Buffer *buffer, uint32_t id) {
+    buffer->data[0] = args_sizes[id];
+  });
   port.recv_n(args, args_sizes, [&](uint64_t size) { return new char[size]; });
 
   // Identify any arguments that are actually pointers to strings on the client.
@@ -73,8 +101,8 @@ template <uint32_t lane_size> void handle_printf(rpc::Server::Port &port) {
     WriteBuffer wb(nullptr, 0);
     Writer writer(&wb);
 
-    internal::StructArgList printf_args(args[lane], args_sizes[lane]);
-    Parser<internal::StructArgList> parser(
+    internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
+    Parser<internal::StructArgList<packed>> parser(
         reinterpret_cast<const char *>(format[lane]), printf_args);
 
     for (FormatSection cur_section = parser.get_next_section();
@@ -83,6 +111,10 @@ template <uint32_t lane_size> void handle_printf(rpc::Server::Port &port) {
       if (cur_section.has_conv && cur_section.conv_name == 's' &&
           cur_section.conv_val_ptr) {
         strs_to_copy[lane].emplace_back(cur_section.conv_val_ptr);
+        // Get the minimum size of the string in the case of padding.
+        char c = '\0';
+        cur_section.conv_val_ptr = &c;
+        convert(&writer, cur_section);
       } else if (cur_section.has_conv) {
         // Ignore conversion errors for the first pass.
         convert(&writer, cur_section);
@@ -126,8 +158,8 @@ template <uint32_t lane_size> void handle_printf(rpc::Server::Port &port) {
     WriteBuffer wb(buffer.get(), buffer_size[lane]);
     Writer writer(&wb);
 
-    internal::StructArgList printf_args(args[lane], args_sizes[lane]);
-    Parser<internal::StructArgList> parser(
+    internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
+    Parser<internal::StructArgList<packed>> parser(
         reinterpret_cast<const char *>(format[lane]), printf_args);
 
     // Parse and print the format string using the arguments we copied from
@@ -337,10 +369,27 @@ rpc_status_t handle_server_impl(
     });
     break;
   }
+  case RPC_PRINTF_TO_STREAM_PACKED:
+  case RPC_PRINTF_TO_STDOUT_PACKED:
+  case RPC_PRINTF_TO_STDERR_PACKED: {
+    handle_printf<true, lane_size>(*port);
+    break;
+  }
   case RPC_PRINTF_TO_STREAM:
   case RPC_PRINTF_TO_STDOUT:
   case RPC_PRINTF_TO_STDERR: {
-    handle_printf<lane_size>(*port);
+    handle_printf<false, lane_size>(*port);
+    break;
+  }
+  case RPC_REMOVE: {
+    uint64_t sizes[lane_size] = {0};
+    void *args[lane_size] = {nullptr};
+    port->recv_n(args, sizes, [&](uint64_t size) { return new char[size]; });
+    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+      buffer->data[0] = static_cast<uint64_t>(
+          remove(reinterpret_cast<const char *>(args[id])));
+      delete[] reinterpret_cast<uint8_t *>(args[id]);
+    });
     break;
   }
   case RPC_NOOP: {

@@ -138,7 +138,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
 
-  auto allFloatAndIntScalars = allIntScalars;
+  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,
+                                       p2, p3,  p4,  p5,  p6};
 
   auto allPtrs = {p0, p1, p2, p3, p4, p5, p6};
   auto allWritablePtrs = {p0, p1, p3, p4, p5, p6};
@@ -238,7 +239,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allFloatScalars, allWritablePtrs);
 
   getActionDefinitionsBuilder(G_ATOMICRMW_XCHG)
-      .legalForCartesianProduct(allFloatAndIntScalars, allWritablePtrs);
+      .legalForCartesianProduct(allFloatAndIntScalarsAndPtrs, allWritablePtrs);
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS).lower();
   // TODO: add proper legalization rules.

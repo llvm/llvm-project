@@ -1,4 +1,16 @@
 add_entrypoint_object(
+  getchar
+  SRCS
+    getchar.cpp
+  HDRS
+    ../getchar.h
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+)
+
+add_entrypoint_object(
   remove
   SRCS
     remove.cpp
@@ -27,6 +39,17 @@ add_entrypoint_object(
     putchar.cpp
   HDRS
     ../putchar.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+)
+
+add_entrypoint_object(
+  puts
+  SRCS
+    puts.cpp
+  HDRS
+    ../puts.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.string_view

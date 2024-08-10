@@ -216,6 +216,8 @@ void reorder(Instruction *I) {
       if (IM->getParent() != I->getParent())
         continue;
 
+      assert(IM != I && "Unexpected cycle while re-ordering instructions");
+
       if (!IM->comesBefore(I)) {
         InstructionsToMove.insert(IM);
         Worklist.push_back(IM);
@@ -252,7 +254,7 @@ public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
       : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getParent()->getDataLayout()), Builder(SE.getContext()) {}
+        DL(F.getDataLayout()), Builder(SE.getContext()) {}
 
   bool run();
 

@@ -9,6 +9,7 @@
 #include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUTargetMachine.h"
+#include "SIFixSGPRCopies.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 
 using namespace llvm;
@@ -38,5 +39,6 @@ void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
 
 Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
   addPass(AMDGPUISelDAGToDAGPass(TM));
+  addPass(SIFixSGPRCopiesPass());
   return Error::success();
 }

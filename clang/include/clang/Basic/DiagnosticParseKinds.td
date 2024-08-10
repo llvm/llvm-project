@@ -157,9 +157,12 @@ def err_duplicate_default_assoc : Error<
   "duplicate default generic association">;
 def note_previous_default_assoc : Note<
   "previous default generic association is here">;
-def ext_generic_with_type_arg : Extension<
-  "passing a type argument as the first operand to '_Generic' is a Clang "
-  "extension">, InGroup<DiagGroup<"generic-type-extension">>;
+def ext_c2y_generic_with_type_arg : Extension<
+  "passing a type argument as the first operand to '_Generic' is a C2y "
+  "extension">, InGroup<C2y>;
+def warn_c2y_compat_generic_with_type_arg : Warning<
+  "passing a type argument as the first operand to '_Generic' is incompatible "
+  "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
@@ -1257,6 +1260,9 @@ def warn_pragma_intrinsic_builtin : Warning<
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
   InGroup<IgnoredPragmas>;
+// - #pragma mc_func
+def err_pragma_mc_func_not_supported :
+   Error<"#pragma mc_func is not supported">;
 // - #pragma init_seg
 def warn_pragma_init_seg_unsupported_target : Warning<
   "'#pragma init_seg' is only supported when targeting a "
@@ -1508,6 +1514,8 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
+def err_omp_unknown_adjust_args_op : Error<
+  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;

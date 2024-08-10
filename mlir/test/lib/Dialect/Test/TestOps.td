@@ -237,6 +237,11 @@ def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
+def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
+  let arguments = (ins NestedPolynomialAttr2:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -462,7 +467,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
-    static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
+    static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
           mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
@@ -1368,7 +1373,7 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
+    ::llvm::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
         SmallVectorImpl<OpFoldResult> &results) {
       return success();
     }
@@ -1879,6 +1884,7 @@ def LegalOpA : TEST_Op<"legal_op_a">,
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
+def LegalOpD : TEST_Op<"legal_op_d">, Arguments<(ins AnyType)>;
 
 // Check that the conversion infrastructure can properly undo the creation of
 // operations where an operation was created before its parent, in this case,
@@ -2408,7 +2414,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -2942,11 +2948,18 @@ def TestVersionedOpC : TEST_Op<"versionedC"> {
 
 // Op with a properties struct defined inline.
 def TestOpWithProperties : TEST_Op<"with_properties"> {
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = [{
+    `a` `=` $a `,`
+    `b` `=` $b `,`
+    `c` `=` $c `,`
+    `flag` `=` $flag `,`
+    `array` `=` $array attr-dict}];
   let arguments = (ins
-    IntProperty<"int64_t">:$a,
+    I64Property:$a,
     StrAttr:$b, // Attributes can directly be used here.
-    ArrayProperty<"int64_t", 4>:$array // example of an array
+    StringProperty:$c,
+    BoolProperty:$flag,
+    IntArrayProperty<"int64_t">:$array // example of an array
   );
 }
 
@@ -2969,7 +2982,7 @@ def TestOpWithPropertiesAndInferredType
 
 // Demonstrate how to wrap an existing C++ class named MyPropStruct.
 def MyStructProperty : Property<"MyPropStruct"> {
-  let convertToAttribute = "$_storage.asAttribute($_ctxt)";
+  let convertToAttribute = "return $_storage.asAttribute($_ctxt);";
   let convertFromAttribute = "return MyPropStruct::setFromAttr($_storage, $_attr, $_diag);";
   let hashProperty = "$_storage.hash();";
 }
@@ -2983,14 +2996,14 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
 
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) attr-dict";
-  let arguments = (ins ArrayProperty<"int64_t", 3>:$prop);
+  let arguments = (ins IntArrayProperty<"int64_t">:$prop);
 }
 
 def TestOpUsingPropertyInCustomAndOther
   : TEST_Op<"using_property_in_custom_and_other"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) prop-dict attr-dict";
   let arguments = (ins
-    ArrayProperty<"int64_t", 3>:$prop,
+    IntArrayProperty<"int64_t">:$prop,
     IntProperty<"int64_t">:$other
   );
 }
@@ -3016,7 +3029,7 @@ def TestOpUsingIntPropertyWithWorseBytecode
 
 def PropertiesWithCustomPrint : Property<"PropertiesWithCustomPrint"> {
   let convertToAttribute = [{
-    getPropertiesAsAttribute($_ctxt, $_storage)
+    return getPropertiesAsAttribute($_ctxt, $_storage);
   }];
   let convertFromAttribute = [{
     return setPropertiesFromAttribute($_storage, $_attr, $_diag);
@@ -3037,7 +3050,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::PropertiesWithCustomPrint &prop);
     static void writeToMlirBytecode(
@@ -3045,7 +3058,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
         const test::PropertiesWithCustomPrint &prop);
   }];
   let extraClassDefinition = [{
-    ::mlir::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
+    ::llvm::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &reader,
         test::PropertiesWithCustomPrint &prop) {
       StringRef label;
@@ -3080,7 +3093,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
 
 def VersionedProperties : Property<"VersionedProperties"> {
   let convertToAttribute = [{
-      getPropertiesAsAttribute($_ctxt, $_storage)
+    return getPropertiesAsAttribute($_ctxt, $_storage);
   }];
   let convertFromAttribute = [{
     return setPropertiesFromAttribute($_storage, $_attr, $_diag);
@@ -3101,7 +3114,7 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::VersionedProperties &prop);
     static void writeToMlirBytecode(
@@ -3126,13 +3139,65 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
 }
 
 def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"> {
-  let assemblyFormat = "prop-dict attr-dict";
-  let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a);
+  let assemblyFormat = [{
+    ($a^) : (`na`)?
+    ($b^)?
+    ($c^)?
+    ($unit^)?
+    attr-dict
+  }];
+  let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a,
+    DefaultValuedProperty<StringProperty, "\"\"">:$b,
+    DefaultValuedProperty<IntProperty<"int32_t">, "-1">:$c,
+    UnitProperty:$unit);
 }
 
 def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
-  let assemblyFormat = "prop-dict attr-dict";
-  let arguments = (ins OptionalAttr<I32Attr>:$a, OptionalAttr<I32Attr>:$b);
+  let assemblyFormat = [{
+    (`anAttr` `=` $anAttr^)?
+    (`simple` `=` $simple^)?
+    (`nonTrivialStorage` `=` $nonTrivialStorage^)?
+    (`hasDefault` `=` $hasDefault^)?
+    (`nested` `=` $nested^)?
+    (`longSyntax` `=` $longSyntax^)?
+    (`hasUnit` $hasUnit^)?
+    (`maybeUnit` `=` $maybeUnit^)?
+    attr-dict
+  }];
+  let arguments = (ins
+    OptionalAttr<I32Attr>:$anAttr,
+    OptionalProperty<I64Property>:$simple,
+    OptionalProperty<StringProperty>:$nonTrivialStorage,
+    // Confirm that properties with default values now default to nullopt and have
+    // the long syntax.
+    OptionalProperty<DefaultValuedProperty<I64Property, "0">>:$hasDefault,
+    OptionalProperty<OptionalProperty<I64Property>>:$nested,
+    OptionalProperty<StringProperty, 0>:$longSyntax,
+    UnitProperty:$hasUnit,
+    OptionalProperty<UnitProperty>:$maybeUnit);
+}
+
+def TestOpWithArrayProperties : TEST_Op<"with_array_properties"> {
+  let assemblyFormat = [{
+    `ints` `=` $ints
+    `strings` `=` $strings
+    `nested` `=` $nested
+    `opt` `=` $opt
+    `explicitOptions` `=` $explicitOptions
+    `explicitUnits` `=` $explicitUnits
+    ($hasDefault^ `thats_has_default`)?
+    attr-dict
+  }];
+  let arguments = (ins
+    ArrayProperty<I64Property>:$ints,
+    ArrayProperty<StringProperty>:$strings,
+    ArrayProperty<ArrayProperty<I32Property>>:$nested,
+    OptionalProperty<ArrayProperty<I32Property>>:$opt,
+    ArrayProperty<OptionalProperty<I64Property>>:$explicitOptions,
+    ArrayProperty<UnitProperty>:$explicitUnits,
+    DefaultValuedProperty<ArrayProperty<I64Property>,
+      "::llvm::ArrayRef<int64_t>{}", "::llvm::SmallVector<int64_t>{}">:$hasDefault
+  );
 }
 
 //===----------------------------------------------------------------------===//

@@ -6,8 +6,17 @@
 # CHECK:      0000000 90 11 22
 # CHECK-NEXT: 0000003
 
-## Check case when linkerscript is used.
-# RUN: echo "SECTIONS { . = 0x1000; }" > %t.script
+## OUTPUT_FORMAT(binary) selects the binary format as well.
+# RUN: echo "OUTPUT_FORMAT(binary)" > %t.script
+# RUN: ld.lld -o %t2.out -T %t.script %t
+# RUN: od -t x1 -v %t2.out | FileCheck %s
+## More OUTPUT_FORMAT commands are ignored.
+# RUN: echo "OUTPUT_FORMAT("binary")OUTPUT_FORMAT(elf64-x86-64)" > %t.script
+# RUN: ld.lld -o %t2.out -T %t.script %t
+# RUN: od -t x1 -v %t2.out | FileCheck %s
+
+## --oformat=binary overrides an ELF OUTPUT_FORMAT.
+# RUN: echo "OUTPUT_FORMAT(elf64-x86-64) SECTIONS { . = 0x1000; }" > %t.script
 # RUN: ld.lld -o %t2.out --script %t.script %t --oformat binary
 # RUN: od -t x1 -v %t2.out | FileCheck %s
 
@@ -44,6 +53,10 @@
 # RUN: not ld.lld -o /dev/null %t --oformat foo 2>&1 \
 # RUN:   | FileCheck %s --check-prefix ERR
 # ERR: unknown --oformat value: foo
+
+# RUN: echo "OUTPUT_FORMAT(binary-freebsd)" > %t.script
+# RUN: not ld.lld -T %t.script %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
+# ERR2: error: {{.*}}.script:1: unknown output format name: binary-freebsd
 
 # RUN: ld.lld -o /dev/null %t --oformat elf
 # RUN: ld.lld -o /dev/null %t --oformat=elf-foo

@@ -9,8 +9,9 @@
 
 #include "src/setjmp/longjmp.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #if defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 1
 
@@ -71,4 +72,4 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
 
 #endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

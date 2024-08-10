@@ -233,6 +233,8 @@ def uimm7_opcode : RISCVUImmOp<7> {
 }
 def uimm7 : RISCVUImmOp<7>;
 def uimm8 : RISCVUImmOp<8>;
+def uimm16 : RISCVUImmOp<16>;
+def uimm32 : RISCVUImmOp<32>;
 def simm12 : RISCVSImmLeafOp<12> {
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -591,8 +593,7 @@ class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class Priv<string opcodestr, bits<7> funct7>
-    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1, GPR:$rs2),
-              opcodestr, "">;
+    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins), opcodestr, "">;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class Priv_rr<string opcodestr, bits<7> funct7>
@@ -1120,6 +1121,12 @@ def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
                                         simm12:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
+def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
+  bits<32> value;
+
+  let Inst{31-0} = value;
+  let AsmString = ".insn 0x4, $value";
+}
 }
 
 // Use InstAliases to match these so that we can combine the insn and format
@@ -1535,8 +1542,8 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(riscv_sret_glue), (SRET (XLenVT X0), (XLenVT X0))>;
-def : Pat<(riscv_mret_glue), (MRET (XLenVT X0), (XLenVT X0))>;
+def : Pat<(riscv_sret_glue), (SRET)>;
+def : Pat<(riscv_mret_glue), (MRET)>;
 
 let isCall = 1, Defs = [X1] in {
 let Predicates = [NoStdExtZicfilp] in
@@ -2072,6 +2079,7 @@ include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
 include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
+include "RISCVInstrInfoXwch.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

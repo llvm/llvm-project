@@ -72,12 +72,13 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args,
                                    std::vector<StringRef> &Features) {
-  StringRef MArch = getRISCVArch(Args, Triple);
+  std::string MArch = getRISCVArch(Args, Triple);
 
   if (!getArchFeatures(D, MArch, Features, Args))
     return;
 
-  bool CPUFastUnaligned = false;
+  bool CPUFastScalarUnaligned = false;
+  bool CPUFastVectorUnaligned = false;
 
   // If users give march and mcpu, get std extension feature from MArch
   // and other features (ex. mirco architecture feature) from mcpu
@@ -88,8 +89,10 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
     getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
 
-    if (llvm::RISCV::hasFastUnalignedAccess(CPU))
-      CPUFastUnaligned = true;
+    if (llvm::RISCV::hasFastScalarUnalignedAccess(CPU))
+      CPUFastScalarUnaligned = true;
+    if (llvm::RISCV::hasFastVectorUnalignedAccess(CPU))
+      CPUFastVectorUnaligned = true;
   }
 
   // Handle features corresponding to "-ffixed-X" options
@@ -169,20 +172,37 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-relax");
   }
 
-  // If -mstrict-align or -mno-strict-align is passed, use it. Otherwise, the
-  // unaligned-*-mem is enabled if the CPU supports it or the target is
+  // If -mstrict-align, -mno-strict-align, -mscalar-strict-align, or
+  // -mno-scalar-strict-align is passed, use it. Otherwise, the
+  // unaligned-scalar-mem is enabled if the CPU supports it or the target is
   // Android.
-  if (const Arg *A = Args.getLastArg(options::OPT_mno_strict_align,
-                                     options::OPT_mstrict_align)) {
-    if (A->getOption().matches(options::OPT_mno_strict_align)) {
+  if (const Arg *A = Args.getLastArg(
+          options::OPT_mno_strict_align, options::OPT_mscalar_strict_align,
+          options::OPT_mstrict_align, options::OPT_mno_scalar_strict_align)) {
+    if (A->getOption().matches(options::OPT_mno_strict_align) ||
+        A->getOption().matches(options::OPT_mno_scalar_strict_align)) {
       Features.push_back("+unaligned-scalar-mem");
-      Features.push_back("+unaligned-vector-mem");
     } else {
       Features.push_back("-unaligned-scalar-mem");
+    }
+  } else if (CPUFastScalarUnaligned || Triple.isAndroid()) {
+    Features.push_back("+unaligned-scalar-mem");
+  }
+
+  // If -mstrict-align, -mno-strict-align, -mvector-strict-align, or
+  // -mno-vector-strict-align is passed, use it. Otherwise, the
+  // unaligned-vector-mem is enabled if the CPU supports it or the target is
+  // Android.
+  if (const Arg *A = Args.getLastArg(
+          options::OPT_mno_strict_align, options::OPT_mvector_strict_align,
+          options::OPT_mstrict_align, options::OPT_mno_vector_strict_align)) {
+    if (A->getOption().matches(options::OPT_mno_strict_align) ||
+        A->getOption().matches(options::OPT_mno_vector_strict_align)) {
+      Features.push_back("+unaligned-vector-mem");
+    } else {
       Features.push_back("-unaligned-vector-mem");
     }
-  } else if (CPUFastUnaligned || Triple.isAndroid()) {
-    Features.push_back("+unaligned-scalar-mem");
+  } else if (CPUFastVectorUnaligned || Triple.isAndroid()) {
     Features.push_back("+unaligned-vector-mem");
   }
 
@@ -227,7 +247,7 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   // rv64g | rv64*d -> lp64d
   // rv64e -> lp64e
   // rv64* -> lp64
-  StringRef Arch = getRISCVArch(Args, Triple);
+  std::string Arch = getRISCVArch(Args, Triple);
 
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /* EnableExperimentalExtension */ true);
@@ -253,8 +273,8 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   }
 }
 
-StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
-                              const llvm::Triple &Triple) {
+std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
+                                const llvm::Triple &Triple) {
   assert(Triple.isRISCV() && "Unexpected triple");
 
   // GCC's logic around choosing a default `-march=` is complex. If GCC is not
@@ -290,12 +310,28 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // 2. Get march (isa string) based on `-mcpu=`
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPU = A->getValue();
-    if (CPU == "native")
+    if (CPU == "native") {
       CPU = llvm::sys::getHostCPUName();
+      // If the target cpu is unrecognized, use target features.
+      if (CPU.starts_with("generic")) {
+        auto FeatureMap = llvm::sys::getHostCPUFeatures();
+        // hwprobe may be unavailable on older Linux versions.
+        if (!FeatureMap.empty()) {
+          std::vector<std::string> Features;
+          for (auto &F : FeatureMap)
+            Features.push_back(((F.second ? "+" : "-") + F.first()).str());
+          auto ParseResult = llvm::RISCVISAInfo::parseFeatures(
+              Triple.isRISCV32() ? 32 : 64, Features);
+          if (ParseResult)
+            return (*ParseResult)->toString();
+        }
+      }
+    }
+
     StringRef MArch = llvm::RISCV::getMArchFromMcpu(CPU);
     // Bypass if target cpu's default march is empty.
     if (MArch != "")
-      return MArch;
+      return MArch.str();
   }
 
   // 3. Choose a default based on `-mabi=`

@@ -684,13 +684,13 @@ private:
 /// CheckValueTypeMatcher - This checks to see if the current node is a
 /// VTSDNode with the specified type, if not it fails to match.
 class CheckValueTypeMatcher : public Matcher {
-  StringRef TypeName;
+  MVT::SimpleValueType VT;
 
 public:
-  CheckValueTypeMatcher(StringRef type_name)
-      : Matcher(CheckValueType), TypeName(type_name) {}
+  CheckValueTypeMatcher(MVT::SimpleValueType SimpleVT)
+      : Matcher(CheckValueType), VT(SimpleVT) {}
 
-  StringRef getTypeName() const { return TypeName; }
+  MVT::SimpleValueType getVT() const { return VT; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == CheckValueType;
@@ -699,7 +699,7 @@ public:
 private:
   void printImpl(raw_ostream &OS, unsigned indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
-    return cast<CheckValueTypeMatcher>(M)->TypeName == TypeName;
+    return cast<CheckValueTypeMatcher>(M)->VT == VT;
   }
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -932,7 +932,7 @@ class EmitMergeInputChainsMatcher : public Matcher {
 
 public:
   EmitMergeInputChainsMatcher(ArrayRef<unsigned> nodes)
-      : Matcher(EmitMergeInputChains), ChainNodes(nodes.begin(), nodes.end()) {}
+      : Matcher(EmitMergeInputChains), ChainNodes(nodes) {}
 
   unsigned getNumNodes() const { return ChainNodes.size(); }
 
@@ -1022,10 +1022,10 @@ public:
                         ArrayRef<unsigned> operands, bool hasChain,
                         bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
                         int numfixedarityoperands, bool isMorphNodeTo)
-      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi),
-        VTs(vts.begin(), vts.end()), Operands(operands.begin(), operands.end()),
-        HasChain(hasChain), HasInGlue(hasInGlue), HasOutGlue(hasOutGlue),
-        HasMemRefs(hasmemrefs), NumFixedArityOperands(numfixedarityoperands) {}
+      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi), VTs(vts),
+        Operands(operands), HasChain(hasChain), HasInGlue(hasInGlue),
+        HasOutGlue(hasOutGlue), HasMemRefs(hasmemrefs),
+        NumFixedArityOperands(numfixedarityoperands) {}
 
   const CodeGenInstruction &getInstruction() const { return CGI; }
 
@@ -1110,8 +1110,7 @@ class CompleteMatchMatcher : public Matcher {
 public:
   CompleteMatchMatcher(ArrayRef<unsigned> results,
                        const PatternToMatch &pattern)
-      : Matcher(CompleteMatch), Results(results.begin(), results.end()),
-        Pattern(pattern) {}
+      : Matcher(CompleteMatch), Results(results), Pattern(pattern) {}
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getResult(unsigned R) const { return Results[R]; }

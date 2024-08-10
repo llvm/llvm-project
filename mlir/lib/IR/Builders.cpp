@@ -38,6 +38,10 @@ FloatType Builder::getFloat8E5M2Type() {
   return FloatType::getFloat8E5M2(context);
 }
 
+FloatType Builder::getFloat8E4M3Type() {
+  return FloatType::getFloat8E4M3(context);
+}
+
 FloatType Builder::getFloat8E4M3FNType() {
   return FloatType::getFloat8E4M3FN(context);
 }
@@ -52,6 +56,10 @@ FloatType Builder::getFloat8E4M3FNUZType() {
 
 FloatType Builder::getFloat8E4M3B11FNUZType() {
   return FloatType::getFloat8E4M3B11FNUZ(context);
+}
+
+FloatType Builder::getFloat8E3M4Type() {
+  return FloatType::getFloat8E3M4(context);
 }
 
 FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }

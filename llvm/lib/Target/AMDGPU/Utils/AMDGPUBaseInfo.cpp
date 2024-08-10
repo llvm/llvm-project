@@ -153,11 +153,17 @@ inline unsigned getSaSdstBitWidth() { return 1; }
 /// \returns SaSdst bit shift
 inline unsigned getSaSdstBitShift() { return 0; }
 
-} // end namespace anonymous
+} // end anonymous namespace
 
 namespace llvm {
 
 namespace AMDGPU {
+
+/// \returns true if the target supports signed immediate offset for SMRD
+/// instructions.
+bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
+  return isGFX9Plus(ST);
+}
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI) {
@@ -490,17 +496,17 @@ bool getSMEMIsBuffer(unsigned Opc) {
 
 bool getVOP1IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -531,8 +537,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info)
     return {Info->CanBeVOPDX, true};
-  else
-    return {false, false};
+  return {false, false};
 }
 
 unsigned getVOPDOpcode(unsigned Opc) {
@@ -1473,11 +1478,10 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
     unsigned Storecnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
                                    getStorecntBitWidth(Version.Major));
     return Dscnt | Storecnt;
-  } else {
-    unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                  getLoadcntBitWidth(Version.Major));
-    return Dscnt | Loadcnt;
   }
+  unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
+                                getLoadcntBitWidth(Version.Major));
+  return Dscnt | Loadcnt;
 }
 
 Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
@@ -2819,10 +2823,6 @@ static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
   return isGCN3Encoding(ST) || isGFX10Plus(ST);
 }
 
-static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
-  return isGFX9Plus(ST);
-}
-
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
   if (isGFX12Plus(ST))
@@ -2857,7 +2857,14 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 }
 
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer) {
+                                            int64_t ByteOffset, bool IsBuffer,
+                                            bool HasSOffset) {
+  // For unbuffered smem loads, it is illegal for the Immediate Offset to be
+  // negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
+  // Handle case where SOffset is not present.
+  if (!IsBuffer && !HasSOffset && ByteOffset < 0 && hasSMRDSignedImmOffset(ST))
+    return std::nullopt;
+
   if (isGFX12Plus(ST)) // 24 bit signed offsets
     return isInt<24>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
                                  : std::nullopt;

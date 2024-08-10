@@ -406,21 +406,25 @@ protected:
 class mlir_attribute_subclass : public pure_subclass {
 public:
   using IsAFunctionTy = bool (*)(MlirAttribute);
+  using GetTypeIDFunctionTy = MlirTypeID (*)();
 
   /// Subclasses by looking up the super-class dynamically.
   mlir_attribute_subclass(py::handle scope, const char *attrClassName,
-                          IsAFunctionTy isaFunction)
+                          IsAFunctionTy isaFunction,
+                          GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : mlir_attribute_subclass(
             scope, attrClassName, isaFunction,
             py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-                .attr("Attribute")) {}
+                .attr("Attribute"),
+            getTypeIDFunction) {}
 
   /// Subclasses with a provided mlir.ir.Attribute super-class. This must
   /// be used if the subclass is being defined in the same extension module
   /// as the mlir.ir class (otherwise, it will trigger a recursive
   /// initialization).
   mlir_attribute_subclass(py::handle scope, const char *typeClassName,
-                          IsAFunctionTy isaFunction, const py::object &superCls)
+                          IsAFunctionTy isaFunction, const py::object &superCls,
+                          GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
     // Casting constructor. Note that it hard, if not impossible, to properly
     // call chain to parent `__init__` in pybind11 due to its special handling
@@ -454,6 +458,20 @@ public:
         "isinstance",
         [isaFunction](MlirAttribute other) { return isaFunction(other); },
         py::arg("other_attribute"));
+    def("__repr__", [superCls, captureTypeName](py::object self) {
+      return py::repr(superCls(self))
+          .attr("replace")(superCls.attr("__name__"), captureTypeName);
+    });
+    if (getTypeIDFunction) {
+      def_staticmethod("get_static_typeid",
+                       [getTypeIDFunction]() { return getTypeIDFunction(); });
+      py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+          .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
+              getTypeIDFunction())(pybind11::cpp_function(
+              [thisClass = thisClass](const py::object &mlirAttribute) {
+                return thisClass(mlirAttribute);
+              }));
+    }
   }
 };
 

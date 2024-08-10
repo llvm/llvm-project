@@ -24,25 +24,23 @@
 define i1 @shifts_necmp_i16_i8(i16 %x) nounwind {
 ; RV32I-LABEL: shifts_necmp_i16_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a2, a0, a1
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    srli a1, a1, 16
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 24
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    xor a0, a0, a2
+; RV32I-NEXT:    srai a0, a0, 8
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: shifts_necmp_i16_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a2, a0, a1
+; RV64I-NEXT:    slli a1, a0, 48
+; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a0, a0, 56
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    srai a0, a0, 8
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
 ;

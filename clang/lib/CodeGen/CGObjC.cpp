@@ -1952,7 +1952,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     Builder.CreateLoad(StateItemsPtr, "stateitems");
 
   // Fetch the value at the current index from the buffer.
-  llvm::Value *CurrentItemPtr = Builder.CreateGEP(
+  llvm::Value *CurrentItemPtr = Builder.CreateInBoundsGEP(
       ObjCIdType, EnumStateItems, index, "currentitem.ptr");
   llvm::Value *CurrentItem =
     Builder.CreateAlignedLoad(ObjCIdType, CurrentItemPtr, getPointerAlign());
@@ -2028,7 +2028,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
 
   // First we check in the local buffer.
   llvm::Value *indexPlusOne =
-      Builder.CreateAdd(index, llvm::ConstantInt::get(NSUIntegerTy, 1));
+      Builder.CreateNUWAdd(index, llvm::ConstantInt::get(NSUIntegerTy, 1));
 
   // If we haven't overrun the buffer yet, we can continue.
   // Set the branch weights based on the simplifying assumption that this is
@@ -2393,7 +2393,8 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);
     llvm::CallBase *newCall = llvm::CallBase::addOperandBundle(
-        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB, oldCall);
+        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB,
+        oldCall->getIterator());
     newCall->copyMetadata(*oldCall);
     oldCall->replaceAllUsesWith(newCall);
     oldCall->eraseFromParent();

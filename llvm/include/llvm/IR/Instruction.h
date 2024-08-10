@@ -29,6 +29,7 @@
 namespace llvm {
 
 class BasicBlock;
+class DataLayout;
 class DbgMarker;
 class FastMathFlags;
 class MDNode;
@@ -188,6 +189,11 @@ public:
     return const_cast<Function *>(
                          static_cast<const Instruction *>(this)->getFunction());
   }
+
+  /// Get the data layout of the module this instruction belongs to.
+  ///
+  /// Requires the instruction to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -427,17 +433,7 @@ public:
   /// convenience method for passes to do so.
   /// dropUBImplyingAttrsAndUnknownMetadata should be used instead of
   /// this API if the Instruction being modified is a call.
-  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs);
-  void dropUnknownNonDebugMetadata() {
-    return dropUnknownNonDebugMetadata(std::nullopt);
-  }
-  void dropUnknownNonDebugMetadata(unsigned ID1) {
-    return dropUnknownNonDebugMetadata(ArrayRef(ID1));
-  }
-  void dropUnknownNonDebugMetadata(unsigned ID1, unsigned ID2) {
-    unsigned IDs[] = {ID1, ID2};
-    return dropUnknownNonDebugMetadata(IDs);
-  }
+  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs = std::nullopt);
   /// @}
 
   /// Adds an !annotation metadata node with \p Annotation to this instruction.

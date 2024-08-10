@@ -41,13 +41,6 @@ static cl::opt<bool> DisableX86DomainReassignment(
 namespace {
 enum RegDomain { NoDomain = -1, GPRDomain, MaskDomain, OtherDomain, NumDomains };
 
-static bool isGPR(const TargetRegisterClass *RC) {
-  return X86::GR64RegClass.hasSubClassEq(RC) ||
-         X86::GR32RegClass.hasSubClassEq(RC) ||
-         X86::GR16RegClass.hasSubClassEq(RC) ||
-         X86::GR8RegClass.hasSubClassEq(RC);
-}
-
 static bool isMask(const TargetRegisterClass *RC,
                    const TargetRegisterInfo *TRI) {
   return X86::VK16RegClass.hasSubClassEq(RC);
@@ -55,7 +48,7 @@ static bool isMask(const TargetRegisterClass *RC,
 
 static RegDomain getDomain(const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) {
-  if (isGPR(RC))
+  if (TRI->isGeneralPurposeRegisterClass(RC))
     return GPRDomain;
   if (isMask(RC, TRI))
     return MaskDomain;
@@ -797,7 +790,8 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     // GPR only current source domain supported.
-    if (!isGPR(MRI->getRegClass(Reg)))
+    if (!MRI->getTargetRegisterInfo()->isGeneralPurposeRegisterClass(
+            MRI->getRegClass(Reg)))
       continue;
 
     // Register already in closure.

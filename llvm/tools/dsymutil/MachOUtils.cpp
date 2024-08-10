@@ -12,7 +12,6 @@
 #include "LinkUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -323,17 +322,17 @@ static void transferSegmentAndSections(
 }
 
 // Write the __DWARF segment load command to the output file.
-static bool createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
+static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t FileOffset,
                                uint64_t FileSize, unsigned NumSections,
-                               MCAsmLayout &Layout, MachObjectWriter &Writer) {
+                                MachObjectWriter &Writer) {
   Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
                                  alignTo(FileSize, 0x1000), FileOffset,
                                  FileSize, /* MaxProt */ 7,
                                  /* InitProt =*/3);
 
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
-    if (Sec->begin() == Sec->end() || !Layout.getSectionFileSize(Sec))
+  for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
+    MCSection *Sec = Writer.getSectionOrder()[i];
+    if (!Asm.getSectionFileSize(*Sec))
       continue;
 
     Align Alignment = Sec->getAlign();
@@ -345,10 +344,10 @@ static bool createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
                      "'s file offset exceeds 4GB."
                      " Refusing to produce an invalid Mach-O file.");
     }
-    Writer.writeSection(Layout, *Sec, VMAddr, FileOffset, 0, 0, 0);
+    Writer.writeSection(Asm, *Sec, VMAddr, FileOffset, 0, 0, 0);
 
-    FileOffset += Layout.getSectionAddressSize(Sec);
-    VMAddr += Layout.getSectionAddressSize(Sec);
+    FileOffset += Asm.getSectionAddressSize(*Sec);
+    VMAddr += Asm.getSectionAddressSize(*Sec);
   }
   return true;
 }
@@ -381,8 +380,7 @@ bool generateDsymCompanion(
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
 
   // Layout but don't emit.
-  MCAsmLayout Layout(MCAsm);
-  MCAsm.layout(Layout);
+  MCAsm.layout();
 
   BinaryHolder InputBinaryHolder(VFS, false);
 
@@ -490,12 +488,12 @@ bool generateDsymCompanion(
   unsigned NumDwarfSections = 0;
   uint64_t DwarfSegmentSize = 0;
 
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
+  for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
+    MCSection *Sec = Writer.getSectionOrder()[i];
     if (Sec->begin() == Sec->end())
       continue;
 
-    if (uint64_t Size = Layout.getSectionFileSize(Sec)) {
+    if (uint64_t Size = MCAsm.getSectionFileSize(*Sec)) {
       DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlign());
       DwarfSegmentSize += Size;
       ++NumDwarfSections;
@@ -586,8 +584,8 @@ bool generateDsymCompanion(
   }
 
   // Write the load command for the __DWARF segment.
-  if (!createDwarfSegment(DwarfVMAddr, DwarfSegmentStart, DwarfSegmentSize,
-                          NumDwarfSections, Layout, Writer))
+  if (!createDwarfSegment(MCAsm, DwarfVMAddr, DwarfSegmentStart, DwarfSegmentSize,
+                          NumDwarfSections, Writer))
     return false;
 
   assert(OutFile.tell() == LoadCommandSize + HeaderSize);
@@ -629,12 +627,9 @@ bool generateDsymCompanion(
 
   // Emit the Dwarf sections contents.
   for (const MCSection &Sec : MCAsm) {
-    if (Sec.empty())
-      continue;
-
     uint64_t Pos = OutFile.tell();
     OutFile.write_zeros(alignTo(Pos, Sec.getAlign()) - Pos);
-    MCAsm.writeSectionData(OutFile, &Sec, Layout);
+    MCAsm.writeSectionData(OutFile, &Sec);
   }
 
   // Apply relocations to the contents of the DWARF segment.

@@ -107,6 +107,7 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
+  let isConvergent         = ps.isConvergent;
 }
 
 class VOP2_Real_Gen <VOP2_Pseudo ps, GFXGen Gen, string real_name = ps.Mnemonic> :
@@ -762,7 +763,11 @@ def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, []>;
 
 // No patterns so that the scalar instructions are always selected.
 // The scalar versions will be replaced with vector when needed later.
-defm V_ADD_CO_U32 : VOP2bInst <"v_add_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_add_co_u32", 1>;
+
+let isAdd = 1 in {
+  defm V_ADD_CO_U32 : VOP2bInst <"v_add_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_add_co_u32", 1>;
+}
+
 defm V_SUB_CO_U32 : VOP2bInst <"v_sub_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_sub_co_u32", 1>;
 defm V_SUBREV_CO_U32 : VOP2bInst <"v_subrev_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_sub_co_u32", 1>;
 defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_addc_u32", 1>;
@@ -771,7 +776,11 @@ defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_f
 
 
 let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
-defm V_ADD_U32 : VOP2Inst_VOPD <"v_add_u32", VOP_I32_I32_I32_ARITH, 0x10, "v_add_nc_u32", null_frag, "v_add_u32", 1>;
+
+let isAdd = 1 in {
+  defm V_ADD_U32 : VOP2Inst_VOPD <"v_add_u32", VOP_I32_I32_I32_ARITH, 0x10, "v_add_nc_u32", null_frag, "v_add_u32", 1>;
+}
+
 defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
 defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
 }
@@ -780,15 +789,23 @@ defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, 
 
 // These are special and do not read the exec mask.
 let isConvergent = 1, Uses = []<Register>, IsInvalidSingleUseConsumer = 1 in {
-def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE,
-  [(set i32:$vdst, (int_amdgcn_readlane i32:$src0, i32:$src1))]>;
+def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE, []>;
 let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
-def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE,
-  [(set i32:$vdst, (int_amdgcn_writelane i32:$src0, i32:$src1, i32:$vdst_in))]> {
+def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []> {
     let IsInvalidSingleUseProducer = 1;
   }
 } // End IsNeverUniform, $vdst = $vdst_in, DisableEncoding $vdst_in
 } // End isConvergent = 1
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(vt (int_amdgcn_readlane vt:$src0, i32:$src1)),
+        (V_READLANE_B32 VRegOrLdsSrc_32:$src0, SCSrc_b32:$src1)
+  >;
+
+  def : GCNPat<(vt (int_amdgcn_writelane vt:$src0, i32:$src1, vt:$src2)),
+        (V_WRITELANE_B32 SCSrc_b32:$src0, SCSrc_b32:$src1, VGPR_32:$src2)
+  >;
+}
 
 let isReMaterializable = 1 in {
 defm V_BFM_B32 : VOP2Inst <"v_bfm_b32", VOP_I32_I32_I32>;

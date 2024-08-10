@@ -22,6 +22,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"
@@ -46,9 +47,6 @@ static cl::opt<bool> DisableBitcodeVersionUpgrade(
     cl::desc("Disable automatic bitcode upgrade for version mismatch"));
 
 static const char *PreservedSymbols[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
     // There are global variables, so put it here instead of in
     // RuntimeLibcalls.def.
     // TODO: Are there similar such variables?
@@ -215,9 +213,16 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
   return P.first->second;
 }
 
-static DenseSet<StringRef> buildPreservedSymbolsSet() {
-  return DenseSet<StringRef>(std::begin(PreservedSymbols),
-                             std::end(PreservedSymbols));
+static DenseSet<StringRef> buildPreservedSymbolsSet(const Triple &TT) {
+  DenseSet<StringRef> PreservedSymbolSet(std::begin(PreservedSymbols),
+                                         std::end(PreservedSymbols));
+
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  for (const char *Name : Libcalls.getLibcallNames()) {
+    if (Name)
+      PreservedSymbolSet.insert(Name);
+  }
+  return PreservedSymbolSet;
 }
 
 Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
@@ -276,7 +281,8 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
   setStr(Sym.IRName, GV->getName());
 
   static const DenseSet<StringRef> PreservedSymbolsSet =
-      buildPreservedSymbolsSet();
+      buildPreservedSymbolsSet(
+          llvm::Triple(GV->getParent()->getTargetTriple()));
   bool IsPreservedSymbol = PreservedSymbolsSet.contains(GV->getName());
 
   if (Used.count(GV) || IsPreservedSymbol)
@@ -295,7 +301,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
       return make_error<StringError>("Only variables can have common linkage!",
                                      inconvertibleErrorCode());
     Uncommon().CommonSize =
-        GV->getParent()->getDataLayout().getTypeAllocSize(GV->getValueType());
+        GV->getDataLayout().getTypeAllocSize(GV->getValueType());
     Uncommon().CommonAlign = GVar->getAlign() ? GVar->getAlign()->value() : 0;
   }
 

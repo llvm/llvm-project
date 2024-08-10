@@ -454,9 +454,22 @@ struct __make_dextents< _IndexType, 0, extents<_IndexType, _ExtentsPack...>> {
 template <class _IndexType, size_t _Rank>
 using dextents = typename __mdspan_detail::__make_dextents<_IndexType, _Rank>::type;
 
+#  if _LIBCPP_STD_VER >= 26
+// [mdspan.extents.dims], alias template `dims`
+template <size_t _Rank, class _IndexType = size_t>
+using dims = dextents<_IndexType, _Rank>;
+#  endif
+
 // Deduction guide for extents
+#  if _LIBCPP_STD_VER >= 26
 template <class... _IndexTypes>
-extents(_IndexTypes...) -> extents<size_t, size_t(((void)sizeof(_IndexTypes), dynamic_extent))...>;
+  requires(is_convertible_v<_IndexTypes, size_t> && ...)
+explicit extents(_IndexTypes...) -> extents<size_t, __maybe_static_ext<_IndexTypes>...>;
+#  else
+template <class... _IndexTypes>
+  requires(is_convertible_v<_IndexTypes, size_t> && ...)
+explicit extents(_IndexTypes...) -> extents<size_t, size_t(((void)sizeof(_IndexTypes), dynamic_extent))...>;
+#  endif
 
 namespace __mdspan_detail {
 

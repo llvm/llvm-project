@@ -263,6 +263,26 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
+    # Check for a Windows UCRT bug (not fixed upstream yet).
+    # With UCRT, printf("%a", 0.0) produces "0x0.0000000000000p+0",
+    # while other C runtimes produce just "0x0p+0".
+    # https://developercommunity.visualstudio.com/t/Printf-formatting-of-float-as-hex-prints/1660844
+    Feature(
+        name="win32-broken-printf-a-precision",
+        when=lambda cfg: "_WIN32" in compilerMacros(cfg)
+        and not programSucceeds(
+            cfg,
+            """
+            #include <stdio.h>
+            #include <string.h>
+            int main(int, char**) {
+              char buf[100];
+              snprintf(buf, sizeof(buf), "%a", 0.0);
+              return strcmp(buf, "0x0p+0");
+            }
+          """,
+        ),
+    ),
     # Check for Glibc < 2.27, where the ru_RU.UTF-8 locale had
     # mon_decimal_point == ".", which our tests don't handle.
     Feature(
@@ -352,6 +372,8 @@ macros = {
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING": "libcpp-has-abi-bounded-iterators-in-string",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR": "libcpp-has-abi-bounded-iterators-in-vector",
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
@@ -585,69 +607,65 @@ DEFAULT_FEATURES += [
 # Those are used for backdeployment features below, do not use directly in tests.
 DEFAULT_FEATURES += [
     Feature(
-        name="_target-before-llvm-11",
+        name="_target-has-llvm-17",
         when=lambda cfg: BooleanExpression.evaluate(
-            "target={{.+}}-apple-macosx{{(10.13|10.14|10.15)(.0)?}}",
+            "target={{.+}}-apple-macosx{{14.[4-9](.0)?}} || target={{.+}}-apple-macosx{{1[5-9]([.].+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
-        name="_target-before-llvm-12",
+        name="_target-has-llvm-16",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-11 || target={{.+}}-apple-macosx{{(11(.\d+)?|12.[0-2])(.0)?}}",
+            "_target-has-llvm-17 || target={{.+}}-apple-macosx{{14.[0-3](.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
-        name="_target-before-llvm-13",
+        name="_target-has-llvm-15",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-12 || target={{.+}}-apple-macosx{{(12.[3-7]|13.[0-3])(.0)?}}",
+            "_target-has-llvm-16 || target={{.+}}-apple-macosx{{13.[4-9](.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
-        name="_target-before-llvm-14",
+        name="_target-has-llvm-14",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-13",
+            "_target-has-llvm-15",
             cfg.available_features,
         ),
     ),
     Feature(
-        name="_target-before-llvm-15",
+        name="_target-has-llvm-13",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-14 || target={{.+}}-apple-macosx{{13.[4-6](.0)?}}",
+            "_target-has-llvm-14 || target={{.+}}-apple-macosx{{13.[0-3](.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
-        name="_target-before-llvm-16",
+        name="_target-has-llvm-12",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-15 || target={{.+}}-apple-macosx{{12.[0-3](.0)?}}",
+            "_target-has-llvm-13 || target={{.+}}-apple-macosx{{12.[3-9](.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
-        name="_target-before-llvm-17",
+        name="_target-has-llvm-11",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-16",
+            "_target-has-llvm-12 || target={{.+}}-apple-macosx{{(11.[0-9]|12.[0-2])(.0)?}}",
             cfg.available_features,
         ),
     ),
-    # For now, no released version of macOS contains LLVM 18
-    # TODO(ldionne) Please provide the correct value.
     Feature(
-        name="_target-before-llvm-18",
+        name="_target-has-llvm-10",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-17 || target={{.+}}-apple-macosx{{.+}}",
+            "_target-has-llvm-11",
             cfg.available_features,
         ),
     ),
-    # For now, no released version of macOS contains LLVM 19
-    # TODO(ldionne) Please provide the correct value.
     Feature(
-        name="_target-before-llvm-19",
+        name="_target-has-llvm-9",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-18 || target={{.+}}-apple-macosx{{.+}}",
+            "_target-has-llvm-10 || target={{.+}}-apple-macosx{{10.15(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -690,12 +708,12 @@ DEFAULT_FEATURES += [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
-for version in ("11", "12", "13", "14", "15", "16", "17", "18", "19"):
+for version in ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"):
     DEFAULT_FEATURES.append(
         Feature(
             name="using-built-library-before-llvm-{}".format(version),
-            when=lambda cfg: BooleanExpression.evaluate(
-                "stdlib=system && _target-before-llvm-{}".format(version),
+            when=lambda cfg, v=version: BooleanExpression.evaluate(
+                "stdlib=system && !_target-has-llvm-{}".format(v),
                 cfg.available_features,
             ),
         )
@@ -706,7 +724,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-filesystem-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(13|14)(.0)?}})",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-9)",
             cfg.available_features,
         ),
     ),
@@ -714,7 +732,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-synchronization_library-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-11)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-11)",
             cfg.available_features,
         ),
     ),
@@ -722,7 +740,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-char8_t_support-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-12)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-12)",
             cfg.available_features,
         ),
     ),
@@ -730,7 +748,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-verbose_abort-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-13)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-13)",
             cfg.available_features,
         ),
     ),
@@ -738,7 +756,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-pmr-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-13)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-13)",
             cfg.available_features,
         ),
     ),
@@ -746,7 +764,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-fp_to_chars-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-14)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-14)",
             cfg.available_features,
         ),
     ),
@@ -754,7 +772,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-print-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-18)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-18)",
             cfg.available_features,
         ),
     ),
@@ -762,7 +780,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-tzdb-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-19)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-19)",
             cfg.available_features,
         ),
     ),

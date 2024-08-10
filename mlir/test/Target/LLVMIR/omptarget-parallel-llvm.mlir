@@ -44,7 +44,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       %5 = llvm.load %arg2 : !llvm.ptr -> i32
       %6 = llvm.mlir.constant(0 : i64) : i32
       %7 = llvm.icmp "ne" %5, %6 : i32
-      omp.parallel if(%7 : i1) {
+      omp.parallel if(%7) {
         llvm.store %4, %arg1 : i32, !llvm.ptr
         omp.terminator
       }
@@ -94,7 +94,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 //
 // This test checks if MLIR expression:
 //      %7 = llvm.icmp "ne" %5, %6 : i32
-//      omp.parallel if(%7 : i1)
+//      omp.parallel if(%7)
 // is correctly lowered to LLVM IR code and the if condition variable
 // is passed as a param to kmpc_parallel_51 function
 
