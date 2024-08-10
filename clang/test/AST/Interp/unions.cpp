@@ -152,4 +152,50 @@ namespace IndirectFieldDecl {
   };
   static_assert(C().a == 1, "");
 }
+
+namespace UnionDtor {
+
+  union U {
+    int *I;
+    constexpr U(int *I) : I(I) {}
+    constexpr ~U() {
+      *I = 10;
+    }
+  };
+
+  constexpr int foo() {
+    int a = 100;
+    {
+      U u(&a);
+    }
+    return a;
+  }
+  static_assert(foo() == 10);
+}
+
+namespace UnionMemberDtor {
+  class UM {
+  public:
+    int &I;
+    constexpr UM(int &I) : I(I) {}
+    constexpr ~UM() { I = 200; }
+  };
+
+  union U {
+    UM um;
+    constexpr U(int &I) : um(I) {}
+    constexpr ~U() {
+    }
+  };
+
+  constexpr int foo() {
+    int a = 100;
+    {
+      U u(a);
+    }
+
+    return a;
+  }
+  static_assert(foo() == 100);
+}
 #endif
