@@ -10645,7 +10645,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPNumTeamsClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_thread_limit:
-    C = new (Context) OMPThreadLimitClause();
+    C = OMPThreadLimitClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_priority:
     C = new (Context) OMPPriorityClause();
@@ -11477,8 +11477,13 @@ void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 
 void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
   VisitOMPClauseWithPreInit(C);
-  C->setThreadLimit(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (auto _ : llvm::seq<unsigned>(NumVars))
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPPriorityClause(OMPPriorityClause *C) {

@@ -360,8 +360,9 @@ Improvements
 ^^^^^^^^^^^^
 - Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
 
-- `num_teams` now accepts multiple expressions when it is used along in ``target teams ompx_bare`` construct.
-  This allows the target region to be launched with multi-dim grid on GPUs.
+- `num_teams` and `thead_limit` now accept multiple expressions when it is used
+  along in ``target teams ompx_bare`` construct. This allows the target region
+  to be launched with multi-dim grid on GPUs.
 
 Additional Information
 ======================

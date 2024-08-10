@@ -1773,6 +1773,24 @@ OMPNumTeamsClause *OMPNumTeamsClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPNumTeamsClause(N);
 }
 
+OMPThreadLimitClause *OMPThreadLimitClause::Create(
+    const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
+    ArrayRef<Expr *> VL, Stmt *PreInit) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+  OMPThreadLimitClause *Clause =
+      new (Mem) OMPThreadLimitClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  Clause->setPreInitStmt(PreInit, CaptureRegion);
+  return Clause;
+}
+
+OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
+                                                        unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  return new (Mem) OMPThreadLimitClause(N);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -2081,9 +2099,11 @@ void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPThreadLimitClause(OMPThreadLimitClause *Node) {
-  OS << "thread_limit(";
-  Node->getThreadLimit()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
+  if (!Node->varlist_empty()) {
+    OS << "thread_limit";
+    VisitOMPClauseList(Node, '(');
+    OS << ")";
+  }
 }
 
 void OMPClausePrinter::VisitOMPPriorityClause(OMPPriorityClause *Node) {
