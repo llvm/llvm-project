@@ -20,7 +20,7 @@
 
 namespace lldb_private {
 
-namespace DIL {
+namespace dil {
 
 lldb::ValueObjectSP
 GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
@@ -96,7 +96,8 @@ GetFieldWithNameIndexPath(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
         if (lhs_val_sp) {
           lldb::ValueObjectSP child_valobj_sp =
               lhs_val_sp->GetChildMemberWithName(name);
-          if (child_valobj_sp)
+          if (child_valobj_sp &&
+              child_valobj_sp->GetName() == ConstString(name))
             field.val_obj_sp = child_valobj_sp;
         }
 
@@ -208,11 +209,9 @@ LookupStaticIdentifier(lldb::TargetSP target_sp,
   // List global variable with the same "basename". There can be many matches
   // from other scopes (namespaces, classes), so we do additional filtering
   // later.
-  std::vector<lldb::ValueObjectSP> values;
   VariableList variable_list;
   ConstString name(name_ref);
-  target_sp->GetImages().FindGlobalVariables(
-      name, (size_t)std::numeric_limits<uint32_t>::max, variable_list);
+  target_sp->GetImages().FindGlobalVariables(name, 1, variable_list);
   if (!variable_list.Empty()) {
     ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
     if (exe_scope == nullptr)
@@ -220,21 +219,13 @@ LookupStaticIdentifier(lldb::TargetSP target_sp,
     for (const lldb::VariableSP &var_sp : variable_list) {
       lldb::ValueObjectSP valobj_sp(
           ValueObjectVariable::Create(exe_scope, var_sp));
-      if (valobj_sp)
-        values.push_back(valobj_sp);
+      if (valobj_sp && valobj_sp->GetVariable() &&
+          (valobj_sp->GetVariable()->NameMatches(unqualified_name) ||
+           valobj_sp->GetVariable()->NameMatches(ConstString(name_ref))))
+        return valobj_sp;
     }
   }
-
-  // Find the corrent variable by matching the name.
-  for (uint32_t i = 0; i < values.size(); ++i) {
-    lldb::ValueObjectSP val = values[i];
-    if (val->GetVariable() &&
-        (val->GetVariable()->NameMatches(unqualified_name) ||
-         val->GetVariable()->NameMatches(ConstString(name_ref))))
-      return val;
-  }
-  lldb::ValueObjectSP empty_obj_sp;
-  return empty_obj_sp;
+  return nullptr;
 }
 
 struct EnumMember {
@@ -263,12 +254,9 @@ ResolveTypeByName(const std::string &name,
   // Internally types don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   llvm::StringRef name_ref(name);
-  bool global_scope = false;
 
-  if (name_ref.starts_with("::")) {
+  if (name_ref.starts_with("::"))
     name_ref = name_ref.drop_front(2);
-    global_scope = true;
-  }
 
   std::vector<CompilerType> result_type_list;
   lldb::TargetSP target_sp = ctx_scope->CalculateTarget();
@@ -319,15 +307,6 @@ ResolveTypeByName(const std::string &name,
   // Full match is always correct.
   if (full_match.IsValid())
     return full_match;
-
-  if (!global_scope) {
-    // We're looking for type, but there may be multiple candidates and which
-    // one is correct may depend on the currect scope. For now just pick the
-    // most "probable" type (pick a random one). TODO: Try to find a better way
-    // to do this.
-    if (partial_matches.size() > 0)
-      return partial_matches.back();
-  }
 
   return {};
 }
@@ -407,7 +386,11 @@ LookupIdentifier(const std::string &name,
         }
       }
     }
-    return IdentifierInfo::FromValue(value_sp);
+    if (value_sp)
+      return IdentifierInfo::FromValue(*value_sp);
+    else
+      return std::unique_ptr<IdentifierInfo>(
+          new IdentifierInfo(IdentifierInfo::Kind::eValue, {}, nullptr, {}));
   }
 
   // Internally values don't have global scope qualifier in their names and
@@ -439,7 +422,7 @@ LookupIdentifier(const std::string &name,
 
       if (value_sp)
         // Force static value, otherwise we can end up with the "real" type.
-        return IdentifierInfo::FromValue(value_sp);
+        return IdentifierInfo::FromValue(*value_sp);
 
       // Try looking for an instance variable (class member).
       ConstString this_string("this");
@@ -449,13 +432,9 @@ LookupIdentifier(const std::string &name,
 
       if (value_sp)
         // Force static value, otherwise we can end up with the "real" type.
-        return IdentifierInfo::FromValue(value_sp->GetStaticValue());
+        return IdentifierInfo::FromValue(*(value_sp->GetStaticValue()));
 
     } else {
-      // In a "value" scope `this` refers to the scope object itself.
-      if (name_ref == "this")
-        return IdentifierInfo::FromThisKeyword(scope_ptr->GetPointerType());
-
       // Lookup the variable as a member of the current scope value.
       lldb::ValueObjectSP empty_sp;
       bool use_synthetic = false;
@@ -534,7 +513,11 @@ LookupIdentifier(const std::string &name,
   }
 
   // Force static value, otherwise we can end up with the "real" type.
-  return IdentifierInfo::FromValue(value);
+  if (value)
+    return IdentifierInfo::FromValue(*value);
+  else
+    return std::unique_ptr<IdentifierInfo>(
+        new IdentifierInfo(IdentifierInfo::Kind::eValue, {}, nullptr, {}));
 }
 
 void ErrorNode::Accept(Visitor *v) const { v->Visit(this); }
@@ -553,8 +536,6 @@ void ArraySubscriptNode::Accept(Visitor *v) const { v->Visit(this); }
 
 void UnaryOpNode::Accept(Visitor *v) const { v->Visit(this); }
 
-void SmartPtrToPtrDecay::Accept(Visitor *v) const { v->Visit(this); }
-
-} // namespace DIL
+} // namespace dil
 
 } // namespace lldb_private

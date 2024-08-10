@@ -28,7 +28,7 @@
 
 namespace lldb_private {
 
-namespace DIL {
+namespace dil {
 
 /// Struct to hold information about member fields. Used by the parser for the
 /// Data Inspection Language (DIL).
@@ -42,8 +42,7 @@ struct MemberInfo {
 };
 
 /// Get the appropriate ValueObjectSP, consulting the use_dynamic and
-/// use_synthetic options passed, acquiring the process & target locks if
-/// appropriate.
+/// use_synthetic options passed.
 lldb::ValueObjectSP GetDynamicOrSyntheticValue(
     lldb::ValueObjectSP valobj_sp,
     lldb::DynamicValueType use_dynamic = lldb::eNoDynamicValues,
@@ -59,7 +58,6 @@ enum class NodeKind {
   eMemberOfNode,
   eArraySubscriptNode,
   eUnaryOpNode,
-  eSmartPtrToPtrDecayNode
 };
 
 /// The C-Style casts for type promotion allowed by DIL.
@@ -84,52 +82,43 @@ ResolveTypeByName(const std::string &name,
 /// Class used to store & manipulate information about identifiers.
 class IdentifierInfo {
 private:
-  using MemberPath = std::vector<uint32_t>;
-  using IdentifierInfoUP = std::unique_ptr<IdentifierInfo>;
 
 public:
   enum class Kind {
     eValue,
     eContextArg,
     eMemberPath,
-    eThisKeyword,
   };
 
-  static IdentifierInfoUP FromValue(lldb::ValueObjectSP value_sp) {
+  static std::unique_ptr<IdentifierInfo> FromValue(ValueObject &valobj) {
     CompilerType type;
-    if (value_sp)
-      type = value_sp->GetCompilerType();
-    return IdentifierInfoUP(
-        new IdentifierInfo(Kind::eValue, type, value_sp, {}));
+    type = valobj.GetCompilerType();
+    return std::unique_ptr<IdentifierInfo>(
+        new IdentifierInfo(Kind::eValue, type, valobj.GetSP(), {}));
   }
 
-  static IdentifierInfoUP FromContextArg(CompilerType type) {
+  static std::unique_ptr<IdentifierInfo> FromContextArg(CompilerType type) {
     lldb::ValueObjectSP empty_value;
-    return IdentifierInfoUP(
+    return std::unique_ptr<IdentifierInfo>(
         new IdentifierInfo(Kind::eContextArg, type, empty_value, {}));
   }
 
-  static IdentifierInfoUP FromMemberPath(CompilerType type, MemberPath path) {
+  static std::unique_ptr<IdentifierInfo>
+  FromMemberPath(CompilerType type, std::vector<uint32_t> path) {
     lldb::ValueObjectSP empty_value;
-    return IdentifierInfoUP(new IdentifierInfo(Kind::eMemberPath, type,
-                                               empty_value, std::move(path)));
+    return std::unique_ptr<IdentifierInfo>(new IdentifierInfo(
+        Kind::eMemberPath, type, empty_value, std::move(path)));
   }
 
-  static IdentifierInfoUP FromThisKeyword(CompilerType type) {
-    lldb::ValueObjectSP empty_value;
-    return IdentifierInfoUP(
-        new IdentifierInfo(Kind::eThisKeyword, type, empty_value, {}));
-  }
-
-  Kind kind() const { return m_kind; }
-  lldb::ValueObjectSP value() const { return m_value; }
-  const MemberPath &path() const { return m_path; }
+  Kind GetKind() const { return m_kind; }
+  lldb::ValueObjectSP GetValue() const { return m_value; }
+  const std::vector<uint32_t> &GetPath() const { return m_path; }
 
   CompilerType GetType() { return m_type; }
   bool IsValid() const { return m_type.IsValid(); }
 
   IdentifierInfo(Kind kind, CompilerType type, lldb::ValueObjectSP value,
-                 MemberPath path)
+                 std::vector<uint32_t> path)
       : m_kind(kind), m_type(type), m_value(std::move(value)),
         m_path(std::move(path)) {}
 
@@ -137,7 +126,7 @@ private:
   Kind m_kind;
   CompilerType m_type;
   lldb::ValueObjectSP m_value;
-  MemberPath m_path;
+  std::vector<uint32_t> m_path;
 };
 
 /// Given the name of an identifier (variable name, member name, type name,
@@ -176,9 +165,10 @@ public:
   virtual bool is_literal_zero() const { return false; }
   virtual uint32_t bitfield_size() const { return 0; }
   virtual CompilerType result_type() const = 0;
+  virtual ValueObject *valobj() const { return nullptr; }
 
   clang::SourceLocation GetLocation() const { return m_location; }
-  NodeKind getKind() const { return m_kind; }
+  NodeKind GetKind() const { return m_kind; }
 
   // The expression result type, but dereferenced in case it's a reference. This
   // is for convenience, since for the purposes of the semantic analysis only
@@ -203,7 +193,7 @@ public:
   CompilerType result_type_real() const { return m_empty_type; }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eErrorNode;
+    return node->GetKind() == NodeKind::eErrorNode;
   }
 
 private:
@@ -213,49 +203,48 @@ private:
 class ScalarLiteralNode : public DILASTNode {
 public:
   ScalarLiteralNode(clang::SourceLocation location, CompilerType type,
-                    Scalar value, bool is_literal_zero)
+                    Scalar value)
       : DILASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
-        m_value(value), m_is_literal_zero(is_literal_zero) {}
+        m_value(value) {}
 
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return true; }
-  bool is_literal_zero() const override { return m_is_literal_zero; }
+  bool is_literal_zero() const override {
+    return m_value.IsZero() && !m_type.IsBoolean();
+  }
   CompilerType result_type() const override { return m_type; }
 
-  auto value() const { return m_value; }
+  Scalar GetValue() const & { return m_value; }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eScalarLiteralNode;
+    return node->GetKind() == NodeKind::eScalarLiteralNode;
   }
 
 private:
   CompilerType m_type;
   Scalar m_value;
-  bool m_is_literal_zero;
 };
 
 class StringLiteralNode : public DILASTNode {
 public:
   StringLiteralNode(clang::SourceLocation location, CompilerType type,
-                    std::vector<char> value, bool is_literal_zero)
+                    std::string value)
       : DILASTNode(location, NodeKind::eStringLiteralNode), m_type(type),
-        m_value(value), m_is_literal_zero(is_literal_zero) {}
+        m_value(value) {}
 
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return true; }
-  bool is_literal_zero() const override { return m_is_literal_zero; }
   CompilerType result_type() const override { return m_type; }
 
-  auto value() const { return m_value; }
+  std::string GetValue() const & { return m_value; }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eStringLiteralNode;
+    return node->GetKind() == NodeKind::eStringLiteralNode;
   }
 
 private:
   CompilerType m_type;
-  std::vector<char> m_value;
-  bool m_is_literal_zero;
+  std::string m_value;
 };
 
 class IdentifierNode : public DILASTNode {
@@ -271,12 +260,15 @@ public:
   bool is_rvalue() const override { return m_is_rvalue; }
   bool is_context_var() const override { return m_is_context_var; };
   CompilerType result_type() const override { return m_identifier->GetType(); }
+  ValueObject *valobj() const override {
+    return m_identifier->GetValue().get();
+  }
 
   std::string name() const { return m_name; }
   const IdentifierInfo &info() const { return *m_identifier; }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eIdentifierNode;
+    return node->GetKind() == NodeKind::eIdentifierNode;
   }
 
 private:
@@ -289,78 +281,73 @@ private:
 class CStyleCastNode : public DILASTNode {
 public:
   CStyleCastNode(clang::SourceLocation location, CompilerType type,
-                 DILASTNodeUP rhs, TypePromotionCastKind kind)
+                 DILASTNodeUP operand, TypePromotionCastKind kind)
       : DILASTNode(location, NodeKind::eCStyleCastNode), m_type(type),
-        m_rhs(std::move(rhs)), m_promo_kind(kind) {}
+        m_operand(std::move(operand)), m_promo_kind(kind) {}
 
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_type; }
+  ValueObject *valobj() const override { return m_operand->valobj(); }
 
   CompilerType type() const { return m_type; }
-  DILASTNode *rhs() const { return m_rhs.get(); }
+  DILASTNode *operand() const { return m_operand.get(); }
   TypePromotionCastKind promo_kind() const { return m_promo_kind; }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eCStyleCastNode;
+    return node->GetKind() == NodeKind::eCStyleCastNode;
   }
 
 private:
   CompilerType m_type;
-  DILASTNodeUP m_rhs;
+  DILASTNodeUP m_operand;
   TypePromotionCastKind m_promo_kind;
 };
 
 class MemberOfNode : public DILASTNode {
 public:
   MemberOfNode(clang::SourceLocation location, CompilerType result_type,
-               DILASTNodeUP lhs, std::optional<uint32_t> bitfield_size,
+               DILASTNodeUP base, std::optional<uint32_t> bitfield_size,
                std::vector<uint32_t> member_index, bool is_arrow,
                bool is_synthetic, bool is_dynamic, ConstString name,
-               lldb::ValueObjectSP valobj_sp)
+               lldb::ValueObjectSP field_valobj_sp)
       : DILASTNode(location, NodeKind::eMemberOfNode),
-        m_result_type(result_type), m_lhs(std::move(lhs)),
-        m_member_index(std::move(member_index)), m_is_arrow(is_arrow),
-        m_is_synthetic(is_synthetic), m_is_dynamic(is_dynamic),
-        m_field_name(name), m_valobj_sp(valobj_sp) {
-    if (bitfield_size) {
-      m_is_bitfield = true;
-      m_bitfield_size = bitfield_size.value();
-    } else {
-      m_is_bitfield = false;
-      m_bitfield_size = 0;
-    }
-  }
+        m_result_type(result_type), m_base(std::move(base)),
+        m_bitfield_size(bitfield_size), m_member_index(std::move(member_index)),
+        m_is_arrow(is_arrow), m_is_synthetic(is_synthetic),
+        m_is_dynamic(is_dynamic), m_field_name(name),
+        m_field_valobj_sp(field_valobj_sp) {}
 
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
-  bool is_bitfield() const override { return m_is_bitfield; }
-  uint32_t bitfield_size() const override { return m_bitfield_size; }
+  bool is_bitfield() const override { return m_bitfield_size ? true : false; }
+  uint32_t bitfield_size() const override {
+    return m_bitfield_size ? m_bitfield_size.value() : 0;
+  }
   CompilerType result_type() const override { return m_result_type; }
+  ValueObject *valobj() const override { return m_field_valobj_sp.get(); }
 
-  DILASTNode *lhs() const { return m_lhs.get(); }
+  DILASTNode *base() const { return m_base.get(); }
   const std::vector<uint32_t> &member_index() const { return m_member_index; }
   bool is_arrow() const { return m_is_arrow; }
   bool is_synthetic() const { return m_is_synthetic; }
   bool is_dynamic() const { return m_is_dynamic; }
   ConstString field_name() const { return m_field_name; }
-  lldb::ValueObjectSP valobj_sp() const { return m_valobj_sp; }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eMemberOfNode;
+    return node->GetKind() == NodeKind::eMemberOfNode;
   }
 
 private:
   CompilerType m_result_type;
-  DILASTNodeUP m_lhs;
-  bool m_is_bitfield;
-  uint32_t m_bitfield_size;
+  DILASTNodeUP m_base;
+  std::optional<uint32_t> m_bitfield_size;
   std::vector<uint32_t> m_member_index;
   bool m_is_arrow;
   bool m_is_synthetic;
   bool m_is_dynamic;
   ConstString m_field_name;
-  lldb::ValueObjectSP m_valobj_sp;
+  lldb::ValueObjectSP m_field_valobj_sp;
 };
 
 class ArraySubscriptNode : public DILASTNode {
@@ -374,12 +361,13 @@ public:
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
   CompilerType result_type() const override { return m_result_type; }
+  ValueObject *valobj() const override { return m_base->valobj(); }
 
   DILASTNode *base() const { return m_base.get(); }
   DILASTNode *index() const { return m_index.get(); }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eArraySubscriptNode;
+    return node->GetKind() == NodeKind::eArraySubscriptNode;
   }
 
 private:
@@ -398,12 +386,13 @@ public:
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return m_kind != UnaryOpKind::Deref; }
   CompilerType result_type() const override { return m_result_type; }
+  ValueObject *valobj() const override { return m_rhs->valobj(); }
 
   UnaryOpKind kind() const { return m_kind; }
   DILASTNode *rhs() const { return m_rhs.get(); }
 
   static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eUnaryOpNode;
+    return node->GetKind() == NodeKind::eUnaryOpNode;
   }
 
 private:
@@ -412,27 +401,6 @@ private:
   DILASTNodeUP m_rhs;
 };
 
-class SmartPtrToPtrDecay : public DILASTNode {
-public:
-  SmartPtrToPtrDecay(clang::SourceLocation location, CompilerType result_type,
-                     DILASTNodeUP ptr)
-      : DILASTNode(location, NodeKind::eSmartPtrToPtrDecayNode),
-        m_result_type(result_type), m_ptr(std::move(ptr)) {}
-
-  void Accept(Visitor *v) const override;
-  bool is_rvalue() const override { return false; }
-  CompilerType result_type() const override { return m_result_type; }
-
-  DILASTNode *ptr() const { return m_ptr.get(); }
-
-  static bool classof(const DILASTNode *node) {
-    return node->getKind() == NodeKind::eSmartPtrToPtrDecayNode;
-  }
-
-private:
-  CompilerType m_result_type;
-  DILASTNodeUP m_ptr;
-};
 
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
@@ -449,10 +417,9 @@ public:
   virtual void Visit(const MemberOfNode *node) = 0;
   virtual void Visit(const ArraySubscriptNode *node) = 0;
   virtual void Visit(const UnaryOpNode *node) = 0;
-  virtual void Visit(const SmartPtrToPtrDecay *node) = 0;
 };
 
-} // namespace DIL
+} // namespace dil
 
 } // namespace lldb_private
 
