@@ -1066,7 +1066,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   unsigned NewBits = PromotedType.getScalarSizeInBits();
 
   if (Opcode == ISD::UADDSAT) {
-    APInt MaxVal = APInt::getAllOnes(OldBits).zext(NewBits);
+    APInt MaxVal = APInt::getLowBitsSet(NewBits, OldBits);
     SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
     SDValue Add =
         matcher.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
