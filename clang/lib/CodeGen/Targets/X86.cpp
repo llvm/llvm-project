@@ -3129,16 +3129,39 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     auto TInfo = getContext().getTypeInfoInChars(Ty);
     uint64_t TySize = TInfo.Width.getQuantity();
     CharUnits TyAlign = TInfo.Align;
+    llvm::Type *CoTy = nullptr;
+    if (AI.isDirect())
+      CoTy = AI.getCoerceToType();
 
     llvm::Value *GpOrFpOffset = neededInt ? gp_offset : fp_offset;
     uint64_t Alignment = neededInt ? 8 : 16;
-    if (auto Offset = AI.getDirectOffset()) {
+    uint64_t RegSize = neededInt ? neededInt * 8 : 16;
+    // There are two cases require special handling:
+    // 1)
+    //    ```
+    //    struct {
+    //      struct {} a[8];
+    //      int b;
+    //    };
+    //    ```
+    //    The lower 8 bytes of the structure are not stored,
+    //    so an 8-byte offset is needed when accessing the structure.
+    // 2)
+    //   ```
+    //   struct {
+    //     long long a;
+    //     struct {} b;
+    //   };
+    //   ```
+    //   The stored size of this structure is smaller than its actual size,
+    //   which may lead to reading past the end of the register save area.
+    if (CoTy && (AI.getDirectOffset() == 8 || RegSize < TySize)) {
       Address Tmp = CGF.CreateMemTemp(Ty);
-      llvm::Type *TyHi = AI.getCoerceToType();
       llvm::Value *Addr =
           CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, GpOrFpOffset);
-      llvm::Value *Src = CGF.Builder.CreateAlignedLoad(TyHi, Addr, TyAlign);
-      llvm::Value *PtrOffset = llvm::ConstantInt::get(CGF.Int32Ty, Offset);
+      llvm::Value *Src = CGF.Builder.CreateAlignedLoad(CoTy, Addr, TyAlign);
+      llvm::Value *PtrOffset =
+          llvm::ConstantInt::get(CGF.Int32Ty, AI.getDirectOffset());
       Address Dst = Address(
           CGF.Builder.CreateGEP(CGF.Int8Ty, Tmp.getBasePointer(), PtrOffset),
           LTy, TyAlign);
