@@ -48,11 +48,11 @@ using namespace llvm;
 // option descriptors for getopt_long_only()
 
 #ifdef _WIN32
-typedef pipe_t fd_t;
-const fd_t kInvalidSharedFD = LLDB_INVALID_PIPE;
+typedef pipe_t shared_fd_t;
+const shared_fd_t kInvalidSharedFD = LLDB_INVALID_PIPE;
 #else
-typedef NativeSocket fd_t;
-const fd_t kInvalidSharedFD = Socket::kInvalidSocketValue;
+typedef NativeSocket shared_fd_t;
+const shared_fd_t kInvalidSharedFD = Socket::kInvalidSocketValue;
 #endif
 
 class SharedSocket {
@@ -82,7 +82,7 @@ public:
 #endif
   }
 
-  fd_t GetSendableFD() { return m_fd; }
+  shared_fd_t GetSendableFD() { return m_fd; }
 
   Status CompleteSending(lldb::pid_t child_pid) {
 #ifdef _WIN32
@@ -109,7 +109,7 @@ public:
     return Status();
   }
 
-  static Status GetNativeSocket(fd_t fd, NativeSocket &socket) {
+  static Status GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
 #ifdef _WIN32
     socket = Socket::kInvalidSocketValue;
     // Read WSAPROTOCOL_INFO from the parent process and create NativeSocket.
@@ -146,7 +146,7 @@ private:
   Pipe m_socket_pipe;
   NativeSocket m_socket;
 #endif
-  fd_t m_fd;
+  shared_fd_t m_fd;
 };
 
 static int g_debug = 0;
@@ -363,7 +363,7 @@ int main_platform(int argc, char *argv[]) {
   StringRef
       log_channels; // e.g. "lldb process threads:gdb-remote default:linux all"
 
-  fd_t fd = kInvalidSharedFD;
+  shared_fd_t fd = kInvalidSharedFD;
 
   int min_gdbserver_port = 0;
   int max_gdbserver_port = 0;
@@ -454,7 +454,7 @@ int main_platform(int argc, char *argv[]) {
         WithColor::error() << "invalid fd " << optarg << "\n";
         option_error = 6;
       } else
-        fd = (fd_t)_fd;
+        fd = (shared_fd_t)_fd;
     } break;
 
     case 'h': /* fall-through is intentional */
