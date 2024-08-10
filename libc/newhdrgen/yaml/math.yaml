@@ -2094,9 +2094,9 @@ functions:
   - name: scalblnf16
     standards:
       - stdc
-    return_type: float16
+    return_type: _Float16
     arguments:
-      - type: float16
+      - type: _Float16
       - type: long
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: scalblnl
