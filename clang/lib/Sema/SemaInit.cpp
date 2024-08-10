@@ -515,8 +515,8 @@ class InitListChecker {
     uint64_t ElsCount = 1;
     // Otherwise try to fill whole array with embed data.
     if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
-      ValueDecl *ArrDecl = Entity.getParent()->getDecl();
-      auto *AType = SemaRef.Context.getAsArrayType(ArrDecl->getType());
+      auto *AType =
+          SemaRef.Context.getAsArrayType(Entity.getParent()->getType());
       assert(AType && "expected array type when initializing array");
       ElsCount = Embed->getDataElementCount();
       if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
