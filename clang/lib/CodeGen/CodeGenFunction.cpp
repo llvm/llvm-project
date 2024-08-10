@@ -880,10 +880,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   // Add pointer authentication attributes.
   const CodeGenOptions &CodeGenOpts = CGM.getCodeGenOpts();
-  if (CodeGenOpts.PointerAuth.FunctionPointers)
-    Fn->addFnAttr("ptrauth-calls");
   if (CodeGenOpts.PointerAuth.ReturnAddresses)
     Fn->addFnAttr("ptrauth-returns");
+  if (CodeGenOpts.PointerAuth.FunctionPointers)
+    Fn->addFnAttr("ptrauth-calls");
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
   if (CodeGenOpts.PointerAuth.AuthTraps)
