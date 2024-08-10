@@ -300,7 +300,14 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-FunctionPass *createAMDGPUAnnotateUniformValues();
+class AMDGPUAnnotateUniformValuesPass
+    : public PassInfoMixin<AMDGPUAnnotateUniformValuesPass> {
+public:
+  AMDGPUAnnotateUniformValuesPass() {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
@@ -328,8 +335,8 @@ extern char &SIOptimizeExecMaskingPreRAID;
 void initializeSIOptimizeVGPRLiveRangePass(PassRegistry &);
 extern char &SIOptimizeVGPRLiveRangeID;
 
-void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
-extern char &AMDGPUAnnotateUniformValuesPassID;
+void initializeAMDGPUAnnotateUniformValuesLegacyPass(PassRegistry &);
+extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
 
 void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
 extern char &AMDGPUCodeGenPrepareID;
