@@ -473,12 +473,10 @@ __dfsan_mem_shadow_origin_conditional_exchange(u8 condition, void *target,
   }
 }
 
-namespace __dfsan {
+bool __dfsan::dfsan_inited;
+bool __dfsan::dfsan_init_is_running;
 
-bool dfsan_inited = false;
-bool dfsan_init_is_running = false;
-
-void dfsan_copy_memory(void *dst, const void *src, uptr size) {
+void __dfsan::dfsan_copy_memory(void *dst, const void *src, uptr size) {
   internal_memcpy(dst, src, size);
   dfsan_mem_shadow_transfer(dst, src, size);
   if (dfsan_get_track_origins())
@@ -545,7 +543,8 @@ static void ReleaseOrClearShadows(void *addr, uptr size) {
   }
 }
 
-void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
+static void SetShadow(dfsan_label label, void *addr, uptr size,
+                      dfsan_origin origin) {
   if (0 != label) {
     const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
     internal_memset((void *)beg_shadow_addr, label, size);
@@ -559,8 +558,6 @@ void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
 
   ReleaseOrClearShadows(addr, size);
 }
-
-}  // namespace __dfsan
 
 // If the label s is tainted, set the size bytes from the address p to be a new
 // origin chain with the previous ID o and the current stack trace. This is
@@ -576,7 +573,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
     dfsan_label label, dfsan_origin origin, void *addr, uptr size) {
-  __dfsan::SetShadow(label, addr, size, origin);
+  SetShadow(label, addr, size, origin);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -587,7 +584,7 @@ void dfsan_set_label(dfsan_label label, void *addr, uptr size) {
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     init_origin = ChainOrigin(0, &stack, true);
   }
-  __dfsan::SetShadow(label, addr, size, init_origin);
+  SetShadow(label, addr, size, init_origin);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -665,9 +662,10 @@ dfsan_has_label(dfsan_label label, dfsan_label elem) {
 }
 
 namespace __dfsan {
-
 typedef void (*dfsan_conditional_callback_t)(dfsan_label label,
                                              dfsan_origin origin);
+
+}  // namespace __dfsan
 static dfsan_conditional_callback_t conditional_callback = nullptr;
 static dfsan_label labels_in_signal_conditional = 0;
 
@@ -696,35 +694,34 @@ static void ConditionalCallback(dfsan_label label, dfsan_origin origin) {
   conditional_callback(label, origin);
 }
 
-}  // namespace __dfsan
-
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __dfsan_conditional_callback_origin(dfsan_label label, dfsan_origin origin) {
-  __dfsan::ConditionalCallback(label, origin);
+  ConditionalCallback(label, origin);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_conditional_callback(
     dfsan_label label) {
-  __dfsan::ConditionalCallback(label, 0);
+  ConditionalCallback(label, 0);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_set_conditional_callback(
     __dfsan::dfsan_conditional_callback_t callback) {
-  __dfsan::conditional_callback = callback;
+  conditional_callback = callback;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_get_labels_in_signal_conditional() {
-  return __dfsan::labels_in_signal_conditional;
+  return labels_in_signal_conditional;
 }
 
 namespace __dfsan {
-
 typedef void (*dfsan_reaches_function_callback_t)(dfsan_label label,
                                                   dfsan_origin origin,
                                                   const char *file,
                                                   unsigned int line,
                                                   const char *function);
+
+}  // namespace __dfsan
 static dfsan_reaches_function_callback_t reaches_function_callback = nullptr;
 static dfsan_label labels_in_signal_reaches_function = 0;
 
@@ -753,30 +750,28 @@ static void ReachesFunctionCallback(dfsan_label label, dfsan_origin origin,
   reaches_function_callback(label, origin, file, line, function);
 }
 
-}  // namespace __dfsan
-
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __dfsan_reaches_function_callback_origin(dfsan_label label, dfsan_origin origin,
                                          const char *file, unsigned int line,
                                          const char *function) {
-  __dfsan::ReachesFunctionCallback(label, origin, file, line, function);
+  ReachesFunctionCallback(label, origin, file, line, function);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __dfsan_reaches_function_callback(dfsan_label label, const char *file,
                                   unsigned int line, const char *function) {
-  __dfsan::ReachesFunctionCallback(label, 0, file, line, function);
+  ReachesFunctionCallback(label, 0, file, line, function);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 dfsan_set_reaches_function_callback(
     __dfsan::dfsan_reaches_function_callback_t callback) {
-  __dfsan::reaches_function_callback = callback;
+  reaches_function_callback = callback;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_get_labels_in_signal_reaches_function() {
-  return __dfsan::labels_in_signal_reaches_function;
+  return labels_in_signal_reaches_function;
 }
 
 namespace {
@@ -1089,8 +1084,8 @@ extern "C" void dfsan_flush() {
       Die();
     }
   }
-  __dfsan::labels_in_signal_conditional = 0;
-  __dfsan::labels_in_signal_reaches_function = 0;
+  labels_in_signal_conditional = 0;
+  labels_in_signal_reaches_function = 0;
 }
 
 // TODO: CheckMemoryLayoutSanity is based on msan.
