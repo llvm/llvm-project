@@ -43,13 +43,13 @@ int main(void) {
 // CHECK-NOPE:       user_code.entry:
 // CHECK-NOPE-NEXT:    [[TMP1:%.*]] = call ptr @printf_allocate(i32 27)
 // CHECK-NOPE-NEXT:    [[VARFN_ARGS_STORE_CASTED:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(1)
-// CHECK-NOPE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
+// CHECK-NOPE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
 // CHECK-NOPE-NEXT:    store i32 16, ptr addrspace(1) [[TMP2]], align 4
-// CHECK-NOPE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
+// CHECK-NOPE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
 // CHECK-NOPE-NEXT:    store i32 1, ptr addrspace(1) [[TMP3]], align 4
-// CHECK-NOPE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
+// CHECK-NOPE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
 // CHECK-NOPE-NEXT:    store i32 983041, ptr addrspace(1) [[TMP4]], align 4
-// CHECK-NOPE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
+// CHECK-NOPE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
 // CHECK-NOPE-NEXT:    store i32 11, ptr addrspace(1) [[TMP5]], align 4
 // CHECK-NOPE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 16
 // CHECK-NOPE-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP6]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)
@@ -73,13 +73,13 @@ int main(void) {
 // CHECK:       user_code.entry:
 // CHECK-NEXT:    [[TMP1:%.*]] = call ptr @printf_allocate(i32 27)
 // CHECK-NEXT:    [[VARFN_ARGS_STORE_CASTED:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(1)
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
 // CHECK-NEXT:    store i32 16, ptr addrspace(1) [[TMP2]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
 // CHECK-NEXT:    store i32 1, ptr addrspace(1) [[TMP3]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
 // CHECK-NEXT:    store i32 983041, ptr addrspace(1) [[TMP4]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
 // CHECK-NEXT:    store i32 11, ptr addrspace(1) [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 16
 // CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP6]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)

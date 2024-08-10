@@ -43,10 +43,10 @@ struct B test11(struct B a) { return a; }
 // area, as if they were an integer type of the same size.
 // CHECK-LABEL: define dso_local double @test20(i32 noundef %a, ...)
 // CHECK: %vl = alloca %struct.__va_list, align 8
-// SOFT: %gr_offs_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 3
-// SOFT: %reg_top_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 1
-// HARD: %vr_offs_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 4
-// HARD: %reg_top_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 2
+// SOFT: %gr_offs_p = getelementptr inbounds nuw %struct.__va_list, ptr %vl, i32 0, i32 3
+// SOFT: %reg_top_p = getelementptr inbounds nuw %struct.__va_list, ptr %vl, i32 0, i32 1
+// HARD: %vr_offs_p = getelementptr inbounds nuw %struct.__va_list, ptr %vl, i32 0, i32 4
+// HARD: %reg_top_p = getelementptr inbounds nuw %struct.__va_list, ptr %vl, i32 0, i32 2
 double test20(int a, ...) {
   va_list vl;
   va_start(vl, a);

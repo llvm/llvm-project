@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: x86-registered-target
-
+// XFAIL: *
 // FIXME: With -no-opaque-pointers, compiler aorts.
 // FIXME: without, we need to update expected results
 

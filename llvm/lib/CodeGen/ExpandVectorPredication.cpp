@@ -160,11 +160,15 @@ struct CachingVPExpander {
   Value *convertEVLToMask(IRBuilder<> &Builder, Value *EVLParam,
                           ElementCount ElemCount);
 
-  Value *foldEVLIntoMask(VPIntrinsic &VPI);
+  /// If needed, folds the EVL in the mask operand and discards the EVL
+  /// parameter. Returns a pair of the value of the intrinsic after the change
+  /// (if any) and whether the mask was actually folded.
+  std::pair<Value *, bool> foldEVLIntoMask(VPIntrinsic &VPI);
 
   /// "Remove" the %evl parameter of \p PI by setting it to the static vector
-  /// length of the operation.
-  void discardEVLParameter(VPIntrinsic &PI);
+  /// length of the operation. Returns true if the %evl (if any) was effectively
+  /// changed.
+  bool discardEVLParameter(VPIntrinsic &PI);
 
   /// Lower this VP binary operator to a unpredicated binary operator.
   Value *expandPredicationInBinaryOperator(IRBuilder<> &Builder,
@@ -206,7 +210,9 @@ public:
   CachingVPExpander(const TargetTransformInfo &TTI)
       : TTI(TTI), UsingTTIOverrides(anyExpandVPOverridesSet()) {}
 
-  bool expandVectorPredication(VPIntrinsic &VPI);
+  /// Expand llvm.vp.* intrinsics as requested by \p TTI.
+  /// Returns the details of the expansion.
+  VPExpansionDetails expandVectorPredication(VPIntrinsic &VPI);
 };
 
 //// CachingVPExpander {
@@ -645,15 +651,15 @@ Value *CachingVPExpander::expandPredicationInComparison(IRBuilder<> &Builder,
   return NewCmp;
 }
 
-void CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
+bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
   LLVM_DEBUG(dbgs() << "Discard EVL parameter in " << VPI << "\n");
 
   if (VPI.canIgnoreVectorLengthParam())
-    return;
+    return false;
 
   Value *EVLParam = VPI.getVectorLengthParam();
   if (!EVLParam)
-    return;
+    return false;
 
   ElementCount StaticElemCount = VPI.getStaticVectorLength();
   Value *MaxEVL = nullptr;
@@ -672,16 +678,17 @@ void CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
     MaxEVL = ConstantInt::get(Int32Ty, StaticElemCount.getFixedValue(), false);
   }
   VPI.setVectorLengthParam(MaxEVL);
+  return true;
 }
 
-Value *CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
+std::pair<Value *, bool> CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
   LLVM_DEBUG(dbgs() << "Folding vlen for " << VPI << '\n');
 
   IRBuilder<> Builder(&VPI);
 
   // Ineffective %evl parameter and so nothing to do here.
   if (VPI.canIgnoreVectorLengthParam())
-    return &VPI;
+    return {&VPI, false};
 
   // Only VP intrinsics can have an %evl parameter.
   Value *OldMaskParam = VPI.getMaskParam();
@@ -704,7 +711,7 @@ Value *CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
          "transformation did not render the evl param ineffective!");
 
   // Reassess the modified instruction.
-  return &VPI;
+  return {&VPI, true};
 }
 
 Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
@@ -807,21 +814,27 @@ CachingVPExpander::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return VPStrat;
 }
 
-/// Expand llvm.vp.* intrinsics as requested by \p TTI.
-bool CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
+VPExpansionDetails
+CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
   auto Strategy = getVPLegalizationStrategy(VPI);
   sanitizeStrategy(VPI, Strategy);
+
+  VPExpansionDetails Changed = VPExpansionDetails::IntrinsicUnchanged;
 
   // Transform the EVL parameter.
   switch (Strategy.EVLParamStrategy) {
   case VPLegalization::Legal:
     break;
   case VPLegalization::Discard:
-    discardEVLParameter(VPI);
+    if (discardEVLParameter(VPI))
+      Changed = VPExpansionDetails::IntrinsicUpdated;
     break;
   case VPLegalization::Convert:
-    if (foldEVLIntoMask(VPI))
+    if (auto [NewVPI, Folded] = foldEVLIntoMask(VPI); Folded) {
+      (void)NewVPI;
+      Changed = VPExpansionDetails::IntrinsicUpdated;
       ++NumFoldedVL;
+    }
     break;
   }
 
@@ -834,17 +847,17 @@ bool CachingVPExpander::expandVectorPredication(VPIntrinsic &VPI) {
   case VPLegalization::Convert:
     if (Value *V = expandPredication(VPI); V != &VPI) {
       ++NumLoweredVPOps;
-      // Return true if and only if the intrinsic was actually removed.
-      return true;
+      Changed = VPExpansionDetails::IntrinsicReplaced;
     }
     break;
   }
 
-  return false;
+  return Changed;
 }
 } // namespace
 
-bool llvm::expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
-                                            const TargetTransformInfo &TTI) {
+VPExpansionDetails
+llvm::expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
+                                       const TargetTransformInfo &TTI) {
   return CachingVPExpander(TTI).expandVectorPredication(VPI);
 }
