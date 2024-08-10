@@ -198,4 +198,59 @@ namespace UnionMemberDtor {
   }
   static_assert(foo() == 100);
 }
+
+namespace Nested {
+  union U {
+    int a;
+    int b;
+  };
+
+  union U2 {
+    U u;
+    U u2;
+    int x;
+    int y;
+  };
+
+ constexpr int foo() { // ref-error {{constexpr function never produces a constant expression}}
+    U2 u;
+    u.u.a = 10;
+    int a = u.y; // both-note {{read of member 'y' of union with active member 'u' is not allowed in a constant expression}} \
+                 // ref-note {{read of member 'y' of union with active member 'u' is not allowed in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+
+ constexpr int foo2() {
+    U2 u;
+    u.u.a = 10;
+    return u.u.a;
+  }
+  static_assert(foo2() == 10);
+
+ constexpr int foo3() { // ref-error {{constexpr function never produces a constant expression}}
+    U2 u;
+    u.u.a = 10;
+    int a = u.u.b; // both-note {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}} \
+                   // ref-note {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo3() == 1); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
+  constexpr int foo4() { // ref-error {{constexpr function never produces a constant expression}}
+    U2 u;
+
+    u.x = 10;
+
+    return u.u.a;// both-note {{read of member 'u' of union with active member 'x' is not allowed in a constant expression}} \
+                 // ref-note {{read of member 'u' of union with active member 'x' is not allowed in a constant expression}}
+  }
+  static_assert(foo4() == 1); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
+}
 #endif
