@@ -817,6 +817,8 @@ class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout> : VOPMProfile
   dag FmaFromTensorInPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp);
   dag FmaFromTensorOutPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp);
 
+  dag FmaFromTensorFrag = (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$aux_data, node:$clamp);
+
   let Asm64 = "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp";
 
   int Layout = OpLayout;
@@ -1525,23 +1527,47 @@ let SubtargetPredicate = isGFX13Plus in {
   def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X128_IU4_twoaddr, int_amdgcn_swmmac_i32_16x16x128_iu4_clamp,       VOPM_SWMMAC_I32_IU4_X128>;
 }
 
-multiclass FmaFromTensorPat_VOPM<string Inst, SDPatternOperator node, string ProfileName> {
-  defvar P = !cast<Fma_From_Tensor_Profile>(ProfileName);
-
-  def : GCNPat <(P.DstVT !setdagop(P.FmaFromTensorInPat, node)),
-                (P.DstVT !setdagop(P.FmaFromTensorOutPat, !cast<Instruction>(Inst)))>;
-}
+class REGULAR_8x4 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<P.FmaFromTensorFrag, !setdagop(P.FmaFromTensorFrag, node),
+	[{ return ((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() & 7) == 0; }]
+>;
+class REGULAR_4x4 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<P.FmaFromTensorFrag, !setdagop(P.FmaFromTensorFrag, node),
+	[{ return ((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() & 7) == 1; }]
+>;
+class REGULAR_4x2 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<P.FmaFromTensorFrag, !setdagop(P.FmaFromTensorFrag, node),
+	[{ return ((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() & 7) == 2; }]
+>;
+class DEQUANT_4x4 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<P.FmaFromTensorFrag, !setdagop(P.FmaFromTensorFrag, node),
+	[{ return ((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() & 7) == 3; }]
+>;
+class DEQUANT_4x2 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<P.FmaFromTensorFrag, !setdagop(P.FmaFromTensorFrag, node),
+	[{ return ((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() & 7) == 4; }]
+>;
 
 multiclass FmaFromTensorPatMulti_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
-  if !eq(!find(ProfilePrefix, "dequant"), -1) then
-  defm : FmaFromTensorPat_VOPM<Inst # "_8x4", node, ProfilePrefix # "_8x4">;
-  defm : FmaFromTensorPat_VOPM<Inst # "_4x4", node, ProfilePrefix # "_4x4">;
-  defm : FmaFromTensorPat_VOPM<Inst # "_4x2", node, ProfilePrefix # "_4x2">;
+
+  defvar P_REG_8x4 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_regular_8x4");
+  def : GCNPat <(P_REG_8x4.DstVT !setdagop(P_REG_8x4.FmaFromTensorInPat, REGULAR_8x4<node, P_REG_8x4>)),
+                (P_REG_8x4.DstVT !setdagop(P_REG_8x4.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_regular_8x4")))>;
+
+  defvar P_REG_4x4 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_regular_4x4");
+  def : GCNPat <(P_REG_4x4.DstVT !setdagop(P_REG_4x4.FmaFromTensorInPat, REGULAR_4x4<node, P_REG_4x4>)),
+                (P_REG_4x4.DstVT !setdagop(P_REG_4x4.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_regular_4x4")))>;
+
+  defvar P_REG_4x2 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_regular_4x2");
+  def : GCNPat <(P_REG_4x2.DstVT !setdagop(P_REG_4x2.FmaFromTensorInPat, REGULAR_4x2<node, P_REG_4x2>)),
+                (P_REG_4x2.DstVT !setdagop(P_REG_4x2.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_regular_4x2")))>;
+
+  defvar P_DEQ_4x4 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_dequant_4x4");
+  def : GCNPat <(P_DEQ_4x4.DstVT !setdagop(P_DEQ_4x4.FmaFromTensorInPat, DEQUANT_4x4<node, P_DEQ_4x4>)),
+                (P_DEQ_4x4.DstVT !setdagop(P_DEQ_4x4.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_dequant_4x4")))>;
+
+  defvar P_DEQ_4x2 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_dequant_4x2");
+  def : GCNPat <(P_DEQ_4x2.DstVT !setdagop(P_DEQ_4x2.FmaFromTensorInPat, DEQUANT_4x2<node, P_DEQ_4x2>)),
+                (P_DEQ_4x2.DstVT !setdagop(P_DEQ_4x2.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_dequant_4x2")))>;
 }
 
 multiclass FmaFromTensorPatMultiDeq_VOPM<string TypeNames, string NodePrefix, string ProfileSuffix> {
-  defm _dequant : FmaFromTensorPatMulti_VOPM<"V_FMA_FROM_TENSOR_" # TypeNames # "_dequant", !cast<SDPatternOperator>(NodePrefix), "VOPM_FMA_FROM_TENSOR_" # ProfileSuffix # "_dequant">;
-  defm _regular : FmaFromTensorPatMulti_VOPM<"V_FMA_FROM_TENSOR_" # TypeNames # "_regular", !cast<SDPatternOperator>(NodePrefix), "VOPM_FMA_FROM_TENSOR_" # ProfileSuffix # "_regular">;
+  defm : FmaFromTensorPatMulti_VOPM<"V_FMA_FROM_TENSOR_" # TypeNames, !cast<SDPatternOperator>(NodePrefix), "VOPM_FMA_FROM_TENSOR_" # ProfileSuffix>;
 }
 
 defm : FmaFromTensorPatMultiDeq_VOPM<"F32_I4", "int_amdgcn_fma_from_tensor_f32_i4", "F32_4B_OR_8B">;

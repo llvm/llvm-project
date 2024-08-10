@@ -20324,11 +20324,129 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_u8_dequant_4x2:
       IntrinsicID = Intrinsic::amdgcn_fma_from_tensor_f32_u8;
       break;
+    default:
+      llvm_unreachable("Unknown BuiltinID");
     }
 
+    enum class FmaFromTensorLayout {
+      CONV_8X4,
+      CONV_4X4,
+      CONV_4X2,
+      DEQUANT_4X4,
+      DEQUANT_4X2,
+    };
+
+    FmaFromTensorLayout OpLayout;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_i4_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i4_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i4_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_u4_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u4_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u4_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_i8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_u8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_fp8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_fp8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_fp8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_bf8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_bf8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_f16_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_f16_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_bf16_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf16_4x2:
+      OpLayout = FmaFromTensorLayout::CONV_4X2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i4_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i4_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u4_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u4_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_fp8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_fp8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_bf8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_f16_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf16_4x4:
+      OpLayout = FmaFromTensorLayout::CONV_4X4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i4_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i4_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u4_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u4_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_fp8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_fp8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_bf8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf8_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_f16_8x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf16_8x4:
+      OpLayout = FmaFromTensorLayout::CONV_8X4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_i4_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i4_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_u4_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u4_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_i8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_u8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_fp8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_bf8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_f16_dequant_4x2:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f32_bf16_dequant_4x2:
+      OpLayout = FmaFromTensorLayout::DEQUANT_4X2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i4_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u4_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_i8_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_u8_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_4x4:
+    case AMDGPU::BI__builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_4x4:
+      OpLayout = FmaFromTensorLayout::DEQUANT_4X4;
+      break;
+    default:
+      llvm_unreachable("Unknown BuiltinID");
+    }
+
+    unsigned AuxDataArg = E->getNumArgs() - 2;
+    unsigned ClampArg = E->getNumArgs() - 1;
     SmallVector<Value *> Args;
-    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+    for (int i = 0, e = AuxDataArg; i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
+
+    // AuxData
+    llvm::APSInt AuxData =
+        *E->getArg(AuxDataArg)->getIntegerConstantExpr(getContext());
+    AuxData |= APSInt(APInt(32, static_cast<int>(OpLayout)), false);
+    Args.push_back(llvm::ConstantInt::get(getLLVMContext(), AuxData));
+    // Clamp
+    Args.push_back(EmitScalarExpr(E->getArg(ClampArg)));
 
     SmallVector<llvm::Type *> ArgTypes;
     llvm::Type *ResultType = ConvertType(E->getType());
