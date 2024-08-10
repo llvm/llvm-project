@@ -6,18 +6,20 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # ===------------------------------------------------------------------------===#
-#
-# Helper script that will merge a Pull Request into a release branch. It will first
-# do some validations of the PR then rebase and finally push the changes to the
-# release branch.
-#
-# Usage: merge-release-pr.py <PR id>
-# By default it will push to the 'upstream' origin, but you can pass
-# --upstream-origin/-o <origin> if you want to change it.
-#
-# If you want to skip a specific validation, like the status checks you can
-# pass -s status_checks, this argument can be passed multiple times.
-#
+
+"""
+Helper script that will merge a Pull Request into a release branch. It will first
+do some validations of the PR then rebase and finally push the changes to the
+release branch.
+
+Usage: merge-release-pr.py <PR id>
+By default it will push to the 'upstream' origin, but you can pass
+--upstream-origin/-o <origin> if you want to change it.
+
+If you want to skip a specific validation, like the status checks you can
+pass -s status_checks, this argument can be passed multiple times.
+"""
+
 import argparse
 import json
 import subprocess
@@ -28,7 +30,6 @@ from typing import List
 
 class PRMerger:
     def __init__(self, args):
-        self.pr = args.pr
         self.args = args
 
     def run_gh(self, gh_cmd: str, args: List[str]) -> str:
@@ -39,34 +40,39 @@ class PRMerger:
             raise RuntimeError("Failed to run gh")
         return p.stdout
 
-    # Validate the state of the PR, this means making sure that it is
-    # OPEN and not already merged or closed.
     def validate_state(self, data):
+        """Validate the state of the PR, this means making sure that it is OPEN and not already merged or closed."""
         state = data["state"]
         if state != "OPEN":
             return False, f"state is {state.lower()}, not open"
         return True
 
-    # Validate that the PR is targetting a release/ branch. We could
-    # validate the exact branch here, but I am not sure how to figure
-    # out what we want except an argument and that might be a bit to
-    # to much overhead.
     def validate_target_branch(self, data):
+        """
+        Validate that the PR is targetting a release/ branch. We could
+        validate the exact branch here, but I am not sure how to figure
+        out what we want except an argument and that might be a bit to
+        to much overhead.
+        """
         baseRefName: str = data["baseRefName"]
         if not baseRefName.startswith("release/"):
             return False, f"target branch is {baseRefName}, not a release branch"
         return True
 
-    # Validate the approval decision. This checks that the PR has been
-    # approved.
     def validate_approval(self, data):
+        """
+        Validate the approval decision. This checks that the PR has been
+        approved.
+        """
         if data["reviewDecision"] != "APPROVED":
             return False, "PR is not approved"
         return True
 
-    # Check that all the actions / status checks succeeded. Will also
-    # fail if we have status checks in progress.
     def validate_status_checks(self, data):
+        """
+        Check that all the actions / status checks succeeded. Will also
+        fail if we have status checks in progress.
+        """
         failures = []
         pending = []
         for status in data["statusCheckRollup"]:
@@ -90,10 +96,12 @@ class PRMerger:
 
         return True
 
-    # Validate that the PR contains just one commit. If it has more
-    # we might want to squash. Which is something we could add to
-    # this script in the future.
     def validate_commits(self, data):
+        """
+        Validate that the PR contains just one commit. If it has more
+        we might want to squash. Which is something we could add to
+        this script in the future.
+        """
         if len(data["commits"]) > 1:
             return False, f"More than 1 commit! {len(data['commits'])}"
         return True
@@ -110,14 +118,14 @@ class PRMerger:
         ]
         o = self.run_gh(
             "pr",
-            ["view", self.pr, "--json", ",".join(fields_to_fetch)],
+            ["view", self.args.pr, "--json", ",".join(fields_to_fetch)],
         )
         prdata = json.loads(o)
 
         # save the baseRefName (target branch) so that we know where to push
         self.target_branch = prdata["baseRefName"]
 
-        print(f"> Handling PR {self.pr} - {prdata['title']}")
+        print(f"> Handling PR {self.args.pr} - {prdata['title']}")
         print(f">   {prdata['url']}")
 
         VALIDATIONS = {
@@ -159,14 +167,21 @@ class PRMerger:
 
     def rebase_pr(self):
         print("> Rebasing")
-        self.run_gh("pr", ["update-branch", "--rebase", self.pr])
+        self.run_gh("pr", ["update-branch", "--rebase", self.args.pr])
         print("> Waiting for GitHub to update PR")
         time.sleep(4)
 
     def checkout_pr(self):
         print("> Fetching PR changes...")
         self.run_gh(
-            "pr", ["checkout", self.pr, "--force", "--branch", "llvm_merger_" + self.pr]
+            "pr",
+            [
+                "checkout",
+                self.args.pr,
+                "--force",
+                "--branch",
+                "llvm_merger_" + self.args.pr,
+            ],
         )
 
     def push_upstream(self):
@@ -179,7 +194,7 @@ class PRMerger:
     def delete_local_branch(self):
         print("> Deleting the old branch...")
         subprocess.run(["git", "switch", "main"])
-        subprocess.run(["git", "branch", "-D", f"llvm_merger_{self.pr}"])
+        subprocess.run(["git", "branch", "-D", f"llvm_merger_{self.args.pr}"])
 
 
 if __name__ == "__main__":
