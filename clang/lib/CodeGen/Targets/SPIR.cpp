@@ -101,7 +101,7 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
     }
 
-   if (isAggregateTypeForABI(Ty)) {
+    if (isAggregateTypeForABI(Ty)) {
       if (getTarget().getTriple().getVendor() == llvm::Triple::AMD)
         // TODO: The AMDGPU kernel ABI passes aggregates byref, which is not
         // currently expressible in SPIR-V; SPIR-V passes aggregates byval,
