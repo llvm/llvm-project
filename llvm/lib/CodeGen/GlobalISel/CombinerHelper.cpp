@@ -2538,60 +2538,6 @@ bool CombinerHelper::matchCombineZextTrunc(MachineInstr &MI, Register &Reg) {
   return false;
 }
 
-bool CombinerHelper::matchCombineExtOfExt(
-    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
-  assert((MI.getOpcode() == TargetOpcode::G_ANYEXT ||
-          MI.getOpcode() == TargetOpcode::G_SEXT ||
-          MI.getOpcode() == TargetOpcode::G_ZEXT) &&
-         "Expected a G_[ASZ]EXT");
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register OriginalSrcReg = getSrcRegIgnoringCopies(SrcReg, MRI);
-  if (OriginalSrcReg.isValid())
-    SrcReg = OriginalSrcReg;
-  MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
-  // Match exts with the same opcode, anyext([sz]ext) and sext(zext).
-  unsigned Opc = MI.getOpcode();
-  unsigned SrcOpc = SrcMI->getOpcode();
-  if (Opc == SrcOpc ||
-      (Opc == TargetOpcode::G_ANYEXT &&
-       (SrcOpc == TargetOpcode::G_SEXT || SrcOpc == TargetOpcode::G_ZEXT)) ||
-      (Opc == TargetOpcode::G_SEXT && SrcOpc == TargetOpcode::G_ZEXT)) {
-    MatchInfo = std::make_tuple(SrcMI->getOperand(1).getReg(), SrcOpc);
-    return true;
-  }
-  return false;
-}
-
-void CombinerHelper::applyCombineExtOfExt(
-    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
-  assert((MI.getOpcode() == TargetOpcode::G_ANYEXT ||
-          MI.getOpcode() == TargetOpcode::G_SEXT ||
-          MI.getOpcode() == TargetOpcode::G_ZEXT) &&
-         "Expected a G_[ASZ]EXT");
-
-  Register Reg = std::get<0>(MatchInfo);
-  unsigned SrcExtOp = std::get<1>(MatchInfo);
-
-  // Combine exts with the same opcode.
-  if (MI.getOpcode() == SrcExtOp) {
-    Observer.changingInstr(MI);
-    MI.getOperand(1).setReg(Reg);
-    Observer.changedInstr(MI);
-    return;
-  }
-
-  // Combine:
-  // - anyext([sz]ext x) to [sz]ext x
-  // - sext(zext x) to zext x
-  if (MI.getOpcode() == TargetOpcode::G_ANYEXT ||
-      (MI.getOpcode() == TargetOpcode::G_SEXT &&
-       SrcExtOp == TargetOpcode::G_ZEXT)) {
-    Register DstReg = MI.getOperand(0).getReg();
-    Builder.buildInstr(SrcExtOp, {DstReg}, {Reg});
-    MI.eraseFromParent();
-  }
-}
-
 static LLT getMidVTForTruncRightShiftCombine(LLT ShiftTy, LLT TruncTy) {
   const unsigned ShiftSize = ShiftTy.getScalarSizeInBits();
   const unsigned TruncSize = TruncTy.getScalarSizeInBits();
@@ -7547,4 +7493,68 @@ bool CombinerHelper::matchFoldAMinusC1PlusC2(const MachineInstr &MI,
   };
 
   return true;
+}
+
+bool CombinerHelper::matchExtOfExt(const MachineInstr &FirstMI,
+                                   const MachineInstr &SecondMI,
+                                   BuildFnTy &MatchInfo) {
+  const GExtOp *First = cast<GExtOp>(&FirstMI);
+  const GExtOp *Second = cast<GExtOp>(&SecondMI);
+
+  Register Dst = First->getReg(0);
+  Register Src = Second->getSrcReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (!MRI.hasOneNonDBGUse(Second->getReg(0)))
+    return false;
+
+  // ext of ext -> later ext
+  if (First->getOpcode() == Second->getOpcode() &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    // not zext -> no flags
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildInstr(Second->getOpcode(), {Dst}, {Src});
+    };
+    return true;
+  }
+
+  // anyext of sext/zext  -> sext/zext
+  // -> pick anyext as second ext, then ext of ext
+  if (First->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  // sext/zext of anyext -> sext/zext
+  // -> pick anyext as first ext, then ext of ext
+  if (Second->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({First->getOpcode(), {DstTy, SrcTy}})) {
+    if (First->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (First->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
 }
