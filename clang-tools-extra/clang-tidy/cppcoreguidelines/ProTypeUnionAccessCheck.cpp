@@ -23,8 +23,12 @@ void ProTypeUnionAccessCheck::registerMatchers(MatchFinder *Finder) {
 
 void ProTypeUnionAccessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Matched = Result.Nodes.getNodeAs<MemberExpr>("expr");
-  diag(Matched->getMemberLoc(),
-       "do not access members of unions; use (boost::)variant instead");
+  if (auto MemberLoc = Matched->getMemberLoc(); MemberLoc.isValid())
+    diag(MemberLoc,
+         "do not access members of unions; use (boost::)variant instead");
+  else
+    diag(Matched->getBeginLoc(),
+         "do not access members of unions; use (boost::)variant instead");
 }
 
 } // namespace clang::tidy::cppcoreguidelines

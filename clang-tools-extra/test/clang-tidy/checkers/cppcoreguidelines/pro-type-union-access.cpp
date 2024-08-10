@@ -5,6 +5,10 @@ union U {
   char union_member2;
 } u;
 
+union W {
+  template <class TP> operator TP *() const;
+};
+
 struct S {
   int non_union_member;
   union {
@@ -20,6 +24,7 @@ void f(char);
 void f2(U);
 void f3(U&);
 void f4(U*);
+W f5();
 
 void check()
 {
@@ -38,4 +43,6 @@ void check()
   f2(u); // OK
   f3(u); // OK
   f4(&u); // OK
+  void *ret = f5();
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: do not access members of unions; use (boost::)variant instead
 }
