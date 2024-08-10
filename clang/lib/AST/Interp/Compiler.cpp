@@ -1386,18 +1386,8 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     if (R->isUnion()) {
       if (Inits.size() == 0) {
-        // Zero-initialize the first union field.
-        if (R->getNumFields() == 0)
-          return this->emitFinishInit(E);
-        const Record::Field *FieldToInit = R->getField(0u);
-        QualType FieldType = FieldToInit->Desc->getType();
-        if (std::optional<PrimType> T = classify(FieldType)) {
-          if (!this->visitZeroInitializer(*T, FieldType, E))
-            return false;
-          if (!this->emitInitField(*T, FieldToInit->Offset, E))
-            return false;
-        }
-        // FIXME: Non-primitive case?
+        if (!this->visitZeroRecordInitializer(R, E))
+          return false;
       } else {
         const Expr *Init = Inits[0];
         const FieldDecl *FToInit = nullptr;
@@ -3374,6 +3364,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
         return false;
       if (!this->emitInitField(T, Field.Offset, E))
         return false;
+      if (R->isUnion())
+        break;
       continue;
     }
 
@@ -3409,8 +3401,11 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
       assert(false);
     }
 
-    if (!this->emitPopPtr(E))
+    if (!this->emitFinishInitPop(E))
       return false;
+
+    if (R->isUnion())
+      break;
   }
 
   for (const Record::Base &B : R->bases()) {
