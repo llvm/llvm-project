@@ -39,6 +39,7 @@ MODULE_PASS_WITH_PARAMS(
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+FUNCTION_PASS("amdgpu-annotate-uniform", AMDGPUAnnotateUniformValuesPass())
 FUNCTION_PASS("amdgpu-codegenprepare", AMDGPUCodeGenPreparePass(*this))
 FUNCTION_PASS("amdgpu-image-intrinsic-opt",
               AMDGPUImageIntrinsicOptimizerPass(*this))
