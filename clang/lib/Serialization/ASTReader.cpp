@@ -11468,10 +11468,8 @@ void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);
-  for ([[maybe_unused]] auto _ : llvm::seq<unsigned>(NumVars)) {
-    (void)_;
+  for (unsigned I = 0; I != NumVars; ++I)
     Vars.push_back(Record.readSubExpr());
-  }
   C->setVarRefs(Vars);
 }
 
@@ -11481,10 +11479,8 @@ void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);
-  for (auto _ : llvm::seq<unsigned>(NumVars)) {
-    (void)_;
+  for (unsigned I = 0; I != NumVars; ++I)
     Vars.push_back(Record.readSubExpr());
-  }
   C->setVarRefs(Vars);
 }
 
