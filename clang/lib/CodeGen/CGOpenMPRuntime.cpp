@@ -9588,15 +9588,18 @@ static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
   genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder, MappedVarSet);
 }
 
-static void emitNumTeamsForBareTargetDirective(
-    CodeGenFunction &CGF, const OMPExecutableDirective &D,
-    llvm::SmallVectorImpl<llvm::Value *> &NumTeams) {
-  const auto *C = D.getSingleClause<OMPNumTeamsClause>();
-  assert(!C->varlist_empty() && "ompx_bare requires explicit num_teams");
-  CodeGenFunction::RunCleanupsScope NumTeamsScope(CGF);
-  for (auto *E : C->getNumTeams()) {
+template <typename ClauseTy>
+static void
+emitClauseForBareTargetDirective(CodeGenFunction &CGF,
+                                 const OMPExecutableDirective &D,
+                                 llvm::SmallVectorImpl<llvm::Value *> &Values) {
+  const auto *C = D.getSingleClause<ClauseTy>();
+  assert(!C->varlist_empty() &&
+         "ompx_bare requires explicit num_teams and thread_limit");
+  CodeGenFunction::RunCleanupsScope Scope(CGF);
+  for (auto *E : C->varlist()) {
     llvm::Value *V = CGF.EmitScalarExpr(E);
-    NumTeams.push_back(
+    Values.push_back(
         CGF.Builder.CreateIntCast(V, CGF.Int32Ty, /*isSigned=*/true));
   }
 }
@@ -9672,14 +9675,18 @@ static void emitTargetCallKernelLaunch(
 
     bool IsBare = D.hasClausesOfKind<OMPXBareClause>();
     SmallVector<llvm::Value *, 3> NumTeams;
-    if (IsBare)
-      emitNumTeamsForBareTargetDirective(CGF, D, NumTeams);
-    else
+    SmallVector<llvm::Value *, 3> NumThreads;
+    if (IsBare) {
+      emitClauseForBareTargetDirective<OMPNumTeamsClause>(CGF, D, NumTeams);
+      emitClauseForBareTargetDirective<OMPThreadLimitClause>(CGF, D,
+                                                             NumThreads);
+    } else {
       NumTeams.push_back(OMPRuntime->emitNumTeamsForTargetDirective(CGF, D));
+      NumThreads.push_back(
+          OMPRuntime->emitNumThreadsForTargetDirective(CGF, D));
+    }
 
     llvm::Value *DeviceID = emitDeviceID(Device, CGF);
-    llvm::Value *NumThreads =
-        OMPRuntime->emitNumThreadsForTargetDirective(CGF, D);
     llvm::Value *RTLoc = OMPRuntime->emitUpdateLocation(CGF, D.getBeginLoc());
     llvm::Value *NumIterations =
         OMPRuntime->emitTargetNumIterationsCall(CGF, D, SizeEmitter);
