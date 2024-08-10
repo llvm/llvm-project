@@ -30,7 +30,7 @@ void Use::swap(Use &OtherUse) {
 }
 
 #ifndef NDEBUG
-void Use::dump(raw_ostream &OS) const {
+void Use::dumpOS(raw_ostream &OS) const {
   Value *Def = nullptr;
   if (LLVMUse == nullptr)
     OS << "<null> LLVM Use! ";
@@ -58,7 +58,7 @@ void Use::dump(raw_ostream &OS) const {
   OS << "\n";
 }
 
-void Use::dump() const { dump(dbgs()); }
+void Use::dump() const { dumpOS(dbgs()); }
 #endif // NDEBUG
 
 Use OperandUseIterator::operator*() const { return Use; }
@@ -203,16 +203,17 @@ void Value::printAsOperandCommon(raw_ostream &OS) const {
     OS << "NULL ";
 }
 
+void Value::dump() const {
+  dumpOS(dbgs());
+  dbgs() << "\n";
+}
+
 void Argument::printAsOperand(raw_ostream &OS) const {
   printAsOperandCommon(OS);
 }
-void Argument::dump(raw_ostream &OS) const {
+void Argument::dumpOS(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
   dumpCommonSuffix(OS);
-}
-void Argument::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
 }
 #endif // NDEBUG
 
@@ -472,12 +473,8 @@ bool Instruction::classof(const sandboxir::Value *From) {
 }
 
 #ifndef NDEBUG
-void Instruction::dump(raw_ostream &OS) const {
+void Instruction::dumpOS(raw_ostream &OS) const {
   OS << "Unimplemented! Please override dump().";
-}
-void Instruction::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
 }
 #endif // NDEBUG
 
@@ -513,18 +510,6 @@ Value *SelectInst::create(Value *Cond, Value *True, Value *False,
 bool SelectInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Select;
 }
-
-#ifndef NDEBUG
-void SelectInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void SelectInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 BranchInst *BranchInst::create(BasicBlock *IfTrue, Instruction *InsertBefore,
                                Context &Ctx) {
@@ -596,16 +581,6 @@ const BasicBlock *
 BranchInst::ConstLLVMBBToSBBB::operator()(const llvm::BasicBlock *BB) const {
   return cast<BasicBlock>(Ctx.getValue(BB));
 }
-#ifndef NDEBUG
-void BranchInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-void BranchInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 void LoadInst::setVolatile(bool V) {
   Ctx.getTracker()
@@ -656,18 +631,6 @@ bool LoadInst::classof(const Value *From) {
 Value *LoadInst::getPointerOperand() const {
   return Ctx.getValue(cast<llvm::LoadInst>(Val)->getPointerOperand());
 }
-
-#ifndef NDEBUG
-void LoadInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void LoadInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 void StoreInst::setVolatile(bool V) {
   Ctx.getTracker()
@@ -720,18 +683,6 @@ Value *StoreInst::getPointerOperand() const {
   return Ctx.getValue(cast<llvm::StoreInst>(Val)->getPointerOperand());
 }
 
-#ifndef NDEBUG
-void StoreInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void StoreInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 UnreachableInst *UnreachableInst::create(Instruction *InsertBefore,
                                          Context &Ctx) {
   auto &Builder = Ctx.getLLVMIRBuilder();
@@ -752,18 +703,6 @@ UnreachableInst *UnreachableInst::create(BasicBlock *InsertAtEnd,
 bool UnreachableInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Unreachable;
 }
-
-#ifndef NDEBUG
-void UnreachableInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void UnreachableInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 ReturnInst *ReturnInst::createCommon(Value *RetVal, IRBuilder<> &Builder,
                                      Context &Ctx) {
@@ -794,18 +733,6 @@ Value *ReturnInst::getReturnValue() const {
   auto *LLVMRetVal = cast<llvm::ReturnInst>(Val)->getReturnValue();
   return LLVMRetVal != nullptr ? Ctx.getValue(LLVMRetVal) : nullptr;
 }
-
-#ifndef NDEBUG
-void ReturnInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void ReturnInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 Value *CallBase::getCalledOperand() const {
   return Ctx.getValue(cast<llvm::CallBase>(Val)->getCalledOperand());
@@ -866,18 +793,6 @@ CallInst *CallInst::create(FunctionType *FTy, Value *Func,
   return CallInst::create(FTy, Func, Args, InsertAtEnd->end(), InsertAtEnd, Ctx,
                           NameStr);
 }
-
-#ifndef NDEBUG
-void CallInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void CallInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
                                BasicBlock *IfNormal, BasicBlock *IfException,
@@ -942,17 +857,6 @@ BasicBlock *InvokeInst::getSuccessor(unsigned SuccIdx) const {
   return cast<BasicBlock>(
       Ctx.getValue(cast<llvm::InvokeInst>(Val)->getSuccessor(SuccIdx)));
 }
-
-#ifndef NDEBUG
-void InvokeInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-void InvokeInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
                                BasicBlock *DefaultDest,
@@ -1039,17 +943,6 @@ BasicBlock *CallBrInst::getSuccessor(unsigned Idx) const {
       Ctx.getValue(cast<llvm::CallBrInst>(Val)->getSuccessor(Idx)));
 }
 
-#ifndef NDEBUG
-void CallBrInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-void CallBrInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
                                  ArrayRef<Value *> IdxList,
                                  BasicBlock::iterator WhereIt,
@@ -1091,18 +984,6 @@ Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
 Value *GetElementPtrInst::getPointerOperand() const {
   return Ctx.getValue(cast<llvm::GetElementPtrInst>(Val)->getPointerOperand());
 }
-
-#ifndef NDEBUG
-void GetElementPtrInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void GetElementPtrInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
 
 BasicBlock *PHINode::LLVMBBToBB::operator()(llvm::BasicBlock *LLVMBB) const {
   return cast<BasicBlock>(Ctx.getValue(LLVMBB));
@@ -1293,18 +1174,6 @@ Value *AllocaInst::getArraySize() {
   return Ctx.getValue(cast<llvm::AllocaInst>(Val)->getArraySize());
 }
 
-#ifndef NDEBUG
-void AllocaInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void AllocaInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
                         BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
                         const Twine &Name) {
@@ -1340,38 +1209,6 @@ bool CastInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Cast;
 }
 
-#ifndef NDEBUG
-void CastInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void CastInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-
-void PHINode::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void PHINode::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-
-void OpaqueInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void OpaqueInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
                                  Instruction *InsertBefore, Context &Ctx,
                                  const Twine &Name) {
@@ -1398,18 +1235,6 @@ Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
-#ifndef NDEBUG
-void InsertElementInst::dump(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void InsertElementInst::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 Constant *Constant::createInt(Type *Ty, uint64_t V, Context &Ctx,
                               bool IsSigned) {
   llvm::Constant *LLVMC = llvm::ConstantInt::get(Ty, V, IsSigned);
@@ -1417,14 +1242,9 @@ Constant *Constant::createInt(Type *Ty, uint64_t V, Context &Ctx,
 }
 
 #ifndef NDEBUG
-void Constant::dump(raw_ostream &OS) const {
+void Constant::dumpOS(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
   dumpCommonSuffix(OS);
-}
-
-void Constant::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
 }
 
 void Function::dumpNameAndArgs(raw_ostream &OS) const {
@@ -1442,7 +1262,7 @@ void Function::dumpNameAndArgs(raw_ostream &OS) const {
       [&] { OS << ", "; });
   OS << ")";
 }
-void Function::dump(raw_ostream &OS) const {
+void Function::dumpOS(raw_ostream &OS) const {
   dumpNameAndArgs(OS);
   OS << " {\n";
   auto *LLVMF = cast<llvm::Function>(Val);
@@ -1457,10 +1277,6 @@ void Function::dump(raw_ostream &OS) const {
       },
       [&OS] { OS << "\n"; });
   OS << "}\n";
-}
-void Function::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
 }
 #endif // NDEBUG
 
@@ -1798,7 +1614,7 @@ Instruction &BasicBlock::back() const {
 }
 
 #ifndef NDEBUG
-void BasicBlock::dump(raw_ostream &OS) const {
+void BasicBlock::dumpOS(raw_ostream &OS) const {
   llvm::BasicBlock *BB = cast<llvm::BasicBlock>(Val);
   const auto &Name = BB->getName();
   OS << Name;
@@ -1827,13 +1643,9 @@ void BasicBlock::dump(raw_ostream &OS) const {
     }
   } else {
     for (auto &SBI : *this) {
-      SBI.dump(OS);
+      SBI.dumpOS(OS);
       OS << "\n";
     }
   }
-}
-void BasicBlock::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
 }
 #endif // NDEBUG
