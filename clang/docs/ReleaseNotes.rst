@@ -349,6 +349,11 @@ Moved checkers
 
 Sanitizers
 ----------
+- Introduced Realtime Sanitizer, activated by using the -fsanitize=realtime
+  flag. This sanitizer detects unsafe system library calls, such as memory
+  allocations and mutex locks. If any such function is called during invocation
+  of a function marked with the ``[[clang::nonblocking]]`` attribute, an error
+  is printed to the console and the process exits non-zero.
 
 Python Binding Changes
 ----------------------
