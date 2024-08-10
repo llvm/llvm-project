@@ -947,12 +947,35 @@ namespace {
 static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
     const Expr *ConstrExpr) {
+  const NamedDecl *ND = DeclInfo.getDecl();
+  // ND would be absent when we are parsing a template parameter header, and the
+  // template it pertains to is thus unavaliable. We collect the surrounding
+  // template arguments for evaluating constraints, starting from the current
+  // semantic context, in order for out-of-line constrained declarations to be
+  // properly evaluated.
+  //
+  //   template <class T>
+  //   class A {
+  //     template <C<T>> class B;
+  //   };
+  //
+  //   template <class T> template <C<T> U> class A<T>::B {};
+  //
+  //   (This is the case when comparing `template <C<T> U>` against its primary
+  //   template parameter list `template <C<T>>`.)
+  //
+  // Parent specializations are also ignored because fully specialized parents
+  // of the out-of-line declaration don't contribute to the depth of templates.
+  //
+  //   template <> template <C<void> U> class A<void>::B {};
+  //   (U rests in the depth of 0.)
+  //
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      DeclInfo.getDecl(), DeclInfo.getDeclContext(), /*Final=*/false,
+      ND, DeclInfo.getDeclContext(), /*Final=*/false,
       /*Innermost=*/std::nullopt,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
-      /*SkipForSpecialization*/ false);
+      /*SkipForSpecialization=*/!ND);
 
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
@@ -962,7 +985,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   Sema::InstantiatingTemplate Inst(
       S, DeclInfo.getLocation(),
       Sema::InstantiatingTemplate::ConstraintNormalization{},
-      const_cast<NamedDecl *>(DeclInfo.getDecl()), SourceRange{});
+      const_cast<NamedDecl *>(ND), SourceRange{});
   if (Inst.isInvalid())
     return nullptr;
 
@@ -971,12 +994,10 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // this may happen while we're comparing two templates' constraint
   // equivalence.
   LocalInstantiationScope ScopeForParameters(S);
-  if (const NamedDecl *D = DeclInfo.getDecl()) {
-    const FunctionDecl *FD = D->getAsFunction();
-    if (FD)
+  if (ND)
+    if (const FunctionDecl *FD = ND->getAsFunction())
       for (auto *PVD : FD->parameters())
         ScopeForParameters.InstantiatedLocal(PVD, PVD);
-  }
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
 

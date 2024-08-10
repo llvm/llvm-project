@@ -619,4 +619,19 @@ template <class U>
   requires Constrained<T, U>
 class C<T>::E {};
 
+#if 0
+// FIXME: Is it conforming? Only Clang rejects it in every released version.
+template <>
+template <Constrained<int> T>
+class C<int>::D<T> {};
+#endif
+
+template <>
+template <Constrained<int>>
+class C<int>::D {};
+
+template <>
+template <class T> requires Constrained<int, T>
+class C<int>::E {};
+
 } // namespace GH102320
