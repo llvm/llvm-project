@@ -253,4 +253,49 @@ namespace Nested {
                               // both-note {{in call to}}
 
 }
+
+
+namespace Zeroing {
+  struct non_trivial_constructor {
+      constexpr non_trivial_constructor() : x(100) {}
+      int x;
+  };
+  union U2 {
+      int a{1000};
+      non_trivial_constructor b;
+  };
+
+  static_assert(U2().b.x == 100, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union { int a; int b; } constexpr u1{};
+  static_assert(u1.a == 0, "");
+  static_assert(u1.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union U { int a; int b; } constexpr u2 = U();
+  static_assert(u2.a == 0, "");
+  static_assert(u2.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+
+
+  struct F {int x; int y; };
+  union { F a; int b; } constexpr u3{};
+  static_assert(u3.a.x == 0, "");
+
+  union U4 { F a; int b; } constexpr u4 = U4();
+  static_assert(u4.a.x == 0, "");
+
+  union { int a[5]; int b; } constexpr u5{};
+  static_assert(u5.a[0] == 0, "");
+  static_assert(u5.a[4] == 0, "");
+  static_assert(u5.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union U6 { int a[5]; int b; } constexpr u6 = U6();
+  static_assert(u6.a[0] == 0, "");
+  static_assert(u6.a[4] == 0, "");
+  static_assert(u6.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+}
 #endif
