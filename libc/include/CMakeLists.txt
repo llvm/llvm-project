@@ -45,6 +45,7 @@ add_header_macro(
   ctype.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(

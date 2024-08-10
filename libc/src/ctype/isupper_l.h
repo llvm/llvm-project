@@ -1,4 +1,4 @@
-//===-- Implementation of isspace------------------------------------------===//
+//===-- Implementation header for isupper_l -----------------------*-C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/ctype/isspace.h"
-#include "src/__support/ctype_utils.h"
+#ifndef LLVM_LIBC_SRC_CTYPE_ISUPPER_H
+#define LLVM_LIBC_SRC_CTYPE_ISUPPER_H
 
-#include "src/__support/common.h"
+#include "hdr/types/locale_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, isspace, (int c)) {
-  return static_cast<int>(internal::isspace(static_cast<unsigned>(c)));
-}
+int isupper_l(int c, locale_t locale);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif //  LLVM_LIBC_SRC_CTYPE_ISUPPER_H
