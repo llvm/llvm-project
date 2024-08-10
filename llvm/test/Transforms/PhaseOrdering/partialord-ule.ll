@@ -6,8 +6,12 @@
 define i1 @ule(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ule(
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ule i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = tail call i64 @llvm.ucmp.i64.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SEL1]], 1
+; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp ult i64 [[TMP0]], 2
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = select i1 [[CMP1]], i1 true, i1 [[SWITCH_SELECTCMP1]]
+; CHECK-NEXT:    ret i1 [[SWITCH_SELECTCMP]]
 ;
 start:
   %cmp1 = icmp eq i32 %a, %b
