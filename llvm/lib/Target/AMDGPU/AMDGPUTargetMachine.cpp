@@ -434,7 +434,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
-  initializeSIAnnotateControlFlowPass(*PR);
+  initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
@@ -1240,7 +1240,7 @@ bool GCNPassConfig::addPreISel() {
   }
   addPass(createAMDGPUAnnotateUniformValues());
   if (!LateCFGStructurize && !DisableStructurizer) {
-    addPass(createSIAnnotateControlFlowPass());
+    addPass(createSIAnnotateControlFlowLegacyPass());
     // TODO: Move this right after structurizeCFG to avoid extra divergence
     // analysis. This depends on stopping SIAnnotateControlFlow from making
     // control flow modifications.

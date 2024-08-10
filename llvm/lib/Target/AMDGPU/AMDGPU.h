@@ -18,6 +18,7 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
+class GCNTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
@@ -32,7 +33,7 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
-FunctionPass *createSIAnnotateControlFlowPass();
+FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsPass();
 FunctionPass *createSIPeepholeSDWAPass();
 FunctionPass *createSILowerI1CopiesPass();
@@ -350,8 +351,18 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-void initializeSIAnnotateControlFlowPass(PassRegistry&);
-extern char &SIAnnotateControlFlowPassID;
+class SIAnnotateControlFlowPass
+    : public PassInfoMixin<SIAnnotateControlFlowPass> {
+private:
+  const AMDGPUTargetMachine &TM;
+
+public:
+  SIAnnotateControlFlowPass(const AMDGPUTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+void initializeSIAnnotateControlFlowLegacyPass(PassRegistry &);
+extern char &SIAnnotateControlFlowLegacyPassID;
 
 void initializeSIMemoryLegalizerPass(PassRegistry&);
 extern char &SIMemoryLegalizerID;
