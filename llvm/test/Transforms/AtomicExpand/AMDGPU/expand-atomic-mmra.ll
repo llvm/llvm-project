@@ -127,8 +127,6 @@ define i16 @test_cmpxchg_i16_global_agent_align4(ptr addrspace(1) %out, i16 %in,
 define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX90A-LABEL: define void @syncscope_workgroup_nortn(
 ; GFX90A-SAME: ptr [[ADDR:%.*]], float [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX90A-NEXT:    br label [[ATOMICRMW_CHECK_SHARED:%.*]]
-; GFX90A:       atomicrmw.check.shared:
 ; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[ADDR]])
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
