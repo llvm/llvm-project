@@ -396,7 +396,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGlobalISel(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeGCNDPPCombinePass(*PR);
-  initializeSILowerI1CopiesPass(*PR);
+  initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
   initializeAMDGPUMarkLastScratchLoadPass(*PR);
@@ -1289,7 +1289,7 @@ bool GCNPassConfig::addILPOpts() {
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
   addPass(&SIFixSGPRCopiesLegacyID);
-  addPass(createSILowerI1CopiesPass());
+  addPass(createSILowerI1CopiesLegacyPass());
   return false;
 }
 
