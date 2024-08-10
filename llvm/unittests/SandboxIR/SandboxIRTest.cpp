@@ -645,14 +645,16 @@ define void @foo(<2 x i8> %vec, i32 %idx) {
   auto *ArgIdx = F.getArg(1);
   auto *BB = &*F.begin();
   auto It = BB->begin();
-  auto *Ins0 = cast<sandboxir::ExtractElementInst>(&*It++);
+  auto *EI = cast<sandboxir::ExtractElementInst>(&*It++);
   auto *Ret = &*It++;
 
-  EXPECT_EQ(Ins0->getOpcode(), sandboxir::Instruction::Opcode::ExtractElement);
-  EXPECT_EQ(Ins0->getOperand(0), ArgVec);
-  EXPECT_EQ(Ins0->getOperand(1), ArgIdx);
-  EXPECT_EQ(Ins0->getVectorOperand(), ArgVec);
-  EXPECT_EQ(Ins0->getIndexOperand(), ArgIdx);
+  EXPECT_EQ(EI->getOpcode(), sandboxir::Instruction::Opcode::ExtractElement);
+  EXPECT_EQ(EI->getOperand(0), ArgVec);
+  EXPECT_EQ(EI->getOperand(1), ArgIdx);
+  EXPECT_EQ(EI->getVectorOperand(), ArgVec);
+  EXPECT_EQ(EI->getIndexOperand(), ArgIdx);
+  EXPECT_EQ(EI->getVectorOperandType(), ArgVec->getType());
+
   auto *NewI1 =
       cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
           ArgVec, ArgIdx, Ret, Ctx, "NewInsBeforeRet"));

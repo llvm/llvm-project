@@ -771,8 +771,8 @@ public:
   }
 };
 
-class ExtractElementInst final :
-    public SingleLLVMInstructionImpl<llvm::ExtractElementInstr> {
+class ExtractElementInst final
+    : public SingleLLVMInstructionImpl<llvm::ExtractElementInst> {
   /// Use Context::createExtractElementInst() instead.
   ExtractElementInst(llvm::Instruction *I, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::ExtractElement,
