@@ -60,6 +60,7 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void f(__VA_ARGS__);
   SANITIZER_INTERFACE_ATTRIBUTE void __dfso_##fun() ALIAS(__dfso_##real);
 
 // Async-safe, non-reentrant spin lock.
+namespace {
 class SignalSpinLocker {
  public:
   SignalSpinLocker() {
@@ -80,6 +81,7 @@ class SignalSpinLocker {
   SignalSpinLocker(const SignalSpinLocker &) = delete;
   SignalSpinLocker &operator=(const SignalSpinLocker &) = delete;
 };
+}  // namespace
 
 StaticSpinMutex SignalSpinLocker::sigactions_mu;
 

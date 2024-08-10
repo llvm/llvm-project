@@ -779,15 +779,15 @@ dfsan_get_labels_in_signal_reaches_function() {
   return __dfsan::labels_in_signal_reaches_function;
 }
 
+namespace {
 class Decorator : public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() {}
   const char *Origin() const { return Magenta(); }
 };
+}  // namespace
 
-namespace {
-
-void PrintNoOriginTrackingWarning() {
+static void PrintNoOriginTrackingWarning() {
   Decorator d;
   Printf(
       "  %sDFSan: origin tracking is not enabled. Did you specify the "
@@ -795,13 +795,13 @@ void PrintNoOriginTrackingWarning() {
       d.Warning(), d.Default());
 }
 
-void PrintNoTaintWarning(const void *address) {
+static void PrintNoTaintWarning(const void *address) {
   Decorator d;
   Printf("  %sDFSan: no tainted value at %x%s\n", d.Warning(), address,
          d.Default());
 }
 
-void PrintInvalidOriginWarning(dfsan_label label, const void *address) {
+static void PrintInvalidOriginWarning(dfsan_label label, const void *address) {
   Decorator d;
   Printf(
       "  %sTaint value 0x%x (at %p) has invalid origin tracking. This can "
@@ -809,7 +809,7 @@ void PrintInvalidOriginWarning(dfsan_label label, const void *address) {
       d.Warning(), label, address, d.Default());
 }
 
-void PrintInvalidOriginIdWarning(dfsan_origin origin) {
+static void PrintInvalidOriginIdWarning(dfsan_origin origin) {
   Decorator d;
   Printf(
       "  %sOrigin Id %d has invalid origin tracking. This can "
@@ -817,7 +817,7 @@ void PrintInvalidOriginIdWarning(dfsan_origin origin) {
       d.Warning(), origin, d.Default());
 }
 
-bool PrintOriginTraceFramesToStr(Origin o, InternalScopedString *out) {
+static bool PrintOriginTraceFramesToStr(Origin o, InternalScopedString *out) {
   Decorator d;
   bool found = false;
 
@@ -841,8 +841,8 @@ bool PrintOriginTraceFramesToStr(Origin o, InternalScopedString *out) {
   return found;
 }
 
-bool PrintOriginTraceToStr(const void *addr, const char *description,
-                           InternalScopedString *out) {
+static bool PrintOriginTraceToStr(const void *addr, const char *description,
+                                  InternalScopedString *out) {
   CHECK(out);
   CHECK(dfsan_get_track_origins());
   Decorator d;
@@ -859,8 +859,6 @@ bool PrintOriginTraceToStr(const void *addr, const char *description,
   Origin o = Origin::FromRawId(origin);
   return PrintOriginTraceFramesToStr(o, out);
 }
-
-}  // namespace
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_print_origin_trace(
     const void *addr, const char *description) {
@@ -1167,7 +1165,7 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
 
 // TODO: InitShadow is based on msan.
 // Consider refactoring these into a shared implementation.
-bool InitShadow(bool init_origins, bool dry_run) {
+static bool InitShadow(bool init_origins, bool dry_run) {
   // Let user know mapping parameters first.
   VPrintf(1, "dfsan_init %p\n", (void *)&__dfsan::dfsan_init);
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
@@ -1227,7 +1225,7 @@ bool InitShadow(bool init_origins, bool dry_run) {
   return true;
 }
 
-bool InitShadowWithReExec(bool init_origins) {
+static bool InitShadowWithReExec(bool init_origins) {
   // Start with dry run: check layout is ok, but don't print warnings because
   // warning messages will cause tests to fail (even if we successfully re-exec
   // after the warning).
@@ -1290,11 +1288,7 @@ static void DFsanInit(int argc, char **argv, char **envp) {
   dfsan_inited = true;
 }
 
-namespace __dfsan {
-
-void dfsan_init() { DFsanInit(0, nullptr, nullptr); }
-
-}  // namespace __dfsan
+void __dfsan::dfsan_init() { DFsanInit(0, nullptr, nullptr); }
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
 __attribute__((section(".preinit_array"),
