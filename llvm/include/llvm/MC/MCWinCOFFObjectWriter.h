@@ -45,7 +45,7 @@ public:
 
 class WinCOFFWriter;
 
-class WinCOFFObjectWriter : public MCObjectWriter {
+class WinCOFFObjectWriter final : public MCObjectWriter {
   friend class WinCOFFWriter;
 
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;

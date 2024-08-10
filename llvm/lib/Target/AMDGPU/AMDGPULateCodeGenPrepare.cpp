@@ -360,7 +360,7 @@ bool LiveRegOptimizer::optimizeLiveType(
         Type *NewType = calculateConvertType(Phi->getType());
         NewPhi->addIncoming(ConstantInt::get(NewType, 0, false),
                             Phi->getIncomingBlock(I));
-      } else if (ValMap.contains(IncVal))
+      } else if (ValMap.contains(IncVal) && ValMap[IncVal])
         NewPhi->addIncoming(ValMap[IncVal], Phi->getIncomingBlock(I));
       else
         MissingIncVal = true;
@@ -370,11 +370,11 @@ bool LiveRegOptimizer::optimizeLiveType(
       // The coercion chain of the PHI is broken. Delete the Phi
       // from the ValMap and any connected / user Phis.
       SmallVector<Value *, 4> PHIWorklist;
-      SmallPtrSet<Value *, 4> Visited;
+      SmallPtrSet<Value *, 4> VisitedPhis;
       PHIWorklist.push_back(DeadVal);
       while (!PHIWorklist.empty()) {
         Value *NextDeadValue = PHIWorklist.pop_back_val();
-        Visited.insert(NextDeadValue);
+        VisitedPhis.insert(NextDeadValue);
         auto OriginalPhi =
             std::find_if(PhiNodes.begin(), PhiNodes.end(),
                          [this, &NextDeadValue](PHINode *CandPhi) {
@@ -388,7 +388,7 @@ bool LiveRegOptimizer::optimizeLiveType(
         DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
 
         for (User *U : NextDeadValue->users()) {
-          if (!Visited.contains(cast<PHINode>(U)))
+          if (!VisitedPhis.contains(cast<PHINode>(U)))
             PHIWorklist.push_back(U);
         }
       }

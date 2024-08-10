@@ -88,7 +88,7 @@
 
 - `--comp-dir-override=<string>`
 
-  Overrides DW_AT_comp_dir, and provides an alterantive base location, which is
+  Overrides DW_AT_comp_dir, and provides an alternative base location, which is
   used with DW_AT_dwo_name to construct a path to *.dwo files.
 
 - `--create-debug-names-section`
@@ -112,6 +112,10 @@
 - `--debug-skeleton-cu`
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
+
+- `--debug-thread-count=<uint>`
+
+  Specifies the number of threads to be used when processing DWO debug information.
 
 - `--dot-tooltip-code`
 

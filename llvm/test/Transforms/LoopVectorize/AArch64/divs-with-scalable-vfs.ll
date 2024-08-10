@@ -274,50 +274,38 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 1, [[TMP19]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP20]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[MUL_2_I]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP20]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[MUL_1_I]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[X]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[MUL_2_I]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP22:%.*]] = udiv <vscale x 2 x i64> [[VEC_IND]], [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP24:%.*]] = urem <vscale x 2 x i64> [[VEC_IND]], [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> [[BROADCAST_SPLAT2]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP26:%.*]] = udiv <vscale x 2 x i64> [[TMP24]], [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> [[BROADCAST_SPLAT2]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP28:%.*]] = urem <vscale x 2 x i64> [[TMP24]], [[TMP27]]
-; CHECK-NEXT:    [[TMP29:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> [[BROADCAST_SPLAT4]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP30:%.*]] = udiv <vscale x 2 x i64> [[TMP28]], [[TMP29]]
-; CHECK-NEXT:    [[TMP31:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> [[BROADCAST_SPLAT4]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP32:%.*]] = urem <vscale x 2 x i64> [[TMP28]], [[TMP31]]
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <vscale x 2 x i64> [[TMP22]], i32 0
-; CHECK-NEXT:    [[TMP34:%.*]] = mul i64 [[X]], [[TMP33]]
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <vscale x 2 x i64> [[TMP26]], i32 0
-; CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[TMP34]], [[TMP35]]
-; CHECK-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP36]], [[X]]
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <vscale x 2 x i64> [[TMP30]], i32 0
-; CHECK-NEXT:    [[TMP39:%.*]] = add i64 [[TMP37]], [[TMP38]]
-; CHECK-NEXT:    [[TMP40:%.*]] = mul i64 [[TMP39]], [[X]]
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <vscale x 2 x i64> [[TMP32]], i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[TMP40]], [[TMP41]]
-; CHECK-NEXT:    [[TMP43:%.*]] = shl i64 [[TMP42]], 32
-; CHECK-NEXT:    [[TMP44:%.*]] = ashr i64 [[TMP43]], 32
-; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP44]]
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr i64, ptr [[TMP45]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP22]], ptr [[TMP46]], i32 4, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP23:%.*]] = udiv <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[TMP24:%.*]] = urem i64 [[TMP21]], [[MUL_2_I]]
+; CHECK-NEXT:    [[TMP25:%.*]] = udiv i64 [[TMP24]], [[MUL_1_I]]
+; CHECK-NEXT:    [[TMP26:%.*]] = urem i64 [[TMP24]], [[MUL_1_I]]
+; CHECK-NEXT:    [[TMP27:%.*]] = udiv i64 [[TMP26]], [[X]]
+; CHECK-NEXT:    [[TMP28:%.*]] = urem i64 [[TMP26]], [[X]]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 2 x i64> [[TMP23]], i32 0
+; CHECK-NEXT:    [[TMP30:%.*]] = mul i64 [[X]], [[TMP29]]
+; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP30]], [[TMP25]]
+; CHECK-NEXT:    [[TMP32:%.*]] = mul i64 [[TMP31]], [[X]]
+; CHECK-NEXT:    [[TMP33:%.*]] = add i64 [[TMP32]], [[TMP27]]
+; CHECK-NEXT:    [[TMP34:%.*]] = mul i64 [[TMP33]], [[X]]
+; CHECK-NEXT:    [[TMP35:%.*]] = add i64 [[TMP34]], [[TMP28]]
+; CHECK-NEXT:    [[TMP36:%.*]] = shl i64 [[TMP35]], 32
+; CHECK-NEXT:    [[TMP37:%.*]] = ashr i64 [[TMP36]], 32
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP37]]
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i64, ptr [[TMP38]], i32 0
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP23]], ptr [[TMP39]], i32 4, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP14]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <vscale x 2 x i1> [[TMP47]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP48]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

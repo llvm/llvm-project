@@ -360,7 +360,7 @@ void MCWinCOFFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                            uint64_t Count) {
   // Ignore temporary symbols for now.
   if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-    getAssembler().CGProfile.push_back({From, To, Count});
+    getWriter().getCGProfile().push_back({From, To, Count});
 }
 
 void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
@@ -376,8 +376,8 @@ void MCWinCOFFStreamer::finishImpl() {
     switchSection(Asm.getContext().getCOFFSection(".llvm_addrsig",
                                                   COFF::IMAGE_SCN_LNK_REMOVE));
   }
-  if (!Asm.CGProfile.empty()) {
-    for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+  if (!Asm.getWriter().getCGProfile().empty()) {
+    for (auto &E : Asm.getWriter().getCGProfile()) {
       finalizeCGProfileEntry(E.From);
       finalizeCGProfileEntry(E.To);
     }

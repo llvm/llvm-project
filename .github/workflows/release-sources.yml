@@ -47,7 +47,7 @@ jobs:
     steps:
       - id: inputs
         run: |
-          ref=${{ inputs.release-version || github.sha }}
+          ref=${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
           if [ -n "${{ inputs.release-version }}" ]; then
             export_args="-release ${{ inputs.release-version }} -final"
           else

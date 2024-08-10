@@ -356,6 +356,32 @@ TLI_DEFINE_ENUM_INTERNAL(ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Ptr, Bool)
 
+/// The following are variants of operator new which return the actual size
+/// reserved by the allocator proposed in P0901R5 (Size feedback in operator new).
+/// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0901r5.html
+/// They are implemented by tcmalloc, see source at
+/// https://github.com/google/tcmalloc/blob/master/tcmalloc/malloc_extension.h
+
+/// __sized_ptr_t __size_returning_new(size_t size)
+TLI_DEFINE_ENUM_INTERNAL(size_returning_new)
+TLI_DEFINE_STRING_INTERNAL("__size_returning_new")
+TLI_DEFINE_SIG_INTERNAL(Struct, Long)
+
+/// __sized_ptr_t __size_returning_new_hot_cold(size_t, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(size_returning_new_hot_cold)
+TLI_DEFINE_STRING_INTERNAL("__size_returning_new_hot_cold")
+TLI_DEFINE_SIG_INTERNAL(Struct, Long, Bool)
+
+/// __sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(size_returning_new_aligned)
+TLI_DEFINE_STRING_INTERNAL("__size_returning_new_aligned")
+TLI_DEFINE_SIG_INTERNAL(Struct, Long, Long)
+
+/// __sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(size_returning_new_aligned_hot_cold)
+TLI_DEFINE_STRING_INTERNAL("__size_returning_new_aligned_hot_cold")
+TLI_DEFINE_SIG_INTERNAL(Struct, Long, Long, Bool)
+
 /// double __acos_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(acos_finite)
 TLI_DEFINE_STRING_INTERNAL("__acos_finite")
@@ -475,6 +501,21 @@ TLI_DEFINE_SIG_INTERNAL(Int, Ptr, Ptr, Ptr)
 TLI_DEFINE_ENUM_INTERNAL(atexit)
 TLI_DEFINE_STRING_INTERNAL("atexit")
 TLI_DEFINE_SIG_INTERNAL(Int, Ptr)
+
+/// void abort(void)
+TLI_DEFINE_ENUM_INTERNAL(abort)
+TLI_DEFINE_STRING_INTERNAL("abort")
+TLI_DEFINE_SIG_INTERNAL(Void)
+
+/// void exit(int)
+TLI_DEFINE_ENUM_INTERNAL(exit)
+TLI_DEFINE_STRING_INTERNAL("exit")
+TLI_DEFINE_SIG_INTERNAL(Void, Int)
+
+/// void _Exit(int)
+TLI_DEFINE_ENUM_INTERNAL(Exit)
+TLI_DEFINE_STRING_INTERNAL("_Exit")
+TLI_DEFINE_SIG_INTERNAL(Void, Int)
 
 /// void __cxa_guard_abort(guard_t *guard);
 /// guard_t is int64_t in Itanium ABI or int32_t on ARM eabi.
@@ -1791,6 +1832,21 @@ TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Ptr)
 TLI_DEFINE_ENUM_INTERNAL(modfl)
 TLI_DEFINE_STRING_INTERNAL("modfl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Ptr)
+
+/// double nan(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nan)
+TLI_DEFINE_STRING_INTERNAL("nan")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Ptr)
+
+/// float nanf(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nanf)
+TLI_DEFINE_STRING_INTERNAL("nanf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Ptr)
+
+/// long double nanl(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nanl)
+TLI_DEFINE_STRING_INTERNAL("nanl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, Ptr)
 
 /// double nearbyint(double x);
 TLI_DEFINE_ENUM_INTERNAL(nearbyint)

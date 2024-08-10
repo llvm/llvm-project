@@ -413,7 +413,18 @@ public:
   }
 
   /// Choose a method of checking LR before performing a tail call.
-  AArch64PAuth::AuthCheckMethod getAuthenticatedLRCheckMethod() const;
+  AArch64PAuth::AuthCheckMethod
+  getAuthenticatedLRCheckMethod(const MachineFunction &MF) const;
+
+  /// Compute the integer discriminator for a given BlockAddress constant, if
+  /// blockaddress signing is enabled, or std::nullopt otherwise.
+  /// Blockaddress signing is controlled by the function attribute
+  /// "ptrauth-indirect-gotos" on the parent function.
+  /// Note that this assumes the discriminator is independent of the indirect
+  /// goto branch site itself, i.e., it's the same for all BlockAddresses in
+  /// a function.
+  std::optional<uint16_t>
+  getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
 
   const PseudoSourceValue *getAddressCheckPSV() const {
     return AddressCheckPSV.get();

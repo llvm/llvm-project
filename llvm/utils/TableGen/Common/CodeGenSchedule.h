@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENSCHEDULE_H
-#define LLVM_UTILS_TABLEGEN_CODEGENSCHEDULE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENSCHEDULE_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENSCHEDULE_H
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -651,4 +651,4 @@ private:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENSCHEDULE_H

@@ -294,7 +294,7 @@ static void testDebugInfoAttributes(MlirContext ctx) {
 
   // CHECK: #llvm.di_local_variable<{{.*}}>
   MlirAttribute local_var = mlirLLVMDILocalVariableAttrGet(
-      ctx, compile_unit, foo, file, 1, 0, 8, di_type);
+      ctx, compile_unit, foo, file, 1, 0, 8, di_type, 0);
   mlirAttributeDump(local_var);
   // CHECK: #llvm.di_derived_type<{{.*}}>
   // CHECK-NOT: dwarfAddressSpace

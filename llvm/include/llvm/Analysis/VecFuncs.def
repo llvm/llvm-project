@@ -51,13 +51,19 @@ TLI_DEFINE_VECFUNC("llvm.cos.f32", "vcosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("tanf", "vtanf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.tan.f32", "vtanf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("asinf", "vasinf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.asin.f32", "vasinf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("acosf", "vacosf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.acos.f32", "vacosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atanf", "vatanf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.atan.f32", "vatanf", FIXED(4), "_ZGV_LLVM_N4v")
 
 // Hyperbolic Functions
 TLI_DEFINE_VECFUNC("sinhf", "vsinhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.sinh.f32", "vsinhf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("coshf", "vcoshf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.cosh.f32", "vcoshf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("tanhf", "vtanhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tanh.f32", "vtanhf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("asinhf", "vasinhf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("acoshf", "vacoshf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atanhf", "vatanhf", FIXED(4), "_ZGV_LLVM_N4v")
@@ -1358,8 +1364,16 @@ TLI_DEFINE_VECFUNC("asinf", "amd_vrs4_asinf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("asinf", "amd_vrs8_asinf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("asinf", "amd_vrs16_asinf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
 
+TLI_DEFINE_VECFUNC("llvm.asin.f64", "amd_vrd8_asin", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.asin.f32", "amd_vrs4_asinf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.asin.f32", "amd_vrs8_asinf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.asin.f32", "amd_vrs16_asinf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+
 TLI_DEFINE_VECFUNC("acosf", "amd_vrs4_acosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("acosf", "amd_vrs8_acosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.acos.f32", "amd_vrs8_acosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.acos.f32", "amd_vrs4_acosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 
 TLI_DEFINE_VECFUNC("atan", "amd_vrd2_atan", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("atan", "amd_vrd4_atan", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
@@ -1368,11 +1382,24 @@ TLI_DEFINE_VECFUNC("atanf", "amd_vrs4_atanf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atanf", "amd_vrs8_atanf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("atanf", "amd_vrs16_atanf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
 
+TLI_DEFINE_VECFUNC("llvm.atan.f64", "amd_vrd2_atan", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.atan.f64", "amd_vrd4_atan", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.atan.f64", "amd_vrd8_atan", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.atan.f32", "amd_vrs4_atanf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.atan.f32", "amd_vrs8_atanf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.atan.f32", "amd_vrs16_atanf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+
 TLI_DEFINE_VECFUNC("coshf", "amd_vrs4_coshf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("coshf", "amd_vrs8_coshf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 
+TLI_DEFINE_VECFUNC("llvm.cosh.f32", "amd_vrs4_coshf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.cosh.f32", "amd_vrs8_coshf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
 TLI_DEFINE_VECFUNC("tanhf", "amd_vrs4_tanhf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("tanhf", "amd_vrs8_tanhf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.tanh.f32", "amd_vrs4_tanhf",  FIXED(4),  NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tanh.f32", "amd_vrs8_tanhf",  FIXED(8),  NOMASK, "_ZGV_LLVM_N8v")
 
 TLI_DEFINE_VECFUNC("cbrt", "amd_vrd2_cbrt", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("cbrtf", "amd_vrs4_cbrtf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")

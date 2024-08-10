@@ -170,7 +170,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
 }
 
 Preprocessor::~Preprocessor() {
-  assert(BacktrackPositions.empty() && "EnableBacktrack/Backtrack imbalance!");
+  assert(!isBacktrackEnabled() && "EnableBacktrack/Backtrack imbalance!");
 
   IncludeMacroStack.clear();
 

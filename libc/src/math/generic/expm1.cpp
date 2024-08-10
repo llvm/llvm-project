@@ -30,13 +30,6 @@
 #define LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
 #endif
 
-// #define DEBUGDEBUG
-
-#ifdef DEBUGDEBUG
-#include <iomanip>
-#include <iostream>
-#endif
-
 namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
