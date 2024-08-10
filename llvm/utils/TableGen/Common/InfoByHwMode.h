@@ -11,8 +11,8 @@
 // data).
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
-#define LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_INFOBYHWMODE_H
+#define LLVM_UTILS_TABLEGEN_COMMON_INFOBYHWMODE_H
 
 #include "CodeGenHwModes.h"
 #include "llvm/ADT/SmallVector.h"
@@ -243,4 +243,4 @@ struct EncodingInfoByHwMode : public InfoByHwMode<Record *> {
 
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_INFOBYHWMODE_H
