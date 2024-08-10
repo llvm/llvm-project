@@ -306,4 +306,45 @@ namespace Zeroing {
   static_assert(UnionWithUnnamedBitfield{}.n == 0, "");
   static_assert(UnionWithUnnamedBitfield{1}.n == 1, "");
 }
+
+namespace IndirectField {
+  struct S {
+    struct {
+      union {
+        struct {
+          int a;
+          int b;
+        };
+        int c;
+      };
+      int d;
+    };
+    union {
+      int e;
+      int f;
+    };
+    constexpr S(int a, int b, int d, int e) : a(a), b(b), d(d), e(e) {}
+    constexpr S(int c, int d, int f) : c(c), d(d), f(f) {}
+  };
+
+  constexpr S s1(1,2,3,4);
+  constexpr S s2(5, 6, 7);
+
+  static_assert(s1.a == 1, "");
+  static_assert(s1.b == 2, "");
+
+  static_assert(s1.c == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s1.d == 3, "");
+  static_assert(s1.e == 4, "");
+  static_assert(s1.f == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+
+  static_assert(s2.a == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s2.b == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s2.c == 5, "");
+  static_assert(s2.d == 6, "");
+  static_assert(s2.e == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s2.f == 7, "");
+}
+
+
 #endif

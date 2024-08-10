@@ -4737,8 +4737,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
-  auto emitFieldInitializer = [&](const Record *R, const Record::Field *F,
-                                  unsigned FieldOffset,
+  auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
                                   const Expr *InitExpr) -> bool {
     // We don't know what to do with these, so just return false.
     if (InitExpr->getType().isNull())
@@ -4750,8 +4749,6 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
 
       if (F->isBitField())
         return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
-      if (R->isUnion())
-        return this->emitInitThisFieldActive(*T, FieldOffset, InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
     // Non-primitive case. Get a pointer to the field-to-initialize
@@ -4787,7 +4784,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
       if (const FieldDecl *Member = Init->getMember()) {
         const Record::Field *F = R->getField(Member);
 
-        if (!emitFieldInitializer(R, F, F->Offset, InitExpr))
+        if (!emitFieldInitializer(F, F->Offset, InitExpr))
           return false;
       } else if (const Type *Base = Init->getBaseClass()) {
         const auto *BaseDecl = Base->getAsCXXRecordDecl();
@@ -4815,11 +4812,11 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
         assert(IFD->getChainingSize() >= 2);
 
         unsigned NestedFieldOffset = 0;
-        const Record *FieldRecord = nullptr;
         const Record::Field *NestedField = nullptr;
         for (const NamedDecl *ND : IFD->chain()) {
           const auto *FD = cast<FieldDecl>(ND);
-          FieldRecord = this->P.getOrCreateRecord(FD->getParent());
+          const Record *FieldRecord =
+              this->P.getOrCreateRecord(FD->getParent());
           assert(FieldRecord);
 
           NestedField = FieldRecord->getField(FD);
@@ -4829,8 +4826,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
         }
         assert(NestedField);
 
-        if (!emitFieldInitializer(FieldRecord, NestedField, NestedFieldOffset,
-                                  InitExpr))
+        if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
           return false;
       } else {
         assert(Init->isDelegatingInitializer());
