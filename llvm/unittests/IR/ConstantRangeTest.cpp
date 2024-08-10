@@ -228,6 +228,12 @@ static bool CheckNonSignWrappedOnly(const ConstantRange &CR1,
   return !CR1.isSignWrappedSet() && !CR2.isSignWrappedSet();
 }
 
+static bool
+CheckNoSignedWrappedLHSAndNoWrappedRHSOnly(const ConstantRange &CR1,
+                                           const ConstantRange &CR2) {
+  return !CR1.isSignWrappedSet() && !CR2.isWrappedSet();
+}
+
 static bool CheckNonWrappedOrSignWrappedOnly(const ConstantRange &CR1,
                                              const ConstantRange &CR2) {
   return !CR1.isWrappedSet() && !CR1.isSignWrappedSet() &&
@@ -1506,7 +1512,9 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
   using OBO = OverflowingBinaryOperator;
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap);
+        ConstantRange Res = CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap);
+        EXPECT_TRUE(CR1.shl(CR2).contains(Res));
+        return Res;
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
@@ -1515,7 +1523,7 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
           return std::nullopt;
         return Res;
       },
-      PreferSmallest, CheckCorrectnessOnly);
+      PreferSmallest, CheckNonWrappedOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shlWithNoWrap(CR2, OBO::NoSignedWrap);
@@ -1527,7 +1535,7 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
           return std::nullopt;
         return Res;
       },
-      PreferSmallest, CheckCorrectnessOnly);
+      PreferSmallestSigned, CheckNoSignedWrappedLHSAndNoWrappedRHSOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
@@ -1542,6 +1550,31 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
         return Res1;
       },
       PreferSmallest, CheckCorrectnessOnly);
+
+  EXPECT_EQ(One.shlWithNoWrap(Full, OBO::NoSignedWrap),
+            ConstantRange(APInt(16, 10), APInt(16, 20481)));
+  EXPECT_EQ(One.shlWithNoWrap(Full, OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 10), APInt(16, -24575)));
+  EXPECT_EQ(One.shlWithNoWrap(Full, OBO::NoSignedWrap | OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 10), APInt(16, 20481)));
+  ConstantRange NegOne(APInt(16, 0xffff));
+  EXPECT_EQ(NegOne.shlWithNoWrap(Full, OBO::NoSignedWrap),
+            ConstantRange(APInt(16, -32768), APInt(16, 0)));
+  EXPECT_EQ(NegOne.shlWithNoWrap(Full, OBO::NoUnsignedWrap), NegOne);
+  EXPECT_EQ(ConstantRange(APInt(16, 768))
+                .shlWithNoWrap(Full, OBO::NoSignedWrap | OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 768), APInt(16, 24577)));
+  EXPECT_EQ(Full.shlWithNoWrap(ConstantRange(APInt(16, 1), APInt(16, 16)),
+                               OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 0), APInt(16, -1)));
+  EXPECT_EQ(ConstantRange(APInt(4, 3), APInt(4, -8))
+                .shlWithNoWrap(ConstantRange(APInt(4, 0), APInt(4, 4)),
+                               OBO::NoSignedWrap),
+            ConstantRange(APInt(4, 3), APInt(4, -8)));
+  EXPECT_EQ(ConstantRange(APInt(4, -1), APInt(4, 0))
+                .shlWithNoWrap(ConstantRange(APInt(4, 1), APInt(4, 4)),
+                               OBO::NoSignedWrap),
+            ConstantRange(APInt(4, -8), APInt(4, -1)));
 }
 
 TEST_F(ConstantRangeTest, Lshr) {

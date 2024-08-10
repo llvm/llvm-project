@@ -29,9 +29,7 @@ template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
       : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P, VD),
-        OldGlobalDecl(Ctx->GlobalDecl),
         OldInitializingDecl(Ctx->InitializingDecl) {
-    Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
     Ctx->InitializingDecl = VD;
     Ctx->InitStack.push_back(InitLink::Decl(VD));
   }
@@ -41,14 +39,12 @@ public:
   }
 
   ~DeclScope() {
-    this->Ctx->GlobalDecl = OldGlobalDecl;
     this->Ctx->InitializingDecl = OldInitializingDecl;
     this->Ctx->InitStack.pop_back();
   }
 
 private:
   Program::DeclScope Scope;
-  bool OldGlobalDecl;
   const ValueDecl *OldInitializingDecl;
 };
 
@@ -339,6 +335,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!PointeeType.isNull()) {
       if (std::optional<PrimType> T = classify(PointeeType))
         Desc = P.createDescriptor(SubExpr, *T);
+      else
+        Desc = P.createDescriptor(SubExpr, PointeeType.getTypePtr(),
+                                  std::nullopt, true, false,
+                                  /*IsMutable=*/false, nullptr);
     }
     return this->emitNull(classifyPrim(CE->getType()), Desc, CE);
   }
@@ -426,7 +426,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (CE->getType()->isAtomicType()) {
       if (!this->discard(SubExpr))
         return false;
-      return this->emitInvalidCast(CastKind::Reinterpret, CE);
+      return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, CE);
     }
 
     if (DiscardResult)
@@ -480,19 +480,25 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       }
     }
 
+    auto maybeNegate = [&]() -> bool {
+      if (CE->getCastKind() == CK_BooleanToSignedIntegral)
+        return this->emitNeg(*ToT, CE);
+      return true;
+    };
+
     if (ToT == PT_IntAP)
-      return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
+      return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE) &&
+             maybeNegate();
     if (ToT == PT_IntAPS)
-      return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE);
+      return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE) &&
+             maybeNegate();
 
     if (FromT == ToT)
       return true;
     if (!this->emitCast(*FromT, *ToT, CE))
       return false;
 
-    if (CE->getCastKind() == CK_BooleanToSignedIntegral)
-      return this->emitNeg(*ToT, CE);
-    return true;
+    return maybeNegate();
   }
 
   case CK_PointerToBoolean:
@@ -2265,7 +2271,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // the temporary is explicitly static, create a global variable.
   std::optional<PrimType> SubExprT = classify(SubExpr);
   bool IsStatic = E->getStorageDuration() == SD_Static;
-  if (GlobalDecl || IsStatic) {
+  if (IsStatic) {
     std::optional<unsigned> GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
@@ -2465,10 +2471,13 @@ bool Compiler<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
-  if (!this->discard(E->getSubExpr()))
+  const Expr *SubExpr = E->getSubExpr();
+
+  bool TypesMatch = classify(E) == classify(SubExpr);
+  if (!this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/!TypesMatch, E))
     return false;
 
-  return this->emitInvalidCast(CastKind::Reinterpret, E);
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>
@@ -3158,10 +3167,11 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
   if (!E->isExpressibleAsConstantInitializer())
-    return this->emitInvalid(E);
+    return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(E->getSubExpr());
+  return this->delegate(SubExpr);
 }
 
 template <class Emitter>
@@ -4729,7 +4739,8 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
-  auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
+  auto emitFieldInitializer = [&](const Record *R, const Record::Field *F,
+                                  unsigned FieldOffset,
                                   const Expr *InitExpr) -> bool {
     // We don't know what to do with these, so just return false.
     if (InitExpr->getType().isNull())
@@ -4741,6 +4752,8 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
 
       if (F->isBitField())
         return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
+      if (R->isUnion())
+        return this->emitInitThisFieldActive(*T, FieldOffset, InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
     // Non-primitive case. Get a pointer to the field-to-initialize
@@ -4752,7 +4765,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
     if (!this->visitInitializer(InitExpr))
       return false;
 
-    return this->emitPopPtr(InitExpr);
+    return this->emitFinishInitPop(InitExpr);
   };
 
   // Emit custom code if this is a lambda static invoker.
@@ -4776,7 +4789,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
       if (const FieldDecl *Member = Init->getMember()) {
         const Record::Field *F = R->getField(Member);
 
-        if (!emitFieldInitializer(F, F->Offset, InitExpr))
+        if (!emitFieldInitializer(R, F, F->Offset, InitExpr))
           return false;
       } else if (const Type *Base = Init->getBaseClass()) {
         const auto *BaseDecl = Base->getAsCXXRecordDecl();
@@ -4804,11 +4817,11 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
         assert(IFD->getChainingSize() >= 2);
 
         unsigned NestedFieldOffset = 0;
+        const Record *FieldRecord = nullptr;
         const Record::Field *NestedField = nullptr;
         for (const NamedDecl *ND : IFD->chain()) {
           const auto *FD = cast<FieldDecl>(ND);
-          const Record *FieldRecord =
-              this->P.getOrCreateRecord(FD->getParent());
+          FieldRecord = this->P.getOrCreateRecord(FD->getParent());
           assert(FieldRecord);
 
           NestedField = FieldRecord->getField(FD);
@@ -4818,7 +4831,8 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
         }
         assert(NestedField);
 
-        if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
+        if (!emitFieldInitializer(FieldRecord, NestedField, NestedFieldOffset,
+                                  InitExpr))
           return false;
       } else {
         assert(Init->isDelegatingInitializer());

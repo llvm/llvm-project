@@ -84,8 +84,7 @@ clang::Decl *ClangASTImporter::CopyDecl(clang::ASTContext *dst_ast,
     LLDB_LOG_ERROR(log, result.takeError(), "Couldn't import decl: {0}");
     if (log) {
       lldb::user_id_t user_id = LLDB_INVALID_UID;
-      ClangASTMetadata *metadata = GetDeclMetadata(decl);
-      if (metadata)
+      if (std::optional<ClangASTMetadata> metadata = GetDeclMetadata(decl))
         user_id = metadata->GetUserID();
 
       if (NamedDecl *named_decl = dyn_cast<NamedDecl>(decl))
@@ -950,7 +949,8 @@ bool ClangASTImporter::RequireCompleteType(clang::QualType type) {
   return true;
 }
 
-ClangASTMetadata *ClangASTImporter::GetDeclMetadata(const clang::Decl *decl) {
+std::optional<ClangASTMetadata>
+ClangASTImporter::GetDeclMetadata(const clang::Decl *decl) {
   DeclOrigin decl_origin = GetDeclOrigin(decl);
 
   if (decl_origin.Valid()) {
@@ -1105,7 +1105,7 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
 
   // If we have a forcefully completed type, try to find an actual definition
   // for it in other modules.
-  const ClangASTMetadata *md = m_main.GetDeclMetadata(From);
+  std::optional<ClangASTMetadata> md = m_main.GetDeclMetadata(From);
   auto *td = dyn_cast<TagDecl>(From);
   if (td && md && md->IsForcefullyCompleted()) {
     Log *log = GetLog(LLDBLog::Expressions);
@@ -1284,8 +1284,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   }
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
-  ClangASTMetadata *metadata = m_main.GetDeclMetadata(from);
-  if (metadata)
+  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from))
     user_id = metadata->GetUserID();
 
   if (log) {

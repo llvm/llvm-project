@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
 
 union U {
   int a;
@@ -65,3 +67,89 @@ namespace ZeroInit {
   constexpr Z z{};
   static_assert(z.f == 0.0, "");
 }
+
+namespace DefaultInit {
+  union U1 {
+    constexpr U1() {}
+    int a, b = 42;
+  };
+
+  constexpr U1 u1; /// OK.
+
+  constexpr int foo() {
+    U1 u;
+    return u.a; // both-note {{read of member 'a' of union with active member 'b'}}
+  }
+  static_assert(foo() == 42); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+}
+
+#if __cplusplus >= 202002L
+namespace SimpleActivate {
+  constexpr int foo() { // ref-error {{never produces a constant expression}}
+    union {
+      int a;
+      int b;
+    } Z;
+
+    Z.a = 10;
+    Z.b = 20;
+    return Z.a; // both-note {{read of member 'a' of union with active member 'b'}} \
+                // ref-note {{read of member 'a' of union with active member 'b}}
+  }
+  static_assert(foo() == 20); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
+  constexpr int foo2() {
+    union {
+      int a;
+      int b;
+    } Z;
+
+    Z.a = 10;
+    Z.b = 20;
+    return Z.b;
+  }
+  static_assert(foo2() == 20);
+
+
+  constexpr int foo3() {
+    union {
+      struct {
+        float x,y;
+      } a;
+      int b;
+    } Z;
+
+    Z.a.y = 10;
+
+    return Z.a.x; // both-note {{read of uninitialized object}}
+  }
+  static_assert(foo3() == 10); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to}}
+
+  constexpr int foo4() {
+    union {
+      struct {
+        float x,y;
+      } a;
+      int b;
+    } Z;
+
+    Z.a.x = 100;
+    Z.a.y = 10;
+
+    return Z.a.x;
+  }
+  static_assert(foo4() == 100);
+}
+
+namespace IndirectFieldDecl {
+  struct C {
+    union { int a, b = 2, c; };
+    union { int d, e = 5, f; };
+    constexpr C() : a(1) {}
+  };
+  static_assert(C().a == 1, "");
+}
+#endif

@@ -190,7 +190,15 @@ def add_function_to_yaml(yaml_file, function_details):
     if new_function.attributes:
         function_dict["attributes"] = new_function.attributes
 
-    yaml_data["functions"].append(function_dict)
+    insert_index = 0
+    for i, func in enumerate(yaml_data["functions"]):
+        if func["name"] > new_function.name:
+            insert_index = i
+            break
+    else:
+        insert_index = len(yaml_data["functions"])
+
+    yaml_data["functions"].insert(insert_index, function_dict)
 
     class IndentYamlListDumper(yaml.Dumper):
         def increase_indent(self, flow=False, indentless=False):
