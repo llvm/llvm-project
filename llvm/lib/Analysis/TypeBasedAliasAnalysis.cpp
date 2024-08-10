@@ -822,16 +822,16 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   AAMDNodes New = *this;
   MDNode *M = New.TBAAStruct;
-  if (M && M->getNumOperands() >= 3 && M->getOperand(0) &&
+  if (!New.TBAA && M && M->getNumOperands() >= 3 && M->getOperand(0) &&
       mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
       mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
       M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
       mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
           AccessSize &&
-      M->getOperand(2) && isa<MDNode>(M->getOperand(2))) {
-    New.TBAAStruct = nullptr;
+      M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
     New.TBAA = cast<MDNode>(M->getOperand(2));
-  }
+
+  New.TBAAStruct = nullptr;
   return New;
 }
 

@@ -171,7 +171,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
 
   // If the memcpy has metadata describing the members, see if we can get the
-  // TBAA tag describing our copy.
+  // TBAA, scope and noalias tags describing our copy.
   AAMDNodes AACopyMD = MI->getAAMetadata().adjustForAccess(Size);
 
   Value *Src = MI->getArgOperand(1);
