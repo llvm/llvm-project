@@ -413,7 +413,7 @@ void Pointer::activate() const {
   }
 
   Pointer B = getBase();
-  while (!B.getFieldDesc()->isUnion()) {
+  while (!B.isRoot() && B.inUnion()) {
     // FIXME: Need to de-activate other fields of parent records.
     B.getInlineDesc()->IsActive = true;
     assert(B.isActive());
