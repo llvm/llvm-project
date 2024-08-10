@@ -285,7 +285,7 @@ define <vscale x 32 x i8> @vp_ctlz_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    vsrl.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vsrl.vi v12, v8, 1, v0.t
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v12, v12, a0, v0.t
@@ -319,7 +319,7 @@ define <vscale x 32 x i8> @vp_ctlz_nxv32i8_unmasked(<vscale x 32 x i8> %va, i32 
 ; CHECK-NEXT:    vor.vv v8, v8, v12
 ; CHECK-NEXT:    vsrl.vi v12, v8, 4
 ; CHECK-NEXT:    vor.vv v8, v8, v12
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    vsrl.vi v12, v8, 1
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v12, v12, a0
@@ -355,7 +355,7 @@ define <vscale x 64 x i8> @vp_ctlz_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 4, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1, v0.t
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v16, v16, a0, v0.t
@@ -389,7 +389,7 @@ define <vscale x 64 x i8> @vp_ctlz_nxv64i8_unmasked(<vscale x 64 x i8> %va, i32 
 ; CHECK-NEXT:    vor.vv v8, v8, v16
 ; CHECK-NEXT:    vsrl.vi v16, v8, 4
 ; CHECK-NEXT:    vor.vv v8, v8, v16
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v16, v16, a0
@@ -662,7 +662,7 @@ define <vscale x 32 x i16> @vp_ctlz_nxv32i16(<vscale x 32 x i16> %va, <vscale x 
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 8, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1, v0.t
 ; CHECK-NEXT:    lui a0, 5
 ; CHECK-NEXT:    addi a0, a0, 1365
@@ -705,7 +705,7 @@ define <vscale x 32 x i16> @vp_ctlz_nxv32i16_unmasked(<vscale x 32 x i16> %va, i
 ; CHECK-NEXT:    vor.vv v8, v8, v16
 ; CHECK-NEXT:    vsrl.vi v16, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v16
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1
 ; CHECK-NEXT:    lui a0, 5
 ; CHECK-NEXT:    addi a0, a0, 1365
@@ -1594,7 +1594,7 @@ define <vscale x 32 x i8> @vp_ctlz_zero_undef_nxv32i8(<vscale x 32 x i8> %va, <v
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    vsrl.vi v12, v8, 4, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vsrl.vi v12, v8, 1, v0.t
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v12, v12, a0, v0.t
@@ -1628,7 +1628,7 @@ define <vscale x 32 x i8> @vp_ctlz_zero_undef_nxv32i8_unmasked(<vscale x 32 x i8
 ; CHECK-NEXT:    vor.vv v8, v8, v12
 ; CHECK-NEXT:    vsrl.vi v12, v8, 4
 ; CHECK-NEXT:    vor.vv v8, v8, v12
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    vsrl.vi v12, v8, 1
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v12, v12, a0
@@ -1663,7 +1663,7 @@ define <vscale x 64 x i8> @vp_ctlz_zero_undef_nxv64i8(<vscale x 64 x i8> %va, <v
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 4, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1, v0.t
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v16, v16, a0, v0.t
@@ -1697,7 +1697,7 @@ define <vscale x 64 x i8> @vp_ctlz_zero_undef_nxv64i8_unmasked(<vscale x 64 x i8
 ; CHECK-NEXT:    vor.vv v8, v8, v16
 ; CHECK-NEXT:    vsrl.vi v16, v8, 4
 ; CHECK-NEXT:    vor.vv v8, v8, v16
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vand.vx v16, v16, a0
@@ -1944,7 +1944,7 @@ define <vscale x 32 x i16> @vp_ctlz_zero_undef_nxv32i16(<vscale x 32 x i16> %va,
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 8, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1, v0.t
 ; CHECK-NEXT:    lui a0, 5
 ; CHECK-NEXT:    addi a0, a0, 1365
@@ -1987,7 +1987,7 @@ define <vscale x 32 x i16> @vp_ctlz_zero_undef_nxv32i16_unmasked(<vscale x 32 x 
 ; CHECK-NEXT:    vor.vv v8, v8, v16
 ; CHECK-NEXT:    vsrl.vi v16, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v16
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    vsrl.vi v16, v8, 1
 ; CHECK-NEXT:    lui a0, 5
 ; CHECK-NEXT:    addi a0, a0, 1365

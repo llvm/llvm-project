@@ -2048,7 +2048,7 @@ define void @fneg_v16f16(ptr %x) {
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFH-NEXT:    vle16.v v8, (a0)
-; ZVFH-NEXT:    vfneg.v v8, v8
+; ZVFH-NEXT:    vfsgnjn.vv v8, v8, v8
 ; ZVFH-NEXT:    vse16.v v8, (a0)
 ; ZVFH-NEXT:    ret
 ;
@@ -2058,7 +2058,7 @@ define void @fneg_v16f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v8, (a0)
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v8, v10
+; ZVFHMIN-NEXT:    vfsgnjn.vv v8, v10, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v8
 ; ZVFHMIN-NEXT:    vse16.v v10, (a0)
@@ -2074,7 +2074,7 @@ define void @fneg_v8f32(ptr %x) {
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVFH-NEXT:    vle32.v v8, (a0)
-; ZVFH-NEXT:    vfneg.v v8, v8
+; ZVFH-NEXT:    vfsgnjn.vv v8, v8, v8
 ; ZVFH-NEXT:    vse32.v v8, (a0)
 ; ZVFH-NEXT:    ret
 ;
@@ -2096,7 +2096,7 @@ define void @fneg_v4f64(ptr %x) {
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; ZVFH-NEXT:    vle64.v v8, (a0)
-; ZVFH-NEXT:    vfneg.v v8, v8
+; ZVFH-NEXT:    vfsgnjn.vv v8, v8, v8
 ; ZVFH-NEXT:    vse64.v v8, (a0)
 ; ZVFH-NEXT:    ret
 ;

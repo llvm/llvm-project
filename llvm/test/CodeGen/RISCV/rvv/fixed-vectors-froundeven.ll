@@ -148,7 +148,7 @@ define <8 x half> @roundeven_v8f16(<8 x half> %x) {
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfabs.v v8, v10
+; ZVFHMIN-NEXT:    vfsgnjx.vv v8, v10, v10
 ; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
@@ -172,7 +172,7 @@ define <16 x half> @roundeven_v16f16(<16 x half> %x) {
 ; ZVFH-NEXT:    lui a0, %hi(.LCPI4_0)
 ; ZVFH-NEXT:    flh fa5, %lo(.LCPI4_0)(a0)
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vfabs.v v10, v8
+; ZVFH-NEXT:    vfsgnjx.vv v10, v8, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFH-NEXT:    fsrmi a0, 0
 ; ZVFH-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -187,7 +187,7 @@ define <16 x half> @roundeven_v16f16(<16 x half> %x) {
 ; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfabs.v v8, v12
+; ZVFHMIN-NEXT:    vfsgnjx.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
@@ -212,7 +212,7 @@ define <32 x half> @roundeven_v32f16(<32 x half> %x) {
 ; ZVFH-NEXT:    flh fa5, %lo(.LCPI5_0)(a0)
 ; ZVFH-NEXT:    li a0, 32
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFH-NEXT:    vfabs.v v12, v8
+; ZVFH-NEXT:    vfsgnjx.vv v12, v8, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFH-NEXT:    fsrmi a0, 0
 ; ZVFH-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -228,7 +228,7 @@ define <32 x half> @roundeven_v32f16(<32 x half> %x) {
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfabs.v v8, v16
+; ZVFHMIN-NEXT:    vfsgnjx.vv v8, v16, v16
 ; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
@@ -310,7 +310,7 @@ define <8 x float> @roundeven_v8f32(<8 x float> %x) {
 ; CHECK-LABEL: roundeven_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
@@ -330,7 +330,7 @@ define <16 x float> @roundeven_v16f32(<16 x float> %x) {
 ; CHECK-LABEL: roundeven_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    vfsgnjx.vv v12, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
@@ -392,7 +392,7 @@ define <4 x double> @roundeven_v4f64(<4 x double> %x) {
 ; CHECK-NEXT:    lui a0, %hi(.LCPI13_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI13_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -412,7 +412,7 @@ define <8 x double> @roundeven_v8f64(<8 x double> %x) {
 ; CHECK-NEXT:    lui a0, %hi(.LCPI14_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    vfsgnjx.vv v12, v8, v8
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t

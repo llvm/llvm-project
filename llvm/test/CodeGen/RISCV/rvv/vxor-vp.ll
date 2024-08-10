@@ -432,7 +432,7 @@ define <vscale x 15 x i8> @vxor_vi_nxv15i8_1(<vscale x 15 x i8> %va, <vscale x 1
 ; CHECK-LABEL: vxor_vi_nxv15i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> splat (i8 -1), <vscale x 15 x i1> %m, i32 %evl)
   ret <vscale x 15 x i8> %v
@@ -442,7 +442,7 @@ define <vscale x 15 x i8> @vxor_vi_nxv15i8_unmasked_1(<vscale x 15 x i8> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv15i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> splat (i8 -1), <vscale x 15 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 15 x i8> %v
@@ -518,7 +518,7 @@ define <vscale x 16 x i8> @vxor_vi_nxv16i8_1(<vscale x 16 x i8> %va, <vscale x 1
 ; CHECK-LABEL: vxor_vi_nxv16i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i8> @llvm.vp.xor.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> splat (i8 -1), <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i8> %v
@@ -528,7 +528,7 @@ define <vscale x 16 x i8> @vxor_vi_nxv16i8_unmasked_1(<vscale x 16 x i8> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv16i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i8> @llvm.vp.xor.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> splat (i8 -1), <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i8> %v
@@ -604,7 +604,7 @@ define <vscale x 32 x i8> @vxor_vi_nxv32i8_1(<vscale x 32 x i8> %va, <vscale x 3
 ; CHECK-LABEL: vxor_vi_nxv32i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i8> @llvm.vp.xor.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> splat (i8 -1), <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i8> %v
@@ -614,7 +614,7 @@ define <vscale x 32 x i8> @vxor_vi_nxv32i8_unmasked_1(<vscale x 32 x i8> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv32i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i8> @llvm.vp.xor.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> splat (i8 -1), <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i8> %v
@@ -690,7 +690,7 @@ define <vscale x 64 x i8> @vxor_vi_nxv64i8_1(<vscale x 64 x i8> %va, <vscale x 6
 ; CHECK-LABEL: vxor_vi_nxv64i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 64 x i8> @llvm.vp.xor.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> splat (i8 -1), <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i8> %v
@@ -700,7 +700,7 @@ define <vscale x 64 x i8> @vxor_vi_nxv64i8_unmasked_1(<vscale x 64 x i8> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv64i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 64 x i8> @llvm.vp.xor.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> splat (i8 -1), <vscale x 64 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 64 x i8> %v
@@ -1046,7 +1046,7 @@ define <vscale x 8 x i16> @vxor_vi_nxv8i16_1(<vscale x 8 x i16> %va, <vscale x 8
 ; CHECK-LABEL: vxor_vi_nxv8i16_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i16> @llvm.vp.xor.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> splat (i16 -1), <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i16> %v
@@ -1056,7 +1056,7 @@ define <vscale x 8 x i16> @vxor_vi_nxv8i16_unmasked_1(<vscale x 8 x i16> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv8i16_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i16> @llvm.vp.xor.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> splat (i16 -1), <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i16> %v
@@ -1132,7 +1132,7 @@ define <vscale x 16 x i16> @vxor_vi_nxv16i16_1(<vscale x 16 x i16> %va, <vscale 
 ; CHECK-LABEL: vxor_vi_nxv16i16_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i16> @llvm.vp.xor.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> splat (i16 -1), <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i16> %v
@@ -1142,7 +1142,7 @@ define <vscale x 16 x i16> @vxor_vi_nxv16i16_unmasked_1(<vscale x 16 x i16> %va,
 ; CHECK-LABEL: vxor_vi_nxv16i16_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i16> @llvm.vp.xor.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> splat (i16 -1), <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i16> %v
@@ -1218,7 +1218,7 @@ define <vscale x 32 x i16> @vxor_vi_nxv32i16_1(<vscale x 32 x i16> %va, <vscale 
 ; CHECK-LABEL: vxor_vi_nxv32i16_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.xor.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> splat (i16 -1), <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i16> %v
@@ -1228,7 +1228,7 @@ define <vscale x 32 x i16> @vxor_vi_nxv32i16_unmasked_1(<vscale x 32 x i16> %va,
 ; CHECK-LABEL: vxor_vi_nxv32i16_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.xor.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> splat (i16 -1), <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i16> %v
@@ -1476,7 +1476,7 @@ define <vscale x 4 x i32> @vxor_vi_nxv4i32_1(<vscale x 4 x i32> %va, <vscale x 4
 ; CHECK-LABEL: vxor_vi_nxv4i32_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.xor.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> splat (i32 -1), <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i32> %v
@@ -1486,7 +1486,7 @@ define <vscale x 4 x i32> @vxor_vi_nxv4i32_unmasked_1(<vscale x 4 x i32> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv4i32_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.xor.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> splat (i32 -1), <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %v
@@ -1562,7 +1562,7 @@ define <vscale x 8 x i32> @vxor_vi_nxv8i32_1(<vscale x 8 x i32> %va, <vscale x 8
 ; CHECK-LABEL: vxor_vi_nxv8i32_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vp.xor.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> splat (i32 -1), <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i32> %v
@@ -1572,7 +1572,7 @@ define <vscale x 8 x i32> @vxor_vi_nxv8i32_unmasked_1(<vscale x 8 x i32> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv8i32_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vp.xor.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> splat (i32 -1), <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i32> %v
@@ -1648,7 +1648,7 @@ define <vscale x 16 x i32> @vxor_vi_nxv16i32_1(<vscale x 16 x i32> %va, <vscale 
 ; CHECK-LABEL: vxor_vi_nxv16i32_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vp.xor.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> splat (i32 -1), <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i32> %v
@@ -1658,7 +1658,7 @@ define <vscale x 16 x i32> @vxor_vi_nxv16i32_unmasked_1(<vscale x 16 x i32> %va,
 ; CHECK-LABEL: vxor_vi_nxv16i32_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vp.xor.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> splat (i32 -1), <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i32> %v
@@ -1876,7 +1876,7 @@ define <vscale x 2 x i64> @vxor_vi_nxv2i64_1(<vscale x 2 x i64> %va, <vscale x 2
 ; CHECK-LABEL: vxor_vi_nxv2i64_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.xor.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> splat (i64 -1), <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %v
@@ -1886,7 +1886,7 @@ define <vscale x 2 x i64> @vxor_vi_nxv2i64_unmasked_1(<vscale x 2 x i64> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv2i64_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.xor.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> splat (i64 -1), <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i64> %v
@@ -1990,7 +1990,7 @@ define <vscale x 4 x i64> @vxor_vi_nxv4i64_1(<vscale x 4 x i64> %va, <vscale x 4
 ; CHECK-LABEL: vxor_vi_nxv4i64_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.vp.xor.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> splat (i64 -1), <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %v
@@ -2000,7 +2000,7 @@ define <vscale x 4 x i64> @vxor_vi_nxv4i64_unmasked_1(<vscale x 4 x i64> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv4i64_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.vp.xor.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> splat (i64 -1), <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i64> %v
@@ -2104,7 +2104,7 @@ define <vscale x 8 x i64> @vxor_vi_nxv8i64_1(<vscale x 8 x i64> %va, <vscale x 8
 ; CHECK-LABEL: vxor_vi_nxv8i64_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vxor.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i64> @llvm.vp.xor.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> splat (i64 -1), <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %v
@@ -2114,7 +2114,7 @@ define <vscale x 8 x i64> @vxor_vi_nxv8i64_unmasked_1(<vscale x 8 x i64> %va, i3
 ; CHECK-LABEL: vxor_vi_nxv8i64_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vnot.v v8, v8
+; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i64> @llvm.vp.xor.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> splat (i64 -1), <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i64> %v

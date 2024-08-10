@@ -548,7 +548,7 @@ define <vscale x 4 x half> @vfcopynsign_vv_nxv4f16(<vscale x 4 x half> %vm, <vsc
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v10, v10
+; ZVFHMIN-NEXT:    vfsgnjn.vv v10, v10, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
@@ -579,7 +579,7 @@ define <vscale x 4 x half> @vfcopynsign_vf_nxv4f16(<vscale x 4 x half> %vm, half
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v10, v10
+; ZVFHMIN-NEXT:    vfsgnjn.vv v10, v10, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
@@ -658,7 +658,7 @@ define <vscale x 8 x half> @vfcopynsign_vv_nxv8f16(<vscale x 8 x half> %vm, <vsc
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v12, v12
+; ZVFHMIN-NEXT:    vfsgnjn.vv v12, v12, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
@@ -689,7 +689,7 @@ define <vscale x 8 x half> @vfcopynsign_vf_nxv8f16(<vscale x 8 x half> %vm, half
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v12, v12
+; ZVFHMIN-NEXT:    vfsgnjn.vv v12, v12, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
@@ -775,7 +775,7 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f32(<vscale x 8 
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v8, v12
+; ZVFHMIN-NEXT:    vfsgnjn.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v12
@@ -809,7 +809,7 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v8, v12
+; ZVFHMIN-NEXT:    vfsgnjn.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v12
@@ -908,7 +908,7 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v16, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v8, v8
+; ZVFHMIN-NEXT:    vfsgnjn.vv v8, v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v16, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v16
@@ -947,7 +947,7 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v16, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v8, v8
+; ZVFHMIN-NEXT:    vfsgnjn.vv v8, v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v16, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v16
@@ -1026,7 +1026,7 @@ define <vscale x 16 x half> @vfcopynsign_vv_nxv16f16(<vscale x 16 x half> %vm, <
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v16, v16
+; ZVFHMIN-NEXT:    vfsgnjn.vv v16, v16, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
@@ -1057,7 +1057,7 @@ define <vscale x 16 x half> @vfcopynsign_vf_nxv16f16(<vscale x 16 x half> %vm, h
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v16, v16
+; ZVFHMIN-NEXT:    vfsgnjn.vv v16, v16, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
@@ -1147,12 +1147,12 @@ define <vscale x 32 x half> @vfcopynsign_vv_nxv32f16(<vscale x 32 x half> %vm, <
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v20
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v24, v24
+; ZVFHMIN-NEXT:    vfsgnjn.vv v24, v24, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v20, v24
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v24, v24
+; ZVFHMIN-NEXT:    vfsgnjn.vv v24, v24, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v16, v24
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
@@ -1189,7 +1189,7 @@ define <vscale x 32 x half> @vfcopynsign_vf_nxv32f16(<vscale x 32 x half> %vm, h
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v24, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfneg.v v16, v16
+; ZVFHMIN-NEXT:    vfsgnjn.vv v16, v16, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v24, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
