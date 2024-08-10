@@ -32,7 +32,7 @@ using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
 using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
-                             bool IsMutable, bool IsActive,
+                             bool IsMutable, bool IsActive, bool InUnion,
                              const Descriptor *FieldDesc);
 
 /// Invoked when a block is destroyed. Invokes the destructors of all
@@ -83,11 +83,15 @@ struct InlineDescriptor {
   /// Flag indicating if the field is an embedded base class.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsBase : 1;
+  /// Flag inidcating if the field is a virtual base class.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsVirtualBase : 1;
   /// Flag indicating if the field is the active member of a union.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;
+  /// Flat indicating if this field is in a union (even if nested).
+  unsigned InUnion : 1;
+  LLVM_PREFERRED_TYPE(bool)
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
@@ -250,6 +254,8 @@ public:
   bool isArray() const { return IsArray; }
   /// Checks if the descriptor is of a record.
   bool isRecord() const { return !IsArray && ElemRecord; }
+  /// Checks if the descriptor is of a union.
+  bool isUnion() const;
   /// Checks if this is a dummy descriptor.
   bool isDummy() const { return IsDummy; }
 

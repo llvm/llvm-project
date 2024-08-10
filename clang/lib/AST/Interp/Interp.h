@@ -1719,8 +1719,10 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1731,8 +1733,10 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   Ptr.deref<T>() = Value;
   return true;
 }
