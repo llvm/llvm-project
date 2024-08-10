@@ -3558,36 +3558,60 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
                                 Masked);
 }
 
-// This function tries to fold the following sequence
-//   %lt = icmp ult/slt i32 %x, %y
-//   %ne0 = icmp ne i32 %x, %y
-//   %ne = zext i1 %ne0 to iN
-//   %r = select i1 %lt, iN -1, iN %ne
-// into
-//   %r = call iN @llvm.ucmp/scmp(%x, %y)
+// This function tries to fold the following operations:
+//   (x < y) ? -1 : zext(x != y)
+//   (x > y) ? 1 : sext(x != y)
+//   (x >= y) ? zext(x != y) : -1
+// Into ucmp/scmp(x, y), where signedness is determined by the signedness
+// of the comparison in the original sequence
 Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
-  if (!isa<Constant>(SI.getTrueValue()) ||
-      !dyn_cast<Constant>(SI.getTrueValue())->isAllOnesValue())
-    return nullptr;
+  Value *TV = SI.getTrueValue();
+  Value *FV = SI.getFalseValue();
 
+  ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
+  if (!match(SI.getCondition(), m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
+    return nullptr;
+
+  if (!LHS->getType()->isIntOrIntVectorTy())
+    return nullptr;
+
+  // Try to swap operands and the predicate. We need to be careful when doing
+  // so because two of the patterns have opposite predicates, so use the
+  // constant inside select to determine if swapping operands would be
+  // beneficial to us.
+  if ((ICmpInst::isGT(Pred) && match(TV, m_AllOnes())) ||
+      (ICmpInst::isLT(Pred) && match(TV, m_One())) || ICmpInst::isLE(Pred)) {
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+    std::swap(LHS, RHS);
+  }
+
+  Intrinsic::ID IID =
+      ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
+
+  CallInst *Intrinsic = nullptr;
   ICmpInst::Predicate NEPred;
-  if (!match(SI.getFalseValue(),
-             m_ZExt(m_ICmp(NEPred, m_Value(LHS), m_Value(RHS)))) ||
-      NEPred != ICmpInst::ICMP_NE)
-    return nullptr;
+  // (x < y) ? -1 : zext(x != y)
+  if (ICmpInst::isLT(Pred) && match(TV, m_AllOnes()) &&
+      match(FV, m_ZExt(m_c_ICmp(NEPred, m_Specific(LHS), m_Specific(RHS)))) &&
+      NEPred == ICmpInst::ICMP_NE)
+    Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
 
-  ICmpInst::Predicate LTPred;
-  if (!match(SI.getCondition(),
-             m_ICmp(LTPred, m_Specific(LHS), m_Specific(RHS))) ||
-      !ICmpInst::isLT(LTPred))
-    return nullptr;
+  // (x > y) ? 1 : sext(x != y)
+  if (ICmpInst::isGT(Pred) && match(TV, m_One()) &&
+      match(FV, m_SExt(m_c_ICmp(NEPred, m_Specific(LHS), m_Specific(RHS)))) &&
+      NEPred == ICmpInst::ICMP_NE)
+    Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
 
-  bool IsSigned = ICmpInst::isSigned(LTPred);
-  Instruction *Result = Builder.CreateIntrinsic(
-      SI.getFalseValue()->getType(),
-      IsSigned ? Intrinsic::scmp : Intrinsic::ucmp, {LHS, RHS});
-  return replaceInstUsesWith(SI, Result);
+  // (x >= y) ? zext(x != y) : -1
+  if (ICmpInst::isGE(Pred) &&
+      match(TV, m_ZExt(m_c_ICmp(NEPred, m_Specific(LHS), m_Specific(RHS)))) &&
+      NEPred == ICmpInst::ICMP_NE && match(FV, m_AllOnes()))
+    Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
+
+  if (Intrinsic)
+    return replaceInstUsesWith(SI, Intrinsic);
+  return nullptr;
 }
 
 bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
