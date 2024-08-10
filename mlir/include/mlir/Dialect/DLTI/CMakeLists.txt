@@ -1,5 +1,3 @@
-add_subdirectory(TransformOps)
-
 add_mlir_dialect(DLTI dlti)
 add_mlir_doc(DLTIAttrs DLTIDialect Dialects/ -gen-dialect-doc)
 

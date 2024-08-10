@@ -1,7 +1,7 @@
 header: threads.h
 macros:
   - macro_name: ONCE_FLAG_INIT
-    macro_value: "{0}"
+    macro_value: '{0}'
 types:
   - type_name: once_flag
   - type_name: __call_once_func_t
@@ -68,6 +68,12 @@ functions:
     arguments:
       - type: cnd_t *
       - type: mtx_t *
+  - name: mtx_destroy
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: void
   - name: mtx_init
     standards:
       - stdc
@@ -75,12 +81,6 @@ functions:
     arguments:
       - type: mtx_t *
       - type: int
-  - name: mtx_destroy
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: void
   - name: mtx_lock
     standards:
       - stdc
@@ -101,25 +101,18 @@ functions:
       - type: thrd_t *
       - type: thrd_start_t
       - type: void *
-  - name: thrd_join
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: thrd_t
-      - type: int *
-  - name: thrd_detach
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: thrd_t
   - name: thrd_current
     standards:
       - stdc
     return_type: thrd_t
     arguments:
       - type: void
+  - name: thrd_detach
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: thrd_t
   - name: thrd_equal
     standards:
       - stdc
@@ -133,6 +126,13 @@ functions:
     return_type: void
     arguments:
       - type: int
+  - name: thrd_join
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: thrd_t
+      - type: int *
   - name: tss_create
     standards:
       - stdc
