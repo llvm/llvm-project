@@ -61,7 +61,7 @@ public:
   }
   bool operator!=(const Use &Other) const { return !(*this == Other); }
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const;
+  void dumpOS(raw_ostream &OS) const;
   void dump() const;
 #endif // NDEBUG
 };
