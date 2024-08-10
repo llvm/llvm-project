@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "cpuid.h"
+#include "gtest/gtest.h"
 
 // TODO(boomanaiden154): This file currently only contains a single test to
 // ensure that the build system components for this test work as expected. The
@@ -19,7 +19,7 @@
 // validated as working on the buildbots.
 
 TEST(BuiltsinCPUModelTest, TestTrue) {
-  OverrideCPUID(1,0,0,4294967295);
+  OverrideCPUID(1, 0, 0, 4294967295);
   int SupportsCmov = __builtin_cpu_supports("cmov");
   ASSERT_TRUE(SupportsCmov);
 }
