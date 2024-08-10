@@ -293,9 +293,6 @@ private:
 
   AMDGPUAttributorOptions Options;
 
-  /// Asserts whether we can assume whole program visibility.
-  bool HasWholeProgramVisibility = false;
-
 public:
   AMDGPUAttributorPass(TargetMachine &TM, AMDGPUAttributorOptions Options = {})
       : TM(TM), Options(Options) {};
