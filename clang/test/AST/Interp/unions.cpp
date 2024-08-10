@@ -346,5 +346,16 @@ namespace IndirectField {
   static_assert(s2.f == 7, "");
 }
 
+namespace CopyCtor {
+  union U {
+    int a;
+    int b;
+  };
 
+  constexpr U x = {42};
+  constexpr U y = x;
+  static_assert(y.a == 42, "");
+  static_assert(y.b == 42, ""); // both-error {{constant expression}} \
+                                // both-note {{'b' of union with active member 'a'}}
+}
 #endif

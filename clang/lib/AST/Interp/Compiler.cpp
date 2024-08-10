@@ -4775,6 +4775,22 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
     if (!R)
       return false;
 
+    if (R->isUnion() && Ctor->isCopyOrMoveConstructor()) {
+      // union copy and move ctors are special.
+      assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
+      if (!this->emitThis(Ctor))
+        return false;
+
+      auto PVD = Ctor->getParamDecl(0);
+      ParamOffset PO = this->Params[PVD]; // Must exist.
+
+      if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
+        return false;
+
+      return this->emitMemcpy(Ctor) && this->emitPopPtr(Ctor) &&
+             this->emitRetVoid(Ctor);
+    }
+
     InitLinkScope<Emitter> InitScope(this, InitLink::This());
     for (const auto *Init : Ctor->inits()) {
       // Scope needed for the initializers.
