@@ -14914,8 +14914,7 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   if (Preds->implies(&Pred))
     return;
 
-  auto &OldPreds = Preds->getPredicates();
-  SmallVector<const SCEVPredicate*, 4> NewPreds(OldPreds.begin(), OldPreds.end());
+  SmallVector<const SCEVPredicate *, 4> NewPreds(Preds->getPredicates());
   NewPreds.push_back(&Pred);
   Preds = std::make_unique<SCEVUnionPredicate>(NewPreds);
   updateGeneration();
