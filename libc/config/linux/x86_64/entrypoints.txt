@@ -798,6 +798,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.ctype.tolower_l
     libc.src.ctype.toupper_l
 
+    # stdlib.h entrypoints
+    libc.src.stdlib.strtod_l
+    libc.src.stdlib.strtof_l
+    libc.src.stdlib.strtol_l
+    libc.src.stdlib.strtold_l
+    libc.src.stdlib.strtoll_l
+    libc.src.stdlib.strtoul_l
+    libc.src.stdlib.strtoull_l
+
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
