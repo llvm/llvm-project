@@ -1014,8 +1014,7 @@ private:
     // The case next is colon, it is not a operator of identifier.
     if (!Tok.Next || Tok.Next->is(tok::colon))
       return false;
-    return std::find(Opes.begin(), Opes.end(), Tok.TokenText.str()) !=
-           Opes.end();
+    return llvm::is_contained(Opes, Tok.TokenText.str());
   }
 
   // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
