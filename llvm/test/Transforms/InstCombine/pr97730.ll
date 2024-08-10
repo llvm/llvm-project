@@ -4,9 +4,10 @@
 define <4 x i1> @pr97730-1(<4 x i1> %val0, <4 x i1> %val1, <4 x i1> %val2) {
 ; CHECK-LABEL: define <4 x i1> @pr97730-1(
 ; CHECK-SAME: <4 x i1> [[VAL0:%.*]], <4 x i1> [[VAL1:%.*]], <4 x i1> [[VAL2:%.*]]) {
+; CHECK-NEXT:    [[VAL3:%.*]] = xor <4 x i1> [[VAL1]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[VAL4:%.*]] = xor <4 x i1> [[VAL0]], <i1 false, i1 undef, i1 undef, i1 true>
-; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i1> [[VAL4]], [[VAL1]]
-; CHECK-NEXT:    [[VAL6:%.*]] = xor <4 x i1> [[TMP0]], <i1 false, i1 undef, i1 undef, i1 true>
+; CHECK-NEXT:    [[VAL5:%.*]] = and <4 x i1> [[VAL4]], [[VAL3]]
+; CHECK-NEXT:    [[VAL6:%.*]] = xor <4 x i1> [[VAL0]], [[VAL5]]
 ; CHECK-NEXT:    ret <4 x i1> [[VAL6]]
 ;
   %val3 = add <4 x i1> %val1, <i1 true, i1 true, i1 true, i1 true>
@@ -19,9 +20,10 @@ define <4 x i1> @pr97730-1(<4 x i1> %val0, <4 x i1> %val1, <4 x i1> %val2) {
 define <4 x i1> @pr97730-2(<4 x i1> %val0, <4 x i1> %val1, <4 x i1> %val2) {
 ; CHECK-LABEL: define <4 x i1> @pr97730-2(
 ; CHECK-SAME: <4 x i1> [[VAL0:%.*]], <4 x i1> [[VAL1:%.*]], <4 x i1> [[VAL2:%.*]]) {
+; CHECK-NEXT:    [[VAL3:%.*]] = xor <4 x i1> [[VAL1]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[VAL4:%.*]] = xor <4 x i1> [[VAL0]], <i1 false, i1 undef, i1 undef, i1 true>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i1> [[VAL4]], [[VAL1]]
-; CHECK-NEXT:    [[VAL6:%.*]] = xor <4 x i1> [[TMP1]], <i1 false, i1 undef, i1 undef, i1 true>
+; CHECK-NEXT:    [[VAL5:%.*]] = and <4 x i1> [[VAL4]], [[VAL3]]
+; CHECK-NEXT:    [[VAL6:%.*]] = xor <4 x i1> [[VAL0]], [[VAL5]]
 ; CHECK-NEXT:    ret <4 x i1> [[VAL6]]
 ;
   %val3 = xor <4 x i1> %val1, <i1 true, i1 true, i1 true, i1 true>

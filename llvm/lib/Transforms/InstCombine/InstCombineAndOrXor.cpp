@@ -4257,6 +4257,11 @@ static Instruction *visitMaskedMerge(BinaryOperator &I,
 
   Value *NotM;
   if (match(M, m_Not(m_Value(NotM)))) {
+
+    if (ConstantVector *C = dyn_cast<ConstantVector>(X))
+      if (C->containsUndefElement())
+        return nullptr;
+
     // De-invert the mask and swap the value in B part.
     Value *NewA = Builder.CreateAnd(D, NotM);
     return BinaryOperator::CreateXor(NewA, X);
