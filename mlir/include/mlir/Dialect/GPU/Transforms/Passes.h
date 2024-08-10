@@ -91,74 +91,11 @@ namespace gpu {
 LogicalResult transformGpuModulesToBinaries(
     Operation *op, OffloadingLLVMTranslationAttrInterface handler = nullptr,
     const gpu::TargetOptions &options = {});
-
-/// Base pass class to serialize kernel functions through LLVM into
-/// user-specified IR and add the resulting blob as module attribute.
-class SerializeToBlobPass : public OperationPass<gpu::GPUModuleOp> {
-public:
-  SerializeToBlobPass(TypeID passID);
-  SerializeToBlobPass(const SerializeToBlobPass &other);
-
-  void runOnOperation() final;
-
-protected:
-  /// Hook allowing the application of optimizations before codegen
-  /// By default, does nothing
-  virtual LogicalResult optimizeLlvm(llvm::Module &llvmModule,
-                                     llvm::TargetMachine &targetMachine);
-
-  /// Translates the 'getOperation()' result to an LLVM module.
-  virtual std::unique_ptr<llvm::Module>
-  translateToLLVMIR(llvm::LLVMContext &llvmContext);
-
-private:
-  /// Creates the LLVM target machine to generate the ISA.
-  std::unique_ptr<llvm::TargetMachine> createTargetMachine();
-
-  /// Translates the module to ISA
-  std::optional<std::string> translateToISA(llvm::Module &llvmModule,
-                                            llvm::TargetMachine &targetMachine);
-
-  /// Serializes the target ISA to binary form.
-  virtual std::unique_ptr<std::vector<char>>
-  serializeISA(const std::string &isa) = 0;
-
-protected:
-  Option<std::string> triple{*this, "triple",
-                             ::llvm::cl::desc("Target triple")};
-  Option<std::string> chip{*this, "chip",
-                           ::llvm::cl::desc("Target architecture")};
-  Option<std::string> features{*this, "features",
-                               ::llvm::cl::desc("Target features")};
-  Option<int> optLevel{*this, "opt-level",
-                       llvm::cl::desc("Optimization level for compilation"),
-                       llvm::cl::init(2)};
-  Option<std::string> gpuBinaryAnnotation{
-      *this, "gpu-binary-annotation",
-      llvm::cl::desc("Annotation attribute string for GPU binary"),
-      llvm::cl::init(getDefaultGpuBinaryAnnotation())};
-  Option<bool> dumpPtx{*this, "dump-ptx",
-                       ::llvm::cl::desc("Dump generated PTX"),
-                       llvm::cl::init(false)};
-};
 } // namespace gpu
 
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
-
-/// Register pass to serialize GPU kernel functions to a HSAco binary
-/// annotation.
-LLVM_DEPRECATED("use Target attributes instead", "")
-void registerGpuSerializeToHsacoPass();
-
-/// Create an instance of the GPU kernel function to HSAco binary serialization
-/// pass.
-LLVM_DEPRECATED("use Target attributes instead", "")
-std::unique_ptr<Pass> createGpuSerializeToHsacoPass(StringRef triple,
-                                                    StringRef arch,
-                                                    StringRef features,
-                                                    int optLevel);
 
 /// Collect a set of patterns to decompose memrefs ops.
 void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);

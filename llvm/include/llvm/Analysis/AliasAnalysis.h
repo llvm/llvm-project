@@ -41,6 +41,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ModRef.h"
@@ -243,12 +244,23 @@ class AAQueryInfo {
 public:
   using LocPair = std::pair<AACacheLoc, AACacheLoc>;
   struct CacheEntry {
+    /// Cache entry is neither an assumption nor does it use a (non-definitive)
+    /// assumption.
+    static constexpr int Definitive = -2;
+    /// Cache entry is not an assumption itself, but may be using an assumption
+    /// from higher up the stack.
+    static constexpr int AssumptionBased = -1;
+
     AliasResult Result;
-    /// Number of times a NoAlias assumption has been used.
-    /// 0 for assumptions that have not been used, -1 for definitive results.
+    /// Number of times a NoAlias assumption has been used, 0 for assumptions
+    /// that have not been used. Can also take one of the Definitive or
+    /// AssumptionBased values documented above.
     int NumAssumptionUses;
+
     /// Whether this is a definitive (non-assumption) result.
-    bool isDefinitive() const { return NumAssumptionUses < 0; }
+    bool isDefinitive() const { return NumAssumptionUses == Definitive; }
+    /// Whether this is an assumption that has not been proven yet.
+    bool isAssumption() const { return NumAssumptionUses >= 0; }
   };
 
   // Alias analysis result aggregration using which this query is performed.

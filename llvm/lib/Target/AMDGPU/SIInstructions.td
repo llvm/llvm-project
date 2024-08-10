@@ -212,25 +212,18 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
 }
 
 let usesCustomInserter = 1 in {
-def S_INVERSE_BALLOT_U32 : SPseudoInstSI <(outs SReg_32:$sdst), (ins SSrc_b32:$mask)>;
+let WaveSizePredicate = isWave32 in
+def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
+  (outs SReg_32:$sdst), (ins SSrc_b32:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i32:$mask))]
+>;
 
-def S_INVERSE_BALLOT_U64 : SPseudoInstSI <(outs SReg_64:$sdst), (ins SSrc_b64:$mask)>;
+let WaveSizePredicate = isWave64 in
+def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
+  (outs SReg_64:$sdst), (ins SSrc_b64:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i64:$mask))]
+>;
 } // End usesCustomInserter = 1
-
-// PSEUDO_WM is treated like STRICT_WWM/STRICT_WQM without exec changes.
-def ENTER_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
-  let Uses = [EXEC];
-  let Defs = [EXEC];
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-}
-
-def EXIT_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-}
 
 // Pseudo instructions used for @llvm.fptrunc.round upward
 // and @llvm.fptrunc.round downward.
@@ -252,15 +245,21 @@ def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
 // restoring it after we're done.
 let Defs = [SCC], isConvergent = 1 in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VSrc_b32: $src, VSrc_b32:$inactive),
-  [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
-}
+  (ins VSrc_b32: $src, VSrc_b32:$inactive), []>;
 
 def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VSrc_b64: $src, VSrc_b64:$inactive),
-  [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
-}
+  (ins VSrc_b64: $src, VSrc_b64:$inactive), []>;
 } // End Defs = [SCC]
+
+foreach vt = Reg32Types.types in {
+def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
+     (V_SET_INACTIVE_B32 VSrc_b32:$src, VSrc_b32:$inactive)>;
+}
+
+foreach vt = Reg64Types.types in {
+def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
+     (V_SET_INACTIVE_B64 VSrc_b64:$src, VSrc_b64:$inactive)>;
+}
 
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 VGPR_32:$src, VGPR_32:$inactive)>;
@@ -2139,19 +2138,28 @@ def : GCNPat <
 /********** Immediate Patterns **********/
 /********** ================== **********/
 
+// FIXME: Remove VGPRImm. Should be inferrable from register bank.
+
+foreach vt = [i32, p3, p5, p6, p2] in {
+  def : GCNPat <
+    (VGPRImm<(vt imm)>:$imm),
+    (V_MOV_B32_e32 imm:$imm)
+  >;
+
+  def : GCNPat <
+    (vt imm:$imm),
+    (S_MOV_B32 imm:$imm)
+  >;
+}
+
 def : GCNPat <
-  (VGPRImm<(i32 imm)>:$imm),
-  (V_MOV_B32_e32 imm:$imm)
+  (p5 frameindex:$fi),
+  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
 def : GCNPat <
-  (VGPRImm<(f32 fpimm)>:$imm),
-  (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
->;
-
-def : GCNPat <
-  (i32 imm:$imm),
-  (S_MOV_B32 imm:$imm)
+  (p5 frameindex:$fi),
+  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
 def : GCNPat <
@@ -2164,18 +2172,39 @@ def : GCNPat <
   (S_MOV_B32 $ga)
 >;
 
-// FIXME: Workaround for ordering issue with peephole optimizer where
-// a register class copy interferes with immediate folding.  Should
-// use s_mov_b32, which can be shrunk to s_movk_i32
-def : GCNPat <
-  (VGPRImm<(f16 fpimm)>:$imm),
-  (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
->;
+foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
+  let True16Predicate = pred in {
+    def : GCNPat <
+      (VGPRImm<(i16 imm)>:$imm),
+      (V_MOV_B32_e32 imm:$imm)
+    >;
+  }
 
-def : GCNPat <
-  (VGPRImm<(bf16 fpimm)>:$imm),
-  (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
->;
+  // FIXME: Workaround for ordering issue with peephole optimizer where
+  // a register class copy interferes with immediate folding.  Should
+  // use s_mov_b32, which can be shrunk to s_movk_i32
+
+  foreach vt = [f16, bf16] in {
+    def : GCNPat <
+      (VGPRImm<(f16 fpimm)>:$imm),
+      (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
+    >;
+  }
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+  def : GCNPat <
+    (VGPRImm<(i16 imm)>:$imm),
+    (V_MOV_B16_t16_e64 0, imm:$imm, 0)
+  >;
+
+  foreach vt = [f16, bf16] in {
+    def : GCNPat <
+      (VGPRImm<(vt fpimm)>:$imm),
+      (V_MOV_B16_t16_e64 0, $imm, 0)
+    >;
+  }
+}
 
 // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
 // immediate and wil be expanded as needed, but we will only use these patterns
@@ -2211,46 +2240,70 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (VGPRImm<(bf16 fpimm)>:$imm),
+  (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : GCNPat <
   (bf16 fpimm:$imm),
   (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : GCNPat <
-  (p5 frameindex:$fi),
-  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+  (VGPRImm<(f32 fpimm)>:$imm),
+  (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : GCNPat <
-  (p5 frameindex:$fi),
-  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
+  (f32 fpimm:$imm),
+  (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+foreach vt = [i64, p1, p0, p4] in { // FIXME: Should accept arbitrary addrspace
+  def : GCNPat <
+    (VGPRImm<(vt imm)>:$imm),
+    (V_MOV_B64_PSEUDO imm:$imm)
+  >;
+
+  def : GCNPat <
+    (vt InlineImm64:$imm),
+    (S_MOV_B64 InlineImm64:$imm)
+  >;
+
+  def : GCNPat <
+    (vt imm:$imm),
+    (S_MOV_B64_IMM_PSEUDO imm:$imm)
+  >;
+}
+
+def : GCNPat <
+  (VGPRImm<(f64 fpimm)>:$imm),
+  (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
+>;
+
+// V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
+// immediate and wil be expanded as needed, but we will only use these patterns
+// for values which can be encoded.
+def : GCNPat <
+  (f64 InlineImmFP64:$imm),
+  (S_MOV_B64 (i64 (bitcast_fpimm_to_i64 $imm)))
 >;
 
 def : GCNPat <
-  (i64 InlineImm64:$imm),
-  (S_MOV_B64 InlineImm64:$imm)
+  (f64 fpimm:$imm),
+  (S_MOV_B64_IMM_PSEUDO (i64 (bitcast_fpimm_to_i64 fpimm:$imm)))
 >;
-
-// XXX - Should this use a s_cmp to set SCC?
 
 // Set to sign-extended 64-bit value (true = -1, false = 0)
-def : GCNPat <
-  (i1 imm:$imm),
-  (S_MOV_B64 (i64 (as_i64imm $imm)))
-> {
+def : GCNPat <(i1 imm:$imm),
+              (S_MOV_B64 imm:$imm)> {
   let WaveSizePredicate = isWave64;
 }
 
-def : GCNPat <
-  (i1 imm:$imm),
-  (S_MOV_B32 (i32 (as_i32imm $imm)))
-> {
+def : GCNPat <(i1 imm:$imm),
+              (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
-
-def : GCNPat <
-  (f64 InlineImmFP64:$imm),
-  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineImmFP64:$imm)))
->;
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
@@ -3398,7 +3451,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 
@@ -3543,16 +3596,6 @@ multiclass FPMed3Pat<ValueType vt,
               DSTCLAMP.NONE, DSTOMOD.NONE)>;
 }
 
-class FP16Med3Pat<ValueType vt,
-                Instruction med3Inst> : GCNPat<
-  (fmaxnum_like_nnan (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
-                                   (VOP3Mods vt:$src1, i32:$src1_mods)),
-           (fminnum_like (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
-                                       (VOP3Mods vt:$src1, i32:$src1_mods)),
-                         (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
-  (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE)
->;
-
 multiclass Int16Med3Pat<Instruction med3Inst,
                         SDPatternOperator min,
                         SDPatternOperator max> {
@@ -3574,6 +3617,10 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 }
 
 defm : FPMed3Pat<f32, V_MED3_F32_e64>;
+
+let SubtargetPredicate = HasMed3_16 in {
+defm : FPMed3Pat<f16, V_MED3_F16_e64>;
+}
 
 class
 IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,
@@ -3620,7 +3667,6 @@ def : FPMinCanonMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>
 }
 
 let OtherPredicates = [isGFX9Plus] in {
-def : FP16Med3Pat<f16, V_MED3_F16_e64>;
 defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax>;
 defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax>;
 } // End Predicates = [isGFX9Plus]
@@ -3872,11 +3918,6 @@ def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
-let Namespace = "AMDGPU" in {
-def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
-def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
-}
-
 class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
@@ -3901,7 +3942,6 @@ def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
-def G_AMDGPU_BUFFER_ATOMIC_FADD_BF16 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 
@@ -3964,6 +4004,14 @@ def G_AMDGPU_INTRIN_IMAGE_LOAD_D16 : AMDGPUGenericInstruction {
   let mayLoad = 1;
 
   // FIXME: Use separate opcode for atomics.
+  let mayStore = 1;
+}
+
+def G_AMDGPU_INTRIN_IMAGE_LOAD_NORET : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
   let mayStore = 1;
 }
 

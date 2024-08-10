@@ -1,3 +1,4 @@
+#include "src/__support/macros/config.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/sys/statvfs/statvfs.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -5,8 +6,14 @@
 #include <linux/magic.h>
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-namespace LIBC_NAMESPACE {
-static int statfs(const char *path, struct statfs *buf) {
+#ifdef SYS_statfs64
+using StatFs = statfs64;
+#else
+using StatFs = statfs;
+#endif
+
+namespace LIBC_NAMESPACE_DECL {
+static int statfs(const char *path, StatFs *buf) {
   using namespace statfs_utils;
   if (cpp::optional<LinuxStatFs> result = linux_statfs(path)) {
     *buf = *result;
@@ -14,10 +21,10 @@ static int statfs(const char *path, struct statfs *buf) {
   }
   return -1;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 TEST(LlvmLibcSysStatfsTest, StatfsBasic) {
-  struct statfs buf;
+  StatFs buf;
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/", &buf), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::statfs("/proc", &buf), Succeeds());
   ASSERT_EQ(buf.f_type, static_cast<decltype(buf.f_type)>(PROC_SUPER_MAGIC));

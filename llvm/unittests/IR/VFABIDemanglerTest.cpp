@@ -43,7 +43,7 @@ private:
     M = parseAssemblyString("declare void @dummy()", Err, Ctx);
     EXPECT_NE(M.get(), nullptr)
         << "Loading an invalid module.\n " << Err.getMessage() << "\n";
-    Type *Ty = parseType(ScalarFTyStr, Err, *(M.get()));
+    Type *Ty = parseType(ScalarFTyStr, Err, *(M));
     ScalarFTy = dyn_cast<FunctionType>(Ty);
     EXPECT_NE(ScalarFTy, nullptr)
         << "Invalid function type string: " << ScalarFTyStr << "\n"

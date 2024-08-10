@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -27,9 +28,7 @@ Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
   // Retrieve host CPU name and sub-target features and add them to builder.
   // Relocation model, code model and codegen opt level are kept to default
   // values.
-  llvm::StringMap<bool> FeatureMap;
-  llvm::sys::getHostCPUFeatures(FeatureMap);
-  for (auto &Feature : FeatureMap)
+  for (const auto &Feature : llvm::sys::getHostCPUFeatures())
     TMBuilder.getFeatures().AddFeature(Feature.first(), Feature.second);
 
   TMBuilder.setCPU(std::string(llvm::sys::getHostCPUName()));

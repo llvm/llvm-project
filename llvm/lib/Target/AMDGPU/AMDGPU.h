@@ -43,7 +43,7 @@ FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangePass();
-FunctionPass *createSIFixSGPRCopiesPass();
+FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
@@ -81,7 +81,7 @@ struct AMDGPUUseNativeCallsPass : PassInfoMixin<AMDGPUUseNativeCallsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-void initializeAMDGPUDAGToDAGISelPass(PassRegistry&);
+void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
 
 void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
 extern char &AMDGPUMachineCFGStructurizerID;
@@ -164,8 +164,8 @@ extern char &SIPeepholeSDWAID;
 void initializeSIShrinkInstructionsPass(PassRegistry&);
 extern char &SIShrinkInstructionsID;
 
-void initializeSIFixSGPRCopiesPass(PassRegistry &);
-extern char &SIFixSGPRCopiesID;
+void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
+extern char &SIFixSGPRCopiesLegacyID;
 
 void initializeSIFixVGPRCopiesPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;

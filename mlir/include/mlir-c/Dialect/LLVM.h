@@ -251,6 +251,12 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
     MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
     uint64_t offsetInBits, int64_t dwarfAddressSpace, MlirAttribute extraData);
 
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIStringTypeAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
+    uint32_t alignInBits, MlirAttribute stringLength,
+    MlirAttribute stringLengthExp, MlirAttribute stringLocationExp,
+    MlirLLVMTypeEncoding encoding);
+
 /// Constant to represent std::nullopt for dwarfAddressSpace to omit the field.
 #define MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL -1
 
@@ -303,7 +309,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILexicalBlockFileAttrGet(
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILocalVariableAttrGet(
     MlirContext ctx, MlirAttribute scope, MlirAttribute name,
     MlirAttribute diFile, unsigned int line, unsigned int arg,
-    unsigned int alignInBits, MlirAttribute diType);
+    unsigned int alignInBits, MlirAttribute diType, int64_t flags);
 
 /// Creates a LLVM DISubprogramAttr attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubprogramAttrGet(

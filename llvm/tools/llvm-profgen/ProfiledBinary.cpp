@@ -56,6 +56,10 @@ static cl::list<std::string> DisassembleFunctions(
     cl::desc("List of functions to print disassembly for. Accept demangled "
              "names only. Only work with show-disassembly-only"));
 
+static cl::opt<bool>
+    KernelBinary("kernel",
+                 cl::desc("Generate the profile for Linux kernel binary."));
+
 extern cl::opt<bool> ShowDetailedWarning;
 extern cl::opt<bool> InferMissingFrames;
 
@@ -128,7 +132,7 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     MCPseudoProbeDecoder &ProbeDecoder) {
   ProbeFrameStack ProbeContext;
   for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren())
-    trackInlineesOptimizedAway(ProbeDecoder, *Child.second.get(), ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, *Child.second, ProbeContext);
 }
 
 void BinarySizeContextTracker::trackInlineesOptimizedAway(
@@ -157,8 +161,7 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
   for (const auto &ChildNode : ProbeNode.getChildren()) {
     InlineSite Location = ChildNode.first;
     ProbeContext.back().second = std::get<1>(Location);
-    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(),
-                               ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second, ProbeContext);
   }
 
   ProbeContext.pop_back();
@@ -220,6 +223,9 @@ void ProfiledBinary::load() {
   TheTriple = Obj->makeTriple();
 
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
+
+  // Mark the binary as a kernel image;
+  IsKernel = KernelBinary;
 
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
@@ -520,7 +526,7 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       outs() << format("%8" PRIx64 ":", Address);
       size_t Start = outs().tell();
       if (Disassembled)
-        IPrinter->printInst(&Inst, Address + Size, "", *STI.get(), outs());
+        IPrinter->printInst(&Inst, Address + Size, "", *STI, outs());
       else
         outs() << "\t<unknown>";
       if (ShowSourceLocations) {
@@ -838,7 +844,7 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
     exitWithError("Error creating the debug info context", Path);
 
   for (const auto &CompilationUnit : DebugContext->compile_units())
-    loadSymbolsFromDWARFUnit(*CompilationUnit.get());
+    loadSymbolsFromDWARFUnit(*CompilationUnit);
 
   // Handles DWO sections that can either be in .o, .dwo or .dwp files.
   uint32_t NumOfDWOMissing = 0;

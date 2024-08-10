@@ -105,6 +105,7 @@ enum GPUKind : uint32_t {
   GK_GFX1103 = 93,
   GK_GFX1150 = 94,
   GK_GFX1151 = 95,
+  GK_GFX1152 = 96,
 
   GK_GFX1200 = 100,
   GK_GFX1201 = 101,
@@ -156,6 +157,12 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_WGP = 1 << 9,
 };
 
+enum FeatureError : uint32_t {
+  NO_ERROR = 0,
+  INVALID_FEATURE_COMBINATION,
+  UNSUPPORTED_TARGET_FEATURE
+};
+
 StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 
 StringRef getArchNameAMDGCN(GPUKind AK);
@@ -176,8 +183,9 @@ void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
                           StringMap<bool> &Features);
 
 /// Inserts wave size feature for given GPU into features map
-bool insertWaveSizeFeature(StringRef GPU, const Triple &T,
-                           StringMap<bool> &Features, std::string &ErrorMsg);
+std::pair<FeatureError, StringRef>
+insertWaveSizeFeature(StringRef GPU, const Triple &T,
+                      StringMap<bool> &Features);
 
 } // namespace AMDGPU
 } // namespace llvm

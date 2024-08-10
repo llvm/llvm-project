@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_SEHFRAMESUPPORT_H
 #define LLVM_EXECUTIONENGINE_JITLINK_SEHFRAMESUPPORT_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Error.h"
@@ -38,7 +39,7 @@ public:
     // count for the fate of seh frame block.
     for (auto *B : S->blocks()) {
       auto &DummySymbol = G.addAnonymousSymbol(*B, 0, 0, false, false);
-      DenseSet<Block *> Children;
+      SetVector<Block *> Children;
       for (auto &E : B->edges()) {
         auto &Sym = E.getTarget();
         if (!Sym.isDefined())

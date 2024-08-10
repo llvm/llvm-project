@@ -79,13 +79,13 @@ end program
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFFreduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             %[[VAL_6:.*]] = arith.constant 0 : i32
-! CHECK:             %[[VAL_7:.*]] = arith.constant 10 : i32
-! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
-! CHECK:             %[[VAL_9:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
-! CHECK:             fir.store %[[VAL_3]]#1 to %[[VAL_9]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
-! CHECK:             omp.wsloop reduction(byref @add_reduction_byref_box_Uxf64 %[[VAL_9]] -> %[[VAL_10:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>) {
-! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
+! CHECK:             %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
+! CHECK:             fir.store %[[VAL_3]]#1 to %[[VAL_6]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
+! CHECK:             %[[VAL_7:.*]] = arith.constant 0 : i32
+! CHECK:             %[[VAL_8:.*]] = arith.constant 10 : i32
+! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
+! CHECK:             omp.wsloop reduction(byref @add_reduction_byref_box_Uxf64 %[[VAL_6]] -> %[[VAL_10:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
 ! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] {fortran_attrs = {{.*}}, uniq_name = "_QFFreduceEr"} : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.ref<!fir.box<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.array<?xf64>>>)
 ! CHECK:                 fir.store %[[VAL_11]] to %[[VAL_5]]#1 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_13:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>

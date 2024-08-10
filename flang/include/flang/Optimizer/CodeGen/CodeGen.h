@@ -28,23 +28,6 @@ struct NameUniquer;
 #define GEN_PASS_DECL_BOXEDPROCEDUREPASS
 #include "flang/Optimizer/CodeGen/CGPasses.h.inc"
 
-/// Prerequiste pass for code gen. Perform intermediate rewrites to perform
-/// the code gen (to LLVM-IR dialect) conversion.
-std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass(
-    CodeGenRewriteOptions Options = CodeGenRewriteOptions{});
-
-/// FirTargetRewritePass options.
-struct TargetRewriteOptions {
-  bool noCharacterConversion{};
-  bool noComplexConversion{};
-  bool noStructConversion{};
-};
-
-/// Prerequiste pass for code gen. Perform intermediate rewrites to tailor the
-/// FIR for the chosen target.
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>> createFirTargetRewritePass(
-    const TargetRewriteOptions &options = TargetRewriteOptions());
-
 /// FIR to LLVM translation pass options.
 struct FIRToLLVMPassOptions {
   // Do not fail when type descriptors are not found when translating
@@ -77,11 +60,6 @@ std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
     llvm::raw_ostream &output,
     LLVMIRLoweringPrinter printer =
         [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
-
-/// Convert boxproc values to a lower level representation. The default is to
-/// use function pointers and thunks.
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass();
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass(bool useThunks);
 
 /// Populate the given list with patterns that convert from FIR to LLVM.
 void populateFIRToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,

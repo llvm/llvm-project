@@ -63,7 +63,7 @@ std::optional<Expr<SubscriptInteger>> DynamicTypeWithLength::LEN() const {
 }
 
 static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
-    const std::optional<parser::TypeSpec> &spec) {
+    const std::optional<parser::TypeSpec> &spec, FoldingContext &context) {
   if (spec) {
     if (const semantics::DeclTypeSpec *typeSpec{spec->declTypeSpec}) {
       // Name resolution sets TypeSpec::declTypeSpec only when it's valid
@@ -80,7 +80,13 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             const semantics::ParamValue &len{cts.length()};
             // N.B. CHARACTER(LEN=*) is allowed in type-specs in ALLOCATE() &
             // type guards, but not in array constructors.
-            return DynamicTypeWithLength{DynamicType{kind, len}};
+            DynamicTypeWithLength type{DynamicType{kind, len}};
+            if (auto lenExpr{type.LEN()}) {
+              type.length = Fold(context,
+                  AsExpr(Extremum<SubscriptInteger>{Ordering::Greater,
+                      Expr<SubscriptInteger>{0}, std::move(*lenExpr)}));
+            }
+            return type;
           } else {
             return DynamicTypeWithLength{DynamicType{category, kind}};
           }
@@ -141,7 +147,7 @@ public:
   }
   void Analyze(const parser::Variable &);
   void Analyze(const parser::ActualArgSpec &, bool isSubroutine);
-  void ConvertBOZ(std::optional<DynamicType> &thisType, std::size_t i,
+  void ConvertBOZ(std::optional<DynamicType> *thisType, std::size_t,
       std::optional<DynamicType> otherType);
 
   bool IsIntrinsicRelational(
@@ -153,6 +159,7 @@ public:
   bool CheckConformance();
   bool CheckAssignmentConformance();
   bool CheckForNullPointer(const char *where = "as an operand here");
+  bool CheckForAssumedRank(const char *where = "as an operand here");
 
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
@@ -172,7 +179,8 @@ public:
   void Dump(llvm::raw_ostream &);
 
 private:
-  MaybeExpr TryDefinedOp(std::vector<const char *>, parser::MessageFixedText);
+  MaybeExpr TryDefinedOp(
+      const std::vector<const char *> &, parser::MessageFixedText);
   MaybeExpr TryBoundOp(const Symbol &, int passIndex);
   std::optional<ActualArgument> AnalyzeExpr(const parser::Expr &);
   std::optional<ActualArgument> AnalyzeVariable(const parser::Variable &);
@@ -521,7 +529,7 @@ static std::optional<parser::Substring> FixMisparsedSubstringDataRef(
                   parser::GetLastName(arrElement.base).symbol}) {
             const Symbol &ultimate{symbol->GetUltimate()};
             if (const semantics::DeclTypeSpec *type{ultimate.GetType()}) {
-              if (!ultimate.IsObjectArray() &&
+              if (ultimate.Rank() == 0 &&
                   type->category() == semantics::DeclTypeSpec::Character) {
                 // The ambiguous S(j:k) was parsed as an array section
                 // reference, but it's now clear that it's a substring.
@@ -1582,7 +1590,8 @@ private:
   std::optional<Expr<SubscriptInteger>> LengthIfGood() const {
     if (type_) {
       auto len{type_->LEN()};
-      if (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len)) {
+      if (explicitType_ ||
+          (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len))) {
         return len;
       }
     }
@@ -1937,7 +1946,8 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
-  ArrayConstructorContext acContext{*this, AnalyzeTypeSpec(acSpec.type)};
+  ArrayConstructorContext acContext{
+      *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
   for (const parser::AcValue &value : acSpec.values) {
     acContext.Add(value);
   }
@@ -3016,8 +3026,7 @@ const Symbol *AssumedTypeDummy<parser::PointerObject>(
 bool ExpressionAnalyzer::CheckIsValidForwardReference(
     const semantics::DerivedTypeSpec &dtSpec) {
   if (dtSpec.IsForwardReferenced()) {
-    Say("Cannot construct value for derived type '%s' "
-        "before it is defined"_err_en_US,
+    Say("Cannot construct value for derived type '%s' before it is defined"_err_en_US,
         dtSpec.name());
     return false;
   }
@@ -3199,6 +3208,7 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
       if (!procRef) {
         analyzer.CheckForNullPointer(
             "in a non-pointer intrinsic assignment statement");
+        analyzer.CheckForAssumedRank("in an assignment statement");
         const Expr<SomeType> &lhs{analyzer.GetExpr(0)};
         if (auto dyType{lhs.GetType()};
             dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
@@ -3393,6 +3403,7 @@ static MaybeExpr NumericUnaryHelper(ExpressionAnalyzer &context,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicNumeric(opr)) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       if (opr == NumericOperator::Add) {
         return analyzer.MoveExpr(0);
       } else {
@@ -3427,6 +3438,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::NOT &x) {
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicLogical()) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       return AsGenericExpr(
           LogicalNegation(std::get<Expr<SomeLogical>>(analyzer.MoveExpr(0).u)));
     } else {
@@ -3475,6 +3487,7 @@ MaybeExpr NumericBinaryHelper(ExpressionAnalyzer &context, NumericOperator opr,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicNumeric(opr)) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       analyzer.CheckConformance();
       return NumericOperation<OPR>(context.GetContextualMessages(),
           analyzer.MoveExpr(0), analyzer.MoveExpr(1),
@@ -3524,6 +3537,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicConcat()) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       return common::visit(
           [&](auto &&x, auto &&y) -> MaybeExpr {
             using T = ResultType<decltype(x)>;
@@ -3566,13 +3580,18 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
   if (!analyzer.fatalErrors()) {
     std::optional<DynamicType> leftType{analyzer.GetType(0)};
     std::optional<DynamicType> rightType{analyzer.GetType(1)};
-    analyzer.ConvertBOZ(leftType, 0, rightType);
-    analyzer.ConvertBOZ(rightType, 1, leftType);
+    analyzer.ConvertBOZ(&leftType, 0, rightType);
+    analyzer.ConvertBOZ(&rightType, 1, leftType);
     if (leftType && rightType &&
         analyzer.IsIntrinsicRelational(opr, *leftType, *rightType)) {
       analyzer.CheckForNullPointer("as a relational operand");
-      return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
-          analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
+      analyzer.CheckForAssumedRank("as a relational operand");
+      if (auto cmp{Relate(context.GetContextualMessages(), opr,
+              analyzer.MoveExpr(0), analyzer.MoveExpr(1))}) {
+        return AsMaybeExpr(ConvertToKind<TypeCategory::Logical>(
+            context.GetDefaultKind(TypeCategory::Logical),
+            AsExpr(std::move(*cmp))));
+      }
     } else {
       return analyzer.TryDefinedOp(opr,
           leftType && leftType->category() == TypeCategory::Logical &&
@@ -3616,6 +3635,7 @@ MaybeExpr LogicalBinaryHelper(ExpressionAnalyzer &context, LogicalOperator opr,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicLogical()) {
       analyzer.CheckForNullPointer("as a logical operand");
+      analyzer.CheckForAssumedRank("as a logical operand");
       return AsGenericExpr(BinaryLogicalOperation(opr,
           std::get<Expr<SomeLogical>>(analyzer.MoveExpr(0).u),
           std::get<Expr<SomeLogical>>(analyzer.MoveExpr(1).u)));
@@ -4187,13 +4207,13 @@ void ArgumentAnalyzer::Analyze(
           },
           [&](const parser::AltReturnSpec &label) {
             if (!isSubroutine) {
-              context_.Say("alternate return specification may not appear on"
-                           " function reference"_err_en_US);
+              context_.Say(
+                  "alternate return specification may not appear on function reference"_err_en_US);
             }
             actual = ActualArgument(label.v);
           },
           [&](const parser::ActualArg::PercentRef &percentRef) {
-            actual = AnalyzeVariable(percentRef.v);
+            actual = AnalyzeExpr(percentRef.v);
             if (actual.has_value()) {
               actual->set_isPercentRef();
             }
@@ -4202,12 +4222,6 @@ void ArgumentAnalyzer::Analyze(
             actual = AnalyzeExpr(percentVal.v);
             if (actual.has_value()) {
               actual->set_isPercentVal();
-              std::optional<DynamicType> type{actual->GetType()};
-              if (!type || !type->IsLengthlessIntrinsicType() ||
-                  actual->Rank() != 0) {
-                context_.SayAt(percentVal.v,
-                    "%VAL argument must be a scalar numerical or logical expression"_err_en_US);
-              }
             }
           },
       },
@@ -4335,6 +4349,18 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
   return true;
 }
 
+bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
+  for (const std::optional<ActualArgument> &arg : actuals_) {
+    if (arg && IsAssumedRank(arg->UnwrapExpr())) {
+      context_.Say(source_,
+          "An assumed-rank dummy argument is not allowed %s"_err_en_US, where);
+      fatalErrors_ = true;
+      return false;
+    }
+  }
+  return true;
+}
+
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     const char *opr, parser::MessageFixedText error, bool isUserOp) {
   if (AnyUntypedOrMissingOperand()) {
@@ -4409,14 +4435,14 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     context_.Say(
         "Operands of %s are not conformable; have rank %d and rank %d"_err_en_US,
         ToUpperCase(opr), actuals_[0]->Rank(), actuals_[1]->Rank());
-  } else if (CheckForNullPointer()) {
+  } else if (CheckForNullPointer() && CheckForAssumedRank()) {
     context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
   }
   return result;
 }
 
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
-    std::vector<const char *> oprs, parser::MessageFixedText error) {
+    const std::vector<const char *> &oprs, parser::MessageFixedText error) {
   if (oprs.size() == 1) {
     return TryDefinedOp(oprs[0], error);
   }
@@ -4473,9 +4499,22 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
     // allocatable (the explicit conversion would prevent the propagation of the
     // right hand side if it is a variable). Lowering will deal with the
     // conversion in this case.
-    if (lhsType && rhsType &&
-        (!IsAllocatableDesignator(lhs) || context_.inWhereBody())) {
-      AddAssignmentConversion(*lhsType, *rhsType);
+    if (lhsType) {
+      if (rhsType) {
+        if (!IsAllocatableDesignator(lhs) || context_.inWhereBody()) {
+          AddAssignmentConversion(*lhsType, *rhsType);
+        }
+      } else {
+        if (lhsType->category() == TypeCategory::Integer ||
+            lhsType->category() == TypeCategory::Real) {
+          ConvertBOZ(nullptr, 1, lhsType);
+        }
+        if (IsBOZLiteral(1)) {
+          context_.Say(
+              "Right-hand side of this assignment may not be BOZ"_err_en_US);
+          fatalErrors_ = true;
+        }
+      }
     }
     if (!fatalErrors_) {
       CheckAssignmentConformance();
@@ -4497,6 +4536,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
         !OkLogicalIntegerAssignment(lhsType->category(), rhsType->category())) {
       SayNoMatch("ASSIGNMENT(=)", true);
     }
+  } else if (!fatalErrors_) {
+    CheckAssignmentConformance();
   }
   return std::nullopt;
 }
@@ -4608,14 +4649,15 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
     context_.SayAt(expr.source,
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
-    if (isProcedureCall_ || !IsProcedure(*argExpr)) {
+    if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {
       ActualArgument arg{std::move(*argExpr)};
       SetArgSourceLocation(arg, expr.source);
       return std::move(arg);
     }
     context_.SayAt(expr.source,
-        IsFunction(*argExpr) ? "Function call must have argument list"_err_en_US
-                             : "Subroutine name is not allowed here"_err_en_US);
+        IsFunctionDesignator(*argExpr)
+            ? "Function call must have argument list"_err_en_US
+            : "Subroutine name is not allowed here"_err_en_US);
   }
   return std::nullopt;
 }
@@ -4703,7 +4745,7 @@ int ArgumentAnalyzer::GetRank(std::size_t i) const {
 // otherType.  If it's REAL convert to REAL, otherwise convert to INTEGER.
 // Note that IBM supports comparing BOZ literals to CHARACTER operands.  That
 // is not currently supported.
-void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> &thisType,
+void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> *thisType,
     std::size_t i, std::optional<DynamicType> otherType) {
   if (IsBOZLiteral(i)) {
     Expr<SomeType> &&argExpr{MoveExpr(i)};
@@ -4713,13 +4755,17 @@ void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> &thisType,
       MaybeExpr realExpr{
           ConvertToKind<TypeCategory::Real>(kind, std::move(*boz))};
       actuals_[i] = std::move(*realExpr);
-      thisType.emplace(TypeCategory::Real, kind);
+      if (thisType) {
+        thisType->emplace(TypeCategory::Real, kind);
+      }
     } else {
       int kind{context_.context().GetDefaultKind(TypeCategory::Integer)};
       MaybeExpr intExpr{
           ConvertToKind<TypeCategory::Integer>(kind, std::move(*boz))};
       actuals_[i] = std::move(*intExpr);
-      thisType.emplace(TypeCategory::Integer, kind);
+      if (thisType) {
+        thisType->emplace(TypeCategory::Integer, kind);
+      }
     }
   }
 }

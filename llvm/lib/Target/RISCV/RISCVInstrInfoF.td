@@ -31,12 +31,17 @@ def SDT_RISCVFROUND
                            SDTCisVT<3, XLenVT>]>;
 def SDT_RISCVFCLASS
     : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisFP<1>]>;
+def SDT_RISCVFSGNJX
+    : SDTypeProfile<1, 2, [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>]>;
 
 def riscv_fclass
     : SDNode<"RISCVISD::FCLASS", SDT_RISCVFCLASS>;
 
 def riscv_fround
     : SDNode<"RISCVISD::FROUND", SDT_RISCVFROUND>;
+
+def riscv_fsgnjx
+    : SDNode<"RISCVISD::FSGNJX", SDT_RISCVFSGNJX>;
 
 def riscv_fmv_w_x_rv64
     : SDNode<"RISCVISD::FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
@@ -539,8 +544,10 @@ def : Pat<(fabs FPR32INX:$rs1), (FSGNJX_S_INX $rs1, $rs1)>;
 def : Pat<(riscv_fclass FPR32INX:$rs1), (FCLASS_S_INX $rs1)>;
 } // Predicates = [HasStdExtZfinx]
 
-foreach Ext = FExts in
+foreach Ext = FExts in {
 defm : PatFprFpr_m<fcopysign, FSGNJ_S, Ext>;
+defm : PatFprFpr_m<riscv_fsgnjx, FSGNJX_S, Ext>;
+}
 
 let Predicates = [HasStdExtF] in {
 def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;

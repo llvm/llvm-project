@@ -389,6 +389,7 @@ my %CompilerLinkerOptionMap = (
   '-target' => 1,
   '-v' => 0,
   '-mmacosx-version-min' => 0, # This is really a 1 argument, but always has '='
+  '-mmacos-version-min' => 0, # This is really a 1 argument, but always has '='
   '-miphoneos-version-min' => 0, # This is really a 1 argument, but always has '='
   '--target' => 0
 );

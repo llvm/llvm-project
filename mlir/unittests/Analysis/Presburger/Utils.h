@@ -16,18 +16,14 @@
 #include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "mlir/Analysis/Presburger/PWMAFunction.h"
-#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
-#include "mlir/Analysis/Presburger/Simplex.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/LLVM.h"
 
 #include <gtest/gtest.h>
 #include <optional>
 
 namespace mlir {
 namespace presburger {
+using llvm::dynamicAPIntFromInt64;
 
 inline IntMatrix makeIntMatrix(unsigned numRow, unsigned numColumns,
                                ArrayRef<SmallVector<int, 8>> matrix) {
@@ -37,7 +33,7 @@ inline IntMatrix makeIntMatrix(unsigned numRow, unsigned numColumns,
     assert(matrix[i].size() == numColumns &&
            "Output expression has incorrect dimensionality!");
     for (unsigned j = 0; j < numColumns; ++j)
-      results(i, j) = MPInt(matrix[i][j]);
+      results(i, j) = DynamicAPInt(matrix[i][j]);
   }
   return results;
 }
@@ -130,8 +126,8 @@ inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a,
 
 /// lhs and rhs represent non-negative integers or positive infinity. The
 /// infinity case corresponds to when the Optional is empty.
-inline bool infinityOrUInt64LE(std::optional<MPInt> lhs,
-                               std::optional<MPInt> rhs) {
+inline bool infinityOrUInt64LE(std::optional<DynamicAPInt> lhs,
+                               std::optional<DynamicAPInt> rhs) {
   // No constraint.
   if (!rhs)
     return true;
@@ -145,9 +141,9 @@ inline bool infinityOrUInt64LE(std::optional<MPInt> lhs,
 /// the true volume `trueVolume`, while also being at least as good an
 /// approximation as `resultBound`.
 inline void expectComputedVolumeIsValidOverapprox(
-    const std::optional<MPInt> &computedVolume,
-    const std::optional<MPInt> &trueVolume,
-    const std::optional<MPInt> &resultBound) {
+    const std::optional<DynamicAPInt> &computedVolume,
+    const std::optional<DynamicAPInt> &trueVolume,
+    const std::optional<DynamicAPInt> &resultBound) {
   assert(infinityOrUInt64LE(trueVolume, resultBound) &&
          "can't expect result to be less than the true volume");
   EXPECT_TRUE(infinityOrUInt64LE(trueVolume, computedVolume));
@@ -155,11 +151,12 @@ inline void expectComputedVolumeIsValidOverapprox(
 }
 
 inline void expectComputedVolumeIsValidOverapprox(
-    const std::optional<MPInt> &computedVolume,
+    const std::optional<DynamicAPInt> &computedVolume,
     std::optional<int64_t> trueVolume, std::optional<int64_t> resultBound) {
   expectComputedVolumeIsValidOverapprox(
-      computedVolume, llvm::transformOptional(trueVolume, mpintFromInt64),
-      llvm::transformOptional(resultBound, mpintFromInt64));
+      computedVolume,
+      llvm::transformOptional(trueVolume, dynamicAPIntFromInt64),
+      llvm::transformOptional(resultBound, dynamicAPIntFromInt64));
 }
 
 } // namespace presburger

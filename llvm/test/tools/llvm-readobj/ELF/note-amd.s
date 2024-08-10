@@ -34,57 +34,64 @@
 // GNU-NEXT:    description data: 61 62 63 64 65 66 00
 // GNU-EMPTY:
 
-// LLVM:      Notes [
+// LLVM:      NoteSections [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.no.desc
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
-// LLVM-NEXT:     Note {
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:     {
 // LLVM-NEXT:       Owner: AMD
 // LLVM-NEXT:       Data size: 0x0
 // LLVM-NEXT:       Type: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 // LLVM-NEXT:       AMD HSA Metadata:
 // LLVM-NEXT:     }
-// LLVM-NEXT:     Note {
+// LLVM-NEXT:     {
 // LLVM-NEXT:       Owner: AMD
 // LLVM-NEXT:       Data size: 0x0
 // LLVM-NEXT:       Type: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 // LLVM-NEXT:       AMD HSA ISA Name:
 // LLVM-NEXT:     }
+// LLVM-NEXT:	 ]
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.desc
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
-// LLVM-NEXT:     Note {
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:     {
 // LLVM-NEXT:       Owner: AMD
 // LLVM-NEXT:       Data size: 0xA
 // LLVM-NEXT:       Type: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 // LLVM-NEXT:       AMD HSA Metadata: meta_blah
 // LLVM-NEXT:     }
-// LLVM-NEXT:     Note {
+// LLVM-NEXT:     {
 // LLVM-NEXT:       Owner: AMD
 // LLVM-NEXT:       Data size: 0x9
 // LLVM-NEXT:       Type: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 // LLVM-NEXT:       AMD HSA ISA Name: isa_blah
 // LLVM-NEXT:     }
+// LLVM-NEXT:	 ]
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.other
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
-// LLVM-NEXT:     Note {
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:     {
 // LLVM-NEXT:       Owner: AMD
 // LLVM-NEXT:       Data size: 0x0
 // LLVM-NEXT:       Type: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 // LLVM-NEXT:       AMD PAL Metadata:
 // LLVM-NEXT:     }
+// LLVM-NEXT:	 ]
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.unknown
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
-// LLVM-NEXT:     Note {
+// LLVM-NEXT:	  Notes [
+// LLVM-NEXT:     {
 // LLVM-NEXT:       Owner: AMD
 // LLVM-NEXT:       Data size: 0x7
 // LLVM-NEXT:       Type: Unknown (0x000004d2)
@@ -92,6 +99,7 @@
 // LLVM-NEXT:         0000: 61626364 656600                      |abcdef.|
 // LLVM-NEXT:       )
 // LLVM-NEXT:     }
+// LLVM-NEXT:	 ]
 // LLVM-NEXT:   }
 // LLVM-NEXT: ]
 

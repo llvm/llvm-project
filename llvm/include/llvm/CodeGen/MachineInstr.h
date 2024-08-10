@@ -117,6 +117,8 @@ public:
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
     NonNeg = 1 << 18,        // The operand is non-negative.
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
+    NoUSWrap = 1 << 20,      // Instruction supports geps
+                             // no unsigned signed wrap.
   };
 
 private:
@@ -301,6 +303,9 @@ private:
   /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
   /// defined by this instruction.
   unsigned DebugInstrNum;
+
+  /// Cached opcode from MCID.
+  uint16_t Opcode;
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
@@ -561,7 +566,7 @@ public:
   const MCInstrDesc &getDesc() const { return *MCID; }
 
   /// Returns the opcode of this MachineInstr.
-  unsigned getOpcode() const { return MCID->Opcode; }
+  unsigned getOpcode() const { return Opcode; }
 
   /// Retuns the total number of operands.
   unsigned getNumOperands() const { return NumOperands; }
@@ -1718,7 +1723,7 @@ public:
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between
   /// the instruction's location and its intended destination.
-  bool isSafeToMove(AAResults *AA, bool &SawStore) const;
+  bool isSafeToMove(bool &SawStore) const;
 
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.

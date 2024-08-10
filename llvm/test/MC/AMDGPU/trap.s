@@ -191,7 +191,7 @@ s_mov_b64     ttmp[14:15], exec
 
 //===----------------------------------------------------------------------===//
 // Trap Handler related - 8-dword registers
-// NB: gfx7 doc states that SMRD does not support trap registers for dst
+// N.B. gfx7 doc states that SMRD does not support trap registers for dst
 //===----------------------------------------------------------------------===//
 
 s_buffer_load_dwordx8 ttmp[0:7], s[0:3], s0
@@ -224,7 +224,7 @@ s_load_dwordx8 ttmp[8:15], s[0:1], s0
 
 //===----------------------------------------------------------------------===//
 // Trap Handler related - 16-dword registers
-// NB: gfx7 doc states that SMRD does not support trap registers for dst
+// N.B. gfx7 doc states that SMRD does not support trap registers for dst
 //===----------------------------------------------------------------------===//
 
 s_buffer_load_dwordx16 ttmp[0:15], s[0:3], s0

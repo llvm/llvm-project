@@ -45,7 +45,7 @@ public:
   OpVariableElement(const VarT *var) : var(var) {}
 
   /// Get the variable.
-  const VarT *getVar() { return var; }
+  const VarT *getVar() const { return var; }
 
 protected:
   /// The op variable, e.g. a type or attribute constraint.
@@ -62,11 +62,6 @@ struct AttributeVariable
   std::optional<StringRef> getTypeBuilder() const {
     std::optional<Type> attrType = var->attr.getValueType();
     return attrType ? attrType->getBuilderCall() : std::nullopt;
-  }
-
-  /// Return if this attribute refers to a UnitAttr.
-  bool isUnitAttr() const {
-    return var->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
   }
 
   /// Indicate if this attribute is printed "qualified" (that is it is
@@ -98,6 +93,42 @@ using SuccessorVariable =
 /// This class represents a variable that refers to a property argument.
 using PropertyVariable =
     OpVariableElement<NamedProperty, VariableElement::Property>;
+
+/// LLVM RTTI helper for attribute-like variables, that is, attributes or
+/// properties. This allows for common handling of attributes and properties in
+/// parts of the code that are oblivious to whether something is stored as an
+/// attribute or a property.
+struct AttributeLikeVariable : public VariableElement {
+  enum { AttributeLike = 1 << 0 };
+
+  static bool classof(const VariableElement *ve) {
+    return ve->getKind() == VariableElement::Attribute ||
+           ve->getKind() == VariableElement::Property;
+  }
+
+  static bool classof(const FormatElement *fe) {
+    return isa<VariableElement>(fe) && classof(cast<VariableElement>(fe));
+  }
+
+  /// Returns true if the variable is a UnitAttr or a UnitProperty.
+  bool isUnit() const {
+    if (const auto *attr = dyn_cast<AttributeVariable>(this))
+      return attr->getVar()->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
+    if (const auto *prop = dyn_cast<PropertyVariable>(this)) {
+      return prop->getVar()->prop.getBaseProperty().getPropertyDefName() ==
+             "UnitProperty";
+    }
+    llvm_unreachable("Type that wasn't listed in classof()");
+  }
+
+  StringRef getName() const {
+    if (const auto *attr = dyn_cast<AttributeVariable>(this))
+      return attr->getVar()->name;
+    if (const auto *prop = dyn_cast<PropertyVariable>(this))
+      return prop->getVar()->name;
+    llvm_unreachable("Type that wasn't listed in classof()");
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -214,11 +245,11 @@ public:
 
   /// If the parsing element is a single UnitAttr element, then it returns the
   /// attribute variable. Otherwise, returns nullptr.
-  AttributeVariable *
-  getUnitAttrParsingElement(ArrayRef<FormatElement *> pelement) {
+  AttributeLikeVariable *
+  getUnitVariableParsingElement(ArrayRef<FormatElement *> pelement) {
     if (pelement.size() == 1) {
-      auto *attrElem = dyn_cast<AttributeVariable>(pelement[0]);
-      if (attrElem && attrElem->isUnitAttr())
+      auto *attrElem = dyn_cast<AttributeLikeVariable>(pelement[0]);
+      if (attrElem && attrElem->isUnit())
         return attrElem;
     }
     return nullptr;
@@ -485,6 +516,36 @@ const char *const enumAttrParserCode = R"(
       {0}Attr = {3};
       {6}
     }
+  }
+)";
+
+/// The code snippet used to generate a parser call for a property.
+/// {0}: The name of the property
+/// {1}: The C++ class name of the operation
+/// {2}: The property's parser code with appropriate substitutions performed
+/// {3}: The description of the expected property for the error message.
+const char *const propertyParserCode = R"(
+  auto {0}PropLoc = parser.getCurrentLocation();
+  auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::ParseResult {{
+    {2}
+    return ::mlir::success();
+  }(result.getOrAddProperties<{1}::Properties>().{0});
+  if (failed({0}PropParseResult)) {{
+    return parser.emitError({0}PropLoc, "invalid value for property {0}, expected {3}");
+  }
+)";
+
+/// The code snippet used to generate a parser call for a property.
+/// {0}: The name of the property
+/// {1}: The C++ class name of the operation
+/// {2}: The property's parser code with appropriate substitutions performed
+const char *const optionalPropertyParserCode = R"(
+  auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::OptionalParseResult {{
+    {2}
+    return ::mlir::success();
+  }(result.getOrAddProperties<{1}::Properties>().{0});
+  if ({0}PropParseResult.has_value() && failed(*{0}PropParseResult)) {{
+    return ::mlir::failure();
   }
 )";
 
@@ -796,9 +857,9 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
 
     // If the anchor is a unit attribute, it won't be parsed directly so elide
     // it.
-    auto *anchor = dyn_cast<AttributeVariable>(optional->getAnchor());
+    auto *anchor = dyn_cast<AttributeLikeVariable>(optional->getAnchor());
     FormatElement *elidedAnchorElement = nullptr;
-    if (anchor && anchor != elements.front() && anchor->isUnitAttr())
+    if (anchor && anchor != elements.front() && anchor->isUnit())
       elidedAnchorElement = anchor;
     for (FormatElement *childElement : elements)
       if (childElement != elidedAnchorElement)
@@ -808,7 +869,7 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
 
   } else if (auto *oilist = dyn_cast<OIListElement>(element)) {
     for (ArrayRef<FormatElement *> pelement : oilist->getParsingElements()) {
-      if (!oilist->getUnitAttrParsingElement(pelement))
+      if (!oilist->getUnitVariableParsingElement(pelement))
         for (FormatElement *element : pelement)
           genElementParserStorage(element, op, body);
     }
@@ -1049,7 +1110,6 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
         body << llvm::formatv("    result.addAttribute(\"{0}\", {0}Attr);\n",
                               var->name);
       }
-
     } else if (auto *operand = dyn_cast<OperandVariable>(param)) {
       const NamedTypeConstraint *var = operand->getVar();
       if (var->isOptional()) {
@@ -1137,6 +1197,29 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                   validCaseKeywordsStr, errorMessage, attrAssignment);
 }
 
+// Generate the parser for a property.
+static void genPropertyParser(PropertyVariable *propVar, MethodBody &body,
+                              StringRef opCppClassName,
+                              bool requireParse = true) {
+  StringRef name = propVar->getVar()->name;
+  const Property &prop = propVar->getVar()->prop;
+  bool parseOptionally =
+      prop.hasDefaultValue() && !requireParse && prop.hasOptionalParser();
+  FmtContext fmtContext;
+  fmtContext.addSubst("_parser", "parser");
+  fmtContext.addSubst("_ctxt", "parser.getContext()");
+  fmtContext.addSubst("_storage", "propStorage");
+
+  if (parseOptionally) {
+    body << formatv(optionalPropertyParserCode, name, opCppClassName,
+                    tgfmt(prop.getOptionalParserCall(), &fmtContext));
+  } else {
+    body << formatv(propertyParserCode, name, opCppClassName,
+                    tgfmt(prop.getParserCall(), &fmtContext),
+                    prop.getSummary());
+  }
+}
+
 // Generate the parser for an attribute.
 static void genAttrParser(AttributeVariable *attr, MethodBody &body,
                           FmtContext &attrTypeCtx, bool parseAsOptional,
@@ -1200,7 +1283,7 @@ static void genParsedAttrPropertiesSetter(OperationFormat &fmt, Operator &op,
   paramList.emplace_back("::llvm::function_ref<::mlir::InFlightDiagnostic()>",
                          "emitError");
 
-  Method *method = opClass.addStaticMethod("::mlir::LogicalResult",
+  Method *method = opClass.addStaticMethod("::llvm::LogicalResult",
                                            "setPropertiesFromParsedAttr",
                                            std::move(paramList));
   MethodBody &body = method->body().indent();
@@ -1213,14 +1296,16 @@ if (!dict) {
 }
 )decl";
 
-  // TODO: properties might be optional as well.
+  // {0}: fromAttribute call
+  // {1}: property name
+  // {2}: isRequired
   const char *propFromAttrFmt = R"decl(
 auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-         ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
+         ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
   {0};
 };
 auto attr = dict.get("{1}");
-if (!attr) {{
+if (!attr && {2}) {{
   emitError() << "expected key entry for {1} in DictionaryAttr to set "
              "Properties.";
   return ::mlir::failure();
@@ -1238,13 +1323,14 @@ if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
 
     StringRef name = namedProperty.name;
     const Property &prop = namedProperty.prop;
+    bool isRequired = !prop.hasDefaultValue();
     FmtContext fctx;
     body << formatv(propFromAttrFmt,
                     tgfmt(prop.getConvertFromAttributeCall(),
                           &fctx.addSubst("_attr", "propAttr")
                                .addSubst("_storage", "propStorage")
                                .addSubst("_diag", "emitError")),
-                    name);
+                    name, isRequired);
   }
 
   // Generate the setter for any attribute not parsed elsewhere.
@@ -1331,20 +1417,24 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       // If the anchor is a unit attribute, we don't need to print it. When
       // parsing, we will add this attribute if this group is present.
       FormatElement *elidedAnchorElement = nullptr;
-      auto *anchorAttr = dyn_cast<AttributeVariable>(optional->getAnchor());
-      if (anchorAttr && anchorAttr != firstElement &&
-          anchorAttr->isUnitAttr()) {
-        elidedAnchorElement = anchorAttr;
+      auto *anchorVar = dyn_cast<AttributeLikeVariable>(optional->getAnchor());
+      if (anchorVar && anchorVar != firstElement && anchorVar->isUnit()) {
+        elidedAnchorElement = anchorVar;
 
         if (!thenGroup == optional->isInverted()) {
-          // Add the anchor unit attribute to the operation state.
-          if (useProperties) {
+          // Add the anchor unit attribute or property to the operation state
+          // or set the property to true.
+          if (isa<PropertyVariable>(anchorVar)) {
+            body << formatv(
+                "    result.getOrAddProperties<{1}::Properties>().{0} = true;",
+                anchorVar->getName(), opCppClassName);
+          } else if (useProperties) {
             body << formatv(
                 "    result.getOrAddProperties<{1}::Properties>().{0} = "
                 "parser.getBuilder().getUnitAttr();",
-                anchorAttr->getVar()->name, opCppClassName);
+                anchorVar->getName(), opCppClassName);
           } else {
-            body << "    result.addAttribute(\"" << anchorAttr->getVar()->name
+            body << "    result.addAttribute(\"" << anchorVar->getName()
                  << "\", parser.getBuilder().getUnitAttr());\n";
           }
         }
@@ -1368,6 +1458,12 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       genAttrParser(attrVar, body, attrTypeCtx, /*parseAsOptional=*/true,
                     useProperties, opCppClassName);
       body << "  if (" << attrVar->getVar()->name << "Attr) {\n";
+    } else if (auto *propVar = dyn_cast<PropertyVariable>(firstElement)) {
+      genPropertyParser(propVar, body, opCppClassName, /*requireParse=*/false);
+      body << llvm::formatv("if ({0}PropParseResult.has_value() && "
+                            "succeeded(*{0}PropParseResult)) ",
+                            propVar->getVar()->name)
+           << " {\n";
     } else if (auto *literal = dyn_cast<LiteralElement>(firstElement)) {
       body << "  if (::mlir::succeeded(parser.parseOptional";
       genLiteralParser(literal->getSpelling(), body);
@@ -1430,15 +1526,19 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << ")) {\n";
       StringRef lelementName = lelement->getSpelling();
       body << formatv(oilistParserCode, lelementName);
-      if (AttributeVariable *unitAttrElem =
-              oilist->getUnitAttrParsingElement(pelement)) {
-        if (useProperties) {
+      if (AttributeLikeVariable *unitVarElem =
+              oilist->getUnitVariableParsingElement(pelement)) {
+        if (isa<PropertyVariable>(unitVarElem)) {
+          body << formatv(
+              "    result.getOrAddProperties<{1}::Properties>().{0} = true;",
+              unitVarElem->getName(), opCppClassName);
+        } else if (useProperties) {
           body << formatv(
               "    result.getOrAddProperties<{1}::Properties>().{0} = "
               "parser.getBuilder().getUnitAttr();",
-              unitAttrElem->getVar()->name, opCppClassName);
+              unitVarElem->getName(), opCppClassName);
         } else {
-          body << "  result.addAttribute(\"" << unitAttrElem->getVar()->name
+          body << "  result.addAttribute(\"" << unitVarElem->getName()
                << "\", UnitAttr::get(parser.getContext()));\n";
         }
       } else {
@@ -1468,6 +1568,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
         (genCtx == GenContext::Normal && attr->getVar()->attr.isOptional());
     genAttrParser(attr, body, attrTypeCtx, parseAsOptional, useProperties,
                   opCppClassName);
+  } else if (auto *prop = dyn_cast<PropertyVariable>(element)) {
+    genPropertyParser(prop, body, opCppClassName);
 
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
@@ -1876,6 +1978,38 @@ const char *enumAttrBeginPrinterCode = R"(
     auto caseValueStr = {1}(caseValue);
 )";
 
+/// Generate a check that an optional or default-valued attribute or property
+/// has a non-default value. For these purposes, the default value of an
+/// optional attribute is its presence, even if the attribute itself has a
+/// default value.
+static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
+                                    AttributeVariable &attrElement) {
+  Attribute attr = attrElement.getVar()->attr;
+  std::string getter = op.getGetterName(attrElement.getVar()->name);
+  bool optionalAndDefault = attr.isOptional() && attr.hasDefaultValue();
+  if (optionalAndDefault)
+    body << "(";
+  if (attr.isOptional())
+    body << getter << "Attr()";
+  if (optionalAndDefault)
+    body << " && ";
+  if (attr.hasDefaultValue()) {
+    FmtContext fctx;
+    fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+    body << getter << "Attr() != "
+         << tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                  attr.getDefaultValue());
+  }
+  if (optionalAndDefault)
+    body << ")";
+}
+
+static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
+                                    PropertyVariable &propElement) {
+  body << op.getGetterName(propElement.getVar()->name)
+       << "() != " << propElement.getVar()->prop.getDefaultValue();
+}
+
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
@@ -1901,6 +2035,15 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
            << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
       body << "       elidedProps.push_back(\"" << name << "\");\n";
+      body << "  }\n";
+    }
+  }
+  // Similarly, elide default-valued properties.
+  for (const NamedProperty &prop : op.getProperties()) {
+    if (prop.prop.hasDefaultValue()) {
+      body << "  if (" << op.getGetterName(prop.name)
+           << "() == " << prop.prop.getDefaultValue() << ") {";
+      body << "    elidedProps.push_back(\"" << prop.name << "\");\n";
       body << "  }\n";
     }
   }
@@ -2031,7 +2174,6 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 
   } else if (auto *property = dyn_cast<PropertyVariable>(element)) {
     FmtContext ctx;
-    ctx.addSubst("_ctxt", "getContext()");
     const NamedProperty *namedProperty = property->getVar();
     ctx.addSubst("_storage", "getProperties()." + namedProperty->name);
     body << tgfmt(namedProperty->prop.getConvertFromStorageCall(), &ctx);
@@ -2154,16 +2296,6 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
           "  }\n";
 }
 
-/// Generate a check that a DefaultValuedAttr has a value that is non-default.
-static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
-                                    AttributeVariable &attrElement) {
-  FmtContext fctx;
-  Attribute attr = attrElement.getVar()->attr;
-  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
-  body << " && " << op.getGetterName(attrElement.getVar()->name) << "Attr() != "
-       << tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue());
-}
-
 /// Generate the check for the anchor of an optional group.
 static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
                                           const Operator &op,
@@ -2190,17 +2322,12 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
         genOptionalGroupPrinterAnchor(element->getInputs(), op, body);
       })
       .Case([&](AttributeVariable *element) {
-        Attribute attr = element->getVar()->attr;
-        body << op.getGetterName(element->getVar()->name) << "Attr()";
-        if (attr.isOptional())
-          return; // done
-        if (attr.hasDefaultValue()) {
-          // Consider a default-valued attribute as present if it's not the
-          // default value.
-          genNonDefaultValueCheck(body, op, *element);
-          return;
-        }
-        llvm_unreachable("attribute must be optional or default-valued");
+        // Consider a default-valued attribute as present if it's not the
+        // default value and an optional one present if it is set.
+        genNonDefaultValueCheck(body, op, *element);
+      })
+      .Case([&](PropertyVariable *element) {
+        genNonDefaultValueCheck(body, op, *element);
       })
       .Case([&](CustomDirective *ele) {
         body << '(';
@@ -2276,10 +2403,10 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     ArrayRef<FormatElement *> thenElements = optional->getThenElements();
     ArrayRef<FormatElement *> elseElements = optional->getElseElements();
     FormatElement *elidedAnchorElement = nullptr;
-    auto *anchorAttr = dyn_cast<AttributeVariable>(anchor);
+    auto *anchorAttr = dyn_cast<AttributeLikeVariable>(anchor);
     if (anchorAttr && anchorAttr != thenElements.front() &&
         (elseElements.empty() || anchorAttr != elseElements.front()) &&
-        anchorAttr->isUnitAttr()) {
+        anchorAttr->isUnit()) {
       elidedAnchorElement = anchorAttr;
     }
     auto genElementPrinters = [&](ArrayRef<FormatElement *> elements) {
@@ -2319,13 +2446,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       for (VariableElement *var : vars) {
         TypeSwitch<FormatElement *>(var)
             .Case([&](AttributeVariable *attrEle) {
-              body << " || (" << op.getGetterName(attrEle->getVar()->name)
-                   << "Attr()";
-              Attribute attr = attrEle->getVar()->attr;
-              if (attr.hasDefaultValue()) {
-                // Don't print default-valued attributes.
-                genNonDefaultValueCheck(body, op, *attrEle);
-              }
+              body << " || (";
+              genNonDefaultValueCheck(body, op, *attrEle);
+              body << ")";
+            })
+            .Case([&](PropertyVariable *propEle) {
+              body << " || (";
+              genNonDefaultValueCheck(body, op, *propEle);
               body << ")";
             })
             .Case([&](OperandVariable *ele) {
@@ -2352,7 +2479,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       body << ") {\n";
       genLiteralPrinter(lelement->getSpelling(), body, shouldEmitSpace,
                         lastWasPunctuation);
-      if (oilist->getUnitAttrParsingElement(pelement) == nullptr) {
+      if (oilist->getUnitVariableParsingElement(pelement) == nullptr) {
         for (FormatElement *element : pelement)
           genElementPrinter(element, body, op, shouldEmitSpace,
                             lastWasPunctuation);
@@ -2369,7 +2496,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     return;
   }
 
-  // Emit the attribute dictionary.
+  // Emit the property dictionary.
   if (isa<PropDictDirective>(element)) {
     genPropDictPrinter(*this, op, body);
     lastWasPunctuation = false;
@@ -2408,6 +2535,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     else
       body << "_odsPrinter.printStrippedAttrOrType("
            << op.getGetterName(var->name) << "Attr());\n";
+  } else if (auto *property = dyn_cast<PropertyVariable>(element)) {
+    const NamedProperty *var = property->getVar();
+    FmtContext fmtContext;
+    fmtContext.addSubst("_printer", "_odsPrinter");
+    fmtContext.addSubst("_ctxt", "getContext()");
+    fmtContext.addSubst("_storage", "getProperties()." + var->name);
+    body << tgfmt(var->prop.getPrinterCall(), &fmtContext) << ";\n";
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     if (operand->getVar()->isVariadicOfVariadic()) {
       body << "  ::llvm::interleaveComma("
@@ -2736,6 +2870,10 @@ static bool isOptionallyParsed(FormatElement *el) {
   if (auto *attrVar = dyn_cast<AttributeVariable>(el)) {
     Attribute attr = attrVar->getVar()->attr;
     return attr.isOptional() || attr.hasDefaultValue();
+  }
+  if (auto *propVar = dyn_cast<PropertyVariable>(el)) {
+    const Property &prop = propVar->getVar()->prop;
+    return prop.hasDefaultValue() && prop.hasOptionalParser();
   }
   if (auto *operandVar = dyn_cast<OperandVariable>(el)) {
     const NamedTypeConstraint *operand = operandVar->getVar();
@@ -3141,10 +3279,9 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
   }
 
   if (const NamedProperty *property = findArg(op.getProperties(), name)) {
-    if (ctx != CustomDirectiveContext && ctx != RefDirectiveContext)
+    if (ctx == TypeDirectiveContext)
       return emitError(
-          loc, "properties currently only supported in `custom` directive");
-
+          loc, "properties cannot be used as children to a `type` directive");
     if (ctx == RefDirectiveContext) {
       if (!seenProperties.count(property))
         return emitError(loc, "property '" + name +
@@ -3428,6 +3565,15 @@ LogicalResult OpFormatParser::verifyOIListParsingElement(FormatElement *element,
                                       "an oilist parsing group");
               return success();
             })
+            // Only optional properties can be within an oilist parsing group.
+            .Case([&](PropertyVariable *propEle) {
+              if (!propEle->getVar()->prop.hasDefaultValue())
+                return emitError(
+                    loc,
+                    "only default-valued or optional properties can be used in "
+                    "an olist parsing group");
+              return success();
+            })
             // Only optional-like(i.e. variadic) operands can be within an
             // oilist parsing group.
             .Case([&](OperandVariable *ele) {
@@ -3554,6 +3700,16 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
         Attribute attr = attrEle->getVar()->attr;
         if (isAnchor && !(attr.isOptional() || attr.hasDefaultValue()))
           return emitError(loc, "only optional or default-valued attributes "
+                                "can be used to anchor an optional group");
+        return success();
+      })
+      // All properties can be within the optional group, but only optional
+      // properties can be the anchor.
+      .Case([&](PropertyVariable *propEle) {
+        Property prop = propEle->getVar()->prop;
+        if (isAnchor && !(prop.hasDefaultValue() && prop.hasOptionalParser()))
+          return emitError(loc, "only properties with default values "
+                                "that can be optionally parsed "
                                 "can be used to anchor an optional group");
         return success();
       })

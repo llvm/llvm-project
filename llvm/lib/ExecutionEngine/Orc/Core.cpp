@@ -932,13 +932,21 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
           if (SymI->second.getFlags().hasError())
             SymbolsInErrorState.insert(KV.first);
           else {
-            auto Flags = KV.second.getFlags();
-            Flags &= ~JITSymbolFlags::Common;
-            assert(Flags ==
-                       (SymI->second.getFlags() & ~JITSymbolFlags::Common) &&
-                   "Resolved flags should match the declared flags");
+            if (SymI->second.getFlags() & JITSymbolFlags::Common) {
+              [[maybe_unused]] auto WeakOrCommon =
+                  JITSymbolFlags::Weak | JITSymbolFlags::Common;
+              assert((KV.second.getFlags() & WeakOrCommon) &&
+                     "Common symbols must be resolved as common or weak");
+              assert((KV.second.getFlags() & ~WeakOrCommon) ==
+                         (SymI->second.getFlags() & ~JITSymbolFlags::Common) &&
+                     "Resolving symbol with incorrect flags");
 
-            Worklist.push_back({SymI, {KV.second.getAddress(), Flags}});
+            } else
+              assert(KV.second.getFlags() == SymI->second.getFlags() &&
+                     "Resolved flags should match the declared flags");
+
+            Worklist.push_back(
+                {SymI, {KV.second.getAddress(), SymI->second.getFlags()}});
           }
         }
 
@@ -1266,7 +1274,7 @@ JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
 
 std::pair<JITDylib::AsynchronousSymbolQuerySet,
           std::shared_ptr<SymbolDependenceMap>>
-JITDylib::removeTracker(ResourceTracker &RT) {
+JITDylib::IL_removeTracker(ResourceTracker &RT) {
   // Note: Should be called under the session lock.
   assert(State != Closed && "JD is defunct");
 
@@ -1305,9 +1313,7 @@ JITDylib::removeTracker(ResourceTracker &RT) {
       SymbolsToFail.push_back(Sym);
   }
 
-  AsynchronousSymbolQuerySet QueriesToFail;
-  auto Result = ES.runSessionLocked(
-      [&]() { return ES.IL_failSymbols(*this, std::move(SymbolsToFail)); });
+  auto Result = ES.IL_failSymbols(*this, std::move(SymbolsToFail));
 
   // Removed symbols should be taken out of the table altogether.
   for (auto &Sym : SymbolsToRemove) {
@@ -2198,7 +2204,8 @@ Error ExecutionSession::removeResourceTracker(ResourceTracker &RT) {
   runSessionLocked([&] {
     CurrentResourceManagers = ResourceManagers;
     RT.makeDefunct();
-    std::tie(QueriesToFail, FailedSymbols) = RT.getJITDylib().removeTracker(RT);
+    std::tie(QueriesToFail, FailedSymbols) =
+        RT.getJITDylib().IL_removeTracker(RT);
   });
 
   Error Err = Error::success();
@@ -2900,9 +2907,16 @@ Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
            "Resolving symbol outside this responsibility set");
     assert(!I->second.hasMaterializationSideEffectsOnly() &&
            "Can't resolve materialization-side-effects-only symbol");
-    assert((KV.second.getFlags() & ~JITSymbolFlags::Common) ==
-               (I->second & ~JITSymbolFlags::Common) &&
-           "Resolving symbol with incorrect flags");
+    if (I->second & JITSymbolFlags::Common) {
+      auto WeakOrCommon = JITSymbolFlags::Weak | JITSymbolFlags::Common;
+      assert((KV.second.getFlags() & WeakOrCommon) &&
+             "Common symbols must be resolved as common or weak");
+      assert((KV.second.getFlags() & ~WeakOrCommon) ==
+                 (I->second & ~JITSymbolFlags::Common) &&
+             "Resolving symbol with incorrect flags");
+    } else
+      assert(KV.second.getFlags() == I->second &&
+             "Resolving symbol with incorrect flags");
   }
 #endif
 

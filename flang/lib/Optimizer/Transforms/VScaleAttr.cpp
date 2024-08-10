@@ -38,7 +38,6 @@
 #include <algorithm>
 
 namespace fir {
-#define GEN_PASS_DECL_VSCALEATTR
 #define GEN_PASS_DEF_VSCALEATTR
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
@@ -76,15 +75,4 @@ void VScaleAttrPass::runOnOperation() {
                     mlir::IntegerAttr::get(intTy, vscaleRange.second)));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass>
-fir::createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr) {
-  VScaleAttrOptions opts;
-  opts.vscaleRange = vscaleAttr;
-  return std::make_unique<VScaleAttrPass>(opts);
-}
-
-std::unique_ptr<mlir::Pass> fir::createVScaleAttrPass() {
-  return std::make_unique<VScaleAttrPass>();
 }

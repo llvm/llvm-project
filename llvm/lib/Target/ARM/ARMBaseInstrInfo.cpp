@@ -49,6 +49,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -2310,7 +2311,7 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
-  if (!MI->isSafeToMove(/* AliasAnalysis = */ nullptr, DontMoveAcrossStores))
+  if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
 }
@@ -5872,11 +5873,10 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
 
 std::optional<outliner::OutlinedFunction>
 ARMBaseInstrInfo::getOutliningCandidateInfo(
+    const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-
   unsigned SequenceSize = 0;
-  for (auto &MI : FirstCand)
+  for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
 
   // Properties about candidate MBBs that hold for all of them.
@@ -6062,6 +6062,8 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
         RepeatedSequenceLocs.size() * Costs.CallDefault) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
+      if (RepeatedSequenceLocs.size() < 2)
+        return std::nullopt;
     } else
       SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
   }
@@ -6071,6 +6073,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
     // check if the range contains a call.  These require a save + restore of
     // the link register.
+    outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
     if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
                     [](const MachineInstr &MI) { return MI.isCall(); }))
       NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
@@ -6276,8 +6279,9 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 }
 
 outliner::InstrType
-ARMBaseInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
-                                   unsigned Flags) const {
+ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                       MachineBasicBlock::iterator &MIT,
+                                       unsigned Flags) const {
   MachineInstr &MI = *MIT;
   const TargetRegisterInfo *TRI = &getRegisterInfo();
 
@@ -6348,8 +6352,7 @@ ARMBaseInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
 
     // We have a function we have information about.  Check if it's something we
     // can safely outline.
-    MachineFunction *MF = MI.getParent()->getParent();
-    MachineFunction *CalleeMF = MF->getMMI().getMachineFunction(*Callee);
+    MachineFunction *CalleeMF = MMI.getMachineFunction(*Callee);
 
     // We don't know what's going on with the callee at all.  Don't touch it.
     if (!CalleeMF)

@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUTargetMachine.h"
+#include "SIFixSGPRCopies.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 
 using namespace llvm;
 
@@ -25,6 +28,8 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // TODO: Add passes pre instruction selection.
+  // Test only, convert to real IR passes in future.
+  addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>());
 }
 
 void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
@@ -32,7 +37,8 @@ void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
   // TODO: Add AsmPrinter.
 }
 
-Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &) const {
-  // TODO: Add instruction selector.
+Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
+  addPass(AMDGPUISelDAGToDAGPass(TM));
+  addPass(SIFixSGPRCopiesPass());
   return Error::success();
 }

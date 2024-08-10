@@ -186,13 +186,15 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 # printed. Therefore, check for whether the compiler supports options in the
 # form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
 
-# Disable GCC warnings
-append("-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
-append("-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
-append("-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  # Disable GCC warnings
+  append("-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
+  append("-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
+  append("-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wstringop-truncation" CXX_SUPPORTS_STRINGOP_TRUNCATION)
-append_if(CXX_SUPPORTS_STRINGOP_TRUNCATION "-Wno-stringop-truncation" CMAKE_CXX_FLAGS)
+  check_cxx_compiler_flag("-Wstringop-truncation" CXX_SUPPORTS_STRINGOP_TRUNCATION)
+  append_if(CXX_SUPPORTS_STRINGOP_TRUNCATION "-Wno-stringop-truncation" CMAKE_CXX_FLAGS)
+endif()
 
 # Disable Clang warnings
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

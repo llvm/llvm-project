@@ -465,6 +465,8 @@ public:
     static bool SetUpdateStateOnRemoval(Event *event_ptr);
 
   private:
+    bool ForwardEventToPendingListeners(Event *event_ptr) override;
+
     void SetUpdateStateOnRemoval() { m_update_state++; }
 
     void SetRestarted(bool new_value) { m_restarted = new_value; }
@@ -1312,10 +1314,16 @@ public:
 
   size_t GetThreadStatus(Stream &ostrm, bool only_threads_with_stop_reason,
                          uint32_t start_frame, uint32_t num_frames,
-                         uint32_t num_frames_with_source,
-                         bool stop_format);
+                         uint32_t num_frames_with_source, bool stop_format);
 
-  void SendAsyncInterrupt();
+  /// Send an async interrupt request.
+  ///
+  /// If \a thread is specified the async interrupt stop will be attributed to
+  /// the specified thread.
+  ///
+  /// \param[in] thread
+  ///     The thread the async interrupt will be attributed to.
+  void SendAsyncInterrupt(Thread *thread = nullptr);
 
   // Notify this process class that modules got loaded.
   //
@@ -2568,6 +2576,19 @@ void PruneThreadPlans();
   ///     information related to the process.
   virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
 
+  /// Fetch extended crash information held by the process.  This will never be
+  /// an empty shared pointer, it will always have a dict, though it may be
+  /// empty.
+  StructuredData::DictionarySP GetExtendedCrashInfoDict() {
+    assert(m_crash_info_dict_sp && "We always have a valid dictionary");
+    return m_crash_info_dict_sp;
+  }
+
+  void ResetExtendedCrashInfoDict() {
+    // StructuredData::Dictionary is add only, so we have to make a new one:
+    m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
+  }
+
   size_t AddImageToken(lldb::addr_t image_ptr);
 
   lldb::addr_t GetImagePtrFromToken(size_t token) const;
@@ -2685,6 +2706,15 @@ void PruneThreadPlans();
   lldb::addr_t FindInMemory(lldb::addr_t low, lldb::addr_t high,
                             const uint8_t *buf, size_t size);
 
+  AddressRanges FindRangesInMemory(const uint8_t *buf, uint64_t size,
+                                   const AddressRanges &ranges,
+                                   size_t alignment, size_t max_matches,
+                                   Status &error);
+
+  lldb::addr_t FindInMemory(const uint8_t *buf, uint64_t size,
+                            const AddressRange &range, size_t alignment,
+                            Status &error);
+
 protected:
   friend class Trace;
 
@@ -2800,6 +2830,11 @@ protected:
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                               Status &error) = 0;
 
+  virtual void DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
+                              const uint8_t *buf, size_t size,
+                              AddressRanges &matches, size_t alignment,
+                              size_t max_matches);
+
   /// DoGetMemoryRegionInfo is called by GetMemoryRegionInfo after it has
   /// removed non address bits from load_addr. Override this method in
   /// subclasses of Process.
@@ -2836,6 +2871,17 @@ protected:
   ///     before the instruction executes.
   virtual std::optional<bool> DoGetWatchpointReportedAfter() {
     return std::nullopt;
+  }
+
+  /// Handle thread specific async interrupt and return the original thread
+  /// that requested the async interrupt. It can be null if original thread
+  /// has exited.
+  ///
+  /// \param[in] description
+  ///     Returns the stop reason description of the async interrupt.
+  virtual lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo, const std::string &description) {
+    return lldb::ThreadSP();
   }
 
   lldb::StateType GetPrivateState();
@@ -3124,6 +3170,11 @@ protected:
                            // Resume will only request a resume, using this
                            // flag to check.
 
+  lldb::tid_t m_interrupt_tid; /// The tid of the thread that issued the async
+                               /// interrupt, used by thread plan timeout. It
+                               /// can be LLDB_INVALID_THREAD_ID to indicate
+                               /// user level async interrupt.
+
   /// This is set at the beginning of Process::Finalize() to stop functions
   /// from looking up or creating things during or after a finalize call.
   std::atomic<bool> m_finalizing;
@@ -3169,6 +3220,10 @@ protected:
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;
+
+  /// A repository for extra crash information, consulted in
+  /// GetExtendedCrashInformation.
+  StructuredData::DictionarySP m_crash_info_dict_sp;
 
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;

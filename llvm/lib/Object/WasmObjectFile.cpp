@@ -509,11 +509,14 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
   llvm::DenseSet<uint64_t> SeenGlobals;
   llvm::DenseSet<uint64_t> SeenSegments;
 
-  // If there is symbol info from the export section, this info will supersede
-  // it, but not info from a linking section
-  if (!HasLinkingSection) {
+  // If we have linking section (symbol table) or if we are parsing a DSO
+  // then we don't use the name section for symbol information.
+  bool PopulateSymbolTable = !HasLinkingSection && !HasDylinkSection;
+
+  // If we are using the name section for symbol information then it will
+  // supersede any symbols created by the export section.
+  if (PopulateSymbolTable)
     Symbols.clear();
-  }
 
   while (Ctx.Ptr < Ctx.End) {
     uint8_t Type = readUint8(Ctx);
@@ -589,7 +592,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
               Index, 0, DataSegments[Index].Data.Content.size()};
         }
         DebugNames.push_back(wasm::WasmDebugName{nameType, Index, Name});
-        if (!HasLinkingSection)
+        if (PopulateSymbolTable)
           Symbols.emplace_back(Info, GlobalType, TableType, Signature);
       }
       break;

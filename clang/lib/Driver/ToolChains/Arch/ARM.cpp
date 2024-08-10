@@ -591,11 +591,9 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
 
   // Add CPU features for generic CPUs
   if (CPUName == "native") {
-    llvm::StringMap<bool> HostFeatures;
-    if (llvm::sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
-        Features.push_back(
-            Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+    for (auto &F : llvm::sys::getHostCPUFeatures())
+      Features.push_back(
+          Args.MakeArgString((F.second ? "+" : "-") + F.first()));
   } else if (!CPUName.empty()) {
     // This sets the default features for the specified CPU. We certainly don't
     // want to override the features that have been explicitly specified on the
@@ -799,8 +797,6 @@ fp16_fml_fallthrough:
     StringRef FrameChainOption = A->getValue();
     if (FrameChainOption.starts_with("aapcs"))
       Features.push_back("+aapcs-frame-chain");
-    if (FrameChainOption == "aapcs+leaf")
-      Features.push_back("+aapcs-frame-chain-leaf");
   }
 
   // CMSE: Check for target 8M (for -mcmse to be applicable) is performed later.

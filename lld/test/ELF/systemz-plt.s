@@ -48,9 +48,9 @@
 # DIS-NEXT: 100102c: d2 07 f0 30 10 08    	mvc	48(8,%r15), 8(%r1)
 # DIS-NEXT: 1001032: e3 10 10 10 00 04    	lg	%r1, 16(%r1)
 # DIS-NEXT: 1001038: 07 f1        	br	%r1
-# DIS-NEXT: 100103a: 07 00        	bcr	0, %r0
-# DIS-NEXT: 100103c: 07 00        	bcr	0, %r0
-# DIS-NEXT: 100103e: 07 00        	bcr	0, %r0
+# DIS-NEXT: 100103a: 07 00        	nopr   %r0
+# DIS-NEXT: 100103c: 07 00        	nopr   %r0
+# DIS-NEXT: 100103e: 07 00        	nopr   %r0
 # DIS-NEXT: 1001040: c0 10 00 00 10 54    	larl	%r1, 0x10030e8
 # DIS-NEXT: 1001046: e3 10 10 00 00 04    	lg	%r1, 0(%r1)
 # DIS-NEXT: 100104c: 07 f1        	br	%r1

@@ -184,8 +184,7 @@ static inline bool CheckMachineFunction(const MachineFunction &MF,
   SmallString<4096> CheckFileBuffer;
   FileCheckRequest Req;
   FileCheck FC(Req);
-  StringRef CheckFileText =
-      FC.CanonicalizeFile(*CheckBuf.get(), CheckFileBuffer);
+  StringRef CheckFileText = FC.CanonicalizeFile(*CheckBuf, CheckFileBuffer);
   SourceMgr SM;
   SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(CheckFileText, "CheckFile"),
                         SMLoc());

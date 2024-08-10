@@ -1392,6 +1392,7 @@ How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
 Than find the line with the counter of interest. it should look like:
+
 .. code-block:: none
 
   my-counter               : {5678,empty}
@@ -1400,6 +1401,7 @@ The number of calls to `my-counter` is 5678
 
 Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
+
 .. code-block:: bash
 
   #! /bin/bash
@@ -2066,8 +2068,10 @@ insertion/deleting/queries with low constant factors) and is very stingy with
 malloc traffic.
 
 Note that, unlike :ref:`std::set <dss_set>`, the iterators of ``SmallPtrSet``
-are invalidated whenever an insertion occurs.  Also, the values visited by the
-iterators are not visited in sorted order.
+are invalidated whenever an insertion or erasure occurs. The ``remove_if``
+method can be used to remove elements while iterating over the set.
+
+Also, the values visited by the iterators are not visited in sorted order.
 
 .. _dss_stringset:
 

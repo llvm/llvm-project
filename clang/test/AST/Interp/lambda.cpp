@@ -46,8 +46,7 @@ constexpr int div(int a, int b) {
     return a / b; // both-note {{division by zero}}
   };
 
-  return f(); // expected-note {{in call to '&f->operator()()'}} \
-              // ref-note {{in call to 'f.operator()()'}}
+  return f(); // both-note {{in call to 'f.operator()()'}}
 }
 static_assert(div(8, 2) == 4);
 static_assert(div(8, 0) == 4); // both-error {{not an integral constant expression}} \
@@ -264,3 +263,25 @@ namespace CaptureDefaults {
   };
   static_assert(f2() == 3, "");
 }
+
+constexpr auto t4 = ([x=42]() consteval { return x; }());
+static_assert(t4 == 42, "");
+
+namespace InvalidCapture {
+
+  int &f(int *p);
+  char &f(...);
+  void g() {
+    int n = -1;   // both-note {{declared here}}
+    [=] {
+      int arr[n]; // both-warning {{variable length arrays in C++ are a Clang extension}} \
+                     both-note {{read of non-const variable 'n' is not allowed in a constant expression}}
+    } ();
+  }
+}
+
+constexpr int fn() {
+  int Capture = 42;
+  return [=]() constexpr { return Capture; }();
+}
+static_assert(fn() == 42, "");

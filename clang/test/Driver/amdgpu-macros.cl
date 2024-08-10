@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // Check that appropriate macros are defined for every supported AMDGPU
 // "-target" and "-mcpu" options.
 
@@ -128,6 +127,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1103 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1103 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1150 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1150 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1151 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1151 -DFAMILY=GFX11
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1152 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1152 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1200 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1201 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1201 -DFAMILY=GFX12
 

@@ -14,9 +14,9 @@
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: <foo>:
-# DISASM-NEXT:     bc 0, 0
+# DISASM-NEXT:     nop     0
 # DISASM:      <hid>:
-# DISASM-NEXT:     bc 0, 0
+# DISASM-NEXT:     nop     0
 # DISASM:      <_start>:
 # DISASM-NEXT:    lgrl    %r1, 0x2400
 # DISASM-NEXT:    lgrl    %r1, 0x2400

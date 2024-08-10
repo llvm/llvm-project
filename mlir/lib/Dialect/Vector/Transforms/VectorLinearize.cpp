@@ -18,7 +18,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
@@ -151,10 +150,12 @@ struct LinearizeVectorExtractStridedSlice final
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(extractOp.getType());
-    assert(!(extractOp.getVector().getType().isScalable() ||
-             cast<VectorType>(dstType).isScalable()) &&
-           "scalable vectors are not supported.");
+    VectorType dstType =
+        getTypeConverter()->convertType<VectorType>(extractOp.getType());
+    assert(dstType && "vector type destination expected.");
+    if (extractOp.getVector().getType().isScalable() || dstType.isScalable())
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -231,8 +232,7 @@ struct LinearizeVectorExtractStridedSlice final
     }
     // Perform a shuffle to extract the kD vector.
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractOp, dstType, srcVector, srcVector,
-        rewriter.getI64ArrayAttr(indices));
+        extractOp, dstType, srcVector, srcVector, indices);
     return success();
   }
 
@@ -264,10 +264,14 @@ struct LinearizeVectorShuffle final
   LogicalResult
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(shuffleOp.getType());
+    VectorType dstType =
+        getTypeConverter()->convertType<VectorType>(shuffleOp.getType());
+    assert(dstType && "vector type destination expected.");
+    // The assert is used because vector.shuffle does not support scalable
+    // vectors.
     assert(!(shuffleOp.getV1VectorType().isScalable() ||
              shuffleOp.getV2VectorType().isScalable() ||
-             cast<VectorType>(dstType).isScalable()) &&
+             dstType.isScalable()) &&
            "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(shuffleOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
@@ -293,20 +297,17 @@ struct LinearizeVectorShuffle final
     // that needs to be shuffled to the destination vector. If shuffleSliceLen >
     // 1 we need to shuffle the slices (consecutive shuffleSliceLen number of
     // elements) instead of scalars.
-    ArrayAttr mask = shuffleOp.getMask();
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
     int64_t totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
     llvm::SmallVector<int64_t, 2> indices(totalSizeOfShuffledElmnts);
-    for (auto [i, value] :
-         llvm::enumerate(mask.getAsValueRange<IntegerAttr>())) {
-
-      int64_t v = value.getZExtValue();
+    for (auto [i, value] : llvm::enumerate(mask)) {
       std::iota(indices.begin() + shuffleSliceLen * i,
                 indices.begin() + shuffleSliceLen * (i + 1),
-                shuffleSliceLen * v);
+                shuffleSliceLen * value);
     }
 
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        shuffleOp, dstType, vec1, vec2, rewriter.getI64ArrayAttr(indices));
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(shuffleOp, dstType, vec1,
+                                                   vec2, indices);
     return success();
   }
 
@@ -336,9 +337,10 @@ struct LinearizeVectorExtract final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
-    assert(!(extractOp.getVector().getType().isScalable() ||
-             cast<VectorType>(dstTy).isScalable()) &&
-           "scalable vectors are not supported.");
+    if (extractOp.getVector().getType().isScalable() ||
+        cast<VectorType>(dstTy).isScalable())
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -362,8 +364,7 @@ struct LinearizeVectorExtract final
     llvm::SmallVector<int64_t, 2> indices(size);
     std::iota(indices.begin(), indices.end(), linearizedOffset);
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractOp, dstTy, adaptor.getVector(), adaptor.getVector(),
-        rewriter.getI64ArrayAttr(indices));
+        extractOp, dstTy, adaptor.getVector(), adaptor.getVector(), indices);
 
     return success();
   }
@@ -394,10 +395,12 @@ struct LinearizeVectorInsert final
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstTy = getTypeConverter()->convertType(insertOp.getDestVectorType());
-    assert(!(insertOp.getDestVectorType().isScalable() ||
-             cast<VectorType>(dstTy).isScalable()) &&
-           "scalable vectors are not supported.");
+    VectorType dstTy = getTypeConverter()->convertType<VectorType>(
+        insertOp.getDestVectorType());
+    assert(dstTy && "vector type destination expected.");
+    if (insertOp.getDestVectorType().isScalable() || dstTy.isScalable())
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "scalable vectors are not supported.");
 
     if (!isLessThanOrEqualTargetBitWidth(insertOp.getSourceType(),
                                          targetVectorBitWidth))
@@ -444,8 +447,7 @@ struct LinearizeVectorInsert final
                                            // [offset+srcNumElements, end)
 
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(),
-        rewriter.getI64ArrayAttr(indices));
+        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(), indices);
 
     return success();
   }

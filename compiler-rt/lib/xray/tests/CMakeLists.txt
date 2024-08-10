@@ -1,7 +1,7 @@
 include_directories(..)
 
 add_custom_target(XRayUnitTests)
-set_target_properties(XRayUnitTests PROPERTIES FOLDER "XRay unittests")
+set_target_properties(XRayUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 
 # Sanity check XRAY_ALL_SOURCE_FILES_ABS_PATHS
 list(LENGTH XRAY_ALL_SOURCE_FILES_ABS_PATHS XASFAP_LENGTH)
@@ -34,7 +34,7 @@ function(add_xray_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
+    FOLDER "Compiler-RT/Tests/Runtime")
 endfunction()
 
 function(get_xray_lib_for_arch arch lib)

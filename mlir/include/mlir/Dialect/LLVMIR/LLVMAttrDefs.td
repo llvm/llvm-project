@@ -532,17 +532,18 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$arg,
     OptionalParameter<"unsigned">:$alignInBits,
-    OptionalParameter<"DITypeAttr">:$type
+    OptionalParameter<"DITypeAttr">:$type,
+    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DIScopeAttr":$scope, "StringRef":$name, "DIFileAttr":$file,
       "unsigned":$line, "unsigned":$arg, "unsigned":$alignInBits,
-      "DITypeAttr":$type
+      "DITypeAttr":$type, "DIFlags":$flags
     ), [{
       MLIRContext *ctx = scope.getContext();
       return $_get(ctx, scope, StringAttr::get(ctx, name), file, line,
-                   arg, alignInBits, type);
+                   arg, alignInBits, type, flags);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -625,10 +626,10 @@ def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
 def LLVM_DISubrangeAttr : LLVM_Attr<"DISubrange", "di_subrange", /*traits=*/[],
                                     "DINodeAttr"> {
   let parameters = (ins
-    OptionalParameter<"IntegerAttr">:$count,
-    OptionalParameter<"IntegerAttr">:$lowerBound,
-    OptionalParameter<"IntegerAttr">:$upperBound,
-    OptionalParameter<"IntegerAttr">:$stride
+    OptionalParameter<"::mlir::Attribute">:$count,
+    OptionalParameter<"::mlir::Attribute">:$lowerBound,
+    OptionalParameter<"::mlir::Attribute">:$upperBound,
+    OptionalParameter<"::mlir::Attribute">:$stride
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -673,6 +674,25 @@ def LLVM_DILabelAttr : LLVM_Attr<"DILabel", "di_label",
     }]>
   ];
 
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DIStringTypeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
+                                     /*traits=*/[], "DITypeAttr"> {
+  let parameters = (ins
+    LLVM_DITagParameter:$tag,
+    "StringAttr":$name,
+    OptionalParameter<"uint64_t">:$sizeInBits,
+    OptionalParameter<"uint32_t">:$alignInBits,
+    OptionalParameter<"DIVariableAttr">:$stringLength,
+    OptionalParameter<"DIExpressionAttr">:$stringLengthExp,
+    OptionalParameter<"DIExpressionAttr">:$stringLocationExp,
+    LLVM_DIEncodingParameter:$encoding
+  );
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -1052,10 +1072,57 @@ def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
 def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 
 //===----------------------------------------------------------------------===//
+// VecTypeHintAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_VecTypeHintAttr : LLVM_Attr<"VecTypeHint", "vec_type_hint"> {
+  let summary = "Explicit vectorization compiler hint";
+  let description = [{
+    A hint to the compiler that indicates most operations used in the function
+    are explictly vectorized using a particular vector type. `$hint` is the
+    vector or scalar type in particular. `$is_signed` can be used with integer
+    types to state whether the type is signed.
+  }];
+  let parameters = (ins "TypeAttr":$hint,
+                        DefaultValuedParameter<"bool", "false">:$is_signed);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroAttr
 //===----------------------------------------------------------------------===//
 
 /// Folded into from LLVM::ZeroOp.
 def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
+
+//===----------------------------------------------------------------------===//
+// TailCallKindAttr
+//===----------------------------------------------------------------------===//
+
+def TailCallKindAttr : LLVM_Attr<"TailCallKind", "tailcallkind"> {
+  let parameters = (ins "TailCallKind":$tailCallKind);
+  let assemblyFormat = "`<` $tailCallKind `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// WorkgroupAttributionAttr
+//===----------------------------------------------------------------------===//
+
+def WorkgroupAttributionAttr
+    : LLVM_Attr<"WorkgroupAttribution", "mlir.workgroup_attribution"> {
+  let summary = "GPU workgroup attribution information";
+  let description = [{
+    GPU workgroup attributions are `gpu.func` attributes encoding memory
+    allocations in the workgroup address space. These might be encoded as
+    `llvm.ptr` function arguments in our dialect, but then type and size
+    information would be dropped. This attribute can be attached to `llvm.ptr`
+    function arguments encoding GPU workgroup attributions to mark them as
+    arguments encoding workgroup attributions and keeping type and size
+    information in our dialect.
+  }];
+  let parameters = (ins "IntegerAttr":$num_elements,
+                        "TypeAttr":$element_type);
+  let assemblyFormat = "`<` $num_elements `,` $element_type `>`";
+}
 
 #endif // LLVMIR_ATTRDEFS
