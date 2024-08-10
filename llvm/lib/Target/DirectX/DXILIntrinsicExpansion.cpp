@@ -43,8 +43,8 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_length:
-  case Intrinsic::dx_sdot:
-  case Intrinsic::dx_udot:
+  case Intrinsic::sdot:
+  case Intrinsic::udot:
   case Intrinsic::fdot:
     return true;
   }
@@ -72,10 +72,11 @@ static bool expandAbs(CallInst *Orig) {
 }
 
 static bool expandDotIntrinsic(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
-  assert(DotIntrinsic == Intrinsic::dx_sdot ||
-         DotIntrinsic == Intrinsic::dx_udot || DotIntrinsic == Intrinsic::fdot);
+  assert(DotIntrinsic == Intrinsic::sdot || DotIntrinsic == Intrinsic::udot ||
+         DotIntrinsic == Intrinsic::fdot);
   Value *A = Orig->getOperand(0);
   Value *B = Orig->getOperand(1);
+
   [[maybe_unused]] Type *ATy = A->getType();
   [[maybe_unused]] Type *BTy = B->getType();
   assert(ATy->isVectorTy() && BTy->isVectorTy());
@@ -88,7 +89,7 @@ static bool expandDotIntrinsic(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
   Value *Result;
   if (EltTy->isIntegerTy()) {
     // Expand integer dot product to multiply and add ops
-    Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::dx_sdot
+    Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::sdot
                                      ? Intrinsic::dx_imad
                                      : Intrinsic::dx_umad;
     Value *Elt0 = Builder.CreateExtractElement(A, (uint64_t)0);
@@ -340,9 +341,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandLerpIntrinsic(Orig);
   case Intrinsic::dx_length:
     return expandLengthIntrinsic(Orig);
-  case Intrinsic::dx_sdot:
-  case Intrinsic::dx_udot:
   case Intrinsic::fdot:
+  case Intrinsic::sdot:
+  case Intrinsic::udot:
     return expandDotIntrinsic(Orig, F.getIntrinsicID());
   }
   return false;
