@@ -297,5 +297,13 @@ namespace Zeroing {
   static_assert(u6.a[4] == 0, "");
   static_assert(u6.b == 0, ""); // both-error {{not an integral constant expression}} \
                                 // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union UnionWithUnnamedBitfield {
+    int : 3;
+    int n;
+  };
+  static_assert(UnionWithUnnamedBitfield().n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{}.n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{1}.n == 1, "");
 }
 #endif
