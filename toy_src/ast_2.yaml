@@ -1,0 +1,44 @@
+  Module:
+    Function 
+      Proto 'multi_transpose' @ast_2.toy:1:1
+      Params: [a, b]
+      Block {
+        Return
+          BinOp: * @ast_2.toy:2:24
+            Call 'transpose' [ @ast_2.toy:2:10
+              var: a @ast_2.toy:2:20
+            ]
+            Call 'trasnpose' [ @ast_2.toy:2:24
+              var: b @ast_2.toy:2:34
+            ]
+      } // Block
+    Function 
+      Proto 'main' @ast_2.toy:6:1
+      Params: []
+      Block {
+        VarDecl a<> @ast_2.toy:7:3
+          Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00]] @ast_2.toy:7:9
+        VarDecl b<2, 3> @ast_2.toy:8:3
+          Literal: <6>[ 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00] @ast_2.toy:8:14
+        VarDecl c<> @ast_2.toy:10:3
+          Call 'multi_transpose' [ @ast_2.toy:10:10
+            var: a @ast_2.toy:10:26
+            var: b @ast_2.toy:10:28
+          ]
+        VarDecl d<> @ast_2.toy:12:3
+          Call 'multi_transpose' [ @ast_2.toy:12:11
+            var: b @ast_2.toy:12:27
+            var: a @ast_2.toy:12:29
+          ]
+        VarDecl e<> @ast_2.toy:14:3
+          Call 'multi_transpose' [ @ast_2.toy:14:11
+            var: c @ast_2.toy:14:27
+            var: d @ast_2.toy:14:29
+          ]
+        VarDecl f<> @ast_2.toy:16:3
+          Call 'multi_transpose' [ @ast_2.toy:16:10
+            var: a @ast_2.toy:16:26
+            var: c @ast_2.toy:16:28
+          ]
+      } // Block
+ast_2.toy

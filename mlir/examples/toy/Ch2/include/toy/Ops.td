@@ -21,20 +21,24 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
 // can define our operations.
 
-// 定义一个名为toy的dialect并在其中定义自己的operation。
+// Cratels: 定义一个名为Toy_Dialect的dialect并在其中定义自己的operation
+// Cratels: tablegen模块会自动将其转换为 C++源码形式，其名称会被转换为 ToyDialect
 def Toy_Dialect : Dialect {
   let name = "toy";
+  // Cratels: 指定C++源码的命名空间
   let cppNamespace = "::mlir::toy";
 }
 
 
 // Base class for toy dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
-//   * The parent dialect of the operation.========================================父类所在的dialect：Toy_Dialect
-//   * The mnemonic for the operation, or the name without the dialect prefix.=====mnemonic：助记符，或者不带dialect前缀的名字
-//   * A list of traits for the operation.=========================================该operation的特征值列表
-// 定义toy dialect的Operation基类，这个operation从基类Op继承而来。
+//   * The parent dialect of the operation.===父类所在的dialect：Toy_Dialect
+//   * The mnemonic for the operation, or the name without the dialect prefix.===mnemonic：助记符，或者不带dialect前缀的名字
+//   * A list of traits for the operation.===该operation的特征值列表
 //
+// Cratels: mnemonic助记符：
+// Cratels: trait 特征值：
+// Cratels: 定义toy dialect的Operation基类，这个operation从基类Op继承而来
 class Toy_Op<string mnemonic, list<Trait> traits = []> :
     Op<Toy_Dialect, mnemonic, traits>;
 
@@ -47,18 +51,20 @@ class Toy_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 // We define a toy operation by inheriting from our base 'Toy_Op' class above.
-// 通过继承Toy_Op来定义一个operation ConstantOp，用来表示常量。
+// Cratels: 通过继承Toy_Op来定义一个operation ConstantOp，用来表示常量。
 // Here we provide the mnemonic and a list of traits for the operation. The
 // constant operation is marked as 'Pure' as it is a pure operation
 // and may be removed if dead.
+// Cratels: Pure 意味着没有side effect副作用，如果不会访问到就可以大胆的删除
 def ConstantOp : Toy_Op<"constant", [Pure]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant";
 
   let description = [{
-    Constant operation turns a literal into an SSA value. The data is attached
-    to the operation as an attribute. For example:
+    Constant operation turns a literal into an SSA value.
+    // Cratels:  The data is attached to the operation as an attribute.
+    For example:
 
     ```mlir
       %0 = toy.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]>
@@ -66,17 +72,17 @@ def ConstantOp : Toy_Op<"constant", [Pure]> {
     ```
   }];
 
-  // ins代表op的输入值列表。outs代表op的输出列表
-  // op是用来进行转换的，所谓转换就是将来源Source转为目标值Target。ins就是指这里的Source来源，outs就是输出
+  // Cratels: ins代表op的输入值列表。outs代表op的输出列表
+  // Cratels: op是用来进行转换的，所谓转换就是将来源Source转为目标值Target。ins就是指这里的Source来源，outs就是输出
   //
   //
-  // The constant operation takes an attribute as the only input.
-  // 常量必须有值，这个op的唯一属性就是常量值。
-  // F64ElementsAttr为attribute的类型，参数名称为value
+  // Cratels: The constant operation takes an attribute as the only input.
+  // Cratels: 常量必须有值，这个op的唯一属性就是常量值。
+  // Cratels: F64ElementsAttr为attribute的类型，参数名称为value
   let arguments = (ins F64ElementsAttr:$value);
 
   // The constant operation returns a single value of TensorType.
-  // 输出类型为F64Tensor，即元素类型为F64的tensar类型
+  // Cratels: 输出类型为F64Tensor，即元素类型为F64的tensor类型
   let results = (outs F64Tensor);
 
   // Indicate that the operation has a custom parser and printer method.
@@ -103,14 +109,18 @@ def ConstantOp : Toy_Op<"constant", [Pure]> {
 // AddOp
 //===----------------------------------------------------------------------===//
 
+// Cratels:从 Toy_Op 中派生出 AddOp 代表加法二元表达式，别名为 add
 def AddOp : Toy_Op<"add"> {
   let summary = "element-wise addition operation";
   let description = [{
     The "add" operation performs element-wise addition between two tensors.
     The shapes of the tensor operands are expected to match.
+    // Cratels:两个执行加法的 tensor 要求唯独完全一致
   }];
 
+  // Cratels:输入为两个 tensor
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
+  // Cratels:输出为一个 tensor
   let results = (outs F64Tensor);
 
   // Indicate that the operation has a custom parser and printer method.
@@ -125,7 +135,8 @@ def AddOp : Toy_Op<"add"> {
 //===----------------------------------------------------------------------===//
 // FuncOp 方法定义的operation
 //===----------------------------------------------------------------------===//
-
+// Cratels:用户自定义方法的 op，别名即为 func，trait 特征值为FunctionOpInterface, IsolatedFromAbove，暂不清楚具体意义
+// Cratels:代表用户定义的方法
 def FuncOp : Toy_Op<"func", [
     FunctionOpInterface, IsolatedFromAbove
   ]> {
@@ -147,24 +158,28 @@ def FuncOp : Toy_Op<"func", [
   }];
 
   let arguments = (ins
-    // 符号表中的方法名
+    // Cratels:符号表中的符号名称
     SymbolNameAttr:$sym_name,
-    // 方法类型信息
+    // Cratels:方法类型
     TypeAttrOf<FunctionType>:$function_type,
-    // 入参列表
+    // Cratels:入参列表
     OptionalAttr<DictArrayAttr>:$arg_attrs,
-    // 返回值列表
+    // Cratels:返回值列表
     OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
-  // 当前OP包含的子元素成为 region
+  // Cratels:方法体，其类型为 region
   let regions = (region AnyRegion:$body);
 
+  // Cratels:CArg 的作用是指当前即为 C 类型，参数直接将其参数拷贝过去即可
   let builders = [OpBuilder<(ins
     "StringRef":$name, "FunctionType":$type,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)
   >];
 
+
+  // Cratels:有些方法可能无法使用 tablegen 来生成，可以使用这个属性直接将其书写下来。
+  // Cratels:在进行tablegen 的时候，这里的代码会被原样拷贝进生成的 cpp 文件中
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
     // FunctionOpInterface Methods
@@ -187,6 +202,7 @@ def FuncOp : Toy_Op<"func", [
 // GenericCallOp
 //===----------------------------------------------------------------------===//
 
+// Cratels:方法调用的 op
 def GenericCallOp : Toy_Op<"generic_call"> {
   let summary = "generic call operation";
   let description = [{
@@ -203,17 +219,19 @@ def GenericCallOp : Toy_Op<"generic_call"> {
     This is only valid if a function named "my_func" exists and takes two
     arguments.
   }];
-
+  // Cratels:当我们调用方法的时候，只需要知道其方法名以及参数列表就可以了
+  // Cratels:方法名
+  // Cratels:方法参数使用可变容器 dic 字典来实现
   // The generic call operation takes a symbol reference attribute as the
   // callee, and inputs for the call.
   let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<F64Tensor>:$inputs);
 
   // The generic call operation returns a single value of TensorType.
-  // 为了简化，Toy中所有的方法返回值都是固定的为F64Tensor
+  // Cratels:为了简化，Toy中所有的方法返回值都是固定的为F64Tensor
   let results = (outs F64Tensor);
 
   // Specialize assembly printing and parsing using a declarative format.
-  // 指定当前op输出时候的格式。这里我为其添加了cratels，这后续再进行MLIR的输出中所有的方法调用中都会增加这个后缀（无意义，仅供测试）
+  // Cratels: 指定当前op输出时候的格式。这里我为其添加了cratels，这后续再进行MLIR的输出中所有的方法调用中都会增加这个后缀（无意义，仅供测试）
   let assemblyFormat = [{
     $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)`cratels`
   }];
@@ -227,7 +245,7 @@ def GenericCallOp : Toy_Op<"generic_call"> {
 //===----------------------------------------------------------------------===//
 // MulOp
 //===----------------------------------------------------------------------===//
-
+// Cratels:乘法 op
 def MulOp : Toy_Op<"mul"> {
   let summary = "element-wise multiplication operation";
   let description = [{
@@ -250,7 +268,7 @@ def MulOp : Toy_Op<"mul"> {
 //===----------------------------------------------------------------------===//
 // PrintOp
 //===----------------------------------------------------------------------===//
-
+// Cratels:信息打印 op
 def PrintOp : Toy_Op<"print"> {
   let summary = "print operation";
   let description = [{
@@ -267,7 +285,7 @@ def PrintOp : Toy_Op<"print"> {
 //===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
-
+// Cratels:reshape，重新塑造 tensor 维度
 def ReshapeOp : Toy_Op<"reshape"> {
   let summary = "tensor reshape operation";
   let description = [{
@@ -335,6 +353,7 @@ def ReturnOp : Toy_Op<"return", [Pure, HasParent<"FuncOp">,
 // TransposeOp
 //===----------------------------------------------------------------------===//
 
+// Cratels:转置 tensor，将 M*N 的 tensor 转换为 N*M
 def TransposeOp : Toy_Op<"transpose"> {
   let summary = "transpose operation";
 
