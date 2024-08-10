@@ -102,12 +102,12 @@ define void @foo(i32 %v1) {
 #ifndef NDEBUG
   std::string Buff;
   raw_string_ostream BS(Buff);
-  F->dump(BS);
-  Arg0->dump(BS);
-  BB->dump(BS);
-  AddI->dump(BS);
-  Const0->dump(BS);
-  OpaqueI->dump(BS);
+  F->dumpOS(BS);
+  Arg0->dumpOS(BS);
+  BB->dumpOS(BS);
+  AddI->dumpOS(BS);
+  Const0->dumpOS(BS);
+  OpaqueI->dumpOS(BS);
 #endif
 }
 
@@ -176,11 +176,11 @@ define i32 @foo(i32 %v0, i32 %v1) {
   EXPECT_EQ(Ret->getOperand(0), I0);
 
 #ifndef NDEBUG
-  // Check Use.dump()
+  // Check Use.dump(()
   std::string Buff;
   raw_string_ostream BS(Buff);
   BS << "\n";
-  I0->getOperandUse(0).dump(BS);
+  I0->getOperandUse(0).dumpOS(BS);
   EXPECT_EQ(Buff, R"IR(
 Def:  i32 %v0 ; SB2. (Argument)
 User:   %add0 = add i32 %v0, %v1 ; SB5. (Opaque)
@@ -396,7 +396,7 @@ bb1:
     std::string Buff;
     raw_string_ostream BS(Buff);
     BS << "\n";
-    F->dump(BS);
+    F->dumpOS(BS);
     EXPECT_EQ(Buff, R"IR(
 void @foo(i32 %arg0, i32 %arg1) {
 bb0:
@@ -465,7 +465,7 @@ bb1:
     std::string Buff;
     raw_string_ostream BS(Buff);
     BS << "\n";
-    BB0.dump(BS);
+    BB0.dumpOS(BS);
     EXPECT_EQ(Buff, R"IR(
 bb0:
   br label %bb1 ; SB3. (Br)
