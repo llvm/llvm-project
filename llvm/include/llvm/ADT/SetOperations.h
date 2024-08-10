@@ -20,6 +20,13 @@
 namespace llvm {
 
 namespace detail {
+template <typename Set>
+using check_has_member_size_t = decltype(std::declval<Set>().size());
+
+template <typename Set>
+static constexpr bool HasMemberSize =
+    is_detected<check_has_member_size_t, Set>::value;
+
 template <typename Set, typename Fn>
 using check_has_member_remove_if_t =
     decltype(std::declval<Set>().remove_if(std::declval<Fn>()));
@@ -149,8 +156,10 @@ void set_subtract(S1Ty &S1, const S2Ty &S2, S1Ty &Removed, S1Ty &Remaining) {
 ///
 template <class S1Ty, class S2Ty>
 bool set_is_subset(const S1Ty &S1, const S2Ty &S2) {
-  if (S1.size() > S2.size())
-    return false;
+  if constexpr (detail::HasMemberSize<S1Ty> && detail::HasMemberSize<S2Ty>) {
+    if (S1.size() > S2.size())
+      return false;
+  }
   for (const auto It : S1)
     if (!S2.count(It))
       return false;

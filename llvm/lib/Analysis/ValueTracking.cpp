@@ -462,9 +462,7 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
       continue;
 
     // If all uses of this value are ephemeral, then so is this value.
-    if (llvm::all_of(V->users(), [&](const User *U) {
-                                   return EphValues.count(U);
-                                 })) {
+    if (llvm::set_is_subset(V->users(), EphValues)) {
       if (V == E)
         return true;
 

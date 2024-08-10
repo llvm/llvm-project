@@ -1747,10 +1747,7 @@ static void deleteDeadBlocksFromLoop(Loop &L,
     if (!DeadBlockSet.count(ChildL->getHeader()))
       return false;
 
-    assert(llvm::all_of(ChildL->blocks(),
-                        [&](BasicBlock *ChildBB) {
-                          return DeadBlockSet.count(ChildBB);
-                        }) &&
+    assert(llvm::set_is_subset(ChildL->blocks(), DeadBlockSet) &&
            "If the child loop header is dead all blocks in the child loop must "
            "be dead as well!");
     LoopUpdater.markLoopAsDeleted(*ChildL, ChildL->getName());

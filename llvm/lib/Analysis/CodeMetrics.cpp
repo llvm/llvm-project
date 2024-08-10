@@ -56,7 +56,7 @@ static void completeEphemeralValues(SmallPtrSetImpl<const Value *> &Visited,
            "Failed to add a worklist entry to our visited set!");
 
     // If all uses of this value are ephemeral, then so is this value.
-    if (!all_of(V->users(), [&](const User *U) { return EphValues.count(U); }))
+    if (!llvm::set_is_subset(V->users(), EphValues))
       continue;
 
     EphValues.insert(V);

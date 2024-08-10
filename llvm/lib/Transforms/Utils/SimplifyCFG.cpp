@@ -2331,9 +2331,8 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
       unsigned NumPHIInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
-        if (It != PHIOperands.end() && !all_of(It->second, [&](Value *V) {
-              return InstructionsToSink.contains(V);
-            })) {
+        if (It != PHIOperands.end() &&
+            !llvm::set_is_subset(It->second, InstructionsToSink)) {
           ++NumPHIInsts;
           // FIXME: this check is overly optimistic. We may end up not sinking
           // said instruction, due to the very same profitability check.
