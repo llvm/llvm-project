@@ -939,7 +939,8 @@ struct dl_iterate_phdr_info {
   void *data;
 };
 
-int dl_iterate_phdr_cb(struct dl_phdr_info *info, size_t size, void *data) {
+static int dl_iterate_phdr_cb(struct dl_phdr_info *info, size_t size,
+                              void *data) {
   dl_iterate_phdr_info *dipi = (dl_iterate_phdr_info *)data;
   dfsan_set_label(0, *info);
   dfsan_set_label(0, const_cast<char *>(info->dlpi_name),
