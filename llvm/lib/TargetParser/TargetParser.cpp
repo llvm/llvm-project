@@ -300,6 +300,9 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1301: return {13, 0, 1};
   case GK_GFX1302: return {13, 0, 2};
 
+
+
+
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
   // restricted in terms of features.
