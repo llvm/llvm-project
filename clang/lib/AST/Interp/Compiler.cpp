@@ -5552,21 +5552,20 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 template <class Emitter>
 bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
   assert(R);
-  // First, destroy all fields.
-  for (const Record::Field &Field : llvm::reverse(R->fields())) {
-    const Descriptor *D = Field.Desc;
-    if (!D->isPrimitive() && !D->isPrimitiveArray()) {
-      if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
-        return false;
-      if (!this->emitDestruction(D))
-        return false;
-      if (!this->emitPopPtr(SourceInfo{}))
-        return false;
+  if (!R->isUnion()) {
+    // First, destroy all fields.
+    for (const Record::Field &Field : llvm::reverse(R->fields())) {
+      const Descriptor *D = Field.Desc;
+      if (!D->isPrimitive() && !D->isPrimitiveArray()) {
+        if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
+          return false;
+        if (!this->emitDestruction(D))
+          return false;
+        if (!this->emitPopPtr(SourceInfo{}))
+          return false;
+      }
     }
   }
-
-  // FIXME: Unions need to be handled differently here. We don't want to
-  //   call the destructor of its members.
 
   // Now emit the destructor and recurse into base classes.
   if (const CXXDestructorDecl *Dtor = R->getDestructor();
