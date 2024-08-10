@@ -24,9 +24,8 @@
 namespace llvm {
 namespace exegesis {
 
-// The tests are only supported on little endian systems.
 #if defined(__linux__) && !defined(__ANDROID__) &&                             \
-    __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    !(defined(__powerpc__) || defined(__s390x__) || defined(__sparc__))
 
 // This needs to be updated anytime a test is added or removed from the test
 // suite.
@@ -107,7 +106,12 @@ TEST_F(SubprocessMemoryTest, DefinitionFillsCompletely) {
   checkSharedMemoryDefinition(getSharedMemoryName(2, 2), 4096, Test3Expected);
 }
 
+// The following test is only supported on little endian systems.
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+TEST_F(SubprocessMemoryTest, DISABLED_DefinitionEndTruncation) {
+#else
 TEST_F(SubprocessMemoryTest, DefinitionEndTruncation) {
+#endif
   testCommon({{"test1", {APInt(48, 0xaabbccddeeff), 4096, 0}}}, 3);
   std::vector<uint8_t> Test1Expected(512, 0);
   // order is reversed since we're assuming a little endian system.
@@ -135,8 +139,7 @@ TEST_F(SubprocessMemoryTest, DefinitionEndTruncation) {
   checkSharedMemoryDefinition(getSharedMemoryName(3, 0), 4096, Test1Expected);
 }
 
-#endif // defined(__linux__) && !defined(__ANDROID__) && __BYTE_ORDER__ ==
-       // __ORDER_LITTLE_ENDIAN__
+#endif // __linux__ && !__ANDROID__ && !(__powerpc__ || __s390x__ || __sparc__)
 
 } // namespace exegesis
 } // namespace llvm
