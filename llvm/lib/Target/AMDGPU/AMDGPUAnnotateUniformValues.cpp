@@ -33,7 +33,7 @@ class AMDGPUAnnotateUniformValues
   MemorySSA *MSSA;
   AliasAnalysis *AA;
   bool isEntryFunc;
-  bool Changed;
+  bool Changed = false;
 
   void setUniformMetadata(Instruction *I) {
     I->setMetadata("amdgpu.uniform", MDNode::get(I->getContext(), {}));
