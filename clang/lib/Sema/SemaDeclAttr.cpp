@@ -1217,8 +1217,11 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleDiagnoseSpecializations(Sema &S, Decl *D,
                                           const ParsedAttr &AL) {
+  StringRef Message;
+  if (AL.getNumArgs() != 0)
+    S.checkStringLiteralArgumentAttr(AL, 0, Message);
   D->getDescribedTemplate()->addAttr(
-      DiagnoseSpecializationsAttr::Create(S.Context, AL));
+      DiagnoseSpecializationsAttr::Create(S.Context, Message, AL));
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {

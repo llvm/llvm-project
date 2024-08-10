@@ -3332,6 +3332,7 @@ def DiagnoseIf : InheritableAttr {
 
 def DiagnoseSpecializations : InheritableAttr {
   let Spellings = [Clang<"diagnose_specializations", /*AllowInC*/0>];
+  let Args = [StringArgument<"Message", 1>];
   let Subjects = SubjectList<[ClassTmpl, VarTmpl]>;
   let Documentation = [DiagnoseSpecializationsDocs];
   let MeaningfulToClassTemplateDefinition = 1;
