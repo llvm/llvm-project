@@ -964,8 +964,6 @@ namespace TemporaryObjectExpr {
     static_assert(foo(F()) == 0, "");
   }
 
-  /// FIXME: This needs support for unions on the new interpreter.
-  /// We diagnose an uninitialized object in c++14.
 #if __cplusplus > 201402L
   namespace Unions {
     struct F {
@@ -978,10 +976,10 @@ namespace TemporaryObjectExpr {
     };
 
     constexpr int foo(F f) {
-      return f.i + f.U.f; // ref-note {{read of member 'f' of union with active member 'a'}}
+      return f.i + f.U.f; // both-note {{read of member 'f' of union with active member 'a'}}
     }
-    static_assert(foo(F()) == 0, ""); // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to}}
+    static_assert(foo(F()) == 0, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{in call to}}
   }
 #endif
 
