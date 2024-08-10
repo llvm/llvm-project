@@ -867,14 +867,16 @@ define <vscale x 8 x i64> @vmul_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV32NOM-LABEL: vmul_xx_nxv8i64:
 ; RV32NOM:       # %bb.0:
 ; RV32NOM-NEXT:    addi sp, sp, -16
-; RV32NOM-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32NOM-NEXT:    call __muldi3
-; RV32NOM-NEXT:    sw a1, 4(sp)
-; RV32NOM-NEXT:    sw a0, 0(sp)
-; RV32NOM-NEXT:    mv a0, sp
+; RV32NOM-NEXT:    sw a1, 12(sp)
+; RV32NOM-NEXT:    sw a0, 8(sp)
+; RV32NOM-NEXT:    addi a0, sp, 8
 ; RV32NOM-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32NOM-NEXT:    vlse64.v v8, (a0), zero
-; RV32NOM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32NOM-NEXT:    sw a3, 4(sp)
+; RV32NOM-NEXT:    sw a2, 0(sp)
+; RV32NOM-NEXT:    mv a0, sp
+; RV32NOM-NEXT:    vlse64.v v16, (a0), zero
+; RV32NOM-NEXT:    vmul.vv v8, v8, v16
 ; RV32NOM-NEXT:    addi sp, sp, 16
 ; RV32NOM-NEXT:    ret
 ;

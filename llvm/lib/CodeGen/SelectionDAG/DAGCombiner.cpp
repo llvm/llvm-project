@@ -26999,14 +26999,16 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   // can do this only before LegalTypes, because it may generate illegal `op
   // EltVT` from legal `op VT (splat EltVT)`, where EltVT is not legal type but
   // the result type of splat is legal.
-  auto EltAction = TLI.getOperationAction(Opcode, EltVT);
   if (!Src0 || !Src1 || Index0 != Index1 ||
       Src0.getValueType().getVectorElementType() != EltVT ||
       Src1.getValueType().getVectorElementType() != EltVT ||
       !(IsBothSplatVector || TLI.isExtractVecEltCheap(VT, Index0)) ||
-      (LegalTypes && !TLI.isTypeLegal(EltVT)) ||
-      !(EltAction == TargetLoweringBase::Legal ||
-        EltAction == TargetLoweringBase::Custom))
+      // If before type legalization, allow scalar types that will eventually be
+      // made legal.
+      !TLI.isOperationLegalOrCustom(
+          Opcode, LegalTypes
+                      ? EltVT
+                      : TLI.getTypeToTransformTo(*DAG.getContext(), EltVT)))
     return SDValue();
 
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
