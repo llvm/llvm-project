@@ -31,21 +31,6 @@ CHECK-NEXT:   11: 1000
 CHECK-NEXT:   12: bar:100
 CHECK-NEXT:    121: 200
 
-RUN: llvm-profdata merge --sample %p/Inputs/merge-filter.proftext --text --no-function="main:4 @@ _Z3fibi" | FileCheck %s --check-prefix=CHECK-FILTER-CALLSITE
-CHECK-FILTER-CALLSITE: main:1313:11
-CHECK-NEXT:  0: 6
-CHECK-NEXT:  1: 6
-CHECK-NEXT:  4: 1 _Z3fibv:1
-CHECK-NEXT:  1: foo:1200
-CHECK-NEXT:   11: 1000
-CHECK-NEXT:   12: bar:100
-CHECK-NEXT:    121: 200
-CHECK-NEXT:   13: bat:100
-CHECK-NEXT:    131: 100
-CHECK-NEXT:  2.100001: goo:100
-CHECK-NEXT:   21: bat:100
-CHECK-NEXT:    211: 100
-
 RUN: llvm-profdata merge --instr %p/Inputs/basic.proftext --text --function="foo" | FileCheck %s --check-prefix=CHECK-FILTER3
 RUN: llvm-profdata merge --instr %p/Inputs/basic.proftext --text --no-function="main" | FileCheck %s --check-prefix=CHECK-FILTER3
 CHECK-FILTER3: foo
@@ -66,7 +51,7 @@ CHECK-NEXT: # Counter Values:
 CHECK-NEXT: 500500
 CHECK-NEXT: 180100
 
-RUN: llvm-profdata merge --instr %p/Inputs/basic.proftext --text --function="foo" --no-function="^foo$" | FileCheck %s --check-prefix=CHECK-FILTER4
+RUN: llvm-profdata merge --instr %p/Inputs/basic.proftext --text --function="\"^foo\"" --no-function="\"^foo$\"" | FileCheck %s --check-prefix=CHECK-FILTER4
 CHECK-FILTER4: foo2
 CHECK-NEXT: # Func Hash:
 CHECK-NEXT: 10
@@ -91,3 +76,18 @@ CHECK-NEXT:  0: 19
 CHECK-NEXT:  1: 19 _Z8funcLeafi:20
 CHECK-NEXT:  3: 12
 CHECK-NEXT:  !Attributes: 1
+
+RUN: llvm-profdata merge --sample %p/Inputs/merge-filter.proftext --text --no-function="main:4 @@ _Z3fibi" | FileCheck %s --check-prefix=CHECK-FILTER-CALLSITE
+CHECK-FILTER-CALLSITE: main:1313:11
+CHECK-NEXT:  0: 6
+CHECK-NEXT:  1: 6
+CHECK-NEXT:  4: 1 _Z3fibv:1
+CHECK-NEXT:  1: foo:1200
+CHECK-NEXT:   11: 1000
+CHECK-NEXT:   12: bar:100
+CHECK-NEXT:    121: 200
+CHECK-NEXT:   13: bat:100
+CHECK-NEXT:    131: 100
+CHECK-NEXT:  2.100001: goo:100
+CHECK-NEXT:   21: bat:100
+CHECK-NEXT:    211: 100

@@ -279,96 +279,80 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
   }
 }
 
-namespace {
-// A class to keep a string invariant where it is appended with contents in a
-// recursive function.
-struct ScopedString {
-  std::string &String;
-
-  size_t Length;
-
-  ScopedString(std::string &String) : String(String), Length(String.length()) {}
-
-  ~ScopedString() {
-    assert(String.length() > Length);
-    String.resize(Length);
-  }
-};
-} // namespace
-
 // CanonicalName is invariant in this function. It should already contain the
 // canonical name of the current FunctionSamples.
-uint64_t FunctionSamples::eraseInlinedCallsites(const llvm::Regex &Re,
-                                                std::string &CanonicalName,
-                                                bool MatchCallTargets,
-                                                bool EraseMatch) {
+uint64_t FunctionSamples::removeCallTargetsAndCallsites(
+    const llvm::Regex &Re, std::string &CanonicalName, bool Inverse) {
   uint64_t Result = 0;
-
-  ScopedString SaveString1(CanonicalName);
   CanonicalName.push_back(':');
+  size_t Length1 = CanonicalName.size();
 
-  if (MatchCallTargets) {
-    // Check matching call targets.
-    for (auto BodySampleIt = BodySamples.begin();
-         BodySampleIt != BodySamples.end();) {
-      auto &[Loc, BodySample] = *BodySampleIt;
-      SampleRecord::CallTargetMap &CallTargets =
-          const_cast<SampleRecord::CallTargetMap &>(
-              BodySample.getCallTargets());
-      if (!CallTargets.empty()) {
-        ScopedString SaveString2(CanonicalName);
-        CanonicalName += Loc.toString();
-        CanonicalName += " @@ ";
-        uint64_t RemovedCallTargetCount = 0;
-        for (auto CallTargetIt = CallTargets.begin();
-             CallTargetIt != CallTargets.end();) {
-          ScopedString SaveString3(CanonicalName);
-          CanonicalName += CallTargetIt->first.str();
+  // Match call targets.
+  for (auto BodySampleIt = BodySamples.begin();
+       BodySampleIt != BodySamples.end();) {
+    auto &[Loc, BodySample] = *BodySampleIt;
+    SampleRecord::CallTargetMap &CallTargets =
+        const_cast<SampleRecord::CallTargetMap &>(BodySample.getCallTargets());
+    if (!CallTargets.empty()) {
+      CanonicalName += Loc.toString();
+      CanonicalName += " @@ ";
+      size_t Length2 = CanonicalName.size();
 
-          if (Re.match(CanonicalName) == EraseMatch) {
-            RemovedCallTargetCount += CallTargetIt->second;
-            CallTargetIt = CallTargets.erase(CallTargetIt);
-          } else
-            ++CallTargetIt;
-        }
-        // Adjust sample count as if they were removed with
-        // removeCalledTargetAndBodySample.
-        Result += BodySample.removeSamples(RemovedCallTargetCount);
-        if (BodySample.getSamples() == 0) {
-          BodySampleIt = BodySamples.erase(BodySampleIt);
-          continue;
-        }
+      uint64_t RemovedCallTargetCount = 0;
+      for (auto CallTargetIt = CallTargets.begin();
+           CallTargetIt != CallTargets.end();) {
+        CanonicalName += CallTargetIt->first.str();
+
+        if (Re.match(CanonicalName) != Inverse) {
+          RemovedCallTargetCount += CallTargetIt->second;
+          CallTargetIt = CallTargets.erase(CallTargetIt);
+        } else
+          ++CallTargetIt;
+
+        CanonicalName.resize(Length2);
       }
-      ++BodySampleIt;
+      CanonicalName.resize(Length1);
+
+      // Adjust sample count as if they were removed with
+      // removeCalledTargetAndBodySample.
+      Result += BodySample.removeSamples(RemovedCallTargetCount);
+      if (BodySample.getSamples() == 0) {
+        BodySampleIt = BodySamples.erase(BodySampleIt);
+        continue;
+      }
     }
+    ++BodySampleIt;
   }
 
-  // Check matching inlined callsites.
+  assert(CanonicalName.size() == Length1);
+
+  // Match inlined callsites.
   for (auto CallsiteSampleIt = CallsiteSamples.begin();
        CallsiteSampleIt != CallsiteSamples.end();) {
     auto &[Loc, FSMap] = *CallsiteSampleIt;
-    ScopedString SaveString2(CanonicalName);
     CanonicalName += Loc.toString();
     CanonicalName += " @ ";
+    size_t Length2 = CanonicalName.size();
+
     for (auto FunctionSampleIt = FSMap.begin();
          FunctionSampleIt != FSMap.end();) {
       FunctionSamples &InlinedFS = FunctionSampleIt->second;
-      ScopedString SaveString3(CanonicalName);
       CanonicalName.append(InlinedFS.getContext().toString());
 
-      if (Re.match(CanonicalName) == EraseMatch) {
+      if (Re.match(CanonicalName) != Inverse) {
         Result += InlinedFS.getTotalSamples();
         FunctionSampleIt = FSMap.erase(FunctionSampleIt);
       } else {
         // Recursively process inlined callsites.
-        Result += InlinedFS.eraseInlinedCallsites(Re, CanonicalName,
-                                                  MatchCallTargets, EraseMatch);
+        Result +=
+            InlinedFS.removeCallTargetsAndCallsites(Re, CanonicalName, Inverse);
         // If every sample in the inlined callsite is removed, remove the
         // callsite as well.
-        if (InlinedFS.getTotalSamples() == 0) {
+        if (InlinedFS.getTotalSamples() == 0)
           FunctionSampleIt = FSMap.erase(FunctionSampleIt);
-        } else
+        else
           ++FunctionSampleIt;
+        CanonicalName.resize(Length2);
       }
     }
 
@@ -377,8 +361,11 @@ uint64_t FunctionSamples::eraseInlinedCallsites(const llvm::Regex &Re,
       CallsiteSampleIt = CallsiteSamples.erase(CallsiteSampleIt);
     else
       ++CallsiteSampleIt;
+    CanonicalName.resize(Length1);
   }
 
+  assert(CanonicalName.size() == Length1);
+  CanonicalName.pop_back();
   // Adjust total sample count after removals.
   return removeTotalSamples(Result);
 }

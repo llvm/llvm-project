@@ -515,3 +515,20 @@ The canonical name of a call taget is defined as:
 ::
 
     <call target canonical name> ::= <canonical name> ":" <LineLocation> " @@ " <FunctionID>
+
+See following text sample profiles where all canonical names are annotated.
+
+::
+
+    # Contextless profile
+    main:200:0                      # main
+     1: 100 _Z3bari:100             # main:1 @@ _Z3bari
+     10: inline1:100                # main:10 @ inline1
+      11: 1
+      12.3: inline2:99              # main:10 @ inline1:12.3 @ inline2
+       111: 98
+       111.2: 1 _Z3fooi:1           # main:10 @ inline1:12.3 @ inline2:111.2 @@ _Z3fooi
+
+    # CSSPGO
+    [main:1 @ foo:2.3 @ bar]:100:0  # [main:1 @ foo:2.3 @ bar]
+     1.2: 100 baz:100               # [main:1 @ foo:2.3 @ bar]:1.2 @@ baz

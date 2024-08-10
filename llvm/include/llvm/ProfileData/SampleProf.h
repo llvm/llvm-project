@@ -1225,12 +1225,13 @@ public:
   // all the inline instances and names of call targets.
   void findAllNames(DenseSet<FunctionId> &NameSet) const;
 
-  /// Traverse inlined callsites recursively, and erase those with matching
-  /// canonical representation (or do the opposite, if EraseMatch is false).
+  /// Traverse inlined callsites recursively, and erase call targets in
+  /// BodySamples and callsites in CallsiteSamples with matching canonical
+  /// representation (or do the opposite, if Inverse is true).
   /// Returns total number of samples removed.
-  uint64_t eraseInlinedCallsites(const llvm::Regex &Re,
-                                 std::string &CanonicalName,
-                                 bool MatchCallTargets, bool EraseMatch);
+  uint64_t removeCallTargetsAndCallsites(const llvm::Regex &Re,
+                                         std::string &CanonicalName,
+                                         bool Inverse = false);
 
   bool operator==(const FunctionSamples &Other) const {
     return (GUIDToFuncNameMap == Other.GUIDToFuncNameMap ||

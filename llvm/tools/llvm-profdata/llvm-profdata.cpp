@@ -833,16 +833,15 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
 // "foo.*bar:1 @ baz" may match "foo:1 @ bar:1 @ baz". The user should specify
 // regex pattern in a way not to match strings that are not valid mangled names.
 static void filterFunctions(SampleProfileMap &Profiles,
-                            std::string FilterString, bool EraseMatch) {
+                            std::string FilterString, bool Inverse) {
   // Checking all call targets is very slow, only do this if FilterString can
   // ever match a call target.
   bool MatchCallTargets = (FilterString.find(" @@ ") != std::string::npos);
 
   // Search inlined callsites recursively is extremely slow, only do this if
   // FilterString has more than one part delimited by " @ " (except for CSSPGO
-  // top level function, we will check for that later) or " @@ ".
-  bool SearchInlinedCallsites =
-      MatchCallTargets || (FilterString.find(" @ ") != std::string::npos);
+  // top level function, we will check for that later).
+  bool SearchInlinedCallsites = (FilterString.find(" @ ") != std::string::npos);
 
   uint64_t MD5 = 0;
 
@@ -885,26 +884,27 @@ static void filterFunctions(SampleProfileMap &Profiles,
       CanonicalName = "[" + CanonicalName + "]";
     if ((Re.match(CanonicalName) ||
          (FunctionSamples::UseMD5 &&
-          FS->second.getContext().getHashCode() == MD5)) == EraseMatch) {
+          FS->second.getContext().getHashCode() == MD5)) != Inverse) {
       FS = Profiles.erase(FS);
       continue;
     }
-    if (SearchInlinedCallsites)
-      FS->second.eraseInlinedCallsites(Re, CanonicalName, MatchCallTargets,
-                                       EraseMatch);
+    // Perform expensive recursive search if the user specifies such pattern.
+    if (MatchCallTargets || SearchInlinedCallsites)
+      FS->second.removeCallTargetsAndCallsites(Re, CanonicalName, Inverse);
     FS++;
   }
 }
 
 static void filterFunctions(StringMap<InstrProfWriter::ProfilingData> &Profiles,
-                            std::string FilterString, bool EraseMatch) {
+                            std::string FilterString, bool Inverse) {
   // If Pattern is quoted string, treat it as escaped regex, otherwise treat it
   // as literal match.
   if (FilterString[0] == '\"') {
     if (FilterString.size() < 2 || FilterString.back() != '\"')
       exitWithError("missing terminating '\"' character");
     FilterString = FilterString.substr(1, FilterString.length() - 2);
-  }
+  } else
+    FilterString = "^" + llvm::Regex::escape(FilterString) + "$";
 
   llvm::Regex Re(FilterString);
   if (std::string Error; !Re.isValid(Error))
@@ -912,7 +912,7 @@ static void filterFunctions(StringMap<InstrProfWriter::ProfilingData> &Profiles,
 
   for (auto ProfileIt = Profiles.begin(); ProfileIt != Profiles.end();) {
     auto Tmp = ProfileIt++;
-    if (Re.match(Tmp->first()) == EraseMatch)
+    if (Re.match(Tmp->first()) != Inverse)
       Profiles.erase(Tmp);
   }
 }
@@ -926,9 +926,9 @@ template <typename T> static void filterFunctions(T &Profiles) {
   size_t Count = Profiles.size();
 
   if (!FuncNameFilter.empty())
-    filterFunctions(Profiles, FuncNameFilter, false);
+    filterFunctions(Profiles, FuncNameFilter, true);
   if (!FuncNameNegativeFilter.empty())
-    filterFunctions(Profiles, FuncNameNegativeFilter, true);
+    filterFunctions(Profiles, FuncNameNegativeFilter, false);
 
   llvm::dbgs() << Count - Profiles.size() << " of " << Count << " functions "
                << "in the original profile are filtered.\n";
