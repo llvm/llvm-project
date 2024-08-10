@@ -474,6 +474,7 @@ private:
   bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
+  bool unfoldPow2Test(CmpInst *Cmp);
   void verifyBFIUpdates(Function &F);
   bool _run(Function &F);
 };
@@ -1762,6 +1763,40 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
   return true;
 }
 
+// Decanonicalizes icmp+ctpop power-of-two test if ctpop is slow.
+bool CodeGenPrepare::unfoldPow2Test(CmpInst *Cmp) {
+  CmpPredicate Pred;
+  Value *X;
+  uint64_t C;
+
+  if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
+                         m_ConstantInt(C))))
+    return false;
+
+  Type *Ty = X->getType();
+  if (Ty->isVectorTy() || TTI->getPopcntSupport(Ty->getIntegerBitWidth()) ==
+                              TargetTransformInfo::PSK_FastHardware)
+    return false;
+
+  // (ctpop x) u< 2 -> (x & (x - 1)) == 0
+  // (ctpop x) u> 1 -> (x & (x - 1)) != 0
+  if ((Pred == CmpInst::ICMP_ULT && C == 2) ||
+      (Pred == CmpInst::ICMP_UGT && C == 1)) {
+    IRBuilder<> Builder(Cmp);
+    Value *Sub = Builder.CreateAdd(X, Constant::getAllOnesValue(Ty));
+    Value *And = Builder.CreateAnd(X, Sub);
+    CmpInst::Predicate NewPred =
+        Pred == CmpInst::ICMP_ULT ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+    Value *NewCmp =
+        Builder.CreateICmp(NewPred, And, ConstantInt::getNullValue(Ty));
+    Cmp->replaceAllUsesWith(NewCmp);
+    RecursivelyDeleteTriviallyDeadInstructions(Cmp);
+    return true;
+  }
+
+  return false;
+}
+
 /// Sink the given CmpInst into user blocks to reduce the number of virtual
 /// registers that must be created and coalesced. This is a clear win except on
 /// targets with multiple condition code registers (PowerPC), where it might
@@ -2181,6 +2216,9 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
     return true;
 
   if (combineToUSubWithOverflow(Cmp, ModifiedDT))
+    return true;
+
+  if (unfoldPow2Test(Cmp))
     return true;
 
   if (foldICmpWithDominatingICmp(Cmp, *TLI))

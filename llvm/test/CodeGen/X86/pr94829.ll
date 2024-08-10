@@ -8,27 +8,9 @@ define i64 @test(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; CHECK-NEXT:    jg .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    shrq %rcx
-; CHECK-NEXT:    movabsq $6148914691236517205, %rsi # imm = 0x5555555555555555
-; CHECK-NEXT:    andq %rcx, %rsi
-; CHECK-NEXT:    subq %rsi, %rdi
-; CHECK-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
-; CHECK-NEXT:    movq %rdi, %rsi
-; CHECK-NEXT:    andq %rcx, %rsi
-; CHECK-NEXT:    shrq $2, %rdi
-; CHECK-NEXT:    andq %rcx, %rdi
-; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    shrq $4, %rcx
-; CHECK-NEXT:    addq %rdi, %rcx
-; CHECK-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
-; CHECK-NEXT:    andq %rcx, %rsi
-; CHECK-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
-; CHECK-NEXT:    imulq %rsi, %rcx
-; CHECK-NEXT:    shrq $56, %rcx
-; CHECK-NEXT:    cmpl $2, %ecx
-; CHECK-NEXT:    jae .LBB0_2
+; CHECK-NEXT:    leaq -1(%rdi), %rcx
+; CHECK-NEXT:    andq %rdi, %rcx
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %if.end
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %if.then

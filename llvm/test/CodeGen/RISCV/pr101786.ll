@@ -8,37 +8,9 @@ define i64 @test(i64 %x, ptr %p) {
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    bgtz a2, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    srli a3, a2, 1
-; CHECK-NEXT:    lui a4, 349525
-; CHECK-NEXT:    addiw a4, a4, 1365
-; CHECK-NEXT:    slli a5, a4, 32
-; CHECK-NEXT:    add a4, a4, a5
-; CHECK-NEXT:    and a3, a3, a4
-; CHECK-NEXT:    sub a2, a2, a3
-; CHECK-NEXT:    lui a3, 209715
-; CHECK-NEXT:    addiw a3, a3, 819
-; CHECK-NEXT:    slli a4, a3, 32
-; CHECK-NEXT:    add a3, a3, a4
-; CHECK-NEXT:    and a4, a2, a3
-; CHECK-NEXT:    srli a2, a2, 2
+; CHECK-NEXT:    addi a3, a2, -1
 ; CHECK-NEXT:    and a2, a2, a3
-; CHECK-NEXT:    add a2, a4, a2
-; CHECK-NEXT:    srli a3, a2, 4
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    lui a3, 61681
-; CHECK-NEXT:    addiw a3, a3, -241
-; CHECK-NEXT:    slli a4, a3, 32
-; CHECK-NEXT:    add a3, a3, a4
-; CHECK-NEXT:    and a2, a2, a3
-; CHECK-NEXT:    slli a3, a2, 8
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    slli a3, a2, 16
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    slli a3, a2, 32
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    srli a2, a2, 56
-; CHECK-NEXT:    li a3, 1
-; CHECK-NEXT:    bltu a3, a2, .LBB0_3
+; CHECK-NEXT:    bnez a2, .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %if.else
 ; CHECK-NEXT:    ld a0, 0(a1)
 ; CHECK-NEXT:  .LBB0_3: # %if.end

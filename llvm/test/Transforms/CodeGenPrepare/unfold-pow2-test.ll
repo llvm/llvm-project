@@ -12,8 +12,9 @@ define i64 @test_ult_2(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; SLOW-LABEL: define i64 @test_ult_2(
 ; SLOW-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; SLOW-NEXT:  [[ENTRY:.*]]:
-; SLOW-NEXT:    [[CTPOP:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
-; SLOW-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[CTPOP]], 1
+; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
+; SLOW-NEXT:    [[TMP1:%.*]] = and i64 [[X]], [[TMP0]]
+; SLOW-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[TMP1]], 0
 ; SLOW-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[Y]], 0
 ; SLOW-NEXT:    [[CMP:%.*]] = or i1 [[CMP2]], [[CMP1]]
 ; SLOW-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -56,8 +57,9 @@ define i64 @test_ugt_1(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; SLOW-LABEL: define i64 @test_ugt_1(
 ; SLOW-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; SLOW-NEXT:  [[ENTRY:.*]]:
-; SLOW-NEXT:    [[CTPOP:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
-; SLOW-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[CTPOP]], 1
+; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
+; SLOW-NEXT:    [[TMP1:%.*]] = and i64 [[X]], [[TMP0]]
+; SLOW-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[TMP1]], 0
 ; SLOW-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[Y]], 0
 ; SLOW-NEXT:    [[CMP:%.*]] = or i1 [[CMP2]], [[CMP1]]
 ; SLOW-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
