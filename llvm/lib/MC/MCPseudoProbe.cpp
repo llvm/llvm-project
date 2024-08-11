@@ -652,7 +652,7 @@ void MCPseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
                                                 uint64_t Address) {
   auto It = Address2ProbesMap.find(Address);
   if (It != Address2ProbesMap.end()) {
-    for (auto &Probe : It->second) {
+    for (const MCDecodedPseudoProbe &Probe : It->second) {
       OS << " [Probe]:\t";
       Probe.print(OS, GUID2FuncDescMap, true);
     }
@@ -679,7 +679,7 @@ MCPseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
   const auto &Probes = It->second;
 
   const MCDecodedPseudoProbe *CallProbe = nullptr;
-  for (const auto &Probe : Probes) {
+  for (const MCDecodedPseudoProbe &Probe : Probes) {
     if (Probe.isCall()) {
       // Disabling the assert and returning first call probe seen so far.
       // Subsequent call probes, if any, are ignored. Due to the the way
