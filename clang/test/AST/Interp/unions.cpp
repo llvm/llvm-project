@@ -361,7 +361,7 @@ namespace CopyCtor {
 
 namespace UnionInBase {
   struct Base {
-    int y;
+    int y; // both-note {{subobject declared here}}
   };
   struct A : Base {
     int x;
@@ -380,5 +380,29 @@ namespace UnionInBase {
   }
   static_assert(read_wrong_member_indirect() == 1); // both-error {{not an integral constant expression}} \
                                                     // both-note {{in call to}}
+  constexpr int read_uninitialized() {
+    B b = {.b = 1};
+    int *p = &b.a.y;
+    b.a.x = 1;
+    return *p; // both-note {{read of uninitialized object}}
+  }
+  static_assert(read_uninitialized() == 0); // both-error {{constant}} \
+                                            // both-note {{in call}}
+  constexpr int write_uninitialized() {
+    B b = {.b = 1};
+    int *p = &b.a.y;
+    b.a.x = 1;
+    *p = 1;
+    return *p;
+  }
+
+  constexpr B return_uninit() {
+    B b = {.b = 1};
+    b.a.x = 2;
+    return b;
+  }
+  constexpr B uninit = return_uninit(); // both-error {{constant expression}} \
+                                        // both-note {{subobject 'y' is not initialized}}
+  static_assert(return_uninit().a.x == 2);
 }
 #endif
