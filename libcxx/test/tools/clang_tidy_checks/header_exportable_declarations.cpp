@@ -77,8 +77,10 @@ header_exportable_declarations::header_exportable_declarations(
 
   list = Options.get("ExtraDeclarations");
   if (list)
-    for (auto decl : std::views::split(*list, ' '))
-      std::cout << "using ::" << std::string_view{decl.data(), decl.size()} << ";\n";
+    for (auto decl : std::views::split(*list, ' ')) {
+      auto common = decl | std::views::common;
+      std::cout << "using ::" << std::string{common.begin(), common.end()} << ";\n";
+    }
 }
 
 header_exportable_declarations::~header_exportable_declarations() {

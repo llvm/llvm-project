@@ -67,6 +67,8 @@ public:
 
   /// Get the C++ type.
   StringRef getType() const { return type; }
+  /// Get the C++ parameter name.
+  StringRef getName() const { return name; }
   /// Returns true if the parameter has a default value.
   bool hasDefaultValue() const { return !defaultValue.empty(); }
 

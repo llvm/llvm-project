@@ -634,7 +634,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory__am
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -686,7 +686,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory__am
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -844,7 +844,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -898,7 +898,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -1068,7 +1068,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__amdgpu_no_fine_gra
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_neg__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff800, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
@@ -1122,7 +1122,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__amdgpu_no_fine_gra
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_neg__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff800, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
@@ -1477,7 +1477,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gr
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_system_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -1533,7 +1533,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gr
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_system_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -1864,7 +1864,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory(pt
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -1918,7 +1918,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory(pt
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -2083,7 +2083,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory__a
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -2137,7 +2137,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory__a
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -2302,7 +2302,7 @@ define void @flat_agent_atomic_fadd_noret_f32_amdgpu_ignore_denormal_mode(ptr %p
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32_amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -2356,7 +2356,7 @@ define void @flat_agent_atomic_fadd_noret_f32_amdgpu_ignore_denormal_mode(ptr %p
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32_amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -3085,7 +3085,7 @@ define void @flat_agent_atomic_fadd_noret_f32__ftz__amdgpu_no_fine_grained_memor
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__ftz__amdgpu_no_fine_grained_memory:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -3137,7 +3137,7 @@ define void @flat_agent_atomic_fadd_noret_f32__ftz__amdgpu_no_fine_grained_memor
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__ftz__amdgpu_no_fine_grained_memory:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -3295,7 +3295,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -3349,7 +3349,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -3519,7 +3519,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__ftz__amdgpu_no_fin
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_neg__ftz__amdgpu_no_fine_grained_memory:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff800, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
@@ -3573,7 +3573,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__ftz__amdgpu_no_fin
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_neg__ftz__amdgpu_no_fine_grained_memory:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff800, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
@@ -3928,7 +3928,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fi
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_system_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -3984,7 +3984,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fi
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_system_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -4339,7 +4339,7 @@ define void @flat_agent_atomic_fadd_noret_f32__ieee__amdgpu_no_fine_grained_memo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__ieee__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -4395,7 +4395,7 @@ define void @flat_agent_atomic_fadd_noret_f32__ieee__amdgpu_no_fine_grained_memo
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__ieee__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7fc, v0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -4736,7 +4736,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory__amdgpu_i
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -4788,7 +4788,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory__amdgpu_i
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -5122,7 +5122,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -5174,7 +5174,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -5508,7 +5508,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amd
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -5560,7 +5560,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amd
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -5894,7 +5894,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amd
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -5946,7 +5946,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amd
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1

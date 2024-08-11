@@ -4,13 +4,9 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zbb < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBB
 ; RUN: llc -mtriple=riscv64 -mattr=+m < %s \
-; RUN:   | FileCheck %s -check-prefixes=RV64I,RV64IILLEGALI32
+; RUN:   | FileCheck %s -check-prefixes=RV64I
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zbb < %s \
-; RUN:   | FileCheck %s -check-prefixes=RV64ZBB,RV64ZBBILLEGALI32
-; RUN: llc -mtriple=riscv64 -mattr=+m -riscv-experimental-rv64-legal-i32 < %s \
-; RUN:   | FileCheck %s -check-prefixes=RV64I,RV64ILEGALI32
-; RUN: llc -mtriple=riscv64 -mattr=+m,+zbb -riscv-experimental-rv64-legal-i32 < %s \
-; RUN:   | FileCheck %s -check-prefixes=RV64ZBB,RV64ZBBLEGALI32
+; RUN:   | FileCheck %s -check-prefixes=RV64ZBB
 
 define i8 @shl_cttz_i8(i8 %x, i8 %y) {
 ; RV32I-LABEL: shl_cttz_i8:
@@ -37,53 +33,29 @@ define i8 @shl_cttz_i8(i8 %x, i8 %y) {
 ; RV32ZBB-NEXT:    sll a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
-; RV64IILLEGALI32-LABEL: shl_cttz_i8:
-; RV64IILLEGALI32:       # %bb.0: # %entry
-; RV64IILLEGALI32-NEXT:    addi a2, a1, -1
-; RV64IILLEGALI32-NEXT:    not a1, a1
-; RV64IILLEGALI32-NEXT:    and a1, a1, a2
-; RV64IILLEGALI32-NEXT:    srli a2, a1, 1
-; RV64IILLEGALI32-NEXT:    andi a2, a2, 85
-; RV64IILLEGALI32-NEXT:    subw a1, a1, a2
-; RV64IILLEGALI32-NEXT:    andi a2, a1, 51
-; RV64IILLEGALI32-NEXT:    srli a1, a1, 2
-; RV64IILLEGALI32-NEXT:    andi a1, a1, 51
-; RV64IILLEGALI32-NEXT:    add a1, a2, a1
-; RV64IILLEGALI32-NEXT:    srli a2, a1, 4
-; RV64IILLEGALI32-NEXT:    add a1, a1, a2
-; RV64IILLEGALI32-NEXT:    andi a1, a1, 15
-; RV64IILLEGALI32-NEXT:    sll a0, a0, a1
-; RV64IILLEGALI32-NEXT:    ret
+; RV64I-LABEL: shl_cttz_i8:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a2, a1, -1
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a2, a1, 1
+; RV64I-NEXT:    andi a2, a2, 85
+; RV64I-NEXT:    subw a1, a1, a2
+; RV64I-NEXT:    andi a2, a1, 51
+; RV64I-NEXT:    srli a1, a1, 2
+; RV64I-NEXT:    andi a1, a1, 51
+; RV64I-NEXT:    add a1, a2, a1
+; RV64I-NEXT:    srli a2, a1, 4
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    andi a1, a1, 15
+; RV64I-NEXT:    sll a0, a0, a1
+; RV64I-NEXT:    ret
 ;
-; RV64ZBBILLEGALI32-LABEL: shl_cttz_i8:
-; RV64ZBBILLEGALI32:       # %bb.0: # %entry
-; RV64ZBBILLEGALI32-NEXT:    ctz a1, a1
-; RV64ZBBILLEGALI32-NEXT:    sll a0, a0, a1
-; RV64ZBBILLEGALI32-NEXT:    ret
-;
-; RV64ILEGALI32-LABEL: shl_cttz_i8:
-; RV64ILEGALI32:       # %bb.0: # %entry
-; RV64ILEGALI32-NEXT:    addi a2, a1, -1
-; RV64ILEGALI32-NEXT:    not a1, a1
-; RV64ILEGALI32-NEXT:    and a1, a1, a2
-; RV64ILEGALI32-NEXT:    srliw a2, a1, 1
-; RV64ILEGALI32-NEXT:    andi a2, a2, 85
-; RV64ILEGALI32-NEXT:    subw a1, a1, a2
-; RV64ILEGALI32-NEXT:    andi a2, a1, 51
-; RV64ILEGALI32-NEXT:    srliw a1, a1, 2
-; RV64ILEGALI32-NEXT:    andi a1, a1, 51
-; RV64ILEGALI32-NEXT:    add a1, a2, a1
-; RV64ILEGALI32-NEXT:    srliw a2, a1, 4
-; RV64ILEGALI32-NEXT:    add a1, a1, a2
-; RV64ILEGALI32-NEXT:    andi a1, a1, 15
-; RV64ILEGALI32-NEXT:    sllw a0, a0, a1
-; RV64ILEGALI32-NEXT:    ret
-;
-; RV64ZBBLEGALI32-LABEL: shl_cttz_i8:
-; RV64ZBBLEGALI32:       # %bb.0: # %entry
-; RV64ZBBLEGALI32-NEXT:    ctzw a1, a1
-; RV64ZBBLEGALI32-NEXT:    sllw a0, a0, a1
-; RV64ZBBLEGALI32-NEXT:    ret
+; RV64ZBB-LABEL: shl_cttz_i8:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    ctz a1, a1
+; RV64ZBB-NEXT:    sll a0, a0, a1
+; RV64ZBB-NEXT:    ret
 entry:
   %cttz = call i8 @llvm.cttz.i8(i8 %y, i1 true)
   %res = shl i8 %x, %cttz
@@ -117,57 +89,31 @@ define i8 @shl_cttz_constant_i8(i8 %y) {
 ; RV32ZBB-NEXT:    sll a0, a1, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV64IILLEGALI32-LABEL: shl_cttz_constant_i8:
-; RV64IILLEGALI32:       # %bb.0: # %entry
-; RV64IILLEGALI32-NEXT:    addi a1, a0, -1
-; RV64IILLEGALI32-NEXT:    not a0, a0
-; RV64IILLEGALI32-NEXT:    and a0, a0, a1
-; RV64IILLEGALI32-NEXT:    srli a1, a0, 1
-; RV64IILLEGALI32-NEXT:    andi a1, a1, 85
-; RV64IILLEGALI32-NEXT:    subw a0, a0, a1
-; RV64IILLEGALI32-NEXT:    andi a1, a0, 51
-; RV64IILLEGALI32-NEXT:    srli a0, a0, 2
-; RV64IILLEGALI32-NEXT:    andi a0, a0, 51
-; RV64IILLEGALI32-NEXT:    add a0, a1, a0
-; RV64IILLEGALI32-NEXT:    srli a1, a0, 4
-; RV64IILLEGALI32-NEXT:    add a0, a0, a1
-; RV64IILLEGALI32-NEXT:    andi a0, a0, 15
-; RV64IILLEGALI32-NEXT:    li a1, 4
-; RV64IILLEGALI32-NEXT:    sll a0, a1, a0
-; RV64IILLEGALI32-NEXT:    ret
+; RV64I-LABEL: shl_cttz_constant_i8:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a1, a0, -1
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 1
+; RV64I-NEXT:    andi a1, a1, 85
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    andi a1, a0, 51
+; RV64I-NEXT:    srli a0, a0, 2
+; RV64I-NEXT:    andi a0, a0, 51
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    srli a1, a0, 4
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    andi a0, a0, 15
+; RV64I-NEXT:    li a1, 4
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    ret
 ;
-; RV64ZBBILLEGALI32-LABEL: shl_cttz_constant_i8:
-; RV64ZBBILLEGALI32:       # %bb.0: # %entry
-; RV64ZBBILLEGALI32-NEXT:    ctz a0, a0
-; RV64ZBBILLEGALI32-NEXT:    li a1, 4
-; RV64ZBBILLEGALI32-NEXT:    sll a0, a1, a0
-; RV64ZBBILLEGALI32-NEXT:    ret
-;
-; RV64ILEGALI32-LABEL: shl_cttz_constant_i8:
-; RV64ILEGALI32:       # %bb.0: # %entry
-; RV64ILEGALI32-NEXT:    addi a1, a0, -1
-; RV64ILEGALI32-NEXT:    not a0, a0
-; RV64ILEGALI32-NEXT:    and a0, a0, a1
-; RV64ILEGALI32-NEXT:    srliw a1, a0, 1
-; RV64ILEGALI32-NEXT:    andi a1, a1, 85
-; RV64ILEGALI32-NEXT:    subw a0, a0, a1
-; RV64ILEGALI32-NEXT:    andi a1, a0, 51
-; RV64ILEGALI32-NEXT:    srliw a0, a0, 2
-; RV64ILEGALI32-NEXT:    andi a0, a0, 51
-; RV64ILEGALI32-NEXT:    add a0, a1, a0
-; RV64ILEGALI32-NEXT:    srliw a1, a0, 4
-; RV64ILEGALI32-NEXT:    add a0, a0, a1
-; RV64ILEGALI32-NEXT:    andi a0, a0, 15
-; RV64ILEGALI32-NEXT:    li a1, 4
-; RV64ILEGALI32-NEXT:    sllw a0, a1, a0
-; RV64ILEGALI32-NEXT:    ret
-;
-; RV64ZBBLEGALI32-LABEL: shl_cttz_constant_i8:
-; RV64ZBBLEGALI32:       # %bb.0: # %entry
-; RV64ZBBLEGALI32-NEXT:    ctzw a0, a0
-; RV64ZBBLEGALI32-NEXT:    li a1, 4
-; RV64ZBBLEGALI32-NEXT:    sllw a0, a1, a0
-; RV64ZBBLEGALI32-NEXT:    ret
+; RV64ZBB-LABEL: shl_cttz_constant_i8:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    ctz a0, a0
+; RV64ZBB-NEXT:    li a1, 4
+; RV64ZBB-NEXT:    sll a0, a1, a0
+; RV64ZBB-NEXT:    ret
 entry:
   %cttz = call i8 @llvm.cttz.i8(i8 %y, i1 true)
   %res = shl i8 4, %cttz
@@ -206,67 +152,36 @@ define i16 @shl_cttz_i16(i16 %x, i16 %y) {
 ; RV32ZBB-NEXT:    sll a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
-; RV64IILLEGALI32-LABEL: shl_cttz_i16:
-; RV64IILLEGALI32:       # %bb.0: # %entry
-; RV64IILLEGALI32-NEXT:    addi a2, a1, -1
-; RV64IILLEGALI32-NEXT:    not a1, a1
-; RV64IILLEGALI32-NEXT:    and a1, a1, a2
-; RV64IILLEGALI32-NEXT:    srli a2, a1, 1
-; RV64IILLEGALI32-NEXT:    lui a3, 5
-; RV64IILLEGALI32-NEXT:    addiw a3, a3, 1365
-; RV64IILLEGALI32-NEXT:    and a2, a2, a3
-; RV64IILLEGALI32-NEXT:    sub a1, a1, a2
-; RV64IILLEGALI32-NEXT:    lui a2, 3
-; RV64IILLEGALI32-NEXT:    addiw a2, a2, 819
-; RV64IILLEGALI32-NEXT:    and a3, a1, a2
-; RV64IILLEGALI32-NEXT:    srli a1, a1, 2
-; RV64IILLEGALI32-NEXT:    and a1, a1, a2
-; RV64IILLEGALI32-NEXT:    add a1, a3, a1
-; RV64IILLEGALI32-NEXT:    srli a2, a1, 4
-; RV64IILLEGALI32-NEXT:    add a1, a1, a2
-; RV64IILLEGALI32-NEXT:    andi a2, a1, 15
-; RV64IILLEGALI32-NEXT:    slli a1, a1, 52
-; RV64IILLEGALI32-NEXT:    srli a1, a1, 60
-; RV64IILLEGALI32-NEXT:    add a1, a2, a1
-; RV64IILLEGALI32-NEXT:    sll a0, a0, a1
-; RV64IILLEGALI32-NEXT:    ret
+; RV64I-LABEL: shl_cttz_i16:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a2, a1, -1
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a2, a1, 1
+; RV64I-NEXT:    lui a3, 5
+; RV64I-NEXT:    addiw a3, a3, 1365
+; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    sub a1, a1, a2
+; RV64I-NEXT:    lui a2, 3
+; RV64I-NEXT:    addiw a2, a2, 819
+; RV64I-NEXT:    and a3, a1, a2
+; RV64I-NEXT:    srli a1, a1, 2
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    add a1, a3, a1
+; RV64I-NEXT:    srli a2, a1, 4
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    andi a2, a1, 15
+; RV64I-NEXT:    slli a1, a1, 52
+; RV64I-NEXT:    srli a1, a1, 60
+; RV64I-NEXT:    add a1, a2, a1
+; RV64I-NEXT:    sll a0, a0, a1
+; RV64I-NEXT:    ret
 ;
-; RV64ZBBILLEGALI32-LABEL: shl_cttz_i16:
-; RV64ZBBILLEGALI32:       # %bb.0: # %entry
-; RV64ZBBILLEGALI32-NEXT:    ctz a1, a1
-; RV64ZBBILLEGALI32-NEXT:    sll a0, a0, a1
-; RV64ZBBILLEGALI32-NEXT:    ret
-;
-; RV64ILEGALI32-LABEL: shl_cttz_i16:
-; RV64ILEGALI32:       # %bb.0: # %entry
-; RV64ILEGALI32-NEXT:    addi a2, a1, -1
-; RV64ILEGALI32-NEXT:    not a1, a1
-; RV64ILEGALI32-NEXT:    and a1, a1, a2
-; RV64ILEGALI32-NEXT:    srliw a2, a1, 1
-; RV64ILEGALI32-NEXT:    lui a3, 5
-; RV64ILEGALI32-NEXT:    addi a3, a3, 1365
-; RV64ILEGALI32-NEXT:    and a2, a2, a3
-; RV64ILEGALI32-NEXT:    subw a1, a1, a2
-; RV64ILEGALI32-NEXT:    lui a2, 3
-; RV64ILEGALI32-NEXT:    addi a2, a2, 819
-; RV64ILEGALI32-NEXT:    and a3, a1, a2
-; RV64ILEGALI32-NEXT:    srliw a1, a1, 2
-; RV64ILEGALI32-NEXT:    and a1, a1, a2
-; RV64ILEGALI32-NEXT:    add a1, a3, a1
-; RV64ILEGALI32-NEXT:    srliw a2, a1, 4
-; RV64ILEGALI32-NEXT:    add a1, a1, a2
-; RV64ILEGALI32-NEXT:    andi a2, a1, 15
-; RV64ILEGALI32-NEXT:    slli a1, a1, 52
-; RV64ILEGALI32-NEXT:    srli a1, a1, 60
-; RV64ILEGALI32-NEXT:    add a1, a2, a1
-; RV64ILEGALI32-NEXT:    sllw a0, a0, a1
-; RV64ILEGALI32-NEXT:    ret
-;
-; RV64ZBBLEGALI32-LABEL: shl_cttz_i16:
-; RV64ZBBLEGALI32:       # %bb.0: # %entry
-; RV64ZBBLEGALI32-NEXT:    ctzw a1, a1
-; RV64ZBBLEGALI32-NEXT:    sllw a0, a0, a1
-; RV64ZBBLEGALI32-NEXT:    ret
+; RV64ZBB-LABEL: shl_cttz_i16:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    ctz a1, a1
+; RV64ZBB-NEXT:    sll a0, a0, a1
+; RV64ZBB-NEXT:    ret
 entry:
   %cttz = call i16 @llvm.cttz.i16(i16 %y, i1 true)
   %res = shl i16 %x, %cttz
@@ -307,71 +222,38 @@ define i16 @shl_cttz_constant_i16(i16 %y) {
 ; RV32ZBB-NEXT:    sll a0, a1, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV64IILLEGALI32-LABEL: shl_cttz_constant_i16:
-; RV64IILLEGALI32:       # %bb.0: # %entry
-; RV64IILLEGALI32-NEXT:    addi a1, a0, -1
-; RV64IILLEGALI32-NEXT:    not a0, a0
-; RV64IILLEGALI32-NEXT:    and a0, a0, a1
-; RV64IILLEGALI32-NEXT:    srli a1, a0, 1
-; RV64IILLEGALI32-NEXT:    lui a2, 5
-; RV64IILLEGALI32-NEXT:    addiw a2, a2, 1365
-; RV64IILLEGALI32-NEXT:    and a1, a1, a2
-; RV64IILLEGALI32-NEXT:    sub a0, a0, a1
-; RV64IILLEGALI32-NEXT:    lui a1, 3
-; RV64IILLEGALI32-NEXT:    addiw a1, a1, 819
-; RV64IILLEGALI32-NEXT:    and a2, a0, a1
-; RV64IILLEGALI32-NEXT:    srli a0, a0, 2
-; RV64IILLEGALI32-NEXT:    and a0, a0, a1
-; RV64IILLEGALI32-NEXT:    add a0, a2, a0
-; RV64IILLEGALI32-NEXT:    srli a1, a0, 4
-; RV64IILLEGALI32-NEXT:    add a0, a0, a1
-; RV64IILLEGALI32-NEXT:    andi a1, a0, 15
-; RV64IILLEGALI32-NEXT:    slli a0, a0, 52
-; RV64IILLEGALI32-NEXT:    srli a0, a0, 60
-; RV64IILLEGALI32-NEXT:    add a0, a1, a0
-; RV64IILLEGALI32-NEXT:    li a1, 4
-; RV64IILLEGALI32-NEXT:    sll a0, a1, a0
-; RV64IILLEGALI32-NEXT:    ret
+; RV64I-LABEL: shl_cttz_constant_i16:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a1, a0, -1
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 1
+; RV64I-NEXT:    lui a2, 5
+; RV64I-NEXT:    addiw a2, a2, 1365
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    lui a1, 3
+; RV64I-NEXT:    addiw a1, a1, 819
+; RV64I-NEXT:    and a2, a0, a1
+; RV64I-NEXT:    srli a0, a0, 2
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    add a0, a2, a0
+; RV64I-NEXT:    srli a1, a0, 4
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    andi a1, a0, 15
+; RV64I-NEXT:    slli a0, a0, 52
+; RV64I-NEXT:    srli a0, a0, 60
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    li a1, 4
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    ret
 ;
-; RV64ZBBILLEGALI32-LABEL: shl_cttz_constant_i16:
-; RV64ZBBILLEGALI32:       # %bb.0: # %entry
-; RV64ZBBILLEGALI32-NEXT:    ctz a0, a0
-; RV64ZBBILLEGALI32-NEXT:    li a1, 4
-; RV64ZBBILLEGALI32-NEXT:    sll a0, a1, a0
-; RV64ZBBILLEGALI32-NEXT:    ret
-;
-; RV64ILEGALI32-LABEL: shl_cttz_constant_i16:
-; RV64ILEGALI32:       # %bb.0: # %entry
-; RV64ILEGALI32-NEXT:    addi a1, a0, -1
-; RV64ILEGALI32-NEXT:    not a0, a0
-; RV64ILEGALI32-NEXT:    and a0, a0, a1
-; RV64ILEGALI32-NEXT:    srliw a1, a0, 1
-; RV64ILEGALI32-NEXT:    lui a2, 5
-; RV64ILEGALI32-NEXT:    addi a2, a2, 1365
-; RV64ILEGALI32-NEXT:    and a1, a1, a2
-; RV64ILEGALI32-NEXT:    subw a0, a0, a1
-; RV64ILEGALI32-NEXT:    lui a1, 3
-; RV64ILEGALI32-NEXT:    addi a1, a1, 819
-; RV64ILEGALI32-NEXT:    and a2, a0, a1
-; RV64ILEGALI32-NEXT:    srliw a0, a0, 2
-; RV64ILEGALI32-NEXT:    and a0, a0, a1
-; RV64ILEGALI32-NEXT:    add a0, a2, a0
-; RV64ILEGALI32-NEXT:    srliw a1, a0, 4
-; RV64ILEGALI32-NEXT:    add a0, a0, a1
-; RV64ILEGALI32-NEXT:    andi a1, a0, 15
-; RV64ILEGALI32-NEXT:    slli a0, a0, 52
-; RV64ILEGALI32-NEXT:    srli a0, a0, 60
-; RV64ILEGALI32-NEXT:    add a0, a1, a0
-; RV64ILEGALI32-NEXT:    li a1, 4
-; RV64ILEGALI32-NEXT:    sllw a0, a1, a0
-; RV64ILEGALI32-NEXT:    ret
-;
-; RV64ZBBLEGALI32-LABEL: shl_cttz_constant_i16:
-; RV64ZBBLEGALI32:       # %bb.0: # %entry
-; RV64ZBBLEGALI32-NEXT:    ctzw a0, a0
-; RV64ZBBLEGALI32-NEXT:    li a1, 4
-; RV64ZBBLEGALI32-NEXT:    sllw a0, a1, a0
-; RV64ZBBLEGALI32-NEXT:    ret
+; RV64ZBB-LABEL: shl_cttz_constant_i16:
+; RV64ZBB:       # %bb.0: # %entry
+; RV64ZBB-NEXT:    ctz a0, a0
+; RV64ZBB-NEXT:    li a1, 4
+; RV64ZBB-NEXT:    sll a0, a1, a0
+; RV64ZBB-NEXT:    ret
 entry:
   %cttz = call i16 @llvm.cttz.i16(i16 %y, i1 true)
   %res = shl i16 4, %cttz
