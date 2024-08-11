@@ -3362,15 +3362,15 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
   if (parseOptionalAtomicOrdering(FailureOrder))
     return true;
 
-  LLT MemoryType;
   if (Token.isNot(MIToken::IntegerLiteral) &&
       Token.isNot(MIToken::kw_unknown_size) &&
       Token.isNot(MIToken::lparen))
     return error("expected memory LLT, the size integer literal or 'unknown-size' after "
                  "memory operation");
 
-  uint64_t Size = MemoryLocation::UnknownSize;
+  LLT MemoryType;
   if (Token.is(MIToken::IntegerLiteral)) {
+    uint64_t Size;
     if (getUint64(Size))
       return true;
 
@@ -3378,7 +3378,6 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     MemoryType = LLT::scalar(8 * Size);
     lex();
   } else if (Token.is(MIToken::kw_unknown_size)) {
-    Size = MemoryLocation::UnknownSize;
     lex();
   } else {
     if (expectAndConsume(MIToken::lparen))
@@ -3387,8 +3386,6 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       return true;
     if (expectAndConsume(MIToken::rparen))
       return true;
-
-    Size = MemoryType.getSizeInBytes().getKnownMinValue();
   }
 
   MachinePointerInfo Ptr = MachinePointerInfo();
@@ -3406,7 +3403,9 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       return true;
   }
   uint64_t BaseAlignment =
-      (Size != MemoryLocation::UnknownSize ? PowerOf2Ceil(Size) : 1);
+      MemoryType.isValid()
+          ? PowerOf2Ceil(MemoryType.getSizeInBytes().getKnownMinValue())
+          : 1;
   AAMDNodes AAInfo;
   MDNode *Range = nullptr;
   while (consumeIfPresent(MIToken::comma)) {

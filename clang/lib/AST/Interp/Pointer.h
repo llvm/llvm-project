@@ -44,6 +44,8 @@ struct BlockPointer {
 struct IntPointer {
   const Descriptor *Desc;
   uint64_t Value;
+
+  IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
 };
 
 enum class Storage { Block, Int, Fn };
@@ -87,6 +89,9 @@ public:
     StorageKind = Storage::Int;
     PointeeStorage.Int.Value = 0;
     PointeeStorage.Int.Desc = nullptr;
+  }
+  Pointer(IntPointer &&IntPtr) : StorageKind(Storage::Int) {
+    PointeeStorage.Int = std::move(IntPtr);
   }
   Pointer(Block *B);
   Pointer(Block *B, uint64_t BaseAndOffset);
@@ -161,9 +166,8 @@ public:
 
   /// Creates a pointer to a field.
   [[nodiscard]] Pointer atField(unsigned Off) const {
+    assert(isBlockPointer());
     unsigned Field = Offset + Off;
-    if (isIntegralPointer())
-      return Pointer(asIntPointer().Value + Field, asIntPointer().Desc);
     return Pointer(asBlockPointer().Pointee, Field, Field);
   }
 
@@ -396,6 +400,12 @@ public:
       return getFieldDesc()->IsArray;
     return false;
   }
+  bool inUnion() const {
+    if (isBlockPointer())
+      return getInlineDesc()->InUnion;
+    return false;
+  };
+
   /// Checks if the structure is a primitive array.
   bool inPrimitiveArray() const {
     if (isBlockPointer())
@@ -665,6 +675,8 @@ public:
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.
   static bool hasSameArray(const Pointer &A, const Pointer &B);
+  /// Checks if both given pointers point to the same block.
+  static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

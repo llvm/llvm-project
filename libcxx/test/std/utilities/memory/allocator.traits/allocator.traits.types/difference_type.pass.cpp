@@ -53,18 +53,12 @@ private:
     typedef void difference_type;
 };
 
-namespace std
-{
-
 template <>
-struct pointer_traits<C<char>::pointer>
-{
-    typedef C<char>::pointer pointer;
-    typedef char             element_type;
-    typedef signed char      difference_type;
+struct std::pointer_traits<C<char>::pointer> {
+  typedef C<char>::pointer pointer;
+  typedef char element_type;
+  typedef signed char difference_type;
 };
-
-}
 
 int main(int, char**)
 {

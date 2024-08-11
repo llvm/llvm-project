@@ -89,3 +89,19 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
     .${LIBC_TARGET_OS}.CndVar
   )
 endif()
+
+if (LLVM_LIBC_FULL_BUILD)
+  set(identifier_dependency_on_thread libc.src.__support.threads.thread)
+endif()
+
+add_header_library(
+  identifier
+  HDRS
+    identifier.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.include.sys_syscall
+    libc.hdr.types.pid_t
+    ${identifier_dependency_on_thread}
+)

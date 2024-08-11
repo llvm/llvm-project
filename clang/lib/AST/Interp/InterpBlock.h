@@ -110,9 +110,10 @@ public:
   void invokeCtor() {
     assert(!IsInitialized);
     std::memset(rawData(), 0, Desc->getAllocSize());
-    if (Desc->CtorFn)
+    if (Desc->CtorFn) {
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
-                   /*isActive=*/true, Desc);
+                   /*isActive=*/true, /*InUnion=*/false, Desc);
+    }
     IsInitialized = true;
   }
 

@@ -401,6 +401,13 @@ namespace cwg2083 { // cwg2083: partial
 #endif
 }
 
+namespace cwg2091 { // cwg2091: 2.7
+template<int &> struct X;
+template<int &N> void f(X<N>&);
+int n;
+void g(X<n> &x) { f(x); }
+} // namespace cwg2091 
+
 namespace cwg2094 { // cwg2094: 5
   struct A { int n; };
   struct B { volatile int n; };

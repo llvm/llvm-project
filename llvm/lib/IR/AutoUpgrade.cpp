@@ -4886,7 +4886,25 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
-  unsigned Version = getDebugMetadataVersionFromModule(M);
+  // We need to get metadata before the module is verified (i.e., getModuleFlag
+  // makes assumptions that we haven't verified yet). Carefully extract the flag
+  // from the metadata.
+  unsigned Version = 0;
+  if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
+      if (Flag->getNumOperands() < 3)
+        return false;
+      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
+        return K->getString() == "Debug Info Version";
+      return false;
+    });
+    if (OpIt != ModFlags->op_end()) {
+      const MDOperand &ValOp = (*OpIt)->getOperand(2);
+      if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(ValOp))
+        Version = CI->getZExtValue();
+    }
+  }
+
   if (Version == DEBUG_METADATA_VERSION) {
     bool BrokenDebugInfo = false;
     if (verifyModule(M, &llvm::errs(), &BrokenDebugInfo))

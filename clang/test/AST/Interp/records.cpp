@@ -334,8 +334,7 @@ namespace InitializerTemporaries {
   };
 
   constexpr int f() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}} \
-         // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // both-note {{in call to 'S{}.~S()'}}
     return 12;
   }
   static_assert(f() == 12); // both-error {{not an integral constant expression}} \
@@ -598,8 +597,7 @@ namespace Destructors {
     }
   };
   constexpr int testS() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}} \
-         // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // both-note {{in call to 'S{}.~S()'}}
     return 1;
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
@@ -966,8 +964,6 @@ namespace TemporaryObjectExpr {
     static_assert(foo(F()) == 0, "");
   }
 
-  /// FIXME: This needs support for unions on the new interpreter.
-  /// We diagnose an uninitialized object in c++14.
 #if __cplusplus > 201402L
   namespace Unions {
     struct F {
@@ -980,10 +976,10 @@ namespace TemporaryObjectExpr {
     };
 
     constexpr int foo(F f) {
-      return f.i + f.U.f; // ref-note {{read of member 'f' of union with active member 'a'}}
+      return f.i + f.U.f; // both-note {{read of member 'f' of union with active member 'a'}}
     }
-    static_assert(foo(F()) == 0, ""); // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to}}
+    static_assert(foo(F()) == 0, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{in call to}}
   }
 #endif
 

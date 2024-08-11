@@ -657,6 +657,7 @@ void SIShrinkInstructions::dropInstructionKeepingImpDefs(
 // although requirements match the pass placement and it reduces code size too.
 MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   assert(MovT.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+         MovT.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
          MovT.getOpcode() == AMDGPU::COPY);
 
   Register T = MovT.getOperand(0).getReg();
@@ -668,7 +669,12 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   Register X = Xop.getReg();
   unsigned Xsub = Xop.getSubReg();
 
-  unsigned Size = TII->getOpSize(MovT, 0) / 4;
+  unsigned Size = TII->getOpSize(MovT, 0);
+
+  // We can't match v_swap_b16 pre-RA, because VGPR_16_Lo128 registers
+  // are not allocatble.
+  if (Size == 2 && X.isVirtual())
+    return nullptr;
 
   if (!TRI->isVGPR(*MRI, X))
     return nullptr;
@@ -684,9 +690,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     KilledT = MovY->killsRegister(T, TRI);
 
     if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+         MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
          MovY->getOpcode() != AMDGPU::COPY) ||
-        !MovY->getOperand(1).isReg()        ||
-        MovY->getOperand(1).getReg() != T   ||
+        !MovY->getOperand(1).isReg() || MovY->getOperand(1).getReg() != T ||
         MovY->getOperand(1).getSubReg() != Tsub)
       continue;
 
@@ -714,6 +720,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
       }
       if (MovX ||
           (I->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+           I->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
            I->getOpcode() != AMDGPU::COPY) ||
           I->getOperand(0).getReg() != X ||
           I->getOperand(0).getSubReg() != Xsub) {
@@ -721,7 +728,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         break;
       }
 
-      if (Size > 1 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
+      if (Size > 4 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
         continue;
 
       MovX = &*I;
@@ -730,23 +737,40 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     if (!MovX)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Matched v_swap_b32:\n" << MovT << *MovX << *MovY);
+    LLVM_DEBUG(dbgs() << "Matched v_swap:\n" << MovT << *MovX << *MovY);
 
-    for (unsigned I = 0; I < Size; ++I) {
-      TargetInstrInfo::RegSubRegPair X1, Y1;
-      X1 = getSubRegForIndex(X, Xsub, I);
-      Y1 = getSubRegForIndex(Y, Ysub, I);
-      MachineBasicBlock &MBB = *MovT.getParent();
+    MachineBasicBlock &MBB = *MovT.getParent();
+    SmallVector<MachineInstr *, 4> Swaps;
+    if (Size == 2) {
       auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
-                         TII->get(AMDGPU::V_SWAP_B32))
-        .addDef(X1.Reg, 0, X1.SubReg)
-        .addDef(Y1.Reg, 0, Y1.SubReg)
-        .addReg(Y1.Reg, 0, Y1.SubReg)
-        .addReg(X1.Reg, 0, X1.SubReg).getInstr();
-      if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
-        // Drop implicit EXEC.
-        MIB->removeOperand(MIB->getNumExplicitOperands());
-        MIB->copyImplicitOps(*MBB.getParent(), *MovX);
+                         TII->get(AMDGPU::V_SWAP_B16))
+                     .addDef(X)
+                     .addDef(Y)
+                     .addReg(Y)
+                     .addReg(X)
+                     .getInstr();
+      Swaps.push_back(MIB);
+    } else {
+      assert(Size > 0 && Size % 4 == 0);
+      for (unsigned I = 0; I < Size / 4; ++I) {
+        TargetInstrInfo::RegSubRegPair X1, Y1;
+        X1 = getSubRegForIndex(X, Xsub, I);
+        Y1 = getSubRegForIndex(Y, Ysub, I);
+        auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                           TII->get(AMDGPU::V_SWAP_B32))
+                       .addDef(X1.Reg, 0, X1.SubReg)
+                       .addDef(Y1.Reg, 0, Y1.SubReg)
+                       .addReg(Y1.Reg, 0, Y1.SubReg)
+                       .addReg(X1.Reg, 0, X1.SubReg)
+                       .getInstr();
+        Swaps.push_back(MIB);
+      }
+    }
+    // Drop implicit EXEC.
+    if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
+      for (MachineInstr *Swap : Swaps) {
+        Swap->removeOperand(Swap->getNumExplicitOperands());
+        Swap->copyImplicitOps(*MBB.getParent(), *MovX);
       }
     }
     MovX->eraseFromParent();
@@ -833,6 +857,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       }
 
       if (ST->hasSwap() && (MI.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+                            MI.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
                             MI.getOpcode() == AMDGPU::COPY)) {
         if (auto *NextMI = matchSwap(MI)) {
           Next = NextMI->getIterator();
@@ -1023,7 +1048,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
               MachineFunctionProperties::Property::NoVRegs))
         continue;
 
-      if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
+      if (ST->useRealTrue16Insts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
           !shouldShrinkTrue16(MI))
         continue;
 

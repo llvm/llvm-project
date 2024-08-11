@@ -1023,7 +1023,8 @@ static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
   }
 }
 
-static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
+static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
+                    AMDGPUAttributorOptions Options) {
   SetVector<Function *> Functions;
   for (Function &F : M) {
     if (!F.isIntrinsic())
@@ -1038,9 +1039,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID, &AACallEdges::ID,
        &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID});
+       &AAUnderlyingObjects::ID, &AAAddressSpace::ID});
 
   AttributorConfig AC(CGUpdater);
+  AC.IsClosedWorldModule = Options.IsClosedWorld;
   AC.Allowed = &Allowed;
   AC.IsModulePass = true;
   AC.DefaultInitializeLiveInternals = false;
@@ -1051,16 +1053,28 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
   Attributor A(Functions, InfoCache, AC);
 
   for (Function &F : M) {
-    if (!F.isIntrinsic()) {
-      A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
-      A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
-      A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(F));
-      CallingConv::ID CC = F.getCallingConv();
-      if (!AMDGPU::isEntryFunctionCC(CC)) {
-        A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
-        A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
-      } else if (CC == CallingConv::AMDGPU_KERNEL) {
-        addPreloadKernArgHint(F, TM);
+    if (F.isIntrinsic())
+      continue;
+
+    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
+    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
+    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(F));
+    CallingConv::ID CC = F.getCallingConv();
+    if (!AMDGPU::isEntryFunctionCC(CC)) {
+      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
+      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
+    } else if (CC == CallingConv::AMDGPU_KERNEL) {
+      addPreloadKernArgHint(F, TM);
+    }
+
+    for (auto &I : instructions(F)) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*LI->getPointerOperand()));
+      }
+      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*SI->getPointerOperand()));
       }
     }
   }
@@ -1086,7 +1100,7 @@ public:
 
   bool runOnModule(Module &M) override {
     AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM);
+    return runImpl(M, AG, *TM, /*Options=*/{});
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1107,8 +1121,8 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   AnalysisGetter AG(FAM);
 
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM) ? PreservedAnalyses::none()
-                            : PreservedAnalyses::all();
+  return runImpl(M, AG, TM, Options) ? PreservedAnalyses::none()
+                                     : PreservedAnalyses::all();
 }
 
 char AMDGPUAttributorLegacy::ID = 0;
