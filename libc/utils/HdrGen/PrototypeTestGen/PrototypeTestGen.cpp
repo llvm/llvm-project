@@ -47,7 +47,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
 
   OS << '\n';
 
-  OS << "int main() {\n";
+  OS << "extern \"C\" int main() {\n";
   for (const auto &entrypoint : EntrypointNamesOption) {
     if (entrypoint == "errno")
       continue;
