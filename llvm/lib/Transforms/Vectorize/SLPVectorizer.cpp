@@ -5998,7 +5998,9 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
     // Collect stores per pointer object.
     for (User *U : V->users()) {
       auto *SI = dyn_cast<StoreInst>(U);
-      if (SI == nullptr || !SI->isSimple() ||
+      // Test whether we can handle the store. If V is a constant, its users
+      // might be in different functions.
+      if (SI == nullptr || !SI->isSimple() || SI->getFunction() != F ||
           !isValidElementType(SI->getValueOperand()->getType()))
         continue;
       // Skip entry if already
