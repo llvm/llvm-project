@@ -576,15 +576,8 @@ struct Allocator {
     }
 
     AsanThread *t = GetCurrentThread();
-    void *allocated;
-    if (t) {
-      AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = allocator.Allocate(cache, needed_size, 8);
-    } else {
-      SpinMutexLock l(&fallback_mutex);
-      AllocatorCache *cache = &fallback_allocator_cache;
-      allocated = allocator.Allocate(cache, needed_size, 8);
-    }
+    void *allocated = allocator.Allocate(
+        GetAllocatorCache(&t->malloc_storage()), needed_size, 8);
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
       if (AllocatorMayReturnNull())
