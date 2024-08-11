@@ -531,6 +531,10 @@ static ExprResult calculateConstraintSatisfaction(
 
     std::optional<unsigned>
     EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) const {
+
+      // We should ignore errors in the presence of packs of different size.
+      Sema::SFINAETrap Trap(S);
+
       Expr *Pattern = FE->getPattern();
 
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
@@ -712,8 +716,8 @@ bool Sema::addInstantiatedCapturesToScope(
   auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
                               unsigned Index) {
     ValueDecl *CapturedVar = LambdaClass->getCapture(Index)->getCapturedVar();
-    if (CapturedVar->isInitCapture())
-      Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
+    assert(CapturedVar->isInitCapture());
+    Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
   };
 
   for (const LambdaCapture &CapturePattern : LambdaPattern->captures()) {
@@ -721,13 +725,21 @@ bool Sema::addInstantiatedCapturesToScope(
       Instantiated++;
       continue;
     }
-    const ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+    ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+
+    if (!CapturedPattern->isInitCapture()) {
+      continue;
+    }
+
     if (!CapturedPattern->isParameterPack()) {
       AddSingleCapture(CapturedPattern, Instantiated++);
     } else {
       Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
-      std::optional<unsigned> NumArgumentsInExpansion =
-          getNumArgumentsInExpansion(CapturedPattern->getType(), TemplateArgs);
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      SemaRef.collectUnexpandedParameterPacks(
+          dyn_cast<VarDecl>(CapturedPattern)->getInit(), Unexpanded);
+      auto NumArgumentsInExpansion =
+          getNumArgumentsInExpansionFromUnexpanded(Unexpanded, TemplateArgs);
       if (!NumArgumentsInExpansion)
         continue;
       for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg)
@@ -1457,8 +1469,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
           : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
   Sema::InstantiatingTemplate Inst(
       S, InstLocBegin,
-      Sema::InstantiatingTemplate::ParameterMappingSubstitution{}, Concept,
-      {InstLocBegin, InstLocEnd});
+      Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+      Atomic.ConstraintDecl, {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
@@ -1632,7 +1644,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
         Kind, std::move(*Sub), FE->getPattern()}};
   }
 
-  return NormalizedConstraint{new (S.Context) AtomicConstraint(S, E)};
+  return NormalizedConstraint{new (S.Context) AtomicConstraint(E, D)};
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(

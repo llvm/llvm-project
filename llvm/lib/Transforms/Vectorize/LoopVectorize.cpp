@@ -2632,8 +2632,9 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
   }
 
   // Create phi nodes to merge from the  backedge-taken check block.
-  PHINode *BCResumeVal = PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
-                                         LoopScalarPreHeader->getFirstNonPHI());
+  PHINode *BCResumeVal =
+      PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
+                      LoopScalarPreHeader->getFirstNonPHIIt());
   // Copy original phi DL over to the new one.
   BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
 
@@ -3342,7 +3343,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   if (!blockNeedsPredicationForAnyReason(I->getParent()) ||
       isSafeToSpeculativelyExecute(I) ||
       (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
-      isa<BranchInst, PHINode>(I))
+      isa<BranchInst, PHINode, AllocaInst>(I))
     return false;
 
   // If the instruction was executed conditionally in the original scalar loop,
@@ -4604,10 +4605,6 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
             << " because it will not generate any vector instructions.\n");
         continue;
       }
-
-      // If profitable add it to ProfitableVF list.
-      if (isMoreProfitable(Candidate, ScalarCost))
-        ProfitableVFs.push_back(Candidate);
 
       if (isMoreProfitable(Candidate, ChosenFactor))
         ChosenFactor = Candidate;
@@ -6723,14 +6720,18 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     return RequiresScalarEpilogue &&
            !TheLoop->contains(cast<Instruction>(U)->getParent());
   };
+  MapVector<Value *, SmallVector<Value *>> DeadInvariantStoreOps;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       // Find all stores to invariant variables. Since they are going to sink
       // outside the loop we do not need calculate cost for them.
       StoreInst *SI;
       if ((SI = dyn_cast<StoreInst>(&I)) &&
-          Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
+          Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         ValuesToIgnore.insert(&I);
+        auto I = DeadInvariantStoreOps.insert({SI->getPointerOperand(), {}});
+        I.first->second.push_back(SI->getValueOperand());
+      }
 
       if (VecValuesToIgnore.contains(&I) || ValuesToIgnore.contains(&I))
         continue;
@@ -6771,6 +6772,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     DeadInterleavePointerOps.append(Op->op_begin(), Op->op_end());
   }
 
+  for (const auto &[_, Ops] : DeadInvariantStoreOps) {
+    for (Value *Op : ArrayRef(Ops).drop_back())
+      DeadOps.push_back(Op);
+  }
   // Mark ops that would be trivially dead and are only used by ignored
   // instructions as free.
   BasicBlock *Header = TheLoop->getHeader();
@@ -6781,8 +6786,8 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         (isa<PHINode>(Op) && Op->getParent() == Header) ||
         !wouldInstructionBeTriviallyDead(Op, TLI) ||
         any_of(Op->users(), [this, IsLiveOutDead](User *U) {
-          return !VecValuesToIgnore.contains(U) && ValuesToIgnore.contains(U) &&
-                 !IsLiveOutDead(U);
+          return !VecValuesToIgnore.contains(U) &&
+                 !ValuesToIgnore.contains(U) && !IsLiveOutDead(U);
         }))
       continue;
 
@@ -7191,7 +7196,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-ElementCount LoopVectorizationPlanner::getBestVF() const {
+ElementCount LoopVectorizationPlanner::getBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
@@ -7203,7 +7208,8 @@ ElementCount LoopVectorizationPlanner::getBestVF() const {
 
   // TODO: Compute scalar cost using VPlan-based cost model.
   InstructionCost ScalarCost = CM.expectedCost(ScalarVF);
-  VectorizationFactor BestFactor(ScalarVF, ScalarCost, ScalarCost);
+  VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
+  VectorizationFactor BestFactor = ScalarFactor;
 
   bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
   if (ForceVectorization) {
@@ -7229,6 +7235,10 @@ ElementCount LoopVectorizationPlanner::getBestVF() const {
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
       if (isMoreProfitable(CurrentFactor, BestFactor))
         BestFactor = CurrentFactor;
+
+      // If profitable add it to ProfitableVF list.
+      if (isMoreProfitable(CurrentFactor, ScalarFactor))
+        ProfitableVFs.push_back(CurrentFactor);
     }
   }
   return BestFactor.Width;
@@ -9137,70 +9147,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   VPlanTransforms::clearReductionWrapFlags(*Plan);
 }
 
-void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
-  assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
-         "Not a pointer induction according to InductionDescriptor!");
-  assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
-         "Unexpected type.");
-  assert(!onlyScalarsGenerated(State.VF.isScalable()) &&
-         "Recipe should have been replaced");
-
-  auto *IVR = getParent()->getPlan()->getCanonicalIV();
-  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0, /*IsScalar*/ true));
-  Type *PhiType = IndDesc.getStep()->getType();
-
-  // Build a pointer phi
-  Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
-  Type *ScStValueType = ScalarStartValue->getType();
-  PHINode *NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
-                                           CanonicalIV->getIterator());
-
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
-
-  // A pointer induction, performed by using a gep
-  BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
-
-  Value *ScalarStepValue = State.get(getOperand(1), VPIteration(0, 0));
-  Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
-  Value *NumUnrolledElems =
-      State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, State.UF));
-  Value *InductionGEP = GetElementPtrInst::Create(
-      State.Builder.getInt8Ty(), NewPointerPhi,
-      State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
-      InductionLoc);
-  // Add induction update using an incorrect block temporarily. The phi node
-  // will be fixed after VPlan execution. Note that at this point the latch
-  // block cannot be used, as it does not exist yet.
-  // TODO: Model increment value in VPlan, by turning the recipe into a
-  // multi-def and a subclass of VPHeaderPHIRecipe.
-  NewPointerPhi->addIncoming(InductionGEP, VectorPH);
-
-  // Create UF many actual address geps that use the pointer
-  // phi as base and a vectorized version of the step value
-  // (<step*0, ..., step*N>) as offset.
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Type *VecPhiType = VectorType::get(PhiType, State.VF);
-    Value *StartOffsetScalar =
-        State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, Part));
-    Value *StartOffset =
-        State.Builder.CreateVectorSplat(State.VF, StartOffsetScalar);
-    // Create a vector of consecutive numbers from zero to VF.
-    StartOffset = State.Builder.CreateAdd(
-        StartOffset, State.Builder.CreateStepVector(VecPhiType));
-
-    assert(ScalarStepValue == State.get(getOperand(1), VPIteration(Part, 0)) &&
-           "scalar step must be the same across all parts");
-    Value *GEP = State.Builder.CreateGEP(
-        State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(
-            StartOffset,
-            State.Builder.CreateVectorSplat(State.VF, ScalarStepValue),
-            "vector.gep"));
-    State.set(this, GEP, Part);
-  }
-}
-
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "VPDerivedIVRecipe being replicated.");
 
@@ -9280,46 +9226,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
-}
-
-void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
-
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGather = !isConsecutive();
-
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *NewLI;
-    Value *Mask = nullptr;
-    if (auto *VPMask = getMask()) {
-      // Mask reversal is only needed for non-all-one (null) masks, as reverse
-      // of a null all-one mask is a null mask.
-      Mask = State.get(VPMask, Part);
-      if (isReverse())
-        Mask = Builder.CreateVectorReverse(Mask, "reverse");
-    }
-
-    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateGather);
-    if (CreateGather) {
-      NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
-                                         "wide.masked.gather");
-    } else if (Mask) {
-      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
-                                       PoisonValue::get(DataTy),
-                                       "wide.masked.load");
-    } else {
-      NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
-    }
-    // Add metadata to the load, but setVectorValue to the reverse shuffle.
-    State.addMetadata(NewLI, LI);
-    if (Reverse)
-      NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
-    State.set(this, NewLI, Part);
-  }
 }
 
 /// Use all-true mask for reverse rather than actual mask, as it avoids a

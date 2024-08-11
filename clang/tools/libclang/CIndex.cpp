@@ -1645,6 +1645,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -2200,6 +2202,7 @@ public:
   void VisitOMPTaskyieldDirective(const OMPTaskyieldDirective *D);
   void VisitOMPBarrierDirective(const OMPBarrierDirective *D);
   void VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *D);
+  void VisitOMPAssumeDirective(const OMPAssumeDirective *D);
   void VisitOMPErrorDirective(const OMPErrorDirective *D);
   void VisitOMPTaskgroupDirective(const OMPTaskgroupDirective *D);
   void
@@ -2425,6 +2428,20 @@ void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
 
 void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
 
+void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
+
+void OMPClauseEnqueue::VisitOMPHoldsClause(const OMPHoldsClause *) {}
+
+void OMPClauseEnqueue::VisitOMPContainsClause(const OMPContainsClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoOpenMPRoutinesClause(
+    const OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoParallelismClause(
+    const OMPNoParallelismClause *) {}
+
 void OMPClauseEnqueue::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseEnqueue::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
@@ -2499,14 +2516,14 @@ void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {
 }
 
 void OMPClauseEnqueue::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  Visitor->AddStmt(C->getNumTeams());
 }
 
 void OMPClauseEnqueue::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  Visitor->AddStmt(C->getThreadLimit());
 }
 
 void OMPClauseEnqueue::VisitOMPPriorityClause(const OMPPriorityClause *C) {
@@ -3307,6 +3324,10 @@ void EnqueueVisitor::VisitOMPBarrierDirective(const OMPBarrierDirective *D) {
 }
 
 void EnqueueVisitor::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPAssumeDirective(const OMPAssumeDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
@@ -6146,6 +6167,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPBarrierDirective");
   case CXCursor_OMPTaskwaitDirective:
     return cxstring::createRef("OMPTaskwaitDirective");
+  case CXCursor_OMPAssumeDirective:
+    return cxstring::createRef("OMPAssumeDirective");
   case CXCursor_OMPErrorDirective:
     return cxstring::createRef("OMPErrorDirective");
   case CXCursor_OMPTaskgroupDirective:

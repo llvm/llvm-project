@@ -756,9 +756,7 @@ static WidthAndSignedness
 getIntegerWidthAndSignedness(const clang::ASTContext &context,
                              const clang::QualType Type) {
   assert(Type->isIntegerType() && "Given type is not an integer.");
-  unsigned Width = Type->isBooleanType()  ? 1
-                   : Type->isBitIntType() ? context.getIntWidth(Type)
-                                          : context.getTypeInfo(Type).Width;
+  unsigned Width = context.getIntWidth(Type);
   bool Signed = Type->isSignedIntegerType();
   return {Width, Signed};
 }
@@ -14462,10 +14460,10 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
     return FeaturesBit;
   };
 
-  int BitPos = RISCVISAInfo::getRISCVFeaturesBitPosition(FeatureStr);
+  auto [GroupID, BitPos] = RISCVISAInfo::getRISCVFeaturesBitsInfo(FeatureStr);
   assert(BitPos != -1 && "validation should have rejected this feature");
   Value *MaskV = Builder.getInt64(1ULL << BitPos);
-  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(0), MaskV);
+  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(GroupID), MaskV);
   return Builder.CreateICmpEQ(Bitset, MaskV);
 }
 

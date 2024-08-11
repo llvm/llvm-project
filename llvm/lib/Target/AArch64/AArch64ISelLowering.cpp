@@ -14546,7 +14546,7 @@ SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
       return Op;
 
     // Concat each pair of subvectors and pack into the lower half of the array.
-    SmallVector<SDValue> ConcatOps(Op->op_begin(), Op->op_end());
+    SmallVector<SDValue> ConcatOps(Op->ops());
     while (ConcatOps.size() > 1) {
       for (unsigned I = 0, E = ConcatOps.size(); I != E; I += 2) {
         SDValue V1 = ConcatOps[I];
@@ -16174,6 +16174,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
       [[fallthrough]];
 
     case Intrinsic::fma:
+    case Intrinsic::fmuladd:
       if (isa<VectorType>(I->getType()) &&
           cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
           !Subtarget->hasFullFP16())
@@ -21769,6 +21770,7 @@ static SDValue performExtendCombine(SDNode *N,
   // helps the backend to decide that an sabdl2 would be useful, saving a real
   // extract_high operation.
   if (!DCI.isBeforeLegalizeOps() && N->getOpcode() == ISD::ZERO_EXTEND &&
+      N->getOperand(0).getValueType().is64BitVector() &&
       (N->getOperand(0).getOpcode() == ISD::ABDU ||
        N->getOperand(0).getOpcode() == ISD::ABDS)) {
     SDNode *ABDNode = N->getOperand(0).getNode();
@@ -25039,7 +25041,7 @@ static SDValue legalizeSVEGatherPrefetchOffsVec(SDNode *N, SelectionDAG &DAG) {
   // Extend the unpacked offset vector to 64-bit lanes.
   SDLoc DL(N);
   Offset = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::nxv2i64, Offset);
-  SmallVector<SDValue, 5> Ops(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 5> Ops(N->ops());
   // Replace the offset operand with the 64-bit one.
   Ops[OffsetPos] = Offset;
 
@@ -25059,7 +25061,7 @@ static SDValue combineSVEPrefetchVecBaseImmOff(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // ...otherwise swap the offset base with the offset...
-  SmallVector<SDValue, 5> Ops(N->op_begin(), N->op_end());
+  SmallVector<SDValue, 5> Ops(N->ops());
   std::swap(Ops[ImmPos], Ops[OffsetPos]);
   // ...and remap the intrinsic `aarch64_sve_prf<T>_gather_scalar_offset` to
   // `aarch64_sve_prfb_gather_uxtw_index`.

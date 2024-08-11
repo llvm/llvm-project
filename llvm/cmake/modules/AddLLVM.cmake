@@ -1010,7 +1010,7 @@ endmacro()
 
 macro(add_llvm_executable name)
   cmake_parse_arguments(ARG
-    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS"
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS;EXPORT_SYMBOLS"
     "ENTITLEMENTS;BUNDLE_PATH"
     ""
     ${ARGN})
@@ -1070,7 +1070,8 @@ macro(add_llvm_executable name)
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
   if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
-      NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES)
+      NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
+      NOT ARG_EXPORT_SYMBOLS AND NOT ARG_EXPORT_SYMBOLS_FOR_PLUGINS)
     if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
       set_property(TARGET ${name} APPEND_STRING PROPERTY
         LINK_FLAGS " -Wl,-no_exported_symbols")
@@ -1111,6 +1112,10 @@ macro(add_llvm_executable name)
   endif()
 
   llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
+
+  if (ARG_EXPORT_SYMBOLS)
+    export_executable_symbols(${name})
+  endif()
 endmacro(add_llvm_executable name)
 
 # add_llvm_pass_plugin(name [NO_MODULE] ...)
@@ -1464,7 +1469,7 @@ macro(add_llvm_example name)
   if( NOT LLVM_BUILD_EXAMPLES )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-  add_llvm_executable(${name} ${ARGN})
+  add_llvm_executable(${name} EXPORT_SYMBOLS ${ARGN})
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
   endif()

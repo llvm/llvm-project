@@ -427,9 +427,7 @@ private:
 public:
   SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
 
-  const SmallVectorImpl<const SCEVPredicate *> &getPredicates() const {
-    return Preds;
-  }
+  ArrayRef<const SCEVPredicate *> getPredicates() const { return Preds; }
 
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;

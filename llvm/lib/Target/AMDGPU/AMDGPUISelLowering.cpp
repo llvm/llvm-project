@@ -4957,7 +4957,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
       SDValue CastBack =
           DAG.getNode(ISD::BITCAST, SL, HighBits.getValueType(), NegHi);
 
-      SmallVector<SDValue, 8> Ops(BCSrc->op_begin(), BCSrc->op_end());
+      SmallVector<SDValue, 8> Ops(BCSrc->ops());
       Ops.back() = CastBack;
       DCI.AddToWorklist(NegHi.getNode());
       SDValue Build =
@@ -5997,34 +5997,6 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
-}
-
-TargetLowering::AtomicExpansionKind
-AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
-  switch (RMW->getOperation()) {
-  case AtomicRMWInst::Nand:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
-  case AtomicRMWInst::FMax:
-  case AtomicRMWInst::FMin:
-    return AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::Xchg: {
-    const DataLayout &DL = RMW->getFunction()->getDataLayout();
-    unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
-    if (ValSize == 32 || ValSize == 64)
-      return AtomicExpansionKind::None;
-    return AtomicExpansionKind::CmpXChg;
-  }
-  default: {
-    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
-      unsigned Size = IntTy->getBitWidth();
-      if (Size == 32 || Size == 64)
-        return AtomicExpansionKind::None;
-    }
-
-    return AtomicExpansionKind::CmpXChg;
-  }
-  }
 }
 
 /// Whether it is profitable to sink the operands of an

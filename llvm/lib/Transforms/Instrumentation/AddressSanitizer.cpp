@@ -690,8 +690,8 @@ public:
       if (EHPad && EHPad->isEHPad()) {
         // Replace CI with a clone with an added funclet OperandBundle
         OperandBundleDef OB("funclet", EHPad);
-        auto *NewCall =
-            CallBase::addOperandBundle(CI, LLVMContext::OB_funclet, OB, CI);
+        auto *NewCall = CallBase::addOperandBundle(CI, LLVMContext::OB_funclet,
+                                                   OB, CI->getIterator());
         NewCall->copyMetadata(*CI);
         CI->replaceAllUsesWith(NewCall);
         CI->eraseFromParent();
@@ -1847,7 +1847,6 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   InstrumentationIRBuilder IRB(InsertBefore);
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
-  const ASanAccessInfo AccessInfo(IsWrite, CompileKernel, AccessSizeIndex);
 
   if (UseCalls && ClOptimizeCallbacks) {
     const ASanAccessInfo AccessInfo(IsWrite, CompileKernel, AccessSizeIndex);

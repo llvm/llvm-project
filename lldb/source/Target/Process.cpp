@@ -473,7 +473,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
       m_private_run_lock(), m_currently_handling_do_on_removals(false),
-      m_resume_requested(false), m_finalizing(false), m_destructing(false),
+      m_resume_requested(false), m_interrupt_tid(LLDB_INVALID_THREAD_ID),
+      m_finalizing(false), m_destructing(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
@@ -895,6 +896,7 @@ bool Process::HandleProcessStateChangedEvent(
             case eStopReasonThreadExiting:
             case eStopReasonInstrumentation:
             case eStopReasonProcessorTrace:
+            case eStopReasonInterrupt:
               if (!other_thread)
                 other_thread = thread;
               break;
@@ -3873,7 +3875,11 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
   }
 }
 
-void Process::SendAsyncInterrupt() {
+void Process::SendAsyncInterrupt(Thread *thread) {
+  if (thread != nullptr)
+    m_interrupt_tid = thread->GetProtocolID();
+  else
+    m_interrupt_tid = LLDB_INVALID_THREAD_ID;
   if (PrivateStateThreadIsValid())
     m_private_state_broadcaster.BroadcastEvent(Process::eBroadcastBitInterrupt,
                                                nullptr);
@@ -4099,9 +4105,14 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
 
       if (interrupt_requested) {
         if (StateIsStoppedState(internal_state, true)) {
-          // We requested the interrupt, so mark this as such in the stop event
-          // so clients can tell an interrupted process from a natural stop
-          ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
+          // Only mark interrupt event if it is not thread specific async
+          // interrupt.
+          if (m_interrupt_tid == LLDB_INVALID_THREAD_ID) {
+            // We requested the interrupt, so mark this as such in the stop
+            // event so clients can tell an interrupted process from a natural
+            // stop
+            ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
+          }
           interrupt_requested = false;
         } else if (log) {
           LLDB_LOGF(log,
@@ -6537,9 +6548,8 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
 }
 
 static void SaveOffRegionsWithStackPointers(
-    Process &process, const SaveCoreOptions &core_options,
-    const MemoryRegionInfos &regions, Process::CoreFileMemoryRanges &ranges,
-    std::set<addr_t> &stack_ends) {
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
   const bool try_dirty_pages = true;
 
   // Before we take any dump, we want to save off the used portions of the
@@ -6561,16 +6571,10 @@ static void SaveOffRegionsWithStackPointers(
     if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
       const size_t stack_head = (sp - red_zone);
       const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
-      // Even if the SaveCoreOption doesn't want us to save the stack
-      // we still need to populate the stack_ends set so it doesn't get saved
-      // off in other calls
       sp_region.GetRange().SetRangeBase(stack_head);
       sp_region.GetRange().SetByteSize(stack_size);
       stack_ends.insert(sp_region.GetRange().GetRangeEnd());
-      // This will return true if the threadlist the user specified is empty,
-      // or contains the thread id from thread_sp.
-      if (core_options.ShouldThreadBeSaved(thread_sp->GetID()))
-        AddRegion(sp_region, try_dirty_pages, ranges);
+      AddRegion(sp_region, try_dirty_pages, ranges);
     }
   }
 }
@@ -6639,11 +6643,10 @@ static void GetCoreFileSaveRangesStackOnly(
   }
 }
 
-Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
+Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
                                             CoreFileMemoryRanges &ranges) {
   lldb_private::MemoryRegionInfos regions;
   Status err = GetMemoryRegions(regions);
-  SaveCoreStyle core_style = options.GetStyle();
   if (err.Fail())
     return err;
   if (regions.empty())
@@ -6653,7 +6656,7 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
                   "eSaveCoreUnspecified");
 
   std::set<addr_t> stack_ends;
-  SaveOffRegionsWithStackPointers(*this, options, regions, ranges, stack_ends);
+  SaveOffRegionsWithStackPointers(*this, regions, ranges, stack_ends);
 
   switch (core_style) {
   case eSaveCoreUnspecified:
@@ -6679,18 +6682,6 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
     return Status("no valid address ranges found for core style");
 
   return Status(); // Success!
-}
-
-std::vector<ThreadSP>
-Process::CalculateCoreFileThreadList(const SaveCoreOptions &core_options) {
-  std::vector<ThreadSP> thread_list;
-  for (const lldb::ThreadSP &thread_sp : m_thread_list.Threads()) {
-    if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
-      thread_list.push_back(thread_sp);
-    }
-  }
-
-  return thread_list;
 }
 
 void Process::SetAddressableBitMasks(AddressableBits bit_masks) {

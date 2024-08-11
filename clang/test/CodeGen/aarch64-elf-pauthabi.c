@@ -5,7 +5,8 @@
 // RUN:   -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini %s | \
+// RUN:   -fptrauth-init-fini %s \
+// RUN:   -fptrauth-init-fini-address-discrimination %s | \
 // RUN:   FileCheck %s --check-prefix=ALL
 
 // RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
@@ -32,8 +33,12 @@
 // RUN:   -fptrauth-calls -fptrauth-init-fini %s | \
 // RUN:   FileCheck %s --check-prefix=INITFINI
 
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
+// RUN:   -fptrauth-calls -fptrauth-init-fini -fptrauth-init-fini-address-discrimination %s | \
+// RUN:   FileCheck %s --check-prefix=INITFINIADDR
+
 // ALL: !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
-// ALL: !{i32 1, !"aarch64-elf-pauthabi-version", i32 127}
+// ALL: !{i32 1, !"aarch64-elf-pauthabi-version", i32 255}
 
 // INTRIN: !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
 // INTRIN: !{i32 1, !"aarch64-elf-pauthabi-version", i32 1}
@@ -55,5 +60,8 @@
 
 // INITFINI: !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
 // INITFINI: !{i32 1, !"aarch64-elf-pauthabi-version", i32 66}
+
+// INITFINIADDR: !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// INITFINIADDR: !{i32 1, !"aarch64-elf-pauthabi-version", i32 194}
 
 void foo() {}

@@ -15,22 +15,7 @@
 
 using namespace llvm::sandboxir;
 
-IRChangeBase::IRChangeBase(Tracker &Parent) : Parent(Parent) {
 #ifndef NDEBUG
-  assert(!Parent.InMiddleOfCreatingChange &&
-         "We are in the middle of creating another change!");
-  if (Parent.isTracking())
-    Parent.InMiddleOfCreatingChange = true;
-#endif // NDEBUG
-}
-
-#ifndef NDEBUG
-unsigned IRChangeBase::getIdx() const {
-  auto It =
-      find_if(Parent.Changes, [this](auto &Ptr) { return Ptr.get() == this; });
-  return It - Parent.Changes.begin();
-}
-
 void UseSet::dump() const {
   dump(dbgs());
   dbgs() << "\n";
@@ -42,24 +27,23 @@ void UseSwap::dump() const {
 }
 #endif // NDEBUG
 
-PHISetIncoming::PHISetIncoming(PHINode &PHI, unsigned Idx, What What,
-                               Tracker &Tracker)
-    : IRChangeBase(Tracker), PHI(PHI), Idx(Idx) {
+PHISetIncoming::PHISetIncoming(PHINode *PHI, unsigned Idx, What What)
+    : PHI(PHI), Idx(Idx) {
   switch (What) {
   case What::Value:
-    OrigValueOrBB = PHI.getIncomingValue(Idx);
+    OrigValueOrBB = PHI->getIncomingValue(Idx);
     break;
   case What::Block:
-    OrigValueOrBB = PHI.getIncomingBlock(Idx);
+    OrigValueOrBB = PHI->getIncomingBlock(Idx);
     break;
   }
 }
 
-void PHISetIncoming::revert() {
+void PHISetIncoming::revert(Tracker &Tracker) {
   if (auto *V = OrigValueOrBB.dyn_cast<Value *>())
-    PHI.setIncomingValue(Idx, V);
+    PHI->setIncomingValue(Idx, V);
   else
-    PHI.setIncomingBlock(Idx, OrigValueOrBB.get<BasicBlock *>());
+    PHI->setIncomingBlock(Idx, OrigValueOrBB.get<BasicBlock *>());
 }
 
 #ifndef NDEBUG
@@ -69,33 +53,33 @@ void PHISetIncoming::dump() const {
 }
 #endif // NDEBUG
 
-PHIRemoveIncoming::PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx,
-                                     Tracker &Tracker)
-    : IRChangeBase(Tracker), PHI(PHI), RemovedIdx(RemovedIdx) {
-  RemovedV = PHI.getIncomingValue(RemovedIdx);
-  RemovedBB = PHI.getIncomingBlock(RemovedIdx);
+PHIRemoveIncoming::PHIRemoveIncoming(PHINode *PHI, unsigned RemovedIdx)
+    : PHI(PHI), RemovedIdx(RemovedIdx) {
+  RemovedV = PHI->getIncomingValue(RemovedIdx);
+  RemovedBB = PHI->getIncomingBlock(RemovedIdx);
 }
 
-void PHIRemoveIncoming::revert() {
+void PHIRemoveIncoming::revert(Tracker &Tracker) {
   // Special case: if the PHI is now empty, as we don't need to care about the
   // order of the incoming values.
-  unsigned NumIncoming = PHI.getNumIncomingValues();
+  unsigned NumIncoming = PHI->getNumIncomingValues();
   if (NumIncoming == 0) {
-    PHI.addIncoming(RemovedV, RemovedBB);
+    PHI->addIncoming(RemovedV, RemovedBB);
     return;
   }
   // Shift all incoming values by one starting from the end until `Idx`.
   // Start by adding a copy of the last incoming values.
   unsigned LastIdx = NumIncoming - 1;
-  PHI.addIncoming(PHI.getIncomingValue(LastIdx), PHI.getIncomingBlock(LastIdx));
+  PHI->addIncoming(PHI->getIncomingValue(LastIdx),
+                   PHI->getIncomingBlock(LastIdx));
   for (unsigned Idx = LastIdx; Idx > RemovedIdx; --Idx) {
-    auto *PrevV = PHI.getIncomingValue(Idx - 1);
-    auto *PrevBB = PHI.getIncomingBlock(Idx - 1);
-    PHI.setIncomingValue(Idx, PrevV);
-    PHI.setIncomingBlock(Idx, PrevBB);
+    auto *PrevV = PHI->getIncomingValue(Idx - 1);
+    auto *PrevBB = PHI->getIncomingBlock(Idx - 1);
+    PHI->setIncomingValue(Idx, PrevV);
+    PHI->setIncomingBlock(Idx, PrevBB);
   }
-  PHI.setIncomingValue(RemovedIdx, RemovedV);
-  PHI.setIncomingBlock(RemovedIdx, RemovedBB);
+  PHI->setIncomingValue(RemovedIdx, RemovedV);
+  PHI->setIncomingBlock(RemovedIdx, RemovedBB);
 }
 
 #ifndef NDEBUG
@@ -105,10 +89,10 @@ void PHIRemoveIncoming::dump() const {
 }
 #endif // NDEBUG
 
-PHIAddIncoming::PHIAddIncoming(PHINode &PHI, Tracker &Tracker)
-    : IRChangeBase(Tracker), PHI(PHI), Idx(PHI.getNumIncomingValues()) {}
+PHIAddIncoming::PHIAddIncoming(PHINode *PHI)
+    : PHI(PHI), Idx(PHI->getNumIncomingValues()) {}
 
-void PHIAddIncoming::revert() { PHI.removeIncomingValue(Idx); }
+void PHIAddIncoming::revert(Tracker &Tracker) { PHI->removeIncomingValue(Idx); }
 
 #ifndef NDEBUG
 void PHIAddIncoming::dump() const {
@@ -121,9 +105,8 @@ Tracker::~Tracker() {
   assert(Changes.empty() && "You must accept or revert changes!");
 }
 
-EraseFromParent::EraseFromParent(std::unique_ptr<sandboxir::Value> &&ErasedIPtr,
-                                 Tracker &Tracker)
-    : IRChangeBase(Tracker), ErasedIPtr(std::move(ErasedIPtr)) {
+EraseFromParent::EraseFromParent(std::unique_ptr<sandboxir::Value> &&ErasedIPtr)
+    : ErasedIPtr(std::move(ErasedIPtr)) {
   auto *I = cast<Instruction>(this->ErasedIPtr.get());
   auto LLVMInstrs = I->getLLVMInstrs();
   // Iterate in reverse program order.
@@ -151,7 +134,7 @@ void EraseFromParent::accept() {
     IData.LLVMI->deleteValue();
 }
 
-void EraseFromParent::revert() {
+void EraseFromParent::revert(Tracker &Tracker) {
   // Place the bottom-most instruction first.
   auto [Operands, BotLLVMI] = InstrData[0];
   if (auto *NextLLVMI = NextLLVMIOrBB.dyn_cast<llvm::Instruction *>()) {
@@ -170,7 +153,7 @@ void EraseFromParent::revert() {
       LLVMI->setOperand(OpNum, Op);
     BotLLVMI = LLVMI;
   }
-  Parent.getContext().registerValue(std::move(ErasedIPtr));
+  Tracker.getContext().registerValue(std::move(ErasedIPtr));
 }
 
 #ifndef NDEBUG
@@ -180,15 +163,14 @@ void EraseFromParent::dump() const {
 }
 #endif // NDEBUG
 
-RemoveFromParent::RemoveFromParent(Instruction *RemovedI, Tracker &Tracker)
-    : IRChangeBase(Tracker), RemovedI(RemovedI) {
+RemoveFromParent::RemoveFromParent(Instruction *RemovedI) : RemovedI(RemovedI) {
   if (auto *NextI = RemovedI->getNextNode())
     NextInstrOrBB = NextI;
   else
     NextInstrOrBB = RemovedI->getParent();
 }
 
-void RemoveFromParent::revert() {
+void RemoveFromParent::revert(Tracker &Tracker) {
   if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
     RemovedI->insertBefore(NextI);
   } else {
@@ -204,28 +186,12 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
-CallBrInstSetDefaultDest::CallBrInstSetDefaultDest(CallBrInst *CallBr,
-                                                   Tracker &Tracker)
-    : IRChangeBase(Tracker), CallBr(CallBr) {
-  OrigDefaultDest = CallBr->getDefaultDest();
-}
-void CallBrInstSetDefaultDest::revert() {
-  CallBr->setDefaultDest(OrigDefaultDest);
-}
-#ifndef NDEBUG
-void CallBrInstSetDefaultDest::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif
-
 CallBrInstSetIndirectDest::CallBrInstSetIndirectDest(CallBrInst *CallBr,
-                                                     unsigned Idx,
-                                                     Tracker &Tracker)
-    : IRChangeBase(Tracker), CallBr(CallBr), Idx(Idx) {
+                                                     unsigned Idx)
+    : CallBr(CallBr), Idx(Idx) {
   OrigIndirectDest = CallBr->getIndirectDest(Idx);
 }
-void CallBrInstSetIndirectDest::revert() {
+void CallBrInstSetIndirectDest::revert(Tracker &Tracker) {
   CallBr->setIndirectDest(Idx, OrigIndirectDest);
 }
 #ifndef NDEBUG
@@ -235,44 +201,14 @@ void CallBrInstSetIndirectDest::dump() const {
 }
 #endif
 
-SetVolatile::SetVolatile(Instruction *I, Tracker &Tracker)
-    : IRChangeBase(Tracker) {
-  if (auto *Load = dyn_cast<LoadInst>(I)) {
-    WasVolatile = Load->isVolatile();
-    StoreOrLoad = Load;
-  } else if (auto *Store = dyn_cast<StoreInst>(I)) {
-    WasVolatile = Store->isVolatile();
-    StoreOrLoad = Store;
-  } else {
-    llvm_unreachable("Expected LoadInst or StoreInst");
-  }
-}
-
-void SetVolatile::revert() {
-  if (auto *Load = StoreOrLoad.dyn_cast<LoadInst *>()) {
-    Load->setVolatile(WasVolatile);
-  } else if (auto *Store = StoreOrLoad.dyn_cast<StoreInst *>()) {
-    Store->setVolatile(WasVolatile);
-  } else {
-    llvm_unreachable("Expected LoadInst or StoreInst");
-  }
-}
-#ifndef NDEBUG
-void SetVolatile::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif
-
-MoveInstr::MoveInstr(Instruction *MovedI, Tracker &Tracker)
-    : IRChangeBase(Tracker), MovedI(MovedI) {
+MoveInstr::MoveInstr(Instruction *MovedI) : MovedI(MovedI) {
   if (auto *NextI = MovedI->getNextNode())
     NextInstrOrBB = NextI;
   else
     NextInstrOrBB = MovedI->getParent();
 }
 
-void MoveInstr::revert() {
+void MoveInstr::revert(Tracker &Tracker) {
   if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
     MovedI->moveBefore(NextI);
   } else {
@@ -288,10 +224,9 @@ void MoveInstr::dump() const {
 }
 #endif
 
-void InsertIntoBB::revert() { InsertedI->removeFromParent(); }
+void InsertIntoBB::revert(Tracker &Tracker) { InsertedI->removeFromParent(); }
 
-InsertIntoBB::InsertIntoBB(Instruction *InsertedI, Tracker &Tracker)
-    : IRChangeBase(Tracker), InsertedI(InsertedI) {}
+InsertIntoBB::InsertIntoBB(Instruction *InsertedI) : InsertedI(InsertedI) {}
 
 #ifndef NDEBUG
 void InsertIntoBB::dump() const {
@@ -300,14 +235,14 @@ void InsertIntoBB::dump() const {
 }
 #endif
 
-void Tracker::track(std::unique_ptr<IRChangeBase> &&Change) {
-  assert(State == TrackerState::Record && "The tracker should be tracking!");
-  Changes.push_back(std::move(Change));
+void CreateAndInsertInst::revert(Tracker &Tracker) { NewI->eraseFromParent(); }
 
 #ifndef NDEBUG
-  InMiddleOfCreatingChange = false;
-#endif
+void CreateAndInsertInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
 }
+#endif
 
 void Tracker::save() { State = TrackerState::Record; }
 
@@ -315,7 +250,7 @@ void Tracker::revert() {
   assert(State == TrackerState::Record && "Forgot to save()!");
   State = TrackerState::Disabled;
   for (auto &Change : reverse(Changes))
-    Change->revert();
+    Change->revert(*this);
   Changes.clear();
 }
 
@@ -329,7 +264,8 @@ void Tracker::accept() {
 
 #ifndef NDEBUG
 void Tracker::dump(raw_ostream &OS) const {
-  for (const auto &ChangePtr : Changes) {
+  for (auto [Idx, ChangePtr] : enumerate(Changes)) {
+    OS << Idx << ". ";
     ChangePtr->dump(OS);
     OS << "\n";
   }
