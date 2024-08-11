@@ -3833,6 +3833,21 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_poison: ID.Kind = ValID::t_Poison; break;
   case lltok::kw_zeroinitializer: ID.Kind = ValID::t_Zero; break;
   case lltok::kw_none: ID.Kind = ValID::t_None; break;
+  case lltok::kw_qnan:
+    ID.APFloatVal = APFloat::getQNaN(APFloat::IEEEdouble());
+    ID.Kind = ValID::t_APFloat;
+    break;
+  case lltok::kw_snan:
+    ID.APFloatVal = APFloat::getSNaN(APFloat::IEEEdouble());
+    ID.Kind = ValID::t_APFloat;
+    break;
+  case lltok::kw_pinf:
+  case lltok::kw_ninf:
+    ID.APFloatVal =
+        APFloat::getInf(APFloat::IEEEdouble(),
+                        /*Negative=*/Lex.getKind() == lltok::kw_ninf);
+    ID.Kind = ValID::t_APFloat;
+    break;
 
   case lltok::lbrace: {
     // ValID ::= '{' ConstVector '}'
