@@ -1,0 +1,20 @@
+add_object_library(
+  nl_langinfo
+  SRCS
+    nl_langinfo.cpp
+  HDRS
+    nl_langinfo.h
+  DEPENDS
+    libc.include.langinfo
+    libc.include.locale
+)
+
+add_object_library(
+  nl_langinfo_l
+  SRCS
+    nl_langinfo_l.cpp
+  HDRS
+    nl_langinfo_l.h
+  DEPENDS
+    libc.include.locale
+)

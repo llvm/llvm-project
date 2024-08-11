@@ -1,0 +1,19 @@
+header: langinfo.h
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: nl_langinfo
+    standards:
+      - POSIX
+    return_type: char *
+    arguments:
+        - type: nl_item
+  - name: nl_langinfo_l
+    standards:
+      - POSIX
+    return_type: char *
+    arguments:
+        - type: nl_item
+        - type: locale_t
