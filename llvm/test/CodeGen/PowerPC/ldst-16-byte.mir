@@ -73,8 +73,9 @@ body: |
   bb.0.entry:
   liveins: $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12
     ; CHECK-LABEL: name: spill_g8prc
-    ; CHECK: liveins: $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $x29, $x30, $x31, $x2
+    ; CHECK: liveins: $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x2, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $x29, $x30, $x31
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: STD killed $x2, -152, $x1 :: (store (s64) into %stack.4)
     ; CHECK-NEXT: STD killed $x14, -144, $x1 :: (store (s64) into %fixed-stack.17, align 16)
     ; CHECK-NEXT: STD killed $x15, -136, $x1 :: (store (s64) into %fixed-stack.16)
     ; CHECK-NEXT: STD killed $x16, -128, $x1 :: (store (s64) into %fixed-stack.15, align 16)
@@ -93,7 +94,6 @@ body: |
     ; CHECK-NEXT: STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.2)
     ; CHECK-NEXT: STD killed $x30, -16, $x1 :: (store (s64) into %fixed-stack.1, align 16)
     ; CHECK-NEXT: STD killed $x31, -8, $x1 :: (store (s64) into %fixed-stack.0)
-    ; CHECK-NEXT: STD killed $x2, -152, $x1 :: (store (s64) into %stack.4)
     ; CHECK-NEXT: $x7 = OR8 $x3, $x3
     ; CHECK-NEXT: renamable $g8p4 = LQARX $x5, $x6
     ; CHECK-NEXT: STD killed $x8, -176, $x1
@@ -143,7 +143,6 @@ body: |
     ; CHECK-NEXT: $x8 = LD -176, $x1
     ; CHECK-NEXT: $x9 = LD -168, $x1
     ; CHECK-NEXT: STQCX killed renamable $g8p4, $x5, $x6, implicit-def dead $cr0
-    ; CHECK-NEXT: $x2 = LD -152, $x1 :: (load (s64) from %stack.4)
     ; CHECK-NEXT: $x31 = LD -8, $x1 :: (load (s64) from %fixed-stack.0)
     ; CHECK-NEXT: $x30 = LD -16, $x1 :: (load (s64) from %fixed-stack.1, align 16)
     ; CHECK-NEXT: $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.2)
@@ -162,6 +161,7 @@ body: |
     ; CHECK-NEXT: $x16 = LD -128, $x1 :: (load (s64) from %fixed-stack.15, align 16)
     ; CHECK-NEXT: $x15 = LD -136, $x1 :: (load (s64) from %fixed-stack.16)
     ; CHECK-NEXT: $x14 = LD -144, $x1 :: (load (s64) from %fixed-stack.17, align 16)
+    ; CHECK-NEXT: $x2 = LD -152, $x1 :: (load (s64) from %stack.4)
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit undef $rm, implicit $x3
   %addr0:g8rc_nox0 = COPY $x3
   %addr1:g8rc = COPY $x4

@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
 
 @a = dso_local global i32 100, align 4
-define dso_local signext i32 @main() {
+define dso_local signext i32 @test_r31_r30_clobber() {
 entry:
   %retval = alloca i32, align 4
   %old = alloca i64, align 8

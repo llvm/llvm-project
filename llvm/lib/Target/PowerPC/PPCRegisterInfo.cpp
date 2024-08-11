@@ -240,7 +240,7 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.pairedVectorMemops()) {
       if (Subtarget.isAIXABI()) {
         if (!TM.getAIXExtendedAltivecABI())
-          return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
+          return SaveR2 ? CSR_AIX64_R2_SaveList : CSR_PPC64_SaveList;
         return SaveR2 ? CSR_AIX64_R2_VSRP_SaveList : CSR_AIX64_VSRP_SaveList;
       }
       return SaveR2 ? CSR_SVR464_R2_VSRP_SaveList : CSR_SVR464_VSRP_SaveList;
@@ -250,7 +250,9 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
                     : CSR_PPC64_Altivec_SaveList;
     }
-    return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
+    return SaveR2 ? (Subtarget.isAIXABI() ? CSR_AIX64_R2_SaveList
+                                          : CSR_PPC64_R2_SaveList)
+                  : CSR_PPC64_SaveList;
   }
   // 32-bit targets.
   if (Subtarget.isAIXABI()) {
