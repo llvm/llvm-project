@@ -102,9 +102,8 @@ void InterpFrame::popArgs() {
 }
 
 template <typename T>
-static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
-                  QualType Ty) {
-  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+static void print(llvm::raw_ostream &OS, const T &V, ASTContext &, QualType) {
+  OS << V;
 }
 
 template <>
