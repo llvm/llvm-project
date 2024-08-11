@@ -37,6 +37,11 @@ on:
         description: "Runner to use for the build"
         required: true
         type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
+
 
 permissions:
   contents: read # Default everything to read-only
