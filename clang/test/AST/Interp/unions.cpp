@@ -358,4 +358,27 @@ namespace CopyCtor {
   static_assert(y.b == 42, ""); // both-error {{constant expression}} \
                                 // both-note {{'b' of union with active member 'a'}}
 }
+
+namespace UnionInBase {
+  struct Base {
+    int y;
+  };
+  struct A : Base {
+    int x;
+    int arr[3];
+    union { int p, q; };
+  };
+  union B {
+    A a;
+    int b;
+  };
+  constexpr int read_wrong_member_indirect() { // both-error {{never produces a constant}}
+    B b = {.b = 1};
+    int *p = &b.a.y;
+    return *p; // both-note 2{{read of member 'a' of union with active member 'b'}}
+
+  }
+  static_assert(read_wrong_member_indirect() == 1); // both-error {{not an integral constant expression}} \
+                                                    // both-note {{in call to}}
+}
 #endif
