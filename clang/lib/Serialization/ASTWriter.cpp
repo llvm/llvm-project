@@ -7589,9 +7589,11 @@ void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  Record.push_back(C->varlist_size());
   VisitOMPClauseWithPreInit(C);
-  Record.AddStmt(C->getThreadLimit());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlist())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPPriorityClause(OMPPriorityClause *C) {

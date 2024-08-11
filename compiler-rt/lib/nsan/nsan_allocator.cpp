@@ -13,6 +13,7 @@
 #include "nsan_allocator.h"
 #include "interception/interception.h"
 #include "nsan.h"
+#include "nsan_flags.h"
 #include "nsan_platform.h"
 #include "nsan_thread.h"
 #include "sanitizer_common/sanitizer_allocator.h"
@@ -22,9 +23,10 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 
-DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
-
 using namespace __nsan;
+
+DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
+DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
 
 namespace {
 struct Metadata {
@@ -73,7 +75,6 @@ void __nsan::NsanAllocatorInit() {
 }
 
 static AllocatorCache *GetAllocatorCache(NsanThreadLocalMallocStorage *ms) {
-  CHECK(ms);
   CHECK_LE(sizeof(AllocatorCache), sizeof(ms->allocator_cache));
   return reinterpret_cast<AllocatorCache *>(ms->allocator_cache);
 }
@@ -137,7 +138,10 @@ void __nsan::NsanDeallocate(void *p) {
   DCHECK(p);
   RunFreeHooks(p);
   auto *meta = reinterpret_cast<Metadata *>(allocator.GetMetaData(p));
+  uptr size = meta->requested_size;
   meta->requested_size = 0;
+  if (flags().poison_in_free)
+    __nsan_set_value_unknown(p, size);
   if (NsanThread *t = GetCurrentThread()) {
     AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
     allocator.Deallocate(cache, p);
@@ -161,7 +165,9 @@ static void *NsanReallocate(void *ptr, uptr new_size, uptr alignment) {
   }
   void *new_p = NsanAllocate(new_size, alignment, false);
   if (new_p) {
-    __nsan_copy_values(new_p, ptr, Min(new_size, old_size));
+    uptr memcpy_size = Min(new_size, old_size);
+    REAL(memcpy)(new_p, ptr, memcpy_size);
+    __nsan_copy_values(new_p, ptr, memcpy_size);
     NsanDeallocate(ptr);
   }
   return new_p;
@@ -184,7 +190,7 @@ static const void *AllocationBegin(const void *p) {
   void *beg = allocator.GetBlockBegin(p);
   if (!beg)
     return nullptr;
-  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
+  auto *b = reinterpret_cast<Metadata *>(allocator.GetMetaData(beg));
   if (!b)
     return nullptr;
   if (b->requested_size == 0)
@@ -193,18 +199,16 @@ static const void *AllocationBegin(const void *p) {
   return beg;
 }
 
+static uptr AllocationSizeFast(const void *p) {
+  return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
+}
+
 static uptr AllocationSize(const void *p) {
   if (!p)
     return 0;
-  const void *beg = allocator.GetBlockBegin(p);
-  if (beg != p)
+  if (allocator.GetBlockBegin(p) != p)
     return 0;
-  Metadata *b = (Metadata *)allocator.GetMetaData(p);
-  return b->requested_size;
-}
-
-static uptr AllocationSizeFast(const void *p) {
-  return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
+  return AllocationSizeFast(p);
 }
 
 void *__nsan::nsan_malloc(uptr size) {
@@ -291,7 +295,7 @@ int __nsan::nsan_posix_memalign(void **memptr, uptr alignment, uptr size) {
   if (UNLIKELY(!ptr))
     // OOM error is already taken care of by NsanAllocate.
     return errno_ENOMEM;
-  CHECK(IsAligned((uptr)ptr, alignment));
+  DCHECK(IsAligned((uptr)ptr, alignment));
   *memptr = ptr;
   return 0;
 }

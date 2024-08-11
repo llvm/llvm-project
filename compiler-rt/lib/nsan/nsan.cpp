@@ -807,6 +807,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   if (nsan_initialized)
     return;
   nsan_init_is_running = true;
+  SanitizerToolName = "NumericalStabilitySanitizer";
 
   InitializeFlags();
   InitializeSuppressions();
