@@ -503,6 +503,12 @@ void GlobalVariable::setInitializer(Constant *InitVal) {
   }
 }
 
+void GlobalVariable::replaceInitializer(Constant *InitVal) {
+  assert(InitVal && "Can't compute type of null initializer");
+  ValueType = InitVal->getType();
+  setInitializer(InitVal);
+}
+
 /// Copy all additional attributes (those not needed to create a GlobalVariable)
 /// from the GlobalVariable Src to this one.
 void GlobalVariable::copyAttributesFrom(const GlobalVariable *Src) {

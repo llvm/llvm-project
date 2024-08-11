@@ -27,10 +27,10 @@ int main(void) {
   }
 }
 // TRACE: Display kernel launch trace
-// TRACE: Kernel '__omp_offloading_{{.*}}_main_l24'
+// TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l24)
 // TRACE:     launchKernel
 // NDEBG:     main
 // DEBUG:     main {{.*}}kernel_crash_single.c:24
 //
 // CHECK: Display only launched kernel:
-// CHECK: Kernel '__omp_offloading_{{.*}}_main_l24'
+// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l24)

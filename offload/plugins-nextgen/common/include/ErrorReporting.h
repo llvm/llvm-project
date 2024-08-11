@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -237,8 +238,11 @@ public:
     }
 
     auto KTI = KTIR.getKernelTraceInfo(Idx);
-    if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo)))
-      reportError("Kernel '%s'", KTI.Kernel->getName());
+    if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo))) {
+      auto PrettyKernelName =
+          llvm::omp::prettifyFunctionName(KTI.Kernel->getName());
+      reportError("Kernel '%s'", PrettyKernelName.c_str());
+    }
     reportError("execution interrupted by hardware trap instruction");
     if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo))) {
       if (!KTI.LaunchTrace.empty())
@@ -284,10 +288,13 @@ public:
 
     for (uint32_t Idx = 0, I = 0; I < NumKTIs; ++Idx) {
       auto KTI = KTIR.getKernelTraceInfo(Idx);
+      auto PrettyKernelName =
+          llvm::omp::prettifyFunctionName(KTI.Kernel->getName());
       if (NumKTIs == 1)
-        print(BoldLightPurple, "Kernel '%s'\n", KTI.Kernel->getName());
+        print(BoldLightPurple, "Kernel '%s'\n", PrettyKernelName.c_str());
       else
-        print(BoldLightPurple, "Kernel %d: '%s'\n", I, KTI.Kernel->getName());
+        print(BoldLightPurple, "Kernel %d: '%s'\n", I,
+              PrettyKernelName.c_str());
       reportStackTrace(KTI.LaunchTrace);
       ++I;
     }

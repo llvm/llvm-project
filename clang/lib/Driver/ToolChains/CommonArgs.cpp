@@ -1244,6 +1244,25 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   return true;
 }
 
+void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
+                                        const JobAction &JA,
+                                        const llvm::opt::ArgList &Args,
+                                        llvm::opt::ArgStringList &CmdArgs) {
+  if (!JA.isHostOffloading(Action::OFK_OpenMP))
+    return;
+
+  // For all the host OpenMP offloading compile jobs we need to pass the targets
+  // information using -fopenmp-targets= option.
+  constexpr llvm::StringLiteral Targets("-fopenmp-targets=");
+
+  SmallVector<std::string> Triples;
+  auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+  std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
+                 [](auto TC) { return TC.second->getTripleString(); });
+  CmdArgs.push_back(
+      Args.MakeArgString(Twine(Targets) + llvm::join(Triples, ",")));
+}
+
 /// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {

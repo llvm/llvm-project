@@ -9,7 +9,7 @@
 !CHECK:           omp.wsloop {
 !CHECK:           }
 !CHECK:         }
-!CHECK:         omp.parallel {
+!CHECK:         omp.parallel {{.*}} {
 !CHECK-NOT:       hlfir.declare {{.*}} {uniq_name = "_QFtest_parallel_assocEb"}
 !CHECK:           omp.wsloop {
 !CHECK:           }
