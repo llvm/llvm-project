@@ -20,7 +20,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-extern "C" int main(int argc, char **argv, char **envp);
+int main(int argc, char **argv, char **envp);
 
 extern "C" {
 // These arrays are present in the .init_array and .fini_array sections.
