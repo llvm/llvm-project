@@ -69,12 +69,13 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   Constant *Const = getConstantOrNull(V);
   if (!Const)
     return false;
-  // Replacing `musttail` instructions with constant breaks `musttail` invariant
-  // unless the call itself can be removed.
-  // Calls with "clang.arc.attachedcall" implicitly use the return value and
-  // those uses cannot be updated with a constant.
+
+  // Replacing call ret values with constant may break some invariants, unless
+  // the call itself can be removed. Calls with "clang.arc.attachedcall"
+  // implicitly use the return value and those uses cannot be updated with a
+  // constant.
   CallBase *CB = dyn_cast<CallBase>(V);
-  if (CB && ((CB->isMustTailCall() &&
+  if (CB && (((CB->isMustTailCall() || !CB->willReturn()) &&
               !canRemoveInstruction(CB)) ||
              CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall))) {
     Function *F = CB->getCalledFunction();
