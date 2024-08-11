@@ -43,7 +43,7 @@ TestOptions parseOptions(int argc, char **argv) {
 
 } // anonymous namespace
 
-int main(int argc, char **argv, char **envp) {
+extern "C" int main(int argc, char **argv, char **envp) {
   LIBC_NAMESPACE::testing::argc = argc;
   LIBC_NAMESPACE::testing::argv = argv;
   LIBC_NAMESPACE::testing::envp = envp;
