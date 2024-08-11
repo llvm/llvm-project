@@ -943,7 +943,7 @@ void MLEvictAdvisor::extractFeatures(
 #undef SET
 }
 
-void extractInstructionFeatures(
+void llvm::extractInstructionFeatures(
     SmallVectorImpl<LRStartEndInfo> &LRPosInfo, MLModelRunner *RegallocRunner,
     function_ref<int(SlotIndex)> GetOpcode,
     function_ref<float(SlotIndex)> GetMBBFreq,
@@ -1060,13 +1060,12 @@ void extractInstructionFeatures(
   }
 }
 
-void extractMBBFrequency(const SlotIndex CurrentIndex,
-                         const size_t CurrentInstructionIndex,
-                         std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
-                         function_ref<float(SlotIndex)> GetMBBFreq,
-                         MachineBasicBlock *CurrentMBBReference,
-                         MLModelRunner *RegallocRunner, const int MBBFreqIndex,
-                         const int MBBMappingIndex) {
+void llvm::extractMBBFrequency(
+    const SlotIndex CurrentIndex, const size_t CurrentInstructionIndex,
+    std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
+    function_ref<float(SlotIndex)> GetMBBFreq,
+    MachineBasicBlock *CurrentMBBReference, MLModelRunner *RegallocRunner,
+    const int MBBFreqIndex, const int MBBMappingIndex) {
   size_t CurrentMBBIndex = VisitedMBBs[CurrentMBBReference];
   float CurrentMBBFreq = GetMBBFreq(CurrentIndex);
   if (CurrentMBBIndex < ModelMaxSupportedMBBCount) {
