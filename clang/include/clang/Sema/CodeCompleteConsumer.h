@@ -1061,7 +1061,7 @@ public:
       /// The lambda operator() candidate paired with the
       /// lambda variable, available when Kind == CK_Lambda.
       struct {
-        FunctionDecl *OperatorParens;
+        FunctionDecl *CallOperator;
         VarDecl *Var;
       } Lambda;
 
@@ -1092,9 +1092,9 @@ public:
       assert(Function != nullptr);
     }
 
-    OverloadCandidate(FunctionDecl *LambdaOperatorParens, VarDecl *LambdaVar)
-        : Kind(CK_Lambda), Lambda{LambdaOperatorParens, LambdaVar} {
-      assert(Lambda.OperatorParens != nullptr);
+    OverloadCandidate(FunctionDecl *LambdaCallOperator, VarDecl *LambdaVar)
+        : Kind(CK_Lambda), Lambda{LambdaCallOperator, LambdaVar} {
+      assert(Lambda.CallOperator != nullptr);
       assert(Lambda.Var != nullptr);
     }
 

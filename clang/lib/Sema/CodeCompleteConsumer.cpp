@@ -505,7 +505,7 @@ FunctionDecl *CodeCompleteConsumer::OverloadCandidate::getFunction() const {
   else if (getKind() == CK_FunctionTemplate)
     return FunctionTemplate->getTemplatedDecl();
   else if (getKind() == CK_Lambda) {
-    return Lambda.OperatorParens;
+    return Lambda.CallOperator;
   } else
     return nullptr;
 }
@@ -520,7 +520,7 @@ CodeCompleteConsumer::OverloadCandidate::getFunctionType() const {
   case CK_Function:
     return Function->getType()->getAs<FunctionType>();
   case CK_Lambda:
-    return Lambda.OperatorParens->getType()->getAs<FunctionType>();
+    return Lambda.CallOperator->getType()->getAs<FunctionType>();
 
   case CK_FunctionTemplate:
     return FunctionTemplate->getTemplatedDecl()
