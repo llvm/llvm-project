@@ -19,7 +19,7 @@ using namespace __rtsan;
 using namespace __sanitizer;
 
 static StaticSpinMutex rtsan_inited_mutex;
-static atomic_uint8_t rtsan_initialized{0};
+static atomic_uint8_t rtsan_initialized = {0};
 
 static void SetInitialized() {
   atomic_store(&rtsan_initialized, 1, memory_order_release);
