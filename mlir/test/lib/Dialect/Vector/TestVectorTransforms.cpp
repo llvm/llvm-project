@@ -385,16 +385,17 @@ struct TestSinkVectorBroadcast
     registry.insert<memref::MemRefDialect, affine::AffineDialect>();
   }
 
-  StringRef getArgument() const final { return "test-sink-vector-broadcast"; }
+  StringRef getArgument() const final { return "test-vector-reorder-patterns"; }
 
   StringRef getDescription() const final {
     return "Test lowering patterns that eliminate redundant brodacast "
-           "operations.";
+           "and transpose operations.";
   }
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateSinkVectorBroadcastPatterns(patterns);
+    populateReoderVectorTransposePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
