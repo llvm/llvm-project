@@ -43,10 +43,10 @@ StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
                                              ASTContext &Context) {
   switch (CastExprKind) {
   case CK_IntegralToBoolean:
-    return Type->isUnsignedIntegerType() ? "0u" : "0";
+    return Type->isUnsignedIntegerType() ? "0U" : "0";
 
   case CK_FloatingToBoolean:
-    return Context.hasSameType(Type, Context.FloatTy) ? "0.0f" : "0.0";
+    return Context.hasSameType(Type, Context.FloatTy) ? "0.0F" : "0.0";
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
@@ -202,13 +202,13 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
 
   if (DestType->isFloatingType()) {
     if (Context.hasSameType(DestType, Context.FloatTy)) {
-      return BoolLiteral->getValue() ? "1.0f" : "0.0f";
+      return BoolLiteral->getValue() ? "1.0F" : "0.0F";
     }
     return BoolLiteral->getValue() ? "1.0" : "0.0";
   }
 
   if (DestType->isUnsignedIntegerType()) {
-    return BoolLiteral->getValue() ? "1u" : "0u";
+    return BoolLiteral->getValue() ? "1U" : "0U";
   }
   return BoolLiteral->getValue() ? "1" : "0";
 }
