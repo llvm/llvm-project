@@ -4606,10 +4606,6 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
         continue;
       }
 
-      // If profitable add it to ProfitableVF list.
-      if (isMoreProfitable(Candidate, ScalarCost))
-        ProfitableVFs.push_back(Candidate);
-
       if (isMoreProfitable(Candidate, ChosenFactor))
         ChosenFactor = Candidate;
     }
@@ -7200,7 +7196,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-ElementCount LoopVectorizationPlanner::getBestVF() const {
+ElementCount LoopVectorizationPlanner::getBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
@@ -7212,7 +7208,8 @@ ElementCount LoopVectorizationPlanner::getBestVF() const {
 
   // TODO: Compute scalar cost using VPlan-based cost model.
   InstructionCost ScalarCost = CM.expectedCost(ScalarVF);
-  VectorizationFactor BestFactor(ScalarVF, ScalarCost, ScalarCost);
+  VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
+  VectorizationFactor BestFactor = ScalarFactor;
 
   bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
   if (ForceVectorization) {
@@ -7238,6 +7235,10 @@ ElementCount LoopVectorizationPlanner::getBestVF() const {
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
       if (isMoreProfitable(CurrentFactor, BestFactor))
         BestFactor = CurrentFactor;
+
+      // If profitable add it to ProfitableVF list.
+      if (isMoreProfitable(CurrentFactor, ScalarFactor))
+        ProfitableVFs.push_back(CurrentFactor);
     }
   }
   return BestFactor.Width;

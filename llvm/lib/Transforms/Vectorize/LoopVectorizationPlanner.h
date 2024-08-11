@@ -365,8 +365,9 @@ public:
   /// Return the best VPlan for \p VF.
   VPlan &getBestPlanFor(ElementCount VF) const;
 
-  /// Return the most profitable vectorization factor.
-  ElementCount getBestVF() const;
+  /// Return the most profitable vectorization factor. Also collect all
+  /// profitable VFs in ProfitableVFs.
+  ElementCount getBestVF();
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
