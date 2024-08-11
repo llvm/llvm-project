@@ -1922,7 +1922,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
                                           AssumptionCache *AC) {
-  for (const auto &AssumeVH : AC->assumptions()) {
+  for (auto AssumeVH : AC->assumptions()) {
     auto *I = dyn_cast_or_null<CallInst>(AssumeVH);
     if (!I)
       continue;
