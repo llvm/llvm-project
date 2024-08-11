@@ -987,6 +987,13 @@ void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
 ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC), thunkLive(live) {}
 
+MachineTypes ImportFile::getMachineType() const {
+  uint16_t machine =
+      reinterpret_cast<const coff_import_header *>(mb.getBufferStart())
+          ->Machine;
+  return MachineTypes(machine);
+}
+
 void ImportFile::parse() {
   const auto *hdr =
       reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
