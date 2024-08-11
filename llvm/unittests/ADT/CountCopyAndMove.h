@@ -12,7 +12,8 @@
 namespace llvm {
 
 struct CountCopyAndMove {
-  static int Constructions;
+  static int DefaultConstructions;
+  static int ValueConstructions;
   static int CopyConstructions;
   static int CopyAssignments;
   static int MoveConstructions;
@@ -20,8 +21,8 @@ struct CountCopyAndMove {
   static int Destructions;
   int val;
 
-  CountCopyAndMove() { ++Constructions; }
-  explicit CountCopyAndMove(int val) : val(val) { ++Constructions; }
+  CountCopyAndMove() { ++DefaultConstructions; }
+  explicit CountCopyAndMove(int val) : val(val) { ++ValueConstructions; }
   CountCopyAndMove(const CountCopyAndMove &other) : val(other.val) {
     ++CopyConstructions;
   }
@@ -41,7 +42,8 @@ struct CountCopyAndMove {
   ~CountCopyAndMove() { ++Destructions; }
 
   static void ResetCounts() {
-    Constructions = 0;
+    DefaultConstructions = 0;
+    ValueConstructions = 0;
     CopyConstructions = 0;
     CopyAssignments = 0;
     MoveConstructions = 0;
@@ -50,7 +52,7 @@ struct CountCopyAndMove {
   }
 
   static int TotalConstructions() {
-    return Constructions + MoveConstructions + CopyConstructions;
+    return DefaultConstructions + ValueConstructions + MoveConstructions + CopyConstructions;
   }
 
   static int TotalCopies() { return CopyConstructions + CopyAssignments; }
