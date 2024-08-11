@@ -169,7 +169,6 @@ void __msan::LockAllocator() { allocator.ForceLock(); }
 void __msan::UnlockAllocator() { allocator.ForceUnlock(); }
 
 AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
-  CHECK(ms);
   CHECK_LE(sizeof(AllocatorCache), sizeof(ms->allocator_cache));
   return reinterpret_cast<AllocatorCache *>(ms->allocator_cache);
 }
@@ -237,7 +236,7 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
 }
 
 void __msan::MsanDeallocate(BufferedStackTrace *stack, void *p) {
-  CHECK(p);
+  DCHECK(p);
   UnpoisonParam(1);
   RunFreeHooks(p);
 
