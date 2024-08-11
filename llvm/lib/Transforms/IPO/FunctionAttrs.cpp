@@ -1855,7 +1855,6 @@ static bool functionWillReturn(const Function &F) {
   });
 }
 
-
 // Set the willreturn function attribute if possible.
 static void addWillReturn(const SCCNodeSet &SCCNodes,
                           SmallSet<Function *, 8> &Changed) {
@@ -1868,8 +1867,6 @@ static void addWillReturn(const SCCNodeSet &SCCNodes,
     Changed.insert(F);
   }
 }
-
-
 
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
