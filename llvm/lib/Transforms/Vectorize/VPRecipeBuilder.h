@@ -134,8 +134,7 @@ public:
   /// Returns the *entry* mask for the block \p BB.
   VPValue *getBlockInMask(BasicBlock *BB) const;
 
-  /// Create masks for all cases with destination different than the default
-  /// destination, and a mask for the default destination.
+  /// Create an edge mask for every destination of cases and/or default.
   void createSwitchEdgeMasks(SwitchInst *SI);
 
   /// A helper function that computes the predicate of the edge between SRC

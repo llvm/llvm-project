@@ -146,6 +146,159 @@ exit:
   ret void
 }
 
+define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr %end) {
+; COST-LABEL: define void @switch_default_to_latch_common_dest_using_branches(
+; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
+; COST-NEXT:  [[ENTRY:.*]]:
+; COST-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; COST-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; COST-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
+; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
+; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
+; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COST:       [[VECTOR_PH]]:
+; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; COST-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; COST-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COST:       [[VECTOR_BODY]]:
+; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; COST-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
+; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; COST-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
+; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP6]], align 1
+; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 -12, i64 -12, i64 -12, i64 -12>
+; COST-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 13, i64 13, i64 13, i64 13>
+; COST-NEXT:    [[TMP9:%.*]] = xor <4 x i1> [[TMP7]], <i1 true, i1 true, i1 true, i1 true>
+; COST-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
+; COST-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP10]], [[TMP7]]
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 42, i64 42, i64 42, i64 42>, ptr [[TMP6]], i32 1, <4 x i1> [[TMP11]])
+; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COST-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COST-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; COST:       [[MIDDLE_BLOCK]]:
+; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; COST-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; COST:       [[SCALAR_PH]]:
+; COST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; COST-NEXT:    br label %[[LOOP_HEADER:.*]]
+; COST:       [[LOOP_HEADER]]:
+; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COST-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
+; COST-NEXT:    [[EQ_1:%.*]] = icmp eq i64 [[L]], -12
+; COST-NEXT:    [[EQ_2:%.*]] = icmp eq i64 [[L]], 13
+; COST-NEXT:    br i1 [[EQ_1]], label %[[IF_THEN:.*]], label %[[ELSE:.*]]
+; COST:       [[IF_THEN]]:
+; COST-NEXT:    store i64 42, ptr [[PTR_IV]], align 1
+; COST-NEXT:    br label %[[LOOP_LATCH]]
+; COST:       [[ELSE]]:
+; COST-NEXT:    br i1 [[EQ_2]], label %[[IF_THEN]], label %[[LOOP_LATCH]]
+; COST:       [[LOOP_LATCH]]:
+; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
+; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; COST:       [[EXIT]]:
+; COST-NEXT:    ret void
+;
+; FORCED-LABEL: define void @switch_default_to_latch_common_dest_using_branches(
+; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
+; FORCED-NEXT:  [[ENTRY:.*]]:
+; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
+; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
+; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
+; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; FORCED:       [[VECTOR_PH]]:
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
+; FORCED:       [[VECTOR_BODY]]:
+; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
+; FORCED-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 32
+; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; FORCED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
+; FORCED-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP7]], align 1
+; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
+; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 -12, i64 -12, i64 -12, i64 -12>
+; FORCED-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD4]], <i64 -12, i64 -12, i64 -12, i64 -12>
+; FORCED-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 13, i64 13, i64 13, i64 13>
+; FORCED-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD4]], <i64 13, i64 13, i64 13, i64 13>
+; FORCED-NEXT:    [[TMP13:%.*]] = xor <4 x i1> [[TMP9]], <i1 true, i1 true, i1 true, i1 true>
+; FORCED-NEXT:    [[TMP14:%.*]] = xor <4 x i1> [[TMP10]], <i1 true, i1 true, i1 true, i1 true>
+; FORCED-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP13]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP14]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP17:%.*]] = or <4 x i1> [[TMP15]], [[TMP9]]
+; FORCED-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP16]], [[TMP10]]
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 42, i64 42, i64 42, i64 42>, ptr [[TMP7]], i32 1, <4 x i1> [[TMP17]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 42, i64 42, i64 42, i64 42>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP18]])
+; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; FORCED:       [[MIDDLE_BLOCK]]:
+; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; FORCED:       [[SCALAR_PH]]:
+; FORCED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; FORCED-NEXT:    br label %[[LOOP_HEADER:.*]]
+; FORCED:       [[LOOP_HEADER]]:
+; FORCED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; FORCED-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
+; FORCED-NEXT:    [[EQ_1:%.*]] = icmp eq i64 [[L]], -12
+; FORCED-NEXT:    [[EQ_2:%.*]] = icmp eq i64 [[L]], 13
+; FORCED-NEXT:    br i1 [[EQ_1]], label %[[IF_THEN:.*]], label %[[ELSE:.*]]
+; FORCED:       [[IF_THEN]]:
+; FORCED-NEXT:    store i64 42, ptr [[PTR_IV]], align 1
+; FORCED-NEXT:    br label %[[LOOP_LATCH]]
+; FORCED:       [[ELSE]]:
+; FORCED-NEXT:    br i1 [[EQ_2]], label %[[IF_THEN]], label %[[LOOP_LATCH]]
+; FORCED:       [[LOOP_LATCH]]:
+; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
+; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; FORCED:       [[EXIT]]:
+; FORCED-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
+  %l = load i64, ptr %ptr.iv, align 1
+  %eq.1 = icmp eq i64 %l, -12
+  %eq.2 = icmp eq i64 %l, 13
+  br i1 %eq.1, label %if.then, label %else
+
+if.then:
+  store i64 42, ptr %ptr.iv, align 1
+  br label %loop.latch
+
+else:
+  br i1 %eq.2, label %if.then, label %loop.latch
+
+loop.latch:
+  %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
+  %ec = icmp eq ptr %ptr.iv.next, %end
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; TODO: Instead of using masked stores, the store can be sunk, executed
+; unconditionally and fed by selects.
 define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; COST-LABEL: define void @switch_all_dests_distinct(
 ; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
@@ -228,7 +381,7 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 2, i64 2, i64 2, i64 2>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP20]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -258,7 +411,7 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -298,6 +451,213 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %end) {
+; COST-LABEL: define void @switch_all_dests_distinct_variant_using_branches(
+; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
+; COST-NEXT:  [[ENTRY:.*]]:
+; COST-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; COST-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; COST-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
+; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
+; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
+; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COST:       [[VECTOR_PH]]:
+; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; COST-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; COST-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COST:       [[VECTOR_BODY]]:
+; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; COST-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
+; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; COST-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
+; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP6]], align 1
+; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 -12, i64 -12, i64 -12, i64 -12>
+; COST-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 13, i64 13, i64 13, i64 13>
+; COST-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], zeroinitializer
+; COST-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP7]], <i1 true, i1 true, i1 true, i1 true>
+; COST-NEXT:    [[TMP11:%.*]] = xor <4 x i1> [[TMP8]], <i1 true, i1 true, i1 true, i1 true>
+; COST-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
+; COST-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP12]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 1, i64 1, i64 1, i64 1>, ptr [[TMP6]], i32 1, <4 x i1> [[TMP13]])
+; COST-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP6]], i32 1, <4 x i1> [[TMP14]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 42, i64 42, i64 42, i64 42>, ptr [[TMP6]], i32 1, <4 x i1> [[TMP7]])
+; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COST-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COST-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; COST:       [[MIDDLE_BLOCK]]:
+; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; COST-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; COST:       [[SCALAR_PH]]:
+; COST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; COST-NEXT:    br label %[[LOOP_HEADER:.*]]
+; COST:       [[LOOP_HEADER]]:
+; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COST-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
+; COST-NEXT:    [[EQ_0:%.*]] = icmp eq i64 [[L]], -12
+; COST-NEXT:    [[EQ_1:%.*]] = icmp eq i64 [[L]], 13
+; COST-NEXT:    [[EQ_2:%.*]] = icmp eq i64 [[L]], 0
+; COST-NEXT:    br i1 [[EQ_0]], label %[[IF_THEN_1:.*]], label %[[ELSE_1:.*]]
+; COST:       [[ELSE_1]]:
+; COST-NEXT:    br i1 [[EQ_1]], label %[[IF_THEN_2:.*]], label %[[ELSE_2:.*]]
+; COST:       [[ELSE_2]]:
+; COST-NEXT:    br i1 [[EQ_2]], label %[[IF_THEN_3:.*]], label %[[LOOP_LATCH]]
+; COST:       [[IF_THEN_1]]:
+; COST-NEXT:    store i64 42, ptr [[PTR_IV]], align 1
+; COST-NEXT:    br label %[[LOOP_LATCH]]
+; COST:       [[IF_THEN_2]]:
+; COST-NEXT:    store i64 0, ptr [[PTR_IV]], align 1
+; COST-NEXT:    br label %[[LOOP_LATCH]]
+; COST:       [[IF_THEN_3]]:
+; COST-NEXT:    store i64 1, ptr [[PTR_IV]], align 1
+; COST-NEXT:    br label %[[LOOP_LATCH]]
+; COST:       [[DEFAULT:.*:]]
+; COST-NEXT:    store i64 2, ptr poison, align 1
+; COST-NEXT:    unreachable
+; COST:       [[LOOP_LATCH]]:
+; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
+; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; COST:       [[EXIT]]:
+; COST-NEXT:    ret void
+;
+; FORCED-LABEL: define void @switch_all_dests_distinct_variant_using_branches(
+; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
+; FORCED-NEXT:  [[ENTRY:.*]]:
+; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
+; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
+; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
+; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; FORCED:       [[VECTOR_PH]]:
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; FORCED-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; FORCED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
+; FORCED:       [[VECTOR_BODY]]:
+; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; FORCED-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
+; FORCED-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 32
+; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; FORCED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
+; FORCED-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP7]], align 1
+; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
+; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 -12, i64 -12, i64 -12, i64 -12>
+; FORCED-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD4]], <i64 -12, i64 -12, i64 -12, i64 -12>
+; FORCED-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 13, i64 13, i64 13, i64 13>
+; FORCED-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD4]], <i64 13, i64 13, i64 13, i64 13>
+; FORCED-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], zeroinitializer
+; FORCED-NEXT:    [[TMP14:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD4]], zeroinitializer
+; FORCED-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[TMP9]], <i1 true, i1 true, i1 true, i1 true>
+; FORCED-NEXT:    [[TMP16:%.*]] = xor <4 x i1> [[TMP10]], <i1 true, i1 true, i1 true, i1 true>
+; FORCED-NEXT:    [[TMP17:%.*]] = xor <4 x i1> [[TMP11]], <i1 true, i1 true, i1 true, i1 true>
+; FORCED-NEXT:    [[TMP18:%.*]] = xor <4 x i1> [[TMP12]], <i1 true, i1 true, i1 true, i1 true>
+; FORCED-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP20]], <4 x i1> [[TMP14]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 1, i64 1, i64 1, i64 1>, ptr [[TMP7]], i32 1, <4 x i1> [[TMP21]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 1, i64 1, i64 1, i64 1>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP22]])
+; FORCED-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP7]], i32 1, <4 x i1> [[TMP23]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP8]], i32 1, <4 x i1> [[TMP24]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 42, i64 42, i64 42, i64 42>, ptr [[TMP7]], i32 1, <4 x i1> [[TMP9]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 42, i64 42, i64 42, i64 42>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP10]])
+; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; FORCED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; FORCED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; FORCED:       [[MIDDLE_BLOCK]]:
+; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; FORCED:       [[SCALAR_PH]]:
+; FORCED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; FORCED-NEXT:    br label %[[LOOP_HEADER:.*]]
+; FORCED:       [[LOOP_HEADER]]:
+; FORCED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; FORCED-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
+; FORCED-NEXT:    [[EQ_0:%.*]] = icmp eq i64 [[L]], -12
+; FORCED-NEXT:    [[EQ_1:%.*]] = icmp eq i64 [[L]], 13
+; FORCED-NEXT:    [[EQ_2:%.*]] = icmp eq i64 [[L]], 0
+; FORCED-NEXT:    br i1 [[EQ_0]], label %[[IF_THEN_1:.*]], label %[[ELSE_1:.*]]
+; FORCED:       [[ELSE_1]]:
+; FORCED-NEXT:    br i1 [[EQ_1]], label %[[IF_THEN_2:.*]], label %[[ELSE_2:.*]]
+; FORCED:       [[ELSE_2]]:
+; FORCED-NEXT:    br i1 [[EQ_2]], label %[[IF_THEN_3:.*]], label %[[LOOP_LATCH]]
+; FORCED:       [[IF_THEN_1]]:
+; FORCED-NEXT:    store i64 42, ptr [[PTR_IV]], align 1
+; FORCED-NEXT:    br label %[[LOOP_LATCH]]
+; FORCED:       [[IF_THEN_2]]:
+; FORCED-NEXT:    store i64 0, ptr [[PTR_IV]], align 1
+; FORCED-NEXT:    br label %[[LOOP_LATCH]]
+; FORCED:       [[IF_THEN_3]]:
+; FORCED-NEXT:    store i64 1, ptr [[PTR_IV]], align 1
+; FORCED-NEXT:    br label %[[LOOP_LATCH]]
+; FORCED:       [[DEFAULT:.*:]]
+; FORCED-NEXT:    store i64 2, ptr poison, align 1
+; FORCED-NEXT:    unreachable
+; FORCED:       [[LOOP_LATCH]]:
+; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
+; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; FORCED:       [[EXIT]]:
+; FORCED-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
+  %l = load i64, ptr %ptr.iv, align 1
+  %eq.0 = icmp eq i64 %l, -12
+  %eq.1 = icmp eq i64 %l, 13
+  %eq.2 = icmp eq i64 %l, 0
+  br i1 %eq.0, label %if.then.1, label %else.1
+
+else.1:
+  br i1 %eq.1, label %if.then.2, label %else.2
+
+else.2:
+  br i1 %eq.2, label %if.then.3, label %loop.latch
+
+if.then.1:
+  store i64 42, ptr %ptr.iv, align 1
+  br label %loop.latch
+
+if.then.2:
+  store i64 0, ptr %ptr.iv, align 1
+  br label %loop.latch
+
+if.then.3:
+  store i64 1, ptr %ptr.iv, align 1
+  br label %loop.latch
+
+default:
+  store i64 2, ptr %ptr.iv, align 1
+  br label %loop.latch
+
+loop.latch:
+  %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
+  %ec = icmp eq ptr %ptr.iv.next, %end
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 
 
 define void @switch_multiple_common_dests(ptr %start, ptr %end) {
@@ -393,7 +753,7 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 2, i64 2, i64 2, i64 2>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP40]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -422,7 +782,7 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -536,7 +896,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 2, i64 2, i64 2, i64 2>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP23]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -563,7 +923,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -688,7 +1048,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 2, i64 2, i64 2, i64 2>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP18]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -718,7 +1078,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP15:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -851,7 +1211,7 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 2, i64 2, i64 2, i64 2>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP37]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -881,7 +1241,7 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP17:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -1033,7 +1393,7 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> <i64 42, i64 42, i64 42, i64 42>, ptr [[TMP8]], i32 1, <4 x i1> [[TMP58]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP59:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; FORCED-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1060,7 +1420,7 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED:       [[LOOP_LATCH]]:
 ; FORCED-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; FORCED-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP15:![0-9]+]]
+; FORCED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP19:![0-9]+]]
 ; FORCED:       [[EXIT]]:
 ; FORCED-NEXT:    ret void
 ;
@@ -1100,6 +1460,10 @@ exit:
 ; COST: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; COST: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; COST: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; COST: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; COST: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; COST: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; COST: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.
 ; FORCED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; FORCED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -1117,4 +1481,8 @@ exit:
 ; FORCED: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
 ; FORCED: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
 ; FORCED: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
+; FORCED: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
+; FORCED: [[LOOP17]] = distinct !{[[LOOP17]], [[META2]], [[META1]]}
+; FORCED: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]]}
+; FORCED: [[LOOP19]] = distinct !{[[LOOP19]], [[META2]], [[META1]]}
 ;.

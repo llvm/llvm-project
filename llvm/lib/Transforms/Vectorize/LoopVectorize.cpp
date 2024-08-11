@@ -6462,7 +6462,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                Instruction::ICmp,
                ToVectorTy(Switch->getCondition()->getType(), VF),
                ToVectorTy(Type::getInt1Ty(I->getContext()), VF),
-               CmpInst::BAD_ICMP_PREDICATE, CostKind);
+               CmpInst::ICMP_EQ, CostKind);
   }
   case Instruction::PHI: {
     auto *Phi = cast<PHINode>(I);
@@ -7867,11 +7867,13 @@ void VPRecipeBuilder::createSwitchEdgeMasks(SwitchInst *SI) {
   BasicBlock *DefaultDst = SI->getDefaultDest();
   MapVector<BasicBlock *, SmallVector<VPValue *>> Dst2Compares;
   for (auto &C : SI->cases()) {
+    BasicBlock *Dst = C.getCaseSuccessor();
+    assert(!EdgeMaskCache.contains({Src, Dst}) && "Edge masks already created");
     // Cases whose destination is the same as default are redundant and can be
     // ignored - they will get there anyhow.
-    if (C.getCaseSuccessor() == DefaultDst)
+    if (Dst == DefaultDst)
       continue;
-    auto I = Dst2Compares.insert({C.getCaseSuccessor(), {}});
+    auto I = Dst2Compares.insert({Dst, {}});
     VPValue *V = getVPValueOrAddLiveIn(C.getCaseValue(), Plan);
     I.first->second.push_back(Builder.createICmp(CmpInst::ICMP_EQ, Cond, V));
   }
