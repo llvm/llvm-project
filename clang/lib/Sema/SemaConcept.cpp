@@ -847,7 +847,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
                                     bool ForOverloadResolution) {
   // Don't check constraints if the function is dependent. Also don't check if
   // this is a function template specialization, as the call to
-  // CheckinstantiatedFunctionTemplateConstraints after this will check it
+  // CheckInstantiatedFunctionTemplateConstraints after this will check it
   // better.
   if (FD->isDependentContext() ||
       FD->getTemplatedKind() ==

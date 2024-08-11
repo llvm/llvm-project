@@ -468,10 +468,11 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     const NamedDecl *ND, const DeclContext *DC, bool Final,
     std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
     const FunctionDecl *Pattern, bool ForConstraintInstantiation,
-    bool SkipForSpecialization) {
+    bool SkipForSpecialization, MultiLevelTemplateArgumentList *Merged) {
   assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
-  MultiLevelTemplateArgumentList Result;
+  MultiLevelTemplateArgumentList Ret;
+  MultiLevelTemplateArgumentList &Result = Merged ? *Merged : Ret;
 
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;

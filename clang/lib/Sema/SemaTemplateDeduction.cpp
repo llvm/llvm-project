@@ -3834,18 +3834,6 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       Result != TemplateDeductionResult::Success)
     return Result;
 
-  // C++ [temp.deduct.call]p10: [DR1391]
-  //   If deduction succeeds for all parameters that contain
-  //   template-parameters that participate in template argument deduction,
-  //   and all template arguments are explicitly specified, deduced, or
-  //   obtained from default template arguments, remaining parameters are then
-  //   compared with the corresponding arguments. For each remaining parameter
-  //   P with a type that was non-dependent before substitution of any
-  //   explicitly-specified template arguments, if the corresponding argument
-  //   A cannot be implicitly converted to P, deduction fails.
-  if (CheckNonDependent())
-    return TemplateDeductionResult::NonDependentConversionFailure;
-
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *SugaredDeducedArgumentList =
       TemplateArgumentList::CreateCopy(Context, SugaredBuilder);
@@ -3875,6 +3863,76 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     FD = const_cast<FunctionDecl *>(FDFriend);
     Owner = FD->getLexicalDeclContext();
   }
+#if 1
+  // FIXME: We have to partially instantiate lambda's captures for constraint
+  // evaluation.
+  if (!isLambdaCallOperator(FD) && !isLambdaConversionOperator(FD) &&
+      (!PartialOverloading ||
+       (CanonicalBuilder.size() ==
+        FunctionTemplate->getTemplateParameters()->size()))) {
+    FunctionTemplateDecl *Template = FunctionTemplate->getCanonicalDecl();
+    FunctionDecl *FD = Template->getTemplatedDecl();
+    SmallVector<const Expr *, 3> TemplateAC;
+    Template->getAssociatedConstraints(TemplateAC);
+    if (!TemplateAC.empty()) {
+
+      // Enter the scope of this instantiation. We don't use
+      // PushDeclContext because we don't have a scope.
+      LocalInstantiationScope Scope(*this);
+
+      // Collect the list of template arguments relative to the 'primary'
+      // template. We need the entire list, since the constraint is completely
+      // uninstantiated at this point.
+
+      MultiLevelTemplateArgumentList MLTAL(FD, SugaredBuilder, /*Final=*/false);
+      getTemplateInstantiationArgs(nullptr, FD->getLexicalDeclContext(),
+                                   /*Final=*/false,
+                                   /*Innermost=*/std::nullopt,
+                                   /*RelativeToPrimary=*/true,
+                                   /*Pattern=*/nullptr,
+                                   /*ForConstraintInstantiation=*/true,
+                                   /*SkipForSpecialization=*/false,
+                                   /*Merged=*/&MLTAL);
+
+      // if (SetupConstraintScope(FD, SugaredBuilder, MLTAL, Scope))
+      //   return TemplateDeductionResult::MiscellaneousDeductionFailure;
+
+      MultiLevelTemplateArgumentList JustTemplArgs(
+          Template, CanonicalDeducedArgumentList->asArray(),
+          /*Final=*/false);
+      if (addInstantiatedParametersToScope(nullptr, FD, Scope, JustTemplArgs))
+        return TemplateDeductionResult::MiscellaneousDeductionFailure;
+
+      if (FunctionTemplateDecl *FromMemTempl =
+              Template->getInstantiatedFromMemberTemplate()) {
+        while (FromMemTempl->getInstantiatedFromMemberTemplate())
+          FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
+        if (addInstantiatedParametersToScope(
+                nullptr, FromMemTempl->getTemplatedDecl(), Scope, MLTAL))
+          return TemplateDeductionResult::MiscellaneousDeductionFailure;
+      }
+
+      Qualifiers ThisQuals;
+      CXXRecordDecl *Record = nullptr;
+      if (auto *Method = dyn_cast<CXXMethodDecl>(FD)) {
+        ThisQuals = Method->getMethodQualifiers();
+        Record = Method->getParent();
+      }
+      CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
+      llvm::SmallVector<Expr *, 1> Converted;
+      if (CheckConstraintSatisfaction(Template, TemplateAC, MLTAL,
+                                      Template->getSourceRange(),
+                                      Info.AssociatedConstraintsSatisfaction))
+        return TemplateDeductionResult::MiscellaneousDeductionFailure;
+      if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+        Info.reset(TemplateArgumentList::CreateCopy(Context, SugaredBuilder),
+                   Info.takeCanonical());
+        return TemplateDeductionResult::ConstraintsNotSatisfied;
+      }
+    }
+  }
+#endif
+
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
       /*Final=*/false);
@@ -3923,6 +3981,18 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
+
+  // C++ [temp.deduct.call]p10: [DR1391]
+  //   If deduction succeeds for all parameters that contain
+  //   template-parameters that participate in template argument deduction,
+  //   and all template arguments are explicitly specified, deduced, or
+  //   obtained from default template arguments, remaining parameters are then
+  //   compared with the corresponding arguments. For each remaining parameter
+  //   P with a type that was non-dependent before substitution of any
+  //   explicitly-specified template arguments, if the corresponding argument
+  //   A cannot be implicitly converted to P, deduction fails.
+  if (CheckNonDependent())
+    return TemplateDeductionResult::NonDependentConversionFailure;
 
   // We skipped the instantiation of the explicit-specifier during the
   // substitution of `FD` before. So, we try to instantiate it back if
