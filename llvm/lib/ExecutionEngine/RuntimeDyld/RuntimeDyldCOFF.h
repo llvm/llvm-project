@@ -15,10 +15,6 @@
 
 #include "RuntimeDyldImpl.h"
 
-#define DEBUG_TYPE "dyld"
-
-using namespace llvm;
-
 namespace llvm {
 
 // Common base class for COFF dynamic linker support.
@@ -56,6 +52,4 @@ private:
 
 } // end namespace llvm
 
-#undef DEBUG_TYPE
-
-#endif
+#endif // LLVM_RUNTIME_DYLD_COFF_H

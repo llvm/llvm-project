@@ -16,9 +16,8 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
-using namespace llvm;
+namespace llvm {
 
-namespace {
 class EmptyMatchContext {
   SelectionDAG &DAG;
   const TargetLowering &TLI;
@@ -171,5 +170,7 @@ public:
     return TLI.isOperationLegalOrCustom(VPOp, VT, LegalOnly);
   }
 };
-} // end anonymous namespace
-#endif
+
+} // namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_SELECTIONDAG_MATCHCONTEXT_H
