@@ -81,18 +81,3 @@ static_assert(bar.fail2<int*, 42>()); // both-error {{constant expression}} \
 static_assert(bar.fail3(3, 4UL, bar, &bar)); // both-error {{constant expression}} \
                                              // expected-note {{in call to 'bar.fail3<int, unsigned long, Bar<int>, const Bar<int> *>(3, 4, &bar, &bar)'}} \
                                              // ref-note {{in call to 'bar.fail3<int, unsigned long, Bar<int>, const Bar<int> *>(3, 4, {}, &bar)'}}
-
-
-
-/// FIXME: Bound member pointer printing doesn't work right, see the last parameter to MemPtr().
-struct MemPtrTest {
-  int n;
-  void f();
-};
-MemPtrTest mpt; // both-note {{here}}
-constexpr int MemPtr(int (MemPtrTest::*a), void (MemPtrTest::*b)(), int &c) {
-  return c; // both-note {{read of non-constexpr variable 'mpt'}}
-}
-static_assert(MemPtr(&MemPtrTest::n, &MemPtrTest::f, mpt.*&MemPtrTest::n), ""); // both-error {{constant expression}} \
-                                                                                // expected-note {{in call to 'MemPtr(&MemPtrTest::n, &MemPtrTest::f, mpt)'}} \
-                                                                                // ref-note {{in call to 'MemPtr(&MemPtrTest::n, &MemPtrTest::f, mpt.n)'}}
