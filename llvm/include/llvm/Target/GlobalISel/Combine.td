@@ -1107,7 +1107,9 @@ def reassocs : GICombineGroup<[reassoc_ptradd, reassoc_comm_binops]>;
 // Constant fold operations.
 def constant_fold_binop : GICombineRule<
   (defs root:$d, apint_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL, G_LSHR, G_ASHR):$d,
+  (match (wip_match_opcode G_ADD, G_PTR_ADD, G_AND, G_ASHR, G_LSHR, G_MUL, G_OR,
+                           G_SHL, G_SUB, G_XOR, G_UDIV, G_SDIV, G_UREM, G_SREM,
+                           G_SMIN, G_SMAX, G_UMIN, G_UMAX):$d,
    [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 

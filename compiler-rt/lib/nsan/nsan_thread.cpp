@@ -1,3 +1,13 @@
+//===- nsan_threads.cpp ---------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// Thread management.
+//===----------------------------------------------------------------------===//
+
 #include "nsan_thread.h"
 
 #include <pthread.h>
@@ -115,7 +125,7 @@ void NsanThread::FinishSwitchFiber(uptr *bottom_old, uptr *size_old) {
 }
 
 static pthread_key_t tsd_key;
-static bool tsd_key_inited = false;
+static bool tsd_key_inited;
 
 void __nsan::NsanTSDInit(void (*destructor)(void *tsd)) {
   CHECK(!tsd_key_inited);

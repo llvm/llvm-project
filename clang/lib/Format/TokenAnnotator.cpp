@@ -3175,6 +3175,15 @@ public:
       parse(Precedence + 1);
 
       int CurrentPrecedence = getCurrentPrecedence();
+      if (Style.BreakBinaryOperations == FormatStyle::BBO_OnePerLine &&
+          CurrentPrecedence > prec::Conditional &&
+          CurrentPrecedence < prec::PointerToMember) {
+        // When BreakBinaryOperations is set to BreakAll,
+        // all operations will be on the same line or on individual lines.
+        // Override precedence to avoid adding fake parenthesis which could
+        // group operations of a different precedence level on the same line
+        CurrentPrecedence = prec::Additive;
+      }
 
       if (Precedence == CurrentPrecedence && Current &&
           Current->is(TT_SelectorName)) {

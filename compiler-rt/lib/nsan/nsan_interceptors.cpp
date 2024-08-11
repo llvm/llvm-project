@@ -206,7 +206,7 @@ extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
 
 static void *NsanThreadStartFunc(void *arg) {
-  NsanThread *t = (NsanThread *)arg;
+  auto *t = reinterpret_cast<NsanThread *>(arg);
   SetCurrentThread(t);
   t->Init();
   SetSigProcMask(&t->starting_sigset_, nullptr);
