@@ -9,6 +9,7 @@ set(NSAN_SOURCES
   nsan_malloc_linux.cpp
   nsan_stats.cpp
   nsan_suppressions.cpp
+  nsan_thread.cpp
 )
 
 set(NSAN_PREINIT_SOURCES
