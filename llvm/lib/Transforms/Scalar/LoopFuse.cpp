@@ -1729,9 +1729,7 @@ private:
     // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks.
-    SE.forgetBlockAndLoopDispositions();
+    SE.forgetLoopDispositions();
 
     // Move instructions from FC0.Latch to FC1.Latch.
     // Note: mergeLatch requires an updated DT.
@@ -2025,9 +2023,7 @@ private:
     // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks.
-    SE.forgetBlockAndLoopDispositions();
+    SE.forgetLoopDispositions();
 
     // Move instructions from FC0.Latch to FC1.Latch.
     // Note: mergeLatch requires an updated DT.
