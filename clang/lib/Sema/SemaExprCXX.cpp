@@ -5641,19 +5641,30 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsImplicitLifetime: {
     DiagnoseVLAInCXXTypeTrait(Self, TInfo,
                               tok::kw___builtin_is_implicit_lifetime);
+    
+    // [basic.types.general] p9
+    // Scalar types, implicit-lifetime class types ([class.prop]),
+    // array types, and cv-qualified versions of these types
+    // are collectively called implicit-lifetime types.
     QualType UnqualT = T->getCanonicalTypeUnqualified();
     if (UnqualT->isScalarType())
       return true;
     if (UnqualT->isArrayType())
       return true;
-
     const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
     if (!RD)
       return false;
+    
+    // [class.prop] p9
+    // A class S is an implicit-lifetime class if
+    //   - it is an aggregate whose destructor is not user-provided or
+    //   - it has at least one trivial eligible constructor and a trivial,
+    //     non-deleted destructor.
+    const CXXDestructorDecl *Dtor = RD->getDestructor();
     if (UnqualT->isAggregateType())
-      if (!RD->getDestructor()->isUserProvided())
+      if (Dtor && !Dtor->isUserProvided())
         return true;
-    if (RD->hasTrivialDestructor())
+    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted()))
       if (RD->hasTrivialDefaultConstructor() ||
           RD->hasTrivialCopyConstructor() || RD->hasTrivialMoveConstructor())
         return true;
