@@ -13,7 +13,6 @@
 
 #include "XtensaISelLowering.h"
 #include "XtensaConstantPoolValue.h"
-#include "XtensaMachineFunctionInfo.h"
 #include "XtensaSubtarget.h"
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -1040,70 +1039,11 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
 
 MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
   case Xtensa::SELECT:
     return emitSelectCC(MI, MBB);
-  case Xtensa::SHL_P: {
-    MachineOperand &R = MI.getOperand(0);
-    MachineOperand &S = MI.getOperand(1);
-    MachineOperand &SA = MI.getOperand(2);
-
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSL)).addReg(SA.getReg());
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SLL), R.getReg()).addReg(S.getReg());
-    MI.eraseFromParent();
-    return MBB;
-  }
-  case Xtensa::SRA_P: {
-    MachineOperand &R = MI.getOperand(0);
-    MachineOperand &T = MI.getOperand(1);
-    MachineOperand &SA = MI.getOperand(2);
-
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSR)).addReg(SA.getReg());
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRA), R.getReg()).addReg(T.getReg());
-    MI.eraseFromParent();
-    return MBB;
-  }
-  case Xtensa::SRL_P: {
-    MachineOperand &R = MI.getOperand(0);
-    MachineOperand &T = MI.getOperand(1);
-    MachineOperand &SA = MI.getOperand(2);
-
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSR)).addReg(SA.getReg());
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRL), R.getReg()).addReg(T.getReg());
-    MI.eraseFromParent();
-    return MBB;
-  }
-  case Xtensa::SRCL_P: {
-    MachineOperand &R = MI.getOperand(0);
-    MachineOperand &HI = MI.getOperand(1);
-    MachineOperand &LO = MI.getOperand(2);
-    MachineOperand &SA = MI.getOperand(3);
-
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSL)).addReg(SA.getReg());
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRC), R.getReg())
-        .addReg(HI.getReg())
-        .addReg(LO.getReg());
-    ;
-    MI.eraseFromParent();
-    return MBB;
-  }
-  case Xtensa::SRCR_P: {
-    MachineOperand &R = MI.getOperand(0);
-    MachineOperand &HI = MI.getOperand(1);
-    MachineOperand &LO = MI.getOperand(2);
-    MachineOperand &SA = MI.getOperand(3);
-
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SSR)).addReg(SA.getReg());
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::SRC), R.getReg())
-        .addReg(HI.getReg())
-        .addReg(LO.getReg());
-    ;
-    MI.eraseFromParent();
-    return MBB;
-  }
   default:
     llvm_unreachable("Unexpected instr type to insert");
   }

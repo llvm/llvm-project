@@ -190,30 +190,6 @@ def SSAI : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins uimm5:$imm),
   let t{0} = imm{4};
 }
 
-// Shift Pseudo instructions:
-// SSL/SSR + Shift combination
-let usesCustomInserter = 1 in {
-  def SHL_P : Pseudo<(outs AR:$r), (ins AR:$s, AR:$sa),
-                    "# SHL_P $r, $s, $sa",
-                    [(set i32:$r, (shl i32:$s, i32:$sa))]>;
-
-  def SRA_P : Pseudo<(outs AR:$r), (ins AR:$t, AR:$sa),
-                    "# SRA_P $r, $t, $sa",
-                    [(set i32:$r, (sra i32:$t, i32:$sa))]>;
-
-  def SRL_P : Pseudo<(outs AR:$r), (ins AR:$t, AR:$sa),
-                    "# SRL_P $r, $t, $sa",
-                    [(set i32:$r, (srl i32:$t, i32:$sa))]>;
-
-  def SRCL_P : Pseudo<(outs AR:$r), (ins AR:$hi, AR:$lo, AR:$sa),
-                    "# SRCL_P $r, $hi, $lo, $sa",
-                    [(set i32:$r, (Xtensa_srcl i32:$hi, i32:$lo, i32:$sa))]>;
-
-  def SRCR_P : Pseudo<(outs AR:$r), (ins AR:$hi, AR:$lo, AR:$sa),
-                    "# SRCR_P $r, $hi, $lo, $sa",
-                    [(set i32:$r, (Xtensa_srcr i32:$hi, i32:$lo, i32:$sa))]>;
-}
-
 //===----------------------------------------------------------------------===//
 // Load and store instructions
 //===----------------------------------------------------------------------===//
