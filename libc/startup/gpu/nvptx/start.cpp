@@ -13,7 +13,7 @@
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 
-int main(int argc, char **argv, char **envp);
+extern "C" int main(int argc, char **argv, char **envp);
 
 namespace LIBC_NAMESPACE_DECL {
 

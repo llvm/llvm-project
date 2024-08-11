@@ -83,6 +83,6 @@
 // tests, then we should not need to explicitly declare/define the main
 // function in individual integration tests. We will not need this macro
 // then.
-#define TEST_MAIN int main
+#define TEST_MAIN extern "C" int main
 
 #endif // LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
