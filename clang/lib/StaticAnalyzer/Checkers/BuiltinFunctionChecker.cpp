@@ -48,40 +48,40 @@ QualType getOverflowBuiltinResultType(const CallEvent &Call, CheckerContext &C,
                                       unsigned BI) {
   assert(Call.getNumArgs() == 3);
 
-  ASTContext &Ast = C.getASTContext();
+  ASTContext &ACtx = C.getASTContext();
 
   switch (BI) {
   case Builtin::BI__builtin_smul_overflow:
   case Builtin::BI__builtin_ssub_overflow:
   case Builtin::BI__builtin_sadd_overflow:
-    return Ast.IntTy;
+    return ACtx.IntTy;
   case Builtin::BI__builtin_smull_overflow:
   case Builtin::BI__builtin_ssubl_overflow:
   case Builtin::BI__builtin_saddl_overflow:
-    return Ast.LongTy;
+    return ACtx.LongTy;
   case Builtin::BI__builtin_smulll_overflow:
   case Builtin::BI__builtin_ssubll_overflow:
   case Builtin::BI__builtin_saddll_overflow:
-    return Ast.LongLongTy;
+    return ACtx.LongLongTy;
   case Builtin::BI__builtin_umul_overflow:
   case Builtin::BI__builtin_usub_overflow:
   case Builtin::BI__builtin_uadd_overflow:
-    return Ast.UnsignedIntTy;
+    return ACtx.UnsignedIntTy;
   case Builtin::BI__builtin_umull_overflow:
   case Builtin::BI__builtin_usubl_overflow:
   case Builtin::BI__builtin_uaddl_overflow:
-    return Ast.UnsignedLongTy;
+    return ACtx.UnsignedLongTy;
   case Builtin::BI__builtin_umulll_overflow:
   case Builtin::BI__builtin_usubll_overflow:
   case Builtin::BI__builtin_uaddll_overflow:
-    return Ast.UnsignedLongLongTy;
+    return ACtx.UnsignedLongLongTy;
   case Builtin::BI__builtin_mul_overflow:
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_add_overflow:
     return getOverflowBuiltinResultType(Call);
   default:
     assert(false && "Unknown overflow builtin");
-    return Ast.IntTy;
+    return ACtx.IntTy;
   }
 }
 
@@ -117,28 +117,21 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
                                       QualType Res) const {
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
-  auto SvalToBool = [&](SVal val) {
-    return State->isNonNull(val).isConstrainedTrue();
-  };
   ASTContext &ACtx = C.getASTContext();
 
   assert(Res->isIntegerType());
 
   unsigned BitWidth = ACtx.getIntWidth(Res);
-  SVal MinType = nonloc::ConcreteInt(
-      llvm::APSInt::getMinValue(BitWidth, Res->isUnsignedIntegerType()));
-  SVal MaxType = nonloc::ConcreteInt(
-      llvm::APSInt::getMaxValue(BitWidth, Res->isUnsignedIntegerType()));
+  auto MinVal = llvm::APSInt::getMinValue(BitWidth, Res->isUnsignedIntegerType());
+  auto MaxVal = llvm::APSInt::getMaxValue(BitWidth, Res->isUnsignedIntegerType());
 
-  bool IsGreaterMax =
-      SvalToBool(SVB.evalBinOp(State, BO_GT, RetVal, MaxType, Res));
-  bool IsLessMin =
-      SvalToBool(SVB.evalBinOp(State, BO_LT, RetVal, MinType, Res));
+  SVal IsLeMax = SVB.evalBinOp(State, BO_LE, RetVal, nonloc::ConcreteInt(MaxVal), Res);
+  SVal IsGeMin = SVB.evalBinOp(State, BO_GE, RetVal, nonloc::ConcreteInt(MinVal), Res);
 
-  bool IsLeMax = SvalToBool(SVB.evalBinOp(State, BO_LE, RetVal, MaxType, Res));
-  bool IsGeMin = SvalToBool(SVB.evalBinOp(State, BO_GE, RetVal, MinType, Res));
+  auto [MayNotOverflow, MayOverflow] = State->assume(IsLeMax.castAs<DefinedOrUnknownSVal>());
+  auto [MayNotUnderflow, MayUnderflow] = State->assume(IsGeMin.castAs<DefinedOrUnknownSVal>());
 
-  return {IsGreaterMax || IsLessMin, IsLeMax && IsGeMin};
+  return {MayOverflow || MayUnderflow, MayNotOverflow && MayNotUnderflow};
 }
 
 void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
