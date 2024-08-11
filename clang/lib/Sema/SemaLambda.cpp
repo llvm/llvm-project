@@ -190,11 +190,6 @@ clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     return NoLambdaIsCaptureCapable;
 
   const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
-  assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
-          S.getCurGenericLambda()) &&
-         "The capture ready lambda for a potential capture can only be the "
-         "current lambda if it is a generic lambda");
-
   const sema::LambdaScopeInfo *const CaptureReadyLambdaLSI =
       cast<sema::LambdaScopeInfo>(FunctionScopes[IndexOfCaptureReadyLambda]);
 
@@ -247,18 +242,23 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
 
 CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
-                              unsigned LambdaDependencyKind,
-                              LambdaCaptureDefault CaptureDefault) {
+                              LambdaCaptureDefault CaptureDefault,
+                              unsigned TemplateDepth) {
   DeclContext *DC = CurContext;
-  while (!(DC->isFunctionOrMethod() || DC->isRecord() || DC->isFileContext()))
-    DC = DC->getParent();
 
   bool IsGenericLambda =
       Info && getGenericLambdaTemplateParameterList(getCurLambda(), *this);
   // Start constructing the lambda class.
+  ContextDeclOrLazy ContextDecl = currentEvaluationContext().ContextDecl;
   CXXRecordDecl *Class = CXXRecordDecl::CreateLambda(
-      Context, DC, Info, IntroducerRange.getBegin(), LambdaDependencyKind,
-      IsGenericLambda, CaptureDefault);
+      Context, DC, Info, IntroducerRange.getBegin(), IsGenericLambda,
+      CaptureDefault,
+      ContextDecl.hasValue() ? *ContextDecl
+                             : ContextDeclOrSentinel(TemplateDepth),
+      currentEvaluationContext().ContextArgs);
+  if (!ContextDecl.hasValue())
+    PendingLazyContextDecls.push_back(Class);
+
   DC->addDecl(Class);
 
   return Class;
@@ -278,11 +278,10 @@ static bool isInInlineFunction(const DeclContext *DC) {
   return false;
 }
 
-std::tuple<MangleNumberingContext *, Decl *>
-Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
+std::tuple<MangleNumberingContext *, bool> Sema::getCurrentMangleNumberContext(
+    const DeclContext *DC, Decl *ManglingContextDecl, bool InSignature) {
   // Compute the context for allocating mangling numbers in the current
   // expression, if the ABI requires them.
-  Decl *ManglingContextDecl = ExprEvalContexts.back().ManglingContextDecl;
 
   enum ContextKind {
     Normal,
@@ -329,15 +328,15 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   switch (Kind) {
   case Normal: {
     //  -- the bodies of inline or templated functions
-    if ((IsInNonspecializedTemplate &&
+    if (((IsInNonspecializedTemplate || InSignature) &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
         isInInlineFunction(CurContext)) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
-      return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
+      return std::make_tuple(&Context.getManglingNumberContext(DC), false);
     }
 
-    return std::make_tuple(nullptr, nullptr);
+    return std::make_tuple(nullptr, false);
   }
 
   case Concept:
@@ -355,7 +354,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(
         &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
                                           ManglingContextDecl),
-        ManglingContextDecl);
+        true);
   }
 
   llvm_unreachable("unexpected context");
@@ -455,7 +454,8 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
 
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
-    std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
+    std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride,
+    bool InSignature) {
   if (NumberingOverride) {
     Class->setLambdaNumbering(*NumberingOverride);
     return;
@@ -477,10 +477,15 @@ void Sema::handleLambdaNumbering(
     return &Context.getManglingNumberContext(DC);
   };
 
+  ContextDeclOrSentinel CDS = Class->getLambdaContext().CDS;
+  if (!CDS.hasValue())
+    return;
+
+  Decl *ContextDecl = CDS.getValue();
   CXXRecordDecl::LambdaNumbering Numbering;
   MangleNumberingContext *MCtx;
-  std::tie(MCtx, Numbering.ContextDecl) =
-      getCurrentMangleNumberContext(Class->getDeclContext());
+  std::tie(MCtx, Numbering.ManglingInContext) = getCurrentMangleNumberContext(
+      Class->getDeclContext(), ContextDecl, InSignature);
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
@@ -490,7 +495,8 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
-    MCtx = getMangleNumberingContext(Class, Numbering.ContextDecl);
+    MCtx = getMangleNumberingContext(
+        Class, Numbering.ManglingInContext ? ContextDecl : nullptr);
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
   }
@@ -1060,7 +1066,8 @@ void Sema::CompleteLambdaCallOperator(
 }
 
 void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
-                                                Scope *CurrentScope) {
+                                                Scope *CurrentScope,
+                                                unsigned TemplateDepth) {
 
   LambdaScopeInfo *LSI = getCurLambda();
   assert(LSI && "LambdaScopeInfo should be on stack!");
@@ -1075,35 +1082,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   assert(LSI->NumExplicitTemplateParams == 0);
 
-  // Determine if we're within a context where we know that the lambda will
-  // be dependent, because there are template parameters in scope.
-  CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
-      CXXRecordDecl::LDK_Unknown;
-  if (CurScope->getTemplateParamParent() != nullptr) {
-    LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  } else if (Scope *P = CurScope->getParent()) {
-    // Given a lambda defined inside a requires expression,
-    //
-    // struct S {
-    //   S(auto var) requires requires { [&] -> decltype(var) { }; }
-    //   {}
-    // };
-    //
-    // The parameter var is not injected into the function Decl at the point of
-    // parsing lambda. In such scenarios, perceiving it as dependent could
-    // result in the constraint being evaluated, which matches what GCC does.
-    while (P->getEntity() && P->getEntity()->isRequiresExprBody())
-      P = P->getParent();
-    if (P->isFunctionDeclarationScope() &&
-        llvm::any_of(P->decls(), [](Decl *D) {
-          return isa<ParmVarDecl>(D) &&
-                 cast<ParmVarDecl>(D)->getType()->isTemplateTypeParmType();
-        }))
-      LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  }
-
-  CXXRecordDecl *Class = createLambdaClosureType(
-      Intro.Range, /*Info=*/nullptr, LambdaDependencyKind, Intro.Default);
+  CXXRecordDecl *Class = createLambdaClosureType(Intro.Range, /*Info=*/nullptr,
+                                                 Intro.Default, TemplateDepth);
   LSI->Lambda = Class;
 
   CXXMethodDecl *Method = CreateLambdaCallOperator(Intro.Range, Class);
@@ -1113,6 +1093,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
   Method->setLexicalDeclContext(CurContext);
 
   PushDeclContext(CurScope, Method);
+  PushExpressionEvaluationContext(currentEvaluationContext().Context, Method);
 
   bool ContainsUnexpandedParameterPack = false;
 
@@ -1549,7 +1530,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   PushExpressionEvaluationContext(
       LSI->CallOperator->isConsteval()
           ? ExpressionEvaluationContext::ImmediateFunctionContext
-          : ExpressionEvaluationContext::PotentiallyEvaluated);
+          : ExpressionEvaluationContext::PotentiallyEvaluated,
+      LSI->CallOperator);
   ExprEvalContexts.back().InImmediateFunctionContext =
       LSI->CallOperator->isConsteval();
   ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
@@ -1746,7 +1728,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
         S.Context.getTranslationUnitDecl(), From->getBeginLoc(),
         From->getLocation(), From->getIdentifier(), From->getType(),
         From->getTypeSourceInfo(), From->getStorageClass(),
-        /*DefArg=*/nullptr));
+        /*DefArg=*/nullptr, CallOperator->getTemplateDepth()));
     CallOpConvTL.setParam(I, From);
     CallOpConvNameTL.setParam(I, From);
   }
@@ -2326,7 +2308,7 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
         Context, Block, From->getBeginLoc(), From->getLocation(),
         From->getIdentifier(), From->getType(), From->getTypeSourceInfo(),
         From->getStorageClass(),
-        /*DefArg=*/nullptr));
+        /*DefArg=*/nullptr, Block->getTemplateDepth()));
   }
   Block->setParams(BlockParams);
 

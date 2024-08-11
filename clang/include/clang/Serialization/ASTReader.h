@@ -1148,6 +1148,9 @@ private:
   /// need to be marked as incomplete once we're done deserializing things.
   SmallVector<Decl *, 16> PendingIncompleteDeclChains;
 
+  /// The list of pending declarations that still need their ContextDecl.
+  SmallVector<std::pair<Decl *, GlobalDeclID>, 16> PendingContextDecls;
+
   /// The Decl IDs for the Sema/Lexical DeclContext of a Decl that has
   /// been loaded but its DeclContext was not set yet.
   struct PendingDeclContextInfo {

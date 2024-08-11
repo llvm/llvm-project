@@ -173,7 +173,7 @@ public:
     // the string that is used in lambda mangled names.
     assert(Lambda->isLambda() && "RD must be a lambda!");
     std::string Name("<lambda");
-    Decl *LambdaContextDecl = Lambda->getLambdaContextDecl();
+    Decl *LambdaContextDecl = Lambda->getLambdaManglingContextDecl();
     unsigned LambdaManglingNumber = Lambda->getLambdaManglingNumber();
     unsigned LambdaId;
     const ParmVarDecl *Parm = dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
@@ -657,13 +657,11 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
   // the way in which Clang parses and creates function declarations, this is
   // not the case: the lambda closure type ends up living in the context
   // where the function itself resides, because the function declaration itself
-  // had not yet been created. Fix the context here.
-  if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
-    if (RD->isLambda())
-      if (ParmVarDecl *ContextParam =
-              dyn_cast_or_null<ParmVarDecl>(RD->getLambdaContextDecl()))
-        return ContextParam->getDeclContext();
-  }
+  // had not yet been created. Fix the context here. FIXME: Remove.
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D); RD && RD->isLambda())
+    if (auto *ContextParam =
+            dyn_cast_or_null<ParmVarDecl>(RD->getLambdaManglingContextDecl()))
+      return ContextParam->getDeclContext();
 
   // Perform the same check for block literals.
   if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
@@ -1061,6 +1059,9 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
   //         ::= <local-name>
   //
   const DeclContext *DC = Context.getEffectiveDeclContext(ND);
+  while (auto *D = dyn_cast<RequiresExprBodyDecl>(DC))
+    DC = D->getDeclContext();
+
   bool IsLambda = isLambda(ND);
 
   // If this is an extern variable declared locally, the relevant DeclContext
@@ -1082,6 +1083,11 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
   // in the global namespace.
   if (const NamedDecl *PrefixND = getClosurePrefix(ND)) {
     mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags);
+    return;
+  }
+
+  if (Decl::castFromDeclContext(DC) == Structor) {
+    mangleUnqualifiedName(GD, DC, AdditionalAbiTags);
     return;
   }
 
@@ -1462,13 +1468,12 @@ void CXXNameMangler::mangleUnresolvedName(
 void CXXNameMangler::mangleUnqualifiedName(
     GlobalDecl GD, DeclarationName Name, const DeclContext *DC,
     unsigned KnownArity, const AbiTagList *AdditionalAbiTags) {
-  const NamedDecl *ND = cast_or_null<NamedDecl>(GD.getDecl());
+  const NamedDecl *ND = cast<NamedDecl>(GD.getDecl());
   //  <unqualified-name> ::= [<module-name>] [F] <operator-name>
   //                     ::= <ctor-dtor-name>
   //                     ::= [<module-name>] [F] <source-name>
   //                     ::= [<module-name>] DC <source-name>* E
-
-  if (ND && DC && DC->isFileContext())
+  if (DC && DC->isFileContext())
     mangleModuleName(ND);
 
   // A member-like constrained friend is mangled with a leading 'F'.
@@ -1888,8 +1893,8 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
     // -- other default arguments do not affect its encoding.
     const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD);
     if (CXXRD && CXXRD->isLambda()) {
-      if (const ParmVarDecl *Parm
-              = dyn_cast_or_null<ParmVarDecl>(CXXRD->getLambdaContextDecl())) {
+      if (const ParmVarDecl *Parm = dyn_cast_or_null<ParmVarDecl>(
+              CXXRD->getLambdaManglingContextDecl())) {
         if (const FunctionDecl *Func
               = dyn_cast<FunctionDecl>(Parm->getDeclContext())) {
           Out << 'd';
@@ -2087,7 +2092,7 @@ void CXXNameMangler::mangleRequiresClause(const Expr *RequiresClause) {
 void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // When trying to be ABI-compatibility with clang 12 and before, mangle a
   // <data-member-prefix> now, with no substitutions.
-  if (Decl *Context = Lambda->getLambdaContextDecl()) {
+  if (Decl *Context = Lambda->getLambdaManglingContextDecl()) {
     if (isCompatibleWith(LangOptions::ClangABI::Ver12) &&
         (isa<VarDecl>(Context) || isa<FieldDecl>(Context)) &&
         !isa<ParmVarDecl>(Context)) {
@@ -2199,6 +2204,9 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   if (DC->isTranslationUnit())
     return;
 
+  while (DC->isRequiresExprBody())
+    DC = DC->getParent();
+
   if (NoFunction && isLocalContainerContext(DC))
     return;
 
@@ -2290,7 +2298,7 @@ const NamedDecl *CXXNameMangler::getClosurePrefix(const Decl *ND) {
     Context = dyn_cast_or_null<NamedDecl>(Block->getBlockManglingContextDecl());
   } else if (auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
     if (RD->isLambda())
-      Context = dyn_cast_or_null<NamedDecl>(RD->getLambdaContextDecl());
+      Context = dyn_cast_or_null<NamedDecl>(RD->getLambdaManglingContextDecl());
   }
   if (!Context)
     return nullptr;

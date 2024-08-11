@@ -391,9 +391,6 @@ struct ConvertConstructorToDeductionGuideTransform {
               /*EvaluateConstraint=*/false);
         }
 
-        assert(NewParam->getTemplateDepth() == 0 &&
-               "Unexpected template parameter depth");
-
         AllParams.push_back(NewParam);
         SubstArgs.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
       }
@@ -401,13 +398,11 @@ struct ConvertConstructorToDeductionGuideTransform {
       // Substitute new template parameters into requires-clause if present.
       Expr *RequiresClause = nullptr;
       if (Expr *InnerRC = InnerParams->getRequiresClause()) {
-        MultiLevelTemplateArgumentList Args;
-        Args.setKind(TemplateSubstitutionKind::Rewrite);
-        Args.addOuterTemplateArguments(Depth1Args);
-        Args.addOuterRetainedLevel();
-        if (NestedPattern)
-          Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
-        ExprResult E = SemaRef.SubstExpr(InnerRC, Args);
+        MultiLevelTemplateArgumentList TemplateArgs(FTD, Depth1Args,
+                                                    /*Final=*/true);
+        TemplateArgs.addOuterRetainedLevels(
+            1 + (NestedPattern ? NestedPattern->getTemplateDepth() : 0));
+        ExprResult E = SemaRef.SubstExpr(InnerRC, TemplateArgs);
         if (E.isInvalid())
           return nullptr;
         RequiresClause = E.getAs<Expr>();
@@ -482,9 +477,9 @@ struct ConvertConstructorToDeductionGuideTransform {
       if (!TSI)
         return nullptr;
 
-      ParmVarDecl *NewParam =
-          ParmVarDecl::Create(SemaRef.Context, DC, Loc, Loc, nullptr,
-                              TSI->getType(), TSI, SC_None, nullptr);
+      ParmVarDecl *NewParam = ParmVarDecl::Create(
+          SemaRef.Context, DC, Loc, Loc, nullptr, TSI->getType(), TSI, SC_None,
+          nullptr, Template->getTemplateDepth());
       NewParam->setScopeInfo(0, Params.size());
       FPTL.setParam(Params.size(), NewParam);
       Params.push_back(NewParam);
@@ -621,10 +616,11 @@ private:
     if (NewType->isArrayType() || NewType->isFunctionType())
       NewType = SemaRef.Context.getDecayedType(NewType);
 
-    ParmVarDecl *NewParam = ParmVarDecl::Create(
-        SemaRef.Context, DC, OldParam->getInnerLocStart(),
-        OldParam->getLocation(), OldParam->getIdentifier(), NewType, NewDI,
-        OldParam->getStorageClass(), NewDefArg.get());
+    ParmVarDecl *NewParam =
+        ParmVarDecl::Create(SemaRef.Context, DC, OldParam->getInnerLocStart(),
+                            OldParam->getLocation(), OldParam->getIdentifier(),
+                            NewType, NewDI, OldParam->getStorageClass(),
+                            NewDefArg.get(), Template->getTemplateDepth());
     NewParam->setScopeInfo(OldParam->getFunctionScopeDepth(),
                            OldParam->getFunctionScopeIndex());
     SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldParam, NewParam);
@@ -640,11 +636,13 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
   struct TemplateParamsReferencedFinder
       : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
     const TemplateParameterList *TemplateParamList;
+    unsigned TargetDepth;
     llvm::BitVector ReferencedTemplateParams;
 
     TemplateParamsReferencedFinder(
         const TemplateParameterList *TemplateParamList)
         : TemplateParamList(TemplateParamList),
+          TargetDepth(TemplateParamList->getDepth()),
           ReferencedTemplateParams(TemplateParamList->size()) {}
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
@@ -673,8 +671,7 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
       }
     }
     void Mark(unsigned Depth, unsigned Index) {
-      if (Index < TemplateParamList->size() &&
-          TemplateParamList->getParam(Index)->getTemplateDepth() == Depth)
+      if (Index < TemplateParamList->size() && Depth == TargetDepth)
         ReferencedTemplateParams.set(Index);
     }
   };
@@ -1182,7 +1179,8 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
         ParmVarDecl *NewParam = ParmVarDecl::Create(
             SemaRef.Context, G->getDeclContext(),
             DG->getParamDecl(I)->getBeginLoc(), P->getLocation(), nullptr,
-            TSI->getType(), TSI, SC_None, nullptr);
+            TSI->getType(), TSI, SC_None, nullptr,
+            AliasTemplate->getTemplateDepth());
         NewParam->setScopeInfo(0, I);
         FPTL.setParam(I, NewParam);
       }

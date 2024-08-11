@@ -3197,16 +3197,23 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       auto TInfoOrErr = import(DCXX->getLambdaTypeInfo());
       if (!TInfoOrErr)
         return TInfoOrErr.takeError();
+
+      llvm::SmallVector<TemplateArgument, 4> ToArgs;
+      auto Context = DCXX->getLambdaContext();
+      if (Context.CDS)
+        if (Error Err = ImportTemplateArguments(Context.Args, ToArgs))
+          return std::move(Err);
+
+      // The ContextDecl will be set later after we create the LambdaExpr, in
+      // order to avoid a cycle.
       if (GetImportedOrCreateSpecialDecl(
               D2CXX, CXXRecordDecl::CreateLambda, D, Importer.getToContext(),
-              DC, *TInfoOrErr, Loc, DCXX->getLambdaDependencyKind(),
-              DCXX->isGenericLambda(), DCXX->getLambdaCaptureDefault()))
+              DC, *TInfoOrErr, Loc, DCXX->isGenericLambda(),
+              DCXX->getLambdaCaptureDefault(),
+              /*ContextDecl=*/Context.CDS ? ContextDeclOrSentinel(0u) : nullptr,
+              ToArgs))
         return D2CXX;
       CXXRecordDecl::LambdaNumbering Numbering = DCXX->getLambdaNumbering();
-      ExpectedDecl CDeclOrErr = import(Numbering.ContextDecl);
-      if (!CDeclOrErr)
-        return CDeclOrErr.takeError();
-      Numbering.ContextDecl = *CDeclOrErr;
       D2CXX->setLambdaNumbering(Numbering);
    } else if (DCXX->isInjectedClassName()) {
       // We have to be careful to do a similar dance to the one in
@@ -4753,7 +4760,7 @@ ExpectedDecl ASTNodeImporter::VisitParmVarDecl(ParmVarDecl *D) {
                               ToInnerLocStart, ToLocation,
                               ToDeclName.getAsIdentifierInfo(), ToType,
                               ToTypeSourceInfo, D->getStorageClass(),
-                              /*DefaultArg*/ nullptr))
+                              /*DefaultArg=*/nullptr, D->getTemplateDepth()))
     return ToParm;
 
   // Set the default argument. It should be no problem if it was already done.
@@ -8724,11 +8731,20 @@ ExpectedStmt ASTNodeImporter::VisitLambdaExpr(LambdaExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return LambdaExpr::Create(Importer.getToContext(), ToClass, ToIntroducerRange,
-                            E->getCaptureDefault(), ToCaptureDefaultLoc,
-                            E->hasExplicitParameters(),
-                            E->hasExplicitResultType(), ToCaptureInits,
-                            ToEndLoc, E->containsUnexpandedParameterPack());
+  LambdaExpr *ToExpr = LambdaExpr::Create(
+      Importer.getToContext(), ToClass, ToIntroducerRange,
+      E->getCaptureDefault(), ToCaptureDefaultLoc, E->hasExplicitParameters(),
+      E->hasExplicitResultType(), ToCaptureInits, ToEndLoc,
+      E->containsUnexpandedParameterPack());
+
+  if (auto ContextDecl = FromClass->getLambdaContext().CDS) {
+    ExpectedDecl CDeclOrErr = import(ContextDecl.getValue());
+    if (!CDeclOrErr)
+      return CDeclOrErr.takeError();
+    ToClass->getLambdaData().setContextDecl(*CDeclOrErr);
+  }
+
+  return ToExpr;
 }
 
 

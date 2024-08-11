@@ -25,6 +25,9 @@ enum class Linkage : unsigned char {
   // Linkage hasn't been computed.
   Invalid = 0,
 
+  /// The linkage for this entity is currently being computed.
+  Computing,
+
   /// No linkage, which means that the entity is unique and
   /// can only be referred to from within its scope.
   None,
@@ -99,6 +102,8 @@ inline bool isExternallyVisible(Linkage L) {
   case Linkage::Module:
   case Linkage::External:
     return true;
+  case Linkage::Computing:
+    llvm_unreachable("Recursive linkage");
   }
   llvm_unreachable("Unhandled Linkage enum");
 }

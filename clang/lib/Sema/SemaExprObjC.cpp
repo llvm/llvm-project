@@ -301,10 +301,10 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(SemaObjC &S, SourceLocation Loc,
         /*isImplicitlyDeclared=*/true,
         /*isDefined=*/false, ObjCImplementationControl::Required,
         /*HasRelatedResultType=*/false);
-    ParmVarDecl *value =
-        ParmVarDecl::Create(S.SemaRef.Context, Method, SourceLocation(),
-                            SourceLocation(), &CX.Idents.get("value"),
-                            NumberType, /*TInfo=*/nullptr, SC_None, nullptr);
+    ParmVarDecl *value = ParmVarDecl::Create(
+        S.SemaRef.Context, Method, SourceLocation(), SourceLocation(),
+        &CX.Idents.get("value"), NumberType, /*TInfo=*/nullptr, SC_None,
+        nullptr, /*TemplateDepth=*/0);
     Method->setMethodParams(S.SemaRef.Context, value, std::nullopt);
   }
 
@@ -581,13 +581,12 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
               /*isDefined=*/false, ObjCImplementationControl::Required,
               /*HasRelatedResultType=*/false);
           QualType ConstCharType = Context.CharTy.withConst();
-          ParmVarDecl *value =
-            ParmVarDecl::Create(Context, M,
-                                SourceLocation(), SourceLocation(),
-                                &Context.Idents.get("value"),
-                                Context.getPointerType(ConstCharType),
-                                /*TInfo=*/nullptr,
-                                SC_None, nullptr);
+          ParmVarDecl *value = ParmVarDecl::Create(
+              Context, M, SourceLocation(), SourceLocation(),
+              &Context.Idents.get("value"),
+              Context.getPointerType(ConstCharType),
+              /*TInfo=*/nullptr, SC_None, nullptr,
+              NSStringDecl->getTemplateDepth());
           M->setMethodParams(Context, value, std::nullopt);
           BoxingMethod = M;
         }
@@ -694,23 +693,18 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
 
         SmallVector<ParmVarDecl *, 2> Params;
 
-        ParmVarDecl *bytes =
-        ParmVarDecl::Create(Context, M,
-                            SourceLocation(), SourceLocation(),
-                            &Context.Idents.get("bytes"),
-                            Context.VoidPtrTy.withConst(),
-                            /*TInfo=*/nullptr,
-                            SC_None, nullptr);
+        unsigned TemplateDepth = NSValueDecl->getTemplateDepth();
+        ParmVarDecl *bytes = ParmVarDecl::Create(
+            Context, M, SourceLocation(), SourceLocation(),
+            &Context.Idents.get("bytes"), Context.VoidPtrTy.withConst(),
+            /*TInfo=*/nullptr, SC_None, nullptr, TemplateDepth);
         Params.push_back(bytes);
 
         QualType ConstCharType = Context.CharTy.withConst();
-        ParmVarDecl *type =
-        ParmVarDecl::Create(Context, M,
-                            SourceLocation(), SourceLocation(),
-                            &Context.Idents.get("type"),
-                            Context.getPointerType(ConstCharType),
-                            /*TInfo=*/nullptr,
-                            SC_None, nullptr);
+        ParmVarDecl *type = ParmVarDecl::Create(
+            Context, M, SourceLocation(), SourceLocation(),
+            &Context.Idents.get("type"), Context.getPointerType(ConstCharType),
+            /*TInfo=*/nullptr, SC_None, nullptr, TemplateDepth);
         Params.push_back(type);
 
         M->setMethodParams(Context, Params, std::nullopt);
@@ -827,21 +821,15 @@ ExprResult SemaObjC::BuildObjCArrayLiteral(SourceRange SR,
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
           ObjCImplementationControl::Required, false);
       SmallVector<ParmVarDecl *, 2> Params;
-      ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
-                                                 SourceLocation(),
-                                                 SourceLocation(),
-                                                 &Context.Idents.get("objects"),
-                                                 Context.getPointerType(IdT),
-                                                 /*TInfo=*/nullptr,
-                                                 SC_None, nullptr);
+      ParmVarDecl *objects = ParmVarDecl::Create(
+          Context, Method, SourceLocation(), SourceLocation(),
+          &Context.Idents.get("objects"), Context.getPointerType(IdT),
+          /*TInfo=*/nullptr, SC_None, nullptr, /*TemplateDepth=*/0);
       Params.push_back(objects);
-      ParmVarDecl *cnt = ParmVarDecl::Create(Context, Method,
-                                             SourceLocation(),
-                                             SourceLocation(),
-                                             &Context.Idents.get("cnt"),
-                                             Context.UnsignedLongTy,
-                                             /*TInfo=*/nullptr, SC_None,
-                                             nullptr);
+      ParmVarDecl *cnt = ParmVarDecl::Create(
+          Context, Method, SourceLocation(), SourceLocation(),
+          &Context.Idents.get("cnt"), Context.UnsignedLongTy,
+          /*TInfo=*/nullptr, SC_None, nullptr, /*TemplateDepth=*/0);
       Params.push_back(cnt);
       Method->setMethodParams(Context, Params, std::nullopt);
     }
@@ -988,29 +976,20 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
           ObjCImplementationControl::Required, false);
       SmallVector<ParmVarDecl *, 3> Params;
-      ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
-                                                 SourceLocation(),
-                                                 SourceLocation(),
-                                                 &Context.Idents.get("objects"),
-                                                 Context.getPointerType(IdT),
-                                                 /*TInfo=*/nullptr, SC_None,
-                                                 nullptr);
+      ParmVarDecl *objects = ParmVarDecl::Create(
+          Context, Method, SourceLocation(), SourceLocation(),
+          &Context.Idents.get("objects"), Context.getPointerType(IdT),
+          /*TInfo=*/nullptr, SC_None, nullptr, /*TemplateDepth=*/0);
       Params.push_back(objects);
-      ParmVarDecl *keys = ParmVarDecl::Create(Context, Method,
-                                              SourceLocation(),
-                                              SourceLocation(),
-                                              &Context.Idents.get("keys"),
-                                              Context.getPointerType(IdT),
-                                              /*TInfo=*/nullptr, SC_None,
-                                              nullptr);
+      ParmVarDecl *keys = ParmVarDecl::Create(
+          Context, Method, SourceLocation(), SourceLocation(),
+          &Context.Idents.get("keys"), Context.getPointerType(IdT),
+          /*TInfo=*/nullptr, SC_None, nullptr, /*TemplateDepth=*/0);
       Params.push_back(keys);
-      ParmVarDecl *cnt = ParmVarDecl::Create(Context, Method,
-                                             SourceLocation(),
-                                             SourceLocation(),
-                                             &Context.Idents.get("cnt"),
-                                             Context.UnsignedLongTy,
-                                             /*TInfo=*/nullptr, SC_None,
-                                             nullptr);
+      ParmVarDecl *cnt = ParmVarDecl::Create(
+          Context, Method, SourceLocation(), SourceLocation(),
+          &Context.Idents.get("cnt"), Context.UnsignedLongTy,
+          /*TInfo=*/nullptr, SC_None, nullptr, /*TemplateDepth=*/0);
       Params.push_back(cnt);
       Method->setMethodParams(Context, Params, std::nullopt);
     }

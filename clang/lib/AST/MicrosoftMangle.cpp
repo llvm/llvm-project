@@ -90,7 +90,7 @@ getLambdaDefaultArgumentDeclContext(const Decl *D) {
   if (const auto *RD = dyn_cast<CXXRecordDecl>(D))
     if (RD->isLambda())
       if (const auto *Parm =
-              dyn_cast_or_null<ParmVarDecl>(RD->getLambdaContextDecl()))
+              dyn_cast_or_null<ParmVarDecl>(RD->getLambdaManglingContextDecl()))
         return Parm->getDeclContext();
   return nullptr;
 }
@@ -253,7 +253,7 @@ public:
     assert(Lambda->isLambda() && "RD must be a lambda!");
     std::string Name("<lambda_");
 
-    Decl *LambdaContextDecl = Lambda->getLambdaContextDecl();
+    Decl *LambdaContextDecl = Lambda->getLambdaManglingContextDecl();
     unsigned LambdaManglingNumber = Lambda->getLambdaManglingNumber();
     unsigned LambdaId;
     const ParmVarDecl *Parm = dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
@@ -1236,7 +1236,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
         if (Record->isLambda()) {
           llvm::SmallString<10> Name("<lambda_");
 
-          Decl *LambdaContextDecl = Record->getLambdaContextDecl();
+          Decl *LambdaContextDecl = Record->getLambdaManglingContextDecl();
           unsigned LambdaManglingNumber = Record->getLambdaManglingNumber();
           unsigned LambdaId;
           const ParmVarDecl *Parm =

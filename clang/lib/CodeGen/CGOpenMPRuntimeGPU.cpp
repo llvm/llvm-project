@@ -1791,7 +1791,8 @@ CGOpenMPRuntimeGPU::translateParameter(const FieldDecl *FD,
       const_cast<DeclContext *>(NativeParam->getDeclContext()),
       NativeParam->getBeginLoc(), NativeParam->getLocation(),
       NativeParam->getIdentifier(), ArgType,
-      /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr);
+      /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr,
+      NativeParam->getTemplateDepth());
 }
 
 Address

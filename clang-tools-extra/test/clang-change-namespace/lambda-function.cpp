@@ -22,10 +22,8 @@ namespace nb {
 void f(function<void(int)> func, int param) { func(param); }
 void g() { f([](int x) {}, 1); }
 
-// x::X in function type parameter list will have translation unit context, so
-// we simply replace it with fully-qualified name.
 using TX = function<x::X(x::X)>;
-// CHECK: using TX = function<X(x::X)>;
+// CHECK: using TX = function<X(X)>;
 
 class A {};
 using TA = function<A(A)>;

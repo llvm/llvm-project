@@ -106,16 +106,11 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
           }
 
           if (PartialSpec) {
-            // A declaration of the partial specialization must be visible.
-            // We can always recover here, because this only happens when we're
-            // entering the context, and that can't happen in a SFINAE context.
-            assert(!isSFINAEContext() && "partial specialization scope "
-                                         "specifier in SFINAE context?");
             if (PartialSpec->hasDefinition() &&
                 !hasReachableDefinition(PartialSpec))
               diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
                                     MissingImportKind::PartialSpecialization,
-                                    true);
+                                    /*Recover=*/!isSFINAEContext());
             return PartialSpec;
           }
 

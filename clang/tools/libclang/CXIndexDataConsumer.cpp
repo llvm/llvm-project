@@ -433,6 +433,8 @@ bool CXIndexDataConsumer::isFunctionLocalDecl(const Decl *D) {
     switch (ND->getFormalLinkage()) {
     case Linkage::Invalid:
       llvm_unreachable("Linkage hasn't been computed!");
+    case Linkage::Computing:
+      llvm_unreachable("Linkage is being computed!");
     case Linkage::None:
     case Linkage::Internal:
       return true;

@@ -19,6 +19,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
@@ -808,6 +809,10 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
                                  ParsingDeclSpec *DS) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
+  assert(TemplateParameterDepth == 0);
+  EnterExpressionEvaluationContext Eval(
+      getActions(), getActions().currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
 
   if (PP.isCodeCompletionReached()) {
     cutOffParsing();
@@ -1291,7 +1296,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
 
   // If this is C89 and the declspecs were completely missing, fudge in an
   // implicit int.  We do this here because this is the only place where
@@ -1480,15 +1484,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Res;
   }
 
-  // With abbreviated function templates - we need to explicitly add depth to
-  // account for the implicit template parameter list induced by the template.
-  if (const auto *Template = dyn_cast_if_present<FunctionTemplateDecl>(Res);
-      Template && Template->isAbbreviated() &&
-      Template->getTemplateParameters()->getParam(0)->isImplicit())
-    // First template parameter is implicit - meaning no explicit template
-    // parameter list was specified.
-    CurTemplateDepthTracker.addDepth(1);
-
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
@@ -1596,9 +1591,12 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
       // If attributes are present, parse them.
       MaybeParseGNUAttributes(ParmDeclarator);
 
+      bool StartImplicitTemplate = false;
       // Ask the actions module to compute the type for this declarator.
-      Decl *Param =
-        Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator);
+      Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator,
+                                                 TemplateParameterDepth,
+                                                 StartImplicitTemplate);
+      assert(!StartImplicitTemplate);
 
       if (Param &&
           // A missing identifier has already been diagnosed.
@@ -1654,7 +1652,8 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
   }
 
   // The actions module must verify that all arguments were declared.
-  Actions.ActOnFinishKNRParamDeclarations(getCurScope(), D, Tok.getLocation());
+  Actions.ActOnFinishKNRParamDeclarations(getCurScope(), D, Tok.getLocation(),
+                                          TemplateParameterDepth);
 }
 
 

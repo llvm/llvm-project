@@ -121,6 +121,43 @@ CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getVBasesSlowCase() const {
   return VBases.get(Definition->getASTContext().getExternalSource());
 }
 
+CXXRecordDecl::LambdaDefinitionData::LambdaDefinitionData(
+    CXXRecordDecl *D, TypeSourceInfo *Info, bool IsGeneric,
+    LambdaCaptureDefault CaptureDefault, ContextDeclOrSentinel ContextDecl,
+    ArrayRef<TemplateArgument> ContextArgs)
+    : DefinitionData(D), IsGenericLambda(IsGeneric),
+      CaptureDefault(CaptureDefault), NumCaptures(0), NumExplicitCaptures(0),
+      HasKnownInternalLinkage(0), ManglingNumber(0), MethodTyInfo(Info) {
+  IsLambda = true;
+
+  // C++1z [expr.prim.lambda]p4:
+  //   This class type is not an aggregate type.
+  Aggregate = false;
+  PlainOldData = false;
+
+  HasContext = ContextDecl;
+  if (auto *Ctx = getLambdaContext()) {
+    Ctx->Decl = ContextDecl;
+    Ctx->Index = 0;
+    Ctx->IsMangled = false;
+    Ctx->NumArgs = ContextArgs.size();
+    std::uninitialized_copy(ContextArgs.begin(), ContextArgs.end(),
+                            getContextArgs().begin());
+  }
+}
+
+auto CXXRecordDecl::LambdaDefinitionData::Create(
+    const ASTContext &C, CXXRecordDecl *D, TypeSourceInfo *Info, bool IsGeneric,
+    LambdaCaptureDefault CaptureDefault, ContextDeclOrSentinel ContextDecl,
+    ArrayRef<TemplateArgument> ContextArgs) -> LambdaDefinitionData * {
+  unsigned Extra = LambdaDefinitionData::additionalSizeToAlloc<
+      LambdaContext, TemplateArgument>(bool(ContextDecl), ContextArgs.size());
+  auto *Mem = C.Allocate(sizeof(LambdaDefinitionData) + Extra,
+                         alignof(LambdaDefinitionData));
+  return new (Mem) struct LambdaDefinitionData(
+      D, Info, IsGeneric, CaptureDefault, ContextDecl, ContextArgs);
+}
+
 CXXRecordDecl::CXXRecordDecl(Kind K, TagKind TK, const ASTContext &C,
                              DeclContext *DC, SourceLocation StartLoc,
                              SourceLocation IdLoc, IdentifierInfo *Id,
@@ -144,21 +181,20 @@ CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
   return R;
 }
 
-CXXRecordDecl *
-CXXRecordDecl::CreateLambda(const ASTContext &C, DeclContext *DC,
-                            TypeSourceInfo *Info, SourceLocation Loc,
-                            unsigned DependencyKind, bool IsGeneric,
-                            LambdaCaptureDefault CaptureDefault) {
-  auto *R = new (C, DC) CXXRecordDecl(CXXRecord, TagTypeKind::Class, C, DC, Loc,
+CXXRecordDecl *CXXRecordDecl::CreateLambda(
+    const ASTContext &C, DeclContext *DC, TypeSourceInfo *Info,
+    SourceLocation Loc, bool IsGeneric, LambdaCaptureDefault CaptureDefault,
+    ContextDeclOrSentinel ContextDecl, ArrayRef<TemplateArgument> ContextArgs) {
+  auto *D = new (C, DC) CXXRecordDecl(CXXRecord, TagTypeKind::Class, C, DC, Loc,
                                       Loc, nullptr, nullptr);
-  R->setBeingDefined(true);
-  R->DefinitionData = new (C) struct LambdaDefinitionData(
-      R, Info, DependencyKind, IsGeneric, CaptureDefault);
-  R->setMayHaveOutOfDateDef(false);
-  R->setImplicit(true);
+  D->setBeingDefined(true);
+  D->DefinitionData = LambdaDefinitionData::Create(
+      C, D, Info, IsGeneric, CaptureDefault, ContextDecl, ContextArgs);
+  D->setMayHaveOutOfDateDef(false);
+  D->setImplicit(true);
 
-  C.getTypeDeclType(R, /*PrevDecl=*/nullptr);
-  return R;
+  C.getTypeDeclType(D, /*PrevDecl=*/nullptr);
+  return D;
 }
 
 CXXRecordDecl *CXXRecordDecl::CreateDeserialized(const ASTContext &C,
@@ -168,6 +204,26 @@ CXXRecordDecl *CXXRecordDecl::CreateDeserialized(const ASTContext &C,
                     SourceLocation(), SourceLocation(), nullptr, nullptr);
   R->setMayHaveOutOfDateDef(false);
   return R;
+}
+
+void CXXRecordDecl::setLambdaContextDecl(Decl *D) {
+  auto [CDS, Args] = getLambdaContext();
+  assert(!CDS.hasValue());
+  if (!D)
+    return;
+  assert(CDS.getTemplateDepth() == D->getTemplateDepth(Args));
+  DeclContext *DC;
+  if (DeclContext::classof(D)) {
+    assert(Args.empty());
+    getLambdaData().setContextDecl(nullptr);
+    DC = Decl::castToDeclContext(D);
+  } else {
+    getLambdaData().setContextDecl(D);
+    DC = D->getDeclContext();
+  }
+  getDeclContext()->removeDecl(this);
+  setDeclContext(DC);
+  DC->addDecl(this);
 }
 
 /// Determine whether a class has a repeated base class. This is intended for
@@ -1736,20 +1792,16 @@ CXXRecordDecl::getLambdaExplicitTemplateParameters() const {
   return llvm::ArrayRef(List->begin(), ExplicitEnd);
 }
 
-Decl *CXXRecordDecl::getLambdaContextDecl() const {
-  assert(isLambda() && "Not a lambda closure type!");
-  ExternalASTSource *Source = getParentASTContext().getExternalSource();
-  return getLambdaData().ContextDecl.get(Source);
-}
-
 void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
   getLambdaData().ManglingNumber = Numbering.ManglingNumber;
   if (Numbering.DeviceManglingNumber)
     getASTContext().DeviceLambdaManglingNumbers[this] =
         Numbering.DeviceManglingNumber;
-  getLambdaData().IndexInContext = Numbering.IndexInContext;
-  getLambdaData().ContextDecl = Numbering.ContextDecl;
+  if (auto *LambdaContext = getLambdaData().getLambdaContext()) {
+    LambdaContext->IsMangled = Numbering.ManglingInContext;
+    LambdaContext->Index = Numbering.IndexInContext;
+  }
   getLambdaData().HasKnownInternalLinkage = Numbering.HasKnownInternalLinkage;
 }
 
@@ -2224,14 +2276,69 @@ CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
       DeductionCandidate::Normal);
 }
 
+RequiresExprBodyDecl::RequiresExprBodyDecl(
+    ASTContext &C, DeclContext *DC, ContextDeclOrSentinel ContextDecl,
+    ArrayRef<TemplateArgument> ContextArgs, SourceLocation StartLoc)
+    : Decl(RequiresExprBody, DC, StartLoc), DeclContext(RequiresExprBody) {
+  if (ContextDecl) {
+    RequiresExprBodyDeclBits.NumContextArgsOrNoContext = ContextArgs.size() + 1;
+    *getTrailingObjects<ContextDeclOrSentinel>() = ContextDecl;
+    setContextArgs(ContextArgs);
+  } else {
+    RequiresExprBodyDeclBits.NumContextArgsOrNoContext = 0;
+    assert(ContextArgs.empty());
+  }
+}
+
+void RequiresExprBodyDecl::setContextArgs(
+    ArrayRef<TemplateArgument> ContextArgs) {
+  assert(RequiresExprBodyDeclBits.NumContextArgsOrNoContext ==
+         ContextArgs.size() + 1);
+  std::uninitialized_copy(ContextArgs.begin(), ContextArgs.end(),
+                          getContextArgs().begin());
+}
+
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
-    ASTContext &C, DeclContext *DC, SourceLocation StartLoc) {
-  return new (C, DC) RequiresExprBodyDecl(C, DC, StartLoc);
+    ASTContext &C, DeclContext *DC, ContextDeclOrSentinel ContextDecl,
+    ArrayRef<TemplateArgument> ContextArgs, SourceLocation StartLoc) {
+  unsigned Extra =
+      additionalSizeToAlloc<ContextDeclOrSentinel, TemplateArgument>(
+          bool(ContextDecl), ContextArgs.size());
+  return new (C, DC, Extra)
+      RequiresExprBodyDecl(C, DC, ContextDecl, ContextArgs, StartLoc);
 }
 
 RequiresExprBodyDecl *
-RequiresExprBodyDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) RequiresExprBodyDecl(C, nullptr, SourceLocation());
+RequiresExprBodyDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                         ContextDeclOrSentinel ContextDecl,
+                                         unsigned NumContextArgs) {
+  assert(!ContextDecl || !ContextDecl.hasValue());
+  unsigned Extra =
+      additionalSizeToAlloc<ContextDeclOrSentinel, TemplateArgument>(
+          bool(ContextDecl), NumContextArgs);
+  auto *D = new (C, ID, Extra) RequiresExprBodyDecl(
+      C, /*DC=*/nullptr, /*ContextDecl=*/ContextDecl,
+      /*ContextArgs=*/std::nullopt, /*StartLoc=*/SourceLocation());
+  D->RequiresExprBodyDeclBits.NumContextArgsOrNoContext =
+      bool(ContextDecl) ? NumContextArgs + 1 : 0;
+  return D;
+}
+
+void RequiresExprBodyDecl::setContextDecl(Decl *D) {
+  assert(numTrailingObjects(OverloadToken<ContextDeclOrSentinel>()) != 0);
+  auto &CDS = *getTrailingObjects<ContextDeclOrSentinel>();
+  assert(!CDS.hasValue());
+  if (!D)
+    return;
+  assert(CDS.getTemplateDepth() == D->getTemplateDepth(getContextArgs()));
+  if (DeclContext::classof(D)) {
+    assert(getContextArgs().empty());
+    CDS = nullptr;
+    setDeclContext(Decl::castToDeclContext(D));
+  } else {
+    CDS = D;
+    setDeclContext(D->getDeclContext());
+  }
 }
 
 void CXXMethodDecl::anchor() {}

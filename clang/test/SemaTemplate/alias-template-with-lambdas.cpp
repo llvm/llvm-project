@@ -102,15 +102,11 @@ template <typename T> using T15 = T14<T, T>;
 
 static_assert(__is_same(T15<char>, int));
 
-// FIXME: This still crashes because we can't extract template arguments T and U
-// outside of the instantiation context of T16.
-#if 0
 template <typename T, typename... U>
 using T16 = decltype([](auto Param) requires (sizeof(Param) != 1 && sizeof...(U) > 0) {
   return Value<T, U...> + sizeof(Param);
 });
 static_assert(T16<int, char, float>()(42) == 2 + sizeof(42));
-#endif
 } // namespace GH82104
 
 namespace GH89853 {
@@ -170,5 +166,13 @@ using Result = decltype(make_tuple(0)(_As{}...));
 using T = Result<int, int>;
 
 } // namespace GH102760
+
+namespace var_template_spec {
+  template <class> int format_kind;
+  template <class _Rp> requires true
+  constexpr int format_kind<_Rp> = [] {
+    return __is_same(_Rp, _Rp);
+  }();
+} // namespace var_template_spec
 
 } // namespace lambda_calls

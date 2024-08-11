@@ -143,6 +143,8 @@ enum class TemplateSubstitutionKind : char {
     /// Determine how many of the \p OldDepth outermost template parameter
     /// lists would be removed by substituting these arguments.
     unsigned getNewDepth(unsigned OldDepth) const {
+      if (Kind == TemplateSubstitutionKind::Rewrite)
+        return OldDepth;
       if (OldDepth < NumRetainedOuterLevels)
         return OldDepth;
       if (OldDepth < getNumLevels())

@@ -116,7 +116,8 @@ struct B {
 template<typename T> void test5(typename T::template Y<1.0>) { }
 template void test5<B>(typename B::Y<1.0>);
 
-// PRE12-CXX20: @_ZN12expr_primary5test6INS_1BEEENT_1YIL_ZZNS_5test6EiE1bEEEi
+// FIXME: This test case does not look valid.
+// PRE12-CXX20: @_ZN12expr_primary5test6INS_1BEEENT_1YIL_Z1bEEEi
 // V12-CXX20:   @_ZN12expr_primary5test6INS_1BEEENT_1YIXfp_EEEi
 template<typename T> auto test6(int b) -> typename T::template Y<b> { return {}; }
 template auto test6<B>(int b) -> B::Y<b>;

@@ -602,8 +602,7 @@ static StorageClass getStorageClass(const Decl *D) {
 
 LinkageInfo
 LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
-                                            LVComputationKind computation,
-                                            bool IgnoreVarTypeLinkage) {
+                                            LVComputationKind computation) {
   assert(D->getDeclContext()->getRedeclContext()->isFileContext() &&
          "Not a name having namespace scope");
   ASTContext &Context = D->getASTContext();
@@ -669,7 +668,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     //   - a data member of an anonymous union.
     const VarDecl *VD = IFD->getVarDecl();
     assert(VD && "Expected a VarDecl in this IndirectFieldDecl!");
-    return getLVForNamespaceScopeDecl(VD, computation, IgnoreVarTypeLinkage);
+    return getLVForNamespaceScopeDecl(VD, computation);
   }
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 
@@ -772,13 +771,14 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
 
-    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
-        !IgnoreVarTypeLinkage) {
+    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var)) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
-      if (!isExternallyVisible(TypeLV.getLinkage()))
-        return LinkageInfo::uniqueExternal();
-      if (!LV.isVisibilityExplicit())
-        LV.mergeVisibility(TypeLV);
+      if (TypeLV.getLinkage() != Linkage::Computing) {
+        if (!isExternallyVisible(TypeLV.getLinkage()))
+          return LinkageInfo::uniqueExternal();
+        if (!LV.isVisibilityExplicit())
+          LV.mergeVisibility(TypeLV);
+      }
     }
 
     if (Var->getStorageClass() == SC_PrivateExtern)
@@ -913,8 +913,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
 LinkageInfo
 LinkageComputer::getLVForClassMember(const NamedDecl *D,
-                                     LVComputationKind computation,
-                                     bool IgnoreVarTypeLinkage) {
+                                     LVComputationKind computation) {
   // Only certain class members have linkage.  Note that fields don't
   // really have linkage, but it's convenient to say they do for the
   // purposes of calculating linkage of pointer-to-data-member
@@ -1026,8 +1025,8 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
     // Modify the variable's linkage by its type, but ignore the
     // type's visibility unless it's a definition.
-    if (!IgnoreVarTypeLinkage) {
-      LinkageInfo typeLV = getLVForType(*VD->getType(), computation);
+    LinkageInfo typeLV = getLVForType(*VD->getType(), computation);
+    if (typeLV.getLinkage() != Linkage::Computing) {
       // FIXME: If the type's linkage is not externally visible, we can
       // give this static data member UniqueExternalLinkage.
       if (!LV.isVisibilityExplicit() && !classLV.isVisibilityExplicit())
@@ -1327,15 +1326,9 @@ LinkageInfo LinkageComputer::getLVForClosure(const DeclContext *DC,
   if (!Owner)
     return LinkageInfo::none();
 
-  // If the owner has a deduced type, we need to skip querying the linkage and
-  // visibility of that type, because it might involve this closure type.  The
-  // only effect of this is that we might give a lambda VisibleNoLinkage rather
-  // than NoLinkage when we don't strictly need to, which is benign.
-  auto *VD = dyn_cast<VarDecl>(Owner);
-  LinkageInfo OwnerLV =
-      VD && VD->getType()->getContainedDeducedType()
-          ? computeLVForDecl(Owner, computation, /*IgnoreVarTypeLinkage*/true)
-          : getLVForDecl(Owner, computation);
+  LinkageInfo OwnerLV = getLVForDecl(Owner, computation);
+  if (OwnerLV.getLinkage() == Linkage::Computing)
+    return LinkageInfo::visible_none();
 
   // A lambda never formally has linkage. But if the owner is externally
   // visible, then the lambda is too. We apply the same rules to blocks.
@@ -1449,8 +1442,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
 }
 
 LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
-                                              LVComputationKind computation,
-                                              bool IgnoreVarTypeLinkage) {
+                                              LVComputationKind computation) {
   // Internal_linkage attribute overrides other considerations.
   if (D->hasAttr<InternalLinkageAttr>())
     return LinkageInfo::internal();
@@ -1514,9 +1506,9 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
           return LinkageInfo::internal();
         }
 
-        return getLVForClosure(
-                  Record->getDeclContext()->getRedeclContext(),
-                  Record->getLambdaContextDecl(), computation);
+        return getLVForClosure(Record->getDeclContext()->getRedeclContext(),
+                               Record->getLambdaManglingContextDecl(),
+                               computation);
       }
 
       break;
@@ -1534,7 +1526,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
 
   // Handle linkage for namespace-scope names.
   if (D->getDeclContext()->getRedeclContext()->isFileContext())
-    return getLVForNamespaceScopeDecl(D, computation, IgnoreVarTypeLinkage);
+    return getLVForNamespaceScopeDecl(D, computation);
 
   // C++ [basic.link]p5:
   //   In addition, a member function, static data member, a named
@@ -1544,7 +1536,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   purposes (7.1.3), has external linkage if the name of the class
   //   has external linkage.
   if (D->getDeclContext()->isRecord())
-    return getLVForClassMember(D, computation, IgnoreVarTypeLinkage);
+    return getLVForClassMember(D, computation);
 
   // C++ [basic.link]p6:
   //   The name of a function declared in block scope and the name of
@@ -1572,15 +1564,19 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   if (D->hasAttr<InternalLinkageAttr>())
     return LinkageInfo::internal();
 
-  if (computation.IgnoreAllVisibility && D->hasCachedLinkage())
+  if (Linkage L = D->getCachedLinkage();
+      L == Linkage::Computing ||
+      (L != Linkage::Invalid && computation.IgnoreAllVisibility))
     return LinkageInfo(D->getCachedLinkage(), DefaultVisibility, false);
 
   if (std::optional<LinkageInfo> LI = lookup(D, computation))
     return *LI;
 
+  // If we recursively depend on this linkage, make sure it does not
+  // fall back here.
+  D->setCachedLinkage(Linkage::Computing);
   LinkageInfo LV = computeLVForDecl(D, computation);
-  if (D->hasCachedLinkage())
-    assert(D->getCachedLinkage() == LV.getLinkage());
+  assert(D->getCachedLinkage() == Linkage::Computing);
 
   D->setCachedLinkage(LV.getLinkage());
   cache(D, computation, LV);
@@ -1601,7 +1597,8 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
     auto *T = cast<NamedDecl>(I);
     if (T == D)
       continue;
-    if (!T->isInvalidDecl() && T->hasCachedLinkage()) {
+    if (!T->isInvalidDecl() && T->hasCachedLinkage() &&
+        T->getCachedLinkage() != Linkage::Computing) {
       Old = T;
       break;
     }
@@ -1924,6 +1921,8 @@ bool NamedDecl::hasLinkage() const {
   case Linkage::Module:
   case Linkage::External:
     return true;
+  case Linkage::Computing:
+    llvm_unreachable("Linkage is being computed!");
   }
   llvm_unreachable("Unhandled Linkage enum");
 }
@@ -2913,9 +2912,14 @@ ParmVarDecl *ParmVarDecl::Create(ASTContext &C, DeclContext *DC,
                                  SourceLocation StartLoc, SourceLocation IdLoc,
                                  const IdentifierInfo *Id, QualType T,
                                  TypeSourceInfo *TInfo, StorageClass S,
-                                 Expr *DefArg) {
-  return new (C, DC) ParmVarDecl(ParmVar, C, DC, StartLoc, IdLoc, Id, T, TInfo,
-                                 S, DefArg);
+                                 Expr *DefArg,
+                                 std::optional<unsigned> TemplateDepth) {
+  if (TemplateDepth &&
+      *TemplateDepth == castFromDeclContext(DC)->getTemplateDepth())
+    TemplateDepth = std::nullopt;
+  unsigned Extra = additionalSizeToAlloc<uint16_t>(bool(TemplateDepth));
+  return new (C, DC, Extra) ParmVarDecl(ParmVar, C, DC, StartLoc, IdLoc, Id, T,
+                                        TInfo, S, DefArg, TemplateDepth);
 }
 
 QualType ParmVarDecl::getOriginalType() const {
@@ -2929,7 +2933,7 @@ QualType ParmVarDecl::getOriginalType() const {
 ParmVarDecl *ParmVarDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID)
       ParmVarDecl(ParmVar, C, nullptr, SourceLocation(), SourceLocation(),
-                  nullptr, QualType(), nullptr, SC_None, nullptr);
+                  nullptr, QualType(), nullptr, SC_None, nullptr, std::nullopt);
 }
 
 SourceRange ParmVarDecl::getSourceRange() const {

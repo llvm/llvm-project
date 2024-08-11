@@ -545,7 +545,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
           Ctx, DebugFunctionDecl,
           CapVar ? CapVar->getBeginLoc() : FD->getBeginLoc(),
           CapVar ? CapVar->getLocation() : FD->getLocation(), II, ArgType,
-          /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr);
+          /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr,
+          DebugFunctionDecl->getTemplateDepth());
     } else {
       Arg = ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(),
                                       II, ArgType, ImplicitParamKind::Other);

@@ -1085,16 +1085,24 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
 }
 
 Decl *TemplateDeclInstantiator::VisitTypedefDecl(TypedefDecl *D) {
+  EnterExpressionEvaluationContext Eval(
+      SemaRef, SemaRef.currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
   Decl *Typedef = InstantiateTypedefNameDecl(D, /*IsTypeAlias=*/false);
   if (Typedef)
     Owner->addDecl(Typedef);
+  SemaRef.UpdateCurrentContextDecl(Typedef);
   return Typedef;
 }
 
 Decl *TemplateDeclInstantiator::VisitTypeAliasDecl(TypeAliasDecl *D) {
+  EnterExpressionEvaluationContext Eval(
+      SemaRef, SemaRef.currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
   Decl *Typedef = InstantiateTypedefNameDecl(D, /*IsTypeAlias=*/true);
   if (Typedef)
     Owner->addDecl(Typedef);
+  SemaRef.UpdateCurrentContextDecl(Typedef);
   return Typedef;
 }
 
@@ -1110,13 +1118,8 @@ Decl *TemplateDeclInstantiator::InstantiateTypeAliasTemplateDecl(
     return nullptr;
 
   TypeAliasDecl *Pattern = D->getTemplatedDecl();
-  Sema::InstantiatingTemplate InstTemplate(
-      SemaRef, D->getBeginLoc(), D,
-      D->getTemplateDepth() >= TemplateArgs.getNumLevels()
-          ? ArrayRef<TemplateArgument>()
-          : (TemplateArgs.begin() + TemplateArgs.getNumLevels() - 1 -
-             D->getTemplateDepth())
-                ->Args);
+  Sema::InstantiatingTemplate InstTemplate(SemaRef, D->getBeginLoc(), D,
+                                           /*TemplateArgs=*/std::nullopt);
   if (InstTemplate.isInvalid())
     return nullptr;
 
@@ -1127,6 +1130,10 @@ Decl *TemplateDeclInstantiator::InstantiateTypeAliasTemplateDecl(
       PrevAliasTemplate = dyn_cast<TypeAliasTemplateDecl>(Found.front());
     }
   }
+
+  EnterExpressionEvaluationContext Eval(
+      SemaRef, SemaRef.currentEvaluationContext().Context,
+      Sema::LazyContextDecl, /*TemplateArgs=*/std::nullopt);
 
   TypeAliasDecl *AliasInst = cast_or_null<TypeAliasDecl>(
     InstantiateTypedefNameDecl(Pattern, /*IsTypeAlias=*/true));
@@ -1145,6 +1152,7 @@ Decl *TemplateDeclInstantiator::InstantiateTypeAliasTemplateDecl(
   if (!PrevAliasTemplate)
     Inst->setInstantiatedFromMemberTemplate(D);
 
+  SemaRef.UpdateCurrentContextDecl(AliasInst);
   return Inst;
 }
 
@@ -2020,16 +2028,25 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
 
   CXXRecordDecl *Record = nullptr;
   bool IsInjectedClassName = D->isInjectedClassName();
-  if (D->isLambda())
+  if (D->isLambda()) {
+    unsigned TemplateDepth =
+        D->getTemplateDepth() - TemplateArgs.getNumSubstitutedLevels();
+    Sema::ContextDeclOrLazy ContextDecl =
+        SemaRef.currentEvaluationContext().ContextDecl;
     Record = CXXRecordDecl::CreateLambda(
         SemaRef.Context, Owner, D->getLambdaTypeInfo(), D->getLocation(),
-        D->getLambdaDependencyKind(), D->isGenericLambda(),
-        D->getLambdaCaptureDefault());
-  else
+        D->isGenericLambda(), D->getLambdaCaptureDefault(),
+        ContextDecl.hasValue() ? *ContextDecl
+                               : ContextDeclOrSentinel(TemplateDepth),
+        SemaRef.currentEvaluationContext().ContextArgs);
+    if (!ContextDecl.hasValue())
+      SemaRef.PendingLazyContextDecls.push_back(Record);
+  } else {
     Record = CXXRecordDecl::Create(SemaRef.Context, D->getTagKind(), Owner,
                                    D->getBeginLoc(), D->getLocation(),
                                    D->getIdentifier(), PrevDecl,
                                    /*DelayTypeCreation=*/IsInjectedClassName);
+  }
   // Link the type of the injected-class-name to that of the outer class.
   if (IsInjectedClassName)
     (void)SemaRef.Context.getTypeDeclType(Record, cast<CXXRecordDecl>(Owner));
@@ -2136,6 +2153,9 @@ static QualType adjustFunctionTypeForInstantiation(ASTContext &Context,
 Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     FunctionDecl *D, TemplateParameterList *TemplateParams,
     RewriteKind FunctionRewriteKind) {
+  EnterExpressionEvaluationContext Eval(
+      SemaRef, SemaRef.currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
   // Check whether there is already a function template specialization for
   // this declaration.
   FunctionTemplateDecl *FunctionTemplate = D->getDescribedFunctionTemplate();
@@ -2245,6 +2265,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         D->FriendConstraintRefersToEnclosingTemplate());
     Function->setRangeEnd(D->getSourceRange().getEnd());
   }
+  SemaRef.UpdateCurrentContextDecl(Function);
 
   if (D->isInlined())
     Function->setImplicitlyInline();
@@ -2527,6 +2548,10 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   else
     isFriend = (D->getFriendObjectKind() != Decl::FOK_None);
 
+  EnterExpressionEvaluationContext Eval(
+      SemaRef, SemaRef.currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
+
   bool MergeWithParentScope = (TemplateParams != nullptr) ||
     !(isa<Decl>(Owner) &&
       cast<Decl>(Owner)->isDefinedOutsideFunctionOrMethod());
@@ -2675,6 +2700,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         D->UsesFPIntrin(), D->isInlineSpecified(), D->getConstexprKind(),
         D->getEndLoc(), TrailingRequiresClause);
   }
+  SemaRef.UpdateCurrentContextDecl(Method);
 
   if (D->isInlined())
     Method->setImplicitlyInline();
@@ -4121,7 +4147,10 @@ Decl *TemplateDeclInstantiator::VisitImplicitConceptSpecializationDecl(
 
 Decl *
 TemplateDeclInstantiator::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
+  ContextDeclAndArgs Context = D->getContext();
+  // FIXME: Transform the arguments.
   return RequiresExprBodyDecl::Create(SemaRef.Context, D->getDeclContext(),
+                                      Context.CDS, Context.Args,
                                       D->getBeginLoc());
 }
 

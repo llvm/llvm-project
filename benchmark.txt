@@ -1,0 +1,91 @@
+stage1-O3:
+
+Benchmark	Old	New
+kimwitu++	42984M	43445M (+1.07%)
+sqlite3	38976M	39006M (+0.08%)
+consumer-typeset	35207M	35272M (+0.18%)
+Bullet	104230M	105079M (+0.82%)
+tramp3d-v4	87692M	87953M (+0.30%)
+mafft	36675M	36746M (+0.19%)
+ClamAV	55998M	56096M (+0.17%)
+lencod	67627M	67727M (+0.15%)
+SPASS	47456M	47609M (+0.32%)
+7zip	214160M	217285M (+1.46%)
+geomean	61396M	61686M (+0.47%)
+stage1-ReleaseThinLTO:
+
+Benchmark	Old	New
+kimwitu++	53856M	54341M (+0.90%)
+sqlite3	51098M	51104M (+0.01%)
+consumer-typeset	49397M	49473M (+0.15%)
+Bullet	98328M	99182M (+0.87%)
+tramp3d-v4	142518M	142862M (+0.24%)
+mafft	31630M	31701M (+0.22%)
+ClamAV	74595M	74691M (+0.13%)
+lencod	116718M	116741M (+0.02%)
+SPASS	66986M	67120M (+0.20%)
+7zip	266444M	269535M (+1.16%)
+geomean	78912M	79220M (+0.39%)
+stage1-ReleaseLTO-g:
+
+Benchmark	Old	New
+kimwitu++	58953M	59413M (+0.78%)
+sqlite3	62117M	62104M (-0.02%)
+consumer-typeset	55231M	55311M (+0.15%)
+Bullet	111542M	112397M (+0.77%)
+tramp3d-v4	171205M	171520M (+0.18%)
+mafft	39383M	39452M (+0.17%)
+ClamAV	86874M	86962M (+0.10%)
+lencod	134904M	135012M (+0.08%)
+SPASS	78556M	78680M (+0.16%)
+7zip	273629M	276683M (+1.12%)
+geomean	90854M	91170M (+0.35%)
+stage1-O0-g:
+
+Benchmark	Old	New
+kimwitu++	24880M	25346M (+1.87%)
+sqlite3	4819M	4831M (+0.25%)
+consumer-typeset	12581M	12648M (+0.54%)
+Bullet	64850M	65658M (+1.25%)
+tramp3d-v4	21204M	21503M (+1.41%)
+mafft	6744M	6812M (+1.02%)
+ClamAV	13666M	13766M (+0.73%)
+lencod	12768M	12861M (+0.72%)
+SPASS	14417M	14560M (+0.99%)
+7zip	142702M	145480M (+1.95%)
+geomean	18624M	18824M (+1.07%)
+stage2-O3:
+
+Benchmark	Old	New
+kimwitu++	38237M	38648M (+1.07%)
+sqlite3	34510M	34521M (+0.03%)
+consumer-typeset	31500M	31555M (+0.17%)
+Bullet	91970M	92608M (+0.69%)
+tramp3d-v4	77162M	77411M (+0.32%)
+mafft	32367M	32426M (+0.18%)
+ClamAV	49676M	49761M (+0.17%)
+lencod	60029M	60110M (+0.14%)
+SPASS	42203M	42319M (+0.27%)
+7zip	189874M	192365M (+1.31%)
+geomean	54428M	54665M (+0.44%)
+stage2-O0-g:
+
+Benchmark	Old	New
+kimwitu++	21908M	22281M (+1.71%)
+sqlite3	4153M	4161M (+0.19%)
+consumer-typeset	11226M	11286M (+0.53%)
+Bullet	56719M	57407M (+1.21%)
+tramp3d-v4	18519M	18754M (+1.27%)
+mafft	5971M	6031M (+1.00%)
+ClamAV	12197M	12284M (+0.71%)
+lencod	11286M	11366M (+0.71%)
+SPASS	12839M	12969M (+1.01%)
+7zip	126866M	129246M (+1.88%)
+geomean	16433M	16601M (+1.02%)
+clang build:
+
+Metric	Old	New
+instructions:u	32641635M	33228307M (+1.80%)
+wall-time	558.38s	568.45s (+1.80%)
+size-file	130961KiB	130988KiB (+0.02%)
+size-file (stage1)	131043KiB	131064KiB (+0.02%)

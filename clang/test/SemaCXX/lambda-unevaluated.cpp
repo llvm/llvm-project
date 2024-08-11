@@ -264,3 +264,15 @@ void func() {
 }
 
 } // namespace GH88081
+
+namespace GH97953 {
+  template<typename T> concept C = true;
+
+  // FIXME: This should be constexpr.
+  static_assert(
+      []<int I=0>() -> decltype([]<C auto = 0>{ return true; })
+      { return {}; }()());
+  // expected-error@-2 {{static assertion expression is not an integral constant expression}}
+  // expected-note@-3 {{non-constexpr function 'operator()<0>' cannot be used in a constant expression}}
+  // expected-note@-4 {{declared here}}
+} // namespace GH97953

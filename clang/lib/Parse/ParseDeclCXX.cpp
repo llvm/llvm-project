@@ -1172,7 +1172,8 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
       // C++11 [dcl.type.simple]p4:
       //   The operand of the decltype specifier is an unevaluated operand.
       EnterExpressionEvaluationContext Unevaluated(
-          Actions, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
+          Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+          Sema::ReuseLambdaContextDecl,
           Sema::ExpressionEvaluationContextRecord::EK_Decltype);
       Result = Actions.CorrectDelayedTyposInExpr(
           ParseExpression(), /*InitDecl=*/nullptr,
@@ -2716,8 +2717,9 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   //
   // NOTE: the latter two productions are a proposed bugfix rather than the
   // current grammar rules as of C++20.
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
   if (Tok.isNot(tok::colon))
-    ParseDeclarator(DeclaratorInfo);
+    ParseDeclarator(DeclaratorInfo, &CurTemplateDepthTracker);
   else
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
@@ -3299,6 +3301,22 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   //   member-declarator-list ',' member-declarator
 
   while (true) {
+    std::optional<EnterExpressionEvaluationContext> Eval;
+    if (!DeclaratorInfo.isFirstDeclarator()) {
+      Eval.emplace(Actions, Actions.currentEvaluationContext().Context,
+                   Sema::LazyContextDecl);
+      // GNU attributes are allowed before the second and subsequent declarator.
+      // However, this does not apply for [[]] attributes (which could show up
+      // before or after the __attribute__ attributes).
+      DiagnoseAndSkipCXX11Attributes();
+      MaybeParseGNUAttributes(DeclaratorInfo);
+      DiagnoseAndSkipCXX11Attributes();
+
+      if (ParseCXXMemberDeclaratorBeforeInitializer(
+              DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs))
+        break;
+    }
+
     InClassInitStyle HasInClassInit = ICIS_NoInit;
     bool HasStaticInitializer = false;
     if (Tok.isOneOf(tok::equal, tok::l_brace) && PureSpecLoc.isInvalid()) {
@@ -3468,23 +3486,12 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
           << TemplateInfo.Kind;
     }
 
-    // Parse the next declarator.
+    // Prepare to parse the next declarator.
     DeclaratorInfo.clear();
     VS.clear();
     BitfieldSize = ExprResult(/*Invalid=*/false);
     EqualLoc = PureSpecLoc = SourceLocation();
     DeclaratorInfo.setCommaLoc(CommaLoc);
-
-    // GNU attributes are allowed before the second and subsequent declarator.
-    // However, this does not apply for [[]] attributes (which could show up
-    // before or after the __attribute__ attributes).
-    DiagnoseAndSkipCXX11Attributes();
-    MaybeParseGNUAttributes(DeclaratorInfo);
-    DiagnoseAndSkipCXX11Attributes();
-
-    if (ParseCXXMemberDeclaratorBeforeInitializer(
-            DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs))
-      break;
   }
 
   if (ExpectSemi &&
@@ -3736,6 +3743,9 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
       return nullptr;
     }
     ParsedTemplateInfo TemplateInfo;
+    EnterExpressionEvaluationContext Eval(
+        Actions, Actions.currentEvaluationContext().Context,
+        Sema::LazyContextDecl);
     return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo);
   }
 }
@@ -5327,6 +5337,9 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
 
     ParsedTemplateInfo TemplateInfo;
     // Parse all the comma separated declarators.
+    EnterExpressionEvaluationContext Eval(
+        Actions, Actions.currentEvaluationContext().Context,
+        Sema::LazyContextDecl);
     ParseCXXClassMemberDeclaration(CurAS, AccessAttrs, TemplateInfo);
   }
 

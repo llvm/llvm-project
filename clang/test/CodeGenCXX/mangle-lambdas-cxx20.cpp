@@ -27,3 +27,9 @@ void test_vt1() {
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZNK3vt1IiEMUlTyiT_E_clIiEEDaiS1_
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZNK3vt1IiEMUlTyiT_E_clIiEEDaiS1_Ed0_NKUlvE_clEv
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZNK3vt1IiEMUlTyiT_E_clIiEEDaiS1_Ed_NKUlvE_clEv
+
+void f1(decltype([]{})) {}
+void test_f1() {
+  f1({});
+}
+// CHECK-LABEL: define internal void @_Z2f1UlvE_(

@@ -624,7 +624,7 @@ unsigned Parser::ParseAttributeArgsCommon(
               Actions,
               Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
                      : Sema::ExpressionEvaluationContext::ConstantEvaluated,
-              nullptr,
+              /*ContextDecl=*/nullptr, /*ContextArgs=*/std::nullopt,
               Sema::ExpressionEvaluationContextRecord::EK_AttrArgument);
 
           ExprResult ArgExpr(
@@ -646,7 +646,7 @@ unsigned Parser::ParseAttributeArgsCommon(
           Actions,
           Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
                  : Sema::ExpressionEvaluationContext::ConstantEvaluated,
-          nullptr,
+          /*ContextDecl=*/nullptr, /*ContextArgs=*/std::nullopt,
           Sema::ExpressionEvaluationContextRecord::ExpressionKind::
               EK_AttrArgument);
 
@@ -2075,6 +2075,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     ProhibitAttributes(DeclSpecAttrs);
     return ParseNamespace(Context, DeclEnd);
   case tok::kw_using: {
+    EnterExpressionEvaluationContext Eval(
+        Actions, Actions.currentEvaluationContext().Context,
+        Sema::LazyContextDecl);
     ParsedAttributes Attrs(AttrFactory);
     takeAndConcatenateAttrs(DeclAttrs, DeclSpecAttrs, Attrs);
     return ParseUsingDirectiveOrDeclaration(Context, ParsedTemplateInfo(),
@@ -2133,6 +2136,10 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
   ParsedTemplateInfo TemplateInfo;
   DeclSpecContext DSContext = getDeclSpecContextFromDeclaratorContext(Context);
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none, DSContext);
+
+  EnterExpressionEvaluationContext Eval(
+      getActions(), getActions().currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
 
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
@@ -2339,7 +2346,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
   SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
-  ParseDeclarator(D);
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  ParseDeclarator(D, &CurTemplateDepthTracker);
 
   if (IsTemplateSpecOrInst)
     SAC.done();
@@ -2362,8 +2370,12 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
   LateParsedAttrList LateParsedAttrs(true);
   if (D.isFunctionDeclarator()) {
-    MaybeParseGNUAttributes(D, &LateParsedAttrs);
-
+    {
+      std::optional<Sema::ContextRAII> Ctx;
+      if (DeclContext *DC = Actions.computeDeclContext(D.getCXXScopeSpec()))
+        Ctx.emplace(Actions, DC);
+      MaybeParseGNUAttributes(D, &LateParsedAttrs);
+    }
     // The _Noreturn keyword can't appear here, unlike the GNU noreturn
     // attribute. If we find the keyword here, tell the user to put it
     // at the start instead.
@@ -2392,7 +2404,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     }
     // We're at the point where the parsing of function declarator is finished.
     //
-    // A common error is that users accidently add a virtual specifier
+    // A common error is that users accidentally add a virtual specifier
     // (e.g. override) in an out-line method definition.
     // We attempt to recover by stripping all these specifiers coming after
     // the declarator.
@@ -2459,7 +2471,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
             TheDecl =
                 ParseFunctionDefinition(D, TemplateInfo, &LateParsedAttrs);
           }
-
           return Actions.ConvertDeclToDeclGroup(TheDecl);
         }
 
@@ -2503,7 +2514,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       IsForRangeLoop = true;
       EnterExpressionEvaluationContext ForRangeInitContext(
           Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-          /*LambdaContextDecl=*/nullptr,
+          /*ContextDecl=*/nullptr, /*ContextArgs=*/std::nullopt,
           Sema::ExpressionEvaluationContextRecord::EK_Other,
           getLangOpts().CPlusPlus23);
 
@@ -2583,6 +2594,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // Parse the next declarator.
     D.clear();
     D.setCommaLoc(CommaLoc);
+
+    EnterExpressionEvaluationContext Eval(
+        getActions(), getActions().currentEvaluationContext().Context,
+        Sema::LazyContextDecl);
 
     // Accept attributes in an init-declarator.  In the first declarator in a
     // declaration, these would be part of the declspec.  In subsequent
@@ -2796,7 +2811,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
     break;
     }
-  }
+    }
 
   SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(),
                                     SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
@@ -3424,7 +3439,8 @@ void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
   using ExpressionKind =
       Sema::ExpressionEvaluationContextRecord::ExpressionKind;
   EnterExpressionEvaluationContext EC(
-      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      /*ContextDecl=*/nullptr, /*ContextArgs=*/std::nullopt,
       ExpressionKind::EK_AttrArgument);
 
   ExprResult ArgExpr(
@@ -6291,7 +6307,8 @@ bool Parser::isDeclarationSpecifier(
 bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
                                      DeclSpec::FriendSpecified IsFriend,
                                      const ParsedTemplateInfo *TemplateInfo) {
-  RevertingTentativeParsingAction TPA(*this);
+  RevertingTentativeParsingAction TPA(*this, /*Unannotated=*/true);
+  Sema::SFINAETrap Trap(Actions);
   // Parse the C++ scope specifier.
   CXXScopeSpec SS;
   if (TemplateInfo && TemplateInfo->TemplateParams)
@@ -6612,11 +6629,13 @@ void Parser::ParseTypeQualifierListOpt(
 }
 
 /// ParseDeclarator - Parse and verify a newly-initialized declarator.
-void Parser::ParseDeclarator(Declarator &D) {
+void Parser::ParseDeclarator(
+    Declarator &D, TemplateParameterDepthRAII *CurTemplateDepthTracker) {
   /// This implements the 'declarator' production in the C grammar, then checks
   /// for well-formedness and issues diagnostics.
   Actions.runWithSufficientStackSpace(D.getBeginLoc(), [&] {
-    ParseDeclaratorInternal(D, &Parser::ParseDirectDeclarator);
+    ParseDeclaratorInternal(D, &Parser::ParseDirectDeclarator,
+                            CurTemplateDepthTracker);
   });
 }
 
@@ -6684,8 +6703,9 @@ static bool isPipeDeclarator(const Declarator &D) {
 /// [GNU]   '&' restrict[opt] attributes[opt]
 /// [GNU?]  '&&' restrict[opt] attributes[opt]
 ///         '::'[opt] nested-name-specifier '*' cv-qualifier-seq[opt]
-void Parser::ParseDeclaratorInternal(Declarator &D,
-                                     DirectDeclParseFunction DirectDeclParser) {
+void Parser::ParseDeclaratorInternal(
+    Declarator &D, DirectDeclParseFunction DirectDeclParser,
+    TemplateParameterDepthRAII *CurTemplateDepthTracker) {
   if (Diags.hasAllExtensionsSilenced())
     D.setExtension();
 
@@ -6756,7 +6776,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
         AnnotateScopeToken(SS, true);
 
       if (DirectDeclParser)
-        (this->*DirectDeclParser)(D);
+        (this->*DirectDeclParser)(D, CurTemplateDepthTracker);
       return;
     }
   }
@@ -6775,7 +6795,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   // Not a pointer, C++ reference, or block.
   if (!isPtrOperatorToken(Kind, getLangOpts(), D.getContext())) {
     if (DirectDeclParser)
-      (this->*DirectDeclParser)(D);
+      (this->*DirectDeclParser)(D, CurTemplateDepthTracker);
     return;
   }
 
@@ -6798,8 +6818,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     D.ExtendWithDeclSpec(DS);
 
     // Recursively parse the declarator.
-    Actions.runWithSufficientStackSpace(
-        D.getBeginLoc(), [&] { ParseDeclaratorInternal(D, DirectDeclParser); });
+    Actions.runWithSufficientStackSpace(D.getBeginLoc(), [&] {
+      ParseDeclaratorInternal(D, DirectDeclParser, CurTemplateDepthTracker);
+    });
     if (Kind == tok::star)
       // Remember that we parsed a pointer type, and remember the type-quals.
       D.AddTypeInfo(DeclaratorChunk::getPointer(
@@ -6844,8 +6865,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     }
 
     // Recursively parse the declarator.
-    Actions.runWithSufficientStackSpace(
-        D.getBeginLoc(), [&] { ParseDeclaratorInternal(D, DirectDeclParser); });
+    Actions.runWithSufficientStackSpace(D.getBeginLoc(), [&] {
+      ParseDeclaratorInternal(D, DirectDeclParser, CurTemplateDepthTracker);
+    });
 
     if (D.getNumTypeObjects() > 0) {
       // C++ [dcl.ref]p4: There shall be no references to references.
@@ -6930,7 +6952,8 @@ static SourceLocation getMissingDeclaratorIdLoc(Declarator &D,
 ///
 /// Note, any additional constructs added here may need corresponding changes
 /// in isConstructorDeclarator.
-void Parser::ParseDirectDeclarator(Declarator &D) {
+void Parser::ParseDirectDeclarator(
+    Declarator &D, TemplateParameterDepthRAII *CurTemplateDepthTracker) {
   DeclaratorScopeObj DeclScopeObj(*this, D.getCXXScopeSpec());
 
   if (getLangOpts().CPlusPlus && D.mayHaveIdentifier()) {
@@ -7256,7 +7279,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       if (IsFunctionDeclaration)
         Actions.ActOnStartFunctionDeclarationDeclarator(D,
                                                         TemplateParameterDepth);
-      ParseFunctionDeclarator(D, attrs, T, IsAmbiguous);
+      ParseFunctionDeclarator(D, attrs, T, CurTemplateDepthTracker,
+                              IsAmbiguous);
       if (IsFunctionDeclaration)
         Actions.ActOnFinishFunctionDeclarationDeclarator(D);
       PrototypeScope.Exit();
@@ -7292,7 +7316,7 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       break;
     }
   }
-}
+ }
 
 void Parser::ParseDecompositionDeclarator(Declarator &D) {
   assert(Tok.is(tok::l_square));
@@ -7486,7 +7510,10 @@ void Parser::ParseParenDeclarator(Declarator &D) {
                             Scope::FunctionPrototypeScope | Scope::DeclScope |
                             (D.isFunctionDeclaratorAFunctionDeclaration()
                                ? Scope::FunctionDeclarationScope : 0));
-  ParseFunctionDeclarator(D, attrs, T, false, RequiresArg);
+
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  ParseFunctionDeclarator(D, attrs, T, &CurTemplateDepthTracker,
+                          /*IsAmbiguous=*/false, RequiresArg);
   PrototypeScope.Exit();
 }
 
@@ -7552,11 +7579,11 @@ void Parser::InitCXXThisScopeForDeclaratorIfRelevant(
 ///           dynamic-exception-specification
 ///           noexcept-specification
 ///
-void Parser::ParseFunctionDeclarator(Declarator &D,
-                                     ParsedAttributes &FirstArgAttrs,
-                                     BalancedDelimiterTracker &Tracker,
-                                     bool IsAmbiguous,
-                                     bool RequiresArg) {
+void Parser::ParseFunctionDeclarator(
+    Declarator &D, ParsedAttributes &FirstArgAttrs,
+    BalancedDelimiterTracker &Tracker,
+    TemplateParameterDepthRAII *CurTemplateDepthTracker, bool IsAmbiguous,
+    bool RequiresArg) {
   assert(getCurScope()->isFunctionPrototypeScope() &&
          "Should call from a Function scope");
   // lparen is already consumed!
@@ -7608,7 +7635,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     ProhibitAttributes(FnAttrs);
   } else {
     if (Tok.isNot(tok::r_paren))
-      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc);
+      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc,
+                                      CurTemplateDepthTracker);
     else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
@@ -7885,7 +7913,9 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration) {
+    SourceLocation &EllipsisLoc,
+    TemplateParameterDepthRAII *CurTemplateDepthTracker,
+    bool IsACXXFunctionDeclaration) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7964,6 +7994,11 @@ void Parser::ParseParameterDeclarationClause(
         Diag(ThisLoc, diag::err_requires_expr_explicit_object_parameter);
     }
 
+    EnterExpressionEvaluationContext Eval(
+        getActions(),
+        Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed,
+        Sema::LazyContextDecl);
+
     ParsedTemplateInfo TemplateInfo;
     ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
                                DeclSpecContext::DSC_normal,
@@ -7980,6 +8015,7 @@ void Parser::ParseParameterDeclarationClause(
                               : DeclaratorCtx == DeclaratorContext::LambdaExpr
                                   ? DeclaratorContext::LambdaExprParameter
                                   : DeclaratorContext::Prototype);
+
     ParseDeclarator(ParmDeclarator);
 
     if (ThisLoc.isValid())
@@ -8065,8 +8101,18 @@ void Parser::ParseParameterDeclarationClause(
 
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
-      Decl *Param =
-          Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator, ThisLoc);
+      bool StartImplicitTemplate = false;
+      ParmVarDecl *Param = Actions.ActOnParamDeclarator(
+          getCurScope(), ParmDeclarator, TemplateParameterDepth,
+          StartImplicitTemplate, ThisLoc);
+      getActions().UpdateCurrentContextDecl(Param);
+      if (StartImplicitTemplate) {
+        assert(CurTemplateDepthTracker &&
+               "A parsing context which can introduce an implicit template is "
+               "not handled");
+        CurTemplateDepthTracker->setAddedDepth(1);
+      }
+
       // Parse the default argument, if any. We parse the default
       // arguments in all dialects; the semantic analysis in
       // ActOnParamDefaultArgument will reject the default argument in
@@ -8088,13 +8134,6 @@ void Parser::ParseParameterDeclarationClause(
         } else {
           // Consume the '='.
           ConsumeToken();
-
-          // The argument isn't actually potentially evaluated unless it is
-          // used.
-          EnterExpressionEvaluationContext Eval(
-              Actions,
-              Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed,
-              Param);
 
           ExprResult DefArgResult;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {

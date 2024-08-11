@@ -1612,7 +1612,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     }
 
     EnterExpressionEvaluationContext PotentiallyDiscarded(
-        Actions, Context, nullptr,
+        Actions, Context, /*ContextDecl=*/nullptr, /*ContextArgs=*/std::nullopt,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
     ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
   }
@@ -1657,7 +1657,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     }
 
     EnterExpressionEvaluationContext PotentiallyDiscarded(
-        Actions, Context, nullptr,
+        Actions, Context, /*ContextDecl=*/nullptr, /*ContextArgs=*/std::nullopt,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
     ElseStmt = ParseStatement();
 

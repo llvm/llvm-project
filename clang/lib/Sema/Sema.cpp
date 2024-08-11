@@ -287,7 +287,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   // evaluation stack.
   ExprEvalContexts.emplace_back(
       ExpressionEvaluationContext::PotentiallyEvaluated, 0, CleanupInfo{},
-      nullptr, ExpressionEvaluationContextRecord::EK_Other);
+      nullptr, std::nullopt, ExpressionEvaluationContextRecord::EK_Other, 0);
 
   // Initialization of data sharing attributes stack for OpenMP
   OpenMP().InitDataSharingAttributesStack();
@@ -529,6 +529,8 @@ void Sema::Initialize() {
 Sema::~Sema() {
   assert(InstantiatingSpecializations.empty() &&
          "failed to clean up an InstantiatingTemplate?");
+  assert(PendingLazyContextDecls.empty() &&
+         "failed to clean up a lazy ContextDecl?");
 
   if (VisContext) FreeVisContext();
 
