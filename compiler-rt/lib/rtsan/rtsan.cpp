@@ -25,14 +25,10 @@ static void SetInitialized() {
   atomic_store(&rtsan_initialized, 1, memory_order_release);
 }
 
-static bool IsInitialized() {
-  return atomic_load(&rtsan_initialized, memory_order_acquire) == 1;
-}
-
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
-  CHECK(!IsInitialized());
+  CHECK(!__rtsan_is_initialized());
   InitializeInterceptors();
   SetInitialized();
 }
