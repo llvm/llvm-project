@@ -950,6 +950,30 @@ public:
   };
 };
 
+/// Represents a splat vector.
+class GSplatVector : public GenericMachineInstr {
+public:
+  Register getValueReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
+  };
+};
+
+/// Represents an integer-like extending operation.
+class GZextOrSextOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H

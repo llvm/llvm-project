@@ -1968,3 +1968,326 @@ Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
                            Ty.getElementCount());
   return IntegerType::get(C, Ty.getSizeInBits());
 }
+
+APInt llvm::GIConstant::getScalarValue() const {
+  assert(Kind == GIConstantKind::Scalar && "Expected scalar constant");
+
+  return Value;
+}
+
+std::optional<GIConstant>
+llvm::GIConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
+  MachineInstr *Constant = getDefIgnoringCopies(Const, MRI);
+
+  if (GSplatVector *Splat = dyn_cast<GSplatVector>(Constant)) {
+    std::optional<ValueAndVReg> MayBeConstant =
+        getIConstantVRegValWithLookThrough(Splat->getValueReg(), MRI);
+    if (!MayBeConstant)
+      return std::nullopt;
+    return GIConstant(MayBeConstant->Value, GIConstantKind::ScalableVector);
+  }
+
+  if (GBuildVector *Build = dyn_cast<GBuildVector>(Constant)) {
+    SmallVector<APInt> Values;
+    unsigned NumSources = Build->getNumSources();
+    for (unsigned I = 0; I < NumSources; ++I) {
+      Register SrcReg = Build->getSourceReg(I);
+      std::optional<ValueAndVReg> MayBeConstant =
+          getIConstantVRegValWithLookThrough(SrcReg, MRI);
+      if (!MayBeConstant)
+        return std::nullopt;
+      Values.push_back(MayBeConstant->Value);
+    }
+    return GIConstant(Values);
+  }
+
+  std::optional<ValueAndVReg> MayBeConstant =
+      getIConstantVRegValWithLookThrough(Const, MRI);
+  if (!MayBeConstant)
+    return std::nullopt;
+
+  return GIConstant(MayBeConstant->Value, GIConstantKind::Scalar);
+}
+
+static bool isKnownNonZero(Register Reg, const MachineRegisterInfo &MRI,
+                           GISelKnownBits *KB, unsigned Depth);
+
+bool llvm::isKnownNonZero(Register Reg, const MachineRegisterInfo &MRI,
+                          GISelKnownBits *KB, unsigned Depth) {
+  if (!Reg.isVirtual())
+    return false;
+
+  LLT Ty = MRI.getType(Reg);
+  if (!Ty.isValid())
+    return false;
+
+  if (Ty.isPointer())
+    return false;
+
+  if (!Ty.isScalar())
+    errs() << "type: " << Ty << '\n';
+
+  assert(Ty.isScalar() && "Expected a scalar value");
+  return ::isKnownNonZero(Reg, MRI, KB, Depth);
+}
+
+static bool matchOpWithOpEqZero(Register Op0, Register Op1,
+                                const MachineRegisterInfo &MRI) {
+  MachineInstr *MI = MRI.getVRegDef(Op0);
+
+  bool Result = false;
+
+  if (GZextOrSextOp *ZS = dyn_cast<GZextOrSextOp>(MI)) {
+    MachineInstr *SrcMI = MRI.getVRegDef(ZS->getSrcReg());
+    if (GICmp *Cmp = dyn_cast<GICmp>(SrcMI)) {
+      std::optional<ValueAndVReg> MayBeConstant =
+          getIConstantVRegValWithLookThrough(Cmp->getRHSReg(), MRI);
+      if (MayBeConstant)
+        Result |= (MayBeConstant->Value == 0) && (Cmp->getLHSReg() == Op1) &&
+                  (Cmp->getCond() == ICmpInst::ICMP_EQ);
+    }
+  }
+
+  MI = MRI.getVRegDef(Op1);
+  if (GZextOrSextOp *ZS = dyn_cast<GZextOrSextOp>(MI)) {
+    MachineInstr *SrcMI = MRI.getVRegDef(ZS->getSrcReg());
+    if (GICmp *Cmp = dyn_cast<GICmp>(SrcMI)) {
+      std::optional<ValueAndVReg> MayBeConstant =
+          getIConstantVRegValWithLookThrough(Cmp->getRHSReg(), MRI);
+      if (MayBeConstant)
+        Result |= (MayBeConstant->Value == 0) && (Cmp->getLHSReg() == Op0) &&
+                  (Cmp->getCond() == ICmpInst::ICMP_EQ);
+    }
+  }
+
+  return Result;
+}
+
+static bool isNonZeroAdd(const GBinOp &Add, const MachineRegisterInfo &MRI,
+                         GISelKnownBits *KB, unsigned Depth,
+                         unsigned BitWidth) {
+  bool NSW = Add.getFlag(MachineInstr::MIFlag::NoSWrap);
+  bool NUW = Add.getFlag(MachineInstr::MIFlag::NoUWrap);
+  Register LHS = Add.getLHSReg();
+  Register RHS = Add.getRHSReg();
+
+  // (X + (X != 0)) is non zero
+  if (matchOpWithOpEqZero(LHS, RHS, MRI))
+    return true;
+
+  if (NUW)
+    return ::isKnownNonZero(RHS, MRI, KB, Depth) ||
+           ::isKnownNonZero(LHS, MRI, KB, Depth);
+
+  KnownBits LHSKnown = KB->getKnownBits(LHS);
+  KnownBits RHSKnown = KB->getKnownBits(RHS);
+
+  // If LHS and RHS are both non-negative (as signed values) then their sum is
+  // not zero unless both LHS and RHS are zero.
+  if (LHSKnown.isNonNegative() && RHSKnown.isNonNegative())
+    if (::isKnownNonZero(LHS, MRI, KB, Depth) ||
+        ::isKnownNonZero(RHS, MRI, KB, Depth))
+      return true;
+
+  // If LHS and RHS are both negative (as signed values) then their sum is not
+  // zero unless both LHS and RHS equal INT_MIN.
+  if (LHSKnown.isNegative() && RHSKnown.isNegative()) {
+    APInt Mask = APInt::getSignedMaxValue(BitWidth);
+    // The sign bit of LHS is set.  If some other bit is set then LHS is not
+    // equal to INT_MIN.
+    if (LHSKnown.One.intersects(Mask))
+      return true;
+    // The sign bit of RHS is set.  If some other bit is set then RHS is not
+    // equal to INT_MIN.
+    if (RHSKnown.One.intersects(Mask))
+      return true;
+  }
+
+  // The sum of a non-negative number and a power of two is not zero.
+  if (LHSKnown.isNonNegative() && ::isKnownToBeAPowerOfTwo(RHS, MRI, KB))
+    return true;
+  if (RHSKnown.isNonNegative() && ::isKnownToBeAPowerOfTwo(LHS, MRI, KB))
+    return true;
+
+  return KnownBits::add(LHSKnown, RHSKnown, NSW, NUW).isNonZero();
+}
+
+static bool isKnownNonZeroBinOp(const GBinOp &BinOp,
+                                const MachineRegisterInfo &MRI,
+                                GISelKnownBits *KB, unsigned Depth) {
+  unsigned BitWidth = MRI.getType(BinOp.getReg(0)).getScalarSizeInBits();
+  switch (BinOp.getOpcode()) {
+  case TargetOpcode::G_XOR:
+    // (X ^ (X != 0)) is non zero
+    if (matchOpWithOpEqZero(BinOp.getLHSReg(), BinOp.getRHSReg(), MRI))
+      return true;
+    break;
+  case TargetOpcode::G_OR: {
+    // (X | (X != 0)) is non zero
+    if (matchOpWithOpEqZero(BinOp.getLHSReg(), BinOp.getRHSReg(), MRI))
+      return true;
+    // X | Y != 0 if X != 0 or Y != 0.
+    return ::isKnownNonZero(BinOp.getRHSReg(), MRI, KB, Depth) ||
+           ::isKnownNonZero(BinOp.getLHSReg(), MRI, KB, Depth);
+  }
+  case TargetOpcode::G_ADD: {
+    // X + Y.
+
+    // If Add has nuw wrap flag, then if either X or Y is non-zero the result is
+    // non-zero.
+    return isNonZeroAdd(BinOp, MRI, KB, Depth, BitWidth);
+  }
+  default:
+    return false;
+  }
+
+  return false;
+}
+
+static bool isKnownNonZeroCastOp(const GCastOp &CastOp,
+                                 const MachineRegisterInfo &MRI,
+                                 GISelKnownBits *KB, unsigned Depth) {
+  switch (CastOp.getOpcode()) {
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+    // ext X != 0 if X != 0.
+    return isKnownNonZero(CastOp.getSrcReg(), MRI, KB);
+  case Instruction::Trunc:
+    // nuw/nsw trunc preserves zero/non-zero status of input.
+    if (CastOp.getFlag(MachineInstr::MIFlag::NoSWrap) ||
+        CastOp.getFlag(MachineInstr::MIFlag::NoUWrap))
+      return ::isKnownNonZero(CastOp.getSrcReg(), MRI, KB, Depth);
+    break;
+  default:
+    return false;
+  }
+
+  return false;
+}
+
+static bool isNonZeroShift(const MachineInstr *MI,
+                           const MachineRegisterInfo &MRI, GISelKnownBits *KB,
+                           unsigned Depth, const KnownBits &KnownVal) {
+  auto ShiftOp = [&](const APInt &Lhs, const APInt &Rhs) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SHL:
+      return Lhs.shl(Rhs);
+    case TargetOpcode::G_LSHR:
+      return Lhs.lshr(Rhs);
+    case TargetOpcode::G_ASHR:
+      return Lhs.ashr(Rhs);
+    default:
+      llvm_unreachable("Unknown Shift Opcode");
+    }
+  };
+
+  auto InvShiftOp = [&](const APInt &Lhs, const APInt &Rhs) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SHL:
+      return Lhs.lshr(Rhs);
+    case TargetOpcode::G_LSHR:
+    case TargetOpcode::G_ASHR:
+      return Lhs.shl(Rhs);
+    default:
+      llvm_unreachable("Unknown Shift Opcode");
+    }
+  };
+
+  if (KnownVal.isUnknown())
+    return false;
+
+  KnownBits KnownCnt = KB->getKnownBits(MI->getOperand(2).getReg());
+  APInt MaxShift = KnownCnt.getMaxValue();
+  unsigned NumBits = KnownVal.getBitWidth();
+  if (MaxShift.uge(NumBits))
+    return false;
+
+  if (!ShiftOp(KnownVal.One, MaxShift).isZero())
+    return true;
+
+  // If all of the bits shifted out are known to be zero, and Val is known
+  // non-zero then at least one non-zero bit must remain.
+  if (InvShiftOp(KnownVal.Zero, NumBits - MaxShift)
+          .eq(InvShiftOp(APInt::getAllOnes(NumBits), NumBits - MaxShift)) &&
+      ::isKnownNonZero(MI->getOperand(1).getReg(), MRI, KB, Depth))
+    return true;
+
+  return false;
+}
+
+bool isKnownNonZero(Register Reg, const MachineRegisterInfo &MRI,
+                    GISelKnownBits *KB, unsigned Depth) {
+  if (!Reg.isVirtual())
+    return false;
+
+  std::optional<ValueAndVReg> MayBeConstant =
+      getIConstantVRegValWithLookThrough(Reg, MRI);
+
+  if (MayBeConstant)
+    return MayBeConstant->Value != 0;
+
+  // Some of the tests below are recursive, so bail out if we hit the limit.
+  if (Depth++ >= MaxAnalysisRecursionDepth)
+    return false;
+
+  MachineInstr *MI = getDefIgnoringCopies(Reg, MRI);
+
+  if (GBinOp *BinOp = dyn_cast<GBinOp>(MI))
+    return isKnownNonZeroBinOp(*BinOp, MRI, KB, Depth);
+
+  if (GCastOp *CastOp = dyn_cast<GCastOp>(MI))
+    return isKnownNonZeroCastOp(*CastOp, MRI, KB, Depth);
+
+  switch (MI->getOpcode()) {
+  case TargetOpcode::G_SHL: {
+    // shl nsw/nuw can't remove any non-zero bits.
+    if (MI->getFlag(MachineInstr::MIFlag::NoUWrap) ||
+        MI->getFlag(MachineInstr::MIFlag::NoSWrap))
+      return ::isKnownNonZero(MI->getOperand(1).getReg(), MRI, KB, Depth);
+
+    // shl X, Y != 0 if X is odd.  Note that the value of the shift is undefined
+    // if the lowest bit is shifted off the end.
+    KnownBits Known = KB->getKnownBits(MI->getOperand(1).getReg());
+    if (Known.One[0])
+      return true;
+
+    return isNonZeroShift(MI, MRI, KB, Depth, Known);
+  }
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    // shr exact can only shift out zero bits.
+    if (MI->getFlag(MachineInstr::MIFlag::IsExact))
+      return ::isKnownNonZero(MI->getOperand(1).getReg(), MRI, KB, Depth);
+
+    // shr X, Y != 0 if X is negative.  Note that the value of the shift is not
+    // defined if the sign bit is shifted off the end.
+    KnownBits Known = KB->getKnownBits(MI->getOperand(1).getReg());
+    if (Known.isNegative())
+      return true;
+
+    return isNonZeroShift(MI, MRI, KB, Depth, Known);
+  }
+  case TargetOpcode::G_FREEZE:
+    return ::isKnownNonZero(MI->getOperand(1).getReg(), MRI, KB, Depth) &&
+           ::isGuaranteedNotToBePoison(MI->getOperand(1).getReg(), MRI, Depth);
+  case TargetOpcode::G_SMIN: {
+    // If either arg is negative the result is non-zero. Otherwise
+    // the result is non-zero if both ops are non-zero.
+    KnownBits Op1Known = KB->getKnownBits(MI->getOperand(2).getReg());
+    if (Op1Known.isNegative())
+      return true;
+    KnownBits Op0Known = KB->getKnownBits(MI->getOperand(1).getReg());
+    if (Op0Known.isNegative())
+      return true;
+
+    if (Op1Known.isNonZero() && Op0Known.isNonZero())
+      return true;
+  }
+    [[fallthrough]];
+  case TargetOpcode::G_UMIN:
+    return ::isKnownNonZero(MI->getOperand(1).getReg(), MRI, KB, Depth) &&
+           ::isKnownNonZero(MI->getOperand(2).getReg(), MRI, KB, Depth);
+  default:
+    return false;
+  }
+}

@@ -593,5 +593,31 @@ bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
 /// estimate of the type.
 Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
+enum class GIConstantKind { Scalar, FixedVector, ScalableVector };
+
+/// An integer-like constant.
+class GIConstant {
+  GIConstantKind Kind;
+  SmallVector<APInt> Values;
+  APInt Value;
+
+public:
+  GIConstant(ArrayRef<APInt> Values)
+      : Kind(GIConstantKind::FixedVector), Values(Values) {};
+  GIConstant(const APInt &Value, GIConstantKind Kind)
+      : Kind(Kind), Value(Value) {};
+
+  GIConstantKind getKind() const { return Kind; }
+
+  APInt getScalarValue() const;
+
+  static std::optional<GIConstant> getConstant(Register Const,
+                                               const MachineRegisterInfo &MRI);
+};
+
+/// Return true if the given value is known to be non-zero when defined.
+bool isKnownNonZero(Register Reg, const MachineRegisterInfo &MRI,
+                    GISelKnownBits *KB, unsigned Depth = 0);
+
 } // End namespace llvm.
 #endif

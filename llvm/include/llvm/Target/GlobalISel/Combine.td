@@ -1007,9 +1007,6 @@ def double_icmp_zero_or_combine: GICombineRule<
          (G_ICMP $root, $p, $ordst, 0))
 >;
 
-def double_icmp_zero_and_or_combine : GICombineGroup<[double_icmp_zero_and_combine,
-                                                      double_icmp_zero_or_combine]>;
-
 def and_or_disjoint_mask : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -1884,6 +1881,46 @@ def cast_combines: GICombineGroup<[
   buildvector_of_truncate
 ]>;
 
+def visit_icmp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_ICMP $root, $pred, $lhs, $rhs):$cmp,
+         [{ return Helper.visitICmp(*${cmp}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
+
+def sext_icmp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_SEXT $rhs, $inputR),
+         (G_SEXT $lhs, $inputL),
+         (G_ICMP $root, $pred, $lhs, $rhs):$cmp,
+         [{ return Helper.matchSextOfICmp(*${cmp}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
+
+def zext_icmp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_ZEXT $rhs, $inputR),
+         (G_ZEXT $lhs, $inputL),
+         (G_ICMP $root, $pred, $lhs, $rhs):$cmp,
+         [{ return Helper.matchZextOfICmp(*${cmp}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
+
+def icmp_of_zero : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_CONSTANT $zero, 0),
+         (G_ICMP $root, $pred, $lhs, $zero):$cmp,
+         [{ return Helper.matchCmpOfZero(*${cmp}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
+
+def icmp_combines: GICombineGroup<[
+  visit_icmp,
+  sext_icmp,
+  zext_icmp,
+  icmp_of_zero,
+  icmp_to_true_false_known_bits,
+  icmp_to_lhs_known_bits,
+  double_icmp_zero_and_combine,
+  double_icmp_zero_or_combine,
+  redundant_binop_in_equality
+]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -1917,7 +1954,7 @@ def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
-  zext_trunc_fold, icmp_to_true_false_known_bits, icmp_to_lhs_known_bits,
+  zext_trunc_fold,
   sext_inreg_to_zext_inreg]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
@@ -1944,7 +1981,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 
-def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
+def all_combines : GICombineGroup<[icmp_combines, integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines, cast_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
     combine_extracted_vector_load,
@@ -1964,9 +2001,9 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     constant_fold_cast_op, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    sub_add_reg, select_to_minmax, redundant_binop_in_equality,
+    sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
+    combine_concat_vector, match_addos,
     sext_trunc, zext_trunc, prefer_sign_combines, combine_shuffle_concat]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in

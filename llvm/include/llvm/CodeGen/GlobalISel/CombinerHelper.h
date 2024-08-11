@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
@@ -298,6 +299,12 @@ public:
   ///     [...]
   ///     $whatever = COPY $addr
   bool tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
+
+  bool visitICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchSextOfICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchZextOfICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  /// Try hard to fold icmp with zero RHS because this is a common case.
+  bool matchCmpOfZero(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
   bool matchPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
   void applyPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
@@ -1017,6 +1024,9 @@ private:
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 
   bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
+
+  bool constantFoldICmp(const GICmp &ICmp, const GIConstant &LHS,
+                        const GIConstant &RHS, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 
