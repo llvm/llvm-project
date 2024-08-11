@@ -122,14 +122,20 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   assert(Res->isIntegerType());
 
   unsigned BitWidth = ACtx.getIntWidth(Res);
-  auto MinVal = llvm::APSInt::getMinValue(BitWidth, Res->isUnsignedIntegerType());
-  auto MaxVal = llvm::APSInt::getMaxValue(BitWidth, Res->isUnsignedIntegerType());
+  auto MinVal =
+      llvm::APSInt::getMinValue(BitWidth, Res->isUnsignedIntegerType());
+  auto MaxVal =
+      llvm::APSInt::getMaxValue(BitWidth, Res->isUnsignedIntegerType());
 
-  SVal IsLeMax = SVB.evalBinOp(State, BO_LE, RetVal, nonloc::ConcreteInt(MaxVal), Res);
-  SVal IsGeMin = SVB.evalBinOp(State, BO_GE, RetVal, nonloc::ConcreteInt(MinVal), Res);
+  SVal IsLeMax =
+      SVB.evalBinOp(State, BO_LE, RetVal, nonloc::ConcreteInt(MaxVal), Res);
+  SVal IsGeMin =
+      SVB.evalBinOp(State, BO_GE, RetVal, nonloc::ConcreteInt(MinVal), Res);
 
-  auto [MayNotOverflow, MayOverflow] = State->assume(IsLeMax.castAs<DefinedOrUnknownSVal>());
-  auto [MayNotUnderflow, MayUnderflow] = State->assume(IsGeMin.castAs<DefinedOrUnknownSVal>());
+  auto [MayNotOverflow, MayOverflow] =
+      State->assume(IsLeMax.castAs<DefinedOrUnknownSVal>());
+  auto [MayNotUnderflow, MayUnderflow] =
+      State->assume(IsGeMin.castAs<DefinedOrUnknownSVal>());
 
   return {MayOverflow || MayUnderflow, MayNotOverflow && MayNotUnderflow};
 }
