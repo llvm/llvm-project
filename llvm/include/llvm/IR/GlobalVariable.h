@@ -147,9 +147,15 @@ public:
     return static_cast<Constant*>(Op<0>().get());
   }
   /// setInitializer - Sets the initializer for this global variable, removing
-  /// any existing initializer if InitVal==NULL.  If this GV has type T*, the
-  /// initializer must have type T.
+  /// any existing initializer if InitVal==NULL. The initializer must have the
+  /// type getValueType().
   void setInitializer(Constant *InitVal);
+
+  /// replaceInitializer - Sets the initializer for this global variable, and
+  /// sets the value type of the global to the type of the initializer. The
+  /// initializer must not be null.  This may affect the global's alignment if
+  /// it isn't explicitly set.
+  void replaceInitializer(Constant *InitVal);
 
   /// If the value is a global constant, its value is immutable throughout the
   /// runtime execution of the program.  Assigning a value into the constant

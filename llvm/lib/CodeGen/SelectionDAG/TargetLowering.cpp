@@ -3245,7 +3245,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       // Don't simplify BROADCASTS.
       if (llvm::any_of(Op->op_values(),
                        [&](SDValue Elt) { return Op.getOperand(0) != Elt; })) {
-        SmallVector<SDValue, 32> Ops(Op->op_begin(), Op->op_end());
+        SmallVector<SDValue, 32> Ops(Op->ops());
         bool Updated = false;
         for (unsigned i = 0; i != NumElts; ++i) {
           if (!DemandedElts[i] && !Ops[i].isUndef()) {
@@ -5145,7 +5145,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           N0.getOpcode() == ISD::AND && N0.hasOneUse()) {
         if (auto *AndRHS = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
           const APInt &AndRHSC = AndRHS->getAPIntValue();
-          if (AndRHSC.isNegatedPowerOf2() && (AndRHSC & C1) == C1) {
+          if (AndRHSC.isNegatedPowerOf2() && C1.isSubsetOf(AndRHSC)) {
             unsigned ShiftBits = AndRHSC.countr_zero();
             if (!TLI.shouldAvoidTransformToShift(ShValTy, ShiftBits)) {
               SDValue Shift = DAG.getNode(
@@ -10782,6 +10782,9 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   unsigned LoHiOp = Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
   unsigned HiOp = Signed ? ISD::MULHS : ISD::MULHU;
   EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VTSize * 2);
+  if (VT.isVector())
+    WideVT =
+        EVT::getVectorVT(*DAG.getContext(), WideVT, VT.getVectorElementCount());
   if (isOperationLegalOrCustom(LoHiOp, VT)) {
     SDValue Result = DAG.getNode(LoHiOp, dl, DAG.getVTList(VT, VT), LHS, RHS);
     Lo = Result.getValue(0);

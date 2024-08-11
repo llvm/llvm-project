@@ -18,8 +18,9 @@
 #include "cuda.h"
 
 namespace Fortran::runtime::cuda {
+extern "C" {
 
-void CUFRegisterAllocator() {
+void RTDEF(CUFRegisterAllocator)() {
   allocatorRegistry.Register(
       kPinnedAllocatorPos, {&CUFAllocPinned, CUFFreePinned});
   allocatorRegistry.Register(
@@ -28,6 +29,7 @@ void CUFRegisterAllocator() {
       kManagedAllocatorPos, {&CUFAllocManaged, CUFFreeManaged});
   allocatorRegistry.Register(
       kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
+}
 }
 
 void *CUFAllocPinned(std::size_t sizeInBytes) {

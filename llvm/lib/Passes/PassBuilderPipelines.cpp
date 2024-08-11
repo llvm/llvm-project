@@ -304,9 +304,7 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
-cl::opt<std::string>
-    UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
-                  cl::desc("Use the specified contextual profile file"));
+extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;

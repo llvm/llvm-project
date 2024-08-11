@@ -1,3 +1,6 @@
+// We try to create options similar to lld's.  That way, options passed to clang
+// -Xoffload-linker can be the same whether offloading to nvptx or amdgpu.
+
 include "llvm/Option/OptParser.td"
 
 def WrapperOnlyOption : OptionFlag;
@@ -69,6 +72,11 @@ def : Joined<["--", "-"], "plugin-opt=emit-asm">,
 def plugin_opt : Joined<["--", "-"], "plugin-opt=">, Flags<[WrapperOnlyOption]>,
   HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
            "'--plugin-opt=--help' for a list of options.">;
+
+def lto_newpm_passes : Joined<["--"], "lto-newpm-passes=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Passes to run during LTO">;
+def lto_debug_pass_manager : Flag<["--"], "lto-debug-pass-manager">,
+  Flags<[WrapperOnlyOption]>,   HelpText<"Debug new pass manager">;
 
 def save_temps : Flag<["--", "-"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
