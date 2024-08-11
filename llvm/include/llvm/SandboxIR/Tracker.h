@@ -97,7 +97,7 @@ public:
 };
 
 class PHISetIncoming : public IRChangeBase {
-  PHINode &PHI;
+  PHINode *PHI;
   unsigned Idx;
   PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
 
@@ -106,7 +106,7 @@ public:
     Value,
     Block,
   };
-  PHISetIncoming(PHINode &PHI, unsigned Idx, What What);
+  PHISetIncoming(PHINode *PHI, unsigned Idx, What What);
   void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
@@ -116,13 +116,13 @@ public:
 };
 
 class PHIRemoveIncoming : public IRChangeBase {
-  PHINode &PHI;
+  PHINode *PHI;
   unsigned RemovedIdx;
   Value *RemovedV;
   BasicBlock *RemovedBB;
 
 public:
-  PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx);
+  PHIRemoveIncoming(PHINode *PHI, unsigned RemovedIdx);
   void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
@@ -132,11 +132,11 @@ public:
 };
 
 class PHIAddIncoming : public IRChangeBase {
-  PHINode &PHI;
+  PHINode *PHI;
   unsigned Idx;
 
 public:
-  PHIAddIncoming(PHINode &PHI);
+  PHIAddIncoming(PHINode *PHI);
   void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
