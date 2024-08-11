@@ -5641,7 +5641,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsImplicitLifetime: {
     DiagnoseVLAInCXXTypeTrait(Self, TInfo,
                               tok::kw___builtin_is_implicit_lifetime);
-    
+
     // [basic.types.general] p9
     // Scalar types, implicit-lifetime class types ([class.prop]),
     // array types, and cv-qualified versions of these types
@@ -5654,7 +5654,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
     if (!RD)
       return false;
-    
+
     // [class.prop] p9
     // A class S is an implicit-lifetime class if
     //   - it is an aggregate whose destructor is not user-provided or
