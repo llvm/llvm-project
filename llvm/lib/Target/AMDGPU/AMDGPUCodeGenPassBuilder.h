@@ -19,10 +19,12 @@ class GCNTargetMachine;
 class AMDGPUCodeGenPassBuilder
     : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine> {
 public:
+  using Base = CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine>;
+
   AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
-
+  void addCodeGenPrepare(AddIRPass &) const;
   void addPreISel(AddIRPass &addPass) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
