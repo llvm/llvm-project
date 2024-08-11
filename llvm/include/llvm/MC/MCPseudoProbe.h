@@ -241,6 +241,7 @@ public:
   InlinedProbeTreeMap &getChildren() { return Children; }
   const InlinedProbeTreeMap &getChildren() const { return Children; }
   std::vector<ProbeType> &getProbes() { return Probes; }
+  const std::vector<ProbeType> &getProbes() const { return Probes; }
   void addProbes(ProbeType Probe) { Probes.push_back(Probe); }
   // Caller node of the inline site
   MCPseudoProbeInlineTreeBase<ProbeType, DerivedProbeInlineTreeType> *Parent =
@@ -368,6 +369,11 @@ public:
 
   // Decode pseudo_probe_desc section to build GUID to PseudoProbeFuncDesc map.
   bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size);
+
+  // Decode pseudo_probe section to count the number of probes and inlined
+  // function records for each function record.
+  bool countRecords(bool IsTopLevelFunc, bool &Discard, uint32_t &ProbeCount,
+                    uint32_t &InlinedCount, const Uint64Set &GuidFilter);
 
   // Decode pseudo_probe section to build address to probes map for specifed
   // functions only.
