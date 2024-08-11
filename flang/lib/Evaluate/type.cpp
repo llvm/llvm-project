@@ -505,7 +505,13 @@ bool AreSameDerivedType(
   return AreSameDerivedType(x, y, false, false, inProgress);
 }
 
-bool AreSameDerivedType(
+bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, true, true, inProgress);
+}
+
+static bool AreSameDerivedType(
     const semantics::DerivedTypeSpec *x, const semantics::DerivedTypeSpec *y) {
   return x == y || (x && y && AreSameDerivedType(*x, *y));
 }

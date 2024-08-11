@@ -2554,10 +2554,9 @@ ChangeStatus Attributor::cleanupIR() {
 
   for (const auto &V : ToBeDeletedInsts) {
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-      if (auto *CB = dyn_cast<CallBase>(I)) {
-        assert((isa<IntrinsicInst>(CB) || isRunOn(*I->getFunction())) &&
-               "Cannot delete an instruction outside the current SCC!");
-      }
+      assert((!isa<CallBase>(I) || isa<IntrinsicInst>(I) ||
+              isRunOn(*I->getFunction())) &&
+             "Cannot delete an instruction outside the current SCC!");
       I->dropDroppableUses();
       CGModifiedFunctions.insert(I->getFunction());
       if (!I->getType()->isVoidTy())

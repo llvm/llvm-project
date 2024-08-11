@@ -56,7 +56,7 @@ int AlignmentOnOriginalDecl; // expected-error {{'_Alignas' must be specified on
 _Static_assert(_Alignof(AlignmentOnOriginalDecl) == 8, "");
 
 long long CompatibleAlignment;
-_Static_assert(_Alignof(CompatibleAlignment) == _Alignof(long long), "");
+_Static_assert(_Alignof(__typeof__(CompatibleAlignment)) == _Alignof(long long), "");
 _Alignas(_Alignof(long long)) long long CompatibleAlignment; // Okay, alignment is the same as the implied alignment
 
 _Alignas(_Alignof(long long)) long long CompatibleAlignment2; // expected-note {{declared with '_Alignas' attribute here}}

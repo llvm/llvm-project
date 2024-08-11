@@ -18,7 +18,7 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (64):
+CHECK: Warnings without flags (65):
 
 CHECK-NEXT:   ext_expected_semi_decl_list
 CHECK-NEXT:   ext_missing_whitespace_after_macro_name
@@ -61,6 +61,7 @@ CHECK-NEXT:   warn_invalid_cpu_supports
 CHECK-NEXT:   warn_maynot_respond
 CHECK-NEXT:   warn_method_param_redefinition
 CHECK-NEXT:   warn_missing_case_for_condition
+CHECK-NEXT:   warn_missing_dependent_template_keyword
 CHECK-NEXT:   warn_missing_whitespace_after_macro_name
 CHECK-NEXT:   warn_mt_message
 CHECK-NEXT:   warn_no_constructor_for_refconst

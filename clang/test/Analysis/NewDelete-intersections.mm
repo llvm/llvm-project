@@ -44,7 +44,7 @@ void testMallocFreeNoWarn() {
 void testDeleteMalloced() {
   int *p1 = (int *)malloc(sizeof(int));
   delete p1;
-  // mismatch-warning@-1{{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
+  // mismatch-warning@-1{{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete'}}
 
   int *p2 = (int *)__builtin_alloca(sizeof(int));
   delete p2; // no warn
@@ -59,13 +59,13 @@ void testUseZeroAllocatedMalloced() {
 void testFreeOpNew() {
   void *p = operator new(0);
   free(p);
-  // mismatch-warning@-1{{Memory allocated by operator new should be deallocated by 'delete', not free()}}
+  // mismatch-warning@-1{{Memory allocated by 'operator new' should be deallocated by 'delete', not 'free()'}}
 }
 
 void testFreeNewExpr() {
   int *p = new int;
   free(p);
-  // mismatch-warning@-1{{Memory allocated by 'new' should be deallocated by 'delete', not free()}}
+  // mismatch-warning@-1{{Memory allocated by 'new' should be deallocated by 'delete', not 'free()'}}
   free(p);
 }
 

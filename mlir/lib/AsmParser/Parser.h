@@ -144,6 +144,9 @@ public:
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result);
 
+  /// Parse an optional integer value only in decimal format from the stream.
+  OptionalParseResult parseOptionalDecimalInteger(APInt &result);
+
   /// Parse a floating point value from an integer literal token.
   ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
                                            const Token &tok, bool isNegative,

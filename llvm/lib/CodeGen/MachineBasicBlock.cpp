@@ -1135,9 +1135,19 @@ public:
   }
 };
 
+#define GET_RESULT(RESULT, GETTER, INFIX)                                      \
+  [MF, P, MFAM]() {                                                            \
+    if (P) {                                                                   \
+      auto *Wrapper = P->getAnalysisIfAvailable<RESULT##INFIX##WrapperPass>(); \
+      return Wrapper ? &Wrapper->GETTER() : nullptr;                           \
+    }                                                                          \
+    return MFAM->getCachedResult<RESULT##Analysis>(*MF);                       \
+  }()
+
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, Pass &P,
+    MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
     std::vector<SparseBitVector<>> *LiveInSets) {
+  assert((P || MFAM) && "Need a way to get analysis results!");
   if (!canSplitCriticalEdge(Succ))
     return nullptr;
 
@@ -1161,10 +1171,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
                     << " -- " << printMBBReference(*NMBB) << " -- "
                     << printMBBReference(*Succ) << '\n');
 
-  auto *LISWrapper = P.getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  auto *SIWrapper = P.getAnalysisIfAvailable<SlotIndexesWrapperPass>();
-  SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
+  LiveIntervals *LIS = GET_RESULT(LiveIntervals, getLIS, );
+  SlotIndexes *Indexes = GET_RESULT(SlotIndexes, getSI, );
   if (LIS)
     LIS->insertMBBInMaps(NMBB);
   else if (Indexes)
@@ -1173,8 +1181,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // On some targets like Mips, branches may kill virtual registers. Make sure
   // that LiveVariables is properly updated after updateTerminator replaces the
   // terminators.
-  auto *LVWrapper = P.getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-  LiveVariables *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+  LiveVariables *LV = GET_RESULT(LiveVariables, getLV, );
 
   // Collect a list of virtual registers killed by the terminators.
   SmallVector<Register, 4> KilledRegs;
@@ -1339,12 +1346,10 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (auto *MDTWrapper =
-          P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
-    MDTWrapper->getDomTree().recordSplitCriticalEdge(this, Succ, NMBB);
+  if (auto *MDT = GET_RESULT(MachineDominatorTree, getDomTree, ))
+    MDT->recordSplitCriticalEdge(this, Succ, NMBB);
 
-  auto *MLIWrapper = P.getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
-  if (MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr)
+  if (MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info))
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
       // If one or the other blocks were not in a loop, the new block is not
       // either, and thus LI doesn't need to be updated.

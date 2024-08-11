@@ -584,6 +584,20 @@ void OMPClauseProfiler::VisitOMPCompareClause(const OMPCompareClause *) {}
 
 void OMPClauseProfiler::VisitOMPFailClause(const OMPFailClause *) {}
 
+void OMPClauseProfiler::VisitOMPAbsentClause(const OMPAbsentClause *) {}
+
+void OMPClauseProfiler::VisitOMPHoldsClause(const OMPHoldsClause *) {}
+
+void OMPClauseProfiler::VisitOMPContainsClause(const OMPContainsClause *) {}
+
+void OMPClauseProfiler::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
+
+void OMPClauseProfiler::VisitOMPNoOpenMPRoutinesClause(
+    const OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseProfiler::VisitOMPNoParallelismClause(
+    const OMPNoParallelismClause *) {}
+
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
@@ -624,7 +638,7 @@ void OMPClauseProfiler::VisitOMPFilterClause(const OMPFilterClause *C) {
 
 template<typename T>
 void OMPClauseProfiler::VisitOMPClauseList(T *Node) {
-  for (auto *E : Node->varlists()) {
+  for (auto *E : Node->varlist()) {
     if (E)
       Profiler->VisitStmt(E);
   }
@@ -843,15 +857,13 @@ void OMPClauseProfiler::VisitOMPAllocateClause(const OMPAllocateClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  VisitOMPClauseList(C);
   VistOMPClauseWithPreInit(C);
-  if (C->getNumTeams())
-    Profiler->VisitStmt(C->getNumTeams());
 }
 void OMPClauseProfiler::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  VisitOMPClauseList(C);
   VistOMPClauseWithPreInit(C);
-  if (C->getThreadLimit())
-    Profiler->VisitStmt(C->getThreadLimit());
 }
 void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
   VistOMPClauseWithPreInit(C);
@@ -918,7 +930,7 @@ void OMPClauseProfiler::VisitOMPUsesAllocatorsClause(
 void OMPClauseProfiler::VisitOMPAffinityClause(const OMPAffinityClause *C) {
   if (const Expr *Modifier = C->getModifier())
     Profiler->VisitStmt(Modifier);
-  for (const Expr *E : C->varlists())
+  for (const Expr *E : C->varlist())
     Profiler->VisitStmt(E);
 }
 void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
@@ -982,6 +994,15 @@ void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
 }
 
 void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPInterchangeDirective(
+    const OMPInterchangeDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
 
@@ -1056,6 +1077,10 @@ void StmtProfiler::VisitOMPBarrierDirective(const OMPBarrierDirective *S) {
 }
 
 void StmtProfiler::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPAssumeDirective(const OMPAssumeDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 

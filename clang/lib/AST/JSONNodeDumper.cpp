@@ -737,6 +737,9 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
     break;
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     JOS.attribute("vectorKind", "fixed-length rvv mask vector");
     break;
   }
@@ -883,9 +886,8 @@ void JSONNodeDumper::VisitNamespaceDecl(const NamespaceDecl *ND) {
   VisitNamedDecl(ND);
   attributeOnlyIfTrue("isInline", ND->isInline());
   attributeOnlyIfTrue("isNested", ND->isNested());
-  if (!ND->isOriginalNamespace())
-    JOS.attribute("originalNamespace",
-                  createBareDeclRef(ND->getOriginalNamespace()));
+  if (!ND->isFirstDecl())
+    JOS.attribute("originalNamespace", createBareDeclRef(ND->getFirstDecl()));
 }
 
 void JSONNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *UDD) {

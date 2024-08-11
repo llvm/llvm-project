@@ -46,7 +46,7 @@ namespace PR12884_half_fixed {
       typedef int arg;
     };
     struct C {
-      typedef typename B::X<typename B::arg> x; // expected-warning {{use 'template'}} expected-error {{refers to non-type}}
+      typedef typename B::X<typename B::arg> x; // expected-error {{use 'template'}} expected-error {{refers to non-type}}
     };
   };
 

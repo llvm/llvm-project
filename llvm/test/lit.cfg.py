@@ -182,6 +182,7 @@ tools.extend(
         "llvm-bitcode-strip",
         "llvm-config",
         "llvm-cov",
+        "llvm-ctxprof-util",
         "llvm-cxxdump",
         "llvm-cvtres",
         "llvm-debuginfod-find",

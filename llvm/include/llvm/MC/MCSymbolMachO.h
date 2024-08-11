@@ -46,6 +46,9 @@ public:
   MCSymbolMachO(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(SymbolKindMachO, Name, isTemporary) {}
 
+  bool isPrivateExtern() const { return IsPrivateExtern; }
+  void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
+
   // Reference type methods.
 
   void clearReferenceType() const {

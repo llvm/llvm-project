@@ -13,7 +13,7 @@
 #include <__config>
 #include <cstdint>
 
-#if defined(__arm64e__) && __has_feature(ptrauth_calls)
+#if __has_feature(ptrauth_calls)
 #  include <ptrauth.h>
 #endif
 
@@ -83,13 +83,13 @@ _LIBCPP_HIDE_FROM_ABI bool __is_function_overridden(_Ret (*__fptr)(_Args...)) no
   uintptr_t __end   = reinterpret_cast<uintptr_t>(&__lcxx_override_end);
   uintptr_t __ptr   = reinterpret_cast<uintptr_t>(__fptr);
 
-#if defined(__arm64e__) && __has_feature(ptrauth_calls)
+#  if __has_feature(ptrauth_calls)
   // We must pass a void* to ptrauth_strip since it only accepts a pointer type. Also, in particular,
   // we must NOT pass a function pointer, otherwise we will strip the function pointer, and then attempt
   // to authenticate and re-sign it when casting it to a uintptr_t again, which will fail because we just
   // stripped the function pointer. See rdar://122927845.
   __ptr = reinterpret_cast<uintptr_t>(ptrauth_strip(reinterpret_cast<void*>(__ptr), ptrauth_key_function_pointer));
-#endif
+#  endif
 
   // Finally, the function was overridden if it falls outside of the section's bounds.
   return __ptr < __start || __ptr > __end;

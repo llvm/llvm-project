@@ -119,7 +119,7 @@ TEST(LlvmLibcTypeTraitsTest, aligned_storage) {
     int a, b;
   };
   aligned_storage_t<sizeof(S), alignof(S)> buf;
-  EXPECT_EQ(alignof(buf), alignof(S));
+  EXPECT_EQ(alignof(decltype(buf)), alignof(S));
   EXPECT_EQ(sizeof(buf), sizeof(S));
 }
 

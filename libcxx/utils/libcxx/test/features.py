@@ -263,6 +263,26 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
+    # Check for a Windows UCRT bug (not fixed upstream yet).
+    # With UCRT, printf("%a", 0.0) produces "0x0.0000000000000p+0",
+    # while other C runtimes produce just "0x0p+0".
+    # https://developercommunity.visualstudio.com/t/Printf-formatting-of-float-as-hex-prints/1660844
+    Feature(
+        name="win32-broken-printf-a-precision",
+        when=lambda cfg: "_WIN32" in compilerMacros(cfg)
+        and not programSucceeds(
+            cfg,
+            """
+            #include <stdio.h>
+            #include <string.h>
+            int main(int, char**) {
+              char buf[100];
+              snprintf(buf, sizeof(buf), "%a", 0.0);
+              return strcmp(buf, "0x0p+0");
+            }
+          """,
+        ),
+    ),
     # Check for Glibc < 2.27, where the ru_RU.UTF-8 locale had
     # mon_decimal_point == ".", which our tests don't handle.
     Feature(
@@ -352,6 +372,8 @@ macros = {
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING": "libcpp-has-abi-bounded-iterators-in-string",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR": "libcpp-has-abi-bounded-iterators-in-vector",
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",

@@ -275,6 +275,27 @@ llvm::LogicalResult fir::AllocaOp::verify() {
   return mlir::success();
 }
 
+bool fir::AllocaOp::ownsNestedAlloca(mlir::Operation *op) {
+  return op->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>() ||
+         op->hasTrait<mlir::OpTrait::AutomaticAllocationScope>() ||
+         mlir::isa<mlir::LoopLikeOpInterface>(*op);
+}
+
+mlir::Region *fir::AllocaOp::getOwnerRegion() {
+  mlir::Operation *currentOp = getOperation();
+  while (mlir::Operation *parentOp = currentOp->getParentOp()) {
+    // If the operation was not registered, inquiries about its traits will be
+    // incorrect and it is not possible to reason about the operation. This
+    // should not happen in a normal Fortran compilation flow, but be foolproof.
+    if (!parentOp->isRegistered())
+      return nullptr;
+    if (fir::AllocaOp::ownsNestedAlloca(parentOp))
+      return currentOp->getParentRegion();
+    currentOp = parentOp;
+  }
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // AllocMemOp
 //===----------------------------------------------------------------------===//

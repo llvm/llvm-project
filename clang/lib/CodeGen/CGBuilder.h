@@ -190,8 +190,8 @@ public:
                               const llvm::Twine &Name = "") {
     if (!Addr.hasOffset())
       return Address(CreateAddrSpaceCast(Addr.getBasePointer(), Ty, Name),
-                     ElementTy, Addr.getAlignment(), nullptr,
-                     Addr.isKnownNonNull());
+                     ElementTy, Addr.getAlignment(), Addr.getPointerAuthInfo(),
+                     /*Offset=*/nullptr, Addr.isKnownNonNull());
     // Eagerly force a raw address if these is an offset.
     return RawAddress(
         CreateAddrSpaceCast(Addr.emitRawPointer(*getCGF()), Ty, Name),
@@ -210,10 +210,10 @@ public:
   /// Given
   ///   %addr = {T1, T2...}* ...
   /// produce
-  ///   %name = getelementptr inbounds %addr, i32 0, i32 index
+  ///   %name = getelementptr inbounds nuw %addr, i32 0, i32 index
   ///
   /// This API assumes that drilling into a struct like this is always an
-  /// inbounds operation.
+  /// inbounds and nuw operation.
   using CGBuilderBaseTy::CreateStructGEP;
   Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::Twine &Name = "") {

@@ -8,11 +8,11 @@ declare double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr nocapture, double) #
 define protected amdgpu_kernel void @InferNothing(i32 %a, ptr %b, double %c) {
 ; CHECK-LABEL: InferNothing:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x24
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2c
+; CHECK-NEXT:    s_load_dword s0, s[2:3], 0x24
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x2c
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
-; CHECK-NEXT:    s_lshl_b64 s[0:1], s[2:3], 3
+; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
+; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 3
 ; CHECK-NEXT:    s_add_u32 s0, s0, s4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
@@ -34,12 +34,12 @@ entry:
 define protected amdgpu_kernel void @InferFadd(i32 %a, ptr addrspace(1) %b, double %c) {
 ; CHECK-LABEL: InferFadd:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x24
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2c
+; CHECK-NEXT:    s_load_dword s0, s[2:3], 0x24
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x2c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
-; CHECK-NEXT:    s_lshl_b64 s[0:1], s[2:3], 3
+; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
+; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 3
 ; CHECK-NEXT:    s_add_u32 s0, s4, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
@@ -58,12 +58,12 @@ entry:
 define protected amdgpu_kernel void @InferFmax(i32 %a, ptr addrspace(1) %b, double %c) {
 ; CHECK-LABEL: InferFmax:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x24
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2c
+; CHECK-NEXT:    s_load_dword s0, s[2:3], 0x24
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x2c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
-; CHECK-NEXT:    s_lshl_b64 s[0:1], s[2:3], 3
+; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
+; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 3
 ; CHECK-NEXT:    s_add_u32 s0, s4, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
@@ -82,12 +82,12 @@ entry:
 define protected amdgpu_kernel void @InferFmin(i32 %a, ptr addrspace(1) %b, double %c) {
 ; CHECK-LABEL: InferFmin:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x24
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2c
+; CHECK-NEXT:    s_load_dword s0, s[2:3], 0x24
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x2c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
-; CHECK-NEXT:    s_lshl_b64 s[0:1], s[2:3], 3
+; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
+; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 3
 ; CHECK-NEXT:    s_add_u32 s0, s4, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
@@ -106,13 +106,13 @@ entry:
 define protected amdgpu_kernel void @InferMixed(i32 %a, ptr addrspace(1) %b, double %c, ptr %d) {
 ; CHECK-LABEL: InferMixed:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x24
-; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x3c
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2c
+; CHECK-NEXT:    s_load_dword s0, s[2:3], 0x24
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x3c
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x2c
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
-; CHECK-NEXT:    s_lshl_b64 s[0:1], s[2:3], 3
+; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
+; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 3
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s8
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s9
 ; CHECK-NEXT:    s_add_u32 s0, s4, s0
@@ -140,11 +140,11 @@ bb1:
 define protected amdgpu_kernel void @InferPHI(i32 %a, ptr addrspace(1) %b, double %c) {
 ; CHECK-LABEL: InferPHI:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x24
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2c
+; CHECK-NEXT:    s_load_dword s0, s[2:3], 0x24
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x2c
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
-; CHECK-NEXT:    s_lshl_b64 s[0:1], s[2:3], 3
+; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
+; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 3
 ; CHECK-NEXT:    s_add_u32 s0, s4, s0
 ; CHECK-NEXT:    s_addc_u32 s1, s5, s1
 ; CHECK-NEXT:    s_add_u32 s2, s0, -8

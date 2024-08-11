@@ -966,7 +966,6 @@ def int_memcpy  : Intrinsic<[],
 // Memcpy semantic that is guaranteed to be inlined.
 // In particular this means that the generated code is not allowed to call any
 // external function.
-// The third argument (specifying the size) must be a constant.
 def int_memcpy_inline
     : Intrinsic<[],
       [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i1_ty],
@@ -974,7 +973,7 @@ def int_memcpy_inline
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
        NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-       ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+       ImmArg<ArgIndex<3>>]>;
 
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
@@ -2343,6 +2342,13 @@ def int_experimental_vp_reverse:
                          llvm_i32_ty],
                         [IntrNoMem]>;
 
+def int_experimental_vp_splat:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                        [LLVMVectorElementType<0>,
+                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                         llvm_i32_ty],
+                        [IntrNoMem]>;
+
 def int_vp_is_fpclass:
       DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                               [ llvm_anyvector_ty,
@@ -2391,6 +2397,11 @@ def int_masked_compressstore:
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
              NoCapture<ArgIndex<1>>]>;
+
+def int_experimental_vector_compress:
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+              [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
+              [IntrNoMem, IntrWillReturn]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],

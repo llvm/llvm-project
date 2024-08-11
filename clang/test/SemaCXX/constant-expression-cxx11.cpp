@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++23 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx20_23,cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++23 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx20_23,cxx23              -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23,pre-cxx23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11,pre-cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
 namespace StaticAssertFoldTest {
 
@@ -1011,10 +1011,12 @@ constexpr bool b(int n) { return &n; }
 static_assert(b(0), "");
 
 struct NonLiteral {
-  NonLiteral();
+  NonLiteral(); // cxx23-note {{declared here}}
   int f();
 };
-constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} expected-note {{non-literal type 'NonLiteral'}}
+constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} \
+				    // pre-cxx23-note {{non-literal type 'NonLiteral'}} \
+				    // cxx23-note {{non-constexpr constructor 'NonLiteral' cannot be used in a constant expression}}
 
 }
 
@@ -1270,8 +1272,10 @@ static_assert(makeComplexWrap(1,0) != complex(0, 1), "");
 
 namespace PR11595 {
   struct A { constexpr bool operator==(int x) const { return true; } };
-  struct B { B(); A& x; };
-  static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+  struct B { B(); A& x; }; // cxx23-note {{declared here}}
+  static_assert(B().x == 3, "");  // expected-error {{constant expression}} \
+				  // pre-cxx23-note {{non-literal type 'B' cannot be used in a constant expression}} \
+				  // cxx23-note {{non-constexpr constructor 'B' cannot be used in a constant expression}}
 
   constexpr bool f(int k) { // cxx11_20-error {{constexpr function never produces a constant expression}}
     return B().x == k; // cxx11_20-note {{non-literal type 'B' cannot be used in a constant expression}}

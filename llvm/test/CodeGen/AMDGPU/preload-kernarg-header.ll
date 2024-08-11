@@ -8,7 +8,7 @@
 ; NON-HSA: s_endpgm
 ; ASM: .fill 63, 4, 0xbf800000 ; s_nop 0
 ; OBJ-COUNT-63: s_nop 0
-define amdgpu_kernel void @preload_kernarg_header(ptr %arg) {
+define amdgpu_kernel void @preload_kernarg_header(ptr inreg %arg) {
     store ptr %arg, ptr %arg
     ret void
 }

@@ -14,7 +14,6 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
-#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -22,7 +21,7 @@
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/Demangle/Demangle.h"
+#include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -43,6 +42,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -235,12 +235,12 @@ void printIR(raw_ostream &OS, const MachineFunction *MF) {
   MF->print(OS);
 }
 
-std::string getIRName(Any IR, bool demangled = false) {
+std::string getIRName(Any IR) {
   if (unwrapIR<Module>(IR))
     return "[module]";
 
   if (const auto *F = unwrapIR<Function>(IR))
-    return demangled ? demangle(F->getName()) : F->getName().str();
+    return F->getName().str();
 
   if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
     return C->getName();
@@ -250,7 +250,7 @@ std::string getIRName(Any IR, bool demangled = false) {
            L->getHeader()->getParent()->getName().str();
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
-    return demangled ? demangle(MF->getName()) : MF->getName().str();
+    return MF->getName().str();
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -752,28 +752,27 @@ static SmallString<32> getIRFileDisplayName(Any IR) {
   SmallString<32> Result;
   raw_svector_ostream ResultStream(Result);
   const Module *M = unwrapModule(IR);
-  stable_hash NameHash = stable_hash_combine_string(M->getName());
-  unsigned int MaxHashWidth = sizeof(stable_hash) * 8 / 4;
+  uint64_t NameHash = xxh3_64bits(M->getName());
+  unsigned MaxHashWidth = sizeof(uint64_t) * 2;
   write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
   if (unwrapIR<Module>(IR)) {
     ResultStream << "-module";
   } else if (const auto *F = unwrapIR<Function>(IR)) {
     ResultStream << "-function-";
-    stable_hash FunctionNameHash = stable_hash_combine_string(F->getName());
+    auto FunctionNameHash = xxh3_64bits(F->getName());
     write_hex(ResultStream, FunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
     ResultStream << "-scc-";
-    stable_hash SCCNameHash = stable_hash_combine_string(C->getName());
+    auto SCCNameHash = xxh3_64bits(C->getName());
     write_hex(ResultStream, SCCNameHash, HexPrintStyle::Lower, MaxHashWidth);
   } else if (const auto *L = unwrapIR<Loop>(IR)) {
     ResultStream << "-loop-";
-    stable_hash LoopNameHash = stable_hash_combine_string(L->getName());
+    auto LoopNameHash = xxh3_64bits(L->getName());
     write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
   } else if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
     ResultStream << "-machine-function-";
-    stable_hash MachineFunctionNameHash =
-        stable_hash_combine_string(MF->getName());
+    auto MachineFunctionNameHash = xxh3_64bits(MF->getName());
     write_hex(ResultStream, MachineFunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else {
@@ -1451,10 +1450,10 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   });
 }
 
-void VerifyInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                              ModuleAnalysisManager *MAM) {
   PIC.registerAfterPassCallback(
-      [this](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+      [this, MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
         if (isIgnored(P) || P == "VerifierPass")
           return;
         const auto *F = unwrapIR<Function>(IR);
@@ -1488,15 +1487,23 @@ void VerifyInstrumentation::registerCallbacks(
                                          P));
           }
 
-          // TODO: Use complete MachineVerifierPass.
           if (auto *MF = unwrapIR<MachineFunction>(IR)) {
             if (DebugLogging)
               dbgs() << "Verifying machine function " << MF->getName() << '\n';
-            verifyMachineFunction(
+            std::string Banner =
                 formatv("Broken machine function found after pass "
                         "\"{0}\", compilation aborted!",
-                        P),
-                *MF);
+                        P);
+            if (MAM) {
+              Module &M = const_cast<Module &>(*MF->getFunction().getParent());
+              auto &MFAM =
+                  MAM->getResult<MachineFunctionAnalysisManagerModuleProxy>(M)
+                      .getManager();
+              MachineVerifierPass Verifier(Banner);
+              Verifier.run(const_cast<MachineFunction &>(*MF), MFAM);
+            } else {
+              verifyMachineFunction(Banner, *MF);
+            }
           }
         }
       });
@@ -1580,7 +1587,7 @@ void TimeProfilingPassesHandler::registerCallbacks(
 }
 
 void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, Any IR) {
-  timeTraceProfilerBegin(PassID, getIRName(IR, true));
+  timeTraceProfilerBegin(PassID, getIRName(IR));
 }
 
 void TimeProfilingPassesHandler::runAfterPass() { timeTraceProfilerEnd(); }
@@ -2515,7 +2522,7 @@ void StandardInstrumentations::registerCallbacks(
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
-    Verify.registerCallbacks(PIC);
+    Verify.registerCallbacks(PIC, MAM);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);

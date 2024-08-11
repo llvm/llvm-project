@@ -1109,6 +1109,20 @@ TEST_F(StructuralEquivalenceEnumTest, EnumsWithDifferentBody) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceEnumTest, AnonymousEnumsWithSameConsts) {
+  // field x is required to trigger comparison of the anonymous enum
+  auto t = makeNamedDecls("struct foo { enum { A } x; };",
+                          "struct foo { enum { A } x;};", Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumTest, AnonymousEnumsWithDiffConsts) {
+  // field x is required to trigger comparison of the anonymous enum
+  auto t = makeNamedDecls("struct foo { enum { A } x; };",
+                          "struct foo { enum { B } x;};", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 struct StructuralEquivalenceEnumConstantTest : StructuralEquivalenceTest {};
 
 TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithSameValues) {

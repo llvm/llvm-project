@@ -381,38 +381,36 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
 std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
     const DWARFFormValue &RefValue,
     ResolveInterCUReferencesMode CanResolveInterCUReferences) {
-  if (std::optional<DWARFFormValue::UnitOffset> Ref =
-          *RefValue.getAsRelativeReference()) {
-    if (Ref->Unit == OrigUnit) {
-      // Referenced DIE is in current compile unit.
-      if (std::optional<uint32_t> RefDieIdx =
-              getDIEIndexForOffset(OrigUnit->getOffset() + Ref->Offset))
-        return UnitEntryPairTy{this, OrigUnit->getDebugInfoEntry(*RefDieIdx)};
-    }
-    uint64_t RefDIEOffset =
-        Ref->Unit ? Ref->Unit->getOffset() + Ref->Offset : Ref->Offset;
-    if (CompileUnit *RefCU = getUnitFromOffset(RefDIEOffset)) {
-      if (RefCU == this) {
-        // Referenced DIE is in current compile unit.
-        if (std::optional<uint32_t> RefDieIdx =
-                getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
-      } else if (CanResolveInterCUReferences) {
-        // Referenced DIE is in other compile unit.
-
-        // Check whether DIEs are loaded for that compile unit.
-        enum Stage ReferredCUStage = RefCU->getStage();
-        if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
-          return UnitEntryPairTy{RefCU, nullptr};
-
-        if (std::optional<uint32_t> RefDieIdx =
-                RefCU->getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
-      } else
-        return UnitEntryPairTy{RefCU, nullptr};
-    }
+  CompileUnit *RefCU;
+  uint64_t RefDIEOffset;
+  if (std::optional<uint64_t> Offset = RefValue.getAsRelativeReference()) {
+    RefCU = this;
+    RefDIEOffset = RefValue.getUnit()->getOffset() + *Offset;
+  } else if (Offset = RefValue.getAsDebugInfoReference(); Offset) {
+    RefCU = getUnitFromOffset(*Offset);
+    RefDIEOffset = *Offset;
+  } else {
+    return std::nullopt;
   }
 
+  if (RefCU == this) {
+    // Referenced DIE is in current compile unit.
+    if (std::optional<uint32_t> RefDieIdx = getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
+  } else if (RefCU && CanResolveInterCUReferences) {
+    // Referenced DIE is in other compile unit.
+
+    // Check whether DIEs are loaded for that compile unit.
+    enum Stage ReferredCUStage = RefCU->getStage();
+    if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
+      return UnitEntryPairTy{RefCU, nullptr};
+
+    if (std::optional<uint32_t> RefDieIdx =
+            RefCU->getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
+  } else {
+    return UnitEntryPairTy{RefCU, nullptr};
+  }
   return std::nullopt;
 }
 

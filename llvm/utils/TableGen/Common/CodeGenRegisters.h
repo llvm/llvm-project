@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENREGISTERS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENREGISTERS_H
 
 #include "CodeGenHwModes.h"
 #include "InfoByHwMode.h"
@@ -568,7 +568,7 @@ struct RegUnitSet {
   unsigned Weight = 0; // Cache the sum of all unit weights.
   unsigned Order = 0;  // Cache the sort key.
 
-  RegUnitSet(std::string Name) : Name(Name) {}
+  RegUnitSet(std::string Name) : Name(std::move(Name)) {}
 };
 
 // Base vector for identifying TopoSigs. The contents uniquely identify a
@@ -860,4 +860,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENREGISTERS_H
