@@ -4,17 +4,19 @@
 ; Test that SLP vectorize doesn't crash if a stored constant is used in multiple
 ; functions.
 
+@p = external global [64 x float]
+
 define void @_Z1hPfl() {
 ; CHECK-LABEL: define void @_Z1hPfl() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr null, i64 28
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr @p, i64 28
 ; CHECK-NEXT:    store <2 x float> <float 0.000000e+00, float 1.000000e+00>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = getelementptr i8, ptr null, i64 28
+  %0 = getelementptr i8, ptr @p, i64 28
   store float 0.000000e+00, ptr %0, align 4
-  %1 = getelementptr i8, ptr null, i64 32
+  %1 = getelementptr i8, ptr @p, i64 32
   store float 1.000000e+00, ptr %1, align 16
   ret void
 }
@@ -27,8 +29,8 @@ define void @_Z1mv(i64 %arrayidx4.i.2.idx) {
 ; CHECK:       [[FOR_COND1_PREHEADER_LR_PH_I:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER_I:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER_I]]:
-; CHECK-NEXT:    store float 1.000000e+00, ptr null, align 4
-; CHECK-NEXT:    [[ARRAYIDX4_I_2:%.*]] = getelementptr i8, ptr null, i64 [[ARRAYIDX4_I_2_IDX]]
+; CHECK-NEXT:    store float 1.000000e+00, ptr @p, align 4
+; CHECK-NEXT:    [[ARRAYIDX4_I_2:%.*]] = getelementptr i8, ptr @p, i64 [[ARRAYIDX4_I_2_IDX]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX4_I_2]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER_I]]
 ;
@@ -39,8 +41,8 @@ for.cond1.preheader.lr.ph.i:                      ; No predecessors!
   br label %for.cond1.preheader.i
 
 for.cond1.preheader.i:                            ; preds = %for.cond1.preheader.i, %for.cond1.preheader.lr.ph.i
-  store float 1.000000e+00, ptr null, align 4
-  %arrayidx4.i.2 = getelementptr i8, ptr null, i64 %arrayidx4.i.2.idx
+  store float 1.000000e+00, ptr @p, align 4
+  %arrayidx4.i.2 = getelementptr i8, ptr @p, i64 %arrayidx4.i.2.idx
   store float 0.000000e+00, ptr %arrayidx4.i.2, align 4
   br label %for.cond1.preheader.i
 }
