@@ -765,17 +765,12 @@ SDValue XtensaTargetLowering::LowerShiftLeftParts(SDValue Op,
       DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
 
   SDValue LoTrue = DAG.getNode(ISD::SHL, DL, VT, Lo, Shamt);
-
   SDValue HiTrue = DAG.getNode(XtensaISD::SRCL, DL, VT, Hi, Lo, Shamt);
-
   SDValue Zero = DAG.getConstant(0, DL, VT);
-
   SDValue HiFalse = DAG.getNode(ISD::SHL, DL, VT, Lo, ShamtMinusRegisterSize);
 
   SDValue Cond = DAG.getSetCC(DL, VT, ShamtMinusRegisterSize, Zero, ISD::SETLT);
-
   Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond, LoTrue, Zero);
-
   Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond, HiTrue, HiFalse);
 
   return DAG.getMergeValues({Lo, Hi}, DL);
@@ -806,21 +801,16 @@ SDValue XtensaTargetLowering::LowerShiftRightParts(SDValue Op,
   //     Hi = 0;
 
   unsigned ShiftRightOp = IsSRA ? ISD::SRA : ISD::SRL;
-
   SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
   SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
   SDValue ShamtMinusRegisterSize =
       DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
 
   SDValue LoTrue = DAG.getNode(XtensaISD::SRCR, DL, VT, Hi, Lo, Shamt);
-
   SDValue HiTrue = DAG.getNode(ShiftRightOp, DL, VT, Hi, Shamt);
-
   SDValue Zero = DAG.getConstant(0, DL, VT);
-
   SDValue LoFalse =
       DAG.getNode(ShiftRightOp, DL, VT, Hi, ShamtMinusRegisterSize);
-
   SDValue HiFalse;
 
   if (IsSRA) {
@@ -830,13 +820,10 @@ SDValue XtensaTargetLowering::LowerShiftRightParts(SDValue Op,
   }
 
   SDValue Cond = DAG.getSetCC(DL, VT, ShamtMinusRegisterSize, Zero, ISD::SETLT);
-
   Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond, LoTrue, LoFalse);
-
   Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond, HiTrue, HiFalse);
 
-  SDValue Ops[2] = {Lo, Hi};
-  return DAG.getMergeValues(Ops, DL);
+  return DAG.getMergeValues({Lo, Hi}, DL);
 }
 
 SDValue XtensaTargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {

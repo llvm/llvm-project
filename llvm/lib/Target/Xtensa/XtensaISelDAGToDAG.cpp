@@ -137,7 +137,10 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SHL: {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
-    if (!isa<ConstantSDNode>(N1)) {
+    auto *C = dyn_cast<ConstantSDNode>(N1);
+    // If C is constant in range [1..31] then we can generate SLLI
+    // instruction using pattern matching, otherwise generate SLL
+    if (!C || !(isUInt<5>(C->getZExtValue()) && !C->isZero())) {
       SDNode *SSL = CurDAG->getMachineNode(Xtensa::SSL, DL, MVT::Glue, N1);
       SDNode *SLL =
           CurDAG->getMachineNode(Xtensa::SLL, DL, VT, N0, SDValue(SSL, 0));
@@ -164,7 +167,10 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SRA: {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
-    if (!isa<ConstantSDNode>(N1)) {
+    auto *C = dyn_cast<ConstantSDNode>(N1);
+    // If C is constant in range [0..31] then we can generate SRAI
+    // instruction using pattern matching, otherwise generate SRA
+    if (!C || !isUInt<5>(C->getZExtValue())) {
       SDNode *SSR = CurDAG->getMachineNode(Xtensa::SSR, DL, MVT::Glue, N1);
       SDNode *SRA =
           CurDAG->getMachineNode(Xtensa::SRA, DL, VT, N0, SDValue(SSR, 0));
