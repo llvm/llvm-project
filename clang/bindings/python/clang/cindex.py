@@ -642,7 +642,6 @@ class BaseEnumeration(Enum):
     Common base class for named enumerations held in sync with Index.h values.
     """
 
-
     def from_param(self):
         return self.value
 
@@ -717,7 +716,6 @@ class CursorKind(BaseEnumeration):
     def is_unexposed(self):
         """Test if this is an unexposed kind."""
         return conf.lib.clang_isUnexposed(self)  # type: ignore [no-any-return]
-
 
     ###
     # Declaration Kinds
@@ -844,7 +842,6 @@ class CursorKind(BaseEnumeration):
 
     # A C++ access specifier decl.
     CXX_ACCESS_SPEC_DECL = 39
-
 
     ###
     # Reference Kinds
@@ -3145,9 +3142,7 @@ class TranslationUnit(ClangObject):
 
         ptr = c_object_p()
         errc = conf.lib.clang_createTranslationUnit2(
-            index,
-            os.fspath(filename),
-            byref(ptr)
+            index, os.fspath(filename), byref(ptr)
         )
 
         if errc != 0:
@@ -3300,7 +3295,7 @@ class TranslationUnit(ClangObject):
             self, len(unsaved_files), unsaved_files_array, options
         )
         if errc != 0:
-            raise TranslationUnitLoadError(errc, 'Error reparsing TranslationUnit.')
+            raise TranslationUnitLoadError(errc, "Error reparsing TranslationUnit.")
 
     def save(self, filename):
         """Saves the TranslationUnit to a file.
@@ -3754,7 +3749,11 @@ functionList: list[LibFunc] = [
     ("clang_codeCompleteGetNumDiagnostics", [CodeCompletionResults], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
     ("clang_createTranslationUnit", [Index, c_interop_string], c_object_p),
-    ("clang_createTranslationUnit2", [Index, c_interop_string, POINTER(c_object_p)], c_int),
+    (
+        "clang_createTranslationUnit2",
+        [Index, c_interop_string, POINTER(c_object_p)],
+        c_int,
+    ),
     ("clang_CXRewriter_create", [TranslationUnit], c_object_p),
     ("clang_CXRewriter_dispose", [Rewriter]),
     ("clang_CXRewriter_insertTextBefore", [Rewriter, SourceLocation, c_interop_string]),
@@ -3951,7 +3950,16 @@ functionList: list[LibFunc] = [
     ),
     (
         "clang_parseTranslationUnit2",
-        [Index, c_interop_string, c_void_p, c_int, c_void_p, c_int, c_int, POINTER(c_object_p)],
+        [
+            Index,
+            c_interop_string,
+            c_void_p,
+            c_int,
+            c_void_p,
+            c_int,
+            c_int,
+            POINTER(c_object_p),
+        ],
         c_int,
     ),
     ("clang_reparseTranslationUnit", [TranslationUnit, c_int, c_void_p, c_int], c_int),
