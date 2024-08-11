@@ -108,15 +108,8 @@ static void *NsanAllocate(uptr size, uptr alignment, bool zero) {
     ReportRssLimitExceeded(&stack);
   }
   NsanThread *t = GetCurrentThread();
-  void *allocated;
-  if (t) {
-    AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-    allocated = allocator.Allocate(cache, size, alignment);
-  } else {
-    SpinMutexLock l(&fallback_mutex);
-    AllocatorCache *cache = &fallback_allocator_cache;
-    allocated = allocator.Allocate(cache, size, alignment);
-  }
+  void *allocated = allocator.Allocate(GetAllocatorCache(&t->malloc_storage()),
+                                       size, alignment);
   if (UNLIKELY(!allocated)) {
     SetAllocatorOutOfMemory();
     if (AllocatorMayReturnNull())
@@ -146,6 +139,8 @@ void __nsan::NsanDeallocate(void *p) {
     AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
     allocator.Deallocate(cache, p);
   } else {
+    // In a just created thread, glibc's _dl_deallocate_tls might reach here
+    // before nsan_current_thread is set.
     SpinMutexLock l(&fallback_mutex);
     AllocatorCache *cache = &fallback_allocator_cache;
     allocator.Deallocate(cache, p);
