@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Value.h"
@@ -219,6 +221,12 @@ public:
       value = underlyingValue;
     } while (true);
     return value;
+  }
+
+  static void loadAnalysis(DataFlowSolver &solver) {
+    solver.load<SparseConstantPropagation>();
+    solver.load<DeadCodeAnalysis>();
+    solver.load<UnderlyingValueAnalysis>();
   }
 };
 

@@ -106,6 +106,10 @@ public:
                       ArrayRef<Lattice<ConstantValue> *> results) override;
 
   void setToEntryState(Lattice<ConstantValue> *lattice) override;
+
+  static void loadAnalysis(DataFlowSolver &solver) {
+    solver.load<SparseConstantPropagation>();
+  }
 };
 
 } // end namespace dataflow
