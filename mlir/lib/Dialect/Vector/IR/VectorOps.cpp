@@ -445,8 +445,7 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
-  build(builder, result, kind, source, acc,
-        builder.getI64ArrayAttr(reductionDims));
+  build(builder, result, kind, source, acc, reductionDims);
 }
 
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
@@ -466,12 +465,14 @@ LogicalResult MultiDimReductionOp::verify() {
   SmallVector<bool> scalableDims;
   Type inferredReturnType;
   auto sourceScalableDims = getSourceVectorType().getScalableDims();
-  for (auto it : llvm::enumerate(getSourceVectorType().getShape()))
-    if (!llvm::any_of(getReductionDims().getValue(), [&](Attribute attr) {
-          return llvm::cast<IntegerAttr>(attr).getValue() == it.index();
-        })) {
-      targetShape.push_back(it.value());
-      scalableDims.push_back(sourceScalableDims[it.index()]);
+  for (auto [dimIdx, dimSize] :
+       llvm::enumerate(getSourceVectorType().getShape()))
+    if (!llvm::any_of(getReductionDims(),
+                      [dimIdx = dimIdx](int64_t reductionDimIdx) {
+                        return reductionDimIdx == static_cast<int64_t>(dimIdx);
+                      })) {
+      targetShape.push_back(dimSize);
+      scalableDims.push_back(sourceScalableDims[dimIdx]);
     }
   // TODO: update to also allow 0-d vectors when available.
   if (targetShape.empty())

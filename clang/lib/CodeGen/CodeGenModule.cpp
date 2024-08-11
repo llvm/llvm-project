@@ -8507,7 +8507,7 @@ int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
                                : getTarget().getGridValue().GV_Max_WG_Size;
   const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
   if (ThreadLimitClause) {
-    Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
+    Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit().front();
     clang::Expr::EvalResult Result;
     if (ThreadLimitExpr->EvaluateAsInt(Result, getContext())) {
       int ThreadLimitEval = Result.Val.getInt().getExtValue();
@@ -8654,7 +8654,7 @@ CodeGenModule::getXteamRedCompatibleThreadLimitStatus(
   const auto *ThreadLimitClause = LD.getSingleClause<OMPThreadLimitClause>();
   if (!ThreadLimitClause)
     return NxSuccess;
-  Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
+  Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit().front();
   clang::Expr::EvalResult Result;
   if (ThreadLimitExpr->EvaluateAsInt(Result, getContext())) {
     int ThreadLimitEval = Result.Val.getInt().getExtValue();

@@ -152,4 +152,210 @@ namespace IndirectFieldDecl {
   };
   static_assert(C().a == 1, "");
 }
+
+namespace UnionDtor {
+
+  union U {
+    int *I;
+    constexpr U(int *I) : I(I) {}
+    constexpr ~U() {
+      *I = 10;
+    }
+  };
+
+  constexpr int foo() {
+    int a = 100;
+    {
+      U u(&a);
+    }
+    return a;
+  }
+  static_assert(foo() == 10);
+}
+
+namespace UnionMemberDtor {
+  class UM {
+  public:
+    int &I;
+    constexpr UM(int &I) : I(I) {}
+    constexpr ~UM() { I = 200; }
+  };
+
+  union U {
+    UM um;
+    constexpr U(int &I) : um(I) {}
+    constexpr ~U() {
+    }
+  };
+
+  constexpr int foo() {
+    int a = 100;
+    {
+      U u(a);
+    }
+
+    return a;
+  }
+  static_assert(foo() == 100);
+}
+
+namespace Nested {
+  union U {
+    int a;
+    int b;
+  };
+
+  union U2 {
+    U u;
+    U u2;
+    int x;
+    int y;
+  };
+
+ constexpr int foo() { // ref-error {{constexpr function never produces a constant expression}}
+    U2 u;
+    u.u.a = 10;
+    int a = u.y; // both-note {{read of member 'y' of union with active member 'u' is not allowed in a constant expression}} \
+                 // ref-note {{read of member 'y' of union with active member 'u' is not allowed in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+
+ constexpr int foo2() {
+    U2 u;
+    u.u.a = 10;
+    return u.u.a;
+  }
+  static_assert(foo2() == 10);
+
+ constexpr int foo3() { // ref-error {{constexpr function never produces a constant expression}}
+    U2 u;
+    u.u.a = 10;
+    int a = u.u.b; // both-note {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}} \
+                   // ref-note {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo3() == 1); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
+  constexpr int foo4() { // ref-error {{constexpr function never produces a constant expression}}
+    U2 u;
+
+    u.x = 10;
+
+    return u.u.a;// both-note {{read of member 'u' of union with active member 'x' is not allowed in a constant expression}} \
+                 // ref-note {{read of member 'u' of union with active member 'x' is not allowed in a constant expression}}
+  }
+  static_assert(foo4() == 1); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+
+}
+
+
+namespace Zeroing {
+  struct non_trivial_constructor {
+      constexpr non_trivial_constructor() : x(100) {}
+      int x;
+  };
+  union U2 {
+      int a{1000};
+      non_trivial_constructor b;
+  };
+
+  static_assert(U2().b.x == 100, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union { int a; int b; } constexpr u1{};
+  static_assert(u1.a == 0, "");
+  static_assert(u1.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union U { int a; int b; } constexpr u2 = U();
+  static_assert(u2.a == 0, "");
+  static_assert(u2.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+
+
+  struct F {int x; int y; };
+  union { F a; int b; } constexpr u3{};
+  static_assert(u3.a.x == 0, "");
+
+  union U4 { F a; int b; } constexpr u4 = U4();
+  static_assert(u4.a.x == 0, "");
+
+  union { int a[5]; int b; } constexpr u5{};
+  static_assert(u5.a[0] == 0, "");
+  static_assert(u5.a[4] == 0, "");
+  static_assert(u5.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union U6 { int a[5]; int b; } constexpr u6 = U6();
+  static_assert(u6.a[0] == 0, "");
+  static_assert(u6.a[4] == 0, "");
+  static_assert(u6.b == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{read of member 'b' of union with active member 'a'}}
+
+  union UnionWithUnnamedBitfield {
+    int : 3;
+    int n;
+  };
+  static_assert(UnionWithUnnamedBitfield().n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{}.n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{1}.n == 1, "");
+}
+
+namespace IndirectField {
+  struct S {
+    struct {
+      union {
+        struct {
+          int a;
+          int b;
+        };
+        int c;
+      };
+      int d;
+    };
+    union {
+      int e;
+      int f;
+    };
+    constexpr S(int a, int b, int d, int e) : a(a), b(b), d(d), e(e) {}
+    constexpr S(int c, int d, int f) : c(c), d(d), f(f) {}
+  };
+
+  constexpr S s1(1,2,3,4);
+  constexpr S s2(5, 6, 7);
+
+  static_assert(s1.a == 1, "");
+  static_assert(s1.b == 2, "");
+
+  static_assert(s1.c == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s1.d == 3, "");
+  static_assert(s1.e == 4, "");
+  static_assert(s1.f == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+
+  static_assert(s2.a == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s2.b == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s2.c == 5, "");
+  static_assert(s2.d == 6, "");
+  static_assert(s2.e == 0, ""); // both-error {{constant expression}} both-note {{union with active member}}
+  static_assert(s2.f == 7, "");
+}
+
+namespace CopyCtor {
+  union U {
+    int a;
+    int b;
+  };
+
+  constexpr U x = {42};
+  constexpr U y = x;
+  static_assert(y.a == 42, "");
+  static_assert(y.b == 42, ""); // both-error {{constant expression}} \
+                                // both-note {{'b' of union with active member 'a'}}
+}
 #endif

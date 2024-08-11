@@ -125,18 +125,15 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (Ptr.isActive())
     return true;
 
-  // Get the inactive field descriptor.
-  const FieldDecl *InactiveField = Ptr.getField();
-  assert(InactiveField);
-
-  // Walk up the pointer chain to find the closest union.
   Pointer U = Ptr.getBase();
-  while (!U.getFieldDesc()->isUnion())
+  Pointer C = Ptr;
+  while (!U.isRoot() && U.inUnion() && !U.isActive()) {
+    C = U;
     U = U.getBase();
-
-  // Find the active field of the union.
-  const Record *R = U.getRecord();
-  assert(R && R->isUnion() && "Not a union");
+  }
+  // Get the inactive field descriptor.
+  const FieldDecl *InactiveField = C.getField();
+  assert(InactiveField);
 
   // Consider:
   // union U {
@@ -148,9 +145,14 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   //
   // When activating x, we will also activate a. If we now try to read
   // from y, we will get to CheckActive, because y is not active. In that
-  // case we return here and let later code handle this.
-  if (!llvm::is_contained(R->getDecl()->fields(), InactiveField))
+  // case, our U will be a (not a union). We return here and let later code
+  // handle this.
+  if (!U.getFieldDesc()->isUnion())
     return true;
+
+  // Find the active field of the union.
+  const Record *R = U.getRecord();
+  assert(R && R->isUnion() && "Not a union");
 
   const FieldDecl *ActiveField = nullptr;
   for (unsigned I = 0, N = R->getNumFields(); I < N; ++I) {

@@ -1386,18 +1386,8 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     if (R->isUnion()) {
       if (Inits.size() == 0) {
-        // Zero-initialize the first union field.
-        if (R->getNumFields() == 0)
-          return this->emitFinishInit(E);
-        const Record::Field *FieldToInit = R->getField(0u);
-        QualType FieldType = FieldToInit->Desc->getType();
-        if (std::optional<PrimType> T = classify(FieldType)) {
-          if (!this->visitZeroInitializer(*T, FieldType, E))
-            return false;
-          if (!this->emitInitField(*T, FieldToInit->Offset, E))
-            return false;
-        }
-        // FIXME: Non-primitive case?
+        if (!this->visitZeroRecordInitializer(R, E))
+          return false;
       } else {
         const Expr *Init = Inits[0];
         const FieldDecl *FToInit = nullptr;
@@ -3366,6 +3356,9 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   assert(R);
   // Fields
   for (const Record::Field &Field : R->fields()) {
+    if (Field.Decl->isUnnamedBitField())
+      continue;
+
     const Descriptor *D = Field.Desc;
     if (D->isPrimitive()) {
       QualType QT = D->getType();
@@ -3374,6 +3367,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
         return false;
       if (!this->emitInitField(T, Field.Offset, E))
         return false;
+      if (R->isUnion())
+        break;
       continue;
     }
 
@@ -3409,8 +3404,11 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
       assert(false);
     }
 
-    if (!this->emitPopPtr(E))
+    if (!this->emitFinishInitPop(E))
       return false;
+
+    if (R->isUnion())
+      break;
   }
 
   for (const Record::Base &B : R->bases()) {
@@ -4739,8 +4737,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
-  auto emitFieldInitializer = [&](const Record *R, const Record::Field *F,
-                                  unsigned FieldOffset,
+  auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
                                   const Expr *InitExpr) -> bool {
     // We don't know what to do with these, so just return false.
     if (InitExpr->getType().isNull())
@@ -4752,8 +4749,6 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
 
       if (F->isBitField())
         return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
-      if (R->isUnion())
-        return this->emitInitThisFieldActive(*T, FieldOffset, InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
     // Non-primitive case. Get a pointer to the field-to-initialize
@@ -4780,6 +4775,22 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
     if (!R)
       return false;
 
+    if (R->isUnion() && Ctor->isCopyOrMoveConstructor()) {
+      // union copy and move ctors are special.
+      assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
+      if (!this->emitThis(Ctor))
+        return false;
+
+      auto PVD = Ctor->getParamDecl(0);
+      ParamOffset PO = this->Params[PVD]; // Must exist.
+
+      if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
+        return false;
+
+      return this->emitMemcpy(Ctor) && this->emitPopPtr(Ctor) &&
+             this->emitRetVoid(Ctor);
+    }
+
     InitLinkScope<Emitter> InitScope(this, InitLink::This());
     for (const auto *Init : Ctor->inits()) {
       // Scope needed for the initializers.
@@ -4789,7 +4800,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
       if (const FieldDecl *Member = Init->getMember()) {
         const Record::Field *F = R->getField(Member);
 
-        if (!emitFieldInitializer(R, F, F->Offset, InitExpr))
+        if (!emitFieldInitializer(F, F->Offset, InitExpr))
           return false;
       } else if (const Type *Base = Init->getBaseClass()) {
         const auto *BaseDecl = Base->getAsCXXRecordDecl();
@@ -4817,11 +4828,11 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
         assert(IFD->getChainingSize() >= 2);
 
         unsigned NestedFieldOffset = 0;
-        const Record *FieldRecord = nullptr;
         const Record::Field *NestedField = nullptr;
         for (const NamedDecl *ND : IFD->chain()) {
           const auto *FD = cast<FieldDecl>(ND);
-          FieldRecord = this->P.getOrCreateRecord(FD->getParent());
+          const Record *FieldRecord =
+              this->P.getOrCreateRecord(FD->getParent());
           assert(FieldRecord);
 
           NestedField = FieldRecord->getField(FD);
@@ -4831,8 +4842,7 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
         }
         assert(NestedField);
 
-        if (!emitFieldInitializer(FieldRecord, NestedField, NestedFieldOffset,
-                                  InitExpr))
+        if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
           return false;
       } else {
         assert(Init->isDelegatingInitializer());
@@ -5552,21 +5562,20 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 template <class Emitter>
 bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
   assert(R);
-  // First, destroy all fields.
-  for (const Record::Field &Field : llvm::reverse(R->fields())) {
-    const Descriptor *D = Field.Desc;
-    if (!D->isPrimitive() && !D->isPrimitiveArray()) {
-      if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
-        return false;
-      if (!this->emitDestruction(D))
-        return false;
-      if (!this->emitPopPtr(SourceInfo{}))
-        return false;
+  if (!R->isUnion()) {
+    // First, destroy all fields.
+    for (const Record::Field &Field : llvm::reverse(R->fields())) {
+      const Descriptor *D = Field.Desc;
+      if (!D->isPrimitive() && !D->isPrimitiveArray()) {
+        if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
+          return false;
+        if (!this->emitDestruction(D))
+          return false;
+        if (!this->emitPopPtr(SourceInfo{}))
+          return false;
+      }
     }
   }
-
-  // FIXME: Unions need to be handled differently here. We don't want to
-  //   call the destructor of its members.
 
   // Now emit the destructor and recurse into base classes.
   if (const CXXDestructorDecl *Dtor = R->getDestructor();
