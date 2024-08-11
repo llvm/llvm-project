@@ -9227,46 +9227,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
 }
 
-void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
-
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGather = !isConsecutive();
-
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *NewLI;
-    Value *Mask = nullptr;
-    if (auto *VPMask = getMask()) {
-      // Mask reversal is only needed for non-all-one (null) masks, as reverse
-      // of a null all-one mask is a null mask.
-      Mask = State.get(VPMask, Part);
-      if (isReverse())
-        Mask = Builder.CreateVectorReverse(Mask, "reverse");
-    }
-
-    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateGather);
-    if (CreateGather) {
-      NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
-                                         "wide.masked.gather");
-    } else if (Mask) {
-      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
-                                       PoisonValue::get(DataTy),
-                                       "wide.masked.load");
-    } else {
-      NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
-    }
-    // Add metadata to the load, but setVectorValue to the reverse shuffle.
-    State.addMetadata(NewLI, LI);
-    if (Reverse)
-      NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
-    State.set(this, NewLI, Part);
-  }
-}
-
 /// Use all-true mask for reverse rather than actual mask, as it avoids a
 /// dependence w/o affecting the result.
 static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
