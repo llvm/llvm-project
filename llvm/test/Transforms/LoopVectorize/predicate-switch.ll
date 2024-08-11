@@ -162,13 +162,13 @@ define void @switch_to_header(ptr %start) {
 ; IC1-NEXT:  [[ENTRY:.*]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC1:       [[LOOP_HEADER]]:
-; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_HEADER_BACKEDGE:.*]] ]
+; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
 ; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC1-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC1-NEXT:      i64 120, label %[[LOOP_HEADER_BACKEDGE]]
+; IC1-NEXT:      i64 120, label %[[IF_THEN1]]
 ; IC1-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC1-NEXT:    ]
-; IC1:       [[LOOP_HEADER_BACKEDGE]]:
+; IC1:       [[IF_THEN1]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER]]
 ; IC1:       [[IF_THEN:.*:]]
 ; IC1-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
@@ -176,7 +176,7 @@ define void @switch_to_header(ptr %start) {
 ; IC1-NEXT:    unreachable
 ; IC1:       [[LOOP_LATCH]]:
 ; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP_HEADER_BACKEDGE]]
+; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
@@ -185,13 +185,13 @@ define void @switch_to_header(ptr %start) {
 ; IC2-NEXT:  [[ENTRY:.*]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC2:       [[LOOP_HEADER]]:
-; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_HEADER_BACKEDGE:.*]] ]
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
 ; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC2-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC2-NEXT:      i64 120, label %[[LOOP_HEADER_BACKEDGE]]
+; IC2-NEXT:      i64 120, label %[[IF_THEN1]]
 ; IC2-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC2-NEXT:    ]
-; IC2:       [[LOOP_HEADER_BACKEDGE]]:
+; IC2:       [[IF_THEN1]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER]]
 ; IC2:       [[IF_THEN:.*:]]
 ; IC2-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
@@ -199,7 +199,7 @@ define void @switch_to_header(ptr %start) {
 ; IC2-NEXT:    unreachable
 ; IC2:       [[LOOP_LATCH]]:
 ; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP_HEADER_BACKEDGE]]
+; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;
