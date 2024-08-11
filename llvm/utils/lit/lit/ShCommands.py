@@ -92,14 +92,15 @@ class Pipeline:
 
 
 class Seq:
-    def __init__(self, lhs, op, rhs):
+    def __init__(self, lhs, op, rhs, seq_type):
         assert op in (";", "&", "||", "&&")
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
+        self.type = seq_type
 
     def __repr__(self):
-        return "Seq(%r, %r, %r)" % (self.lhs, self.op, self.rhs)
+        return "Seq(%r, %r, %r, %r)" % (self.lhs, self.op, self.rhs, self.type)
 
     def __eq__(self, other):
         if not isinstance(other, Seq):

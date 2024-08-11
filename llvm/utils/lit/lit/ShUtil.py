@@ -157,7 +157,11 @@ class ShLexer:
         lex_one_token - Lex a single 'sh' token."""
 
         c = self.eat()
+        if c == "{" or c == "}":
+            return (c,)
         if c == ";":
+            if self.maybe_eat("}") or (self.maybe_eat(" ") and self.maybe_eat("}")):
+                return("}",)
             return (c,)
         if c == "|":
             if self.maybe_eat("|"):
@@ -200,6 +204,8 @@ class ShParser:
         self.data = data
         self.pipefail = pipefail
         self.tokens = ShLexer(data, win32Escapes=win32Escapes).lex()
+        self.brace_stack = []
+        self.brace_dict = {'{': '}'}
 
     def lex(self):
         for item in self.tokens:
@@ -255,18 +261,42 @@ class ShParser:
             self.lex()
             commands.append(self.parse_command())
         return Pipeline(commands, negate, self.pipefail)
+            
+    
+    # {echo foo; echo bar;} && echo hello
+    # echo hello && {echo foo; echo bar}
+    
+    def parse(self, seq_type):
+        lhs = None
+        if isinstance(self.look(), tuple):
+            brace = self.lex()
+            self.brace_stack.append(brace)
+            if brace[0] == '{':
+                lhs = self.parse(('{', '}'))
+            else:
+                raise ValueError("syntax error near unexpected token %r" % brace[0])
 
-    def parse(self):
-        lhs = self.parse_pipeline()
+        else:
+            lhs = self.parse_pipeline()
 
         while self.look():
             operator = self.lex()
             assert isinstance(operator, tuple) and len(operator) == 1
 
+            if operator == self.brace_dict[self.brace_stack.peek()]:
+                break
+
             if not self.look():
                 raise ValueError("missing argument to operator %r" % operator[0])
 
             # FIXME: Operator precedence!!
-            lhs = Seq(lhs, operator[0], self.parse_pipeline())
+            if isinstance(self.look(), tuple):
+                lhs = self.parse(('{', '}'))
+            else: 
+                lhs = Seq(lhs, operator[0], self.parse_pipeline(), seq_type)
+            seq_type = None
+        
+        if not stack.empty():
+            raise ValueError("missing token to %r" % stack.peek())
 
         return lhs

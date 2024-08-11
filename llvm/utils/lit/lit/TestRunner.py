@@ -1056,7 +1056,7 @@ def executeScriptInternal(
             ln = command
         try:
             cmds.append(
-                ShUtil.ShParser(ln, litConfig.isWindows, test.config.pipefail).parse()
+                ShUtil.ShParser(ln, litConfig.isWindows, test.config.pipefail).parse(None)
             )
         except:
             raise ScriptFatal(
