@@ -118,7 +118,7 @@ void fir::setIdent(mlir::ModuleOp mod, llvm::StringRef ident) {
   if (ident.empty())
     return;
 
-  auto *ctx = mod.getContext();
+  mlir::MLIRContext *ctx = mod.getContext();
   mod->setAttr(mlir::LLVM::LLVMDialect::getIdentAttrName(),
                mlir::StringAttr::get(ctx, ident));
 }
