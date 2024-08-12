@@ -54,20 +54,21 @@
 #ifndef LLVM_MC_MCPSEUDOPROBE_H
 #define LLVM_MC_MCPSEUDOPROBE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/IR/PseudoProbe.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
-#include <list>
-#include <map>
+#include <functional>
 #include <memory>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -86,7 +87,7 @@ enum class MCPseudoProbeFlag {
 struct MCPseudoProbeFuncDesc {
   uint64_t FuncGUID = 0;
   uint64_t FuncHash = 0;
-  std::string FuncName;
+  StringRef FuncName;
 
   MCPseudoProbeFuncDesc(uint64_t GUID, uint64_t Hash, StringRef Name)
       : FuncGUID(GUID), FuncHash(Hash), FuncName(Name){};
@@ -100,17 +101,21 @@ class MCDecodedPseudoProbe;
 using InlineSite = std::tuple<uint64_t, uint32_t>;
 using MCPseudoProbeInlineStack = SmallVector<InlineSite, 8>;
 // GUID to PseudoProbeFuncDesc map
-using GUIDProbeFunctionMap =
-    std::unordered_map<uint64_t, MCPseudoProbeFuncDesc>;
-// Address to pseudo probes map.
-using AddressProbesMap = std::map<uint64_t, std::list<MCDecodedPseudoProbe>>;
+class GUIDProbeFunctionMap : public std::vector<MCPseudoProbeFuncDesc> {
+public:
+  auto find(uint64_t GUID) const {
+    return llvm::lower_bound(
+        *this, GUID, [](const MCPseudoProbeFuncDesc &Desc, uint64_t GUID) {
+          return Desc.FuncGUID < GUID;
+        });
+  }
+};
 
 class MCDecodedPseudoProbeInlineTree;
 
 class MCPseudoProbeBase {
 protected:
-  uint64_t Guid;
-  uint64_t Index;
+  uint32_t Index;
   uint32_t Discriminator;
   uint8_t Attributes;
   uint8_t Type;
@@ -120,14 +125,12 @@ protected:
   const static uint32_t PseudoProbeFirstId = 1;
 
 public:
-  MCPseudoProbeBase(uint64_t G, uint64_t I, uint64_t At, uint8_t T, uint32_t D)
-      : Guid(G), Index(I), Discriminator(D), Attributes(At), Type(T) {}
+  MCPseudoProbeBase(uint64_t I, uint64_t At, uint8_t T, uint32_t D)
+      : Index(I), Discriminator(D), Attributes(At), Type(T) {}
 
   bool isEntry() const { return Index == PseudoProbeFirstId; }
 
-  uint64_t getGuid() const { return Guid; }
-
-  uint64_t getIndex() const { return Index; }
+  uint32_t getIndex() const { return Index; }
 
   uint32_t getDiscriminator() const { return Discriminator; }
 
@@ -157,18 +160,20 @@ public:
 /// uses an address from a temporary label created at the current address in the
 /// current section.
 class MCPseudoProbe : public MCPseudoProbeBase {
+  uint64_t Guid;
   MCSymbol *Label;
 
 public:
   MCPseudoProbe(MCSymbol *Label, uint64_t Guid, uint64_t Index, uint64_t Type,
                 uint64_t Attributes, uint32_t Discriminator)
-      : MCPseudoProbeBase(Guid, Index, Attributes, Type, Discriminator),
+      : MCPseudoProbeBase(Index, Attributes, Type, Discriminator), Guid(Guid),
         Label(Label) {
     assert(Type <= 0xFF && "Probe type too big to encode, exceeding 2^8");
     assert(Attributes <= 0xFF &&
            "Probe attributes too big to encode, exceeding 2^16");
   }
 
+  uint64_t getGuid() const { return Guid; };
   MCSymbol *getLabel() const { return Label; }
   void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *LastProbe) const;
 };
@@ -181,11 +186,11 @@ class MCDecodedPseudoProbe : public MCPseudoProbeBase {
   MCDecodedPseudoProbeInlineTree *InlineTree;
 
 public:
-  MCDecodedPseudoProbe(uint64_t Ad, uint64_t G, uint32_t I, PseudoProbeType K,
-                       uint8_t At, uint32_t D,
-                       MCDecodedPseudoProbeInlineTree *Tree)
-      : MCPseudoProbeBase(G, I, At, static_cast<uint8_t>(K), D), Address(Ad),
+  MCDecodedPseudoProbe(uint64_t Ad, uint32_t I, PseudoProbeType K, uint8_t At,
+                       uint32_t D, MCDecodedPseudoProbeInlineTree *Tree)
+      : MCPseudoProbeBase(I, At, static_cast<uint8_t>(K), D), Address(Ad),
         InlineTree(Tree){};
+  uint64_t getGuid() const;
 
   uint64_t getAddress() const { return Address; }
 
@@ -209,6 +214,25 @@ public:
   // Print pseudo probe while disassembling
   void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,
              bool ShowName) const;
+};
+
+// Address to pseudo probes map.
+class AddressProbesMap
+    : public std::vector<std::reference_wrapper<MCDecodedPseudoProbe>> {
+  auto getIt(uint64_t Addr) const {
+    auto CompareProbe = [](const MCDecodedPseudoProbe &Probe, uint64_t Addr) {
+      return Probe.getAddress() < Addr;
+    };
+    return llvm::lower_bound(*this, Addr, CompareProbe);
+  }
+
+public:
+  // Returns range of probes within [\p From, \p To) address range.
+  auto find(uint64_t From, uint64_t To) const {
+    return llvm::make_range(getIt(From), getIt(To));
+  }
+  // Returns range of probes with given \p Address.
+  auto find(uint64_t Address) const { return find(Address, Address + 1); }
 };
 
 template <typename ProbeType, typename DerivedProbeInlineTreeType>
@@ -276,17 +300,35 @@ public:
 };
 
 // inline tree node for the decoded pseudo probe
-class MCDecodedPseudoProbeInlineTree
-    : public MCPseudoProbeInlineTreeBase<MCDecodedPseudoProbe *,
-                                         MCDecodedPseudoProbeInlineTree> {
+class MCDecodedPseudoProbeInlineTree {
 public:
-  InlineSite ISite;
+  uint64_t Guid = 0;
+
+  // Caller node of the inline site
+  MCDecodedPseudoProbeInlineTree *Parent = nullptr;
 
   MCDecodedPseudoProbeInlineTree() = default;
-  MCDecodedPseudoProbeInlineTree(const InlineSite &Site) : ISite(Site){};
+  MCDecodedPseudoProbeInlineTree(uint64_t Guid, uint32_t ProbeId,
+                                 MCDecodedPseudoProbeInlineTree *Parent)
+      : Guid(Guid), Parent(Parent), ProbeId(ProbeId) {}
 
+  // Track children (e.g. inlinees) of current context
+  MutableArrayRef<MCDecodedPseudoProbeInlineTree> Children;
+  // Set of probes that come with the function.
+  MCDecodedPseudoProbe *Probes = nullptr;
+  uint32_t NumProbes = 0;
+  uint32_t ProbeId = 0;
+
+  // Root node has a GUID 0.
+  bool isRoot() const { return Guid == 0; }
   // Return false if it's a dummy inline site
   bool hasInlineSite() const { return !isRoot() && !Parent->isRoot(); }
+  InlineSite getInlineSite() const { return InlineSite(Guid, ProbeId); }
+  auto getChildren() const { return Children; }
+  auto getProbes() const {
+    return llvm::make_pointer_range(
+        MutableArrayRef<MCDecodedPseudoProbe>(Probes, NumProbes));
+  }
 };
 
 /// Instances of this class represent the pseudo probes inserted into a compile
@@ -336,8 +378,19 @@ public:
 };
 
 class MCPseudoProbeDecoder {
+  // Decoded pseudo probes vector.
+  std::vector<MCDecodedPseudoProbe> PseudoProbeVec;
+  // Injected pseudo probes, identified by the containing inline tree node.
+  std::unordered_map<const MCDecodedPseudoProbeInlineTree *,
+                     std::vector<MCDecodedPseudoProbe>>
+      InjectedProbeMap;
+  // Decoded inline records vector.
+  std::vector<MCDecodedPseudoProbeInlineTree> InlineTreeVec;
+
   // GUID to PseudoProbeFuncDesc map.
   GUIDProbeFunctionMap GUID2FuncDescMap;
+
+  BumpPtrAllocator FuncNameAllocator;
 
   // Address to probes map.
   AddressProbesMap Address2ProbesMap;
@@ -370,14 +423,16 @@ public:
   // Decode pseudo_probe_desc section to build GUID to PseudoProbeFuncDesc map.
   bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size);
 
+  // Decode pseudo_probe section to count the number of probes and inlined
+  // function records for each function record.
+  template <bool IsTopLevelFunc>
+  bool countRecords(bool &Discard, uint32_t &ProbeCount, uint32_t &InlinedCount,
+                    const Uint64Set &GuidFilter);
+
   // Decode pseudo_probe section to build address to probes map for specifed
   // functions only.
   bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size,
                              const Uint64Set &GuildFilter,
-                             const Uint64Map &FuncStartAddrs);
-
-  bool buildAddress2ProbeMap(MCDecodedPseudoProbeInlineTree *Cur,
-                             uint64_t &LastAddr, const Uint64Set &GuildFilter,
                              const Uint64Map &FuncStartAddrs);
 
   // Print pseudo_probe_desc section info
@@ -422,6 +477,32 @@ public:
   const MCDecodedPseudoProbeInlineTree &getDummyInlineRoot() const {
     return DummyInlineRoot;
   }
+
+  void addInjectedProbe(const MCDecodedPseudoProbe &Probe, uint64_t Address) {
+    const MCDecodedPseudoProbeInlineTree *Parent = Probe.getInlineTreeNode();
+    InjectedProbeMap[Parent].emplace_back(Probe).setAddress(Address);
+  }
+
+  size_t
+  getNumInjectedProbes(const MCDecodedPseudoProbeInlineTree *Parent) const {
+    auto It = InjectedProbeMap.find(Parent);
+    if (It == InjectedProbeMap.end())
+      return 0;
+    return It->second.size();
+  }
+
+  auto getInjectedProbes(MCDecodedPseudoProbeInlineTree *Parent) {
+    auto It = InjectedProbeMap.find(Parent);
+    assert(It != InjectedProbeMap.end());
+    return llvm::make_pointer_range(iterator_range(It->second));
+  }
+
+private:
+  template <bool IsTopLevelFunc>
+  void buildAddress2ProbeMap(MCDecodedPseudoProbeInlineTree *Cur,
+                             uint64_t &LastAddr, const Uint64Set &GuildFilter,
+                             const Uint64Map &FuncStartAddrs,
+                             uint32_t &CurChild);
 };
 
 } // end namespace llvm
