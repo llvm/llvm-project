@@ -1781,7 +1781,7 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
   return GetConstantFoldFPValue(Result, Ty);
 }
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
                             Type *Ty) {
   llvm_fenv_clearexcept();
@@ -2114,7 +2114,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
       if (IntrinsicID == Intrinsic::log) {
         float128 Result = logf128(Op->getValueAPF().convertToQuad());

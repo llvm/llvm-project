@@ -14186,6 +14186,10 @@ public:
   std::optional<unsigned> getNumArgumentsInExpansion(
       QualType T, const MultiLevelTemplateArgumentList &TemplateArgs);
 
+  std::optional<unsigned> getNumArgumentsInExpansionFromUnexpanded(
+      llvm::ArrayRef<UnexpandedParameterPack> Unexpanded,
+      const MultiLevelTemplateArgumentList &TemplateArgs);
+
   /// Determine whether the given declarator contains any unexpanded
   /// parameter packs.
   ///
