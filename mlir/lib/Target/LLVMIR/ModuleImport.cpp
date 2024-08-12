@@ -535,6 +535,23 @@ LogicalResult ModuleImport::convertIdentMetadata() {
   return success();
 }
 
+LogicalResult ModuleImport::convertCommandlineMetadata() {
+  for (const llvm::NamedMDNode &nmd : llvmModule->named_metadata()) {
+    // llvm.commandline should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (nmd.getName() != LLVMDialect::getCommandlineAttrName())
+      continue;
+
+    if (nmd.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(nmd.getOperand(0)))
+        if (md->getNumOperands() == 1)
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr(LLVMDialect::getCommandlineAttrName(),
+                                builder.getStringAttr(mdStr->getString()));
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
@@ -564,6 +581,8 @@ LogicalResult ModuleImport::convertMetadata() {
   if (failed(convertLinkerOptionsMetadata()))
     return failure();
   if (failed(convertIdentMetadata()))
+    return failure();
+  if (failed(convertCommandlineMetadata()))
     return failure();
   return success();
 }

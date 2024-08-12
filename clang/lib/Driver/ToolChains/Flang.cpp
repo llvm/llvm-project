@@ -9,6 +9,7 @@
 #include "Flang.h"
 #include "Arch/RISCV.h"
 #include "CommonArgs.h"
+#include "CommonUtils.h"
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
@@ -884,6 +885,20 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
   addDashXForInput(Args, Input, CmdArgs);
+
+  bool FRecordCmdLine = false;
+  bool GRecordCmdLine = false;
+  if (ShouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
+    const char *CmdLine = RenderEscapedCommandLine(TC, Args);
+    if (FRecordCmdLine) {
+      CmdArgs.push_back("-record-command-line");
+      CmdArgs.push_back(CmdLine);
+    }
+    if (TC.UseDwarfDebugFlags() || GRecordCmdLine) {
+      CmdArgs.push_back("-dwarf-debug-flags");
+      CmdArgs.push_back(CmdLine);
+    }
+  }
 
   CmdArgs.push_back(Input.getFilename());
 
