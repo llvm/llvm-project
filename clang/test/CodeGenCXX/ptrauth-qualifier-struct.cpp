@@ -57,9 +57,9 @@ void testMoveConstructor(SA a) {
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: store ptr %[[V0:.*]], ptr %[[_ADDR]], align 8
 // CHECK: %[[THISI:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK: %[[M0:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[THISI]], i32 0, i32 0
+// CHECK: %[[M0:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[THISI]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[_ADDR]], align 8
-// CHECK: %[[M02:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
+// CHECK: %[[M02:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
 // CHECK: %[[V2:.*]] = load ptr, ptr %[[M02]], align 8
 // CHECK: %[[V3:.*]] = ptrtoint ptr %[[M02]] to i64
 // CHECK: %[[V4:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V3]], i64 50)
@@ -82,9 +82,9 @@ void testCopyAssignment(SA a) {
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: store ptr %[[V0:.*]], ptr %[[_ADDR]], align 8
 // CHECK: %[[THISI:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK: %[[M0:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[THISI]], i32 0, i32 0
+// CHECK: %[[M0:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[THISI]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[_ADDR]], align 8
-// CHECK: %[[M02:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
+// CHECK: %[[M02:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
 // CHECK: %[[V2:.*]] = load ptr, ptr %[[M02]], align 8
 // CHECK: %[[V3:.*]] = ptrtoint ptr %[[M02]] to i64
 // CHECK: %[[V4:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V3]], i64 50)
@@ -136,9 +136,9 @@ void testMoveAssignment(SI a) {
 // CHECK: store ptr %[[V0:.*]], ptr %[[_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // CHECK: store ptr %[[THIS1]], ptr %[[RETVAL]], align 8
-// CHECK: %[[M0:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[THIS1]], i32 0, i32 0
+// CHECK: %[[M0:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[THIS1]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[_ADDR]], align 8
-// CHECK: %[[M02:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
+// CHECK: %[[M02:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
 // CHECK: %[[V2:.*]] = load ptr, ptr %[[M02]], align 8
 // CHECK: %[[V3:.*]] = ptrtoint ptr %[[M02]] to i64
 // CHECK: %[[V4:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V3]], i64 50)
@@ -155,9 +155,9 @@ void testMoveAssignment(SI a) {
 // CHECK: store ptr %[[V0:.*]], ptr %[[_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // CHECK: store ptr %[[THIS1]], ptr %[[RETVAL]], align 8
-// CHECK: %[[M0:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[THIS1]], i32 0, i32 0
+// CHECK: %[[M0:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[THIS1]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[_ADDR]], align 8
-// CHECK: %[[M02:.*]] = getelementptr inbounds %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
+// CHECK: %[[M02:.*]] = getelementptr inbounds nuw %[[STRUCT_SA]], ptr %[[V1]], i32 0, i32 0
 // CHECK: %[[V2:.*]] = load ptr, ptr %[[M02]], align 8
 // CHECK: %[[V3:.*]] = ptrtoint ptr %[[M02]] to i64
 // CHECK: %[[V4:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V3]], i64 50)

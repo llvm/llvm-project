@@ -30,7 +30,7 @@ void use_block(int (^)(void));
 void test_block_literal(int i) {
   // CHECK:      [[I:%.*]] = alloca i32,
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align
-  // CHECK:      [[FNPTRADDR:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 3
+  // CHECK:      [[FNPTRADDR:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 3
   // CHECK-NEXT: [[DISCRIMINATOR:%.*]] = ptrtoint ptr [[FNPTRADDR]] to i64
   // CHECK-NEXT: [[SIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr {{@.*}} to i64), i32 0, i64 [[DISCRIMINATOR]])
   // CHECK-NEXT: [[T0:%.*]] = inttoptr i64 [[SIGNED]] to ptr
@@ -46,12 +46,12 @@ void test_copy_destroy(A *a) {
 
 // CHECK-LABEL: define void @test_byref_copy_destroy
 void test_byref_copy_destroy(A *a) {
-  // CHECK:      [[COPY_FIELD:%.*]] = getelementptr inbounds [[BYREF_T:%.*]], ptr [[BYREF:%.*]], i32 0, i32 4
+  // CHECK:      [[COPY_FIELD:%.*]] = getelementptr inbounds nuw [[BYREF_T:%.*]], ptr [[BYREF:%.*]], i32 0, i32 4
   // CHECK-NEXT: [[T0:%.*]] = ptrtoint ptr [[COPY_FIELD]] to i64
   // CHECK-NEXT: [[T1:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr {{@.*}} to i64), i32 0, i64 [[T0]])
   // CHECK-NEXT: [[T2:%.*]] = inttoptr i64 [[T1]] to ptr
   // CHECK-NEXT: store ptr [[T2]], ptr [[COPY_FIELD]], align 8
-  // CHECK:      [[DISPOSE_FIELD:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[BYREF]], i32 0, i32 5
+  // CHECK:      [[DISPOSE_FIELD:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 5
   // CHECK-NEXT: [[T0:%.*]] = ptrtoint ptr [[DISPOSE_FIELD]] to i64
   // CHECK-NEXT: [[T1:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr {{@.*}} to i64), i32 0, i64 [[T0]])
   // CHECK-NEXT: [[T2:%.*]] = inttoptr i64 [[T1]] to ptr
