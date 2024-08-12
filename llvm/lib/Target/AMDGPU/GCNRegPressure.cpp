@@ -288,6 +288,16 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
   }
 }
 
+static LaneBitmask getRegLanes(ArrayRef<RegisterMaskPair> RegUnits,
+                               Register RegUnit) {
+  auto I = llvm::find_if(RegUnits, [RegUnit](const RegisterMaskPair Other) {
+    return Other.RegUnit == RegUnit;
+  });
+  if (I == RegUnits.end())
+    return LaneBitmask::getNone();
+  return I->LaneMask;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRPTracker
 
