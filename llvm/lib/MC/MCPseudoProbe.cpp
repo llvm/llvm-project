@@ -647,7 +647,7 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   std::vector<std::pair<uint64_t, uint32_t>> SortedA2P(ProbeCount);
   for (const auto &[I, Probe] : llvm::enumerate(PseudoProbeVec))
     SortedA2P[I] = {Probe.getAddress(), I};
-  llvm::sort(SortedA2P, llvm::less_first());
+  llvm::stable_sort(SortedA2P, llvm::less_first());
   Address2ProbesMap.reserve(ProbeCount);
   for (const uint32_t I : llvm::make_second_range(SortedA2P))
     Address2ProbesMap.emplace_back(PseudoProbeVec[I]);
