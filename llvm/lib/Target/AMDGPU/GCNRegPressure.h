@@ -165,6 +165,8 @@ protected:
   
   void bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs);
 
+  LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
+
 public:
   // reset tracker and set live register set to the specified value.
   void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);
