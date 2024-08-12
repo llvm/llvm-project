@@ -29,7 +29,6 @@
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -45,6 +44,7 @@
 
 namespace llvm {
 
+class MemoryBuffer;
 class MemoryBufferRef;
 class Twine;
 template <typename T> class ArrayRef;
@@ -664,6 +664,9 @@ struct YAMLVFSEntry {
   std::string RPath;
   bool IsDirectory = false;
 };
+
+class RedirectingFSDirIterImpl;
+class RedirectingFileSystemParser;
 
 /// A virtual file system parsed from a YAML file.
 ///
