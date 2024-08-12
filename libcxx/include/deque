@@ -380,9 +380,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend bool operator!=(const __deque_iterator& __x, const __deque_iterator& __y) {
     return !(__x == __y);
   }
-#endif
-
-  // TODO(mordante) disable these overloads in the LLVM 20 release.
   _LIBCPP_HIDE_FROM_ABI friend bool operator<(const __deque_iterator& __x, const __deque_iterator& __y) {
     return __x.__m_iter_ < __y.__m_iter_ || (__x.__m_iter_ == __y.__m_iter_ && __x.__ptr_ < __y.__ptr_);
   }
@@ -399,7 +396,8 @@ public:
     return !(__x < __y);
   }
 
-#if _LIBCPP_STD_VER >= 20
+#else
+
   _LIBCPP_HIDE_FROM_ABI friend strong_ordering operator<=>(const __deque_iterator& __x, const __deque_iterator& __y) {
     if (__x.__m_iter_ < __y.__m_iter_)
       return strong_ordering::less;

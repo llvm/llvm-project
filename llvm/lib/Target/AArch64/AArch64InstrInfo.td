@@ -143,6 +143,8 @@ def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->isSVEAvailable()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE), "sve">;
+def HasSVEB16B16     : Predicate<"Subtarget->hasSVEB16B16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEB16B16), "sve-b16b16">;
 def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2p1        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()">,
@@ -155,8 +157,6 @@ def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SHA3), "sve2-sha3">;
 def HasSVE2BitPerm   : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2BitPerm()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
-def HasB16B16        : Predicate<"Subtarget->hasB16B16()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureB16B16), "b16b16">;
 def HasSMEandIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME), "sme">;
@@ -170,6 +170,8 @@ def HasSMEFA64       : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF
                                  AssemblerPredicateWithAll<(all_of FeatureSMEFA64), "sme-fa64">;
 def HasSMEI16I64     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEI16I64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI16I64), "sme-i16i64">;
+def HasSMEB16B16     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEB16B16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEB16B16), "sme-b16b16">;
 def HasSME2andIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
@@ -8128,6 +8130,20 @@ def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
                                                     vecshiftR64Narrow:$imm)))),
           (SHRNv4i32_shift (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
                            V128:$Rn, vecshiftR32Narrow:$imm)>;
+
+def : Pat<(shl (v8i16 (zext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (USHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
+def : Pat<(shl (v4i32 (zext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (USHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
+def : Pat<(shl (v2i64 (zext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (USHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
+
+def : Pat<(shl (v8i16 (sext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (SSHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
+def : Pat<(shl (v4i32 (sext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (SSHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
+def : Pat<(shl (v2i64 (sext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (SSHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
 
 // Vector sign and zero extensions are implemented with SSHLL and USSHLL.
 // Anyexts are implemented as zexts.

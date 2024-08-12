@@ -119,7 +119,7 @@ static RT_API_ATTRS bool EditBOZInput(
   std::memset(n, 0, bytes);
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
-      (isHostLittleEndian ? significantBytes - 1 : 0)};
+      (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
   int shift{((digits - 1) * LOG2_BASE) & 7};
   while (digits > 0) {
     char32_t ch{*io.NextInField(remaining, edit)};

@@ -358,8 +358,10 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
       Say(std::get<MessageFormattedText>(*msg));
     }
     return false;
+  } else {
+    context_.NoteDefinedSymbol(*base);
+    return true;
   }
-  return true;
 }
 
 // Common handling for procedure pointer right-hand sides

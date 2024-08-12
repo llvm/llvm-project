@@ -27,7 +27,7 @@
 // RUN: %clang --target=x86_64-sie-ps5 -### %s -fno-unified-lto -flto=full 2>&1 | FileCheck --check-prefixes=LD,NOLTO %s
 // RUN: %clang --target=x86_64-sie-ps5 -### %s -fno-unified-lto -flto=thin 2>&1 | FileCheck --check-prefixes=LD,NOLTO %s
 
-// LD: {{.*ld}}"
+// LD: {{.*ld(\.exe)?}}"
 // LTOFULL-SAME: "--lto=full"
 // LTOTHIN-SAME: "--lto=thin"
 // NOLTO-NOT: "--lto

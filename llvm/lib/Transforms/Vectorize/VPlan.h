@@ -1673,6 +1673,14 @@ public:
     return true;
   }
 
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    assert(getNumOperands() == 1 && "must have a single operand");
+    return true;
+  }
+
   VPVectorPointerRecipe *clone() override {
     return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
                                      isInBounds(), getDebugLoc());
@@ -3799,12 +3807,12 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                        ScalarEvolution &SE);
 
 /// Returns true if \p VPV is uniform after vectorization.
-inline bool isUniformAfterVectorization(VPValue *VPV) {
+inline bool isUniformAfterVectorization(const VPValue *VPV) {
   // A value defined outside the vector region must be uniform after
   // vectorization inside a vector region.
   if (VPV->isDefinedOutsideVectorRegions())
     return true;
-  VPRecipeBase *Def = VPV->getDefiningRecipe();
+  const VPRecipeBase *Def = VPV->getDefiningRecipe();
   assert(Def && "Must have definition for value defined inside vector region");
   if (auto Rep = dyn_cast<VPReplicateRecipe>(Def))
     return Rep->isUniform();
@@ -3816,7 +3824,7 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
 }
 
 /// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(VPValue *V, VPlan &Plan);
+bool isHeaderMask(const VPValue *V, VPlan &Plan);
 } // end namespace vputils
 
 } // end namespace llvm

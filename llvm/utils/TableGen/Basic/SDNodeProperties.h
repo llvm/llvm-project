@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_SDNODEPROPERTIES_H
-#define LLVM_UTILS_TABLEGEN_SDNODEPROPERTIES_H
+#ifndef LLVM_UTILS_TABLEGEN_BASIC_SDNODEPROPERTIES_H
+#define LLVM_UTILS_TABLEGEN_BASIC_SDNODEPROPERTIES_H
 
 namespace llvm {
 
@@ -36,4 +36,4 @@ unsigned parseSDPatternOperatorProperties(Record *R);
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_BASIC_SDNODEPROPERTIES_H

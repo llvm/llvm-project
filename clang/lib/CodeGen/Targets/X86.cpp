@@ -795,6 +795,10 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     if (!IsWin32StructABI && isEmptyRecord(getContext(), Ty, true))
       return ABIArgInfo::getIgnore();
 
+    // Ignore 0 sized structs.
+    if (TI.Width == 0)
+      return ABIArgInfo::getIgnore();
+
     llvm::LLVMContext &LLVMContext = getVMContext();
     llvm::IntegerType *Int32 = llvm::Type::getInt32Ty(LLVMContext);
     bool NeedsPadding = false;

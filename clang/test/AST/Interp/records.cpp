@@ -334,8 +334,7 @@ namespace InitializerTemporaries {
   };
 
   constexpr int f() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}} \
-         // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // both-note {{in call to 'S{}.~S()'}}
     return 12;
   }
   static_assert(f() == 12); // both-error {{not an integral constant expression}} \
@@ -598,8 +597,7 @@ namespace Destructors {
     }
   };
   constexpr int testS() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}} \
-         // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // both-note {{in call to 'S{}.~S()'}}
     return 1;
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
@@ -966,8 +964,6 @@ namespace TemporaryObjectExpr {
     static_assert(foo(F()) == 0, "");
   }
 
-  /// FIXME: This needs support for unions on the new interpreter.
-  /// We diagnose an uninitialized object in c++14.
 #if __cplusplus > 201402L
   namespace Unions {
     struct F {
@@ -980,10 +976,10 @@ namespace TemporaryObjectExpr {
     };
 
     constexpr int foo(F f) {
-      return f.i + f.U.f; // ref-note {{read of member 'f' of union with active member 'a'}}
+      return f.i + f.U.f; // both-note {{read of member 'f' of union with active member 'a'}}
     }
-    static_assert(foo(F()) == 0, ""); // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to}}
+    static_assert(foo(F()) == 0, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{in call to}}
   }
 #endif
 
@@ -1560,3 +1556,43 @@ namespace ArrayInitChain {
   static_assert(A[1].Width == 12, "");
   static_assert(A[1].Mask == 13, "");
 }
+
+#if __cplusplus >= 202002L
+namespace ctorOverrider {
+  // Ensure that we pick the right final overrider during construction.
+  struct A {
+    virtual constexpr char f() const { return 'A'; }
+    char a = f();
+  };
+
+  struct Covariant1 {
+    A d;
+  };
+
+  constexpr Covariant1 cb;
+}
+#endif
+
+#if __cplusplus >= 202002L
+namespace VirtDtor {
+  struct X { char *p; constexpr ~X() { *p++ = 'X'; } };
+  struct Y : X { int y; virtual constexpr ~Y() { *p++ = 'Y'; } };
+  struct Z : Y { int z; constexpr ~Z() override { *p++ = 'Z'; } };
+
+  union VU {
+    constexpr VU() : z() {}
+    constexpr ~VU() {}
+    Z z;
+  };
+
+  constexpr char virt_dtor(int mode, const char *expected) {
+    char buff[4] = {};
+    VU vu;
+    vu.z.p = buff;
+
+    ((Y&)vu.z).~Y();
+    return true;
+  }
+  static_assert(virt_dtor(0, "ZYX"));
+}
+#endif

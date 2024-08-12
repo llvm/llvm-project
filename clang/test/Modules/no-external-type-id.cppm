@@ -23,7 +23,7 @@ export module b;
 import a;
 export int b();
 
-// CHECK: <DECL_FUNCTION {{.*}} op8=4048
+// CHECK: <DECL_FUNCTION {{.*}} op8=4056
 // CHECK: <TYPE_FUNCTION_PROTO
 
 //--- a.v1.cppm

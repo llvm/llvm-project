@@ -189,6 +189,35 @@ loop:
   br label %loop
 }
 
+; Don't fold if the intermediate op has more than two uses. This is an
+; heuristic that can be adjusted if warranted. Currently we are being
+; conservative to minimise potential impact in code size.
+define void @not_many_uses(i64 %c1, i64 %c2, i64 %c3) {
+; CHECK-LABEL: @not_many_uses(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    [[OTHER:%.*]] = add i64 [[STEP_ADD]], [[C3:%.*]]
+; CHECK-NEXT:    call void @use(i64 [[OTHER]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = add i64 %step.add, %c2
+  %other = add i64 %step.add, %c3
+  call void @use(i64 %other)
+  br label %loop
+}
+
 ; Original reproducer, adapted from:
 ;   for(long i = 0; i < n; ++i)
 ;     a[i] = (i*k) * v;
