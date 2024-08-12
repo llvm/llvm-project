@@ -922,7 +922,9 @@ defm FCVT_Z2Z_HtoB  : sme2_fp8_cvt_vg2_single<"fcvt",   0b0>;
 defm BFCVT_Z2Z_HtoB : sme2_fp8_cvt_vg2_single<"bfcvt",  0b1>;
 defm FCVT_Z4Z_StoB  : sme2_fp8_cvt_vg4_single<"fcvt",   0b0>;
 defm FCVTN_Z4Z_StoB : sme2_fp8_cvt_vg4_single<"fcvtn",  0b1>;
+} // [HasSME2, HasFP8]
 
+let Uses=[FPCR], Predicates = [HasSME2, HasFP8] in {
 defm FSCALE_2ZZ   : sme2_fp_sve_destructive_vector_vg2_single<"fscale", 0b0011000>;
 defm FSCALE_4ZZ   : sme2_fp_sve_destructive_vector_vg4_single<"fscale", 0b0011000>;
 defm FSCALE_2Z2Z  : sme2_fp_sve_destructive_vector_vg2_multi<"fscale",  0b0011000>;
