@@ -644,6 +644,61 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
 
+TEST_F(TrackerTest, AtomicRMWSetters) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %arg) {
+  %atomicrmw = atomicrmw add ptr %ptr, i8 %arg acquire, align 128
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *RMW = cast<sandboxir::AtomicRMWInst>(&*It++);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = RMW->getAlign();
+  Align NewAlign(1024);
+  EXPECT_NE(NewAlign, OrigAlign);
+  RMW->setAlignment(NewAlign);
+  EXPECT_EQ(RMW->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getAlign(), OrigAlign);
+
+  // Check setVolatile().
+  Ctx.save();
+  auto OrigIsVolatile = RMW->isVolatile();
+  bool NewIsVolatile = true;
+  EXPECT_NE(NewIsVolatile, OrigIsVolatile);
+  RMW->setVolatile(NewIsVolatile);
+  EXPECT_EQ(RMW->isVolatile(), NewIsVolatile);
+  Ctx.revert();
+  EXPECT_EQ(RMW->isVolatile(), OrigIsVolatile);
+
+  // Check setOrdering().
+  Ctx.save();
+  auto OrigOrdering = RMW->getOrdering();
+  auto NewOrdering = AtomicOrdering::SequentiallyConsistent;
+  EXPECT_NE(NewOrdering, OrigOrdering);
+  RMW->setOrdering(NewOrdering);
+  EXPECT_EQ(RMW->getOrdering(), NewOrdering);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getOrdering(), OrigOrdering);
+
+  // Check setSyncScopeID().
+  Ctx.save();
+  auto OrigSSID = RMW->getSyncScopeID();
+  auto NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  RMW->setSyncScopeID(NewSSID);
+  EXPECT_EQ(RMW->getSyncScopeID(), NewSSID);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getSyncScopeID(), OrigSSID);
+}
+
 TEST_F(TrackerTest, AtomicCmpXchgSetters) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
