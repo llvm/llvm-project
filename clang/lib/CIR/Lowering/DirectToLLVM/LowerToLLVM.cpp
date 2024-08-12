@@ -1877,6 +1877,18 @@ class CIRGlobalOpLowering
 public:
   using OpConversionPattern<mlir::cir::GlobalOp>::OpConversionPattern;
 
+  // Get addrspace by converting a pointer type.
+  // TODO: The approach here is a little hacky. We should access the target info
+  // directly to convert the address space of global op, similar to what we do
+  // for type converter.
+  unsigned getGlobalOpTargetAddrSpace(mlir::cir::GlobalOp op) const {
+    auto tempPtrTy = mlir::cir::PointerType::get(getContext(), op.getSymType(),
+                                                 op.getAddrSpaceAttr());
+    return cast<mlir::LLVM::LLVMPointerType>(
+               typeConverter->convertType(tempPtrTy))
+        .getAddressSpace();
+  }
+
   /// Replace CIR global with a region initialized LLVM global and update
   /// insertion point to the end of the initializer block.
   inline void setupRegionInitializedLLVMGlobalOp(
@@ -1885,7 +1897,8 @@ public:
     SmallVector<mlir::NamedAttribute> attributes;
     auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
         op, llvmType, op.getConstant(), convertLinkage(op.getLinkage()),
-        op.getSymName(), nullptr, /*alignment*/ 0, /*addrSpace*/ 0,
+        op.getSymName(), nullptr, /*alignment*/ 0,
+        /*addrSpace*/ getGlobalOpTargetAddrSpace(op),
         /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
         /*comdat*/ mlir::SymbolRefAttr(), attributes);
     newGlobalOp.getRegion().push_back(new mlir::Block());
@@ -1915,7 +1928,7 @@ public:
     if (!init.has_value()) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
           op, llvmType, isConst, linkage, symbol, mlir::Attribute(),
-          /*alignment*/ 0, /*addrSpace*/ 0,
+          /*alignment*/ 0, /*addrSpace*/ getGlobalOpTargetAddrSpace(op),
           /*dsoLocal*/ isDsoLocal, /*threadLocal*/ (bool)op.getTlsModelAttr(),
           /*comdat*/ mlir::SymbolRefAttr(), attributes);
       return mlir::success();
@@ -2003,7 +2016,7 @@ public:
     // Rewrite op.
     auto llvmGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
         op, llvmType, isConst, linkage, symbol, init.value(),
-        /*alignment*/ 0, /*addrSpace*/ 0,
+        /*alignment*/ 0, /*addrSpace*/ getGlobalOpTargetAddrSpace(op),
         /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
         /*comdat*/ mlir::SymbolRefAttr(), attributes);
     auto mod = op->getParentOfType<mlir::ModuleOp>();
