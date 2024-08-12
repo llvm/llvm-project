@@ -1430,19 +1430,16 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   if (!(TempExp && TempMFMA))
     return false;
 
-  HasChainBetweenCvt =
-      std::find_if((*TempExp)->Succs.begin(), (*TempExp)->Succs.end(),
-                   [&isCvt](SDep &Succ) {
-                     return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
-                   }) == (*TempExp)->Succs.end();
+  HasChainBetweenCvt = none_of((*TempExp)->Succs, [&isCvt](SDep &Succ) {
+    return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
+  });
 
   // Count the number of MFMAs that are reached by an EXP
   for (auto &SuccSU : MFMAPipeCands) {
     if (MFMAPipeSUs.size() &&
-        std::find_if(MFMAPipeSUs.begin(), MFMAPipeSUs.end(),
-                     [&SuccSU](SUnit *PotentialMatch) {
-                       return PotentialMatch->NodeNum == SuccSU->NodeNum;
-                     }) != MFMAPipeSUs.end())
+        any_of(MFMAPipeSUs, [&SuccSU](SUnit *PotentialMatch) {
+          return PotentialMatch->NodeNum == SuccSU->NodeNum;
+        }))
       continue;
 
     for (auto &PredSU : ExpPipeCands) {
