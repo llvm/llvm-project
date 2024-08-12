@@ -1606,7 +1606,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   m_module = &llvm_module;
-  m_target_data = std::make_unique<DataLayout>(m_module);
+  m_target_data = &m_module->getDataLayout();
   m_intptr_ty = llvm::Type::getIntNTy(m_module->getContext(),
                                       m_target_data->getPointerSizeInBits());
 
