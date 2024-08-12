@@ -124,7 +124,7 @@ ConstructQueue buildConstructQueue(
   return constructs;
 }
 
-bool isLastItemInQueue(ConstructQueue::iterator item,
+bool isLastItemInQueue(ConstructQueue::const_iterator item,
                        const ConstructQueue &queue) {
   return std::next(item) == queue.end();
 }
