@@ -458,6 +458,9 @@ struct VariableDescription {
   std::string GetResult(llvm::StringRef context);
 };
 
+/// Does the given variable have an associated value location?
+bool HasValueLocation(lldb::SBValue v);
+
 /// Create a "Variable" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned

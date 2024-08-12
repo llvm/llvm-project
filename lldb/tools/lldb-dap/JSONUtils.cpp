@@ -1198,6 +1198,18 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
   return description.trim().str();
 }
 
+bool HasValueLocation(lldb::SBValue v) {
+  if (!v.GetType().IsPointerType() && !v.GetType().IsReferenceType()) {
+    return false;
+  }
+
+  lldb::addr_t addr = v.GetValueAsAddress();
+  lldb::SBLineEntry line_entry =
+      g_dap.target.ResolveLoadAddress(addr).GetLineEntry();
+
+  return line_entry.IsValid();
+}
+
 // "Variable": {
 //   "type": "object",
 //   "description": "A Variable is a name/value pair. Optionally a variable
@@ -1276,6 +1288,18 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
 //                       lifetime as the `variablesReference`. See 'Lifetime of
 //                       Object References' in the Overview section for
 //                       details."
+//     },
+//     "valueLocationReference": {
+//       "type": "integer",
+//       "description": "A reference that allows the client to request the
+//                       location where the variable's value is declared. For
+//                       example, if the variable contains a function pointer,
+//                       the adapter may be able to look up the function's
+//                       location. This should be present only if the adapter
+//                       is likely to be able to resolve the location.\n\nThis
+//                       reference shares the same lifetime as the
+//                       `variablesReference`. See 'Lifetime of Object
+//                       References' in the Overview section for details."
 //     },
 //
 //     "$__lldb_extensions": {
@@ -1390,7 +1414,10 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
     object.try_emplace("variablesReference", 0);
 
   if (v.GetDeclaration().IsValid())
-    object.try_emplace("declarationLocationReference", var_ref);
+    object.try_emplace("declarationLocationReference", var_ref << 1);
+
+  if (HasValueLocation(v))
+    object.try_emplace("valueLocationReference", (var_ref << 1) | 1);
 
   if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     object.try_emplace("memoryReference", EncodeMemoryReference(addr));
@@ -1416,8 +1443,8 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
-  // This indicates the IDE to open an embedded terminal, instead of opening the
-  // terminal in a new window.
+  // This indicates the IDE to open an embedded terminal, instead of opening
+  // the terminal in a new window.
   run_in_terminal_args.try_emplace("kind", "integrated");
 
   auto launch_request_arguments = launch_request.getObject("arguments");
