@@ -1,8 +1,7 @@
-## Check the cat command.
+## Test the cat command.
 #
 # RUN: not %{lit} -a -v %{inputs}/shtest-cat \
 # RUN: | FileCheck -match-full-lines %s
-#
 # END.
 
 # CHECK: FAIL: shtest-cat :: cat-error-0.txt ({{[^)]*}})
@@ -20,5 +19,5 @@
 # CHECK: PASS: shtest-cat :: cat.txt ({{[^)]*}})
 
 # CHECK: Total Discovered Tests: 3
-# CHECK: Passed: 1 {{\([0-9]*\.[0-9]*%\)}}
-# CHECK: Failed: 2 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK-NEXT: Passed: 1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK-NEXT: Failed: 2 {{\([0-9]*\.[0-9]*%\)}}
