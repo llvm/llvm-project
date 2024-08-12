@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck --check-prefixes=GCN,CI,ALL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,VI,ALL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,GFX9,ALL %s
-; RUN: llc -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=BON,GCNHSA,ALL %s
+; RUN: llc -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=CAR,GCNHSA,ALL %s
+; RUN: llc -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GFX10,GCNHSA,ALL %s
+; RUN: llc -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GFX11,GCNHSA,ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 
@@ -24,7 +24,7 @@
 
 ; GCNHSA: .amdhsa_kernel large_alloca_compute_shader
 ; GCNHSA:         .amdhsa_group_segment_fixed_size 0
-; GCNHSA:         .amdhsa_private_segment_fixed_size 32772
+; GCNHSA:         .amdhsa_private_segment_fixed_size large_alloca_compute_shader.private_seg_size
 ; GCNHSA:         .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCNHSA:         .amdhsa_user_sgpr_dispatch_ptr 1
 ; GCNHSA:         .amdhsa_user_sgpr_queue_ptr 1
@@ -32,14 +32,19 @@
 ; GCNHSA:         .amdhsa_user_sgpr_dispatch_id 1
 ; GCNHSA:         .amdhsa_user_sgpr_flat_scratch_init 1
 ; GCNHSA:         .amdhsa_user_sgpr_private_segment_size 0
-; GCNHSA:         .amdhsa_system_sgpr_private_segment_wavefront_offset 1
+; GCNHSA:         .amdhsa_system_sgpr_private_segment_wavefront_offset (((((alignto(large_alloca_compute_shader.private_seg_size*{{32|64}}, {{1024|256}}))/{{1024|256}})>0)||(large_alloca_compute_shader.has_dyn_sized_stack|large_alloca_compute_shader.has_recursion))|5020)&1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_info 0
 ; GCNHSA:         .amdhsa_system_vgpr_workitem_id 2
-; GCNHSA:         .amdhsa_next_free_vgpr 3
-; GCNHSA:         .amdhsa_next_free_sgpr 18
+; GCNHSA:         .amdhsa_next_free_vgpr max(totalnumvgprs(large_alloca_compute_shader.num_agpr, large_alloca_compute_shader.num_vgpr), 1, 0)
+; BON:            .amdhsa_next_free_sgpr (max(large_alloca_compute_shader.num_sgpr+(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 0)), 1, 0))-(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 0))
+; CAR:            .amdhsa_next_free_sgpr (max(large_alloca_compute_shader.num_sgpr+(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 1))
+; GFX10:          .amdhsa_next_free_sgpr (max(large_alloca_compute_shader.num_sgpr+(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 1))
+; GFX11:          .amdhsa_next_free_sgpr (max(large_alloca_compute_shader.num_sgpr+(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 0)), 1, 0))-(extrasgprs(large_alloca_compute_shader.uses_vcc, large_alloca_compute_shader.uses_flat_scratch, 0))
+; GCNHSA:         .amdhsa_reserve_vcc large_alloca_compute_shader.uses_vcc
+; GCNHSA:         .amdhsa_reserve_flat_scratch large_alloca_compute_shader.uses_flat_scratch
 ; GCNHSA:         .amdhsa_float_round_mode_32 0
 ; GCNHSA:         .amdhsa_float_round_mode_16_64 0
 ; GCNHSA:         .amdhsa_float_denorm_mode_32 3
@@ -54,6 +59,16 @@
 ; GCNHSA:         .amdhsa_exception_fp_ieee_inexact 0
 ; GCNHSA:         .amdhsa_exception_int_div_zero 0
 ; GCNHSA: .end_amdhsa_kernel
+
+; GCNHSA: .set large_alloca_compute_shader.num_vgpr, 3
+; GCNHSA: .set large_alloca_compute_shader.num_agpr, 0
+; GCNHSA: .set large_alloca_compute_shader.num_sgpr, 18
+; GCNHSA: .set large_alloca_compute_shader.private_seg_size, 32772
+; GCNHSA: .set large_alloca_compute_shader.uses_vcc
+; GCNHSA: .set large_alloca_compute_shader.uses_flat_scratch, 0
+; GCNHSA: .set large_alloca_compute_shader.has_dyn_sized_stack, 0
+; GCNHSA: .set large_alloca_compute_shader.has_recursion, 0
+; GCNHSA: .set large_alloca_compute_shader.has_indirect_call, 0
 
 ; Scratch size = alloca size + emergency stack slot, align {{.*}}, addrspace(5)
 ; ALL: ; ScratchSize: 32772

@@ -5,11 +5,13 @@ declare void @llvm.trap() #0
 
 ; DOORBELL:      .amdhsa_kernel trap
 ; DOORBELL-NEXT:     .amdhsa_group_segment_fixed_size 0
-; DOORBELL-NEXT:     .amdhsa_private_segment_fixed_size 0
+; DOORBELL-NEXT:     .amdhsa_private_segment_fixed_size trap.private_seg_size
 ; DOORBELL-NEXT:     .amdhsa_kernarg_size 8
 ; DOORBELL-NEXT:     .amdhsa_user_sgpr_count 12
 ; DOORBELL-NEXT:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; DOORBELL:      .end_amdhsa_kernel
+
+; DOORBELL: .set trap.private_seg_size, 0
 
 define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) #0 {
   store volatile i32 1, ptr addrspace(1) %arg0

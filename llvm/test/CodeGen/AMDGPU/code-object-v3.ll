@@ -15,12 +15,18 @@
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 10
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_kernarg_segment_ptr 1
-; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr 3
-; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr 8
-; OSABI-AMDHSA-ASM:     .amdhsa_reserve_vcc 0
-; OSABI-AMDHSA-ASM:     .amdhsa_reserve_flat_scratch 0
+; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr max(totalnumvgprs(fadd.num_agpr, fadd.num_vgpr), 1, 0)
+; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr (max(fadd.num_sgpr+(extrasgprs(fadd.uses_vcc, fadd.uses_flat_scratch, 0)), 1, 0))-(extrasgprs(fadd.uses_vcc, fadd.uses_flat_scratch, 0))
+; OSABI-AMDHSA-ASM:     .amdhsa_reserve_vcc fadd.uses_vcc
+; OSABI-AMDHSA-ASM:     .amdhsa_reserve_flat_scratch fadd.uses_flat_scratch
 ; OSABI-AMDHSA-ASM: .end_amdhsa_kernel
 ; OSABI-AMDHSA-ASM: .text
+
+; OSABI-AMDHSA-ASM: .set fadd.num_vgpr, 3
+; OSABI-AMDHSA-ASM: .set fadd.num_agpr, 0
+; OSABI-AMDHSA-ASM: .set fadd.num_sgpr, 8
+; OSABI-AMDHSA-ASM: .set fadd.uses_vcc, 0
+; OSABI-AMDHSA-ASM: .set fadd.uses_flat_scratch, 0
 
 ; ALL-ASM-LABEL: {{^}}fsub:
 
@@ -34,12 +40,18 @@
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 10
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_kernarg_segment_ptr 1
-; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr 3
-; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr 8
-; OSABI-AMDHSA-ASM:     .amdhsa_reserve_vcc 0
-; OSABI-AMDHSA-ASM:     .amdhsa_reserve_flat_scratch 0
+; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr max(totalnumvgprs(fsub.num_agpr, fsub.num_vgpr), 1, 0)
+; OSABI-AMDHSA-ASM:     .amdhsa_next_free_sgpr (max(fsub.num_sgpr+(extrasgprs(fsub.uses_vcc, fsub.uses_flat_scratch, 0)), 1, 0))-(extrasgprs(fsub.uses_vcc, fsub.uses_flat_scratch, 0))
+; OSABI-AMDHSA-ASM:     .amdhsa_reserve_vcc fsub.uses_vcc
+; OSABI-AMDHSA-ASM:     .amdhsa_reserve_flat_scratch fsub.uses_flat_scratch
 ; OSABI-AMDHSA-ASM: .end_amdhsa_kernel
 ; OSABI-AMDHSA-ASM: .text
+
+; OSABI-AMDHSA-ASM: .set fsub.num_vgpr, 3
+; OSABI-AMDHSA-ASM: .set fsub.num_agpr, 0
+; OSABI-AMDHSA-ASM: .set fsub.num_sgpr, 8
+; OSABI-AMDHSA-ASM: .set fsub.uses_vcc, 0
+; OSABI-AMDHSA-ASM: .set fsub.uses_flat_scratch, 0
 
 ; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_version
 ; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_isa
@@ -93,8 +105,10 @@ entry:
 ; registers used.
 ;
 ; ALL-ASM-LABEL: {{^}}empty:
-; ALL-ASM:     .amdhsa_next_free_vgpr 1
-; ALL-ASM:     .amdhsa_next_free_sgpr 1
+; ALL-ASM:     .amdhsa_next_free_vgpr max(totalnumvgprs(empty.num_agpr, empty.num_vgpr), 1, 0)
+; ALL-ASM:     .amdhsa_next_free_sgpr (max(empty.num_sgpr+(extrasgprs(empty.uses_vcc, empty.uses_flat_scratch, 0)), 1, 0))-(extrasgprs(empty.uses_vcc, empty.uses_flat_scratch, 0))
+; ALL-ASM:  NumSGPRsForWavesPerEU: 1
+; ALL-ASM:  NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @empty(
     i32 %i,
     ptr addrspace(1) %r,

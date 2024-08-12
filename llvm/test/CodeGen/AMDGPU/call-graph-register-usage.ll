@@ -222,10 +222,14 @@ ret:
 }
 
 ; GCN-LABEL: {{^}}usage_direct_recursion:
-; GCN: .amdhsa_private_segment_fixed_size 18448
+; GCN: .amdhsa_private_segment_fixed_size usage_direct_recursion.private_seg_size
+; GCN: .set usage_direct_recursion.private_seg_size, 0+(max(16384, direct_recursion_use_stack.private_seg_size))
+; GCN: ScratchSize: 18448
 ;
 ; GCN-V5-LABEL: {{^}}usage_direct_recursion:
-; GCN-V5: .amdhsa_private_segment_fixed_size 2064{{$}}
+; GCN-V5: .amdhsa_private_segment_fixed_size usage_direct_recursion.private_seg_size
+; GCN-V5: .set usage_direct_recursion.private_seg_size, 0+(max(direct_recursion_use_stack.private_seg_size))
+; GCN-V5: ScratchSize: 2064
 define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
   call void @direct_recursion_use_stack(i32 %n)
   ret void
@@ -234,10 +238,11 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; Make sure there's no assert when a sgpr96 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr96_external_call
 ; GCN: ; sgpr96 s[{{[0-9]+}}:{{[0-9]+}}]
-; CI: NumSgprs: 84
-; VI-NOBUG: NumSgprs: 86
+; GCN: .set count_use_sgpr96_external_call.num_vgpr, max(0, max_num_vgpr)
+; GCN: .set count_use_sgpr96_external_call.num_sgpr, max(33, max_num_sgpr)
+; CI: NumSgprs: count_use_sgpr96_external_call.num_sgpr+4
 ; VI-BUG: NumSgprs: 96
-; GCN: NumVgprs: 50
+; GCN: NumVgprs: count_use_sgpr96_external_call.num_vgpr
 define amdgpu_kernel void @count_use_sgpr96_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
@@ -248,10 +253,11 @@ entry:
 ; Make sure there's no assert when a sgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr160_external_call
 ; GCN: ; sgpr160 s[{{[0-9]+}}:{{[0-9]+}}]
-; CI: NumSgprs: 84
-; VI-NOBUG: NumSgprs: 86
+; GCN: .set count_use_sgpr160_external_call.num_vgpr, max(0, max_num_vgpr)
+; GCN: .set count_use_sgpr160_external_call.num_sgpr, max(33, max_num_sgpr)
+; CI: NumSgprs: count_use_sgpr160_external_call.num_sgpr+4
 ; VI-BUG: NumSgprs: 96
-; GCN: NumVgprs: 50
+; GCN: NumVgprs: count_use_sgpr160_external_call.num_vgpr
 define amdgpu_kernel void @count_use_sgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
@@ -262,16 +268,38 @@ entry:
 ; Make sure there's no assert when a vgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_vgpr160_external_call
 ; GCN: ; vgpr160 v[{{[0-9]+}}:{{[0-9]+}}]
-; CI: NumSgprs: 84
-; VI-NOBUG: NumSgprs: 86
+; GCN: .set count_use_vgpr160_external_call.num_vgpr, max(5, max_num_vgpr)
+; GCN: .set count_use_vgpr160_external_call.num_sgpr, max(33, max_num_sgpr)
+; CI: NumSgprs: count_use_vgpr160_external_call.num_sgpr+4
 ; VI-BUG: NumSgprs: 96
-; GCN: NumVgprs: 50
+; GCN: NumVgprs: count_use_vgpr160_external_call.num_vgpr
 define amdgpu_kernel void @count_use_vgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
   call void @external()
   ret void
 }
+
+; GCN: .set max_num_vgpr, 50
+; GCN: .set max_num_agpr, 0
+; GCN: .set max_num_sgpr, 80
+
+; GCN-LABEL: amdhsa.kernels:
+; GCN:      .name: count_use_sgpr96_external_call
+; CI:       .sgpr_count: 84
+; VI-NOBUG: .sgpr_count: 86
+; VI-BUG:   .sgpr_count: 96
+; GCN:      .vgpr_count: 50
+; GCN:      .name: count_use_sgpr160_external_call
+; CI:       .sgpr_count: 84
+; VI-NOBUG: .sgpr_count: 86
+; VI-BUG:   .sgpr_count: 96
+; GCN:      .vgpr_count: 50
+; GCN:      .name: count_use_vgpr160_external_call
+; CI:       .sgpr_count: 84
+; VI-NOBUG: .sgpr_count: 86
+; VI-BUG:   .sgpr_count: 96
+; GCN:      .vgpr_count: 50
 
 attributes #0 = { nounwind noinline norecurse "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind noinline norecurse "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

@@ -475,7 +475,7 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
 ; GCN: .amdhsa_user_sgpr_private_segment_size 0
-; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
+; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset (((((alignto(kern_indirect_use_every_sgpr_input.private_seg_size*64, 1024))/1024)>0)||(kern_indirect_use_every_sgpr_input.has_dyn_sized_stack|kern_indirect_use_every_sgpr_input.has_recursion))|920)&1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
@@ -500,7 +500,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
 ; GCN: .amdhsa_user_sgpr_private_segment_size 0
-; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
+; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset (((((alignto(kern_indirect_use_every_sgpr_input_no_kernargs.private_seg_size*64, 1024))/1024)>0)||(kern_indirect_use_every_sgpr_input_no_kernargs.has_dyn_sized_stack|kern_indirect_use_every_sgpr_input_no_kernargs.has_recursion))|916)&1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1

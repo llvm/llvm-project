@@ -62,7 +62,8 @@
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RELOAD_VAL]]
 
-; VGPR: .amdhsa_private_segment_fixed_size 16
+; VGPR: .amdhsa_private_segment_fixed_size divergent_if_endif.private_seg_size
+; VGPR: .set divergent_if_endif.private_seg_size, 16
 define amdgpu_kernel void @divergent_if_endif(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -133,7 +134,8 @@ endif:
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[VAL_END]]
 
-; VGPR: .amdhsa_private_segment_fixed_size 20
+; VGPR: .amdhsa_private_segment_fixed_size divergent_loop.private_seg_size
+; VGPR: .set divergent_loop.private_seg_size, 20
 define amdgpu_kernel void @divergent_loop(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
