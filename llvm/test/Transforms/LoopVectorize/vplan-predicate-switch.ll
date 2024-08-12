@@ -59,12 +59,11 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): if.then.1.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   if.then.1.1:
-; CHECK-NEXT:     EMIT vp<[[C3:%.+]]> = or vp<[[DEFAULT_MASK]]>, vp<[[DEFAULT_MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
 ; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C3]]>
+; CHECK-NEXT:       BRANCH-ON-MASK vp<[[DEFAULT_MASK]]>
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
