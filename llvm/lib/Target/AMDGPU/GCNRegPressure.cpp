@@ -351,6 +351,21 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
   MaxPressure = CurPressure = getRegPressure(MRI_, LiveRegs_);
 }
 
+void GCNRPTracker::bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs) {
+  for (const RegisterMaskPair &P : DeadDefs) {
+    Register Reg = P.RegUnit;
+    LaneBitmask LiveMask = LiveRegs.contains(Reg);
+    LaneBitmask BumpedMask = LiveMask | P.LaneMask;
+    increaseRegPressure(Reg, LiveMask, BumpedMask);
+  }
+  for (const RegisterMaskPair &P : DeadDefs) {
+    Register Reg = P.RegUnit;
+    LaneBitmask LiveMask = LiveRegs.contains(Reg);
+    LaneBitmask BumpedMask = LiveMask | P.LaneMask;
+    decreaseRegPressure(Reg, BumpedMask, LiveMask);
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
 

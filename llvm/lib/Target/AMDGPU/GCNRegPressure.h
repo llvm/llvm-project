@@ -19,6 +19,7 @@
 
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
 
 namespace llvm {
@@ -161,6 +162,8 @@ protected:
 
   void reset(const MachineInstr &MI, const LiveRegSet *LiveRegsCopy,
              bool After);
+  
+  void bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs);
 
 public:
   // reset tracker and set live register set to the specified value.
