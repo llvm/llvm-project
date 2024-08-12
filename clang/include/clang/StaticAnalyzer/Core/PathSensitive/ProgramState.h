@@ -484,17 +484,6 @@ private:
   friend void ProgramStateRetain(const ProgramState *state);
   friend void ProgramStateRelease(const ProgramState *state);
 
-  /// \sa invalidateValues()
-  /// \sa invalidateRegions()
-  ProgramStateRef
-  invalidateRegionsImpl(ArrayRef<SVal> Values,
-                        const Expr *E, unsigned BlockCount,
-                        const LocationContext *LCtx,
-                        bool ResultsInSymbolEscape,
-                        InvalidatedSymbols *IS,
-                        RegionAndSymbolInvalidationTraits *HTraits,
-                        const CallEvent *Call) const;
-
   SVal wrapSymbolicRegion(SVal Base) const;
 };
 
