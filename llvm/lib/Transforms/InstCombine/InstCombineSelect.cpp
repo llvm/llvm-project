@@ -3590,23 +3590,14 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
       ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
 
   CallInst *Intrinsic = nullptr;
-  ICmpInst::Predicate NEPred;
   // (x < y) ? -1 : zext(x != y)
   if (ICmpInst::isLT(Pred) && match(TV, m_AllOnes()) &&
-      match(FV, m_ZExt(m_c_ICmp(NEPred, m_Specific(LHS), m_Specific(RHS)))) &&
-      NEPred == ICmpInst::ICMP_NE)
+      match(FV, m_ZExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS), m_Specific(RHS)))))
     Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
 
   // (x > y) ? 1 : sext(x != y)
   if (ICmpInst::isGT(Pred) && match(TV, m_One()) &&
-      match(FV, m_SExt(m_c_ICmp(NEPred, m_Specific(LHS), m_Specific(RHS)))) &&
-      NEPred == ICmpInst::ICMP_NE)
-    Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
-
-  // (x >= y) ? zext(x != y) : -1
-  if (ICmpInst::isGE(Pred) &&
-      match(TV, m_ZExt(m_c_ICmp(NEPred, m_Specific(LHS), m_Specific(RHS)))) &&
-      NEPred == ICmpInst::ICMP_NE && match(FV, m_AllOnes()))
+      match(FV, m_SExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS), m_Specific(RHS)))))
     Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
 
   if (Intrinsic)
