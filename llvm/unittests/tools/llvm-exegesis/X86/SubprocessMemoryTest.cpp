@@ -64,7 +64,7 @@ protected:
         shm_open(DefinitionName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     uint8_t *SharedMemoryMapping = (uint8_t *)mmap(
         NULL, DefinitionSize, PROT_READ, MAP_SHARED, SharedMemoryFD, 0);
-    EXPECT_NE((intptr_t)SharedMemoryMapping, -1);
+    EXPECT_NE(reinterpret_cast<intptr_t>(SharedMemoryMapping), -1);
     for (size_t I = 0; I < ExpectedValue.size(); ++I) {
       EXPECT_EQ(SharedMemoryMapping[I], ExpectedValue[I]);
     }
