@@ -3863,7 +3863,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     FD = const_cast<FunctionDecl *>(FDFriend);
     Owner = FD->getLexicalDeclContext();
   }
-#if 1
+  // [DR2369]
   // FIXME: We have to partially instantiate lambda's captures for constraint
   // evaluation.
   if (!isLambdaCallOperator(FD) && !isLambdaConversionOperator(FD) &&
@@ -3894,9 +3894,6 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
                                    /*SkipForSpecialization=*/false,
                                    /*Merged=*/&MLTAL);
 
-      // if (SetupConstraintScope(FD, SugaredBuilder, MLTAL, Scope))
-      //   return TemplateDeductionResult::MiscellaneousDeductionFailure;
-
       MultiLevelTemplateArgumentList JustTemplArgs(
           Template, CanonicalDeducedArgumentList->asArray(),
           /*Final=*/false);
@@ -3921,7 +3918,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
       llvm::SmallVector<Expr *, 1> Converted;
       if (CheckConstraintSatisfaction(Template, TemplateAC, MLTAL,
-                                      Template->getSourceRange(),
+                                      Info.getLocation(),
                                       Info.AssociatedConstraintsSatisfaction))
         return TemplateDeductionResult::MiscellaneousDeductionFailure;
       if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
@@ -3931,7 +3928,18 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       }
     }
   }
-#endif
+
+  // C++ [temp.deduct.call]p10: [DR1391]
+  //   If deduction succeeds for all parameters that contain
+  //   template-parameters that participate in template argument deduction,
+  //   and all template arguments are explicitly specified, deduced, or
+  //   obtained from default template arguments, remaining parameters are then
+  //   compared with the corresponding arguments. For each remaining parameter
+  //   P with a type that was non-dependent before substitution of any
+  //   explicitly-specified template arguments, if the corresponding argument
+  //   A cannot be implicitly converted to P, deduction fails.
+  if (CheckNonDependent())
+    return TemplateDeductionResult::NonDependentConversionFailure;
 
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
@@ -3981,18 +3989,6 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
-
-  // C++ [temp.deduct.call]p10: [DR1391]
-  //   If deduction succeeds for all parameters that contain
-  //   template-parameters that participate in template argument deduction,
-  //   and all template arguments are explicitly specified, deduced, or
-  //   obtained from default template arguments, remaining parameters are then
-  //   compared with the corresponding arguments. For each remaining parameter
-  //   P with a type that was non-dependent before substitution of any
-  //   explicitly-specified template arguments, if the corresponding argument
-  //   A cannot be implicitly converted to P, deduction fails.
-  if (CheckNonDependent())
-    return TemplateDeductionResult::NonDependentConversionFailure;
 
   // We skipped the instantiation of the explicit-specifier during the
   // substitution of `FD` before. So, we try to instantiate it back if
