@@ -54,8 +54,6 @@ def CExpression : NativeOpTrait<"emitc::CExpression">;
 def IntegerIndexOrOpaqueType : Type<CPred<"emitc::isIntegerIndexOrOpaqueType($_self)">,
 "integer, index or opaque type supported by EmitC">;
 def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[EmitCFloatType, IntegerIndexOrOpaqueType]>;
-def SwitchOperandType : Type<CPred<"emitc::isSwitchOperandType($_self)">,
-"integer type for switch operation">;
 
 def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
   let summary = "Addition operation";
@@ -1361,7 +1359,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
     ```
   }];
 
-  let arguments = (ins SwitchOperandType:$arg, DenseI64ArrayAttr:$cases);
+  let arguments = (ins IntegerIndexOrOpaqueType:$arg, DenseI64ArrayAttr:$cases);
   let results = (outs);
   let regions = (region SizedRegion<1>:$defaultRegion,
                         VariadicRegion<SizedRegion<1>>:$caseRegions);

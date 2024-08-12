@@ -1211,7 +1211,7 @@ static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,
 }
 
 LogicalResult emitc::SwitchOp::verify() {
-  if (!isSwitchOperandType(getArg().getType()))
+  if (!isIntegerIndexOrOpaqueType(getArg().getType()))
     return emitOpError("unsupported type ") << getArg().getType();
 
   if (getCases().size() != getCaseRegions().size()) {
