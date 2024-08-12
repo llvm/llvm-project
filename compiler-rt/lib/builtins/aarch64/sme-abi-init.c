@@ -7,7 +7,8 @@ _Bool __aarch64_has_sme_and_tpidr2_el0;
 
 // We have multiple ways to check that the function has SME, depending on our
 // target.
-// * For Linux we can use __getauxval().
+// * For Linux/glibc we can use __getauxval().
+// * For Android we can use getauxval().
 // * For newlib we can use __aarch64_sme_accessible().
 
 #if defined(__linux__)
@@ -20,11 +21,15 @@ _Bool __aarch64_has_sme_and_tpidr2_el0;
 #define HWCAP2_SME (1 << 23)
 #endif
 
+#ifdef __ANDROID__
+extern unsigned long int getauxval(unsigned long int);
+#define GETAUXVAL(x) getauxval(x)
+#else
 extern unsigned long int __getauxval (unsigned long int);
+#define GETAUXVAL(x) __getauxval(x)
+#endif
 
-static _Bool has_sme(void) {
-  return __getauxval(AT_HWCAP2) & HWCAP2_SME;
-}
+static _Bool has_sme(void) { return GETAUXVAL(AT_HWCAP2) & HWCAP2_SME; }
 
 #else  // defined(__linux__)
 
