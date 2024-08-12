@@ -288,10 +288,16 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
                              MachineRegisterInfo &MRI,
                              ShuffleVectorPseudo &MatchInfo) {
   assert(Lane >= 0 && "Expected positive lane?");
+  int NumElements = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
   // Test if the LHS is a BUILD_VECTOR. If it is, then we can just reference the
   // lane's definition directly.
-  auto *BuildVecMI = getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
-                                  MI.getOperand(1).getReg(), MRI);
+  auto *BuildVecMI =
+      getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
+                   MI.getOperand(Lane < NumElements ? 1 : 2).getReg(), MRI);
+  // If Lane >= NumElements then it is point to RHS, just check from RHS
+  if (NumElements <= Lane)
+    Lane -= NumElements;
+
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();

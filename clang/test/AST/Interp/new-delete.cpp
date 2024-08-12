@@ -358,7 +358,7 @@ namespace delete_random_things {
                                              // both-note {{delete of pointer to subobject }}
   static_assert((delete (new int + 1), true)); // both-error {{}} \
                                                // ref-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}} \
-                                               // expected-note {{delete of pointer '&new int + 1' that does not point to complete object}}
+                                               // expected-note {{delete of pointer '&{*new int#1} + 1' that does not point to complete object}}
   static_assert((delete[] (new int[3] + 1), true)); // both-error {{}} \
                                                     // both-note {{delete of pointer to subobject}}
   static_assert((delete &(int&)(int&&)0, true)); // both-error {{}} \

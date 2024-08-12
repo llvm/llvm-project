@@ -382,8 +382,12 @@ bool ClauseProcessor::processNumTeams(
   // TODO Get lower and upper bounds for num_teams when parser is updated to
   // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->t);
-    auto &upperBound = std::get<ExprTy>(clause->t);
+    // The num_teams directive accepts a list of team lower/upper bounds.
+    // This is an extension to support grid specification for ompx_bare.
+    // Here, only expect a single element in the list.
+    assert(clause->v.size() == 1);
+    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->v[0]->t);
+    auto &upperBound = std::get<ExprTy>(clause->v[0].t);
     result.numTeamsUpper =
         fir::getBase(converter.genExprValue(upperBound, stmtCtx));
     return true;

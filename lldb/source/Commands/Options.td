@@ -841,8 +841,8 @@ let Command = "scripting run" in {
     " language. If none is specific the default scripting language is used.">;
 }
 
-let Command = "scripting template list" in {
-  def scripting_template_list_language : Option<"language", "l">,
+let Command = "scripting extension list" in {
+  def scripting_extension_list_language : Option<"language", "l">,
     EnumArg<"ScriptLang">, Desc<"Specify the scripting "
     " language. If none is specified the default scripting language is used.">;
 }

@@ -146,53 +146,9 @@ entry:
 define i64 @red_strided_ld_16xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_strided_ld_16xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD0:%.*]] = load i64, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[LD1:%.*]] = load i64, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i64 [[LD0]], [[LD1]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 4
-; CHECK-NEXT:    [[LD2:%.*]] = load i64, ptr [[GEP_1]], align 8
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i64 [[ADD_1]], [[LD2]]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 6
-; CHECK-NEXT:    [[LD3:%.*]] = load i64, ptr [[GEP_2]], align 8
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i64 [[ADD_2]], [[LD3]]
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[LD4:%.*]] = load i64, ptr [[GEP_3]], align 8
-; CHECK-NEXT:    [[ADD_4:%.*]] = add nuw nsw i64 [[ADD_3]], [[LD4]]
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 10
-; CHECK-NEXT:    [[LD5:%.*]] = load i64, ptr [[GEP_4]], align 8
-; CHECK-NEXT:    [[ADD_5:%.*]] = add nuw nsw i64 [[ADD_4]], [[LD5]]
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 12
-; CHECK-NEXT:    [[LD6:%.*]] = load i64, ptr [[GEP_5]], align 8
-; CHECK-NEXT:    [[ADD_6:%.*]] = add nuw nsw i64 [[ADD_5]], [[LD6]]
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 14
-; CHECK-NEXT:    [[LD7:%.*]] = load i64, ptr [[GEP_6]], align 8
-; CHECK-NEXT:    [[ADD_7:%.*]] = add nuw nsw i64 [[ADD_6]], [[LD7]]
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 16
-; CHECK-NEXT:    [[LD8:%.*]] = load i64, ptr [[GEP_7]], align 8
-; CHECK-NEXT:    [[ADD_8:%.*]] = add nuw nsw i64 [[ADD_7]], [[LD8]]
-; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 18
-; CHECK-NEXT:    [[LD9:%.*]] = load i64, ptr [[GEP_8]], align 8
-; CHECK-NEXT:    [[ADD_9:%.*]] = add nuw nsw i64 [[ADD_8]], [[LD9]]
-; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 20
-; CHECK-NEXT:    [[LD10:%.*]] = load i64, ptr [[GEP_9]], align 8
-; CHECK-NEXT:    [[ADD_10:%.*]] = add nuw nsw i64 [[ADD_9]], [[LD10]]
-; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 22
-; CHECK-NEXT:    [[LD11:%.*]] = load i64, ptr [[GEP_10]], align 8
-; CHECK-NEXT:    [[ADD_11:%.*]] = add nuw nsw i64 [[ADD_10]], [[LD11]]
-; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 24
-; CHECK-NEXT:    [[LD12:%.*]] = load i64, ptr [[GEP_11]], align 8
-; CHECK-NEXT:    [[ADD_12:%.*]] = add nuw nsw i64 [[ADD_11]], [[LD12]]
-; CHECK-NEXT:    [[GEP_12:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 26
-; CHECK-NEXT:    [[LD13:%.*]] = load i64, ptr [[GEP_12]], align 8
-; CHECK-NEXT:    [[ADD_13:%.*]] = add nuw nsw i64 [[ADD_12]], [[LD13]]
-; CHECK-NEXT:    [[GEP_13:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 28
-; CHECK-NEXT:    [[LD14:%.*]] = load i64, ptr [[GEP_13]], align 8
-; CHECK-NEXT:    [[ADD_14:%.*]] = add nuw nsw i64 [[ADD_13]], [[LD14]]
-; CHECK-NEXT:    [[GEP_14:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 30
-; CHECK-NEXT:    [[LD15:%.*]] = load i64, ptr [[GEP_14]], align 8
-; CHECK-NEXT:    [[ADD_15:%.*]] = add nuw nsw i64 [[ADD_14]], [[LD15]]
-; CHECK-NEXT:    ret i64 [[ADD_15]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP0]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
   %ld0 = load i64, ptr %ptr

@@ -69,6 +69,8 @@ To add through the command line:
    generated header file with the new addition in the newhdrgen directory to
    examine.
 
+If you want to sort the functions alphabetically you can check out libc/newhdrgen/yaml_functions_sorted.py.
+
 
 Testing
 -------

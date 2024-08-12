@@ -372,10 +372,11 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
       converter,
-      /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
-      /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
-      rocdlDialect->getKernelAttrHelper().getName(),
-      rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName());
+      GPUFuncOpLoweringOptions{
+          /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
+          /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
+          rocdlDialect->getKernelAttrHelper().getName(),
+          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName()});
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {

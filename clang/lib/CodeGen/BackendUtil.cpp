@@ -588,12 +588,6 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
   // this also adds codegenerator level optimization passes.
   CodeGenFileType CGFT = getCodeGenFileType(Action);
 
-  // Add ObjC ARC final-cleanup optimizations. This is done as part of the
-  // "codegen" passes so that it isn't run multiple times when there is
-  // inlining happening.
-  if (CodeGenOpts.OptimizationLevel > 0)
-    CodeGenPasses.add(createObjCARCContractPass());
-
   if (TM->addPassesToEmitFile(CodeGenPasses, OS, DwoOS, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);

@@ -15,6 +15,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVISelLowering.h"
+#include "RISCVInstrInfo.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -1216,9 +1217,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
       break;
-    uint64_t C1 = N1C->getZExtValue();
-    const bool IsC1Mask = isMask_64(C1);
-    const bool IsC1ANDI = isInt<12>(C1);
 
     SDValue N0 = Node->getOperand(0);
 
@@ -1252,6 +1250,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // TODO: What if ANDI faster than shift?
       bool IsCANDI = isInt<6>(N1C->getSExtValue());
 
+      uint64_t C1 = N1C->getZExtValue();
+
       // Clear irrelevant bits in the mask.
       if (LeftShift)
         C1 &= maskTrailingZeros<uint64_t>(C2);
@@ -1266,7 +1266,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       // Turn (and (srl x, c2) c1) -> (srli (slli x, c3-c2), c3) if c1 is a mask
       // with c3 leading zeros.
-      if (!LeftShift && IsC1Mask) {
+      if (!LeftShift && isMask_64(C1)) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         if (C2 < Leading) {
           // If the number of leading zeros is C2+32 this can be SRLIW.
@@ -1449,12 +1449,44 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
     }
 
+    const uint64_t C1 = N1C->getZExtValue();
+
+    // Turn (and (sra x, c2), c1) -> (srli (srai x, c2-c3), c3) if c1 is a mask
+    // with c3 leading zeros and c2 is larger than c3.
+    if (N0.getOpcode() == ISD::SRA && isa<ConstantSDNode>(N0.getOperand(1)) &&
+        N0.hasOneUse()) {
+      unsigned C2 = N0.getConstantOperandVal(1);
+      unsigned XLen = Subtarget->getXLen();
+      assert((C2 > 0 && C2 < XLen) && "Unexpected shift amount!");
+
+      SDValue X = N0.getOperand(0);
+
+      // Prefer SRAIW + ANDI when possible.
+      bool Skip = C2 > 32 && isInt<12>(N1C->getSExtValue()) &&
+                  X.getOpcode() == ISD::SHL &&
+                  isa<ConstantSDNode>(X.getOperand(1)) &&
+                  X.getConstantOperandVal(1) == 32;
+      if (isMask_64(C1) && !Skip) {
+        unsigned Leading = XLen - llvm::bit_width(C1);
+        if (C2 > Leading) {
+          SDNode *SRAI = CurDAG->getMachineNode(
+              RISCV::SRAI, DL, VT, X,
+              CurDAG->getTargetConstant(C2 - Leading, DL, VT));
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, SDValue(SRAI, 0),
+              CurDAG->getTargetConstant(Leading, DL, VT));
+          ReplaceNode(Node, SRLI);
+          return;
+        }
+      }
+    }
+
     // If C1 masks off the upper bits only (but can't be formed as an
     // ANDI), use an unsigned bitfield extract (e.g., th.extu), if
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (IsC1Mask && !IsC1ANDI) {
+    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue())) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;
@@ -3162,11 +3194,17 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SLLI_UW:
     case RISCV::FMV_W_X:
     case RISCV::FCVT_H_W:
+    case RISCV::FCVT_H_W_INX:
     case RISCV::FCVT_H_WU:
+    case RISCV::FCVT_H_WU_INX:
     case RISCV::FCVT_S_W:
+    case RISCV::FCVT_S_W_INX:
     case RISCV::FCVT_S_WU:
+    case RISCV::FCVT_S_WU_INX:
     case RISCV::FCVT_D_W:
+    case RISCV::FCVT_D_W_INX:
     case RISCV::FCVT_D_WU:
+    case RISCV::FCVT_D_WU_INX:
     case RISCV::TH_REVW:
     case RISCV::TH_SRRIW:
       if (Bits >= 32)
@@ -3849,7 +3887,8 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // Some operations produce different elementwise results depending on the
   // active elements, like viota.m or vredsum. This transformation is illegal
   // for these if we change the active elements (i.e. mask or VL).
-  if (Info->ActiveElementsAffectResult) {
+  const MCInstrDesc &TrueBaseMCID = TII->get(RISCV::getRVVMCOpcode(TrueOpc));
+  if (RISCVII::activeElementsAffectResult(TrueBaseMCID.TSFlags)) {
     if (Mask && !usesAllOnesMask(Mask, Glue))
       return false;
     if (TrueVL != VL)

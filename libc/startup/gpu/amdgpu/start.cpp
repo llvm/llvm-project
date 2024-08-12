@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "config/gpu/app.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/macros/config.h"
@@ -15,6 +16,8 @@
 extern "C" int main(int argc, char **argv, char **envp);
 
 namespace LIBC_NAMESPACE_DECL {
+
+DataEnvironment app;
 
 extern "C" uintptr_t __init_array_start[];
 extern "C" uintptr_t __init_array_end[];
@@ -40,6 +43,8 @@ static void call_fini_array_callbacks() {
 
 extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
 _begin(int argc, char **argv, char **env) {
+  __atomic_store_n(&LIBC_NAMESPACE::app.env_ptr,
+                   reinterpret_cast<uintptr_t *>(env), __ATOMIC_RELAXED);
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
