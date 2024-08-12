@@ -69,9 +69,10 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     m_expected_directories += 9;
 
   // Go through all of the threads and check for exceptions.
-  std::vector<lldb::ThreadSP> threads =
-      m_process_sp->CalculateCoreFileThreadList(m_save_core_options);
-  for (const ThreadSP &thread_sp : threads) {
+  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
+  const uint32_t num_threads = thread_list.GetSize();
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     if (stop_info_sp) {
       const StopReason &stop_reason = stop_info_sp->GetStopReason();
@@ -587,13 +588,12 @@ Status MinidumpFileBuilder::FixThreadStacks() {
 
 Status MinidumpFileBuilder::AddThreadList() {
   constexpr size_t minidump_thread_size = sizeof(llvm::minidump::Thread);
-  std::vector<ThreadSP> thread_list =
-      m_process_sp->CalculateCoreFileThreadList(m_save_core_options);
+  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
 
   // size of the entire thread stream consists of:
   // number of threads and threads array
   size_t thread_stream_size = sizeof(llvm::support::ulittle32_t) +
-                              thread_list.size() * minidump_thread_size;
+                              thread_list.GetSize() * minidump_thread_size;
   // save for the ability to set up RVA
   size_t size_before = GetCurrentDataEndOffset();
   Status error;
@@ -602,15 +602,17 @@ Status MinidumpFileBuilder::AddThreadList() {
     return error;
 
   llvm::support::ulittle32_t thread_count =
-      static_cast<llvm::support::ulittle32_t>(thread_list.size());
+      static_cast<llvm::support::ulittle32_t>(thread_list.GetSize());
   m_data.AppendData(&thread_count, sizeof(llvm::support::ulittle32_t));
 
   // Take the offset after the thread count.
   m_thread_list_start = GetCurrentDataEndOffset();
   DataBufferHeap helper_data;
 
+  const uint32_t num_threads = thread_list.GetSize();
   Log *log = GetLog(LLDBLog::Object);
-  for (const ThreadSP &thread_sp : thread_list) {
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
     RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
 
     if (!reg_ctx_sp) {
@@ -648,7 +650,7 @@ Status MinidumpFileBuilder::AddThreadList() {
     m_tid_to_reg_ctx[thread_sp->GetID()] = thread_context_memory_locator;
 
     LLDB_LOGF(log, "AddThreadList for thread %d: thread_context %zu bytes",
-              thread_sp->GetIndexID(), thread_context.size());
+              thread_idx, thread_context.size());
     helper_data.AppendData(thread_context.data(), thread_context.size());
 
     llvm::minidump::Thread t;
@@ -672,10 +674,11 @@ Status MinidumpFileBuilder::AddThreadList() {
 }
 
 Status MinidumpFileBuilder::AddExceptions() {
-  std::vector<ThreadSP> thread_list =
-      m_process_sp->CalculateCoreFileThreadList(m_save_core_options);
+  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
   Status error;
-  for (const ThreadSP &thread_sp : thread_list) {
+  const uint32_t num_threads = thread_list.GetSize();
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     bool add_exception = false;
     if (stop_info_sp) {
@@ -816,7 +819,7 @@ Status MinidumpFileBuilder::AddLinuxFileStreams() {
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList() {
+Status MinidumpFileBuilder::AddMemoryList(SaveCoreStyle core_style) {
   Status error;
 
   // We first save the thread stacks to ensure they fit in the first UINT32_MAX
@@ -825,26 +828,18 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // in accessible with a 32 bit offset.
   Process::CoreFileMemoryRanges ranges_32;
   Process::CoreFileMemoryRanges ranges_64;
-  Process::CoreFileMemoryRanges all_core_memory_ranges;
-  error = m_process_sp->CalculateCoreFileSaveRanges(m_save_core_options,
-                                                    all_core_memory_ranges);
+  error = m_process_sp->CalculateCoreFileSaveRanges(
+      SaveCoreStyle::eSaveCoreStackOnly, ranges_32);
   if (error.Fail())
     return error;
 
-  // Start by saving all of the stacks and ensuring they fit under the 32b
-  // limit.
+  // Calculate totalsize including the current offset.
   uint64_t total_size = GetCurrentDataEndOffset();
-  auto iterator = all_core_memory_ranges.begin();
-  while (iterator != all_core_memory_ranges.end()) {
-    if (m_saved_stack_ranges.count(iterator->range.start()) > 0) {
-      // We don't save stacks twice.
-      ranges_32.push_back(*iterator);
-      total_size +=
-          iterator->range.size() + sizeof(llvm::minidump::MemoryDescriptor);
-      iterator = all_core_memory_ranges.erase(iterator);
-    } else {
-      iterator++;
-    }
+  total_size += ranges_32.size() * sizeof(llvm::minidump::MemoryDescriptor);
+  std::unordered_set<addr_t> stack_start_addresses;
+  for (const auto &core_range : ranges_32) {
+    stack_start_addresses.insert(core_range.range.start());
+    total_size += core_range.range.size();
   }
 
   if (total_size >= UINT32_MAX) {
@@ -854,6 +849,14 @@ Status MinidumpFileBuilder::AddMemoryList() {
     return error;
   }
 
+  Process::CoreFileMemoryRanges all_core_memory_ranges;
+  if (core_style != SaveCoreStyle::eSaveCoreStackOnly) {
+    error = m_process_sp->CalculateCoreFileSaveRanges(core_style,
+                                                      all_core_memory_ranges);
+    if (error.Fail())
+      return error;
+  }
+
   // After saving the stacks, we start packing as much as we can into 32b.
   // We apply a generous padding here so that the Directory, MemoryList and
   // Memory64List sections all begin in 32b addressable space.
@@ -861,13 +864,16 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // All core memeroy ranges will either container nothing on stacks only
   // or all the memory ranges including stacks
   if (!all_core_memory_ranges.empty())
-    total_size += 256 + (all_core_memory_ranges.size() *
-                         sizeof(llvm::minidump::MemoryDescriptor_64));
+    total_size +=
+        256 + (all_core_memory_ranges.size() - stack_start_addresses.size()) *
+                  sizeof(llvm::minidump::MemoryDescriptor_64);
 
   for (const auto &core_range : all_core_memory_ranges) {
     const addr_t range_size = core_range.range.size();
-    // We don't need to check for stacks here because we already removed them
-    // from all_core_memory_ranges.
+    if (stack_start_addresses.count(core_range.range.start()) > 0)
+      // Don't double save stacks.
+      continue;
+
     if (total_size + range_size < UINT32_MAX) {
       ranges_32.push_back(core_range);
       total_size += range_size;

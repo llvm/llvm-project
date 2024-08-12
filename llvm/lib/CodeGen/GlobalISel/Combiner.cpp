@@ -217,8 +217,9 @@ Combiner::WorkListMaintainer::create(Level Lvl, WorkListTy &WorkList,
   case Level::SinglePass:
     return std::make_unique<WorkListMaintainerImpl<Level::SinglePass>>(WorkList,
                                                                        MRI);
+  default:
+    llvm_unreachable("Illegal ObserverLevel");
   }
-  llvm_unreachable("Illegal ObserverLevel");
 }
 
 Combiner::Combiner(MachineFunction &MF, CombinerInfo &CInfo,

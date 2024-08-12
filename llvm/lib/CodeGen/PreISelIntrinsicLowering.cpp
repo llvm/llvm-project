@@ -16,6 +16,7 @@
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/ExpandVectorPredication.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -46,7 +47,7 @@ static cl::opt<int64_t> MemIntrinsicExpandSizeThresholdOpt(
 namespace {
 
 struct PreISelIntrinsicLowering {
-  const TargetMachine &TM;
+  const TargetMachine *TM;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
@@ -56,7 +57,7 @@ struct PreISelIntrinsicLowering {
   const bool UseMemIntrinsicLibFunc;
 
   explicit PreISelIntrinsicLowering(
-      const TargetMachine &TM_,
+      const TargetMachine *TM_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
@@ -222,10 +223,12 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool canEmitLibcall(const TargetMachine &TM, Function *F,
+static bool canEmitLibcall(const TargetMachine *TM, Function *F,
                            RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
-  const TargetLowering *TLI = TM.getSubtargetImpl(*F)->getTargetLowering();
+  if (!TM)
+    return true;
+  const TargetLowering *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
   return TLI->getLibcallName(LC) != nullptr;
 }
 
@@ -346,9 +349,25 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Function *Parent = CI->getParent()->getParent();
         TargetLibraryInfo &TLI = LookupTLI(*Parent);
+        // Intrinsics in unreachable code are not lowered.
         bool Changed = lowerConstantIntrinsics(*Parent, TLI, /*DT=*/nullptr);
-        assert(Changed && "lowerConstantIntrinsics did not lower intrinsic");
         return Changed;
+      });
+      break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                    \
+  case Intrinsic::VPID:
+#include "llvm/IR/VPIntrinsics.def"
+      forEachCall(F, [&](CallInst *CI) {
+        Function *Parent = CI->getParent()->getParent();
+        const TargetTransformInfo &TTI = LookupTTI(*Parent);
+        auto *VPI = cast<VPIntrinsic>(CI);
+        VPExpansionDetails ED = expandVectorPredicationIntrinsic(*VPI, TTI);
+        // Expansion of VP intrinsics may change the IR but not actually
+        // replace the intrinsic, so update Changed for the pass
+        // and compute Removed for forEachCall.
+        Changed |= ED != VPExpansionDetails::IntrinsicUnchanged;
+        bool Removed = ED == VPExpansionDetails::IntrinsicReplaced;
+        return Removed;
       });
       break;
     case Intrinsic::objc_autorelease:
@@ -453,7 +472,7 @@ public:
       return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     };
 
-    const auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     PreISelIntrinsicLowering Lowering(TM, LookupTTI, LookupTLI);
     return Lowering.lowerIntrinsics(M);
   }

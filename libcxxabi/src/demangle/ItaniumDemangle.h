@@ -19,7 +19,6 @@
 #include "DemangleConfig.h"
 #include "StringViewExtras.h"
 #include "Utility.h"
-#include <__cxxabi_config.h>
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -31,7 +30,7 @@
 #include <type_traits>
 #include <utility>
 
-#ifdef _LIBCXXABI_COMPILER_CLANG
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-template"
 #endif
@@ -3319,7 +3318,7 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorEncoding() {
     return nullptr;
 
   // We can't use lower_bound as that can link to symbols in the C++ library,
-  // and this must remain independant of that.
+  // and this must remain independent of that.
   size_t lower = 0u, upper = NumOps - 1; // Inclusive bounds.
   while (upper != lower) {
     size_t middle = (upper + lower) / 2;
@@ -5948,7 +5947,7 @@ struct ManglingParser : AbstractManglingParser<ManglingParser<Alloc>, Alloc> {
 
 DEMANGLE_NAMESPACE_END
 
-#ifdef _LIBCXXABI_COMPILER_CLANG
+#if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 

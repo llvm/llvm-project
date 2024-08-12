@@ -1484,7 +1484,7 @@ the configuration (without a prefix: ``Auto``).
   * ``OAS_AlignAfterOperator`` (in configuration: ``AlignAfterOperator``)
     Horizontally align operands of binary and ternary expressions.
 
-    This is similar to ``AO_Align``, except when
+    This is similar to ``OAS_Align``, except when
     ``BreakBeforeBinaryOperators`` is set, the operator is un-indented so
     that the wrapped operand is aligned with the operand on the first line.
 
@@ -3299,6 +3299,46 @@ the configuration (without a prefix: ``Auto``).
      veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
          firstValue :
          SecondValueVeryVeryVeryVeryLong;
+
+.. _BreakBinaryOperations:
+
+**BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
+  The break constructor initializers style to use.
+
+  Possible values:
+
+  * ``BBO_Never`` (in configuration: ``Never``)
+    Don't break binary operations
+
+    .. code-block:: c++
+
+       aaa + bbbb * ccccc - ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+    Binary operations will either be all on the same line, or each operation
+    will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb *
+       ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+    Binary operations of a particular precedence that exceed the column
+    limit will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb * ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+
 
 .. _BreakConstructorInitializers:
 
