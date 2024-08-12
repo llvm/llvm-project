@@ -3,6 +3,7 @@ include(CheckLibraryExists)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
+include(LLVMCheckCompilerLinkerFlag)
 
 check_library_exists(c fopen "" LIBCXXABI_HAS_C_LIB)
 if (NOT LIBCXXABI_USE_COMPILER_RT)
@@ -14,17 +15,6 @@ if (NOT LIBCXXABI_USE_COMPILER_RT)
   endif ()
 endif ()
 
-# Disable linker for CMake flag compatibility checks
-#
-# Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
-# disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
-# for static targets; cache the target type here, and reset it after the various
-# checks have been performed.
-set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-set(CMAKE_REQUIRED_LINK_OPTIONS)
-
 # libc++abi is using -nostdlib++ at the link step when available,
 # otherwise -nodefaultlibs is used. We want all our checks to also
 # use one of these options, otherwise we may end up with an inconsistency between
@@ -34,11 +24,13 @@ set(CMAKE_REQUIRED_LINK_OPTIONS)
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-check_cxx_compiler_flag(-nostdlib++ CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(
+    CXX "-nostdlib++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()
-  check_c_compiler_flag(-nodefaultlibs C_SUPPORTS_NODEFAULTLIBS_FLAG)
+  llvm_check_compiler_linker_flag(
+      C "-nodefaultlibs" RESET STATIC_LIBRARY C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   endif()
@@ -103,11 +95,8 @@ int main(void) { return 0; }
 endif()
 
 # Check compiler flags
-check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
-
-# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
-set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
+llvm_check_compiler_linker_flag(
+    CXX "-nostdinc++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDINCXX_FLAG)
 
 # Check libraries
 if(FUCHSIA)

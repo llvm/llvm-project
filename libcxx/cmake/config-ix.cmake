@@ -1,21 +1,10 @@
 include(CMakePushCheckState)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
-include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
-
-# Disable linker for CMake flag compatibility checks
-#
-# Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
-# disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
-# for static targets; cache the target type here, and reset it after the various
-# checks have been performed.
-set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-set(CMAKE_REQUIRED_LINK_OPTIONS)
+include(LLVMCheckCompilerLinkerFlag)
 
 # The compiler driver may be implicitly trying to link against libunwind.
 # This is normally ok (libcxx relies on an unwinder), but if libunwind is
@@ -24,7 +13,8 @@ set(CMAKE_REQUIRED_LINK_OPTIONS)
 # libunwind (and the compiler implicit -lunwind wouldn't succeed as the newly
 # built libunwind isn't installed yet). For those cases, it'd be good to
 # link with --unwindlib=none. Check if that option works.
-llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+llvm_check_compiler_linker_flag(
+    C "--unwindlib=none" RESET STATIC_LIBRARY CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 
 if (NOT LIBCXX_USE_COMPILER_RT)
   if(WIN32 AND NOT MINGW)
@@ -38,8 +28,10 @@ if (NOT LIBCXX_USE_COMPILER_RT)
   endif()
 endif()
 
-check_cxx_compiler_flag(-nostdlibinc CXX_SUPPORTS_NOSTDLIBINC_FLAG)
-check_cxx_compiler_flag(-nolibc CXX_SUPPORTS_NOLIBC_FLAG)
+llvm_check_compiler_linker_flag(
+    CXX "-nostdlibinc" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDLIBINC_FLAG)
+llvm_check_compiler_linker_flag(
+    CXX "-nolibc" RESET STATIC_LIBRARY CXX_SUPPORTS_NOLIBC_FLAG)
 
 # libc++ is using -nostdlib++ at the link step when available,
 # otherwise -nodefaultlibs is used. We want all our checks to also
@@ -50,11 +42,13 @@ check_cxx_compiler_flag(-nolibc CXX_SUPPORTS_NOLIBC_FLAG)
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-check_cxx_compiler_flag(-nostdlib++ CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(
+    CXX "-nostdlib++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()
-  check_c_compiler_flag(-nodefaultlibs C_SUPPORTS_NODEFAULTLIBS_FLAG)
+  llvm_check_compiler_linker_flag(
+      C "-nodefaultlibs" RESET STATIC_LIBRARY C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   endif()
@@ -111,10 +105,6 @@ int main(void) { return 0; }
 " C_SUPPORTS_COMMENT_LIB_PRAGMA)
   cmake_pop_check_state()
 endif()
-
-# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
-set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 
 check_symbol_exists(__PICOLIBC__ "string.h" PICOLIBC)
 

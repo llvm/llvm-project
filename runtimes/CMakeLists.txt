@@ -114,38 +114,23 @@ filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} C
 # Currently, we counteract this issue by adding -fno-sanitize=all flag in
 # the project specific code within */cmake/config-ix.cmake files but that's
 # brittle. We should ideally move this to runtimes/CMakeLists.txt.
-llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+llvm_check_compiler_linker_flag(C "--unwindlib=none" "" "" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
   list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "--unwindlib=none")
 endif()
-
-# Disable linker for CMake flag compatibility checks
-#
-# Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
-# disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
-# for static targets; cache the target type here, and reset it after the various
-# checks have been performed.
-set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-set(CMAKE_REQUIRED_LINK_OPTIONS)
 
 # Disable use of the installed C++ standard library when building runtimes.
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(CXX "-nostdlib++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
-check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+llvm_check_compiler_linker_flag(CXX "-nostdinc++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDINCXX_FLAG)
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
 endif()
-
-# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
-set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)

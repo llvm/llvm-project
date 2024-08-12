@@ -7,6 +7,7 @@
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(HandleFlags)
+include(LLVMCheckCompilerLinkerFlag)
 
 unset(add_flag_if_supported)
 
@@ -30,7 +31,8 @@ endmacro()
 macro(add_compile_flags_if_supported)
   foreach(flag ${ARGN})
       mangle_name("${flag}" flagname)
-      check_cxx_compiler_flag("${flag}" "CXX_SUPPORTS_${flagname}_FLAG")
+      llvm_check_compiler_linker_flag(
+          CXX "${flag}" RESET STATIC_LIBRARY "CXX_SUPPORTS_${flagname}_FLAG")
       add_compile_flags_if(CXX_SUPPORTS_${flagname}_FLAG ${flag})
   endforeach()
 endmacro()
