@@ -363,7 +363,7 @@ void PseudoProbeRewriter::encodePseudoProbes() {
         Deleted++;
     LLVM_DEBUG(dbgs() << "Deleted Probes:" << Deleted << "\n");
     size_t InjectedProbes = ProbeDecoder.getNumInjectedProbes(Cur);
-    uint64_t ProbesSize = Cur->Probes.size() + InjectedProbes - Deleted;
+    uint64_t ProbesSize = Cur->NumProbes + InjectedProbes - Deleted;
     EmitULEB128IntValue(ProbesSize);
     // Emit number of direct inlinees
     EmitULEB128IntValue(Cur->getChildren().size());

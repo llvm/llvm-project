@@ -2654,7 +2654,7 @@ class Type(Structure):
         the ExceptionSpecificationKind enumeration.
         """
         return ExceptionSpecificationKind.from_id(
-            conf.lib.clang.getExceptionSpecificationType(self)
+            conf.lib.clang_getExceptionSpecificationType(self)
         )
 
     @property

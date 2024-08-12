@@ -28,10 +28,8 @@ namespace User {
   std::error_condition make_error_condition(Err) { return std::error_condition(42, std::generic_category()); }
 }
 
-namespace std {
-  template <>
-  struct is_error_condition_enum<User::Err> : true_type {};
-}
+template <>
+struct std::is_error_condition_enum<User::Err> : true_type {};
 
 int main(int, char**) {
   std::error_condition e;

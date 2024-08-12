@@ -49,6 +49,8 @@ static const MCExpr *buildSymbolDiff(MCObjectStreamer *MCOS, const MCSymbol *A,
   return AddrDelta;
 }
 
+uint64_t MCDecodedPseudoProbe::getGuid() const { return InlineTree->Guid; }
+
 void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
                          const MCPseudoProbe *LastProbe) const {
   bool IsSentinel = isSentinelProbe(getAttributes());
@@ -318,10 +320,10 @@ void MCDecodedPseudoProbe::print(raw_ostream &OS,
                                  bool ShowName) const {
   OS << "FUNC: ";
   if (ShowName) {
-    StringRef FuncName = getProbeFNameForGUID(GUID2FuncMAP, Guid);
+    StringRef FuncName = getProbeFNameForGUID(GUID2FuncMAP, getGuid());
     OS << FuncName.str() << " ";
   } else {
-    OS << Guid << " ";
+    OS << getGuid() << " ";
   }
   OS << "Index: " << Index << "  ";
   if (Discriminator)
@@ -417,6 +419,7 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
   return true;
 }
 
+template <bool IsTopLevelFunc>
 void MCPseudoProbeDecoder::buildAddress2ProbeMap(
     MCDecodedPseudoProbeInlineTree *Cur, uint64_t &LastAddr,
     const Uint64Set &GuidFilter, const Uint64Map &FuncStartAddrs,
@@ -425,7 +428,6 @@ void MCPseudoProbeDecoder::buildAddress2ProbeMap(
   // format defined in MCPseudoProbe.h
 
   uint32_t Index = 0;
-  bool IsTopLevelFunc = Cur == &DummyInlineRoot;
   if (IsTopLevelFunc) {
     // Use a sequential id for top level inliner.
     Index = CurChild;
@@ -453,7 +455,10 @@ void MCPseudoProbeDecoder::buildAddress2ProbeMap(
   }
   // Advance CurChild for non-skipped top-level functions and unconditionally
   // for inlined functions.
-  CurChild += Cur || !IsTopLevelFunc;
+  if (IsTopLevelFunc)
+    CurChild += !!Cur;
+  else
+    ++CurChild;
 
   // Read number of probes in the current node.
   uint32_t NodeCount =
@@ -499,8 +504,8 @@ void MCPseudoProbeDecoder::buildAddress2ProbeMap(
     }
 
     if (Cur && !isSentinelProbe(Attr)) {
-      PseudoProbeVec.emplace_back(Addr, Cur->Guid, Index, PseudoProbeType(Kind),
-                                  Attr, Discriminator, Cur);
+      PseudoProbeVec.emplace_back(Addr, Index, PseudoProbeType(Kind), Attr,
+                                  Discriminator, Cur);
       Address2ProbesMap[Addr].emplace_back(PseudoProbeVec.back());
       ++CurrentProbeCount;
     }
@@ -508,17 +513,19 @@ void MCPseudoProbeDecoder::buildAddress2ProbeMap(
   }
 
   if (Cur) {
-    Cur->Probes = MutableArrayRef(PseudoProbeVec).take_back(CurrentProbeCount);
+    Cur->Probes =
+        MutableArrayRef(PseudoProbeVec).take_back(CurrentProbeCount).begin();
+    Cur->NumProbes = CurrentProbeCount;
     InlineTreeVec.resize(InlineTreeVec.size() + ChildrenToProcess);
     Cur->Children = MutableArrayRef(InlineTreeVec).take_back(ChildrenToProcess);
   }
   for (uint32_t I = 0; I < ChildrenToProcess;) {
-    buildAddress2ProbeMap(Cur, LastAddr, GuidFilter, FuncStartAddrs, I);
+    buildAddress2ProbeMap<false>(Cur, LastAddr, GuidFilter, FuncStartAddrs, I);
   }
 }
 
-bool MCPseudoProbeDecoder::countRecords(bool IsTopLevelFunc, bool &Discard,
-                                        uint32_t &ProbeCount,
+template <bool IsTopLevelFunc>
+bool MCPseudoProbeDecoder::countRecords(bool &Discard, uint32_t &ProbeCount,
                                         uint32_t &InlinedCount,
                                         const Uint64Set &GuidFilter) {
   if (!IsTopLevelFunc)
@@ -591,7 +598,7 @@ bool MCPseudoProbeDecoder::countRecords(bool IsTopLevelFunc, bool &Discard,
   }
 
   for (uint32_t I = 0; I < ChildrenToProcess; I++)
-    if (!countRecords(false, Discard, ProbeCount, InlinedCount, GuidFilter))
+    if (!countRecords<false>(Discard, ProbeCount, InlinedCount, GuidFilter))
       return false;
   return true;
 }
@@ -608,7 +615,7 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   End = Data + Size;
   bool Discard = false;
   while (Data < End) {
-    if (!countRecords(true, Discard, ProbeCount, InlinedCount, GuidFilter))
+    if (!countRecords<true>(Discard, ProbeCount, InlinedCount, GuidFilter))
       return false;
     TopLevelFuncs += !Discard;
   }
@@ -625,8 +632,8 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   uint64_t LastAddr = 0;
   uint32_t Child = 0;
   while (Data < End)
-    buildAddress2ProbeMap(&DummyInlineRoot, LastAddr, GuidFilter,
-                          FuncStartAddrs, Child);
+    buildAddress2ProbeMap<true>(&DummyInlineRoot, LastAddr, GuidFilter,
+                                FuncStartAddrs, Child);
   assert(Data == End && "Have unprocessed data in pseudo_probe section");
   return true;
 }

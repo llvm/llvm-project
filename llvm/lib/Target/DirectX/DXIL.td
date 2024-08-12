@@ -318,7 +318,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 def Abs :  DXILOp<6, unary> {
   let Doc = "Returns the absolute value of the input.";
   let LLVMIntrinsic = int_fabs;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -338,7 +338,7 @@ def IsInf :  DXILOp<9, isSpecialFloat> {
 def Cos :  DXILOp<12, unary> {
   let Doc = "Returns cosine(theta) for theta in radians.";
   let LLVMIntrinsic = int_cos;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -348,7 +348,7 @@ def Cos :  DXILOp<12, unary> {
 def Sin :  DXILOp<13, unary> {
   let Doc = "Returns sine(theta) for theta in radians.";
   let LLVMIntrinsic = int_sin;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -358,7 +358,7 @@ def Sin :  DXILOp<13, unary> {
 def Tan :  DXILOp<14, unary> {
   let Doc = "Returns tangent(theta) for theta in radians.";
   let LLVMIntrinsic = int_tan;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -368,7 +368,7 @@ def Tan :  DXILOp<14, unary> {
 def ACos :  DXILOp<15, unary> {
   let Doc = "Returns the arccosine of the specified value.";
   let LLVMIntrinsic = int_acos;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -378,7 +378,7 @@ def ACos :  DXILOp<15, unary> {
 def ASin :  DXILOp<16, unary> {
   let Doc = "Returns the arcsine of the specified value.";
   let LLVMIntrinsic = int_asin;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -388,7 +388,7 @@ def ASin :  DXILOp<16, unary> {
 def ATan :  DXILOp<17, unary> {
   let Doc = "Returns the arctangent of the specified value.";
   let LLVMIntrinsic = int_atan;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -398,7 +398,7 @@ def ATan :  DXILOp<17, unary> {
 def HCos :  DXILOp<18, unary> {
   let Doc = "Returns the hyperbolic cosine of the specified value.";
   let LLVMIntrinsic = int_cosh;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -408,7 +408,7 @@ def HCos :  DXILOp<18, unary> {
 def HSin :  DXILOp<19, unary> {
   let Doc = "Returns the hyperbolic sine of the specified value.";
   let LLVMIntrinsic = int_sinh;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -418,7 +418,7 @@ def HSin :  DXILOp<19, unary> {
 def HTan :  DXILOp<20, unary> {
   let Doc = "Returns the hyperbolic tan of the specified value.";
   let LLVMIntrinsic = int_tanh;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -429,7 +429,7 @@ def Exp2 :  DXILOp<21, unary> {
   let Doc = "Returns the base 2 exponential, or 2**x, of the specified value. "
             "exp2(x) = 2**x.";
   let LLVMIntrinsic = int_exp2;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -440,7 +440,7 @@ def Frac :  DXILOp<22, unary> {
   let Doc = "Returns a fraction from 0 to 1 that represents the decimal part "
             "of the input.";
   let LLVMIntrinsic = int_dx_frac;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -450,7 +450,7 @@ def Frac :  DXILOp<22, unary> {
 def Log2 :  DXILOp<23, unary> {
   let Doc = "Returns the base-2 logarithm of the specified value.";
   let LLVMIntrinsic = int_log2;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -461,7 +461,7 @@ def Sqrt :  DXILOp<24, unary> {
   let Doc = "Returns the square root of the specified floating-point value, "
             "per component.";
   let LLVMIntrinsic = int_sqrt;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -472,7 +472,7 @@ def RSqrt :  DXILOp<25, unary> {
   let Doc = "Returns the reciprocal of the square root of the specified value. "
             "rsqrt(x) = 1 / sqrt(x).";
   let LLVMIntrinsic = int_dx_rsqrt;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -483,7 +483,7 @@ def Round :  DXILOp<26, unary> {
   let Doc = "Returns the input rounded to the nearest integer within a "
             "floating-point type.";
   let LLVMIntrinsic = int_roundeven;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -494,7 +494,7 @@ def Floor :  DXILOp<27, unary> {
   let Doc =
       "Returns the largest integer that is less than or equal to the input.";
   let LLVMIntrinsic = int_floor;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -505,7 +505,7 @@ def Ceil :  DXILOp<28, unary> {
   let Doc = "Returns the smallest integer that is greater than or equal to the "
             "input.";
   let LLVMIntrinsic = int_ceil;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -515,7 +515,7 @@ def Ceil :  DXILOp<28, unary> {
 def Trunc :  DXILOp<29, unary> {
   let Doc = "Returns the specified value truncated to the integer component.";
   let LLVMIntrinsic = int_trunc;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -525,7 +525,7 @@ def Trunc :  DXILOp<29, unary> {
 def Rbits :  DXILOp<30, unary> {
   let Doc = "Returns the specified value with its bits reversed.";
   let LLVMIntrinsic = int_bitreverse;
-  let arguments = [LLVMMatchType<0>];
+  let arguments = [overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
@@ -536,7 +536,7 @@ def Rbits :  DXILOp<30, unary> {
 def FMax :  DXILOp<35, binary> {
   let Doc = "Float maximum. FMax(a,b) = a > b ? a : b";
   let LLVMIntrinsic = int_maxnum;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
@@ -547,7 +547,7 @@ def FMax :  DXILOp<35, binary> {
 def FMin :  DXILOp<36, binary> {
   let Doc = "Float minimum. FMin(a,b) = a < b ? a : b";
   let LLVMIntrinsic = int_minnum;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
@@ -558,7 +558,7 @@ def FMin :  DXILOp<36, binary> {
 def SMax :  DXILOp<37, binary> {
   let Doc = "Signed integer maximum. SMax(a,b) = a > b ? a : b";
   let LLVMIntrinsic = int_smax;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
@@ -569,7 +569,7 @@ def SMax :  DXILOp<37, binary> {
 def SMin :  DXILOp<38, binary> {
   let Doc = "Signed integer minimum. SMin(a,b) = a < b ? a : b";
   let LLVMIntrinsic = int_smin;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
@@ -580,7 +580,7 @@ def SMin :  DXILOp<38, binary> {
 def UMax :  DXILOp<39, binary> {
   let Doc = "Unsigned integer maximum. UMax(a,b) = a > b ? a : b";
   let LLVMIntrinsic = int_umax;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
@@ -591,7 +591,7 @@ def UMax :  DXILOp<39, binary> {
 def UMin :  DXILOp<40, binary> {
   let Doc = "Unsigned integer minimum. UMin(a,b) = a < b ? a : b";
   let LLVMIntrinsic = int_umin;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
@@ -603,7 +603,7 @@ def FMad :  DXILOp<46, tertiary> {
   let Doc = "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m "
             "* a + b.";
   let LLVMIntrinsic = int_fmuladd;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
@@ -615,7 +615,7 @@ def IMad :  DXILOp<48, tertiary> {
   let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m "
             "* a + b.";
   let LLVMIntrinsic = int_dx_imad;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
@@ -627,7 +627,7 @@ def UMad :  DXILOp<49, tertiary> {
   let Doc = "Unsigned integer arithmetic multiply/add operation. umad(m,a, = m "
             "* a + b.";
   let LLVMIntrinsic = int_dx_umad;
-  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>];
+  let arguments = [overloadTy, overloadTy, overloadTy];
   let result = overloadTy;
   let overloads =
       [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];

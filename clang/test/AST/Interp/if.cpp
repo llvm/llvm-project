@@ -58,3 +58,21 @@ constexpr char g(char const (&x)[2]) {
     ;
 }
 static_assert(g("x") == 'x');
+
+namespace IfScope {
+  struct Inc {
+    int &a;
+    constexpr Inc(int &a) : a(a) {}
+    constexpr ~Inc() { ++a; }
+  };
+
+  constexpr int foo() {
+    int a= 0;
+    int b = 12;
+    if (Inc{a}; true) {
+      b += a;
+    }
+    return b;
+  }
+  static_assert(foo() == 13, "");
+}

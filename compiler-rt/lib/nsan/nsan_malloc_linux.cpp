@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception/interception.h"
-#include "nsan/nsan.h"
+#include "nsan.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_platform.h"

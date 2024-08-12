@@ -104,8 +104,6 @@ cl::opt<bool> InferMissingFrames(
         "Infer missing call frames due to compiler tail call elimination."),
     llvm::cl::Optional);
 
-extern cl::opt<bool> LeadingIPOnly;
-
 using namespace llvm;
 using namespace sampleprof;
 
@@ -390,25 +388,18 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
   // Use the maximum count of samples with same line location
   uint32_t Discriminator = getBaseDiscriminator(LeafLoc.Location.Discriminator);
 
-  if (LeadingIPOnly) {
-    // When computing an IP-based profile we take the SUM of counts at the
-    // location instead of applying duplication factors and taking the MAX.
+  // Use duplication factor to compensated for loop unroll/vectorization.
+  // Note that this is only needed when we're taking MAX of the counts at
+  // the location instead of SUM.
+  Count *= getDuplicationFactor(LeafLoc.Location.Discriminator);
+
+  ErrorOr<uint64_t> R =
+      FunctionProfile.findSamplesAt(LeafLoc.Location.LineOffset, Discriminator);
+
+  uint64_t PreviousCount = R ? R.get() : 0;
+  if (PreviousCount <= Count) {
     FunctionProfile.addBodySamples(LeafLoc.Location.LineOffset, Discriminator,
-                                   Count);
-  } else {
-    // Otherwise, use duplication factor to compensate for loop
-    // unroll/vectorization. Note that this is only needed when we're taking
-    // MAX of the counts at the location instead of SUM.
-    Count *= getDuplicationFactor(LeafLoc.Location.Discriminator);
-
-    ErrorOr<uint64_t> R = FunctionProfile.findSamplesAt(
-        LeafLoc.Location.LineOffset, Discriminator);
-
-    uint64_t PreviousCount = R ? R.get() : 0;
-    if (PreviousCount <= Count) {
-      FunctionProfile.addBodySamples(LeafLoc.Location.LineOffset, Discriminator,
-                                     Count - PreviousCount);
-    }
+                                   Count - PreviousCount);
   }
 }
 
