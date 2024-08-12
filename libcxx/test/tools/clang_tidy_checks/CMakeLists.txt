@@ -71,7 +71,7 @@ endif()
 # Note it has not been tested whether version 11 works.
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/test.cpp" "
 #include <version>
-#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 12
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 11
   # error The libstdc++ version is too old.
 #endif
 int main(){}
@@ -83,7 +83,7 @@ try_compile(HAS_NEWER_STANDARD_LIBRARY
 
 if(NOT HAS_NEWER_STANDARD_LIBRARY)
   message(STATUS "Clang-tidy tests are disabled due to using "
-                 "stdlibc++ older than version 12")
+                 "stdlibc++ older than version 11")
   return()
 endif()
 message(STATUS "Clang-tidy tests are enabled.")

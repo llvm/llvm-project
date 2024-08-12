@@ -270,13 +270,42 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) const {
   return LLVM::LLVMPointerType::get(type.getContext());
 }
 
+/// Returns the `llvm.byval` or `llvm.byref` attributes that are present in the
+/// function arguments. Returns an empty container if none of these attributes
+/// are found in any of the arguments.
+static void
+filterByValRefArgAttrs(FunctionOpInterface funcOp,
+                       SmallVectorImpl<std::optional<NamedAttribute>> &result) {
+  assert(result.empty() && "Unexpected non-empty output");
+  result.resize(funcOp.getNumArguments(), std::nullopt);
+  bool foundByValByRefAttrs = false;
+  for (int argIdx : llvm::seq(funcOp.getNumArguments())) {
+    for (NamedAttribute namedAttr : funcOp.getArgAttrs(argIdx)) {
+      if ((namedAttr.getName() == LLVM::LLVMDialect::getByValAttrName() ||
+           namedAttr.getName() == LLVM::LLVMDialect::getByRefAttrName())) {
+        foundByValByRefAttrs = true;
+        result[argIdx] = namedAttr;
+        break;
+      }
+    }
+  }
+
+  if (!foundByValByRefAttrs)
+    result.clear();
+}
+
 // Function types are converted to LLVM Function types by recursively converting
-// argument and result types.  If MLIR Function has zero results, the LLVM
-// Function has one VoidType result.  If MLIR Function has more than one result,
+// argument and result types. If MLIR Function has zero results, the LLVM
+// Function has one VoidType result. If MLIR Function has more than one result,
 // they are into an LLVM StructType in their order of appearance.
-Type LLVMTypeConverter::convertFunctionSignature(
+// If `byValRefNonPtrAttrs` is provided, converted types of `llvm.byval` and
+// `llvm.byref` function arguments which are not LLVM pointers are overridden
+// with LLVM pointers. `llvm.byval` and `llvm.byref` arguments that were already
+// converted to LLVM pointer types are removed from 'byValRefNonPtrAttrs`.
+Type LLVMTypeConverter::convertFunctionSignatureImpl(
     FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
-    LLVMTypeConverter::SignatureConversion &result) const {
+    LLVMTypeConverter::SignatureConversion &result,
+    SmallVectorImpl<std::optional<NamedAttribute>> *byValRefNonPtrAttrs) const {
   // Select the argument converter depending on the calling convention.
   useBarePtrCallConv = useBarePtrCallConv || options.useBarePtrCallConv;
   auto funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter
@@ -286,6 +315,19 @@ Type LLVMTypeConverter::convertFunctionSignature(
     SmallVector<Type, 8> converted;
     if (failed(funcArgConverter(*this, type, converted)))
       return {};
+
+    // Rewrite converted type of `llvm.byval` or `llvm.byref` function
+    // argument that was not converted to an LLVM pointer types.
+    if (byValRefNonPtrAttrs != nullptr && !byValRefNonPtrAttrs->empty() &&
+        converted.size() == 1 && (*byValRefNonPtrAttrs)[idx].has_value()) {
+      // If the argument was already converted to an LLVM pointer type, we stop
+      // tracking it as it doesn't need more processing.
+      if (isa<LLVM::LLVMPointerType>(converted[0]))
+        (*byValRefNonPtrAttrs)[idx] = std::nullopt;
+      else
+        converted[0] = LLVM::LLVMPointerType::get(&getContext());
+    }
+
     result.addInputs(idx, converted);
   }
 
@@ -300,6 +342,27 @@ Type LLVMTypeConverter::convertFunctionSignature(
     return {};
   return LLVM::LLVMFunctionType::get(resultType, result.getConvertedTypes(),
                                      isVariadic);
+}
+
+Type LLVMTypeConverter::convertFunctionSignature(
+    FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
+    LLVMTypeConverter::SignatureConversion &result) const {
+  return convertFunctionSignatureImpl(funcTy, isVariadic, useBarePtrCallConv,
+                                      result,
+                                      /*byValRefNonPtrAttrs=*/nullptr);
+}
+
+Type LLVMTypeConverter::convertFunctionSignature(
+    FunctionOpInterface funcOp, bool isVariadic, bool useBarePtrCallConv,
+    LLVMTypeConverter::SignatureConversion &result,
+    SmallVectorImpl<std::optional<NamedAttribute>> &byValRefNonPtrAttrs) const {
+  // Gather all `llvm.byval` and `llvm.byref` function arguments. Only those
+  // that were not converted to LLVM pointer types will be returned for further
+  // processing.
+  filterByValRefArgAttrs(funcOp, byValRefNonPtrAttrs);
+  auto funcTy = cast<FunctionType>(funcOp.getFunctionType());
+  return convertFunctionSignatureImpl(funcTy, isVariadic, useBarePtrCallConv,
+                                      result, &byValRefNonPtrAttrs);
 }
 
 /// Converts the function type to a C-compatible format, in particular using

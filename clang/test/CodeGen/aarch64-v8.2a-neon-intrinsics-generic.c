@@ -63,7 +63,7 @@ float16x8_t test_vbslq_f16(uint16x8_t a, float16x8_t b, float16x8_t c) {
 // CHECK-NEXT:    [[VZIP1_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
 // CHECK-NEXT:    store <4 x half> [[VZIP1_I]], ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP3]], 0
 // CHECK-NEXT:    store [2 x <4 x half>] [[TMP5]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
@@ -86,7 +86,7 @@ float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:    [[VZIP1_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 // CHECK-NEXT:    store <8 x half> [[VZIP1_I]], ptr [[TMP2]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP3]], 0
 // CHECK-NEXT:    store [2 x <8 x half>] [[TMP5]], ptr [[TMP4]], align 16
 // CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
@@ -109,7 +109,7 @@ float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-NEXT:    [[VUZP1_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 // CHECK-NEXT:    store <4 x half> [[VUZP1_I]], ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP3]], 0
 // CHECK-NEXT:    store [2 x <4 x half>] [[TMP5]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
@@ -132,7 +132,7 @@ float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:    [[VUZP1_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 // CHECK-NEXT:    store <8 x half> [[VUZP1_I]], ptr [[TMP2]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP3]], 0
 // CHECK-NEXT:    store [2 x <8 x half>] [[TMP5]], ptr [[TMP4]], align 16
 // CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
@@ -155,7 +155,7 @@ float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-NEXT:    [[VTRN1_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 // CHECK-NEXT:    store <4 x half> [[VTRN1_I]], ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP3]], 0
 // CHECK-NEXT:    store [2 x <4 x half>] [[TMP5]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
@@ -178,7 +178,7 @@ float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:    [[VTRN1_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 // CHECK-NEXT:    store <8 x half> [[VTRN1_I]], ptr [[TMP2]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP3]], 0
 // CHECK-NEXT:    store [2 x <8 x half>] [[TMP5]], ptr [[TMP4]], align 16
 // CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
