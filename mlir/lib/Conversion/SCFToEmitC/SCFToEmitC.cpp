@@ -167,11 +167,11 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
       rewriter.create<emitc::IfOp>(loc, ifOp.getCondition(), false, false);
 
   Region &loweredThenRegion = loweredIf.getThenRegion();
-  lowerRegion(thenRegion, loweredThenRegion);
+  lowerRegion(resultVariables, rewriter, thenRegion, loweredThenRegion);
 
   if (hasElseBlock) {
     Region &loweredElseRegion = loweredIf.getElseRegion();
-    lowerRegion(elseRegion, loweredElseRegion);
+    lowerRegion(resultVariables, rewriter, elseRegion, loweredElseRegion);
   }
 
   rewriter.replaceOp(ifOp, resultVariables);
@@ -204,11 +204,12 @@ IndexSwitchOpLowering::matchAndRewrite(IndexSwitchOp indexSwitchOp,
   // Lowering all case regions.
   for (auto pair : llvm::zip(indexSwitchOp.getCaseRegions(),
                              loweredSwitch.getCaseRegions())) {
-    lowerRegion(std::get<0>(pair), std::get<1>(pair));
+    lowerRegion(resultVariables, rewriter, std::get<0>(pair),
+                std::get<1>(pair));
   }
 
   // Lowering default region.
-  lowerRegion(indexSwitchOp.getDefaultRegion(),
+  lowerRegion(resultVariables, rewriter, indexSwitchOp.getDefaultRegion(),
               loweredSwitch.getDefaultRegion());
 
   rewriter.replaceOp(indexSwitchOp, resultVariables);
