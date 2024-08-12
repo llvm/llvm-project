@@ -2178,24 +2178,21 @@ struct DSEState {
     return MadeChange;
   }
 
-  enum class ChangeStateEnum : uint8_t {
-    NoChange,
-    DeleteByMemTerm,
-    CompleteDeleteByNonMemTerm,
-    PartiallyDeleteByNonMemTerm,
-  };
   // Try to eliminate dead defs killed by `KillingLocWrapper` and return the
-  // change state.
-  ChangeStateEnum eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper);
+  // change state: whether make any change, and whether make a partial delete
+  // by a non memory-terminator instruction.
+  std::pair<bool, bool>
+  eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper);
 
   // Try to eliminate dead defs killed by `KillingDefWrapper` and return the
-  // change state.
+  // change state: whether make any change.
   bool eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper);
 };
 
-DSEState::ChangeStateEnum
+std::pair<bool, bool>
 DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
-  ChangeStateEnum ChangeState = ChangeStateEnum::NoChange;
+  bool Changed = false;
+  bool Shortened = false;
   unsigned ScanLimit = MemorySSAScanLimit;
   unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
   unsigned PartialLimit = MemorySSAPartialStoreLimit;
@@ -2251,7 +2248,7 @@ DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
                         << *KillingLocWrapper.DefInst << '\n');
       deleteDeadInstruction(DeadLocWrapper.DefInst);
       ++NumFastStores;
-      ChangeState = ChangeStateEnum::DeleteByMemTerm;
+      Changed = true;
     } else {
       // Check if DeadI overwrites KillingI.
       int64_t KillingOffset = 0;
@@ -2283,7 +2280,8 @@ DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
             // Update stored value of earlier store to merged constant.
             DeadSI->setOperand(0, Merged);
             ++NumModifiedStores;
-            ChangeState = ChangeStateEnum::PartiallyDeleteByNonMemTerm;
+            Changed = true;
+            Shortened = true;
 
             // Remove killing store and remove any outstanding overlap
             // intervals for the updated store.
@@ -2301,11 +2299,11 @@ DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
                           << "\n  KILLER: " << *DefInst << '\n');
         deleteDeadInstruction(DeadLocWrapper.DefInst);
         ++NumFastStores;
-        ChangeState = ChangeStateEnum::CompleteDeleteByNonMemTerm;
+        Changed = true;
       }
     }
   }
-  return ChangeState;
+  return {Changed, Shortened};
 }
 
 bool DSEState::eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper) {
@@ -2318,12 +2316,11 @@ bool DSEState::eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper) {
                     << " (" << *DefInst << ")\n");
 
   auto &KillingLocWrapper = *KillingDefWrapper.DefinedLocation;
-  ChangeStateEnum ChangeState = eliminateDeadDefs(KillingLocWrapper);
-  bool Shortend = ChangeState == ChangeStateEnum::PartiallyDeleteByNonMemTerm;
+  auto [Changed, Shortened] = eliminateDeadDefs(KillingLocWrapper);
 
   // Check if the store is a no-op.
-  if (!Shortend && storeIsNoop(KillingLocWrapper.MemDef,
-                               KillingLocWrapper.UnderlyingObject)) {
+  if (!Shortened && storeIsNoop(KillingLocWrapper.MemDef,
+                                KillingLocWrapper.UnderlyingObject)) {
     LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *DefInst
                       << '\n');
     deleteDeadInstruction(KillingLocWrapper.DefInst);
@@ -2331,14 +2328,14 @@ bool DSEState::eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper) {
     return true;
   }
   // Can we form a calloc from a memset/malloc pair?
-  if (!Shortend && tryFoldIntoCalloc(KillingLocWrapper.MemDef,
-                                     KillingLocWrapper.UnderlyingObject)) {
+  if (!Shortened && tryFoldIntoCalloc(KillingLocWrapper.MemDef,
+                                      KillingLocWrapper.UnderlyingObject)) {
     LLVM_DEBUG(dbgs() << "DSE: Remove memset after forming calloc:\n"
                       << "  DEAD: " << *KillingLocWrapper.DefInst << '\n');
     deleteDeadInstruction(KillingLocWrapper.DefInst);
     return true;
   }
-  return ChangeState != ChangeStateEnum::NoChange;
+  return Changed;
 }
 
 static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
