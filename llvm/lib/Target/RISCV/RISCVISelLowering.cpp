@@ -268,10 +268,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LOAD, MVT::i32, Custom);
     setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                        MVT::i32, Custom);
-    setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
-                       MVT::i32, Custom);
+    setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
     if (!Subtarget.hasStdExtZbb())
-      setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
+      setOperationAction(
+          {ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT}, MVT::i32,
+          Custom);
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
@@ -12172,20 +12173,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::UADDSAT:
   case ISD::USUBSAT: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
-    if (Subtarget.hasStdExtZbb()) {
-      // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
-      // sign extend allows overflow of the lower 32 bits to be detected on
-      // the promoted size.
-      SDValue LHS =
-          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
-      SDValue RHS =
-          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue Res = DAG.getNode(N->getOpcode(), DL, MVT::i64, LHS, RHS);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      return;
-    }
-
+           !Subtarget.hasStdExtZbb() && "Unexpected custom legalisation");
     // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
     // promotion for UADDO/USUBO.
     Results.push_back(expandAddSubSat(N, DAG));
@@ -21364,8 +21352,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
-bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                                           LoadInst *LI) const {
+bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
+    IntrinsicInst *DI, LoadInst *LI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
@@ -21414,8 +21403,9 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
   return true;
 }
 
-bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                                          StoreInst *SI) const {
+bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
+    IntrinsicInst *II, StoreInst *SI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   assert(SI->isSimple());
   IRBuilder<> Builder(SI);
 

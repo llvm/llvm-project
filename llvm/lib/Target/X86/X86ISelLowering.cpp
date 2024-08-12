@@ -37130,12 +37130,9 @@ static void computeKnownBitsForPSADBW(SDValue LHS, SDValue RHS,
   Known2 = DAG.computeKnownBits(LHS, DemandedSrcElts, Depth + 1);
   Known = KnownBits::abdu(Known, Known2).zext(16);
   // Known = (((D0 + D1) + (D2 + D3)) + ((D4 + D5) + (D6 + D7)))
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
-                                      Known, Known);
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
-                                      Known, Known);
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
-                                      Known, Known);
+  Known = KnownBits::add(Known, Known, /*NSW=*/true, /*NUW=*/true);
+  Known = KnownBits::add(Known, Known, /*NSW=*/true, /*NUW=*/true);
+  Known = KnownBits::add(Known, Known, /*NSW=*/true, /*NUW=*/true);
   Known = Known.zext(64);
 }
 
@@ -37158,8 +37155,7 @@ static void computeKnownBitsForPMADDWD(SDValue LHS, SDValue RHS,
   KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
   KnownBits Lo = KnownBits::mul(LHSLo.sext(32), RHSLo.sext(32));
   KnownBits Hi = KnownBits::mul(LHSHi.sext(32), RHSHi.sext(32));
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
-                                      /*NUW=*/false, Lo, Hi);
+  Known = KnownBits::add(Lo, Hi, /*NSW=*/false, /*NUW=*/false);
 }
 
 static void computeKnownBitsForPMADDUBSW(SDValue LHS, SDValue RHS,
@@ -42520,6 +42516,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
       // Zero upper elements.
     case X86ISD::VZEXT_MOVL:
+      // Variable blend.
+    case X86ISD::BLENDV:
       // Target unary shuffles by immediate:
     case X86ISD::PSHUFD:
     case X86ISD::PSHUFLW:
@@ -57164,8 +57162,10 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(X86ISD::VFPEXT, DL, VT, InVec.getOperand(0));
       }
     }
-    // v4i32 CVTPS2DQ(v4f32).
-    if (InOpcode == ISD::FP_TO_SINT && VT == MVT::v4i32) {
+    // v4i32 CVTPS2DQ(v4f32) / CVTPS2UDQ(v4f32).
+    if ((InOpcode == ISD::FP_TO_SINT ||
+         (InOpcode == ISD::FP_TO_UINT && Subtarget.hasVLX())) &&
+        VT == MVT::v4i32) {
       SDValue Src = InVec.getOperand(0);
       if (Src.getValueType().getScalarType() == MVT::f32)
         return DAG.getNode(InOpcode, DL, VT,
