@@ -496,7 +496,7 @@ writeFileDefinition(const Location &L,
                     std::optional<StringRef> RepositoryUrl = std::nullopt) {
   if (!L.IsFileInRootDir && !RepositoryUrl)
     return std::make_unique<TagNode>(
-        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
+        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.StartLineNumber) +
                             " of file " + L.Filename);
   SmallString<128> FileURL(RepositoryUrl.value_or(""));
   llvm::sys::path::append(
@@ -513,14 +513,14 @@ writeFileDefinition(const Location &L,
   auto Node = std::make_unique<TagNode>(HTMLTag::TAG_P);
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
   auto LocNumberNode =
-      std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
+      std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.StartLineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
   // FIXME: we probably should have a configuration setting for line number
   // rendering in the HTML. For example, GitHub uses #L22, while googlesource
   // uses #22 for line numbers.
   LocNumberNode->Attributes.emplace_back(
-      "href", (FileURL + "#" + std::to_string(L.LineNumber)).str());
+      "href", (FileURL + "#" + std::to_string(L.StartLineNumber)).str());
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
@@ -726,9 +726,9 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
   std::string EnumType = I.Scoped ? "enum class " : "enum ";
   // Determine if enum members have comments attached
-  bool HasComments = std::any_of(
-      I.Members.begin(), I.Members.end(),
-      [](const EnumValueInfo &M) { return !M.Description.empty(); });
+  bool HasComments =
+      std::any_of(I.Members.begin(), I.Members.end(),
+                  [](const EnumValueInfo &M) { return !M.Description.empty(); });
   std::unique_ptr<TagNode> Table =
       std::make_unique<TagNode>(HTMLTag::TAG_TABLE);
   std::unique_ptr<TagNode> THead =
