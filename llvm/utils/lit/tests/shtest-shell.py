@@ -28,6 +28,12 @@
 
 # CHECK: PASS: shtest-shell :: continuations.txt
 
+# CHECK: FAIL: shtest-shell :: curly-brace.txt
+# CHECK: # executed command: '{' echo bar
+# CHECK-NEXT: # .---command stderr------------
+# CHECK-NEXT: # | '{': command not found
+# CHECK: error: command failed with exit status: 127
+
 # CHECK: PASS: shtest-shell :: dev-null.txt
 
 #      CHECK: FAIL: shtest-shell :: diff-b.txt
@@ -635,4 +641,4 @@
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
 # CHECK: Unresolved Tests (1)
-# CHECK: Failed Tests (36)
+# CHECK: Failed Tests (37)

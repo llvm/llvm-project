@@ -1,0 +1,12 @@
+## Test curly braces used in grouping commands.
+
+## Test one command inside curly brace.
+# RUN: { echo bar; } | FileCheck --check-prefix=ONE-CMD %s
+
+# ONE-CMD: bar
+
+## Test two commands inside curly brace.
+# RUN: { echo foo; echo bar; } | FileCheck --check-prefix=TWO-CMDS %s
+
+# TWO-CMDS: foo
+# TWO-CMDS: bar
