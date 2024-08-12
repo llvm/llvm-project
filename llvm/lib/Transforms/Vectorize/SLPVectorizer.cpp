@@ -1253,7 +1253,7 @@ public:
     NonScheduledFirst.clear();
     EntryToLastInstruction.clear();
     ExternalUses.clear();
-    ExternalUsesAsGEPs.clear();
+    ExternalUsesAsOriginalScalar.clear();
     for (auto &Iter : BlocksSchedules) {
       BlockScheduling *BS = Iter.second.get();
       BS->clear();
@@ -3468,7 +3468,7 @@ private:
 
   /// A list of GEPs which can be reaplced by scalar GEPs instead of
   /// extractelement instructions.
-  SmallPtrSet<Value *, 4> ExternalUsesAsGEPs;
+  SmallPtrSet<Value *, 4> ExternalUsesAsOriginalScalar;
 
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
@@ -10663,6 +10663,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseSet<std::pair<const TreeEntry *, Type *>> VectorCasts;
   std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
+  DenseMap<const TreeEntry *, DenseSet<Value *>> ExtractsCount;
   for (ExternalUser &EU : ExternalUses) {
     // We only add extract cost once for the same scalar.
     if (!isa_and_nonnull<InsertElementInst>(EU.User) &&
@@ -10771,52 +10772,90 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         }
       }
     }
-    // Leave the GEPs as is, they are free in most cases and better to keep them
-    // as GEPs.
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(EU.Scalar)) {
-      if (!ValueToExtUses) {
-        ValueToExtUses.emplace();
-        for_each(enumerate(ExternalUses), [&](const auto &P) {
-          ValueToExtUses->try_emplace(P.value().Scalar, P.index());
-        });
-      }
-      // Can use original GEP, if no operands vectorized or they are marked as
-      // externally used already.
-      bool CanBeUsedAsGEP = all_of(GEP->operands(), [&](Value *V) {
-        if (!getTreeEntry(V))
-          return true;
-        auto It = ValueToExtUses->find(V);
-        if (It != ValueToExtUses->end()) {
-          // Replace all uses to avoid compiler crash.
-          ExternalUses[It->second].User = nullptr;
-          return true;
-        }
-        return false;
-      });
-      if (CanBeUsedAsGEP) {
-        ExtractCost += TTI->getInstructionCost(GEP, CostKind);
-        ExternalUsesAsGEPs.insert(EU.Scalar);
-        continue;
-      }
-    }
 
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     // If we plan to rewrite the tree in a smaller type, we will need to sign
     // extend the extracted value back to the original type. Here, we account
     // for the extract and the added cost of the sign extend if needed.
+    InstructionCost ExtraCost = TTI::TCC_Free;
     auto *VecTy = getWidenedType(EU.Scalar->getType(), BundleWidth);
-    auto It = MinBWs.find(getTreeEntry(EU.Scalar));
+    const TreeEntry *Entry = getTreeEntry(EU.Scalar);
+    auto It = MinBWs.find(Entry);
     if (It != MinBWs.end()) {
       auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
       unsigned Extend =
           It->second.second ? Instruction::SExt : Instruction::ZExt;
       VecTy = getWidenedType(MinTy, BundleWidth);
-      ExtractCost += TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
-                                                   VecTy, EU.Lane);
+      ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
+                                                VecTy, EU.Lane);
     } else {
-      ExtractCost += TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                             CostKind, EU.Lane);
+      ExtraCost = TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                          CostKind, EU.Lane);
     }
+    // Leave the scalar instructions as is if they are cheaper than extracts.
+    if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
+        Entry->getOpcode() == Instruction::Load) {
+      if (!ValueToExtUses) {
+        ValueToExtUses.emplace();
+        for_each(enumerate(ExternalUses), [&](const auto &P) {
+          // Ignore phis in loops.
+          if (auto *Phi = dyn_cast_if_present<PHINode>(P.value().User)) {
+            auto *I = cast<Instruction>(P.value().Scalar);
+            const Loop *L = LI->getLoopFor(Phi->getParent());
+            if (L && (Phi->getParent() == I->getParent() ||
+                      L == LI->getLoopFor(I->getParent())))
+              return;
+          }
+
+          ValueToExtUses->try_emplace(P.value().Scalar, P.index());
+        });
+      }
+      // Can use original instruction, if no operands vectorized or they are
+      // marked as externally used already.
+      auto *Inst = cast<Instruction>(EU.Scalar);
+      bool CanBeUsedAsScalar = all_of(Inst->operands(), [&](Value *V) {
+        if (!getTreeEntry(V)) {
+          // Some extractelements might be not vectorized, but
+          // transformed into shuffle and removed from the function,
+          // consider it here.
+          if (auto *EE = dyn_cast<ExtractElementInst>(V))
+            return !EE->hasOneUse() || !MustGather.contains(EE);
+          return true;
+        }
+        return ValueToExtUses->contains(V);
+      });
+      if (CanBeUsedAsScalar) {
+        InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
+        bool KeepScalar = ScalarCost <= ExtraCost;
+        if (KeepScalar && ScalarCost != TTI::TCC_Free &&
+            ExtraCost - ScalarCost <= TTI::TCC_Basic) {
+          unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
+            return ValueToExtUses->contains(V);
+          });
+          auto It = ExtractsCount.find(Entry);
+          if (It != ExtractsCount.end())
+            ScalarUsesCount -= It->getSecond().size();
+          // Keep original scalar if number of externally used instructions in
+          // the same entry is not power of 2. It may help to do some extra
+          // vectorization for now.
+          KeepScalar = ScalarUsesCount <= 1 || !isPowerOf2_32(ScalarUsesCount);
+        }
+        if (KeepScalar) {
+          ExternalUsesAsOriginalScalar.insert(EU.Scalar);
+          for_each(Inst->operands(), [&](Value *V) {
+            auto It = ValueToExtUses->find(V);
+            if (It != ValueToExtUses->end()) {
+              // Replace all uses to avoid compiler crash.
+              ExternalUses[It->second].User = nullptr;
+            }
+          });
+          ExtraCost = ScalarCost;
+          ExtractsCount[Entry].insert(Inst);
+        }
+      }
+    }
+
+    ExtractCost += ExtraCost;
   }
   // Add reduced value cost, if resized.
   if (!VectorizedVals.empty()) {
@@ -14067,8 +14106,7 @@ Value *BoUpSLP::vectorizeTree(
   DenseMap<Value *, InsertElementInst *> VectorToInsertElement;
   // Maps extract Scalar to the corresponding extractelement instruction in the
   // basic block. Only one extractelement per block should be emitted.
-  DenseMap<Value *,
-           DenseMap<BasicBlock *, std::pair<Instruction *, Instruction *>>>
+  DenseMap<Value *, DenseMap<BasicBlock *, std::pair<Value *, Value *>>>
       ScalarToEEs;
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
@@ -14098,30 +14136,41 @@ Value *BoUpSLP::vectorizeTree(
       if (Scalar->getType() != Vec->getType()) {
         Value *Ex = nullptr;
         Value *ExV = nullptr;
-        auto *GEP = dyn_cast<GetElementPtrInst>(Scalar);
-        bool ReplaceGEP = GEP && ExternalUsesAsGEPs.contains(GEP);
+        auto *Inst = dyn_cast<Instruction>(Scalar);
+        bool ReplaceInst = Inst && ExternalUsesAsOriginalScalar.contains(Inst);
         auto It = ScalarToEEs.find(Scalar);
         if (It != ScalarToEEs.end()) {
           // No need to emit many extracts, just move the only one in the
           // current block.
-          auto EEIt = It->second.find(Builder.GetInsertBlock());
+          auto EEIt = It->second.find(ReplaceInst ? Inst->getParent()
+                                                  : Builder.GetInsertBlock());
           if (EEIt != It->second.end()) {
-            Instruction *I = EEIt->second.first;
-            if (Builder.GetInsertPoint() != Builder.GetInsertBlock()->end() &&
+            Value *PrevV = EEIt->second.first;
+            if (auto *I = dyn_cast<Instruction>(PrevV);
+                I && !ReplaceInst &&
+                Builder.GetInsertPoint() != Builder.GetInsertBlock()->end() &&
                 Builder.GetInsertPoint()->comesBefore(I)) {
               I->moveBefore(*Builder.GetInsertPoint()->getParent(),
                             Builder.GetInsertPoint());
-              if (auto *CI = EEIt->second.second)
+              if (auto *CI = dyn_cast<Instruction>(EEIt->second.second))
                 CI->moveAfter(I);
             }
-            Ex = I;
+            Ex = PrevV;
             ExV = EEIt->second.second ? EEIt->second.second : Ex;
           }
         }
         if (!Ex) {
           // "Reuse" the existing extract to improve final codegen.
-          if (auto *ES = dyn_cast<ExtractElementInst>(Scalar);
-              ES && isa<Instruction>(Vec)) {
+          if (ReplaceInst) {
+            // Leave the instruction as is, if it cheaper extracts and all
+            // operands are scalar.
+            auto *CloneInst = Inst->clone();
+            CloneInst->insertBefore(Inst);
+            if (Inst->hasName())
+              CloneInst->takeName(Inst);
+            Ex = CloneInst;
+          } else if (auto *ES = dyn_cast<ExtractElementInst>(Scalar);
+                     ES && isa<Instruction>(Vec)) {
             Value *V = ES->getVectorOperand();
             auto *IVec = cast<Instruction>(Vec);
             if (const TreeEntry *ETE = getTreeEntry(V))
@@ -14132,18 +14181,6 @@ Value *BoUpSLP::vectorizeTree(
               Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
             else
               Ex = Builder.CreateExtractElement(Vec, Lane);
-          } else if (ReplaceGEP) {
-            // Leave the GEPs as is, they are free in most cases and better to
-            // keep them as GEPs.
-            auto *CloneGEP = GEP->clone();
-            if (isa<Instruction>(Vec))
-              CloneGEP->insertBefore(*Builder.GetInsertBlock(),
-                                     Builder.GetInsertPoint());
-            else
-              CloneGEP->insertBefore(GEP);
-            if (GEP->hasName())
-              CloneGEP->takeName(GEP);
-            Ex = CloneGEP;
           } else if (auto *VecTy =
                          dyn_cast<FixedVectorType>(Scalar->getType())) {
             assert(SLPReVec && "FixedVectorType is not expected.");
@@ -14164,14 +14201,15 @@ Value *BoUpSLP::vectorizeTree(
           if (Scalar->getType() != Ex->getType())
             ExV = Builder.CreateIntCast(Ex, Scalar->getType(),
                                         MinBWs.find(E)->second.second);
-          if (auto *I = dyn_cast<Instruction>(Ex))
-            ScalarToEEs[Scalar].try_emplace(
-                Builder.GetInsertBlock(),
-                std::make_pair(I, cast<Instruction>(ExV)));
+          auto *I = dyn_cast<Instruction>(Ex);
+          ScalarToEEs[Scalar].try_emplace(I ? I->getParent()
+                                            : &F->getEntryBlock(),
+                                          std::make_pair(Ex, ExV));
         }
         // The then branch of the previous if may produce constants, since 0
         // operand might be a constant.
-        if (auto *ExI = dyn_cast<Instruction>(Ex)) {
+        if (auto *ExI = dyn_cast<Instruction>(Ex);
+            ExI && !isa<PHINode>(ExI) && !mayHaveNonDefUseDependency(*ExI)) {
           GatherShuffleExtractSeq.insert(ExI);
           CSEBlocks.insert(ExI->getParent());
         }
@@ -14192,9 +14230,10 @@ Value *BoUpSLP::vectorizeTree(
         continue;
       assert((ExternallyUsedValues.count(Scalar) ||
               Scalar->hasNUsesOrMore(UsesLimit) ||
+              ExternalUsesAsOriginalScalar.contains(Scalar) ||
               any_of(Scalar->users(),
                      [&](llvm::User *U) {
-                       if (ExternalUsesAsGEPs.contains(U))
+                       if (ExternalUsesAsOriginalScalar.contains(U))
                          return true;
                        TreeEntry *UseEntry = getTreeEntry(U);
                        return UseEntry &&
