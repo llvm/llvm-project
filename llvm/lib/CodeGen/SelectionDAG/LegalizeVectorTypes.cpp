@@ -2425,7 +2425,10 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   bool HasCustomLowering = false;
   EVT CheckVT = LoVT;
   while (CheckVT.getVectorMinNumElements() > 1) {
-    if (TLI.isOperationCustom(ISD::VECTOR_COMPRESS, CheckVT)) {
+    // TLI.isOperationLegalOrCustom requires a legal type, but we could have a
+    // custom lowering for illegal types. So we do the checks separately.
+    if (TLI.isOperationLegal(ISD::VECTOR_COMPRESS, CheckVT) ||
+        TLI.isOperationCustom(ISD::VECTOR_COMPRESS, CheckVT)) {
       HasCustomLowering = true;
       break;
     }
