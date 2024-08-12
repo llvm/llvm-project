@@ -1814,6 +1814,20 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
   return success();
 }
 
+LogicalResult ModuleTranslation::createIdentMetadata() {
+  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
+          LLVMDialect::getIdentAttrName())) {
+    StringRef ident = attr;
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    llvm::NamedMDNode *namedMd =
+        llvmModule->getOrInsertNamedMetadata(LLVMDialect::getIdentAttrName());
+    llvm::MDNode *md = llvm::MDNode::get(ctx, llvm::MDString::get(ctx, ident));
+    namedMd->addOperand(md);
+  }
+
+  return success();
+}
+
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -1964,6 +1978,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertGlobals()))
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
+    return nullptr;
+  if (failed(translator.createIdentMetadata()))
     return nullptr;
 
   // Convert other top-level operations if possible.
