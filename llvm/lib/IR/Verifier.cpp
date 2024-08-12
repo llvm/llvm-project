@@ -1049,9 +1049,7 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   Check(isa<PointerType>(Resolver->getFunctionType()->getReturnType()),
         "IFunc resolver must return a pointer", &GI);
 
-  const Type *ResolverFuncTy =
-      GlobalIFunc::getResolverFunctionType(GI.getValueType());
-  Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
+  Check(ResolverTy == PointerType::get(Context, GI.getAddressSpace()),
         "IFunc resolver has incorrect type", &GI);
 }
 
