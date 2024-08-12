@@ -356,3 +356,14 @@ void test_template_auto_member_func_ptr() {
   AutoConstMemberFuncPtrT(&StructD::test);
   // CHECK: call {{.*}} @"??$AutoConstMemberFuncPtrT@P8StructD@@EAA?BHXZ@@YAP8StructD@@EAA?B_PXZP80@EAA?BHXZ@Z"
 }
+
+template<class T>
+auto * __attribute__((address_space(1))) * AutoPtrAddressSpaceT() {
+  T * __attribute__((address_space(1))) * p = nullptr;
+  return p;
+}
+
+void test_template_auto_address_space_ptr() {
+  AutoPtrAddressSpaceT<int>();
+  // CHECK: call {{.*}} @"??$AutoPtrAddressSpaceT@H@@YA?A?<auto>@@XZ"
+}
