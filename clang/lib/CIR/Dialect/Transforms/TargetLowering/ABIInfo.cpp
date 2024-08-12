@@ -27,6 +27,8 @@ CIRCXXABI &ABIInfo::getCXXABI() const { return LT.getCXXABI(); }
 
 CIRLowerContext &ABIInfo::getContext() const { return LT.getContext(); }
 
+const clang::TargetInfo &ABIInfo::getTarget() const { return LT.getTarget(); }
+
 const ::cir::CIRDataLayout &ABIInfo::getDataLayout() const {
   return LT.getDataLayout();
 }

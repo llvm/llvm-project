@@ -41,6 +41,8 @@ public:
 
   CIRLowerContext &getContext() const;
 
+  const clang::TargetInfo &getTarget() const;
+
   const ::cir::CIRDataLayout &getDataLayout() const;
 
   virtual void computeInfo(LowerFunctionInfo &FI) const = 0;

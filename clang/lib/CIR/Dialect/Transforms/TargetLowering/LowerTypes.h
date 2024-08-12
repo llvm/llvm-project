@@ -60,6 +60,7 @@ public:
   LowerModule &getLM() const { return LM; }
   CIRCXXABI &getCXXABI() const { return CXXABI; }
   CIRLowerContext &getContext() { return context; }
+  const clang::TargetInfo &getTarget() const { return Target; }
   MLIRContext *getMLIRContext() { return mlirContext; }
 
   /// Convert clang calling convention to LLVM callilng convention.

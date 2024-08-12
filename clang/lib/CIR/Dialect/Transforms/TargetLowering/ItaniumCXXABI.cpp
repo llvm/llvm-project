@@ -43,6 +43,14 @@ public:
         UseARMGuardVarABI(UseARMGuardVarABI), Use32BitVTableOffsetABI(false) {}
 
   bool classifyReturnType(LowerFunctionInfo &FI) const override;
+
+  // FIXME(cir): This expects a CXXRecordDecl! Not any record type.
+  RecordArgABI getRecordArgABI(const StructType RD) const override {
+    assert(!::cir::MissingFeatures::recordDeclIsCXXDecl());
+    // If C++ prohibits us from making a copy, pass by address.
+    assert(!::cir::MissingFeatures::recordDeclCanPassInRegisters());
+    return RAA_Default;
+  }
 };
 
 } // namespace

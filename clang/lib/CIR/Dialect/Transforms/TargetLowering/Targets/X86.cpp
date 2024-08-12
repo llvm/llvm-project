@@ -20,6 +20,19 @@ namespace cir {
 
 namespace {
 
+/// \p returns the size in bits of the largest (native) vector for \p AVXLevel.
+unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
+  switch (AVXLevel) {
+  case X86AVXABILevel::AVX512:
+    return 512;
+  case X86AVXABILevel::AVX:
+    return 256;
+  case X86AVXABILevel::None:
+    return 128;
+  }
+  llvm_unreachable("Unknown AVXLevel");
+}
+
 /// Return true if the specified [start,end) bit range is known to either be
 /// off the end of the specified type or being in alignment padding.  The user
 /// type specified is known to be at most 128 bits in size, and have passed
@@ -36,7 +49,44 @@ static bool BitsContainNoUserData(Type Ty, unsigned StartBit, unsigned EndBit,
   if (TySize <= StartBit)
     return true;
 
-  llvm_unreachable("NYI");
+  if (auto arrTy = llvm::dyn_cast<ArrayType>(Ty)) {
+    llvm_unreachable("NYI");
+  }
+
+  if (auto structTy = llvm::dyn_cast<StructType>(Ty)) {
+    const CIRRecordLayout &Layout = Context.getCIRRecordLayout(Ty);
+
+    // If this is a C++ record, check the bases first.
+    if (::cir::MissingFeatures::isCXXRecordDecl() ||
+        ::cir::MissingFeatures::getCXXRecordBases()) {
+      llvm_unreachable("NYI");
+    }
+
+    // Verify that no field has data that overlaps the region of interest. Yes
+    // this could be sped up a lot by being smarter about queried fields,
+    // however we're only looking at structs up to 16 bytes, so we don't care
+    // much.
+    unsigned idx = 0;
+    for (auto type : structTy.getMembers()) {
+      unsigned FieldOffset = (unsigned)Layout.getFieldOffset(idx);
+
+      // If we found a field after the region we care about, then we're done.
+      if (FieldOffset >= EndBit)
+        break;
+
+      unsigned FieldStart = FieldOffset < StartBit ? StartBit - FieldOffset : 0;
+      if (!BitsContainNoUserData(type, FieldStart, EndBit - FieldOffset,
+                                 Context))
+        return false;
+
+      ++idx;
+    }
+
+    // If nothing in this record overlapped the area of interest, we're good.
+    return true;
+  }
+
+  return false;
 }
 
 /// Return a floating point type at the specified offset.
@@ -52,6 +102,33 @@ Type getFPTypeAtOffset(Type IRType, unsigned IROffset,
 
 class X86_64ABIInfo : public ABIInfo {
   using Class = ::cir::X86ArgClass;
+
+  /// Implement the X86_64 ABI merging algorithm.
+  ///
+  /// Merge an accumulating classification \arg Accum with a field
+  /// classification \arg Field.
+  ///
+  /// \param Accum - The accumulating classification. This should
+  /// always be either NoClass or the result of a previous merge
+  /// call. In addition, this should never be Memory (the caller
+  /// should just return Memory for the aggregate).
+  static Class merge(Class Accum, Class Field);
+
+  /// Implement the X86_64 ABI post merging algorithm.
+  ///
+  /// Post merger cleanup, reduces a malformed Hi and Lo pair to
+  /// final MEMORY or SSE classes when necessary.
+  ///
+  /// \param AggregateSize - The size of the current aggregate in
+  /// the classification process.
+  ///
+  /// \param Lo - The classification for the parts of the type
+  /// residing in the low word of the containing object.
+  ///
+  /// \param Hi - The classification for the parts of the type
+  /// residing in the higher words of the containing object.
+  ///
+  void postMerge(unsigned AggregateSize, Class &Lo, Class &Hi) const;
 
   /// Determine the x86_64 register classes in which the given type T should be
   /// passed.
@@ -88,8 +165,20 @@ class X86_64ABIInfo : public ABIInfo {
   Type GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset, Type SourceTy,
                               unsigned SourceOffset) const;
 
+  /// The 0.98 ABI revision clarified a lot of ambiguities,
+  /// unfortunately in ways that were not always consistent with
+  /// certain previous compilers.  In particular, platforms which
+  /// required strict binary compatibility with older versions of GCC
+  /// may need to exempt themselves.
+  bool honorsRevision0_98() const {
+    return !getTarget().getTriple().isOSDarwin();
+  }
+
+  X86AVXABILevel AVXLevel;
+
 public:
-  X86_64ABIInfo(LowerTypes &CGT, X86AVXABILevel AVXLevel) : ABIInfo(CGT) {}
+  X86_64ABIInfo(LowerTypes &CGT, X86AVXABILevel AVXLevel)
+      : ABIInfo(CGT), AVXLevel(AVXLevel) {}
 
   ::cir::ABIArgInfo classifyReturnType(Type RetTy) const;
 
@@ -160,6 +249,92 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
 
     } else if (isa<BoolType>(Ty)) {
       Current = Class::Integer;
+    } else if (const auto RT = dyn_cast<StructType>(Ty)) {
+      uint64_t Size = getContext().getTypeSize(Ty);
+
+      // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
+      // than eight eightbytes, ..., it has class MEMORY.
+      if (Size > 512)
+        llvm_unreachable("NYI");
+
+      // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
+      // copy constructor or a non-trivial destructor, it is passed by invisible
+      // reference.
+      if (getRecordArgABI(RT, getCXXABI()))
+        llvm_unreachable("NYI");
+
+      // Assume variable sized types are passed in memory.
+      if (::cir::MissingFeatures::recordDeclHasFlexibleArrayMember())
+        llvm_unreachable("NYI");
+
+      const auto &Layout = getContext().getCIRRecordLayout(Ty);
+
+      // Reset Lo class, this will be recomputed.
+      Current = Class::NoClass;
+
+      // If this is a C++ record, classify the bases first.
+      assert(!::cir::MissingFeatures::isCXXRecordDecl() &&
+             !::cir::MissingFeatures::getCXXRecordBases());
+
+      // Classify the fields one at a time, merging the results.
+      bool UseClang11Compat = getContext().getLangOpts().getClangABICompat() <=
+                                  clang::LangOptions::ClangABI::Ver11 ||
+                              getContext().getTargetInfo().getTriple().isPS();
+      bool IsUnion = RT.isUnion() && !UseClang11Compat;
+
+      // FIXME(cir): An interface to handle field declaration might be needed.
+      assert(!::cir::MissingFeatures::fieldDeclAbstraction());
+      for (auto [idx, FT] : llvm::enumerate(RT.getMembers())) {
+        uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
+        assert(!::cir::MissingFeatures::fieldDeclIsBitfield());
+        bool BitField = false;
+
+        // Ignore padding bit-fields.
+        if (BitField && !::cir::MissingFeatures::fieldDeclisUnnamedBitField())
+          llvm_unreachable("NYI");
+
+        // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
+        // eight eightbytes, or it contains unaligned fields, it has class
+        // MEMORY.
+        //
+        // The only case a 256-bit or a 512-bit wide vector could be used is
+        // when the struct contains a single 256-bit or 512-bit element. Early
+        // check and fallback to memory.
+        //
+        // FIXME: Extended the Lo and Hi logic properly to work for size wider
+        // than 128.
+        if (Size > 128 && ((!IsUnion && Size != getContext().getTypeSize(FT)) ||
+                           Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
+          llvm_unreachable("NYI");
+        }
+        // Note, skip this test for bit-fields, see below.
+        if (!BitField && Offset % getContext().getTypeAlign(RT)) {
+          llvm_unreachable("NYI");
+        }
+
+        // Classify this field.
+        //
+        // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate
+        // exceeds a single eightbyte, each is classified
+        // separately. Each eightbyte gets initialized to class
+        // NO_CLASS.
+        Class FieldLo, FieldHi;
+
+        // Bit-fields require special handling, they do not force the
+        // structure to be passed in memory even if unaligned, and
+        // therefore they can straddle an eightbyte.
+        if (BitField) {
+          llvm_unreachable("NYI");
+        } else {
+          classify(FT, Offset, FieldLo, FieldHi, isNamedArg);
+        }
+        Lo = merge(Lo, FieldLo);
+        Hi = merge(Hi, FieldHi);
+        if (Lo == Class::Memory || Hi == Class::Memory)
+          break;
+      }
+
+      postMerge(Size, Lo, Hi);
     } else {
       llvm::outs() << "Missing X86 classification for type " << Ty << "\n";
       llvm_unreachable("NYI");
@@ -245,7 +420,15 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
   }
 
   if (auto RT = dyn_cast<StructType>(DestTy)) {
-    llvm_unreachable("NYI");
+    // If this is a struct, recurse into the field at the specified offset.
+    const ::cir::StructLayout *SL = getDataLayout().getStructLayout(RT);
+    if (IROffset < SL->getSizeInBytes()) {
+      unsigned FieldIdx = SL->getElementContainingOffset(IROffset);
+      IROffset -= SL->getElementOffset(FieldIdx);
+
+      return GetINTEGERTypeAtOffset(RT.getMembers()[FieldIdx], IROffset,
+                                    SourceTy, SourceOffset);
+    }
   }
 
   // Okay, we don't have any better idea of what to pass, so we pass this in
@@ -328,7 +511,7 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
   if (HighPart)
     llvm_unreachable("NYI");
 
-  return ABIArgInfo::getDirect(RetTy);
+  return ABIArgInfo::getDirect(resType);
 }
 
 ABIArgInfo X86_64ABIInfo::classifyArgumentType(Type Ty, unsigned freeIntRegs,
@@ -461,6 +644,80 @@ void X86_64ABIInfo::computeInfo(LowerFunctionInfo &FI) const {
       llvm_unreachable("Indirect results are NYI");
     }
   }
+}
+
+X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
+  // AMD64-ABI 3.2.3p2: Rule 4. Each field of an object is
+  // classified recursively so that always two fields are
+  // considered. The resulting class is calculated according to
+  // the classes of the fields in the eightbyte:
+  //
+  // (a) If both classes are equal, this is the resulting class.
+  //
+  // (b) If one of the classes is NO_CLASS, the resulting class is
+  // the other class.
+  //
+  // (c) If one of the classes is MEMORY, the result is the MEMORY
+  // class.
+  //
+  // (d) If one of the classes is INTEGER, the result is the
+  // INTEGER.
+  //
+  // (e) If one of the classes is X87, X87UP, COMPLEX_X87 class,
+  // MEMORY is used as class.
+  //
+  // (f) Otherwise class SSE is used.
+
+  // Accum should never be memory (we should have returned) or
+  // ComplexX87 (because this cannot be passed in a structure).
+  assert((Accum != Class::Memory && Accum != Class::ComplexX87) &&
+         "Invalid accumulated classification during merge.");
+  if (Accum == Field || Field == Class::NoClass)
+    return Accum;
+  if (Field == Class::Memory)
+    return Class::Memory;
+  if (Accum == Class::NoClass)
+    return Field;
+  if (Accum == Class::Integer || Field == Class::Integer)
+    return Class::Integer;
+  if (Field == Class::X87 || Field == Class::X87Up ||
+      Field == Class::ComplexX87 || Accum == Class::X87 ||
+      Accum == Class::X87Up)
+    return Class::Memory;
+  return Class::SSE;
+}
+
+void X86_64ABIInfo::postMerge(unsigned AggregateSize, Class &Lo,
+                              Class &Hi) const {
+  // AMD64-ABI 3.2.3p2: Rule 5. Then a post merger cleanup is done:
+  //
+  // (a) If one of the classes is Memory, the whole argument is passed in
+  //     memory.
+  //
+  // (b) If X87UP is not preceded by X87, the whole argument is passed in
+  //     memory.
+  //
+  // (c) If the size of the aggregate exceeds two eightbytes and the first
+  //     eightbyte isn't SSE or any other eightbyte isn't SSEUP, the whole
+  //     argument is passed in memory. NOTE: This is necessary to keep the
+  //     ABI working for processors that don't support the __m256 type.
+  //
+  // (d) If SSEUP is not preceded by SSE or SSEUP, it is converted to SSE.
+  //
+  // Some of these are enforced by the merging logic.  Others can arise
+  // only with unions; for example:
+  //   union { _Complex double; unsigned; }
+  //
+  // Note that clauses (b) and (c) were added in 0.98.
+  //
+  if (Hi == Class::Memory)
+    Lo = Class::Memory;
+  if (Hi == Class::X87Up && Lo != Class::X87 && honorsRevision0_98())
+    Lo = Class::Memory;
+  if (AggregateSize > 128 && (Lo != Class::SSE || Hi != Class::SSEUp))
+    Lo = Class::Memory;
+  if (Hi == Class::SSEUp && Lo != Class::SSE)
+    Hi = Class::SSE;
 }
 
 std::unique_ptr<TargetLoweringInfo>

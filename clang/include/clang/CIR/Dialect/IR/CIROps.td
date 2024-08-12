@@ -589,6 +589,12 @@ def StoreOp : CIR_Op<"store", [
     ```
   }];
 
+  let builders = [
+    OpBuilder<(ins "Value":$value, "Value":$addr), [{
+      $_state.addOperands({value, addr});
+    }]>
+  ];
+
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
