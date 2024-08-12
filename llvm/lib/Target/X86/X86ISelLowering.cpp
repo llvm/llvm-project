@@ -42526,6 +42526,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return TLO.CombineTo(Op, Insert);
     }
       // Conversions.
+      // TODO: Add more CVT opcodes when we have test coverage.
     case X86ISD::CVTTP2SI:
     case X86ISD::CVTTP2UI:
     case X86ISD::CVTPH2PS: {
