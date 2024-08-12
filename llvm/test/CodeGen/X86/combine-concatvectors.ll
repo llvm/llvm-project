@@ -123,7 +123,7 @@ define <4 x i64> @broadcast_of_shuffle_v2i64_v4i64(<16 x i8> %vecinit.i) {
 ; AVX1-LABEL: broadcast_of_shuffle_v2i64_v4i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vpsllq $56, %xmm0, %xmm0
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
