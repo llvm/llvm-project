@@ -17,8 +17,8 @@
 #include "error.h"
 #include "executor_address.h"
 #include "orc_rt/c_api.h"
-#include <type_traits>
 #include <algorithm>
+#include <type_traits>
 #include <vector>
 
 /// This macro should be used to define tags that will be associated with

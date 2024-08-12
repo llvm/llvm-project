@@ -1,4 +1,5 @@
-//===------ ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc -----===//
+//===------ ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc
+//-----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -812,11 +813,11 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
     auto &JBS = MP.JDBootstrapStates[&JD];
     for (auto &I : ELFNixPlatformSecs)
       JBS.Initializers.push_back(I);
-     /*G.allocActions().push_back(
-           {{},
-            cantFail(WrapperFunctionCall::Create<SPSRegisterInitSectionsArgs>(
-                MP.orc_rt_elfnix_deregister_init_sections, HeaderAddr,
-                ELFNixPlatformSecs))});*/
+    /*G.allocActions().push_back(
+          {{},
+           cantFail(WrapperFunctionCall::Create<SPSRegisterInitSectionsArgs>(
+               MP.orc_rt_elfnix_deregister_init_sections, HeaderAddr,
+               ELFNixPlatformSecs))});*/
   } else {
     G.allocActions().push_back(
         {cantFail(WrapperFunctionCall::Create<SPSRegisterInitSectionsArgs>(

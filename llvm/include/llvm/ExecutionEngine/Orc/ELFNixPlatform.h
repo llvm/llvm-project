@@ -172,7 +172,8 @@ private:
   // Associate ELFNixPlatform JIT-side runtime support functions with handlers.
   Error associateRuntimeSupportFunctions(JITDylib &PlatformJD);
 
-  void pushInitializersLoop(PushInitializersSendResultFn SendResult, JITDylibSP JD);
+  void pushInitializersLoop(PushInitializersSendResultFn SendResult,
+                            JITDylibSP JD);
 
   void rt_recordInitializers(PushInitializersSendResultFn SendResult,
                              ExecutorAddr JDHeader);
@@ -183,8 +184,8 @@ private:
   // Records the addresses of runtime symbols used by the platform.
   Error bootstrapELFNixRuntime(JITDylib &PlatformJD);
 
-  Error registerPerObjectSections(
-      jitlink::LinkGraph &G,const ELFPerObjectSectionsToRegister &POSR);
+  Error registerPerObjectSections(jitlink::LinkGraph &G,
+                                  const ELFPerObjectSectionsToRegister &POSR);
 
   Expected<uint64_t> createPThreadKey();
 
@@ -261,4 +262,3 @@ using SPSELFNixJITDylibDepInfoMap =
 } // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_ELFNIXPLATFORM_H
-
