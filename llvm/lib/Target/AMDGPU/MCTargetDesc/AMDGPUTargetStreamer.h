@@ -65,11 +65,11 @@ public:
       const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
       const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
       const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
-      const MCSymbol *HasIndirectCall){};
+      const MCSymbol *HasIndirectCall) {};
 
   virtual void EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
                                       const MCSymbol *MaxAGPR,
-                                      const MCSymbol *MaxSGPR){};
+                                      const MCSymbol *MaxSGPR) {};
 
   /// \returns True on success, false on failure.
   virtual bool EmitISAVersion() { return true; }
